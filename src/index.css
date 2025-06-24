@@ -1,0 +1,223 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system based on the uploaded style guide */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 215 25% 27%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 27%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 27%;
+
+    /* Updated primary to coral/salmon brand color */
+    --primary: 7 86% 70%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 215 25% 27%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 215 25% 27%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 7 86% 70%;
+
+    --radius: 0.5rem;
+
+    /* Brand colors from style guide */
+    --coral-light: 7 86% 70%; /* FA7275 */
+    --coral-dark: 12 78% 65%; /* EA6365 */
+    --navy-dark: 215 25% 27%; /* 131524 */
+    --navy-darker: 220 25% 16%; /* 04050C */
+    --slate-dark: 215 20% 31%; /* 333F4E */
+    --slate-light: 215 15% 65%; /* A3B2C7 */
+
+    /* Accent colors */
+    --green: 162 63% 55%; /* 3DD9B3 */
+    --orange: 25 86% 70%; /* F9AB72 */
+    --purple: 280 56% 74%; /* EEA8FD */
+    --blue: 211 86% 70%; /* 56B8FF */
+    --error: 0 69% 36%; /* B80000 */
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 7 86% 70%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 215 25% 27%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 7 86% 70%;
+  }
+
+  .dark {
+    --background: 215 25% 27%;
+    --foreground: 0 0% 100%;
+
+    --card: 215 25% 27%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 215 25% 27%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 7 86% 70%;
+    --primary-foreground: 215 25% 27%;
+
+    --secondary: 215 20% 31%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 215 20% 31%;
+    --muted-foreground: 215 15% 65%;
+
+    --accent: 215 20% 31%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 69% 36%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 20% 31%;
+    --input: 215 20% 31%;
+    --ring: 7 86% 70%;
+
+    --sidebar-background: 220 25% 16%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 7 86% 70%;
+    --sidebar-primary-foreground: 215 25% 27%;
+    --sidebar-accent: 215 20% 31%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 215 20% 31%;
+    --sidebar-ring: 7 86% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI",
+      "Roboto", sans-serif;
+  }
+
+  /* Typography from style guide */
+  h1 {
+    @apply text-4xl font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply text-2xl font-bold;
+  }
+
+  h3 {
+    @apply text-xl font-medium;
+  }
+
+  h4 {
+    @apply text-lg font-medium;
+  }
+
+  h5 {
+    @apply text-base font-semibold;
+  }
+
+  .subtitle-1 {
+    @apply text-base font-medium;
+  }
+
+  .subtitle-2 {
+    @apply text-sm font-semibold;
+  }
+
+  .body-1 {
+    @apply text-base font-normal;
+  }
+
+  .body-2 {
+    @apply text-sm font-normal;
+  }
+
+  .button-text {
+    @apply text-sm font-medium;
+  }
+
+  .caption {
+    @apply text-xs font-normal;
+  }
+
+  .overline {
+    @apply text-xs font-normal uppercase tracking-wider;
+  }
+}
+
+/* Custom utility classes for brand colors */
+@layer utilities {
+  .text-coral {
+    color: hsl(var(--coral-light));
+  }
+
+  .text-coral-dark {
+    color: hsl(var(--coral-dark));
+  }
+
+  .text-navy {
+    color: hsl(var(--navy-dark));
+  }
+
+  .text-navy-dark {
+    color: hsl(var(--navy-darker));
+  }
+
+  .bg-coral {
+    background-color: hsl(var(--coral-light));
+  }
+
+  .bg-coral-dark {
+    background-color: hsl(var(--coral-dark));
+  }
+
+  .bg-navy {
+    background-color: hsl(var(--navy-dark));
+  }
+
+  .bg-navy-dark {
+    background-color: hsl(var(--navy-darker));
+  }
+
+  .bg-accent-green {
+    background-color: hsl(var(--green));
+  }
+
+  .bg-accent-orange {
+    background-color: hsl(var(--orange));
+  }
+
+  .bg-accent-purple {
+    background-color: hsl(var(--purple));
+  }
+
+  .bg-accent-blue {
+    background-color: hsl(var(--blue));
+  }
+
+  .bg-background {
+    background-color: hsl(var(--background));
+  }
+
+  .text-foreground {
+    color: hsl(var(--foreground));
+  }
+}

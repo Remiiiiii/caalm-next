@@ -1,0 +1,239 @@
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Users,
+  GraduationCap,
+  FileCheck,
+  Bell,
+  Upload,
+  UserPlus,
+} from "lucide-react";
+
+const HRDashboard = () => {
+  const trainingStats = [
+    {
+      title: "Active Employees",
+      value: "187",
+      icon: Users,
+      color: "text-blue-600",
+    },
+    {
+      title: "Training Completed",
+      value: "94%",
+      icon: GraduationCap,
+      color: "text-green-600",
+    },
+    {
+      title: "Certifications Due",
+      value: "23",
+      icon: FileCheck,
+      color: "text-orange-600",
+    },
+    {
+      title: "Compliance Alerts",
+      value: "5",
+      icon: Bell,
+      color: "text-red-600",
+    },
+  ];
+
+  const employeeTraining = [
+    {
+      id: 1,
+      employee: "John Smith",
+      department: "IT",
+      certification: "Security Clearance",
+      status: "expired",
+      dueDate: "2024-06-15",
+      contractRequirement: "Federal IT Services Contract",
+    },
+    {
+      id: 2,
+      employee: "Mary Johnson",
+      department: "Operations",
+      certification: "Safety Training",
+      status: "due-soon",
+      dueDate: "2024-08-10",
+      contractRequirement: "Municipal Services Contract",
+    },
+    {
+      id: 3,
+      employee: "Robert Davis",
+      department: "Finance",
+      certification: "Financial Compliance",
+      status: "current",
+      dueDate: "2025-01-15",
+      contractRequirement: "State Audit Requirements",
+    },
+  ];
+
+  const pendingDocuments = [
+    {
+      id: 1,
+      type: "Training Certificate",
+      employee: "Alice Wilson",
+      uploaded: "2 hours ago",
+    },
+    {
+      id: 2,
+      type: "Background Check",
+      employee: "David Brown",
+      uploaded: "1 day ago",
+    },
+    {
+      id: 3,
+      type: "License Renewal",
+      employee: "Sarah Miller",
+      uploaded: "3 days ago",
+    },
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "current":
+        return "text-green-600 bg-green-100";
+      case "due-soon":
+        return "text-yellow-600 bg-yellow-100";
+      case "expired":
+        return "text-red-600 bg-red-100";
+      default:
+        return "text-gray-600 bg-gray-100";
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">
+          HR Administration Dashboard
+        </h1>
+        <div className="flex space-x-2">
+          <Button variant="default">
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add Employee
+          </Button>
+          <Button>
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Training Record
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {trainingStats.map((stat, index) => (
+          <Card key={index}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    {stat.title}
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {stat.value}
+                  </p>
+                </div>
+                <stat.icon className={`h-8 w-8 ${stat.color}`} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Employee Training Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Employee Training & Certifications</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {employeeTraining.map((record) => (
+                <div key={record.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-medium text-gray-900">
+                        {record.employee}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {record.department}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        record.status
+                      )}`}
+                    >
+                      {record.status.replace("-", " ")}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>
+                      <strong>Certification:</strong> {record.certification}
+                    </p>
+                    <p>
+                      <strong>Due Date:</strong> {record.dueDate}
+                    </p>
+                    <p>
+                      <strong>Required for:</strong>{" "}
+                      {record.contractRequirement}
+                    </p>
+                  </div>
+                  <div className="mt-3 flex space-x-2">
+                    <Button variant="default">Update Status</Button>
+                    <Button variant="default">Send Reminder</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Document Uploads */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Document Uploads</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {pendingDocuments.map((doc) => (
+                <div key={doc.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-medium text-gray-900">{doc.type}</h4>
+                    <span className="text-xs text-gray-500">
+                      {doc.uploaded}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Employee: {doc.employee}
+                  </p>
+                  <div className="mt-3 flex space-x-2">
+                    <Button variant="default">Review</Button>
+                    <Button variant="default">Approve</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-900 mb-2">
+                Training Requirements Alert
+              </h4>
+              <p className="text-sm text-blue-700">
+                5 employees have upcoming certification deadlines within the
+                next 30 days. Please coordinate with managers to schedule
+                required training sessions.
+              </p>
+              <Button className="mt-2" variant="default">
+                View All Deadlines
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default HRDashboard;
