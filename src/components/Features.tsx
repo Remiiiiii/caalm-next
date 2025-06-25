@@ -63,13 +63,13 @@ const Features = () => {
   ];
 
   return (
-    <section className="py-20 px-4 bg-white">
+    <section className="py-20 px-4 bg-background">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-4xl font-bold text-navy mb-4">
             Powerful Features for Complete Control
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-slate-dark max-w-3xl mx-auto">
             Everything you need to streamline compliance, reduce risk, and
             safeguard your organization&apos;s critical agreements.
           </p>
@@ -79,14 +79,14 @@ const Features = () => {
           {features.map((feature, index) => (
             <Card
               key={index}
-              className="hover:shadow-md transition-shadow border-gray-200"
+              className="hover:shadow-md transition-shadow border-border"
             >
               <CardHeader className="pb-4">
-                <feature.icon className="h-8 w-8 text-blue-600 mb-2" />
+                <feature.icon className="h-8 w-8 text-blue mb-2" />
                 <CardTitle className="text-lg">{feature.title}</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-gray-600 text-sm">{feature.description}</p>
+                <p className="text-slate-dark text-sm">{feature.description}</p>
               </CardContent>
             </Card>
           ))}

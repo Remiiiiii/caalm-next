@@ -18,13 +18,13 @@ const ProblemSolution = () => {
   ];
 
   return (
-    <section className="py-20 px-4 bg-gray-50">
+    <section className="py-20 px-4 bg-background">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-4xl font-bold text-navy mb-4">
             From Chaos to Control
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-slate-dark max-w-3xl mx-auto">
             Transform your fragmented, manual processes into a streamlined,
             automated compliance management system.
           </p>
@@ -32,30 +32,30 @@ const ProblemSolution = () => {
 
         <div className="grid lg:grid-cols-2 gap-12">
           <div className="space-y-6">
-            <h3 className="text-2xl font-semibold text-red-600 flex items-center">
+            <h3 className="text-2xl font-semibold text-coral flex items-center">
               <AlertTriangle className="mr-3 h-6 w-6" />
               Current Challenges
             </h3>
             <div className="space-y-4">
               {problems.map((problem, index) => (
                 <div key={index} className="flex items-start">
-                  <div className="w-2 h-2 bg-red-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                  <p className="text-gray-700">{problem}</p>
+                  <div className="w-2 h-2 bg-coral rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                  <p className="text-slate-dark">{problem}</p>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="space-y-6">
-            <h3 className="text-2xl font-semibold text-green-600 flex items-center">
+            <h3 className="text-2xl font-semibold text-green flex items-center">
               <CheckCircle className="mr-3 h-6 w-6" />
               Caalm
             </h3>
             <div className="space-y-4">
               {solutions.map((solution, index) => (
                 <div key={index} className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
-                  <p className="text-gray-700">{solution}</p>
+                  <CheckCircle className="w-5 h-5 text-green mt-0.5 mr-3 flex-shrink-0" />
+                  <p className="text-slate-dark">{solution}</p>
                 </div>
               ))}
             </div>

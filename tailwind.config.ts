@@ -11,31 +11,38 @@ export default {
   ],
   prefix: "",
   theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
-    },
     extend: {
-      fontFamily: {
-        sans: [
-          "Poppins",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
-          "sans-serif",
-        ],
-        poppins: ["Poppins", "sans-serif"],
-      },
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
+        brand: {
+          "100": "#EA6365",
+          DEFAULT: "#FA7275",
+        },
+        red: "#FF7474",
+        error: "#b80000",
+        green: "#3DD9B3",
+        blue: "#56B8FF",
+        pink: "#EEA8FD",
+        orange: "#F9AB72",
+        light: {
+          "100": "#333F4E",
+          "200": "#A3B2C7",
+          "300": "#F2F5F9",
+          "400": "#F2F4F8",
+        },
+        dark: {
+          "100": "#04050C",
+          "200": "#131524",
+        },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -43,10 +50,6 @@ export default {
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -56,45 +59,28 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        chart: {
+          "1": "hsl(var(--chart-1))",
+          "2": "hsl(var(--chart-2))",
+          "3": "hsl(var(--chart-3))",
+          "4": "hsl(var(--chart-4))",
+          "5": "hsl(var(--chart-5))",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
-        },
-        // Brand colors from style guide
-        coral: {
-          light: "hsl(var(--coral-light))",
-          DEFAULT: "hsl(var(--coral-light))",
-          dark: "hsl(var(--coral-dark))",
-        },
-        navy: {
-          DEFAULT: "hsl(var(--navy-dark))",
-          dark: "hsl(var(--navy-darker))",
-        },
-        slate: {
-          DEFAULT: "hsl(var(--slate-dark))",
-          light: "hsl(var(--slate-light))",
-        },
-        brand: {
-          green: "hsl(var(--green))",
-          orange: "hsl(var(--orange))",
-          purple: "hsl(var(--purple))",
-          blue: "hsl(var(--blue))",
-          error: "hsl(var(--error))",
-        },
+      },
+      fontFamily: {
+        poppins: ["var(--font-poppins)"],
+      },
+      boxShadow: {
+        "drop-1": "0px 10px 30px 0px rgba(66, 71, 97, 0.1)",
+        "drop-2": "0 8px 30px 0 rgba(65, 89, 214, 0.3)",
+        "drop-3": "0 8px 30px 0 rgba(65, 89, 214, 0.1)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -102,26 +88,17 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
-        "accordion-down": {
-          from: {
-            height: "0",
+        "caret-blink": {
+          "0%,70%,100%": {
+            opacity: "1",
           },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
-        },
-        "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
+          "20%,50%": {
+            opacity: "0",
           },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        "caret-blink": "caret-blink 1.25s ease-out infinite",
       },
     },
   },

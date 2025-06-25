@@ -1,75 +1,108 @@
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { FileText, Calendar, AlertCircle, Clock, Upload, MessageSquare } from 'lucide-react';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  FileText,
+  Calendar,
+  AlertCircle,
+  Clock,
+  Upload,
+  MessageSquare,
+} from "lucide-react";
 
 const ManagerDashboard = () => {
   const myContracts = [
-    { 
-      id: 1, 
-      name: 'Operations Facility Management', 
-      expiration: '2024-12-15', 
-      status: 'active', 
-      amount: '$2.5M',
+    {
+      id: 1,
+      name: "Operations Facility Management",
+      expiration: "2024-12-15",
+      status: "active",
+      amount: "$2.5M",
       daysUntilExpiry: 45,
-      compliance: 'up-to-date'
+      compliance: "up-to-date",
     },
-    { 
-      id: 2, 
-      name: 'Supply Chain Agreement', 
-      expiration: '2024-08-30', 
-      status: 'expiring', 
-      amount: '$850K',
+    {
+      id: 2,
+      name: "Supply Chain Agreement",
+      expiration: "2024-08-30",
+      status: "expiring",
+      amount: "$850K",
       daysUntilExpiry: 8,
-      compliance: 'action-required'
+      compliance: "action-required",
     },
-    { 
-      id: 3, 
-      name: 'Technology Services Contract', 
-      expiration: '2025-03-22', 
-      status: 'active', 
-      amount: '$1.2M',
+    {
+      id: 3,
+      name: "Technology Services Contract",
+      expiration: "2025-03-22",
+      status: "active",
+      amount: "$1.2M",
       daysUntilExpiry: 178,
-      compliance: 'up-to-date'
-    }
+      compliance: "up-to-date",
+    },
   ];
 
   const upcomingTasks = [
-    { id: 1, task: 'Submit Q3 compliance report', deadline: '2024-07-25', priority: 'high' },
-    { id: 2, task: 'Review vendor performance metrics', deadline: '2024-07-28', priority: 'medium' },
-    { id: 3, task: 'Update training records', deadline: '2024-08-02', priority: 'low' },
-    { id: 4, task: 'Prepare contract renewal documentation', deadline: '2024-08-15', priority: 'high' }
+    {
+      id: 1,
+      task: "Submit Q3 compliance report",
+      deadline: "2024-07-25",
+      priority: "high",
+    },
+    {
+      id: 2,
+      task: "Review vendor performance metrics",
+      deadline: "2024-07-28",
+      priority: "medium",
+    },
+    {
+      id: 3,
+      task: "Update training records",
+      deadline: "2024-08-02",
+      priority: "low",
+    },
+    {
+      id: 4,
+      task: "Prepare contract renewal documentation",
+      deadline: "2024-08-15",
+      priority: "high",
+    },
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'text-green-600 bg-green-100';
-      case 'expiring': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case "active":
+        return "text-green-600 bg-green-100";
+      case "expiring":
+        return "text-red-600 bg-red-100";
+      default:
+        return "text-gray-600 bg-gray-100";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'text-red-600 bg-red-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'low': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case "high":
+        return "text-red-600 bg-red-100";
+      case "medium":
+        return "text-yellow-600 bg-yellow-100";
+      case "low":
+        return "text-green-600 bg-green-100";
+      default:
+        return "text-gray-600 bg-gray-100";
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Operations Dashboard</h1>
+        <h1 className="text-3xl font-bold text-navy">Operations Dashboard</h1>
         <div className="flex space-x-2">
           <Button variant="outline">
-            <Upload className="mr-2 h-4 w-4" />
+            <Upload className="mr-2 h-4 w-4 text-coral" />
             Upload Document
           </Button>
           <Button>
-            <MessageSquare className="mr-2 h-4 w-4" />
+            <MessageSquare className="mr-2 h-4 w-4 text-coral" />
             Submit Report
           </Button>
         </div>
@@ -81,34 +114,44 @@ const ManagerDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">My Contracts</p>
-                <p className="text-3xl font-bold text-gray-900">{myContracts.length}</p>
+                <p className="text-sm font-medium text-slate-dark">
+                  My Contracts
+                </p>
+                <p className="text-3xl font-bold text-navy">
+                  {myContracts.length}
+                </p>
               </div>
-              <FileText className="h-8 w-8 text-blue-600" />
+              <FileText className="h-8 w-8 text-blue" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Expiring Soon</p>
-                <p className="text-3xl font-bold text-red-600">1</p>
+                <p className="text-sm font-medium text-slate-dark">
+                  Expiring Soon
+                </p>
+                <p className="text-3xl font-bold text-coral">1</p>
               </div>
-              <AlertCircle className="h-8 w-8 text-red-600" />
+              <AlertCircle className="h-8 w-8 text-coral" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
-                <p className="text-3xl font-bold text-orange-600">{upcomingTasks.length}</p>
+                <p className="text-sm font-medium text-slate-dark">
+                  Pending Tasks
+                </p>
+                <p className="text-3xl font-bold text-orange">
+                  {upcomingTasks.length}
+                </p>
               </div>
-              <Clock className="h-8 w-8 text-orange-600" />
+              <Clock className="h-8 w-8 text-orange" />
             </div>
           </CardContent>
         </Card>
@@ -123,22 +166,34 @@ const ManagerDashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {myContracts.map((contract) => (
-                <div key={contract.id} className="border rounded-lg p-4">
+                <div
+                  key={contract.id}
+                  className="border border-border rounded-lg p-4"
+                >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-gray-900">{contract.name}</h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
+                    <h4 className="font-medium text-navy">{contract.name}</h4>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        contract.status
+                      )}`}
+                    >
                       {contract.status}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-sm text-slate-dark space-y-1">
                     <p>Amount: {contract.amount}</p>
-                    <p>Expires: {contract.expiration} ({contract.daysUntilExpiry} days)</p>
+                    <p>
+                      Expires: {contract.expiration} ({contract.daysUntilExpiry}{" "}
+                      days)
+                    </p>
                     <p>Compliance: {contract.compliance}</p>
                   </div>
                   <div className="mt-3 flex space-x-2">
-                    <Button size="sm" variant="outline">View Details</Button>
                     <Button size="sm" variant="outline">
-                      <Calendar className="mr-1 h-3 w-3" />
+                      View Details
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      <Calendar className="mr-1 h-3 w-3 text-coral" />
                       Schedule Review
                     </Button>
                   </div>
@@ -156,14 +211,23 @@ const ManagerDashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {upcomingTasks.map((task) => (
-                <div key={task.id} className="border rounded-lg p-4">
+                <div
+                  key={task.id}
+                  className="border border-border rounded-lg p-4"
+                >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-gray-900">{task.task}</h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                    <h4 className="font-medium text-navy">{task.task}</h4>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+                        task.priority
+                      )}`}
+                    >
                       {task.priority}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600">Due: {task.deadline}</p>
+                  <p className="text-sm text-slate-dark">
+                    Due: {task.deadline}
+                  </p>
                   <div className="mt-3">
                     <Button size="sm">Mark Complete</Button>
                   </div>

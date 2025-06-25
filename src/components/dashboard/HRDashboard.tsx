@@ -16,25 +16,25 @@ const HRDashboard = () => {
       title: "Active Employees",
       value: "187",
       icon: Users,
-      color: "text-blue-600",
+      color: "text-blue",
     },
     {
       title: "Training Completed",
       value: "94%",
       icon: GraduationCap,
-      color: "text-green-600",
+      color: "text-green",
     },
     {
       title: "Certifications Due",
       value: "23",
       icon: FileCheck,
-      color: "text-orange-600",
+      color: "text-orange",
     },
     {
       title: "Compliance Alerts",
       value: "5",
       icon: Bell,
-      color: "text-red-600",
+      color: "text-coral",
     },
   ];
 
@@ -92,29 +92,29 @@ const HRDashboard = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "current":
-        return "text-green-600 bg-green-100";
+        return "text-green bg-accent-green";
       case "due-soon":
-        return "text-yellow-600 bg-yellow-100";
+        return "text-orange bg-accent-orange";
       case "expired":
-        return "text-red-600 bg-red-100";
+        return "text-coral bg-coral/10";
       default:
-        return "text-gray-600 bg-gray-100";
+        return "text-slate-dark bg-background";
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">
+        <h1 className="text-3xl font-bold text-navy">
           HR Administration Dashboard
         </h1>
         <div className="flex space-x-2">
           <Button variant="default">
-            <UserPlus className="mr-2 h-4 w-4" />
+            <UserPlus className="mr-2 h-4 w-4 text-coral" />
             Add Employee
           </Button>
           <Button>
-            <Upload className="mr-2 h-4 w-4" />
+            <Upload className="mr-2 h-4 w-4 text-coral" />
             Upload Training Record
           </Button>
         </div>
@@ -127,12 +127,10 @@ const HRDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium text-slate-dark">
                     {stat.title}
                   </p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stat.value}
-                  </p>
+                  <p className="text-3xl font-bold text-navy">{stat.value}</p>
                 </div>
                 <stat.icon className={`h-8 w-8 ${stat.color}`} />
               </div>
@@ -150,13 +148,16 @@ const HRDashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {employeeTraining.map((record) => (
-                <div key={record.id} className="border rounded-lg p-4">
+                <div
+                  key={record.id}
+                  className="border border-border rounded-lg p-4"
+                >
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-medium text-gray-900">
+                      <h4 className="font-medium text-navy">
                         {record.employee}
                       </h4>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-slate-dark">
                         {record.department}
                       </p>
                     </div>
@@ -168,7 +169,7 @@ const HRDashboard = () => {
                       {record.status.replace("-", " ")}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-sm text-slate-dark space-y-1">
                     <p>
                       <strong>Certification:</strong> {record.certification}
                     </p>
@@ -198,14 +199,17 @@ const HRDashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {pendingDocuments.map((doc) => (
-                <div key={doc.id} className="border rounded-lg p-4">
+                <div
+                  key={doc.id}
+                  className="border border-border rounded-lg p-4"
+                >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-gray-900">{doc.type}</h4>
-                    <span className="text-xs text-gray-500">
+                    <h4 className="font-medium text-navy">{doc.type}</h4>
+                    <span className="text-xs text-slate-light">
                       {doc.uploaded}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-slate-dark">
                     Employee: {doc.employee}
                   </p>
                   <div className="mt-3 flex space-x-2">
@@ -216,11 +220,11 @@ const HRDashboard = () => {
               ))}
             </div>
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">
+            <div className="mt-6 p-4 bg-accent-blue rounded-lg">
+              <h4 className="font-medium text-blue mb-2">
                 Training Requirements Alert
               </h4>
-              <p className="text-sm text-blue-700">
+              <p className="text-sm text-blue">
                 5 employees have upcoming certification deadlines within the
                 next 30 days. Please coordinate with managers to schedule
                 required training sessions.

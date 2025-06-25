@@ -9,7 +9,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background shadow-drop-1">
       <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
         <div className="flex items-center">
           <Image
@@ -73,7 +73,7 @@ const Header = () => {
       </div>
 
       {isMenuOpen && (
-        <div className="md:hidden py-4 border-t">
+        <div className="md:hidden py-4 border-t border-border bg-background">
           <nav className="flex flex-col space-y-4">
             <a href="#features" className="text-navy font-medium">
               Features

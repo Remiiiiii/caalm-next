@@ -6,8 +6,8 @@ const UserRoles = () => {
     {
       title: "Executives",
       icon: Crown,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
+      color: "text-coral",
+      bgColor: "bg-accent-purple",
       description:
         "Oversee, approve, assign, and strategically manage all contracts, licenses, audits, and critical business agreements.",
       responsibilities: [
@@ -20,8 +20,8 @@ const UserRoles = () => {
     {
       title: "Mid-Level Managers",
       icon: UserCheck,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      color: "text-blue",
+      bgColor: "bg-accent-blue",
       description:
         "Monitor and report on the status of contracts, licenses, and audits within their assigned units.",
       responsibilities: [
@@ -34,8 +34,8 @@ const UserRoles = () => {
     {
       title: "HR & Administrative Staff",
       icon: Users,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      color: "text-green",
+      bgColor: "bg-accent-green",
       description:
         "Maintain records of staff training and documentation tied to contract requirements.",
       responsibilities: [
@@ -51,10 +51,10 @@ const UserRoles = () => {
     <section className="py-20 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-4xl font-bold text-navy mb-4">
             Built for Every Role
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-slate-dark max-w-3xl mx-auto">
             Caalm provides tailored experiences for executives, managers, and
             administrative staff with role-based access and workflows.
           </p>
@@ -70,7 +70,7 @@ const UserRoles = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <p className="text-gray-600 mb-4">{role.description}</p>
+                <p className="text-slate-dark mb-4">{role.description}</p>
                 <ul className="space-y-2">
                   {role.responsibilities.map((resp, respIndex) => (
                     <li key={respIndex} className="flex items-start">
@@ -80,7 +80,7 @@ const UserRoles = () => {
                           "bg-"
                         )} rounded-full mt-2 mr-3 flex-shrink-0`}
                       ></div>
-                      <span className="text-sm text-gray-700">{resp}</span>
+                      <span className="text-sm text-navy">{resp}</span>
                     </li>
                   ))}
                 </ul>
