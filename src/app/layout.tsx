@@ -1,4 +1,4 @@
-import "../index.css";
+import "./globals.css";
 
 import type { ReactNode } from "react";
 import { Poppins } from "next/font/google";

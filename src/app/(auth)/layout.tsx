@@ -14,11 +14,11 @@ const layout = ({ children }: { children: React.ReactNode }) => {
             className="h-auto"
           />
           <div className="space-y-5 text-white">
-            <h1>
+            <h1 className="h1">
               Eliminate Missed Deadliness and Compliance Risks with Centralized
               Contract Management
             </h1>
-            <p>
+            <p className="body-1">
               The perfect place to manage your contracts, audits, and licenses.
             </p>
           </div>

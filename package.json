@@ -13,16 +13,22 @@
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@types/react-router-dom": "^5.3.3",
+    "appwrite": "^18.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.523.0",
     "next": "latest",
+    "node-appwrite": "^17.0.0",
     "react": "latest",
     "react-dom": "latest",
     "react-hook-form": "^7.58.1",
     "react-router-dom": "^7.6.2",
     "tailwind-merge": "^3.3.1",
     "zod": "^3.25.67"
+  },
+  "overrides": {
+    "react": "$react",
+    "react-dom": "$react-dom"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
