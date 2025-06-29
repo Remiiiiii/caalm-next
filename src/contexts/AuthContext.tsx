@@ -61,7 +61,7 @@ const mockUsers: User[] = [
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string): Promise<boolean> => {
     // Mock authentication - in real app, this would call your API
     const foundUser = mockUsers.find((u) => u.email === email && u.isApproved);
     if (foundUser) {
