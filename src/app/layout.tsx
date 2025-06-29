@@ -2,6 +2,7 @@ import "./globals.css";
 
 import type { ReactNode } from "react";
 import { Poppins } from "next/font/google";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -19,7 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <head />
       <body className={`${poppins.variable} font-poppins antialiased`}>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

@@ -17,6 +17,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { createAccount } from "@/lib/actions/user.actions";
+import { useAuth } from "@/contexts/AuthContext";
 
 type FormType = "sign-in" | "sign-up";
 
@@ -27,13 +28,14 @@ const authFormSchema = (formType: FormType) => {
       formType === "sign-up"
         ? z.string().min(2).max(50)
         : z.string().optional(),
+    password: z.string().optional(),
   });
 };
 
 const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [accountId, setAccountId] = useState(null);
+  const { login } = useAuth();
 
   const formSchema = authFormSchema(type);
 
@@ -43,6 +45,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
     defaultValues: {
       fullName: "",
       email: "",
+      password: "",
     },
   });
 
@@ -51,17 +54,28 @@ const AuthForm = ({ type }: { type: FormType }) => {
     setIsLoading(true);
     setErrorMessage("");
 
-    try {
-      const user = await createAccount({
-        fullName: values.fullName || "",
-        email: values.email,
-      });
-
-      setAccountId(user.accountId);
-    } catch {
-      setErrorMessage("Failed to create an account. Please try again.");
-    } finally {
-      setIsLoading(false);
+    if (type === "sign-in") {
+      try {
+        const success = await login(values.email, values.password || "");
+        if (!success) {
+          setErrorMessage("Invalid email or password.");
+        }
+      } catch {
+        setErrorMessage("Failed to sign in. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      try {
+        await createAccount({
+          fullName: values.fullName || "",
+          email: values.email,
+        });
+      } catch {
+        setErrorMessage("Failed to create an account. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -112,6 +126,28 @@ const AuthForm = ({ type }: { type: FormType }) => {
               </FormItem>
             )}
           />
+          {type === "sign-in" && (
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="shad-form-item">
+                    <FormLabel className="shad-form-label">Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter your password"
+                        {...field}
+                        className="shad-input"
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage className="shad-form-message" />
+                </FormItem>
+              )}
+            />
+          )}
           <Button
             type="submit"
             className="form-submit-button"

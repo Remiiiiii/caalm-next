@@ -10,7 +10,7 @@ const DashboardHeader = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/sign-in");
   };
 
   const getRoleDisplay = (role: string) => {

@@ -14,7 +14,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
             className="h-auto"
           />
           <div className="space-y-5 text-white">
-            <h1 className="h1">
+            <h1 className="text-2xl font-bold">
               Eliminate Missed Deadliness and Compliance Risks with Centralized
               Contract Management
             </h1>

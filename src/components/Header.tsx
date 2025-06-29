@@ -1,55 +1,124 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import AOS from "aos";
+import "aos/dist/aos.css";
+import clsx from "clsx";
 
-const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+export const Header = () => {
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    AOS.init({
+      duration: 1500,
+      once: true,
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setHasScrolled(window.scrollY > 32);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background shadow-drop-1">
-      <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
-        <div className="flex items-center">
+    <header
+      className={clsx(
+        "flex items-center fixed top-0 left-0 right-0 z-50 w-full bg-white transition-all duration-500",
+        hasScrolled
+          ? "py-2 h-14 sm:h-16 bg-white/60 backdrop-blur-lg border border-white/30 shadow-lg"
+          : "py-3 h-16 sm:py-4 sm:h-20"
+      )}
+    >
+      <div
+        className={clsx(
+          "flex items-center justify-between w-full px-3 sm:px-4 md:px-6 transition-all duration-500 container mx-auto",
+          hasScrolled ? "h-14 sm:h-16" : "h-16 sm:h-20"
+        )}
+      >
+        <div className="flex items-center ">
           <Image
-            src="/placeholder.svg"
-            alt="Caalm Logo"
+            src="/assets/images/color-star.png"
+            alt="Logo"
             width={32}
             height={32}
-            className="h-8 w-8"
+            className="h-7 w-7 sm:h-8 sm:w-8"
           />
-          <span className="ml-2 text-xl font-bold text-navy">Caalm</span>
+          <span className="ml-2 text-lg sm:text-xl font-bold text-navy">
+            Caalm
+          </span>
         </div>
-        <nav className="hidden items-center space-x-6 md:flex">
+        <nav className="hidden items-center space-x-4 sm:space-x-6 md:flex">
           <a
+            data-aos="fade-down"
+            data-aos-easing="linear"
+            data-aos-duration="500"
+            className="text-navy group transition-all duration-200 font-medium relative"
             href="#features"
-            className="text-navy hover:text-coral transition-colors font-medium"
           >
-            Features
+            <span className="group-hover:bg-gradient-to-r group-hover:from-[#1793F0] group-hover:to-[#1A9FF1] group-hover:bg-clip-text group-hover:text-transparent transition-all duration-200">
+              Features
+            </span>
           </a>
           <a
+            data-aos="fade-down"
+            data-aos-easing="linear"
+            data-aos-duration="1000"
+            className="text-navy group transition-all duration-200 font-medium relative"
             href="#solutions"
-            className="text-navy hover:text-coral transition-colors font-medium"
           >
-            Solutions
+            <span className="group-hover:bg-gradient-to-r group-hover:from-[#1793F0] group-hover:to-[#1A9FF1] group-hover:bg-clip-text group-hover:text-transparent transition-all duration-200">
+              Solutions
+            </span>
           </a>
           <a
+            data-aos="fade-down"
+            data-aos-easing="linear"
+            data-aos-duration="1500"
+            className="text-navy group transition-all duration-200 font-medium relative"
             href="#pricing"
-            className="text-navy hover:text-coral transition-colors font-medium"
           >
-            Pricing
+            <span className="group-hover:bg-gradient-to-r group-hover:from-[#1793F0] group-hover:to-[#1A9FF1] group-hover:bg-clip-text group-hover:text-transparent transition-all duration-200">
+              Pricing
+            </span>
           </a>
           <a
+            data-aos="fade-down"
+            data-aos-easing="linear"
+            data-aos-duration="2000"
+            className="text-navy group transition-all duration-200 font-medium relative"
             href="#contact"
-            className="text-navy hover:text-coral transition-colors font-medium"
           >
-            Contact
+            <span className="group-hover:bg-gradient-to-r group-hover:from-[#1793F0] group-hover:to-[#1A9FF1] group-hover:bg-clip-text group-hover:text-transparent transition-all duration-200">
+              Contact
+            </span>
           </a>
         </nav>
 
-        <div className="hidden md:flex items-center space-x-4">
-          <Link href="/login">
+        <div className="hidden md:flex items-center space-x-2 sm:space-x-4">
+          <Link href="/sign-in">
             <Button
               variant="ghost"
               className="text-navy hover:text-coral hover:bg-coral/10"
@@ -57,53 +126,94 @@ const Header = () => {
               Sign In
             </Button>
           </Link>
-          <Link href="/login">
-            <Button className="bg-coral hover:bg-coral-dark text-white">
-              Get Started
-            </Button>
-          </Link>
+          <Link href="/sign-in"></Link>
         </div>
 
         <button
-          className="md:hidden text-navy"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="flex flex-col items-center justify-center border-2 rounded-full lg:hidden z-20 w-10 h-10 border-s4/25 ml-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors bg-white"
+          onClick={() => setIsOpen((prevState) => !prevState)}
+          aria-label={isOpen ? "Close menu" : "Open menu"}
         >
-          <Menu className="h-6 w-6" />
+          <span
+            className={`block w-6 h-0.5 bg-navy rounded transition-all duration-300 ease-in-out ${
+              isOpen ? "rotate-45 translate-y-1.5" : "-translate-y-1.5"
+            }`}
+          ></span>
+          <span
+            className={`block w-6 h-0.5 bg-navy rounded transition-all duration-300 ease-in-out my-1 ${
+              isOpen ? "opacity-0" : "opacity-100"
+            }`}
+          ></span>
+          <span
+            className={`block w-6 h-0.5 bg-navy rounded transition-all duration-300 ease-in-out ${
+              isOpen ? "-rotate-45 -translate-y-1.5" : "translate-y-1.5"
+            }`}
+          ></span>
         </button>
       </div>
 
-      {isMenuOpen && (
-        <div className="md:hidden py-4 border-t border-border bg-background">
-          <nav className="flex flex-col space-y-4">
-            <a href="#features" className="text-navy font-medium">
-              Features
-            </a>
-            <a href="#solutions" className="text-navy font-medium">
-              Solutions
-            </a>
-            <a href="#pricing" className="text-navy font-medium">
-              Pricing
-            </a>
-            <a href="#contact" className="text-navy font-medium">
-              Contact
-            </a>
-            <div className="flex flex-col space-y-2 pt-4">
-              <Link href="/login">
-                <Button
-                  variant="ghost"
-                  className="justify-start text-navy hover:text-coral hover:bg-coral/10"
-                >
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button className="justify-start bg-coral hover:bg-coral-dark text-white">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-          </nav>
-        </div>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-10 bg-black/30 backdrop-blur-sm"
+            aria-hidden="true"
+          ></div>
+          <div
+            ref={menuRef}
+            className="fixed top-16 left-0 right-0 z-20 md:hidden py-6 border-t border-border bg-white w-full px-6 shadow-xl animate-fadeIn"
+          >
+            <nav className="flex flex-col space-y-4">
+              <a
+                href="#features"
+                className="text-navy font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                Features
+              </a>
+              <a
+                href="#solutions"
+                className="text-navy font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                Solutions
+              </a>
+              <a
+                href="#pricing"
+                className="text-navy font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                Pricing
+              </a>
+              <a
+                href="#contact"
+                className="text-navy font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                Contact
+              </a>
+              <div className="flex flex-col space-y-2 pt-3">
+                <Link href="/sign-in">
+                  <Button
+                    variant="ghost"
+                    className="justify-start text-navy hover:text-coral hover:bg-coral/10 w-full"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/sign-in">
+                  <Button
+                    className="justify-start bg-coral hover:bg-coral-dark text-white w-full"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Get Started
+                  </Button>
+                </Link>
+              </div>
+            </nav>
+          </div>
+        </>
       )}
     </header>
   );
