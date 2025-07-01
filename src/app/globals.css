@@ -145,11 +145,11 @@
     @apply outline-none ring-offset-transparent focus:ring-transparent focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0 !important;
   }
   .shad-input {
-    @apply border-none shadow-none p-0 shad-no-focus placeholder:text-light-200 body-2 !important;
+    @apply border-none w-[500px] shadow-none p-0 shad-no-focus placeholder:text-light-200 body-2 !important;
   }
 
   .shad-form-item {
-    @apply flex h-[78px] w-[450px] flex-col justify-center rounded-xl border border-light-300 px-4 shadow-drop-1;
+    @apply flex h-[78px] flex-col justify-center rounded-xl border border-light-300 px-4 shadow-drop-1;
   }
   .shad-form-label {
     @apply text-light-100 pt-2 body-2 w-full !important;
