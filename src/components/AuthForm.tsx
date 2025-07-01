@@ -17,7 +17,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { createAccount } from "@/lib/actions/user.actions";
-import { useAuth } from "@/contexts/AuthContext";
+import { signInHandler } from "@/app/sign-in/actions";
 import OTPModal from "@/components/OTPModal";
 
 type FormType = "sign-in" | "sign-up";
@@ -36,8 +36,7 @@ const authFormSchema = (formType: FormType) => {
 const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const { login } = useAuth();
-  const [accountId, setAccountId] = useState(null);
+  const [accountId, setAccountId] = useState<string | null>(null);
 
   const formSchema = authFormSchema(type);
 
@@ -58,10 +57,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
     if (type === "sign-in") {
       try {
-        const success = await login(values.email, values.password || "");
-        if (!success) {
-          setErrorMessage("Invalid email or password.");
-        }
+        await signInHandler(values.email, values.password || "");
       } catch {
         setErrorMessage("Failed to sign in. Please try again.");
       } finally {

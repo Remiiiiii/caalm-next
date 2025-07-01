@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+description: Best practices for styling with Tailwind CSS
+globs: **/*.{ts,tsx,css}
+---
+
+- Use utility-first classes for rapid UI development.
+- Create custom themes using Tailwind's configuration file.
+
+- Utilize `@apply` for reusable styles in your CSS files.

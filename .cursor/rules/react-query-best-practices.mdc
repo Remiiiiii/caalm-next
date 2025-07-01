@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+description: Best practices for data fetching with React Query
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+- Use `useQuery` and `useMutation` hooks for data fetching and mutations.
+- Implement query invalidation to keep data fresh.
+
+- Utilize caching strategies to minimize unnecessary network requests.

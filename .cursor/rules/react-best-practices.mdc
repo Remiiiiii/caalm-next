@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+description: Best practices for React applications
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+- Use functional components and hooks for state management.
+- Implement React's Context API for global state management.
+- Optimize performance with `React.memo` and `useMemo` for expensive calculations.
+

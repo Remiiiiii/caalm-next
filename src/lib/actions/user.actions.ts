@@ -6,7 +6,7 @@ import { appwriteConfig } from "../appwrite/config";
 import { parseStringify } from "../utils";
 import { cookies } from "next/headers";
 
-const getUserByEmail = async (email: string) => {
+export const getUserByEmail = async (email: string) => {
   const { databases } = await createAdminClient();
   const result = await databases.listDocuments(
     appwriteConfig.databaseId,

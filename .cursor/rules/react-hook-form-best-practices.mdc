@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+description: Best practices for form handling with React Hook Form
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+- Use `useForm` to manage form state and validation.
+- Integrate with `zod` for schema validation.
+- Leverage `Controller` for custom components to maintain compatibility with React Hook Form.
+
