@@ -1,32 +1,32 @@
-"use client";
+'use client';
 
 import {
   Sheet,
   SheetContent,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
-import Image from "next/image";
-import { useState } from "react";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
-import { navItems } from "../../constants";
-import { cn } from "@/lib/utils";
-import { Button } from "./ui/button";
-import FileUploader from "./FileUploader";
+} from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
+import Image from 'next/image';
+import { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { navItems } from '../../constants';
+import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
+import FileUploader from './FileUploader';
 
 interface Props {
-  ownerId: string;
+  $id: string;
   accountId: string;
   fullName: string;
   avatar: string;
   email: string;
-  role: "executive" | "hr" | "manager";
+  role: 'executive' | 'hr' | 'manager';
 }
 
 const MobileNavigation = ({
-  ownerId,
+  $id: ownerId,
   accountId,
   fullName,
   avatar,
@@ -79,12 +79,12 @@ const MobileNavigation = ({
                 // Support both string and array for url
                 const urls = Array.isArray(url) ? url : [url];
                 const isActive = urls.some(
-                  (u) => pathname === u || pathname.startsWith(u + "/")
+                  (u) => pathname === u || pathname.startsWith(u + '/')
                 );
                 return (
                   <li
                     key={name}
-                    className={cn("mobile-nav-item", isActive && "shad-active")}
+                    className={cn('mobile-nav-item', isActive && 'shad-active')}
                   >
                     <Link
                       href={urls[0]}
@@ -96,8 +96,8 @@ const MobileNavigation = ({
                         width={24}
                         height={24}
                         className={cn(
-                          "nav-icon",
-                          isActive && "nav-icon-active"
+                          'nav-icon',
+                          isActive && 'nav-icon-active'
                         )}
                       />
                       <p>{name}</p>
@@ -113,7 +113,9 @@ const MobileNavigation = ({
             <Button
               type="submit"
               className="mobile-sign-out-button"
-              onClick={() => {}}
+              onClick={async () => {
+                await signOutUser();
+              }}
             >
               <Image
                 src="/assets/icons/logout.svg"

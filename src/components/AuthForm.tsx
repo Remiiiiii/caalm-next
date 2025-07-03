@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
@@ -12,21 +12,21 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { createAccount } from "@/lib/actions/user.actions";
-import { signInHandler } from "@/app/sign-in/actions";
-import OTPModal from "@/components/OTPModal";
+} from '@/components/ui/form';
+import { useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { createAccount, signInUser } from '@/lib/actions/user.actions';
+import { signInHandler } from '@/app/sign-in/actions';
+import OTPModal from '@/components/OTPModal';
 
-type FormType = "sign-in" | "sign-up";
+type FormType = 'sign-in' | 'sign-up';
 
 const authFormSchema = (formType: FormType) => {
   return z.object({
     email: z.string().email(),
     fullName:
-      formType === "sign-up"
+      formType === 'sign-up'
         ? z.string().min(2).max(50)
         : z.string().optional(),
     password: z.string().optional(),
@@ -35,7 +35,7 @@ const authFormSchema = (formType: FormType) => {
 
 const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState('');
   const [accountId, setAccountId] = useState<string | null>(null);
 
   const formSchema = authFormSchema(type);
@@ -44,35 +44,39 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: "",
-      email: "",
-      password: "",
+      fullName: '',
+      email: '',
+      password: '',
     },
   });
 
   // 2. Define a submit handler.
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    setErrorMessage("");
+    setErrorMessage('');
 
-    if (type === "sign-in") {
+    if (type === 'sign-in') {
       try {
-        await signInHandler(values.email, values.password || "");
+        await signInHandler(values.email || '');
       } catch {
-        setErrorMessage("Failed to sign in. Please try again.");
+        setErrorMessage('Failed to sign in. Please try again.');
       } finally {
         setIsLoading(false);
       }
     } else {
       try {
-        const accountId = await createAccount({
-          fullName: values.fullName || "",
-          email: values.email,
-        });
-        console.log("accountId:", accountId);
-        setAccountId(accountId);
+        const user =
+          type === 'sign-up'
+            ? await createAccount({
+                fullName: values.fullName || '',
+                email: values.email,
+              })
+            : await signInUser({ email: values.email });
+        console.log('accountId:', user.accountId);
+
+        setAccountId(user.accountId);
       } catch {
-        setErrorMessage("Failed to create an account. Please try again.");
+        setErrorMessage('Failed to create an account. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -84,9 +88,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="auth-form">
           <h1 className="form-title">
-            {type === "sign-in" ? "Sign In" : "Sign Up"}
+            {type === 'sign-in' ? 'Sign In' : 'Sign Up'}
           </h1>
-          {type === "sign-up" && (
+          {type === 'sign-up' && (
             <FormField
               control={form.control}
               name="fullName"
@@ -126,7 +130,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
               </FormItem>
             )}
           />
-          {type === "sign-in" && (
+          {type === 'sign-in' && (
             <FormField
               control={form.control}
               name="password"
@@ -153,7 +157,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
             className="form-submit-button"
             disabled={isLoading}
           >
-            {type === "sign-in" ? "Sign In" : "Sign Up"}
+            {type === 'sign-in' ? 'Sign In' : 'Sign Up'}
 
             {isLoading && (
               <Image
@@ -169,20 +173,20 @@ const AuthForm = ({ type }: { type: FormType }) => {
           {errorMessage && <p className="error-message">*{errorMessage}</p>}
           <div className="body-2 flex justify-center">
             <p className="text-light-100">
-              {type === "sign-in"
+              {type === 'sign-in'
                 ? "Don't have an account?"
-                : "Already have an account?"}
+                : 'Already have an account?'}
             </p>
             <Link
-              href={type === "sign-in" ? "/sign-up" : "sign-in"}
+              href={type === 'sign-in' ? '/sign-up' : 'sign-in'}
               className="ml-1 font-medium text-brand"
             >
-              {type === "sign-in" ? "Sign Up" : "Sign In"}
+              {type === 'sign-in' ? 'Sign Up' : 'Sign In'}
             </Link>
           </div>
         </form>
         {accountId && (
-          <OTPModal email={form.getValues("email")} accountId={accountId} />
+          <OTPModal email={form.getValues('email')} accountId={accountId} />
         )}
       </Form>
     </>
