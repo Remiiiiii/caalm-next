@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +11,25 @@ import {
   Calendar,
   TrendingUp,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  createInvitation,
+  listPendingInvitations,
+  revokeInvitation,
+} from "@/lib/actions/user.actions";
+
+// Add Invitation type
+interface Invitation {
+  $id: string;
+  name: string;
+  email: string;
+  role: string;
+  token: string;
+  expiresAt: string;
+  status: string;
+  revoked: boolean;
+  $createdAt: string;
+}
 
 const ExecutiveDashboard = () => {
   const stats = [
@@ -85,6 +106,67 @@ const ExecutiveDashboard = () => {
       resource: "Confidential Audit Files",
     },
   ];
+
+  // Invitation management state
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [inviteForm, setInviteForm] = useState({
+    name: "",
+    email: "",
+    role: "Member",
+  });
+  const [loading, setLoading] = useState(false);
+  const orgId = "TODO_ORG_ID"; // Replace with actual orgId from context or props
+  const adminName = "Executive"; // Replace with actual admin name
+  const [resendingToken, setResendingToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch pending invitations on mount
+    const fetchInvites = async () => {
+      const data = await listPendingInvitations({ orgId });
+      // Map Document[] to Invitation[]
+      setInvitations(data.map((inv: unknown) => inv as Invitation));
+    };
+    fetchInvites();
+  }, [orgId]);
+
+  const handleInviteChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setInviteForm({ ...inviteForm, [e.target.name]: e.target.value });
+  };
+
+  const handleInviteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    await createInvitation({
+      ...inviteForm,
+      orgId,
+      invitedBy: adminName,
+    });
+    // Refresh invitations
+    const data = await listPendingInvitations({ orgId });
+    setInvitations(data.map((inv: unknown) => inv as Invitation));
+    setInviteForm({ name: "", email: "", role: "Member" });
+    setLoading(false);
+  };
+
+  const handleRevoke = async (token: string) => {
+    await revokeInvitation({ token });
+    const data = await listPendingInvitations({ orgId });
+    setInvitations(data.map((inv: unknown) => inv as Invitation));
+  };
+
+  const resendInvitation = async () => {
+    // TODO: Implement actual email sending logic
+    // For now, just simulate a delay
+    return new Promise((resolve) => setTimeout(resolve, 1000));
+  };
+
+  const handleResend = async (token: string) => {
+    setResendingToken(token);
+    await resendInvitation();
+    setResendingToken(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -191,6 +273,108 @@ const ExecutiveDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Invitation Management Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Invite User</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="flex flex-col md:flex-row gap-4 items-center"
+            onSubmit={handleInviteSubmit}
+          >
+            <Input
+              name="name"
+              placeholder="Full Name"
+              value={inviteForm.name}
+              onChange={handleInviteChange}
+              required
+            />
+            <Input
+              name="email"
+              type="email"
+              placeholder="Email"
+              value={inviteForm.email}
+              onChange={handleInviteChange}
+              required
+            />
+            <select
+              name="role"
+              value={inviteForm.role}
+              onChange={handleInviteChange}
+              className="border rounded px-2 py-1"
+            >
+              <option value="Member">Member</option>
+              <option value="Manager">Manager</option>
+              <option value="HR">HR</option>
+            </select>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Inviting..." : "Send Invite"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pending Invitations</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <table className="w-full text-left">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Invited</th>
+                <th>Expires</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invitations.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center text-slate-light py-4">
+                    No pending invitations
+                  </td>
+                </tr>
+              ) : (
+                invitations.map((inv) => (
+                  <tr key={inv.$id}>
+                    <td>{inv.name}</td>
+                    <td>{inv.email}</td>
+                    <td>{inv.role}</td>
+                    <td>{new Date(inv.$createdAt).toLocaleDateString()}</td>
+                    <td>{new Date(inv.expiresAt).toLocaleDateString()}</td>
+                    <td>{inv.status}</td>
+                    <td className="space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRevoke(inv.token)}
+                      >
+                        Revoke
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleResend(inv.token)}
+                        disabled={resendingToken === inv.token}
+                      >
+                        {resendingToken === inv.token
+                          ? "Resending..."
+                          : "Resend"}
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
   );
 };
