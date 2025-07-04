@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Users,
   FileText,
@@ -10,13 +10,17 @@ import {
   CheckCircle,
   Calendar,
   TrendingUp,
-} from "lucide-react";
-import { Input } from "@/components/ui/input";
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import {
   createInvitation,
   listPendingInvitations,
   revokeInvitation,
-} from "@/lib/actions/user.actions";
+} from '@/lib/actions/user.actions';
+import dynamic from 'next/dynamic';
+const ClientDate = dynamic(() => import('@/components/ClientDate'), {
+  ssr: false,
+});
 
 // Add Invitation type
 interface Invitation {
@@ -34,89 +38,89 @@ interface Invitation {
 const ExecutiveDashboard = () => {
   const stats = [
     {
-      title: "Total Contracts",
-      value: "156",
+      title: 'Total Contracts',
+      value: '156',
       icon: FileText,
-      color: "text-blue-600",
+      color: 'text-blue-600',
     },
     {
-      title: "Expiring Soon",
-      value: "12",
+      title: 'Expiring Soon',
+      value: '12',
       icon: AlertTriangle,
-      color: "text-red-600",
+      color: 'text-red-600',
     },
     {
-      title: "Active Users",
-      value: "24",
+      title: 'Active Users',
+      value: '24',
       icon: Users,
-      color: "text-green-600",
+      color: 'text-green-600',
     },
     {
-      title: "Compliance Rate",
-      value: "94%",
+      title: 'Compliance Rate',
+      value: '94%',
       icon: CheckCircle,
-      color: "text-green-600",
+      color: 'text-green-600',
     },
   ];
 
   const recentActivity = [
     {
       id: 1,
-      action: "Contract renewal approved",
-      contract: "Federal IT Services Contract",
-      time: "2 hours ago",
+      action: 'Contract renewal approved',
+      contract: 'Federal IT Services Contract',
+      time: '2 hours ago',
     },
     {
       id: 2,
-      action: "New user registration",
-      user: "Alice Johnson - Accounting",
-      time: "4 hours ago",
+      action: 'New user registration',
+      user: 'Alice Johnson - Accounting',
+      time: '4 hours ago',
     },
     {
       id: 3,
-      action: "Audit document uploaded",
-      contract: "State Licensing Agreement",
-      time: "6 hours ago",
+      action: 'Audit document uploaded',
+      contract: 'State Licensing Agreement',
+      time: '6 hours ago',
     },
     {
       id: 4,
-      action: "Deadline alert triggered",
-      contract: "Municipal Services Contract",
-      time: "1 day ago",
+      action: 'Deadline alert triggered',
+      contract: 'Municipal Services Contract',
+      time: '1 day ago',
     },
   ];
 
   const pendingApprovals = [
     {
       id: 1,
-      type: "User Registration",
-      requester: "David Wilson - Operations",
-      department: "Operations",
+      type: 'User Registration',
+      requester: 'David Wilson - Operations',
+      department: 'Operations',
     },
     {
       id: 2,
-      type: "Contract Proposal",
-      title: "New Vendor Agreement",
-      amount: "$125,000",
+      type: 'Contract Proposal',
+      title: 'New Vendor Agreement',
+      amount: '$125,000',
     },
     {
       id: 3,
-      type: "Document Access",
-      requester: "Emma Davis - Legal",
-      resource: "Confidential Audit Files",
+      type: 'Document Access',
+      requester: 'Emma Davis - Legal',
+      resource: 'Confidential Audit Files',
     },
   ];
 
   // Invitation management state
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [inviteForm, setInviteForm] = useState({
-    name: "",
-    email: "",
-    role: "Member",
+    name: '',
+    email: '',
+    role: 'Member',
   });
   const [loading, setLoading] = useState(false);
-  const orgId = "TODO_ORG_ID"; // Replace with actual orgId from context or props
-  const adminName = "Executive"; // Replace with actual admin name
+  const orgId = 'TODO_ORG_ID'; // Replace with actual orgId from context or props
+  const adminName = 'Executive'; // Replace with actual admin name
   const [resendingToken, setResendingToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -146,7 +150,7 @@ const ExecutiveDashboard = () => {
     // Refresh invitations
     const data = await listPendingInvitations({ orgId });
     setInvitations(data.map((inv: unknown) => inv as Invitation));
-    setInviteForm({ name: "", email: "", role: "Member" });
+    setInviteForm({ name: '', email: '', role: 'Member' });
     setLoading(false);
   };
 
@@ -197,7 +201,7 @@ const ExecutiveDashboard = () => {
                   <p className="text-3xl font-bold text-navy">{stat.value}</p>
                 </div>
                 <stat.icon
-                  className={`h-8 w-8 ${stat.color.replace("text-", "text-")}`}
+                  className={`h-8 w-8 ${stat.color.replace('text-', 'text-')}`}
                 />
               </div>
             </CardContent>
@@ -310,7 +314,7 @@ const ExecutiveDashboard = () => {
               <option value="HR">HR</option>
             </select>
             <Button type="submit" disabled={loading}>
-              {loading ? "Inviting..." : "Send Invite"}
+              {loading ? 'Inviting...' : 'Send Invite'}
             </Button>
           </form>
         </CardContent>
@@ -346,8 +350,12 @@ const ExecutiveDashboard = () => {
                     <td>{inv.name}</td>
                     <td>{inv.email}</td>
                     <td>{inv.role}</td>
-                    <td>{new Date(inv.$createdAt).toLocaleDateString()}</td>
-                    <td>{new Date(inv.expiresAt).toLocaleDateString()}</td>
+                    <td>
+                      <ClientDate dateString={inv.$createdAt} />
+                    </td>
+                    <td>
+                      <ClientDate dateString={inv.expiresAt} />
+                    </td>
                     <td>{inv.status}</td>
                     <td className="space-x-2">
                       <Button
@@ -364,8 +372,8 @@ const ExecutiveDashboard = () => {
                         disabled={resendingToken === inv.token}
                       >
                         {resendingToken === inv.token
-                          ? "Resending..."
-                          : "Resend"}
+                          ? 'Resending...'
+                          : 'Resend'}
                       </Button>
                     </td>
                   </tr>

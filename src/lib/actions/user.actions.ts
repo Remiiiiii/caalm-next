@@ -180,7 +180,28 @@ export const createInvitation = async ({
     ID.unique(),
     { email, orgId, role, name, token, expiresAt, status, revoked, invitedBy }
   );
-  // TODO: send invitation email with link containing token
+  const inviteLink = `http://localhost:3000/invite/accept?token=${token}`;
+  try {
+    const response = await fetch(
+      'https://cloud.appwrite.io/v1/functions/6865b2c900296bb59c3b/executions',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: email,
+          subject: "You're invited to join CAALM Solutions",
+          text: `You have been invited! Click the link to join: ${inviteLink}`,
+          html: `<p>You have been invited! Click <a href="${inviteLink}">here</a> to join.</p>`,
+        }),
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to send invite email: ${response.statusText}`);
+    }
+  } catch (err) {
+    console.error('Error sending invite email:', err);
+    throw err;
+  }
   return { email, token, expiresAt };
 };
 
