@@ -49,65 +49,54 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
   }
 };
 
-export const createAccount = async ({
+export const createAccount = async ({ email }: { email: string }) => {
+  // Only send OTP, do not create Auth user or messaging target yet
+  await sendEmailOTP({ email });
+  return { sent: true };
+};
+
+// This function should be called only after OTP is verified
+export const finalizeAccountAfterEmailVerification = async ({
   fullName,
   email,
 }: {
   fullName: string;
   email: string;
 }) => {
-  const existingUser = (await getUserByEmail(email)) as AppUser | null;
-
-  let accountId: string;
-  if (!existingUser) {
-    const maybeAccountId = await sendEmailOTP({ email });
-    if (!maybeAccountId) throw new Error('Failed to send email OTP');
-    accountId = maybeAccountId;
-  } else {
-    accountId = existingUser.accountId;
-  }
-
-  // Always ensure a document exists in the users collection
-  if (!existingUser) {
-    const { databases } = await createAdminClient();
-    await databases.createDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      ID.unique(),
-      {
-        fullName,
-        email,
-        avatar: avatarPlaceholderUrl,
-        accountId,
-        role: '',
-      }
-    );
-    await addUserEmailTarget(accountId, email);
-  } else {
-    // If user exists in Auth but not in users collection, create the document
-    const { databases } = await createAdminClient();
-    const userDoc = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('email', email)]
-    );
-    if (userDoc.total === 0) {
-      await databases.createDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.usersCollectionId,
-        ID.unique(),
-        {
-          fullName,
-          email,
-          avatar: avatarPlaceholderUrl,
-          accountId,
-          role: '',
-        }
-      );
-      await addUserEmailTarget(accountId, email);
+  // 1. Create Auth user if not exists, or update name if missing
+  const client = new sdk.Client()
+    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+    .setKey(process.env.NEXT_APPWRITE_KEY!);
+  const users = new sdk.Users(client);
+  // Check if user already exists in Auth
+  const userList = await users.list([sdk.Query.equal('email', email)]);
+  let authUser;
+  if (userList.total > 0) {
+    authUser = userList.users[0];
+    // Update name if missing
+    if ((!authUser.name || authUser.name === '') && fullName) {
+      await users.updateName(authUser.$id, fullName);
     }
+  } else {
+    const randomPassword = crypto.randomBytes(16).toString('hex');
+    authUser = await users.create(
+      sdk.ID.unique(),
+      email,
+      undefined,
+      randomPassword,
+      fullName
+    );
   }
+  const accountId = authUser.$id;
 
+  // 2. After OTP verification, update email verification status
+  await users.updateEmailVerification(accountId, true);
+
+  // 3. Add messaging target so user can be added as a subscriber manually
+  await addUserEmailTarget(accountId, email);
+
+  // Do NOT create users collection document here
   return { accountId };
 };
 
@@ -273,14 +262,7 @@ export const createInvitation = async ({
   );
 
   // 2. Send invite link email (using Appwrite Messaging API)
-  const client = new sdk.Client()
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-    .setKey(process.env.NEXT_APPWRITE_KEY!);
-
-  // Find or create a messaging target for the email
-  // (You may need to adjust this depending on your Appwrite Messaging setup)
-  const messaging = new sdk.Messaging(client);
+  const { messaging } = await createAdminClient();
 
   // Compose invite link
   const inviteLink = `http://localhost:3000/invite/accept?token=${token}`;
@@ -322,42 +304,35 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   if (new Date(invite.expiresAt) < new Date())
     throw new Error('Invitation expired');
 
-  // 1. Check if user exists in your users collection
+  // 1. Find Auth user by email
+  const client = new sdk.Client()
+    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+    .setKey(process.env.NEXT_APPWRITE_KEY!);
+  const users = new sdk.Users(client);
+  const userList = await users.list([sdk.Query.equal('email', invite.email)]);
+  const authUser = userList.total > 0 ? userList.users[0] : null;
+  if (!authUser) throw new Error('User not found in Auth');
+  const accountId = authUser.$id;
+
+  // 2. Create users collection document with role if not exists
   let user = await getUserByEmail(invite.email);
-
-  // 2. If not, create Auth user and users collection document
   if (!user) {
-    // Optionally, create the Auth user here if you want to pre-create them
-    // Otherwise, just create the users collection document
-    const { databases } = await createAdminClient();
-    const roleToAssign = allowedRoles.includes(invite.role)
-      ? invite.role
-      : 'member'; // fallback or throw
-
-    // Optionally, throw an error if invalid:
-    if (!allowedRoles.includes(invite.role)) {
-      throw new Error(
-        `Invalid role: ${invite.role}. Must be one of ${allowedRoles.join(
-          ', '
-        )}`
-      );
-    }
-
+    const normalizedRole = invite.role.toLowerCase();
     await databases.createDocument(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
-      ID.unique(),
+      sdk.ID.unique(),
       {
         fullName: invite.name,
         email: invite.email,
         avatar: avatarPlaceholderUrl,
-        accountId: '', // Fill this after OTP verification if needed
-        role: roleToAssign, // Now guaranteed to be valid
+        accountId,
+        role: normalizedRole,
       }
     );
     user = await getUserByEmail(invite.email);
   }
-
   if (!user) throw new Error('User creation failed');
 
   // 3. Mark invitation as accepted
@@ -368,8 +343,13 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     { status: 'accepted' }
   );
 
-  // 4. Return info for frontend to proceed to sign-in/OTP
-  return { success: true, email: invite.email, accountId: user.accountId };
+  // 4. Return info for frontend to redirect to dashboard
+  return {
+    success: true,
+    email: invite.email,
+    accountId: user.accountId,
+    role: user.role,
+  };
 };
 
 export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
@@ -428,4 +408,14 @@ export const addUserEmailTarget = async (userId: string, email: string) => {
     console.error('Error creating email target:', error);
     throw error;
   }
+};
+
+export const getInvitationByToken = async (token: string) => {
+  const { databases } = await createAdminClient();
+  const result = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    'invitations',
+    [Query.equal('token', token)]
+  );
+  return result.total > 0 ? result.documents[0] : null;
 };

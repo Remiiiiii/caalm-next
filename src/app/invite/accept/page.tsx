@@ -2,47 +2,50 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { acceptInvitation } from '@/lib/actions/user.actions'; // Your backend action
 import OTPModal from '@/components/OTPModal';
 
 export default function AcceptInvitePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  const [email, setEmail] = useState('');
-  const [accountId, setAccountId] = useState<string | null>(null);
+  const email = searchParams.get('email');
+  const accountId = searchParams.get('accountId');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!token) {
-      setError('No invitation token found.');
+      setError('No invitation token provided.');
       return;
     }
-    // Accept the invitation and create the user if needed
-    (async () => {
-      try {
-        const res = await acceptInvitation({ token });
-        if (res && res.email && res.accountId) {
-          setEmail(res.email);
-          setAccountId(res.accountId);
+    fetch(`/api/invite/accept?token=${token}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success) {
+          // Redirect to dashboard based on role
+          if (data.role === 'executive')
+            window.location.href = '/dashboard/executive';
+          else if (data.role === 'manager')
+            window.location.href = '/dashboard/manager';
+          else if (data.role === 'hr') window.location.href = '/dashboard/hr';
+          else window.location.href = '/dashboard';
         } else {
-          setError('Invalid or expired invitation.');
+          setError(data?.error || 'Failed to accept invitation.');
         }
-      } catch {
-        setError('Failed to accept invitation.');
-      }
-    })();
+      })
+      .catch(() => {
+        setError('Invalid or expired invitation.');
+      });
   }, [token]);
 
-  if (error) return <div>{error}</div>;
-  if (!accountId || !email) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  if (!email || !accountId) return <div>Loading...</div>;
 
   return (
     <OTPModal
       email={email}
       accountId={accountId}
       onSuccess={() => {
-        // After OTP verification, redirect to sign-in
         router.push('/sign-in');
       }}
     />

@@ -24,7 +24,7 @@ const OTPModal = ({
   email,
   onSuccess,
 }: {
-  accountId: string;
+  accountId?: string;
   email: string;
   onSuccess: () => void;
 }) => {
@@ -36,11 +36,16 @@ const OTPModal = ({
   const handleVerify = async () => {
     setIsLoading(true);
     try {
-      const res = await verifySecret({ accountId, password: otp });
-      if (res?.sessionId) {
-        onSuccess();
+      if (accountId) {
+        const res = await verifySecret({ accountId, password: otp });
+        if (res?.sessionId) {
+          onSuccess();
+        } else {
+          setError('Invalid OTP. Try again.');
+        }
       } else {
-        setError('Invalid OTP. Try again.');
+        // For sign-up, just call onSuccess (actual verification handled in finalizeAccountAfterEmailVerification)
+        onSuccess();
       }
     } catch (error) {
       console.error('Failed to verify OTP', error);

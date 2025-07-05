@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import React from "react";
-import Image from "next/image";
-import { avatarPlaceholderUrl, navItems } from "../../constants";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import Link from 'next/link';
+import React from 'react';
+import Image from 'next/image';
+import { avatarPlaceholderUrl, navItems } from '../../constants';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 interface Props {
   fullName: string;
   avatar: string;
   email: string;
-  role: "executive" | "hr" | "manager";
+  role: 'executive' | 'hr' | 'manager';
 }
 
 const Sidebar = ({ fullName, avatar, email, role }: Props) => {
@@ -20,7 +20,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
     <aside className="sidebar">
       <Link href="/">
         <Image
-          src="/assets/images/color-star.png"
+          src="/assets/images/logo.svg"
           alt="logo"
           width={75}
           height={75}
@@ -28,7 +28,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
         />
 
         <Image
-          src="/assets/images/color-star.png"
+          src="/assets/images/logo.svg"
           alt="logo"
           width={50}
           height={50}
@@ -41,12 +41,12 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
             // Support both string and array for url
             const urls = Array.isArray(url) ? url : [url];
             const isActive = urls.some(
-              (u) => pathname === u || pathname.startsWith(u + "/")
+              (u) => pathname === u || pathname.startsWith(u + '/')
             );
             return (
               <li
                 key={name}
-                className={cn("sidebar-nav-item", isActive && "shad-active")}
+                className={cn('sidebar-nav-item', isActive && 'shad-active')}
               >
                 <Link
                   href={urls[0]}
@@ -57,7 +57,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                     alt={name}
                     width={24}
                     height={24}
-                    className={cn("nav-icon", isActive && "nav-icon-active")}
+                    className={cn('nav-icon', isActive && 'nav-icon-active')}
                   />
                   <p className="hidden lg:block">{name}</p>
                 </Link>

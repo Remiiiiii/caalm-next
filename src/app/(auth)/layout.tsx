@@ -1,5 +1,5 @@
-import React from "react";
-import Image from "next/image";
+import React from 'react';
+import Image from 'next/image';
 
 const layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -34,7 +34,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
       <section className="flex flex-1 flex-col items-center lg:justify-center p-4 py-10 bg-white lg:p-10 lg:py-10">
         <div className="mb-16 lg:hidden">
           <Image
-            src="/assets/images/color-star-3-48.png"
+            src="/assets/images/logo.svg"
             alt="logo"
             width={50}
             height={50}

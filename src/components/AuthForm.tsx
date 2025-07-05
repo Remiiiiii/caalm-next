@@ -19,7 +19,8 @@ import Link from 'next/link';
 import {
   createAccount,
   signInUser,
-  getCurrentUser,
+  finalizeAccountAfterEmailVerification,
+  getUserByEmail,
 } from '@/lib/actions/user.actions';
 import OTPModal from '@/components/OTPModal';
 import { useRouter } from 'next/navigation';
@@ -40,8 +41,12 @@ const authFormSchema = (formType: FormType) => {
 const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [accountId, setAccountId] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState<string | null>(null); // Only used for sign-in OTP
   const [success, setSuccess] = useState(false);
+  const [pendingSignup, setPendingSignup] = useState<{
+    email: string;
+    fullName: string;
+  } | null>(null);
 
   const formSchema = authFormSchema(type);
 
@@ -79,16 +84,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
       }
     } else {
       try {
-        const user =
-          type === 'sign-up'
-            ? await createAccount({
-                fullName: values.fullName || '',
-                email: values.email,
-              })
-            : await signInUser({ email: values.email });
-        console.log('accountId:', user.accountId);
-
-        setAccountId(user.accountId);
+        await createAccount({ email: values.email });
+        setPendingSignup({
+          email: values.email,
+          fullName: values.fullName || '',
+        });
       } catch {
         setErrorMessage('Failed to create an account. Please try again.');
       } finally {
@@ -182,18 +182,31 @@ const AuthForm = ({ type }: { type: FormType }) => {
             </Link>
           </div>
         </form>
-        {accountId && (
+        {type === 'sign-in' && accountId && (
           <OTPModal
             email={form.getValues('email')}
             accountId={accountId}
             onSuccess={async () => {
-              const user = await getCurrentUser();
+              // After successful OTP verification for sign-in, fetch user and redirect by role
+              const user = await getUserByEmail(form.getValues('email'));
               if (user?.role === 'executive')
                 router.push('/dashboard/executive');
               else if (user?.role === 'manager')
                 router.push('/dashboard/manager');
               else if (user?.role === 'hr') router.push('/dashboard/hr');
               else router.push('/dashboard');
+            }}
+          />
+        )}
+        {type === 'sign-up' && pendingSignup && (
+          <OTPModal
+            email={pendingSignup.email}
+            onSuccess={async () => {
+              await finalizeAccountAfterEmailVerification({
+                fullName: pendingSignup.fullName,
+                email: pendingSignup.email,
+              });
+              router.push('/?signup=success');
             }}
           />
         )}

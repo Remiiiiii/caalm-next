@@ -116,7 +116,7 @@ const ExecutiveDashboard = () => {
   const [inviteForm, setInviteForm] = useState({
     name: '',
     email: '',
-    role: 'Member',
+    role: 'manager',
   });
   const [loading, setLoading] = useState(false);
   const orgId = 'TODO_ORG_ID'; // Replace with actual orgId from context or props
@@ -150,7 +150,7 @@ const ExecutiveDashboard = () => {
     // Refresh invitations
     const data = await listPendingInvitations({ orgId });
     setInvitations(data.map((inv: unknown) => inv as Invitation));
-    setInviteForm({ name: '', email: '', role: 'Member' });
+    setInviteForm({ name: '', email: '', role: 'executive' });
     setLoading(false);
   };
 
@@ -309,9 +309,9 @@ const ExecutiveDashboard = () => {
               onChange={handleInviteChange}
               className="border rounded px-2 py-1"
             >
-              <option value="Member">Member</option>
-              <option value="Manager">Manager</option>
-              <option value="HR">HR</option>
+              <option value="executive">Executive</option>
+              <option value="manager">Manager</option>
+              <option value="hr">HR</option>
             </select>
             <Button type="submit" disabled={loading}>
               {loading ? 'Inviting...' : 'Send Invite'}
