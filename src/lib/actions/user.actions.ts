@@ -8,6 +8,16 @@ import { cookies } from 'next/headers';
 import { avatarPlaceholderUrl } from '../../../constants';
 import { redirect } from 'next/navigation';
 import crypto from 'crypto';
+import * as sdk from 'node-appwrite';
+
+type AppUser = {
+  fullName: string;
+  email: string;
+  avatar: string;
+  accountId: string;
+  role: string;
+  // add other fields as needed
+};
 
 export const getUserByEmail = async (email: string) => {
   const { databases } = await createAdminClient();
@@ -46,15 +56,20 @@ export const createAccount = async ({
   fullName: string;
   email: string;
 }) => {
-  const existingUser = await getUserByEmail(email);
+  const existingUser = (await getUserByEmail(email)) as AppUser | null;
 
-  const accountId = await sendEmailOTP({ email });
-  if (!accountId) {
-    throw new Error('Failed to send email OTP');
+  let accountId: string;
+  if (!existingUser) {
+    const maybeAccountId = await sendEmailOTP({ email });
+    if (!maybeAccountId) throw new Error('Failed to send email OTP');
+    accountId = maybeAccountId;
+  } else {
+    accountId = existingUser.accountId;
   }
+
+  // Always ensure a document exists in the users collection
   if (!existingUser) {
     const { databases } = await createAdminClient();
-
     await databases.createDocument(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
@@ -64,8 +79,33 @@ export const createAccount = async ({
         email,
         avatar: avatarPlaceholderUrl,
         accountId,
+        role: '',
       }
     );
+    await addUserEmailTarget(accountId, email);
+  } else {
+    // If user exists in Auth but not in users collection, create the document
+    const { databases } = await createAdminClient();
+    const userDoc = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      [Query.equal('email', email)]
+    );
+    if (userDoc.total === 0) {
+      await databases.createDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.usersCollectionId,
+        ID.unique(),
+        {
+          fullName,
+          email,
+          avatar: avatarPlaceholderUrl,
+          accountId,
+          role: '',
+        }
+      );
+      await addUserEmailTarget(accountId, email);
+    }
   }
 
   return { accountId };
@@ -122,16 +162,44 @@ export const signOutUser = async () => {
 
 export const signInUser = async ({ email }: { email: string }) => {
   try {
-    const existingUser = await getUserByEmail(email);
-
+    const existingUser = (await getUserByEmail(email)) as AppUser | null;
     if (existingUser) {
       await sendEmailOTP({ email });
-      return parseStringify({ accountId: existingUser.accountId });
+      return { accountId: existingUser.accountId };
     }
 
-    return parseStringify({ accountId: null, error: 'User not found' });
-  } catch (error) {
-    handleError(error, 'Failed to sign in user');
+    // Try to find the user in Appwrite Auth (pseudo-code, depends on your SDK)
+    const client = new sdk.Client()
+      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+      .setKey(process.env.NEXT_APPWRITE_KEY!);
+
+    const users = new sdk.Users(client);
+    const userList = await users.list([sdk.Query.equal('email', email)]);
+    const authUser = userList.total > 0 ? userList.users[0] : null;
+
+    if (authUser) {
+      // Create the missing users collection document
+      const { databases } = await createAdminClient();
+      await databases.createDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.usersCollectionId,
+        ID.unique(),
+        {
+          fullName: authUser.name || '',
+          email: authUser.email,
+          avatar: avatarPlaceholderUrl,
+          accountId: authUser.$id,
+          role: '',
+        }
+      );
+      await sendEmailOTP({ email });
+      return { accountId: authUser.$id };
+    }
+
+    return { accountId: null, error: 'User not found' };
+  } catch {
+    return { accountId: null, error: 'Failed to sign in user' };
   }
 };
 
@@ -159,6 +227,10 @@ interface ListPendingInvitationsParams {
   orgId: string;
 }
 
+const allowedRoles = ['executive', 'hr', 'manager'] as const;
+
+type AllowedRole = (typeof allowedRoles)[number];
+
 export const createInvitation = async ({
   email,
   orgId,
@@ -174,34 +246,65 @@ export const createInvitation = async ({
   ).toISOString();
   const status = 'pending';
   const revoked = false;
+
+  const normalizedRole = role.toLowerCase();
+  if (!allowedRoles.includes(normalizedRole as AllowedRole)) {
+    throw new Error(
+      `Invalid role: ${role}. Must be one of ${allowedRoles.join(', ')}`
+    );
+  }
+
+  // 1. Create invitation document
   await databases.createDocument(
     appwriteConfig.databaseId,
     INVITATIONS_COLLECTION,
     ID.unique(),
-    { email, orgId, role, name, token, expiresAt, status, revoked, invitedBy }
-  );
-  const inviteLink = `http://localhost:3000/invite/accept?token=${token}`;
-  try {
-    const response = await fetch(
-      'https://cloud.appwrite.io/v1/functions/6865b2c900296bb59c3b/executions',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: email,
-          subject: "You're invited to join CAALM Solutions",
-          text: `You have been invited! Click the link to join: ${inviteLink}`,
-          html: `<p>You have been invited! Click <a href="${inviteLink}">here</a> to join.</p>`,
-        }),
-      }
-    );
-    if (!response.ok) {
-      throw new Error(`Failed to send invite email: ${response.statusText}`);
+    {
+      email,
+      orgId,
+      role: normalizedRole,
+      name,
+      token,
+      expiresAt,
+      status,
+      revoked,
+      invitedBy,
     }
-  } catch (err) {
-    console.error('Error sending invite email:', err);
-    throw err;
+  );
+
+  // 2. Send invite link email (using Appwrite Messaging API)
+  const client = new sdk.Client()
+    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+    .setKey(process.env.NEXT_APPWRITE_KEY!);
+
+  // Find or create a messaging target for the email
+  // (You may need to adjust this depending on your Appwrite Messaging setup)
+  const messaging = new sdk.Messaging(client);
+
+  // Compose invite link
+  const inviteLink = `http://localhost:3000/invite/accept?token=${token}`;
+
+  // Send the invite email
+  try {
+    await messaging.createEmail(
+      ID.unique(),
+      "You're invited to join CAALM Solutions",
+      `You have been invited! Click the link to join: <a href="${inviteLink}">${inviteLink}</a>`,
+      ['68659c97003b73e38fcb'], // topics
+      [], // targets
+      [],
+      [],
+      [],
+      [],
+      false,
+      true
+    );
+  } catch (error) {
+    console.error('Failed to send invite email:', error);
+    throw error;
   }
+
   return { email, token, expiresAt };
 };
 
@@ -218,21 +321,55 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     throw new Error('Invitation is not valid');
   if (new Date(invite.expiresAt) < new Date())
     throw new Error('Invitation expired');
-  // Check if user exists
-  const user = await getUserByEmail(invite.email);
+
+  // 1. Check if user exists in your users collection
+  let user = await getUserByEmail(invite.email);
+
+  // 2. If not, create Auth user and users collection document
   if (!user) {
-    // Create user (reuse createAccount logic, but pass name/email)
-    await createAccount({ fullName: invite.name, email: invite.email });
-    // Optionally, set password here if needed
+    // Optionally, create the Auth user here if you want to pre-create them
+    // Otherwise, just create the users collection document
+    const { databases } = await createAdminClient();
+    const roleToAssign = allowedRoles.includes(invite.role)
+      ? invite.role
+      : 'member'; // fallback or throw
+
+    // Optionally, throw an error if invalid:
+    if (!allowedRoles.includes(invite.role)) {
+      throw new Error(
+        `Invalid role: ${invite.role}. Must be one of ${allowedRoles.join(
+          ', '
+        )}`
+      );
+    }
+
+    await databases.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      ID.unique(),
+      {
+        fullName: invite.name,
+        email: invite.email,
+        avatar: avatarPlaceholderUrl,
+        accountId: '', // Fill this after OTP verification if needed
+        role: roleToAssign, // Now guaranteed to be valid
+      }
+    );
+    user = await getUserByEmail(invite.email);
   }
-  // Mark invitation as accepted
+
+  if (!user) throw new Error('User creation failed');
+
+  // 3. Mark invitation as accepted
   await databases.updateDocument(
     appwriteConfig.databaseId,
     INVITATIONS_COLLECTION,
     invite.$id,
     { status: 'accepted' }
   );
-  return { success: true };
+
+  // 4. Return info for frontend to proceed to sign-in/OTP
+  return { success: true, email: invite.email, accountId: user.accountId };
 };
 
 export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
@@ -267,4 +404,28 @@ export const listPendingInvitations = async ({
     ]
   );
   return result.documents;
+};
+
+export const addUserEmailTarget = async (userId: string, email: string) => {
+  const client = new sdk.Client()
+    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+    .setKey(process.env.NEXT_APPWRITE_KEY!);
+
+  const users = new sdk.Users(client);
+  const newUserId = userId; // The ID of the user you want to add the target to
+  const targetType = sdk.MessagingProviderType.Email; // The type of target you are adding
+
+  try {
+    const response = await users.createTarget(
+      newUserId,
+      ID.unique(),
+      targetType,
+      email
+    );
+    return response;
+  } catch (error) {
+    console.error('Error creating email target:', error);
+    throw error;
+  }
 };

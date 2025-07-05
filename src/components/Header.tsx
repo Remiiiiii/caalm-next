@@ -1,11 +1,11 @@
-"use client";
-import { Button } from "@/components/ui/button";
-import Image from "next/image";
-import { useEffect, useState, useRef } from "react";
-import Link from "next/link";
-import AOS from "aos";
-import "aos/dist/aos.css";
-import clsx from "clsx";
+'use client';
+import { Button } from '@/components/ui/button';
+import Image from 'next/image';
+import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+import clsx from 'clsx';
 
 export const Header = () => {
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -24,10 +24,10 @@ export const Header = () => {
       setHasScrolled(window.scrollY > 32);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
@@ -39,34 +39,34 @@ export const Header = () => {
         setIsOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, [isOpen]);
 
   return (
     <header
       className={clsx(
-        "flex items-center fixed top-0 left-0 right-0 z-50 w-full bg-white transition-all duration-500",
+        'flex items-center fixed top-0 left-0 right-0 z-50 w-full bg-white transition-all duration-500',
         hasScrolled
-          ? "py-2 h-14 sm:h-16 bg-white/60 backdrop-blur-lg border border-white/30 shadow-lg"
-          : "py-3 h-16 sm:py-4 sm:h-20"
+          ? 'py-2 h-14 sm:h-16 bg-white/60 backdrop-blur-lg border border-white/30 shadow-lg'
+          : 'py-3 h-16 sm:py-4 sm:h-20'
       )}
     >
       <div
         className={clsx(
-          "flex items-center justify-between w-full px-3 sm:px-4 md:px-6 transition-all duration-500 container mx-auto",
-          hasScrolled ? "h-14 sm:h-16" : "h-16 sm:h-20"
+          'flex items-center justify-between w-full px-3 sm:px-4 md:px-6 transition-all duration-500 container mx-auto',
+          hasScrolled ? 'h-14 sm:h-16' : 'h-16 sm:h-20'
         )}
       >
         <div className="flex items-center ">
           <Image
-            src="/assets/images/color-star.png"
+            src="/assets/images/logo.svg"
             alt="Logo"
-            width={32}
-            height={32}
-            className="h-7 w-7 sm:h-8 sm:w-8"
+            width={50}
+            height={50}
+            className="h-12 w-12 sm:h-14 sm:w-14"
           />
-          <span className="ml-2 text-lg sm:text-xl font-bold text-navy">
+          <span className="ml-1 text-lg sm:text-xl font-bold text-navy">
             Caalm
           </span>
         </div>
@@ -132,21 +132,21 @@ export const Header = () => {
         <button
           className="flex flex-col items-center justify-center border-2 rounded-full lg:hidden z-20 w-10 h-10 border-s4/25 ml-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors bg-white"
           onClick={() => setIsOpen((prevState) => !prevState)}
-          aria-label={isOpen ? "Close menu" : "Open menu"}
+          aria-label={isOpen ? 'Close menu' : 'Open menu'}
         >
           <span
             className={`block w-6 h-0.5 bg-navy rounded transition-all duration-300 ease-in-out ${
-              isOpen ? "rotate-45 translate-y-1.5" : "-translate-y-1.5"
+              isOpen ? 'rotate-45 translate-y-1.5' : '-translate-y-1.5'
             }`}
           ></span>
           <span
             className={`block w-6 h-0.5 bg-navy rounded transition-all duration-300 ease-in-out my-1 ${
-              isOpen ? "opacity-0" : "opacity-100"
+              isOpen ? 'opacity-0' : 'opacity-100'
             }`}
           ></span>
           <span
             className={`block w-6 h-0.5 bg-navy rounded transition-all duration-300 ease-in-out ${
-              isOpen ? "-rotate-45 -translate-y-1.5" : "translate-y-1.5"
+              isOpen ? '-rotate-45 -translate-y-1.5' : 'translate-y-1.5'
             }`}
           ></span>
         </button>

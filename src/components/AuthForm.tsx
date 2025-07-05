@@ -16,9 +16,13 @@ import {
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { createAccount, signInUser } from '@/lib/actions/user.actions';
-import { signInHandler } from '@/app/sign-in/actions';
+import {
+  createAccount,
+  signInUser,
+  getCurrentUser,
+} from '@/lib/actions/user.actions';
 import OTPModal from '@/components/OTPModal';
+import { useRouter } from 'next/navigation';
 
 type FormType = 'sign-in' | 'sign-up';
 
@@ -37,6 +41,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const formSchema = authFormSchema(type);
 
@@ -50,14 +55,23 @@ const AuthForm = ({ type }: { type: FormType }) => {
     },
   });
 
+  const router = useRouter();
+
   // 2. Define a submit handler.
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     setErrorMessage('');
+    setSuccess(false);
 
     if (type === 'sign-in') {
       try {
-        await signInHandler(values.email || '');
+        const res = await signInUser({ email: values.email });
+        if (res?.accountId) {
+          setSuccess(true);
+          setAccountId(res.accountId);
+        } else {
+          setErrorMessage(res?.error || 'Failed to sign in. Please try again.');
+        }
       } catch {
         setErrorMessage('Failed to sign in. Please try again.');
       } finally {
@@ -130,28 +144,6 @@ const AuthForm = ({ type }: { type: FormType }) => {
               </FormItem>
             )}
           />
-          {type === 'sign-in' && (
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="shad-form-item">
-                    <FormLabel className="shad-form-label">Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter your password"
-                        {...field}
-                        className="shad-input"
-                      />
-                    </FormControl>
-                  </div>
-                  <FormMessage className="shad-form-message" />
-                </FormItem>
-              )}
-            />
-          )}
           <Button
             type="submit"
             className="form-submit-button"
@@ -171,6 +163,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
           </Button>
 
           {errorMessage && <p className="error-message">*{errorMessage}</p>}
+          {success && (
+            <p className="text-green-500 text-center">
+              Check your email for a login link or OTP.
+            </p>
+          )}
           <div className="body-2 flex justify-center">
             <p className="text-light-100">
               {type === 'sign-in'
@@ -186,7 +183,19 @@ const AuthForm = ({ type }: { type: FormType }) => {
           </div>
         </form>
         {accountId && (
-          <OTPModal email={form.getValues('email')} accountId={accountId} />
+          <OTPModal
+            email={form.getValues('email')}
+            accountId={accountId}
+            onSuccess={async () => {
+              const user = await getCurrentUser();
+              if (user?.role === 'executive')
+                router.push('/dashboard/executive');
+              else if (user?.role === 'manager')
+                router.push('/dashboard/manager');
+              else if (user?.role === 'hr') router.push('/dashboard/hr');
+              else router.push('/dashboard');
+            }}
+          />
         )}
       </Form>
     </>
