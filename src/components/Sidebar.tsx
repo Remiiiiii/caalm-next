@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import React from 'react';
 import Image from 'next/image';
-import { avatarPlaceholderUrl, navItems } from '../../constants';
+import { navItems } from '../../constants';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,7 @@ interface Props {
   role: 'executive' | 'hr' | 'manager';
 }
 
-const Sidebar = ({ fullName, avatar, email, role }: Props) => {
+const Sidebar = ({ fullName, avatar, email }: Props) => {
   const pathname = usePathname();
   return (
     <aside className="sidebar">
