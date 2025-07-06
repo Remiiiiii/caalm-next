@@ -6,6 +6,7 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Models, Query } from 'node-appwrite';
 import { constructFileUrl, getFileType, parseStringify } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
+import { getCurrentUser } from './user.actions';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
@@ -87,4 +88,32 @@ const createQueries = (
   }
 
   return queries;
+};
+
+export const getFiles = async ({
+  types = [],
+  searchText = '',
+  sort = '$createdAt-desc',
+  limit,
+}: GetFilesProps) => {
+  const { databases } = await createAdminClient();
+
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) throw new Error('User not found');
+
+    const queries = createQueries(currentUser, types, searchText, sort, limit);
+
+    const files = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.filesCollectionId,
+      queries
+    );
+
+    console.log({ files });
+    return parseStringify(files);
+  } catch (error) {
+    handleError(error, 'Failed to get files');
+  }
 };
