@@ -3,12 +3,12 @@
 import { createAdminClient } from '@/lib/appwrite';
 import { InputFile } from 'node-appwrite/file';
 import { appwriteConfig } from '@/lib/appwrite/config';
-import { ID } from 'node-appwrite';
+import { ID, Models, Query } from 'node-appwrite';
 import { constructFileUrl, getFileType, parseStringify } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 
 const handleError = (error: unknown, message: string) => {
-  console.error(error, message);
+  console.log(error, message);
   throw error;
 };
 
@@ -58,4 +58,33 @@ export const uploadFile = async ({
   } catch (error) {
     handleError(error, 'Failed to upload file');
   }
+};
+
+const createQueries = (
+  currentUser: Models.Document,
+  types: string[],
+  searchText: string,
+  sort: string,
+  limit?: number
+) => {
+  const queries = [
+    Query.or([
+      Query.equal('owner', [currentUser.$id]),
+      Query.contains('users', [currentUser.email]),
+    ]),
+  ];
+
+  if (types.length > 0) queries.push(Query.equal('type', types));
+  if (searchText) queries.push(Query.contains('name', searchText));
+  if (limit) queries.push(Query.limit(limit));
+
+  if (sort) {
+    const [sortBy, orderBy] = sort.split('-');
+
+    queries.push(
+      orderBy === 'asc' ? Query.orderAsc(sortBy) : Query.orderDesc(sortBy)
+    );
+  }
+
+  return queries;
 };
