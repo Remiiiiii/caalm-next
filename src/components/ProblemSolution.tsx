@@ -1,20 +1,20 @@
-import { AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 
 const ProblemSolution = () => {
   const problems = [
-    "Documents scattered across personal drives and email",
-    "Manual spreadsheet tracking prone to errors",
-    "Missed deadlines due to ad hoc reminder systems",
-    "Security risks from unsecured local storage",
-    "Limited visibility into compliance status",
+    'Documents scattered across personal drives and email',
+    'Manual spreadsheet tracking prone to errors',
+    'Missed deadlines due to ad hoc reminder systems',
+    'Security risks from unsecured local storage',
+    'Limited visibility into compliance status',
   ];
 
   const solutions = [
-    "Centralized, secure cloud-based repository",
-    "Automated tracking with intelligent alerts",
-    "Proactive deadline notifications and escalations",
-    "Enterprise-grade security with audit trails",
-    "Real-time dashboards and compliance reporting",
+    'Centralized, secure cloud-based repository',
+    'Automated tracking with intelligent alerts',
+    'Proactive deadline notifications and escalations',
+    'Enterprise-grade security with audit trails',
+    'Real-time dashboards and compliance reporting',
   ];
 
   return (

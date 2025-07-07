@@ -66,7 +66,7 @@ export const Header = () => {
             height={50}
             className="h-12 w-12 sm:h-14 sm:w-14"
           />
-          <span className="ml-1 text-lg sm:text-xl font-bold text-navy">
+          <span className="ml-1 text-lg sm:text-xl font-bold text-slate-700">
             Caalm
           </span>
         </div>
@@ -75,45 +75,37 @@ export const Header = () => {
             data-aos="fade-down"
             data-aos-easing="linear"
             data-aos-duration="500"
-            className="text-navy group transition-all duration-200 font-medium relative"
+            className="text-navy hover:text-[#2563eb] transition-all duration-200 font-medium relative"
             href="#features"
           >
-            <span className="group-hover:bg-gradient-to-r group-hover:from-[#1793F0] group-hover:to-[#1A9FF1] group-hover:bg-clip-text group-hover:text-transparent transition-all duration-200">
-              Features
-            </span>
+            Features
           </a>
           <a
             data-aos="fade-down"
             data-aos-easing="linear"
             data-aos-duration="1000"
-            className="text-navy group transition-all duration-200 font-medium relative"
+            className="text-navy hover:text-[#2563eb] transition-all duration-200 font-medium relative"
             href="#solutions"
           >
-            <span className="group-hover:bg-gradient-to-r group-hover:from-[#1793F0] group-hover:to-[#1A9FF1] group-hover:bg-clip-text group-hover:text-transparent transition-all duration-200">
-              Solutions
-            </span>
+            Solutions
           </a>
           <a
             data-aos="fade-down"
             data-aos-easing="linear"
             data-aos-duration="1500"
-            className="text-navy group transition-all duration-200 font-medium relative"
+            className="text-navy hover:text-[#2563eb] transition-all duration-200 font-medium relative"
             href="#pricing"
           >
-            <span className="group-hover:bg-gradient-to-r group-hover:from-[#1793F0] group-hover:to-[#1A9FF1] group-hover:bg-clip-text group-hover:text-transparent transition-all duration-200">
-              Pricing
-            </span>
+            Pricing
           </a>
           <a
             data-aos="fade-down"
             data-aos-easing="linear"
             data-aos-duration="2000"
-            className="text-navy group transition-all duration-200 font-medium relative"
+            className="text-navy hover:text-[#2563eb] transition-all duration-200 font-medium relative"
             href="#contact"
           >
-            <span className="group-hover:bg-gradient-to-r group-hover:from-[#1793F0] group-hover:to-[#1A9FF1] group-hover:bg-clip-text group-hover:text-transparent transition-all duration-200">
-              Contact
-            </span>
+            Contact
           </a>
         </nav>
 
@@ -121,7 +113,7 @@ export const Header = () => {
           <Link href="/sign-in">
             <Button
               variant="ghost"
-              className="text-navy hover:text-coral hover:bg-coral/10"
+              className="text-navy hover:text-[#2563eb] hover:bg-[#2563eb] hover:bg-opacity-10"
             >
               Sign In
             </Button>
@@ -196,7 +188,7 @@ export const Header = () => {
                 <Link href="/sign-in">
                   <Button
                     variant="ghost"
-                    className="justify-start text-navy hover:text-coral hover:bg-coral/10 w-full"
+                    className="justify-start text-navy hover:text-[#2563eb] hover:bg-[#2563eb] hover:bg-opacity-10 w-full"
                     onClick={() => setIsOpen(false)}
                   >
                     Sign In
@@ -204,7 +196,7 @@ export const Header = () => {
                 </Link>
                 <Link href="/sign-in">
                   <Button
-                    className="justify-start bg-coral hover:bg-coral-dark text-white w-full"
+                    className="justify-start bg-[#2563eb] hover:bg-[#1e40af] text-white w-full"
                     onClick={() => setIsOpen(false)}
                   >
                     Get Started
