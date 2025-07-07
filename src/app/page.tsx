@@ -5,11 +5,14 @@ import ProblemSolution from '../components/ProblemSolution';
 import CTA from '../components/CTA';
 import Footer from '../components/Footer';
 import SignupBannerWrapper from '@/components/SignupBannerWrapper';
+import { Suspense } from 'react';
 
 export default function HomePage() {
   return (
     <>
-      <SignupBannerWrapper />
+      <Suspense fallback={<div>Loading...</div>}>
+        <SignupBannerWrapper />
+      </Suspense>
       <Header />
       <main>
         <Hero />
