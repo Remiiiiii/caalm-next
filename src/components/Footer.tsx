@@ -1,5 +1,5 @@
-import { Mail, Phone, MapPin } from "lucide-react";
-import Image from "next/image";
+import { Mail, Phone, MapPin } from 'lucide-react';
+import Image from 'next/image';
 
 const Footer = () => {
   return (
@@ -9,7 +9,7 @@ const Footer = () => {
           <div className="md:col-span-1">
             <div className="flex items-center">
               <Image
-                src="/assets/images/color-star.png"
+                src="/assets/images/logo.svg"
                 alt="Caalm Logo"
                 width={28}
                 height={28}

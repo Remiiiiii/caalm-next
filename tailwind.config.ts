@@ -109,4 +109,8 @@ export default {
     },
   },
   plugins: [tailwindcssAnimate],
+  safelist: [
+    "shad-active",
+    // add any other dynamic classes here if needed
+  ],
 } satisfies Config;

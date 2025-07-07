@@ -1,16 +1,18 @@
+"use client";
+
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { FileText, Bell, Mail, LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 
 const DashboardHeader = () => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const handleLogout = () => {
     logout();
-    navigate("/sign-in");
+    router.push("/sign-in");
   };
 
   const getRoleDisplay = (role: string) => {

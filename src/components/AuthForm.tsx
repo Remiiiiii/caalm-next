@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
@@ -12,20 +12,26 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { createAccount } from "@/lib/actions/user.actions";
-import { useAuth } from "@/contexts/AuthContext";
+} from '@/components/ui/form';
+import { useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import {
+  createAccount,
+  signInUser,
+  finalizeAccountAfterEmailVerification,
+  getUserByEmail,
+} from '@/lib/actions/user.actions';
+import OTPModal from '@/components/OTPModal';
+import { useRouter } from 'next/navigation';
 
-type FormType = "sign-in" | "sign-up";
+type FormType = 'sign-in' | 'sign-up';
 
 const authFormSchema = (formType: FormType) => {
   return z.object({
     email: z.string().email(),
     fullName:
-      formType === "sign-up"
+      formType === 'sign-up'
         ? z.string().min(2).max(50)
         : z.string().optional(),
     password: z.string().optional(),
@@ -34,8 +40,13 @@ const authFormSchema = (formType: FormType) => {
 
 const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const { login } = useAuth();
+  const [errorMessage, setErrorMessage] = useState('');
+  const [accountId, setAccountId] = useState<string | null>(null); // Only used for sign-in OTP
+  const [success, setSuccess] = useState(false);
+  const [pendingSignup, setPendingSignup] = useState<{
+    email: string;
+    fullName: string;
+  } | null>(null);
 
   const formSchema = authFormSchema(type);
 
@@ -43,36 +54,43 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: "",
-      email: "",
-      password: "",
+      fullName: '',
+      email: '',
+      password: '',
     },
   });
+
+  const router = useRouter();
 
   // 2. Define a submit handler.
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    setErrorMessage("");
+    setErrorMessage('');
+    setSuccess(false);
 
-    if (type === "sign-in") {
+    if (type === 'sign-in') {
       try {
-        const success = await login(values.email, values.password || "");
-        if (!success) {
-          setErrorMessage("Invalid email or password.");
+        const res = await signInUser({ email: values.email });
+        if (res?.accountId) {
+          setSuccess(true);
+          setAccountId(res.accountId);
+        } else {
+          setErrorMessage(res?.error || 'Failed to sign in. Please try again.');
         }
       } catch {
-        setErrorMessage("Failed to sign in. Please try again.");
+        setErrorMessage('Failed to sign in. Please try again.');
       } finally {
         setIsLoading(false);
       }
     } else {
       try {
-        await createAccount({
-          fullName: values.fullName || "",
+        await createAccount({ email: values.email });
+        setPendingSignup({
           email: values.email,
+          fullName: values.fullName || '',
         });
       } catch {
-        setErrorMessage("Failed to create an account. Please try again.");
+        setErrorMessage('Failed to create an account. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -84,9 +102,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="auth-form">
           <h1 className="form-title">
-            {type === "sign-in" ? "Sign In" : "Sign Up"}
+            {type === 'sign-in' ? 'Sign In' : 'Sign Up'}
           </h1>
-          {type === "sign-up" && (
+          {type === 'sign-up' && (
             <FormField
               control={form.control}
               name="fullName"
@@ -126,34 +144,12 @@ const AuthForm = ({ type }: { type: FormType }) => {
               </FormItem>
             )}
           />
-          {type === "sign-in" && (
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="shad-form-item">
-                    <FormLabel className="shad-form-label">Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter your password"
-                        {...field}
-                        className="shad-input"
-                      />
-                    </FormControl>
-                  </div>
-                  <FormMessage className="shad-form-message" />
-                </FormItem>
-              )}
-            />
-          )}
           <Button
             type="submit"
             className="form-submit-button"
             disabled={isLoading}
           >
-            {type === "sign-in" ? "Sign In" : "Sign Up"}
+            {type === 'sign-in' ? 'Sign In' : 'Sign Up'}
 
             {isLoading && (
               <Image
@@ -167,22 +163,54 @@ const AuthForm = ({ type }: { type: FormType }) => {
           </Button>
 
           {errorMessage && <p className="error-message">*{errorMessage}</p>}
+          {success && (
+            <p className="text-green-500 text-center">
+              Check your email for a login link or OTP.
+            </p>
+          )}
           <div className="body-2 flex justify-center">
             <p className="text-light-100">
-              {type === "sign-in"
+              {type === 'sign-in'
                 ? "Don't have an account?"
-                : "Already have an account?"}
+                : 'Already have an account?'}
             </p>
             <Link
-              href={type === "sign-in" ? "/sign-up" : "sign-in"}
+              href={type === 'sign-in' ? '/sign-up' : 'sign-in'}
               className="ml-1 font-medium text-brand"
             >
-              {type === "sign-in" ? "Sign Up" : "Sign In"}
+              {type === 'sign-in' ? 'Sign Up' : 'Sign In'}
             </Link>
           </div>
         </form>
+        {type === 'sign-in' && accountId && (
+          <OTPModal
+            email={form.getValues('email')}
+            accountId={accountId}
+            onSuccess={async () => {
+              // After successful OTP verification for sign-in, fetch user and redirect by role
+              const user = await getUserByEmail(form.getValues('email'));
+              if (user?.role === 'executive')
+                router.push('/dashboard/executive');
+              else if (user?.role === 'manager')
+                router.push('/dashboard/manager');
+              else if (user?.role === 'hr') router.push('/dashboard/hr');
+              else router.push('/dashboard');
+            }}
+          />
+        )}
+        {type === 'sign-up' && pendingSignup && (
+          <OTPModal
+            email={pendingSignup.email}
+            onSuccess={async () => {
+              await finalizeAccountAfterEmailVerification({
+                fullName: pendingSignup.fullName,
+                email: pendingSignup.email,
+              });
+              router.push('/?signup=success');
+            }}
+          />
+        )}
       </Form>
-      {/* TODO: OTP Verification */}
     </>
   );
 };

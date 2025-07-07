@@ -1,22 +1,12 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-import { Element, Link as LinkScroll } from "react-scroll";
-import "../index.css";
-import Spline from "@splinetool/react-spline";
-import AOS from "aos";
-import "aos/dist/aos.css";
-import { useEffect, useState } from "react";
+import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
+import Spline from '@splinetool/react-spline';
 
-export const Hero = () => {
-  useEffect(() => {
-    AOS.init({
-      duration: 1500,
-      once: true,
-    });
-  }, []);
-
+const Hero = () => {
   // Crossfade effect state
   const [showSecond, setShowSecond] = useState(false);
   useEffect(() => {
@@ -25,99 +15,157 @@ export const Hero = () => {
   }, []);
 
   return (
-    <section className="relative bg-gradient-to-br from-blue/10 to-green/10 pt-24 pb-12 px-4 sm:pt-32 sm:pb-20 md:pt-36 md:pb-24 lg:pt-40 lg:pb-32">
-      <Element name="hero">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
-            {/* Left: Text Content */}
-            <div
-              data-aos="fade-right"
-              data-aos-offset="300"
-              data-aos-easing="ease-in-sine"
-              className="w-full max-w-[32rem] sm:max-w-[28rem] md:max-w-[36rem] lg:max-w-[44rem] xl:max-w-[48rem] mx-auto lg:mx-0"
-            >
-              <div className="font-bold uppercase text-xl sm:text-2xl md:text-3xl">
-                CAALM
+    <section className="relative flex flex-col md:flex-row items-center justify-between py-16 px-4 bg-gradient-to-b from-white to-blue-50 overflow-hidden">
+      {/* Subtle grid background */}
+      <div
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(90deg,rgba(0,0,0,0.03) 1px,transparent 1px),linear-gradient(180deg,rgba(0,0,0,0.03) 1px,transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+      />
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row items-center justify-between">
+          {/* Left: Text, Buttons, Testimonial */}
+          <motion.div
+            initial={{ opacity: 0, x: -60 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            className="relative z-10 flex-1 flex flex-col gap-6"
+          >
+            <h1 className="text-4xl md:text-6xl font-bold leading-tight mt-20 bg-gradient-to-r from-[#2563eb] to-[#1e40af] bg-clip-text text-transparent">
+              Centralize Your Contracts, Licenses & Audits
+            </h1>
+            {/* Crossfade paragraphs */}
+            <div className="relative h-16 max-w-full mb-8 sm:mb-12 text-slate-700">
+              <p
+                className={`absolute inset-0 transition-opacity duration-700 ${
+                  showSecond ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                }`}
+              >
+                Streamline your compliance and agreement processes with CAALM
+                Solutions.
+              </p>
+              <p
+                className={`absolute inset-0 transition-opacity duration-700 ${
+                  showSecond ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+              >
+                Caalm eliminates fragmented document storage and manual
+                tracking. Secure your compliance, prevent missed deadlines, and
+                protect your organization from financial and reputational risks.
+              </p>
+            </div>
+            {/* Original styled buttons with arrows and hover arrow animation */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-xs sm:max-w-none mx-auto">
+              <button
+                className="group bg-gradient-to-r from-[#2563eb] to-[#1e40af] hover:from-[#1e40af] hover:to-[#2563eb] text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center"
+                style={{ fontSize: '1.125rem' }}
+              >
+                Start Free Trial
+                <ArrowRight className="ml-2 h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1.5" />
+              </button>
+              <button
+                className="group bg-gradient-to-r from-slate-500 to-slate-700 hover:from-slate-700 hover:to-slate-500 text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 hover:text-white w-full sm:w-auto flex items-center justify-center"
+                style={{ fontSize: '1.125rem' }}
+              >
+                Schedule Demo
+                <ArrowRight className="ml-2 h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1.5" />
+              </button>
+            </div>
+            {/* Avatars and rating */}
+            <div className="flex items-center gap-2 mt-6">
+              <div className="flex -space-x-2">
+                <Image
+                  src="/assets/images/1.png"
+                  alt="avatar"
+                  width={32}
+                  height={32}
+                  className="rounded-full border-2 border-white"
+                />
+                <Image
+                  src="/assets/images/2.png"
+                  alt="avatar"
+                  width={32}
+                  height={32}
+                  className="rounded-full border-2 border-white"
+                />
+                <Image
+                  src="/assets/images/3.png"
+                  alt="avatar"
+                  width={32}
+                  height={32}
+                  className="rounded-full border-2 border-white"
+                />
+                <Image
+                  src="/assets/images/4.png"
+                  alt="avatar"
+                  width={32}
+                  height={32}
+                  className="rounded-full border-2 border-white"
+                />
+                <Image
+                  src="/assets/images/5.png"
+                  alt="avatar"
+                  width={32}
+                  height={32}
+                  className="rounded-full border-2 border-white"
+                />
               </div>
-              <div className="bg-white/20 backdrop-bl-md rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 max-w-full ml-0 mr-auto mb-6 sm:mb-8 max-lg:mx-auto">
-                <h1 className="mb-4 sm:mb-6 h1 sm:text-4xl md:text-5xl lg:text-6xl font-bold text-p4 uppercase w-[42rem] max-w-[36rem] sm:max-w-[40rem] md:max-w-[44rem] lg:max-w-[64rem] xl:max-w-[80rem] leading-tight">
-                  Centralize Your Contracts, Licenses & Audits
-                </h1>
-              </div>
-              {/* Paragraph crossfade transition start */}
-              <div className="relative h-16 max-w-full mb-8 sm:mb-12">
-                <p
-                  className={`body-1 absolute inset-0 transition-opacity duration-700 ${
-                    showSecond ? "opacity-0 pointer-events-none" : "opacity-100"
-                  }`}
-                >
-                  Caalm eliminates fragmented document storage and manual
-                  tracking.
-                </p>
-                <p
-                  className={`body-1 absolute inset-0 transition-opacity duration-700 ${
-                    showSecond ? "opacity-100" : "opacity-0 pointer-events-none"
-                  }`}
-                >
-                  Secure your compliance, prevent missed deadlines, and protect
-                  your organization from financial and reputational risks.
-                </p>
-              </div>
-              {/* Paragraph crossfade transition end */}
-              <LinkScroll to="features">
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-xs sm:max-w-none mx-auto">
-                  <Button
-                    size="lg"
-                    className="bg-gradient-to-r from-[#1793F0] to-[#1A9FF1] hover:from-[#1A9FF1] hover:to-[#1793F0] text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto"
-                  >
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                  <Button
-                    className="bg-gradient-to-r from-slate-500 to-slate-700 hover:from-slate-700 hover:to-slate-500 text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 hover:text-white w-full sm:w-auto"
-                    variant="outline"
-                    size="lg"
-                  >
-                    Schedule Demo
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
+              <span className="ml-2 text-yellow-500 text-lg">★★★★★</span>
+              <span className="ml-2 text-blue-900 font-semibold">4.9/5</span>
+              <span className="ml-1 text-slate-500 text-sm">
+                based on reviews
+              </span>
+            </div>
+            {/* Testimonial */}
+            <div className="bg-white/80 rounded-xl shadow p-4 mt-4 max-w-md">
+              <p className="text-blue-900 text-base italic">
+                &ldquo;I use Caalm every day to keep all our contracts and
+                compliance documents organized. It&rsquo;s so helpful, our team
+                never misses a deadline or audit anymore!
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Image
+                  src="/assets/images/review-avatar.jpg"
+                  alt="Nicolas Scalice"
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+                <div>
+                  <div className="text-blue-900 font-semibold text-sm">
+                    Priya Sharma{' '}
+                  </div>
+                  <div className="text-slate-500 text-xs">
+                    Director of Human Resources at Growthspark
+                  </div>
                 </div>
-              </LinkScroll>
+              </div>
             </div>
-            {/* Right: Spline 3D */}
-            <div className="w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl flex justify-center mx-auto lg:mx-0 lg:-ml-12 xl:-ml-20">
-              <Spline
-                scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
-                className="w-full h-[180px] sm:h-[260px] md:h-[340px] lg:h-[420px] xl:h-[500px]"
-              />
-            </div>
-          </div>
+          </motion.div>
+          {/* Right: Spline or App Screenshot */}
+          <motion.div
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+            className="relative z-10 flex-1 flex items-center justify-center mt-10 md:mt-0"
+          >
+            <Spline
+              scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
+              className="w-full h-[180px] sm:h-[260px] md:h-[340px] lg:h-[420px] xl:h-[500px] z-10"
+            />
+            <Image
+              src="/assets/images/card-main.png"
+              alt="App Screenshot"
+              width={400}
+              height={400}
+              className="rounded-xl shadow-xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-90 pointer-events-none"
+            />
+          </motion.div>
         </div>
-      </Element>
-
-      {/* <div className="grid md:grid-cols-3 gap-8 text-center">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <Shield className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Secure & Compliant</h3>
-          <p className="text-slate-700">
-            Centralized, encrypted storage with role-based access controls
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <Users className="h-12 w-12 text-green-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Team Collaboration</h3>
-          <p className="text-slate-700">
-            Multi-user workflows with approval processes and audit trails
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <FileText className="h-12 w-12 text-slate-700 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Automated Tracking</h3>
-          <p className="text-slate-700">
-            Proactive alerts for renewals, deadlines, and compliance milestones
-          </p>
-        </div>
-      </div> */}
+      </div>
     </section>
   );
 };

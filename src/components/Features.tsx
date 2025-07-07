@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Database,
   Bell,
@@ -8,58 +8,58 @@ import {
   Calendar,
   FileCheck,
   Users2,
-} from "lucide-react";
-import BrandMarquee from "./BrandMarquee";
+} from 'lucide-react';
+import BrandMarquee from './BrandMarquee';
 
 const Features = () => {
   const features = [
     {
       icon: Database,
-      title: "Centralized Document Storage",
+      title: 'Centralized Document Storage',
       description:
-        "Secure cloud-based repository with advanced search, tagging, and version control.",
+        'Secure cloud-based repository with advanced search, tagging, and version control.',
     },
     {
       icon: Bell,
-      title: "Automated Deadline Alerts",
+      title: 'Automated Deadline Alerts',
       description:
-        "Proactive notifications for renewals, audits, and key compliance milestones.",
+        'Proactive notifications for renewals, audits, and key compliance milestones.',
     },
     {
       icon: GitBranch,
-      title: "Collaboration Tools",
+      title: 'Collaboration Tools',
       description:
-        "Multi-user review, approval workflows, and real-time collaboration features.",
+        'Multi-user review, approval workflows, and real-time collaboration features.',
     },
     {
       icon: BarChart3,
-      title: "Reporting & Analytics",
+      title: 'Reporting & Analytics',
       description:
-        "Real-time dashboards for compliance status, risk assessment, and pending actions.",
+        'Real-time dashboards for compliance status, risk assessment, and pending actions.',
     },
     {
       icon: Lock,
-      title: "Enterprise Security",
+      title: 'Enterprise Security',
       description:
-        "Role-based access controls, encryption, and comprehensive audit trails.",
+        'Role-based access controls, encryption, and comprehensive audit trails.',
     },
     {
       icon: Calendar,
-      title: "Smart Scheduling",
+      title: 'Smart Scheduling',
       description:
-        "Intelligent calendar integration with automated reminder escalation.",
+        'Intelligent calendar integration with automated reminder escalation.',
     },
     {
       icon: FileCheck,
-      title: "Compliance Tracking",
+      title: 'Compliance Tracking',
       description:
-        "Monitor regulatory requirements and maintain certification records.",
+        'Monitor regulatory requirements and maintain certification records.',
     },
     {
       icon: Users2,
-      title: "Team Management",
+      title: 'Team Management',
       description:
-        "Assign responsibilities, track progress, and manage team workflows.",
+        'Assign responsibilities, track progress, and manage team workflows.',
     },
   ];
 

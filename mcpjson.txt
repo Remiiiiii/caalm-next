@@ -1,0 +1,32 @@
+  "appwrite-dev": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "SET",
+        "APPWRITE_PROJECT_ID=684da54c000dd1269153",
+        "&&",
+        "SET",
+        "APPWRITE_API_KEY=standard_663c852ac2078d9298182def7568b71660381a330e23c2bb4a65ca6076aa0de8908b003747644d0319ead003aaf1c927292a2eae65616c478116f1a70a9c5cd536cdc4f3d44fd853aa2c1f2b5041193fe48fa2bd938f6a1e930e9974d341d5110efa890c881b913a798dbca7bca7a17880a4c41622cf0a15cf8af69fda006e15",
+        "&&",
+        "uvx",
+        "mcp-server-appwrite",
+        "--databases",
+        "--users"
+      ]
+    },
+    "appwrite-prod": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "SET",
+        "APPWRITE_PROJECT_ID=67a0e839001820f1e646",
+        "&&",
+        "SET",
+        "APPWRITE_API_KEY=standard_bf1c746d7671d1e95a31417c049d9e448d9cb1eef605ad1375bb8c5a54a74faa3218322a6602a884c1860e52d5ee63c2fd3dce571b2c5deb8b46b380745c35a732ef364a4ef41cf2491775127544de4455d936b5e72615edf0940591b0f2bbd3432b1a757067d596dbdb87e4ba5e04d3fb4354b700f864615e3307e9668e1bdf",
+        "&&",
+        "uvx",
+        "mcp-server-appwrite",
+        "--databases",
+        "--users"
+      ]
+    },
