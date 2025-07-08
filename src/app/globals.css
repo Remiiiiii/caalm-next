@@ -133,9 +133,20 @@
   .container {
     @apply mx-auto max-w-7xl px-5;
   }
-  .primary-btn {
-    @apply bg-brand hover:bg-brand-100 transition-all rounded-full button !important;
+  .primary-btn,
+  .shad-active,
+  .shad-submit-btn {
+    @apply text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center;
+    background-image: linear-gradient(
+      to right,
+      #00c1cb,
+      #078fab,
+      #0e638f,
+      #11487d,
+      #162768
+    );
   }
+
   .flex-center {
     @apply flex items-center justify-center;
   }
@@ -161,7 +172,11 @@
     @apply space-y-4 max-w-[95%] sm:w-fit rounded-xl md:rounded-[30px] px-4 md:px-8 py-10 bg-white outline-none !important;
   }
   .shad-submit-btn {
-    @apply bg-brand button hover:bg-brand-100 transition-all rounded-full !important;
+    @apply button transition-all rounded-full !important;
+    background-color: #1976d2 !important;
+  }
+  .shad-submit-btn:hover {
+    background-color: #1565c0 !important;
   }
   .shad-otp {
     @apply w-full flex gap-1 sm:gap-2 justify-between !important;
@@ -319,7 +334,8 @@
 
   /* Chart */
   .chart {
-    @apply flex items-center rounded-[20px] bg-brand p-5 text-white md:flex-col xl:flex-row !important;
+    @apply flex items-center rounded-[20px] p-5 text-white md:flex-col xl:flex-row !important;
+    background-color: #1976d2 !important;
   }
   .chart-container {
     @apply mx-auto aspect-square w-[180px] text-white xl:w-[250px] !important;
@@ -366,7 +382,11 @@
     @apply flex-center min-w-fit gap-4 !important;
   }
   .sign-out-button {
-    @apply flex-center h-[52px] min-w-[54px] items-center rounded-full bg-brand/10 p-0 text-brand shadow-none transition-all hover:bg-brand/20 !important;
+    @apply flex-center h-[52px] min-w-[54px] items-center rounded-full p-0 text-brand shadow-none transition-all !important;
+    background-color: #e3f2fd !important;
+    &:hover {
+      background-color: #90caf9 !important;
+    }
   }
 
   /* Mobile Navigation */
@@ -374,7 +394,8 @@
     @apply flex h-[60px] justify-between px-5 sm:hidden !important;
   }
   .header-user {
-    @apply my-3 flex items-center gap-2 rounded-full p-1 text-light-100 sm:justify-center sm:bg-brand/10 lg:justify-start lg:p-3 !important;
+    @apply my-3 flex items-center gap-2 rounded-full p-1 text-light-100 sm:justify-center lg:justify-start lg:p-3 !important;
+    background-color: #e3f2fd !important;
   }
   .header-user-avatar {
     @apply aspect-square w-10 rounded-full object-cover !important;
@@ -389,7 +410,11 @@
     @apply flex text-light-100 gap-4 w-full justify-start items-center h5 px-6 h-[52px] rounded-full !important;
   }
   .mobile-sign-out-button {
-    @apply h5 flex h-[52px] w-full items-center gap-4 rounded-full bg-brand/10 px-6 text-brand shadow-none transition-all hover:bg-brand/20 !important;
+    @apply h5 flex h-[52px] w-full items-center gap-4 rounded-full px-6 text-brand shadow-none transition-all !important;
+    background-color: #e3f2fd !important;
+    &:hover {
+      background-color: #90caf9 !important;
+    }
   }
 
   /* OTP Modal */
@@ -425,14 +450,23 @@
     @apply flex text-light-100 gap-4 rounded-xl lg:w-full justify-center lg:justify-start items-center h5 lg:px-[30px] h-[52px] lg:rounded-full !important;
   }
   .sidebar-user-info {
-    @apply mt-4 flex items-center justify-center gap-2 rounded-full bg-brand/10 p-1 text-light-100 lg:justify-start lg:p-3 !important;
+    @apply mt-4 flex items-center justify-center gap-2 rounded-full p-1 text-light-100 lg:justify-start lg:p-3 !important;
+    background-color: #e3f2fd !important;
   }
   .sidebar-user-avatar {
     @apply aspect-square w-10 rounded-full object-cover !important;
   }
 
   .shad-active {
-    @apply bg-brand text-white shadow-drop-2 !important;
+    @apply text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center !important;
+    background-image: linear-gradient(
+      to right,
+      #00c1cb,
+      #078fab,
+      #0e638f,
+      #11487d,
+      #162768
+    );
   }
 
   /* Sort */
@@ -445,7 +479,8 @@
 
   /* Thumbnail */
   .thumbnail {
-    @apply flex-center size-[50px] min-w-[50px] overflow-hidden rounded-full bg-brand/10;
+    @apply flex-center size-[50px] min-w-[50px] overflow-hidden rounded-full !important;
+    background-color: #e3f2fd !important;
   }
   .thumbnail-image {
     @apply size-full object-cover object-center !important;

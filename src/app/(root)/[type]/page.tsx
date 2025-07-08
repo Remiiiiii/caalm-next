@@ -1,8 +1,8 @@
-import Card from '@/components/Card';
+import React from 'react';
 import Sort from '@/components/Sort';
 import { getFiles } from '@/lib/actions/file.actions';
 import { Models } from 'node-appwrite';
-import React from 'react';
+import Card from '@/components/Card';
 import { getFileTypesParams } from '@/lib/utils';
 
 const Page = async ({ searchParams, params }: SearchParamProps) => {
@@ -18,17 +18,20 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
     <div className="page-container">
       <section className="w-full">
         <h1 className="h1 capitalize">{type}</h1>
+
         <div className="total-size-section">
           <p className="body-1">
-            Total: <span className="h5">0 MB</span>{' '}
+            Total: <span className="h5">0 MB</span>
           </p>
 
           <div className="sort-container">
-            <p className="body-1 hidden sm:block text-light-200">Sort by:</p>
+            <p className="body-1 hidden text-light-200 sm:block">Sort by:</p>
+
             <Sort />
           </div>
         </div>
       </section>
+
       {/* Render the files */}
       {files.total > 0 ? (
         <section className="file-list">

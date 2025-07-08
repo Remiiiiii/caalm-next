@@ -64,9 +64,8 @@ export const Header = () => {
             alt="Logo"
             width={50}
             height={50}
-            className="h-12 w-12 sm:h-14 sm:w-14"
           />
-          <span className="ml-1 text-lg sm:text-xl font-bold text-slate-700">
+          <span className="ml-1 text-2xl sm:text-xl font-bold text-slate-700">
             Caalm
           </span>
         </div>
@@ -75,7 +74,7 @@ export const Header = () => {
             data-aos="fade-down"
             data-aos-easing="linear"
             data-aos-duration="500"
-            className="text-navy hover:text-[#2563eb] transition-all duration-200 font-medium relative"
+            className="text-transparent bg-gradient-to-r bg-clip-text from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] transition-all duration-200 font-medium relative"
             href="#features"
           >
             Features
@@ -84,7 +83,7 @@ export const Header = () => {
             data-aos="fade-down"
             data-aos-easing="linear"
             data-aos-duration="1000"
-            className="text-navy hover:text-[#2563eb] transition-all duration-200 font-medium relative"
+            className="text-transparent bg-gradient-to-r bg-clip-text from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] transition-all duration-200 font-medium relative"
             href="#solutions"
           >
             Solutions
@@ -93,7 +92,7 @@ export const Header = () => {
             data-aos="fade-down"
             data-aos-easing="linear"
             data-aos-duration="1500"
-            className="text-navy hover:text-[#2563eb] transition-all duration-200 font-medium relative"
+            className="text-transparent bg-gradient-to-r bg-clip-text from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] transition-all duration-200 font-medium relative"
             href="#pricing"
           >
             Pricing
@@ -102,7 +101,7 @@ export const Header = () => {
             data-aos="fade-down"
             data-aos-easing="linear"
             data-aos-duration="2000"
-            className="text-navy hover:text-[#2563eb] transition-all duration-200 font-medium relative"
+            className="text-transparent bg-gradient-to-r bg-clip-text from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] transition-all duration-200 font-medium relative"
             href="#contact"
           >
             Contact

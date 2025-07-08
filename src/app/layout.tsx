@@ -23,21 +23,21 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         {/* <link
           rel="icon"
-          href="/assets/images/favicon-96x96.png"
+          href="/assets/images/logo.png"
           type="image/png"
-          sizes="96x96"
+          sizes="452x431"
         /> */}
-        <link
+        {/* <link
           rel="icon"
           href="/favicon.ico"
           type="image/x-icon"
           sizes="48x48"
-        />
-        {/* <link rel="icon" href="/favicon.ico" sizes="96x96" />
-        <link rel="icon" href="/logo.svg" type="image/svg+xml" sizes="96x96" />
-        <link
-          rel="apple-touch-icon"
-          href="/apple-touch-icon.png"
+        /> */}
+
+        {/* <link
+          rel="icon"
+          href="/assets/images/logo.svg"
+          type="image/svg+xml"
           sizes="96x96"
         /> */}
       </head>
