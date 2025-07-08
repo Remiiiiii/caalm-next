@@ -4,7 +4,7 @@ import Image from 'next/image';
 const layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex min-h-screen">
-      <section className="bg-brand p-10 hidden w-1/2 items-center justify-center lg:flex xl:w-2/5">
+      <section className="bg-gradient-to-r from-slate-700 to-gray-900 p-10 hidden w-1/2 items-center justify-center lg:flex xl:w-2/5">
         <div className="flex flex-col max-h-[800px] max-w-[430px] justify-center space-y-12">
           <div className="flex items-center gap-2">
             <Image
@@ -19,7 +19,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
           <div className="space-y-5 text-white">
             <h1 className="text-2xl font-bold">
               Eliminate Missed Deadliness and Compliance Risks with Centralized
-              Contract Management
+              Document Management
             </h1>
             <p className="body-1">
               The perfect place to manage your contracts, audits, and licenses.
