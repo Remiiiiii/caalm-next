@@ -34,7 +34,13 @@ const Hero = () => {
             transition={{ duration: 0.8, ease: 'easeOut' }}
             className="relative z-10 flex-1 flex flex-col gap-6"
           >
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight mt-20 bg-gradient-to-r from-[#2563eb] to-[#1e40af] bg-clip-text text-transparent">
+            <h1
+              className="text-4xl md:text-6xl font-bold leading-tight mt-20 bg-gradient-to-r bg-clip-text text-transparent"
+              style={{
+                backgroundImage:
+                  'linear-gradient(to right, #00C1CB, #078FAB, #0E638F, #11487D, #162768)',
+              }}
+            >
               Centralize Your Contracts, Licenses & Audits
             </h1>
             {/* Crossfade paragraphs */}
@@ -60,7 +66,7 @@ const Hero = () => {
             {/* Original styled buttons with arrows and hover arrow animation */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-xs sm:max-w-none mx-auto">
               <button
-                className="group bg-gradient-to-r from-[#2563eb] to-[#1e40af] hover:from-[#1e40af] hover:to-[#2563eb] text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center"
+                className="group bg-gradient-to-r from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] hover:from-[#162768] hover:via-[#11487D] hover:via-[#0E638F] hover:via-[#078FAB] hover:to-[#00C1CB] text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center"
                 style={{ fontSize: '1.125rem' }}
               >
                 Start Free Trial
