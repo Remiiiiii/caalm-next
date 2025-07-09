@@ -1,4 +1,5 @@
 import Header from '../components/Header';
+// import HeroIntro from '../components/HeroIntro';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
 import ProblemSolution from '../components/ProblemSolution';

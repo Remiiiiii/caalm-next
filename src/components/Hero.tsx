@@ -4,7 +4,8 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
-import Spline from '@splinetool/react-spline';
+// import Spline from '@splinetool/react-spline';
+import HeroIntro from './HeroIntro';
 
 const Hero = () => {
   // Crossfade effect state
@@ -26,6 +27,7 @@ const Hero = () => {
         }}
       />
       <div className="container mx-auto px-4">
+        <HeroIntro />
         <div className="flex flex-col md:flex-row items-center justify-between">
           {/* Left: Text, Buttons, Testimonial */}
           <motion.div
@@ -158,10 +160,6 @@ const Hero = () => {
             transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
             className="relative z-10 flex-1 flex items-center justify-center mt-10 md:mt-0"
           >
-            <Spline
-              scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
-              className="w-full h-[180px] sm:h-[260px] md:h-[340px] lg:h-[420px] xl:h-[500px] z-10"
-            />
             <Image
               src="/assets/images/card-main.png"
               alt="App Screenshot"
