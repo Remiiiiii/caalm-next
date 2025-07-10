@@ -37,7 +37,7 @@ const brands = [
 
 export default function BrandMarquee() {
   return (
-    <div className="relative overflow-x-hidden w-full mt-10 max-w-5xl mx-auto mb-10 sm:py-4 select-none">
+    <div className="relative overflow-x-hidden w-full  max-w-5xl mx-auto mb-10 sm:py-4 select-none">
       {/* Left fade */}
       <div
         className="pointer-events-none absolute left-0 top-0 h-full w-8 sm:w-12 md:w-16 z-10"

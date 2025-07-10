@@ -2,7 +2,7 @@
 
 import Spline from '@splinetool/react-spline';
 import { useAnimationFrame } from 'framer-motion';
-import { useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   Database,
   Bell,
@@ -107,15 +107,98 @@ function OrbitingBlocks() {
   );
 }
 
+const VIDEO_SRC = '/assets/video/wave.mp4';
+const FADE_DURATION = 1500; // ms
+
 const HeroIntro = () => {
+  const videoA = useRef<HTMLVideoElement | null>(null);
+  const videoB = useRef<HTMLVideoElement | null>(null);
+  const [showA, setShowA] = useState(true);
+  const [fade, setFade] = useState(false);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
+
+  // Get video duration dynamically
+  useEffect(() => {
+    const video = document.createElement('video');
+    video.src = VIDEO_SRC;
+    video.onloadedmetadata = () => setVideoDuration(video.duration);
+  }, []);
+
+  useEffect(() => {
+    if (!videoDuration) return;
+    let fadeTimeout: NodeJS.Timeout;
+    let loopTimeout: NodeJS.Timeout;
+
+    function scheduleCrossfade() {
+      const timeToFade = videoDuration! * 1000 - FADE_DURATION;
+      loopTimeout = setTimeout(() => {
+        setFade(true);
+        // Start the other video from the beginning
+        if (showA && videoB.current) {
+          videoB.current.currentTime = 0;
+          videoB.current.play();
+        } else if (!showA && videoA.current) {
+          videoA.current.currentTime = 0;
+          videoA.current.play();
+        }
+        // After fade, swap videos
+        fadeTimeout = setTimeout(() => {
+          setShowA((prev) => !prev);
+          setFade(false);
+          scheduleCrossfade();
+        }, FADE_DURATION);
+      }, timeToFade);
+    }
+
+    scheduleCrossfade();
+
+    return () => {
+      clearTimeout(fadeTimeout);
+      clearTimeout(loopTimeout);
+    };
+  }, [showA, videoDuration]);
+
   return (
     <section className="relative flex flex-col items-center justify-center pt-20 pb-8 bg-gradient-to-b from-white to-blue-50 overflow-hidden">
+      {/* Video crossfade background */}
+      {videoDuration !== null && (
+        <>
+          <video
+            ref={videoA}
+            src={VIDEO_SRC}
+            autoPlay
+            muted
+            loop={false}
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-[1500ms]"
+            style={{
+              opacity: showA ? 1 : fade ? 0.5 : 0,
+              zIndex: showA ? 2 : 1,
+              transition: `opacity ${FADE_DURATION}ms`,
+            }}
+          />
+          <video
+            ref={videoB}
+            src={VIDEO_SRC}
+            autoPlay={false}
+            muted
+            loop={false}
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-[1500ms]"
+            style={{
+              opacity: !showA ? 1 : fade ? 0.5 : 0,
+              zIndex: !showA ? 2 : 1,
+              transition: `opacity ${FADE_DURATION}ms`,
+            }}
+          />
+        </>
+      )}
       {/* Subtle grid background */}
       <div
-        className="absolute inset-0 z-0 pointer-events-none"
+        className="absolute inset-0 z-10 pointer-events-none"
         style={{
           backgroundImage:
-            'linear-gradient(90deg,rgba(0,0,0,0.03) 1px,transparent 1px),linear-gradient(180deg,rgba(0,0,0,0.03) 1px,transparent 1px)',
+            'linear-gradient(90deg,rgba(0,0,0,0.02) 1px,transparent 1px),linear-gradient(180deg,rgba(0,0,0,0.02) 1px,transparent 1px)',
           backgroundSize: '40px 40px',
         }}
       />
@@ -129,18 +212,24 @@ const HeroIntro = () => {
           className="w-full h-full z-10"
         />
       </div>
-      {/* Headline */}
-      <div data-aos="fade-up" data-aos-duration="3000">
+      {/* Headline and subheadline */}
+      <div className="relative z-30 w-full flex flex-col items-center">
         <h1 className="text-2xl md:text-[3.5em] font-bold text-center mb-4 leading-tight bg-gradient-to-r from-[#059BB2] via-[#00C1CB] to-[#162768] bg-clip-text text-transparent">
           Centralize
           <br />
           Contracts Audits and Licenses
         </h1>
-        {/* Subheadline */}
-        <p className="text-lg md:text-xl text-slate-600 text-center  mx-auto">
+        <p className="text-lg md:text-xl text-slate-600 text-center mx-auto">
           Your journey to data management and compliance starts here
         </p>
       </div>
+      {/* Fade-out overlay at the bottom for smooth transition */}
+      <div
+        className="pointer-events-none absolute left-0 right-0 bottom-0 h-[48px] z-20"
+        style={{
+          background: 'linear-gradient(to bottom, transparent, white 90%)',
+        }}
+      />
     </section>
   );
 };

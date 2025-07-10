@@ -8,6 +8,7 @@ import Footer from '../components/Footer';
 import SignupBannerWrapper from '@/components/SignupBannerWrapper';
 import { Suspense } from 'react';
 import HeroIntro from '../components/HeroIntro';
+import BrandMarquee from '../components/BrandMarquee';
 
 export default function HomePage() {
   return (
@@ -19,6 +20,7 @@ export default function HomePage() {
       <main>
         <HeroIntro />
         <Hero />
+        <BrandMarquee />
         <Features />
         <ProblemSolution />
         <CTA />

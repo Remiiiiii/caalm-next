@@ -598,3 +598,7 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+#bgVideo {
+  transition: opacity 3.5s;
+}

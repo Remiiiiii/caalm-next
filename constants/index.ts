@@ -1,87 +1,149 @@
+import {
+  Database,
+  Bell,
+  GitBranch,
+  BarChart3,
+  Lock,
+  Calendar,
+  FileCheck,
+  Users2,
+} from 'lucide-react';
+
 export const navItems = [
   {
-    name: "Dashboard",
-    icon: "/assets/icons/dashboard.svg",
-    url: ["/dashboard/executive", "/dashboard/manager", "/dashboard/hr"],
+    name: 'Dashboard',
+    icon: '/assets/icons/dashboard.svg',
+    url: ['/dashboard/executive', '/dashboard/manager', '/dashboard/hr'],
   },
   {
-    name: "Documents",
-    icon: "/assets/icons/documents.svg",
-    url: "/documents",
+    name: 'Documents',
+    icon: '/assets/icons/documents.svg',
+    url: '/documents',
   },
   {
-    name: "Images",
-    icon: "/assets/icons/images.svg",
-    url: "/images",
+    name: 'Images',
+    icon: '/assets/icons/images.svg',
+    url: '/images',
   },
   {
-    name: "Media",
-    icon: "/assets/icons/video.svg",
-    url: "/media",
+    name: 'Media',
+    icon: '/assets/icons/video.svg',
+    url: '/media',
   },
   {
-    name: "Others",
-    icon: "/assets/icons/others.svg",
-    url: "/others",
+    name: 'Others',
+    icon: '/assets/icons/others.svg',
+    url: '/others',
   },
 ];
 
 export const actionsDropdownItems = [
   {
-    label: "Rename",
-    icon: "/assets/icons/edit.svg",
-    value: "rename",
+    label: 'Rename',
+    icon: '/assets/icons/edit.svg',
+    value: 'rename',
   },
   {
-    label: "Details",
-    icon: "/assets/icons/info.svg",
-    value: "details",
+    label: 'Details',
+    icon: '/assets/icons/info.svg',
+    value: 'details',
   },
   {
-    label: "Share",
-    icon: "/assets/icons/share.svg",
-    value: "share",
+    label: 'Share',
+    icon: '/assets/icons/share.svg',
+    value: 'share',
   },
   {
-    label: "Download",
-    icon: "/assets/icons/download.svg",
-    value: "download",
+    label: 'Download',
+    icon: '/assets/icons/download.svg',
+    value: 'download',
   },
   {
-    label: "Delete",
-    icon: "/assets/icons/delete.svg",
-    value: "delete",
+    label: 'Delete',
+    icon: '/assets/icons/delete.svg',
+    value: 'delete',
   },
 ];
 
 export const sortTypes = [
   {
-    label: "Date created (newest)",
-    value: "$createdAt-desc",
+    label: 'Date created (newest)',
+    value: '$createdAt-desc',
   },
   {
-    label: "Created Date (oldest)",
-    value: "$createdAt-asc",
+    label: 'Created Date (oldest)',
+    value: '$createdAt-asc',
   },
   {
-    label: "Name (A-Z)",
-    value: "name-asc",
+    label: 'Name (A-Z)',
+    value: 'name-asc',
   },
   {
-    label: "Name (Z-A)",
-    value: "name-desc",
+    label: 'Name (Z-A)',
+    value: 'name-desc',
   },
   {
-    label: "Size (Highest)",
-    value: "size-desc",
+    label: 'Size (Highest)',
+    value: 'size-desc',
   },
   {
-    label: "Size (Lowest)",
-    value: "size-asc",
+    label: 'Size (Lowest)',
+    value: 'size-asc',
+  },
+];
+
+export const features = [
+  {
+    icon: Database,
+    title: 'Centralized Document Storage',
+    description:
+      'Secure cloud-based repository with advanced search, tagging, and version control.',
+  },
+  {
+    icon: Bell,
+    title: 'Automated Deadline Alerts',
+    description:
+      'Proactive notifications for renewals, audits, and key compliance milestones.',
+  },
+  {
+    icon: GitBranch,
+    title: 'Collaboration Tools',
+    description:
+      'Multi-user review, approval workflows, and real-time collaboration features.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Reporting & Analytics',
+    description:
+      'Real-time dashboards for compliance status, risk assessment, and pending actions.',
+  },
+  {
+    icon: Lock,
+    title: 'Enterprise Security',
+    description:
+      'Role-based access controls, encryption, and comprehensive audit trails.',
+  },
+  {
+    icon: Calendar,
+    title: 'Smart Scheduling',
+    description:
+      'Intelligent calendar integration with automated reminder escalation.',
+  },
+  {
+    icon: FileCheck,
+    title: 'Compliance Tracking',
+    description:
+      'Monitor regulatory requirements and maintain certification records.',
+  },
+  {
+    icon: Users2,
+    title: 'Team Management',
+    description:
+      'Assign responsibilities, track progress, and manage team workflows.',
   },
 ];
 
 export const avatarPlaceholderUrl =
-  "https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg";
+  'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg';
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB

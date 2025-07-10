@@ -3,17 +3,7 @@
 import { useInView } from 'react-intersection-observer';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Database,
-  Bell,
-  GitBranch,
-  BarChart3,
-  Lock,
-  Calendar,
-  FileCheck,
-  Users2,
-} from 'lucide-react';
-import BrandMarquee from './BrandMarquee';
+import { features } from '../../constants';
 
 const Features = () => {
   const { ref, inView } = useInView({
@@ -26,70 +16,35 @@ const Features = () => {
     setVisible(inView);
   }, [inView]);
 
-  const features = [
-    {
-      icon: Database,
-      title: 'Centralized Document Storage',
-      description:
-        'Secure cloud-based repository with advanced search, tagging, and version control.',
-    },
-    {
-      icon: Bell,
-      title: 'Automated Deadline Alerts',
-      description:
-        'Proactive notifications for renewals, audits, and key compliance milestones.',
-    },
-    {
-      icon: GitBranch,
-      title: 'Collaboration Tools',
-      description:
-        'Multi-user review, approval workflows, and real-time collaboration features.',
-    },
-    {
-      icon: BarChart3,
-      title: 'Reporting & Analytics',
-      description:
-        'Real-time dashboards for compliance status, risk assessment, and pending actions.',
-    },
-    {
-      icon: Lock,
-      title: 'Enterprise Security',
-      description:
-        'Role-based access controls, encryption, and comprehensive audit trails.',
-    },
-    {
-      icon: Calendar,
-      title: 'Smart Scheduling',
-      description:
-        'Intelligent calendar integration with automated reminder escalation.',
-    },
-    {
-      icon: FileCheck,
-      title: 'Compliance Tracking',
-      description:
-        'Monitor regulatory requirements and maintain certification records.',
-    },
-    {
-      icon: Users2,
-      title: 'Team Management',
-      description:
-        'Assign responsibilities, track progress, and manage team workflows.',
-    },
-  ];
-
   return (
     <section
-      data-aos="fade-up"
+      data-aos="fade-in"
       data-aos-duration="3000"
       id="features"
       ref={ref}
-      className={`py-8 sm:py-10 md:py-14 px-2 sm:px-4 bg-background>
-transition-opacity duration-700 ${
+      className={`scroll-mt-20 py-8 sm:py-10 md:py-14 px-2 sm:px-4 bg-[url('/assets/images/features-bg.jpg')] bg-cover bg-center bg-no-repeat transition-opacity duration-700 ${
         visible ? 'opacity-100' : 'opacity-0'
-      } relative flex flex-col md:flex-row items-center justify-between py-4 px-4 bg-gradient-to-b from-white to-blue-50 overflow-hidden`}
+      } relative flex flex-col md:flex-row items-center justify-between py-4 px-4 overflow-hidden`}
     >
-      <div className="max-w-7xl mx-auto mt-[5rem]">
-        <BrandMarquee />
+      {/* Overlay for blending */}
+      <div className="absolute inset-0 bg-white/20 pointer-events-none z-0" />
+      {/* Top fade overlay */}
+      <div
+        className="absolute left-0 right-0 top-0 h-48 z-10 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to bottom, rgba(255,255,255,0.95) 90%, transparent)',
+        }}
+      />
+      {/* Bottom fade overlay */}
+      <div
+        className="absolute left-0 right-0 bottom-0 h-32 z-10 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to top, rgba(255,255,255,0.8) 60%, transparent 100%)',
+        }}
+      />
+      <div className="max-w-7xl mx-auto mt-[50px] relative z-10">
         <div className="text-center mb-10 sm:mb-14 md:mb-16">
           <h2 className="text-2xl md:text-[3.5em] font-bold text-center mb-4 leading-tight bg-gradient-to-r from-[#059BB2] via-[#00C1CB] to-[#162768] bg-clip-text text-transparent">
             Powerful Features for Complete Control
@@ -106,7 +61,7 @@ transition-opacity duration-700 ${
             return (
               <Card
                 key={index}
-                className="hover:shadow-md transition-shadow border-border h-full"
+                className="hover:shadow-lg transition-shadow border border-white/30 bg-white/60 backdrop-blur-md h-full"
                 style={{
                   opacity: visible ? 1 : 0,
                   transform: visible ? 'translateY(0)' : 'translateY(40px)',
