@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Chart } from '@/components/Chart';
 import {
   Users,
   FileText,
@@ -18,6 +19,16 @@ import {
   revokeInvitation,
 } from '@/lib/actions/user.actions';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
+import Link from 'next/link';
+import ActionDropdown from '@/components/ActionDropdown';
+import FormattedDateTime from '@/components/FormattedDateTime';
+import Thumbnail from '@/components/Thumbnail';
+import { Separator } from '@/components/ui/separator';
+import { getFiles, getTotalSpaceUsed } from '@/lib/actions/file.actions';
+import { convertFileSize, getUsageSummary } from '@/lib/utils';
+import { Models } from 'node-appwrite';
+
 const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
 });
@@ -123,6 +134,23 @@ const ExecutiveDashboard = () => {
   const adminName = 'Executive'; // Replace with actual admin name
   const [resendingToken, setResendingToken] = useState<string | null>(null);
 
+  // File usage and recent files state
+  const [files, setFiles] = useState<Models.Document[] | null>(null);
+  interface FileTypeSummary {
+    size: number;
+    latestDate: string;
+  }
+  interface TotalSpace {
+    document: FileTypeSummary;
+    image: FileTypeSummary;
+    video: FileTypeSummary;
+    audio: FileTypeSummary;
+    other: FileTypeSummary;
+    used: number;
+    all: number;
+  }
+  const [totalSpace, setTotalSpace] = useState<TotalSpace | null>(null);
+
   useEffect(() => {
     // Fetch pending invitations on mount
     const fetchInvites = async () => {
@@ -131,6 +159,17 @@ const ExecutiveDashboard = () => {
       setInvitations(data.map((inv: unknown) => inv as Invitation));
     };
     fetchInvites();
+
+    // Fetch files and usage data in parallel
+    const fetchData = async () => {
+      const [filesRes, totalSpaceRes] = await Promise.all([
+        getFiles({ types: [], limit: 10 }),
+        getTotalSpaceUsed(),
+      ]);
+      setFiles(filesRes.documents); // <-- Use .documents if that's the structure
+      setTotalSpace(totalSpaceRes as TotalSpace);
+    };
+    fetchData();
   }, [orgId]);
 
   const handleInviteChange = (
@@ -207,6 +246,83 @@ const ExecutiveDashboard = () => {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* File Usage Overview Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* File Usage Overview */}
+        <section className="bg-white rounded-xl shadow p-6 flex flex-col">
+          <div className="flex justify-center items-center mb-6">
+            <Chart used={totalSpace?.used || 0} />
+          </div>
+          {/* Uploaded file type summaries */}
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {totalSpace &&
+              getUsageSummary(totalSpace).map((summary) => (
+                <Link
+                  href={summary.url}
+                  key={summary.title}
+                  className="flex flex-col bg-slate-50 rounded-lg p-4 hover:shadow transition border border-border"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <Image
+                      src={summary.icon}
+                      width={40}
+                      height={40}
+                      alt="uploaded image"
+                      className="rounded-full"
+                    />
+                    <h4 className="text-lg font-semibold text-navy">
+                      {convertFileSize(summary.size) || 0}
+                    </h4>
+                  </div>
+                  <h5 className="text-sm font-medium text-slate-dark mb-1">
+                    {summary.title}
+                  </h5>
+                  <Separator className="bg-light-400 my-2" />
+                  <FormattedDateTime
+                    date={summary.latestDate}
+                    className="text-center text-xs text-slate-light"
+                  />
+                </Link>
+              ))}
+          </ul>
+        </section>
+
+        {/* Recent files uploaded */}
+        <section className="dashboard-recent-files">
+          <h2 className="h3 xl:h2 text-light-100">Recent files uploaded</h2>
+          {files && files.length > 0 ? (
+            <ul className="mt-5 flex flex-col gap-5">
+              {files.map((file: Models.Document) => (
+                <Link
+                  href={file.url}
+                  target="_blank"
+                  className="flex items-center gap-3"
+                  key={file.$id}
+                >
+                  <Thumbnail
+                    type={file.type}
+                    extension={file.extension}
+                    url={file.url}
+                  />
+                  <div className="recent-file-details">
+                    <div className="flex flex-col gap-1">
+                      <p className="recent-file-name">{file.name}</p>
+                      <FormattedDateTime
+                        date={file.$createdAt}
+                        className="caption"
+                      />
+                    </div>
+                    <ActionDropdown file={file} />
+                  </div>
+                </Link>
+              ))}
+            </ul>
+          ) : (
+            <p className="empty-list">No files uploaded</p>
+          )}
+        </section>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

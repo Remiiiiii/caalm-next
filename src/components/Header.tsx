@@ -6,29 +6,37 @@ import Link from 'next/link';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import clsx from 'clsx';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 export const Header = () => {
-  const [hasScrolled, setHasScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef(null);
+  const { scrollY } = useScroll();
+
+  // Animate only after 64px scroll
+  const width = useTransform(scrollY, [0, 64], ['100%', '70%']);
+  const borderRadius = useTransform(scrollY, [0, 64], [0, 24]);
+  const margin = useTransform(scrollY, [0, 64], ['0px', '16px auto']);
+  const boxShadow = useTransform(
+    scrollY,
+    [0, 64],
+    [
+      'none',
+      '0 4px 32px 0 rgba(16,30,54,0.10), 0 1.5px 4px 0 rgba(16,30,54,0.03)',
+    ]
+  );
+  const background = useTransform(
+    scrollY,
+    [0, 64],
+    ['rgba(255,255,255,0.85)', 'rgba(255,255,255,0.65)']
+  );
 
   useEffect(() => {
     AOS.init({
       duration: 1500,
       once: true,
     });
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setHasScrolled(window.scrollY > 32);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
   }, []);
 
   // Close menu on outside click
@@ -44,18 +52,35 @@ export const Header = () => {
   }, [isOpen]);
 
   return (
-    <header
-      className={clsx(
-        'flex items-center fixed top-0 left-0 right-0 z-50 w-full bg-white transition-all duration-500',
-        hasScrolled
-          ? 'py-2 h-14 sm:h-16 bg-white/60 backdrop-blur-lg border border-white/30 shadow-lg'
-          : 'py-3 h-16 sm:py-4 sm:h-20'
-      )}
+    <motion.header
+      ref={headerRef}
+      style={{
+        width,
+        borderRadius,
+        margin,
+        boxShadow,
+        background,
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        height: 72,
+        border: '1px solid rgba(200,200,200,0.18)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 2rem',
+        transition: 'all 0.3s cubic-bezier(.4,0,.2,1)',
+      }}
+      className="transition-all duration-500"
     >
       <div
         className={clsx(
-          'flex items-center justify-between w-full px-3 sm:px-4 md:px-6 transition-all duration-500 container mx-auto',
-          hasScrolled ? 'h-14 sm:h-16' : 'h-16 sm:h-20'
+          'flex items-center justify-between w-full px-3 sm:px-4 md:px-6 transition-all duration-500 container mx-auto'
+          // hasScrolled ? 'h-14 sm:h-16' : 'h-16 sm:h-20' // Removed hasScrolled
         )}
       >
         <div className="flex items-center ">
@@ -206,7 +231,7 @@ export const Header = () => {
           </div>
         </>
       )}
-    </header>
+    </motion.header>
   );
 };
 
