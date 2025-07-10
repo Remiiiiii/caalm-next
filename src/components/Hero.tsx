@@ -1,22 +1,40 @@
 'use client';
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { useInView } from 'react-intersection-observer';
 import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 // import Spline from '@splinetool/react-spline';
-import HeroIntro from './HeroIntro';
 
 const Hero = () => {
-  // Crossfade effect state
-  const [showSecond, setShowSecond] = useState(false);
+  const { ref, inView } = useInView({
+    threshold: 0.2, // Adjust as needed
+    triggerOnce: false,
+  });
+  const [visible, setVisible] = useState(false);
+
   useEffect(() => {
-    const interval = setInterval(() => setShowSecond((prev) => !prev), 5000);
+    setVisible(inView);
+  }, [inView]);
+
+  // Crossfade effect state
+  const [crossfadeIndex, setCrossfadeIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCrossfadeIndex((prev) => (prev + 1) % 3);
+    }, 3500);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <section className="relative flex flex-col md:flex-row items-center justify-between py-16 px-4 bg-gradient-to-b from-white to-blue-50 overflow-hidden">
+    <section
+      data-aos="fade-up"
+      data-aos-duration="3000"
+      ref={ref}
+      className={`transition-opacity duration-700 ${
+        visible ? 'opacity-100' : 'opacity-0'
+      } relative flex flex-col md:flex-row items-center justify-between py-4 px-4 bg-gradient-to-b from-white to-blue-50 overflow-hidden`}
+    >
       {/* Subtle grid background */}
       <div
         className="absolute inset-0 z-0 pointer-events-none"
@@ -26,16 +44,10 @@ const Hero = () => {
           backgroundSize: '40px 40px',
         }}
       />
-      <div className="container mx-auto px-4">
-        <HeroIntro />
+      <div className="max-w-7xl ml-12">
         <div className="flex flex-col md:flex-row items-center justify-between">
           {/* Left: Text, Buttons, Testimonial */}
-          <motion.div
-            initial={{ opacity: 0, x: -60 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="relative z-10 flex-1 flex flex-col gap-6"
-          >
+          <div className="relative z-10 flex-1 flex flex-col gap-6">
             <h1
               className="text-4xl md:text-6xl font-bold leading-tight mt-20 bg-gradient-to-r bg-clip-text text-transparent"
               style={{
@@ -43,13 +55,15 @@ const Hero = () => {
                   'linear-gradient(to right, #00C1CB, #078FAB, #0E638F, #11487D, #162768)',
               }}
             >
-              Centralize Your Contracts, Licenses & Audits
+              Track Compliance, Users, and Contract Activity
             </h1>
             {/* Crossfade paragraphs */}
-            <div className="relative h-16 max-w-full mb-8 sm:mb-12 text-slate-700">
+            <div className="mt-4 relative h-16 max-w-full mb-2 sm:mb-4 text-slate-700">
               <p
                 className={`absolute inset-0 transition-opacity duration-700 ${
-                  showSecond ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                  crossfadeIndex === 0
+                    ? 'opacity-100'
+                    : 'opacity-0 pointer-events-none'
                 }`}
               >
                 Streamline your compliance and agreement processes with CAALM
@@ -57,12 +71,23 @@ const Hero = () => {
               </p>
               <p
                 className={`absolute inset-0 transition-opacity duration-700 ${
-                  showSecond ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  crossfadeIndex === 1
+                    ? 'opacity-100'
+                    : 'opacity-0 pointer-events-none'
                 }`}
               >
                 Caalm eliminates fragmented document storage and manual
-                tracking. Secure your compliance, prevent missed deadlines, and
-                protect your organization from financial and reputational risks.
+                tracking.
+              </p>
+              <p
+                className={`absolute inset-0 transition-opacity duration-700 ${
+                  crossfadeIndex === 2
+                    ? 'opacity-100'
+                    : 'opacity-0 pointer-events-none'
+                }`}
+              >
+                Secure your compliance, prevent missed deadlines, and protect
+                your organization from financial and reputational risks.
               </p>
             </div>
             {/* Original styled buttons with arrows and hover arrow animation */}
@@ -152,14 +177,9 @@ const Hero = () => {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
           {/* Right: Spline or App Screenshot */}
-          <motion.div
-            initial={{ opacity: 0, x: 60 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
-            className="relative z-10 flex-1 flex items-center justify-center mt-10 md:mt-0"
-          >
+          <div className="relative z-10 flex-1 flex items-center justify-center mt-10 md:mt-0">
             <Image
               src="/assets/images/card-main.png"
               alt="App Screenshot"
@@ -167,7 +187,7 @@ const Hero = () => {
               height={400}
               className="rounded-xl shadow-xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-90 pointer-events-none"
             />
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

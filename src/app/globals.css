@@ -495,3 +495,106 @@
     @apply bg-background text-foreground;
   }
 }
+
+.gradient-icon {
+  background: linear-gradient(
+    90deg,
+    #00c1cb 0%,
+    #078fab 25%,
+    #0e638f 50%,
+    #11487d 75%,
+    #162768 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-icon {
+  filter: drop-shadow(0 2px 8px rgba(0, 193, 203, 0.25))
+    drop-shadow(0 8px 24px rgba(22, 39, 104, 0.15));
+}
+
+.orbit-3d {
+  background: radial-gradient(ellipse at 60% 30%, #fff 60%, #e0f7fa 100%);
+  box-shadow: 0 4px 24px 0 rgba(0, 193, 203, 0.18),
+    0 1.5px 6px 0 rgba(22, 39, 104, 0.1), 0 0.5px 0.5px 0 #fff inset,
+    0 0 0 3px rgba(30, 41, 59, 0.12); /* subtle dark outer border */
+  border-top: 2px solid #fff8;
+  border-left: 2px solid #fff5;
+  border-bottom: 2px solid #b2ebf2;
+  border-right: 2px solid #b2ebf2;
+  border-radius: 1rem;
+  /* Add a slightly darker border for 3D edge */
+  outline: 2px solid rgba(30, 41, 59, 0.18);
+  outline-offset: -2px;
+  /* Optional: slight tilt for more 3D illusion */
+  transform-style: preserve-3d;
+}
+
+.orbit-animated-border {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@property --orbit-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.orbit-animated-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  padding: 3px;
+  background: conic-gradient(
+    from var(--orbit-angle, 0deg),
+    transparent 0deg,
+    #059bb2 5deg,
+    #00c1cb 18deg,
+    #fff 30deg,
+    #00c1cb 42deg,
+    #059bb2 55deg,
+    transparent 70deg,
+    transparent 360deg
+  );
+  box-shadow: 0 0 8px 2px #00c1cb44;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: 1;
+  animation: orbit-snake-move 4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes orbit-snake-move {
+  0% {
+    --orbit-angle: 0deg;
+  }
+  100% {
+    --orbit-angle: 360deg;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
