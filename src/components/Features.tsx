@@ -88,7 +88,7 @@ transition-opacity duration-700 ${
         visible ? 'opacity-100' : 'opacity-0'
       } relative flex flex-col md:flex-row items-center justify-between py-4 px-4 bg-gradient-to-b from-white to-blue-50 overflow-hidden`}
     >
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto mt-[5rem]">
         <BrandMarquee />
         <div className="text-center mb-10 sm:mb-14 md:mb-16">
           <h2 className="text-2xl md:text-[3.5em] font-bold text-center mb-4 leading-tight bg-gradient-to-r from-[#059BB2] via-[#00C1CB] to-[#162768] bg-clip-text text-transparent">
