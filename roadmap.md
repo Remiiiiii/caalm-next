@@ -4,14 +4,15 @@
 
 - [ ] Backend Configuration (Database setup, API endpoints)
 - [ ] User Authentication & Role-Based Access
-  - [ ] Executive/Admin approval workflow
-  - [ ] Tiered permissions (Head Admin, Manager, HR)
+- [ ] Executive/Admin approval workflow
+- [ ] Tiered permissions (Head Admin, Manager, HR)
 - [ ] Contract Dashboard (Base UI with mock data)
 - [ ] Document Upload & Storage
 - [ ] Basic Deadline Alerts (Email notifications)
 
 ## Phase 2: Workflows & Compliance (Weeks 3-4)
 
+- [ ] AI-Assisted Contract Review
 - [ ] Approval System (Contract proposals, user registrations)
 - [ ] Training Requirement Tracking (HR Dashboard)
 - [ ] Automated Compliance Checks
@@ -40,4 +41,3 @@
 - [ ] Mobile App/PWA
 - [ ] API for Third-Party Integrations
 - [ ] Advanced Analytics (Compliance trends)
-- [ ] AI-Assisted Contract Review
