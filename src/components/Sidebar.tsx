@@ -133,7 +133,25 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
       header: 'Reports & Analytics',
       items: [
         {
-          name: 'Reports & Analytics',
+          name: 'Operations',
+          icon: '/assets/icons/chart.svg',
+          url: '/analytics',
+          roles: ['executive', 'manager'],
+        },
+        {
+          name: 'Finance',
+          icon: '/assets/icons/chart.svg',
+          url: '/analytics',
+          roles: ['executive', 'manager'],
+        },
+        {
+          name: 'Child Welfare',
+          icon: '/assets/icons/chart.svg',
+          url: '/analytics',
+          roles: ['executive', 'manager'],
+        },
+        {
+          name: 'Behavioral Health',
           icon: '/assets/icons/chart.svg',
           url: '/analytics',
           roles: ['executive', 'manager'],
@@ -204,25 +222,51 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                       </span>
                     ) : section.header === 'Contracts' ? (
                       <span className="text-[#03AFBF]">
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 26 26"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M21.053 4.37004C21.1963 4.59528 20.9508 4.85768 20.6905 4.79852V4.79852C20.1814 4.64685 19.618 4.57102 19.0439 4.57102H15.4477C15.2905 4.57102 15.1425 4.49707 15.048 4.37138L13.7897 2.69685V2.69685C13.6371 2.48066 13.7813 2.16602 14.0459 2.16602H17.0289C18.7199 2.16602 20.2096 3.04431 21.053 4.37004Z"
-                            fill="currentColor"
-                          />
-                          <path
-                            d="M21.8177 7.08435C21.3518 6.74852 20.821 6.49935 20.2469 6.35852C19.8569 6.25018 19.456 6.19602 19.0443 6.19602H15.0143C14.386 6.19602 14.3427 6.14185 14.0068 5.69768L12.4902 3.68268C11.786 2.74018 11.2335 2.16602 9.46768 2.16602H6.95435C4.31102 2.16602 2.16602 4.31102 2.16602 6.95435V19.0443C2.16602 21.6877 4.31102 23.8327 6.95435 23.8327H19.0443C21.6877 23.8327 23.8327 21.6877 23.8327 19.0443V10.9843C23.8327 9.37018 23.0418 7.95102 21.8177 7.08435ZM15.5885 17.701H10.3993C9.97685 17.701 9.65185 17.3652 9.65185 16.9427C9.65185 16.531 9.97685 16.1843 10.3993 16.1843H15.5885C16.011 16.1843 16.3468 16.531 16.3468 16.9427C16.3468 17.3652 16.011 17.701 15.5885 17.701Z"
-                            fill="currentColor"
-                          />
-                        </svg>
+                        <Image
+                          src="/assets/icons/contracts.svg"
+                          alt="contracts"
+                          width={24}
+                          height={24}
+                        />
+                      </span>
+                    ) : section.header === 'Documents' ? (
+                      <span className="text-[#03AFBF]">
+                        <Image
+                          src="/assets/icons/documents.svg"
+                          alt="documents"
+                          width={20}
+                          height={20}
+                        />
+                      </span>
+                    ) : section.header === 'Compliance' ? (
+                      <span className="text-[#03AFBF]">
+                        <Image
+                          src="/assets/icons/compliance.svg"
+                          alt="compliance"
+                          width={24}
+                          height={24}
+                        />
+                      </span>
+                    ) : section.header === 'Team' ? (
+                      <span className="text-[#03AFBF]">
+                        <Image
+                          src="/assets/icons/team.svg"
+                          alt="team"
+                          width={24}
+                          height={24}
+                        />
+                      </span>
+                    ) : section.header === 'Reports & Analytics' ? (
+                      <span className="text-[#03AFBF]">
+                        <Image
+                          src="/assets/icons/reports-analytics.svg"
+                          alt="reports-analytics"
+                          width={24}
+                          height={24}
+                        />
                       </span>
                     ) : null}
-                    <span className="font-bold text-lg lg:text-xl">
+                    <span className="font-bold text-base">
                       {section.header}
                     </span>
                   </span>
@@ -240,21 +284,148 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                           href={url}
                           className="ml-4 lg:w-full flex items-start gap-3"
                         >
-                          <span className="text-[#BFBFBF]">
-                            <svg
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M12 3C11.2916 2.99895 10.6056 3.24866 10.0636 3.70493C9.52155 4.16119 9.15852 4.79455 9.03874 5.49283C8.91897 6.19111 9.05019 6.90925 9.40916 7.52005C9.76814 8.13085 10.3317 8.5949 11 8.83V11H8.00003C7.20438 11 6.44132 11.3161 5.87871 11.8787C5.3161 12.4413 5.00003 13.2044 5.00003 14V15.17C4.33254 15.4059 3.76994 15.8702 3.41167 16.4808C3.0534 17.0914 2.92254 17.809 3.04222 18.5068C3.16189 19.2046 3.5244 19.8375 4.06566 20.2939C4.60692 20.7502 5.29208 21.0005 6.00003 21.0005C6.70798 21.0005 7.39314 20.7502 7.9344 20.2939C8.47566 19.8375 8.83817 19.2046 8.95784 18.5068C9.07752 17.809 8.94666 17.0914 8.58839 16.4808C8.23012 15.8702 7.66752 15.4059 7.00003 15.17V14C7.00003 13.7348 7.10539 13.4804 7.29292 13.2929C7.48046 13.1054 7.73481 13 8.00003 13H16C16.2652 13 16.5196 13.1054 16.7071 13.2929C16.8947 13.4804 17 13.7348 17 14V15.17C16.3325 15.4059 15.7699 15.8702 15.4117 16.4808C15.0534 17.0914 14.9225 17.809 15.0422 18.5068C15.1619 19.2046 15.5244 19.8375 16.0657 20.2939C16.6069 20.7502 17.2921 21.0005 18 21.0005C18.708 21.0005 19.3931 20.7502 19.9344 20.2939C20.4757 19.8375 20.8382 19.2046 20.9578 18.5068C21.0775 17.809 20.9467 17.0914 20.5884 16.4808C20.2301 15.8702 19.6675 15.4059 19 15.17V14C19 13.2044 18.684 12.4413 18.1214 11.8787C17.5587 11.3161 16.7957 11 16 11H13V8.83C13.6672 8.59385 14.2294 8.12952 14.5874 7.51904C14.9454 6.90855 15.0761 6.19118 14.9565 5.49366C14.8368 4.79614 14.4745 4.16334 13.9335 3.70705C13.3926 3.25076 12.7077 3.00033 12 3Z"
-                                fill="currentColor"
+                          {/* Render only the corresponding icon for each item, no generic icon */}
+                          {section.header === 'Dashboard' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/department.svg"
+                                alt="department"
+                                width={20}
+                                height={20}
                               />
-                            </svg>
-                          </span>
-                          <p className="font-semibold text-slate-700">{name}</p>
+                            </span>
+                          )}
+                          {name === 'All Contracts' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/all-contracts.svg"
+                                alt="all-contracts"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Proposals & Approvals' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/proposal-approval.svg"
+                                alt="proposal-approval"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Uploads' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/upload.svg"
+                                alt="upload"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Images' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/images.svg"
+                                alt="images"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Media' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/video.svg"
+                                alt="video"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Others' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/others.svg"
+                                alt="others"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Compliance Status' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/compliance-status.svg"
+                                alt="compliance-status"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Audit Logs' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/audit-logs.svg"
+                                alt="audit-logs"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'User Management' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/user-management.svg"
+                                alt="team"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Operations' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/department.svg"
+                                alt="reports-analytics"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Finance' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/department.svg"
+                                alt="reports-analytics"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Child Welfare' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/department.svg"
+                                alt="reports-analytics"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          {name === 'Behavioral Health' && (
+                            <span className="gap-1">
+                              <Image
+                                src="/assets/icons/department.svg"
+                                alt="reports-analytics"
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                          )}
+                          <p className="text-sm text-slate-700">{name}</p>
                         </Link>
                       </li>
                     ))}
