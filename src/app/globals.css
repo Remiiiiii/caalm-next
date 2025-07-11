@@ -443,8 +443,13 @@
   .sidebar {
     @apply remove-scrollbar hidden h-screen w-[90px] flex-col overflow-auto px-5 py-7 sm:flex lg:w-[280px] xl:w-[325px] !important;
   }
+  .sidebar.collapsed {
+    width: 90px;
+    min-width: 90px;
+    max-width: 90px;
+  }
   .sidebar-nav {
-    @apply h5 mt-9 flex-1 gap-1 text-brand !important;
+    @apply h5 mt-9 flex-1 gap-1 sidebar-gradient-text bg-gradient-to-r bg-clip-text text-transparent !important;
   }
   .sidebar-nav-item {
     @apply flex text-light-100 gap-4 rounded-xl lg:w-full justify-center lg:justify-start items-center h5 lg:px-[30px] h-[52px] lg:rounded-full !important;
@@ -601,4 +606,18 @@
 
 #bgVideo {
   transition: opacity 3.5s;
+}
+
+.sidebar-gradient-text {
+  background-image: linear-gradient(
+    to right,
+    #00c1cb,
+    #078fab,
+    #0e638f,
+    #11487d,
+    #162768
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

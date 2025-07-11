@@ -17,7 +17,9 @@ import {
   createInvitation,
   listPendingInvitations,
   revokeInvitation,
+  listAllUsers,
 } from '@/lib/actions/user.actions';
+import type { AppUser } from '@/lib/actions/user.actions';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -28,6 +30,13 @@ import { Separator } from '@/components/ui/separator';
 import { getFiles, getTotalSpaceUsed } from '@/lib/actions/file.actions';
 import { convertFileSize, getUsageSummary } from '@/lib/utils';
 import { Models } from 'node-appwrite';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
@@ -44,6 +53,22 @@ interface Invitation {
   status: string;
   revoked: boolean;
   $createdAt: string;
+}
+
+// Type guard for user document
+function isAppUserDoc(
+  u: unknown
+): u is AppUser & { $id: string; department?: string } {
+  return (
+    typeof u === 'object' &&
+    u !== null &&
+    'fullName' in u &&
+    'email' in u &&
+    'avatar' in u &&
+    'accountId' in u &&
+    'role' in u &&
+    '$id' in u
+  );
 }
 
 const ExecutiveDashboard = () => {
@@ -151,6 +176,51 @@ const ExecutiveDashboard = () => {
   }
   const [totalSpace, setTotalSpace] = useState<TotalSpace | null>(null);
 
+  // User management state
+  const [users, setUsers] = useState<
+    (AppUser & { $id: string; department?: string })[]
+  >([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [editUser, setEditUser] = useState<
+    (AppUser & { $id: string; department?: string }) | null
+  >(null);
+  const [editForm, setEditForm] = useState({
+    fullName: '',
+    department: '',
+    role: '',
+  });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Fetch all users for executive user management
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const data = await listAllUsers();
+      const mapped = (data ?? []).filter(isAppUserDoc).map((u) => ({
+        $id: u.$id,
+        fullName: u.fullName,
+        email: u.email,
+        avatar: u.avatar,
+        accountId: u.accountId,
+        role: u.role,
+        department: u.department,
+      }));
+      setUsers(mapped);
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to load users',
+        variant: 'destructive',
+      });
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Fetch pending invitations on mount
     const fetchInvites = async () => {
@@ -170,6 +240,8 @@ const ExecutiveDashboard = () => {
       setTotalSpace(totalSpaceRes as TotalSpace);
     };
     fetchData();
+
+    fetchUsers();
   }, [orgId]);
 
   const handleInviteChange = (
@@ -209,6 +281,110 @@ const ExecutiveDashboard = () => {
     setResendingToken(token);
     await resendInvitation();
     setResendingToken(null);
+  };
+
+  // User edit handlers
+  const openEditModal = (
+    user: AppUser & { $id: string; department?: string }
+  ) => {
+    setEditUser(user);
+    setEditForm({
+      fullName: user.fullName || '',
+      department: user.department || '',
+      role: user.role || '',
+    });
+    setEditError(null);
+  };
+
+  const closeEditModal = () => {
+    setEditUser(null);
+    setEditForm({ fullName: '', department: '', role: '' });
+    setEditError(null);
+  };
+
+  const handleEditChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError(null);
+    // Validation
+    if (!editForm.fullName.trim()) {
+      setEditError('Full name is required.');
+      return;
+    }
+    if (!editForm.department) {
+      setEditError('Department is required.');
+      return;
+    }
+    if (!editForm.role) {
+      setEditError('Role is required.');
+      return;
+    }
+    setEditLoading(true);
+    try {
+      if (!editUser || !editUser.accountId) throw new Error('No user selected');
+      const res = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountId: editUser.accountId,
+          ...editForm,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update user');
+      }
+      // Refresh users list
+      await fetchUsers();
+      toast({
+        title: 'User updated',
+        description: 'User profile updated successfully.',
+      });
+      closeEditModal();
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : 'Unknown error');
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    setDeleteLoadingId(userId);
+    try {
+      const res = await fetch('/api/user/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete user');
+      }
+      await fetchUsers();
+      toast({
+        title: 'User deleted',
+        description: 'User deleted successfully.',
+      });
+    } catch (err: unknown) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteLoadingId(null);
+      setDeleteConfirmId(null);
+    }
   };
 
   return (
@@ -499,6 +675,171 @@ const ExecutiveDashboard = () => {
           </table>
         </CardContent>
       </Card>
+
+      {/* User Management Table (Executive only) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>User Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            {usersLoading ? (
+              <div className="py-8 text-center text-slate-500">
+                Loading users...
+              </div>
+            ) : (
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-2 py-1 text-left">Name</th>
+                    <th className="px-2 py-1 text-left">Email</th>
+                    <th className="px-2 py-1 text-left">Department</th>
+                    <th className="px-2 py-1 text-left">Role</th>
+                    <th className="px-2 py-1 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.$id} className="border-b">
+                      <td className="px-2 py-1">{user.fullName}</td>
+                      <td className="px-2 py-1">{user.email}</td>
+                      <td className="px-2 py-1">{user.department || '-'}</td>
+                      <td className="px-2 py-1">{user.role}</td>
+                      <td className="px-2 py-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditModal(user)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="ml-2"
+                          onClick={() => setDeleteConfirmId(user.$id)}
+                          disabled={deleteLoadingId === user.$id}
+                        >
+                          {deleteLoadingId === user.$id
+                            ? 'Deleting...'
+                            : 'Delete'}
+                        </Button>
+                        {/* Delete confirmation dialog */}
+                        {deleteConfirmId === user.$id && (
+                          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                            <div className="bg-white rounded shadow-lg p-6 w-80">
+                              <div className="mb-4 text-center">
+                                <div className="font-bold mb-2">
+                                  Delete User?
+                                </div>
+                                <div className="text-sm text-slate-600">
+                                  Are you sure you want to delete this user?
+                                  This action cannot be undone.
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setDeleteConfirmId(null)}
+                                  disabled={deleteLoadingId === user.$id}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDeleteUser(user.$id)}
+                                  disabled={deleteLoadingId === user.$id}
+                                >
+                                  {deleteLoadingId === user.$id
+                                    ? 'Deleting...'
+                                    : 'Delete'}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Edit User Modal */}
+      <Dialog open={!!editUser} onOpenChange={closeEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium">Full Name</label>
+              <Input
+                name="fullName"
+                value={editForm.fullName}
+                onChange={handleEditChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Department</label>
+              <select
+                name="department"
+                value={editForm.department}
+                onChange={handleEditChange}
+                className="w-full border rounded px-2 py-1"
+                required
+              >
+                <option value="">Select department</option>
+                <option value="childwelfare">Child Welfare</option>
+                <option value="behavioralhealth">Behavioral Health</option>
+                <option value="finance">Finance</option>
+                <option value="operations">Operations</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Role</label>
+              <select
+                name="role"
+                value={editForm.role}
+                onChange={handleEditChange}
+                className="w-full border rounded px-2 py-1"
+                required
+              >
+                <option value="executive">Executive</option>
+                <option value="manager">Manager</option>
+                <option value="hr">HR</option>
+              </select>
+            </div>
+            {editError && (
+              <div className="text-red-600 text-sm">{editError}</div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeEditModal}
+                disabled={editLoading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editLoading}>
+                {editLoading ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+            {editLoading && (
+              <div className="text-center text-slate-500">
+                Saving changes...
+              </div>
+            )}
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

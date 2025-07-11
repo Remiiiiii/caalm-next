@@ -10,13 +10,13 @@ import { redirect } from 'next/navigation';
 import crypto from 'crypto';
 import * as sdk from 'node-appwrite';
 
-type AppUser = {
+export type AppUser = {
   fullName: string;
   email: string;
   avatar: string;
   accountId: string;
   role: string;
-  // add other fields as needed
+  department?: 'childwelfare' | 'behavioralhealth' | 'finance' | 'operations';
 };
 
 export const getUserByEmail = async (email: string) => {
@@ -184,6 +184,7 @@ export const signInUser = async ({ email }: { email: string }) => {
           avatar: avatarPlaceholderUrl,
           accountId: authUser.$id,
           role: '',
+          department: undefined,
         }
       );
       await sendEmailOTP({ email });
@@ -422,4 +423,86 @@ export const getInvitationByToken = async (token: string) => {
     [Query.equal('token', token)]
   );
   return result.total > 0 ? result.documents[0] : null;
+};
+
+/**
+ * Update a user's profile in the users collection.
+ * @param {Object} params
+ * @param {string} params.accountId - The user's accountId (Appwrite Auth user ID)
+ * @param {string} [params.fullName] - The user's full name
+ * @param {string} [params.role] - The user's role
+ * @returns {Promise<Object>} The updated user document
+ */
+export const updateUserProfile = async ({
+  accountId,
+  fullName,
+  department,
+  role,
+}: {
+  accountId: string;
+  fullName?: string;
+  department?: 'childwelfare' | 'behavioralhealth' | 'finance' | 'operations';
+  role?: string;
+}) => {
+  try {
+    const { databases } = await createAdminClient();
+    // Find the user document by accountId
+    const userList = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      [Query.equal('accountId', accountId)]
+    );
+    if (userList.total === 0) throw new Error('User not found');
+    const userDoc = userList.documents[0];
+    // Prepare update payload
+    const updatePayload: Record<string, unknown> = {};
+    if (fullName !== undefined) updatePayload.fullName = fullName;
+    if (role !== undefined) updatePayload.role = role;
+    if (department !== undefined) updatePayload.department = department;
+    // Update the user document
+    const updatedUser = await databases.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      userDoc.$id,
+      updatePayload
+    );
+    return updatedUser;
+  } catch (error) {
+    handleError(error, 'Failed to update user profile');
+  }
+};
+
+/**
+ * List all users in the users collection.
+ * @returns {Promise<any[]>} Array of user documents
+ */
+export const listAllUsers = async () => {
+  try {
+    const { databases } = await createAdminClient();
+    const result = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId
+    );
+    return result.documents;
+  } catch (error) {
+    handleError(error, 'Failed to list all users');
+  }
+};
+
+/**
+ * Delete a user document from the users collection by $id.
+ * @param {string} userId - The $id of the user document to delete
+ */
+export const deleteUser = async (userId: string) => {
+  try {
+    const { databases } = await createAdminClient();
+    await databases.deleteDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      userId
+    );
+    return { success: true };
+  } catch (error) {
+    handleError(error, 'Failed to delete user');
+  }
 };
