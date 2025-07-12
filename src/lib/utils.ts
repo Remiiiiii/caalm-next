@@ -232,12 +232,16 @@ export const getUsageSummary = (totalSpace: TotalSpace) => {
   ];
 };
 
-export const getFileTypesParams = (type: string) => {
-  switch (type) {
+export function getFileTypesParams(type: string): FileType[] {
+  if (!type || type.toLowerCase() === 'uploads') {
+    return ['image', 'video', 'audio', 'document', 'other'];
+  }
+  switch (type.toLowerCase()) {
+    case 'images':
+      // Only allow 'image' type, filter extensions in the page
+      return ['image'];
     case 'documents':
       return ['document'];
-    case 'images':
-      return ['image'];
     case 'media':
       return ['video', 'audio'];
     case 'others':
@@ -245,4 +249,4 @@ export const getFileTypesParams = (type: string) => {
     default:
       return ['document'];
   }
-};
+}

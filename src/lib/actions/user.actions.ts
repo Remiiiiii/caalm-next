@@ -17,6 +17,7 @@ export type AppUser = {
   accountId: string;
   role: string;
   department?: 'childwelfare' | 'behavioralhealth' | 'finance' | 'operations';
+  status?: 'active' | 'inactive';
 };
 
 export const getUserByEmail = async (email: string) => {

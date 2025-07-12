@@ -14,6 +14,24 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
   const files = await getFiles({ types, searchText, sort });
 
+  // If type is 'images', filter to only png, jpg, jpeg
+  let filteredDocuments = files.documents;
+  if (type.toLowerCase() === 'images') {
+    filteredDocuments = files.documents.filter((file: Models.Document) => {
+      const ext = (file.extension || '').toLowerCase();
+      return ext === 'png' || ext === 'jpg' || ext === 'jpeg';
+    });
+  }
+
+  // Calculate total size in bytes
+  const totalSizeBytes = filteredDocuments.reduce(
+    (sum: number, file: Models.Document) => sum + (file.size || 0),
+    0
+  );
+  // Format total size using convertFileSize
+  const { convertFileSize } = await import('@/lib/utils');
+  const totalSizeFormatted = convertFileSize(totalSizeBytes);
+
   return (
     <div className="page-container">
       <section className="w-full">
@@ -21,7 +39,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
         <div className="total-size-section">
           <p className="body-1">
-            Total: <span className="h5">0 MB</span>
+            Total: <span className="h5">{totalSizeFormatted}</span>
           </p>
 
           <div className="sort-container">
@@ -33,9 +51,9 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       </section>
 
       {/* Render the files */}
-      {files.total > 0 ? (
+      {filteredDocuments.length > 0 ? (
         <section className="file-list">
-          {files.documents.map((file: Models.Document) => (
+          {filteredDocuments.map((file: Models.Document) => (
             <Card key={file.$id} file={file} />
           ))}
         </section>

@@ -65,8 +65,8 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
       items: [
         {
           name: 'Uploads',
-          icon: '/assets/icons/upload.svg',
-          url: '/documents',
+          icon: '/assets/icons/uploads.svg',
+          url: '/uploads', // This should match the [type] param
           roles: ['executive', 'manager', 'hr'],
         },
         {
@@ -77,7 +77,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
         },
         {
           name: 'Media',
-          icon: '/assets/icons/video.svg',
+          icon: '/assets/icons/media.svg',
           url: '/media',
           roles: ['executive', 'manager', 'hr'],
         },
@@ -118,7 +118,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
         {
           name: 'User Management',
           icon: '/assets/icons/users.svg',
-          url: '/team/users',
+          url: '/dashboard/user-management',
           roles: ['executive'],
         },
         {
@@ -318,7 +318,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                           {name === 'Uploads' && (
                             <span className="gap-1">
                               <Image
-                                src="/assets/icons/upload.svg"
+                                src="/assets/icons/uploads.svg"
                                 alt="upload"
                                 width={20}
                                 height={20}
@@ -338,7 +338,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                           {name === 'Media' && (
                             <span className="gap-1">
                               <Image
-                                src="/assets/icons/video.svg"
+                                src="/assets/icons/media.svg"
                                 alt="video"
                                 width={20}
                                 height={20}
