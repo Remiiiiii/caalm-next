@@ -1,13 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogHeader,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { useState, useEffect } from 'react';
+import { Dialog } from '@/components/ui/dialog';
 import Image from 'next/image';
 
 import {
@@ -28,10 +22,19 @@ import {
   deleteFile,
   renameFile,
   updateFileUsers,
+  assignContract,
 } from '@/lib/actions/file.actions';
+import { listAllUsers, AppUser } from '@/lib/actions/user.actions';
 import { usePathname } from 'next/navigation';
 import { FileDetails } from './ActionsModalContent';
 import { ShareInput } from '@/components/ActionsModalContent';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from './ui/card';
 
 const ActionDropdown = ({ file }: { file: Models.Document }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,10 +43,42 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
   const [name, setName] = useState(file.name);
   const [isLoading, setIsLoading] = useState(false);
   const [emails, setEmails] = useState<string[]>([]);
+  const [managers, setManagers] = useState<AppUser[]>([]);
+  const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
 
   const path = usePathname();
 
-  const closeAllModals = () => {
+  // Fetch managers when Assign dialog is opened
+  useEffect(() => {
+    if (action?.value === 'assign') {
+      (async () => {
+        const users = await listAllUsers();
+        if (users) {
+          setManagers(
+            (users as Models.Document[])
+              .filter((u) => u.role === 'manager')
+              .map((u) => ({
+                fullName: u.fullName,
+                email: u.email,
+                avatar: u.avatar,
+                accountId: u.accountId,
+                role: u.role,
+                department: u.department,
+                status: u.status,
+              }))
+          );
+        } else {
+          setManagers([]);
+        }
+      })();
+    }
+  }, [action]);
+
+  const closeAllModals = (event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     setIsModalOpen(false);
     setIsDropdownOpen(false);
     setAction(null);
@@ -57,6 +92,12 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
     let success = false;
 
     const actions = {
+      assign: () =>
+        assignContract({
+          fileId: file.$id,
+          managerAccountIds: selectedManagers,
+          path,
+        }),
       rename: () =>
         renameFile({
           fileId: file.$id,
@@ -104,63 +145,256 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
 
   const renderDialogContent = () => {
     if (!action) return null;
-
     const { value, label } = action;
-
-    return (
-      <DialogContent className="shad-dialog button">
-        <DialogHeader className="flex flex-col gap-3">
-          <DialogTitle className="text-center text-light-100">
-            {label}
-          </DialogTitle>
-          {value === 'rename' && (
-            <Input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          )}
-          {value === 'details' && <FileDetails file={file} />}
-          {value === 'share' && (
-            <ShareInput
-              file={file}
-              onInputChange={setEmails}
-              onRemove={handleRemoveUser}
-            />
-          )}
-          {value === 'delete' && (
-            <p className="delete-confirmation">
-              Are you sure you want to delete{` `}
-              <span className="delete-file-name">{file.name}</span>?
-            </p>
-          )}
-        </DialogHeader>
-        {['rename', 'delete', 'share'].includes(value) && (
-          <DialogFooter className="flex flex-col gap-3 md:flex-row">
-            <Button onClick={closeAllModals} className="modal-cancel-button">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAction}
-              disabled={isLoading}
-              className="modal-submit-button"
-            >
-              <p className="capitalize">{value}</p>
-              {isLoading && (
-                <Image
-                  src="/assets/icons/loader.svg"
-                  alt="loader"
-                  width={24}
-                  height={24}
-                  className="animate-spin"
-                />
-              )}
-            </Button>
-          </DialogFooter>
-        )}
-      </DialogContent>
+    // All dialogs styled like Assign (NotificationCenter)
+    const dialogHeader = (
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="sidebar-gradient-text">{label}</CardTitle>
+        <Button variant="ghost" size="icon" onClick={closeAllModals}>
+          <span className="sr-only">Close</span>×
+        </Button>
+      </CardHeader>
     );
+    if (value === 'assign') {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <Card className="w-full max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+            {dialogHeader}
+            <CardContent>
+              <div className="mb-2 text-sm text-slate-700">
+                Select manager(s) to assign this contract:
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-white/30 mb-4">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50/80">
+                    <tr>
+                      <th></th>
+                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                        Name
+                      </th>
+                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                        Department
+                      </th>
+                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                        Role
+                      </th>
+                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-700 text-sm">
+                    {managers.map((manager: AppUser) => (
+                      <tr key={manager.accountId}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedManagers.includes(
+                              manager.accountId
+                            )}
+                            onChange={() => {
+                              setSelectedManagers((prev) =>
+                                prev.includes(manager.accountId)
+                                  ? prev.filter(
+                                      (id) => id !== manager.accountId
+                                    )
+                                  : [...prev, manager.accountId]
+                              );
+                            }}
+                          />
+                        </td>
+                        <td className="px-2 py-1">{manager.fullName}</td>
+                        <td className="px-2 py-1">{manager.department}</td>
+                        <td className="px-2 py-1">{manager.role}</td>
+                        <td className="px-2 py-1">{manager.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3 md:flex-row">
+              <Button
+                onClick={(e) => closeAllModals(e)}
+                className="modal-cancel-button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAction}
+                disabled={isLoading || selectedManagers.length === 0}
+                className="modal-submit-button"
+              >
+                <p className="capitalize">Assign</p>
+                {isLoading && (
+                  <Image
+                    src="/assets/icons/loader.svg"
+                    alt="loader"
+                    width={24}
+                    height={24}
+                    className="animate-spin"
+                  />
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      );
+    }
+    // Rename dialog
+    if (value === 'rename') {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <Card className="w-[500px] max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+            {dialogHeader}
+            <CardContent>
+              <Input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3 md:flex-row">
+              <Button
+                onClick={(e) => closeAllModals(e)}
+                className="modal-cancel-button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAction}
+                disabled={isLoading}
+                className="modal-submit-button"
+              >
+                <p className="capitalize">Rename</p>
+                {isLoading && (
+                  <Image
+                    src="/assets/icons/loader.svg"
+                    alt="loader"
+                    width={24}
+                    height={24}
+                    className="animate-spin"
+                  />
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      );
+    }
+    // Details dialog
+    if (value === 'details') {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <Card className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+            {dialogHeader}
+            <CardContent>
+              <FileDetails file={file} />
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3 md:flex-row">
+              <Button
+                onClick={(e) => closeAllModals(e)}
+                className="modal-cancel-button"
+              >
+                Cancel
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      );
+    }
+    // Share dialog
+    if (value === 'share') {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <Card className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+            {dialogHeader}
+            <CardContent>
+              <ShareInput
+                file={file}
+                onInputChange={setEmails}
+                onRemove={handleRemoveUser}
+              />
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3 md:flex-row">
+              <Button
+                onClick={(e) => closeAllModals(e)}
+                className="modal-cancel-button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAction}
+                disabled={isLoading}
+                className="modal-submit-button"
+              >
+                <p className="capitalize">Share</p>
+                {isLoading && (
+                  <Image
+                    src="/assets/icons/loader.svg"
+                    alt="loader"
+                    width={24}
+                    height={24}
+                    className="animate-spin"
+                  />
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      );
+    }
+    // Delete dialog
+    if (value === 'delete') {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <Card className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+            {dialogHeader}
+            <CardContent>
+              <p className="delete-confirmation">
+                Are you sure you want to delete{' '}
+                <span className="delete-file-name">{file.name}</span>?
+              </p>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3 md:flex-row">
+              <Button
+                onClick={(e) => closeAllModals(e)}
+                className="modal-cancel-button"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleAction();
+                }}
+                disabled={isLoading}
+                className="modal-submit-button"
+              >
+                <p className="capitalize">Delete</p>
+                {isLoading && (
+                  <Image
+                    src="/assets/icons/loader.svg"
+                    alt="loader"
+                    width={24}
+                    height={24}
+                    className="animate-spin"
+                  />
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      );
+    }
   };
+
+  // Only show Assign if file name contains 'Contract'
+  const isContractFile = file.name.toLowerCase().includes('contract');
+  const filteredActions = isContractFile
+    ? actionsDropdownItems
+    : actionsDropdownItems.filter((action) => action.value !== 'assign');
 
   return (
     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -178,15 +412,14 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
             {file.name}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {actionsDropdownItems.map((actionItem) => (
+          {filteredActions.map((actionItem) => (
             <DropdownMenuItem
               key={actionItem.value}
               className="shad-dropdown-item"
               onClick={() => {
                 setAction(actionItem);
-
                 if (
-                  ['rename', 'delete', 'share', 'details'].includes(
+                  ['assign', 'rename', 'delete', 'share', 'details'].includes(
                     actionItem.value
                   )
                 ) {
@@ -199,6 +432,7 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
                   href={constructDownloadUrl(file.bucketFileId)}
                   download={file.name}
                   className="flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <Image
                     src={actionItem.icon}

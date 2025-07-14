@@ -228,3 +228,43 @@ export async function getTotalSpaceUsed() {
     handleError(error, 'Error calculating total space used:, ');
   }
 }
+
+export interface AssignContractProps {
+  fileId: string;
+  managerAccountIds: string[];
+  path: string;
+}
+
+export const assignContract = async ({
+  fileId,
+  managerAccountIds,
+  path,
+}: AssignContractProps) => {
+  const { databases } = await createAdminClient();
+  try {
+    // Fetch the file document
+    const fileDoc = await databases.getDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.filesCollectionId,
+      fileId
+    );
+    // Only allow assignment if file name/title contains 'Contract'
+    if (!fileDoc.name.toLowerCase().includes('contract')) {
+      throw new Error('File is not a contract and cannot be assigned.');
+    }
+    // Update the file document: set isContract true and assign manager(s)
+    const updatedFile = await databases.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.filesCollectionId,
+      fileId,
+      {
+        isContract: true,
+        assignedManagers: managerAccountIds,
+      }
+    );
+    revalidatePath(path);
+    return parseStringify(updatedFile);
+  } catch (error) {
+    handleError(error, 'Failed to assign contract');
+  }
+};
