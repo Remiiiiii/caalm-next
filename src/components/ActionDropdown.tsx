@@ -157,8 +157,14 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
     );
     if (value === 'assign') {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <Card className="w-full max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+          style={{ pointerEvents: 'none' }}
+        >
+          <Card
+            className="w-full max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg"
+            style={{ pointerEvents: 'auto' }}
+          >
             {dialogHeader}
             <CardContent>
               <div className="mb-2 text-sm text-slate-700">

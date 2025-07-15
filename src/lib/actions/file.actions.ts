@@ -68,12 +68,8 @@ const createQueries = (
   sort: string,
   limit?: number
 ) => {
-  const queries = [
-    Query.or([
-      Query.equal('owner', [currentUser.$id]),
-      Query.contains('users', [currentUser.email]),
-    ]),
-  ];
+  // 'owner' is a relationship attribute (not a string or array)
+  const queries = [Query.equal('owner', [currentUser.$id])];
 
   if (types.length > 0) queries.push(Query.equal('type', types));
   if (searchText) queries.push(Query.contains('name', searchText));
@@ -81,7 +77,6 @@ const createQueries = (
 
   if (sort) {
     const [sortBy, orderBy] = sort.split('-');
-
     queries.push(
       orderBy === 'asc' ? Query.orderAsc(sortBy) : Query.orderDesc(sortBy)
     );
@@ -242,20 +237,20 @@ export const assignContract = async ({
 }: AssignContractProps) => {
   const { databases } = await createAdminClient();
   try {
-    // Fetch the file document
-    const fileDoc = await databases.getDocument(
+    // Fetch the contract document from the contracts collection
+    const contractDoc = await databases.getDocument(
       appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
+      'contracts',
       fileId
     );
-    // Only allow assignment if file name/title contains 'Contract'
-    if (!fileDoc.name.toLowerCase().includes('contract')) {
-      throw new Error('File is not a contract and cannot be assigned.');
+    // Only allow assignment if contractName/title contains 'Contract'
+    if (!contractDoc.contractName.toLowerCase().includes('contract')) {
+      throw new Error('Document is not a contract and cannot be assigned.');
     }
-    // Update the file document: set isContract true and assign manager(s)
-    const updatedFile = await databases.updateDocument(
+    // Update the contract document: set isContract true and assign manager(s)
+    const updatedContract = await databases.updateDocument(
       appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
+      'contracts',
       fileId,
       {
         isContract: true,
@@ -263,7 +258,7 @@ export const assignContract = async ({
       }
     );
     revalidatePath(path);
-    return parseStringify(updatedFile);
+    return parseStringify(updatedContract);
   } catch (error) {
     handleError(error, 'Failed to assign contract');
   }

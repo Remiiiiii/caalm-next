@@ -8,7 +8,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import Image from 'next/image';
 
-const ImageThumbnail = ({ file }: Models.Document) => (
+const ImageThumbnail = ({ file }: { file: Models.Document }) => (
   <div className="file-details-thumbnail">
     <Thumbnail type={file.type} extension={file.extension} url={file.url} />
     <div className="flex flex-col">
@@ -92,7 +92,7 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
         </div>
         <DetailRow label="Format" value={file.extension} />
         <DetailRow label="Size" value={convertFileSize(file.size)} />
-        <DetailRow label="Owner" value={file.owner.fulName} />
+        <DetailRow label="Owner" value={file.owner.fullName} />
         <DetailRow label="Format" value={formatDateTime(file.$updatedAt)} />
       </div>
     </>
