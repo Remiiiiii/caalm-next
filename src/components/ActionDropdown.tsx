@@ -98,13 +98,21 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
           managerAccountIds: selectedManagers,
           path,
         }),
-      rename: () =>
-        renameFile({
+      rename: () => {
+        // Remove extension if user included it
+        let baseName = name;
+        if (
+          baseName.toLowerCase().endsWith(`.${file.extension.toLowerCase()}`)
+        ) {
+          baseName = baseName.slice(0, -file.extension.length - 1);
+        }
+        return renameFile({
           fileId: file.$id,
-          name,
+          name: baseName,
           extension: file.extension,
           path,
-        }),
+        });
+      },
       share: () =>
         updateFileUsers({
           fileId: file.$id,
@@ -150,7 +158,12 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
     const dialogHeader = (
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="sidebar-gradient-text">{label}</CardTitle>
-        <Button variant="ghost" size="icon" onClick={closeAllModals}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={closeAllModals}
+          style={{ pointerEvents: 'auto' }}
+        >
           <span className="sr-only">Close</span>×
         </Button>
       </CardHeader>
@@ -162,8 +175,8 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
           style={{ pointerEvents: 'none' }}
         >
           <Card
-            className="w-full max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg"
-            style={{ pointerEvents: 'auto' }}
+            className="w-[500px] max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg"
+            style={{ pointerEvents: 'none' }}
           >
             {dialogHeader}
             <CardContent>
@@ -189,7 +202,10 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="text-slate-700 text-sm">
+                  <tbody
+                    className="text-slate-700 text-sm"
+                    style={{ pointerEvents: 'auto' }}
+                  >
                     {managers.map((manager: AppUser) => (
                       <tr key={manager.accountId}>
                         <td>
@@ -223,13 +239,20 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
               <Button
                 onClick={(e) => closeAllModals(e)}
                 className="modal-cancel-button"
+                style={{ pointerEvents: 'auto' }}
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleAction}
+                //stop propagation
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleAction();
+                }}
                 disabled={isLoading || selectedManagers.length === 0}
                 className="modal-submit-button"
+                style={{ pointerEvents: 'auto' }}
               >
                 <p className="capitalize">Assign</p>
                 {isLoading && (
@@ -258,6 +281,10 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
               />
             </CardContent>
             <CardFooter className="flex flex-col gap-3 md:flex-row">
@@ -268,7 +295,11 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
                 Cancel
               </Button>
               <Button
-                onClick={handleAction}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleAction();
+                }}
                 disabled={isLoading}
                 className="modal-submit-button"
               >
@@ -291,8 +322,14 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
     // Details dialog
     if (value === 'details') {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <Card className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+          style={{ pointerEvents: 'none' }}
+        >
+          <Card
+            className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg"
+            style={{ pointerEvents: 'none' }}
+          >
             {dialogHeader}
             <CardContent>
               <FileDetails file={file} />
@@ -301,6 +338,7 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
               <Button
                 onClick={(e) => closeAllModals(e)}
                 className="modal-cancel-button"
+                style={{ pointerEvents: 'auto' }}
               >
                 Cancel
               </Button>
@@ -312,27 +350,42 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
     // Share dialog
     if (value === 'share') {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <Card className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+          style={{ pointerEvents: 'none' }}
+        >
+          <Card
+            className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg"
+            style={{ pointerEvents: 'none' }}
+          >
             {dialogHeader}
-            <CardContent>
+            <CardContent style={{ pointerEvents: 'auto' }}>
               <ShareInput
                 file={file}
                 onInputChange={setEmails}
                 onRemove={handleRemoveUser}
               />
             </CardContent>
-            <CardFooter className="flex flex-col gap-3 md:flex-row">
+            <CardFooter
+              className="flex flex-col gap-3 md:flex-row"
+              style={{ pointerEvents: 'auto' }}
+            >
               <Button
                 onClick={(e) => closeAllModals(e)}
                 className="modal-cancel-button"
+                style={{ pointerEvents: 'auto' }}
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleAction}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleAction();
+                }}
                 disabled={isLoading}
                 className="modal-submit-button"
+                style={{ pointerEvents: 'auto' }}
               >
                 <p className="capitalize">Share</p>
                 {isLoading && (

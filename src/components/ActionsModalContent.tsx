@@ -50,14 +50,21 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
     <>
       <ImageThumbnail file={file} />
 
-      <div className="share-wrapper">
-        <p className="subtitle-2 pl-1 text-light-100">
+      <div className="share-wrapper" style={{ pointerEvents: 'none' }}>
+        <p
+          className="subtitle-2 pl-1 text-light-100"
+          style={{ pointerEvents: 'none' }}
+        >
           Share file with other users
         </p>
         <Input
           type="email"
           placeholder="Enter email addresses"
           onChange={(e) => onInputChange(e.target.value.trim().split(','))}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           className="share-input-field"
         />
         <div className="pt-4">
