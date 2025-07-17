@@ -35,8 +35,16 @@ import {
   CardContent,
   CardFooter,
 } from './ui/card';
+import { useContractStatusEnums } from '@/hooks/useContractStatusEnums';
+import { useUpdateContractStatus } from '@/hooks/useUpdateContractStatus';
 
-const ActionDropdown = ({ file }: { file: Models.Document }) => {
+const ActionDropdown = ({
+  file,
+  onStatusChange,
+}: {
+  file: Models.Document;
+  onStatusChange?: () => void;
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [action, setAction] = useState<ActionType | null>(null);
@@ -45,8 +53,12 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
   const [emails, setEmails] = useState<string[]>([]);
   const [managers, setManagers] = useState<AppUser[]>([]);
   const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
-
-  const path = usePathname();
+  const [selectedStatus, setSelectedStatus] = useState<string>(
+    file.status || ''
+  );
+  const path = usePathname() || '';
+  const { enums: statusOptions, error: statusError } = useContractStatusEnums();
+  const { updateStatus } = useUpdateContractStatus({ onStatusChange });
 
   // Fetch managers when Assign dialog is opened
   useEffect(() => {
@@ -149,6 +161,18 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
       setEmails(updateEmails);
     }
     closeAllModals();
+  };
+
+  const handleStatusChange = async () => {
+    setIsLoading(true);
+    const contractId = file.contractId || file.$id;
+    const success = await updateStatus({
+      fileId: contractId,
+      status: selectedStatus,
+      path,
+    });
+    if (success) closeAllModals();
+    setIsLoading(false);
   };
 
   const renderDialogContent = () => {
@@ -447,13 +471,84 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
         </div>
       );
     }
+    // Status dialog
+    if (value === 'status') {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <Card className="w-[400px] max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="sidebar-gradient-text">
+                Change Status
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={closeAllModals}>
+                <span className="sr-only">Close</span>×
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-2 text-sm text-slate-700">
+                Select a new status for this contract:
+              </div>
+              {statusError && (
+                <div className="text-red-500 mb-2">{statusError}</div>
+              )}
+              <div className="flex flex-col gap-2">
+                {statusOptions.map((option) => (
+                  <label key={option} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="contract-status"
+                      value={option}
+                      checked={selectedStatus === option}
+                      onChange={() => setSelectedStatus(option)}
+                      disabled={isLoading}
+                    />
+                    <span className="capitalize">
+                      {option.replace('-', ' ')}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3 md:flex-row">
+              <Button onClick={closeAllModals} className="modal-cancel-button">
+                Cancel
+              </Button>
+              <Button
+                //stop propagation
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleStatusChange();
+                }}
+                disabled={isLoading || !selectedStatus}
+                className="modal-submit-button"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <p className="capitalize">Update Status</p>
+                {isLoading && (
+                  <Image
+                    src="/assets/icons/loader.svg"
+                    alt="loader"
+                    width={24}
+                    height={24}
+                    className="animate-spin"
+                  />
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      );
+    }
   };
 
-  // Only show Assign if file name contains 'Contract'
+  // Only show Assign and Status if file name contains 'Contract'
   const isContractFile = file.name.toLowerCase().includes('contract');
   const filteredActions = isContractFile
     ? actionsDropdownItems
-    : actionsDropdownItems.filter((action) => action.value !== 'assign');
+    : actionsDropdownItems.filter(
+        (action) => !['assign', 'status'].includes(action.value)
+      );
 
   return (
     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -478,9 +573,14 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
               onClick={() => {
                 setAction(actionItem);
                 if (
-                  ['assign', 'rename', 'delete', 'share', 'details'].includes(
-                    actionItem.value
-                  )
+                  [
+                    'assign',
+                    'rename',
+                    'delete',
+                    'share',
+                    'details',
+                    'status',
+                  ].includes(actionItem.value)
                 ) {
                   setIsModalOpen(true);
                 }

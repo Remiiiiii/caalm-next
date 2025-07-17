@@ -39,6 +39,11 @@ export const navItems = [
 
 export const actionsDropdownItems = [
   {
+    label: 'Status',
+    icon: '/assets/icons/contract-status.svg',
+    value: 'status',
+  },
+  {
     label: 'Assign',
     icon: '/assets/icons/assign.svg',
     value: 'assign',

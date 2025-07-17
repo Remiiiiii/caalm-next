@@ -158,6 +158,11 @@ const ExecutiveDashboard = () => {
   }
   const [totalSpace, setTotalSpace] = useState<TotalSpace | null>(null);
 
+  const refreshFiles = async () => {
+    const filesRes = await getFiles({ types: [], limit: 10 });
+    setFiles(filesRes.documents);
+  };
+
   // User management state
   useEffect(() => {
     // Fetch pending invitations on mount
@@ -342,7 +347,10 @@ const ExecutiveDashboard = () => {
                             className="caption"
                           />
                         </div>
-                        <ActionDropdown file={file} />
+                        <ActionDropdown
+                          file={file}
+                          onStatusChange={refreshFiles}
+                        />
                       </div>
                     </Link>
                   ))}

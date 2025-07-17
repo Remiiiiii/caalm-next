@@ -66,6 +66,7 @@ export const uploadFile = async ({
       // Add to Contracts collection as well
       // 1. Extract expiry date from file using your /api/extract-expiry endpoint
       let contractExpiryDate: string | undefined = undefined;
+      let status: string = 'pending-review'; // Default to pending-review
       if (bucketFile.name.toLowerCase().includes('contract')) {
         try {
           // Call your API endpoint to extract the expiry date
@@ -79,28 +80,39 @@ export const uploadFile = async ({
             }
           );
           const data = await response.json();
-          contractExpiryDate =
-            data.expiryDate || new Date().toISOString().split('T')[0];
+          contractExpiryDate = data.expiryDate;
+          if (!contractExpiryDate) {
+            contractExpiryDate = new Date().toISOString().split('T')[0];
+            status = 'action-required';
+          }
         } catch {
           contractExpiryDate = new Date().toISOString().split('T')[0]; // fallback
+          status = 'action-required';
         }
 
         const contractDocument = {
           contractName: bucketFile.name,
           contractExpiryDate,
-          status: contractExpiryDate ? 'pending' : 'action-required',
+          status,
           amount: undefined,
           daysUntilExpiry: undefined,
           compliance: undefined,
           assignedManagers: [],
-          fileId: newFile.$id,
+          fileId: newFile.$id, // Save file.$id in the contract document
           fileRef: newFile.$id,
         };
-        await databases.createDocument(
+        const contract = await databases.createDocument(
           appwriteConfig.databaseId,
           appwriteConfig.contractsCollectionId,
           ID.unique(),
           contractDocument
+        );
+        // Save contract.$id in the file document, or file.$id in the contract document
+        await databases.updateDocument(
+          appwriteConfig.databaseId,
+          appwriteConfig.filesCollectionId,
+          newFile.$id,
+          { contractId: contract.$id }
         );
       }
     } else {
@@ -245,15 +257,32 @@ export const deleteFile = async ({
   const { databases, storage } = await createAdminClient();
 
   try {
-    const deletedFile = await databases.deleteDocument(
+    console.log('Deleting fileId:', fileId);
+    // 1. Delete the contract document linked to this file
+    const contractDocs = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.contractsCollectionId,
+      [Query.equal('fileId', fileId)]
+    );
+    if (contractDocs.documents.length > 0) {
+      const contractId = contractDocs.documents[0].$id;
+      await databases.deleteDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.contractsCollectionId,
+        contractId
+      );
+    }
+
+    // 2. Delete the file document
+    await databases.deleteDocument(
       appwriteConfig.databaseId,
       appwriteConfig.filesCollectionId,
       fileId
     );
 
-    if (deletedFile) {
-      await storage.deleteFile(appwriteConfig.bucketId, bucketFileId);
-    }
+    // Always attempt to delete the storage file
+    await storage.deleteFile(appwriteConfig.bucketId, bucketFileId);
+
     revalidatePath(path);
     return parseStringify({ status: 'success' });
   } catch (error) {
@@ -339,5 +368,67 @@ export const assignContract = async ({
     return parseStringify(updatedContract);
   } catch (error) {
     handleError(error, 'Failed to assign contract');
+  }
+};
+
+// Fetch allowed contract status enums from the database
+export const getContractStatusEnums = async () => {
+  const { databases } = await createAdminClient();
+  const databaseId = appwriteConfig.databaseId;
+  const collectionId = appwriteConfig.contractsCollectionId;
+  const attrKey = 'status';
+  try {
+    // Type assertion to fix linter error
+    const attr = (await databases.getAttribute(
+      databaseId,
+      collectionId,
+      attrKey
+    )) as { elements?: string[] };
+    return attr.elements || [];
+  } catch (error) {
+    handleError(error, 'Failed to fetch contract status enums');
+  }
+};
+
+// Update contract status by fileId
+export const contractStatus = async ({
+  fileId,
+  status,
+  path,
+}: {
+  fileId: string;
+  status: string;
+  path: string;
+}) => {
+  const { databases } = await createAdminClient();
+  try {
+    // Update the contract document's status
+    const updated = await databases.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.contractsCollectionId,
+      fileId,
+      { status }
+    );
+    revalidatePath(path);
+    return parseStringify(updated);
+  } catch (error) {
+    handleError(error, 'Failed to update contract status');
+  }
+};
+
+export const getContracts = async () => {
+  const { databases } = await createAdminClient();
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error('User not found');
+    // Fetch contracts where file owner matches current user
+    // (Assumes you want contracts for the user's files)
+    const contracts = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.contractsCollectionId
+    );
+    return parseStringify(contracts);
+  } catch (error) {
+    handleError(error, 'Failed to get contracts');
   }
 };

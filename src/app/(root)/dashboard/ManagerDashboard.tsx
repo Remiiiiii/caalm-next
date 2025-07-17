@@ -1,9 +1,10 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   FileText,
-  Calendar,
   AlertCircle,
   Clock,
   Upload,
@@ -11,6 +12,8 @@ import {
 } from 'lucide-react';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
+import ActionDropdown from '@/components/ActionDropdown';
+import { Models } from 'node-appwrite';
 
 type Contract = {
   $id: string;
@@ -25,19 +28,25 @@ type Contract = {
   fileRef?: unknown;
 };
 
-const ManagerDashboard = async () => {
-  // Fetch contracts from the database
-  const { databases } = await createAdminClient();
-  let contracts: Contract[] = [];
-  try {
-    const res = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId
-    );
-    contracts = res.documents as unknown as Contract[];
-  } catch {
-    contracts = [];
-  }
+const ManagerDashboard = () => {
+  const [contracts, setContracts] = useState<Contract[]>([]);
+
+  const refreshContracts = async () => {
+    const { databases } = await createAdminClient();
+    try {
+      const res = await databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.contractsCollectionId
+      );
+      setContracts(res.documents as unknown as Contract[]);
+    } catch {
+      setContracts([]);
+    }
+  };
+
+  useEffect(() => {
+    refreshContracts();
+  }, []);
 
   const upcomingTasks = [
     {
@@ -65,17 +74,6 @@ const ManagerDashboard = async () => {
       priority: 'high',
     },
   ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'text-green-600 bg-green-100';
-      case 'expiring':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
-    }
-  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -176,9 +174,7 @@ const ManagerDashboard = async () => {
                       {contract.contractName}
                     </h4>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        contract.status || 'pending'
-                      )}`}
+                      className={`px-2 py-1 rounded-full text-xs font-medium`}
                     >
                       {contract.status || 'pending'}
                     </span>
@@ -198,13 +194,10 @@ const ManagerDashboard = async () => {
                     <p>Compliance: {contract.compliance || 'N/A'}</p>
                   </div>
                   <div className="mt-3 flex space-x-2">
-                    <Button size="sm" variant="outline">
-                      View Details
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <Calendar className="mr-1 h-3 w-3 text-coral" />
-                      Schedule Review
-                    </Button>
+                    <ActionDropdown
+                      file={contract as unknown as Models.Document}
+                      onStatusChange={refreshContracts}
+                    />
                   </div>
                 </div>
               ))}

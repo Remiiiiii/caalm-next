@@ -1,12 +1,72 @@
+'use client';
+
 import Link from 'next/link';
 import { Models } from 'node-appwrite';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Thumbnail from './Thumbnail';
 import { convertFileSize } from '@/lib/utils';
 import FormattedDateTime from './FormattedDateTime';
 import ActionDropdown from './ActionDropdown';
 
-const Card = ({ file }: { file: Models.Document }) => {
+// Map contract status to badge color and label
+const statusBadge = (status: string) => {
+  let color = '';
+  let label = status;
+  switch (status) {
+    case 'pending-review':
+      color = 'bg-red text-blue-800 text-xs rounded-xl font-medium';
+      label = 'Pending Review';
+      break;
+    case 'action-required':
+      color = 'bg-red-100 text-red-800 text-xs rounded-xl font-medium';
+      label = 'Action Required';
+      break;
+    case 'active':
+      color = 'bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
+      label = 'Active';
+      break;
+    case 'inactive':
+      color =
+        'bg-destructive/10 text-destructive text-xs rounded-xl font-medium';
+      label = 'Inactive';
+      break;
+    default:
+      color = 'bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
+      label = status;
+  }
+  return <span className={`inline-block px-2 py-1 ${color}`}>{label}</span>;
+};
+
+interface CardProps {
+  file: Models.Document;
+  status?: string;
+}
+
+const Card = ({ file, status }: CardProps) => {
+  const [contractStatus, setContractStatus] = useState<string | undefined>(
+    status || file.status
+  );
+
+  useEffect(() => {
+    // If status is not present but contractId exists, fetch the contract status
+    if (!status && !file.status && file.contractId) {
+      (async () => {
+        // Dynamically import to avoid SSR issues
+        const { getContracts } = await import('@/lib/actions/file.actions');
+        const contractsRes = await getContracts();
+        const contracts = Array.isArray(contractsRes.documents)
+          ? contractsRes.documents
+          : [];
+        const contract = contracts.find(
+          (c: Models.Document) => c.$id === file.contractId
+        );
+        if (contract && contract.status) {
+          setContractStatus(contract.status);
+        }
+      })();
+    }
+  }, [file.contractId, status, file.status]);
+
   return (
     <Link href={file.url} target="_blank" className="file-card">
       <div className="flex justify-between text-slate-700">
@@ -24,6 +84,7 @@ const Card = ({ file }: { file: Models.Document }) => {
       </div>
       <div className="file-card-details">
         <p className="subtitle-2 line-clamp-1">{file.name}</p>
+        {contractStatus && statusBadge(contractStatus)}
         <FormattedDateTime
           date={file.$createdAt}
           className="body-2 text-slate-700"
