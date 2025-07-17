@@ -48,13 +48,13 @@ const ActionDropdown = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [action, setAction] = useState<ActionType | null>(null);
-  const [name, setName] = useState(file.name);
+  const [name, setName] = useState(file?.name || file?.contractName || '');
   const [isLoading, setIsLoading] = useState(false);
   const [emails, setEmails] = useState<string[]>([]);
   const [managers, setManagers] = useState<AppUser[]>([]);
   const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>(
-    file.status || ''
+    file?.status || ''
   );
   const path = usePathname() || '';
   const { enums: statusOptions, error: statusError } = useContractStatusEnums();
@@ -94,7 +94,7 @@ const ActionDropdown = ({
     setIsModalOpen(false);
     setIsDropdownOpen(false);
     setAction(null);
-    setName(file.name);
+    setName(file.name || file.contractName || '');
     //setEmails([])
   };
 
@@ -436,7 +436,10 @@ const ActionDropdown = ({
             <CardContent>
               <p className="delete-confirmation">
                 Are you sure you want to delete{' '}
-                <span className="delete-file-name">{file.name}</span>?
+                <span className="delete-file-name">
+                  {file.name || file.contractName}
+                </span>
+                ?
               </p>
             </CardContent>
             <CardFooter className="flex flex-col gap-3 md:flex-row">
@@ -542,8 +545,15 @@ const ActionDropdown = ({
     }
   };
 
+  // Safety check: ensure file object exists and has required properties
+  if (!file) {
+    console.error('ActionDropdown: file prop is undefined or null');
+    return null;
+  }
+
   // Only show Assign and Status if file name contains 'Contract'
-  const isContractFile = file.name.toLowerCase().includes('contract');
+  const fileName = file.name || file.contractName || '';
+  const isContractFile = fileName.toLowerCase().includes('contract');
   const filteredActions = isContractFile
     ? actionsDropdownItems
     : actionsDropdownItems.filter(
@@ -563,7 +573,7 @@ const ActionDropdown = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuLabel className="max-w-[200px] truncate">
-            {file.name}
+            {file.name || file.contractName}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {filteredActions.map((actionItem) => (
@@ -589,7 +599,7 @@ const ActionDropdown = ({
               {actionItem.value === 'download' ? (
                 <Link
                   href={constructDownloadUrl(file.bucketFileId)}
-                  download={file.name}
+                  download={file.name || file.contractName}
                   className="flex items-center gap-2"
                   onClick={(e) => e.stopPropagation()}
                 >

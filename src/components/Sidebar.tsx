@@ -184,13 +184,16 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
             let sectionItems;
             if (section.header === 'Dashboard') {
               if (role === 'executive') {
-                sectionItems = section.items; // Show all dashboard links
+                // Executives see all dashboard links
+                sectionItems = section.items;
               } else {
+                // Other roles see only their own dashboard
                 sectionItems = section.items.filter((item) =>
                   item.roles.includes(role)
                 );
               }
             } else {
+              // For non-dashboard sections, filter by role
               sectionItems = section.items.filter((item) =>
                 item.roles.includes(role)
               );
@@ -445,13 +448,15 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
         priority
       />
       <div className="sidebar-user-info">
-        <Image
-          src={avatar}
-          alt="avatar"
-          width={44}
-          height={44}
-          className="sidebar-user-avatar"
-        />
+        {avatar && (
+          <Image
+            src={avatar}
+            alt="avatar"
+            width={44}
+            height={44}
+            className="sidebar-user-avatar"
+          />
+        )}
         <div className="hidden lg:block">
           <p className="subtitle-2 capitalize">{fullName}</p>
           <p className="caption">{email}</p>

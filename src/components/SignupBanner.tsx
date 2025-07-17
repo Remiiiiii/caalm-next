@@ -1,10 +1,19 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function SignupBanner() {
   const searchParams = useSearchParams();
-  const signupSuccess = searchParams.get('signup') === 'success';
+  const [mounted, setMounted] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+    setSignupSuccess(searchParams?.get('signup') === 'success');
+  }, [searchParams]);
+
+  // Don't render anything until the component is mounted on the client
+  if (!mounted) return null;
   if (!signupSuccess) return null;
 
   return (

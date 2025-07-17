@@ -57,13 +57,15 @@ const MobileNavigation = ({
         <SheetContent className="shad-sheet h-screen px-3">
           <SheetTitle>
             <div className="header-user">
-              <Image
-                src={avatar}
-                alt="avatar"
-                width={44}
-                height={44}
-                className="header-user-avatar"
-              />
+              {avatar && (
+                <Image
+                  src={avatar}
+                  alt="avatar"
+                  width={44}
+                  height={44}
+                  className="header-user-avatar"
+                />
+              )}
               <div className="sm:hidden lg:block">
                 <p className="subtitle-2 capitalize">
                   {fullName} | {role}
@@ -80,7 +82,8 @@ const MobileNavigation = ({
                 // Support both string and array for url
                 const urls = Array.isArray(url) ? url : [url];
                 const isActive = urls.some(
-                  (u) => pathname === u || pathname.startsWith(u + '/')
+                  (u) =>
+                    pathname === u || (pathname && pathname.startsWith(u + '/'))
                 );
                 return (
                   <li

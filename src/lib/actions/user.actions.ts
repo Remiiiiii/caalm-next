@@ -507,3 +507,32 @@ export const deleteUser = async (userId: string) => {
     handleError(error, 'Failed to delete user');
   }
 };
+
+export const getContracts = async () => {
+  const { databases } = await createAdminClient();
+  try {
+    const res = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.contractsCollectionId
+    );
+    return parseStringify(res.documents);
+  } catch (error) {
+    console.error('Failed to fetch contracts:', error);
+    return [];
+  }
+};
+
+export const getUnreadNotificationsCount = async (userId: string) => {
+  const { databases } = await createAdminClient();
+  try {
+    const res = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      'notifications',
+      [Query.equal('userId', userId), Query.equal('read', false)]
+    );
+    return res.total;
+  } catch (error) {
+    console.error('Failed to fetch unread notifications:', error);
+    return 0;
+  }
+};

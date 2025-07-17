@@ -24,18 +24,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     null
   );
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const client = new Client()
       .setEndpoint(appwriteConfig.endpointUrl)
       .setProject(appwriteConfig.projectId);
     const account = new Account(client);
 
-    account
-      .get()
-      .then((user) => setUser(user))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+    const checkSession = async () => {
+      try {
+        setLoading(true);
+        // Only call if a session exists (e.g., check localStorage/cookie or try/catch)
+        const user = await account.get();
+        setUser(user);
+      } catch (error) {
+        console.log(error);
+        // 401 Unauthorized: No session, handle gracefully
+        setUser(null);
+        // Optionally: redirect to login or show guest UI
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkSession();
   }, []);
 
   const logout = async () => {
@@ -46,6 +59,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await account.deleteSession('current');
     setUser(null);
   };
+
+  // Don't render children until mounted to prevent hydration mismatches
+  if (!mounted) {
+    return <div style={{ visibility: 'hidden' }}>{children}</div>;
+  }
 
   return (
     <AuthContext.Provider value={{ user, setUser, loading, logout }}>

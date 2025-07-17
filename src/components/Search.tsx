@@ -16,7 +16,7 @@ const Search = () => {
   const [open, setOpen] = useState(false);
   const [debouncedQuery] = useDebounce(query, 300);
   const searchParams = useSearchParams();
-  const searchQuery = searchParams.get('query') || '';
+  const searchQuery = searchParams?.get('query') || '';
   const router = useRouter();
   const path = usePathname();
 
@@ -25,7 +25,12 @@ const Search = () => {
       if (debouncedQuery.length === 0) {
         setResults([]);
         setOpen(false);
-        return router.push(path.replace(searchParams.toString(), ''));
+        return router.push(
+          (path ?? '').replace(
+            (searchParams && searchParams.toString()) || '',
+            ''
+          )
+        );
       }
       const files = await getFiles({
         types: [],
@@ -36,7 +41,7 @@ const Search = () => {
     };
 
     fetchFiles();
-  }, [debouncedQuery]);
+  }, [debouncedQuery, path, router, searchParams]);
 
   useEffect(() => {
     if (!searchQuery) {

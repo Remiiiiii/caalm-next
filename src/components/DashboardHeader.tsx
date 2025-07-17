@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { FileText, Bell, Mail, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NotificationCenter from '@/components/NotificationCenter';
-import { Client, Databases, Query } from 'appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
 import { Models } from 'appwrite';
-import { signOutUser } from '@/lib/actions/user.actions';
+import {
+  signOutUser,
+  getUnreadNotificationsCount,
+} from '@/lib/actions/user.actions';
 
 interface DashboardHeaderProps {
-  user?: Models.User<Models.Preferences> | null;
+  user?: (Models.User<Models.Preferences> & { role?: string }) | null;
 }
 
 const DashboardHeader = ({ user }: DashboardHeaderProps) => {
@@ -24,21 +25,17 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
       // Fetch unread notifications for the current user
       try {
         if (!user) return;
-        const client = new Client();
-        client
-          .setEndpoint(appwriteConfig.endpointUrl)
-          .setProject(appwriteConfig.projectId);
-        const databases = new Databases(client);
-        const res = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          'notifications',
-          [Query.equal('userId', user.$id), Query.equal('read', false)]
-        );
-        setUnreadCount(res.total);
+        const count = await getUnreadNotificationsCount(user.$id);
+        setUnreadCount(count);
       } catch {}
     }
+
+    // Initial fetch
     fetchUnread();
-    const interval = setInterval(fetchUnread, 10000);
+
+    // Only poll if user is active and component is mounted
+    const interval = setInterval(fetchUnread, 300000); // Poll every 5 minutes
+
     return () => clearInterval(interval);
   }, [user]);
 
@@ -55,11 +52,11 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
 
   const getRoleDisplay = (role: string) => {
     switch (role) {
-      case 'head_admin':
+      case 'executive':
         return 'Executive';
       case 'manager':
         return 'Manager';
-      case 'hr_admin':
+      case 'hr':
         return 'HR Administrator';
       default:
         return role;
@@ -83,7 +80,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
                 <div className="text-sm text-foreground">
                   <p className="font-medium text-navy">{user.name}</p>
                   <p className="text-xs text-slate-dark">
-                    {getRoleDisplay(user.prefs?.role || '')} -{' '}
+                    {getRoleDisplay(user?.role || user.prefs?.role || '')} -{' '}
                     {user.prefs?.department || 'Unknown Department'}
                   </p>
                 </div>

@@ -10,14 +10,14 @@ import {
   Upload,
   MessageSquare,
 } from 'lucide-react';
-import { createAdminClient } from '@/lib/appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
+import { getContracts } from '@/lib/actions/user.actions';
 import ActionDropdown from '@/components/ActionDropdown';
 import { Models } from 'node-appwrite';
 
 type Contract = {
   $id: string;
   contractName: string;
+  name?: string;
   contractExpiryDate?: string;
   status?: string;
   amount?: number;
@@ -32,14 +32,21 @@ const ManagerDashboard = () => {
   const [contracts, setContracts] = useState<Contract[]>([]);
 
   const refreshContracts = async () => {
-    const { databases } = await createAdminClient();
     try {
-      const res = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.contractsCollectionId
+      const contractsData = await getContracts();
+      // Ensure all contracts have the required properties
+      const validatedContracts = (contractsData as Contract[]).map(
+        (contract) => ({
+          ...contract,
+          contractName:
+            contract.contractName || contract.name || 'Unnamed Contract',
+          name: contract.name || contract.contractName || 'Unnamed Contract',
+          status: contract.status || 'pending',
+        })
       );
-      setContracts(res.documents as unknown as Contract[]);
-    } catch {
+      setContracts(validatedContracts);
+    } catch (error) {
+      console.error('Failed to fetch contracts:', error);
       setContracts([]);
     }
   };
@@ -164,43 +171,49 @@ const ManagerDashboard = () => {
               {contracts.length === 0 && (
                 <div className="text-gray-500">No contracts found.</div>
               )}
-              {contracts.map((contract) => (
-                <div
-                  key={contract.$id}
-                  className="border border-border rounded-lg p-4"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-navy">
-                      {contract.contractName}
-                    </h4>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium`}
-                    >
-                      {contract.status || 'pending'}
-                    </span>
+              {contracts.map((contract) => {
+                // Convert contract to a plain object to avoid serialization errors
+                const plainContract = JSON.parse(JSON.stringify(contract));
+
+                return (
+                  <div
+                    key={contract.$id}
+                    className="border border-border rounded-lg p-4"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-medium text-navy">
+                        {contract.contractName}
+                      </h4>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium`}
+                      >
+                        {contract.status}
+                      </span>
+                    </div>
+                    <div className="text-sm text-slate-dark space-y-1">
+                      <p>
+                        Amount:{' '}
+                        {contract.amount ? `$${contract.amount}` : 'N/A'}
+                      </p>
+                      <p>
+                        Expires:{' '}
+                        {contract.contractExpiryDate
+                          ? contract.contractExpiryDate.split('T')[0]
+                          : 'N/A'}
+                        {contract.daysUntilExpiry !== undefined &&
+                          ` (${contract.daysUntilExpiry} days)`}
+                      </p>
+                      <p>Compliance: {contract.compliance || 'N/A'}</p>
+                    </div>
+                    <div className="mt-3 flex space-x-2">
+                      <ActionDropdown
+                        file={plainContract as unknown as Models.Document}
+                        onStatusChange={refreshContracts}
+                      />
+                    </div>
                   </div>
-                  <div className="text-sm text-slate-dark space-y-1">
-                    <p>
-                      Amount: {contract.amount ? `$${contract.amount}` : 'N/A'}
-                    </p>
-                    <p>
-                      Expires:{' '}
-                      {contract.contractExpiryDate
-                        ? contract.contractExpiryDate.split('T')[0]
-                        : 'N/A'}
-                      {contract.daysUntilExpiry !== undefined &&
-                        ` (${contract.daysUntilExpiry} days)`}
-                    </p>
-                    <p>Compliance: {contract.compliance || 'N/A'}</p>
-                  </div>
-                  <div className="mt-3 flex space-x-2">
-                    <ActionDropdown
-                      file={contract as unknown as Models.Document}
-                      onStatusChange={refreshContracts}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

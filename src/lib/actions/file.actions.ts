@@ -196,10 +196,20 @@ export const getFiles = async ({
       queries
     );
 
-    console.log({ files });
-    return parseStringify(files);
+    // Defensive: always return a plain object with a documents array
+    const plain = parseStringify(files);
+    if (
+      !plain ||
+      typeof plain !== 'object' ||
+      !Array.isArray(plain.documents)
+    ) {
+      return { documents: [] };
+    }
+    return plain;
   } catch (error) {
     handleError(error, 'Failed to get files');
+    // Defensive: always return a plain object
+    return { documents: [] };
   }
 };
 

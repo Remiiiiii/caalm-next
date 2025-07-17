@@ -14,11 +14,13 @@ const statusBadge = (status: string) => {
   let label = status;
   switch (status) {
     case 'pending-review':
-      color = 'bg-red text-blue-800 text-xs rounded-xl font-medium';
+      color =
+        'bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium mr-auto';
       label = 'Pending Review';
       break;
     case 'action-required':
-      color = 'bg-red-100 text-red-800 text-xs rounded-xl font-medium';
+      color =
+        'bg-destructive/10 text-destructive text-xs rounded-xl font-medium mr-auto';
       label = 'Action Required';
       break;
     case 'active':
@@ -27,7 +29,7 @@ const statusBadge = (status: string) => {
       break;
     case 'inactive':
       color =
-        'bg-destructive/10 text-destructive text-xs rounded-xl font-medium';
+        'bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium mr-auto';
       label = 'Inactive';
       break;
     default:

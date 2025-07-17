@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Poppins } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import SignupBanner from '@/components/SignupBanner';
+import ClientOnly from '@/components/ClientOnly';
 import { Suspense } from 'react';
 
 const poppins = Poppins({
@@ -41,10 +42,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           sizes="96x96"
         /> */}
       </head>
-      <body className={`${poppins.variable} font-poppins antialiased`}>
-        <Suspense fallback={null}>
-          <SignupBanner />
-        </Suspense>
+      <body
+        className={`${poppins.variable} font-poppins antialiased`}
+        suppressHydrationWarning={true}
+      >
+        <ClientOnly>
+          <Suspense fallback={null}>
+            <SignupBanner />
+          </Suspense>
+        </ClientOnly>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

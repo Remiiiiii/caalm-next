@@ -1,10 +1,11 @@
 import React from 'react';
 import Sidebar from '@/components/Sidebar';
 import MobileNavigation from '@/components/MobileNavigation';
-import DashboardHeader2 from '@/components/DashboardHeader2';
+import DashboardHeader from '@/components/DashboardHeader';
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';
 import { Toaster } from '@/components/ui/toaster';
+import { avatarPlaceholderUrl } from '../../../constants';
 
 const layout = async ({ children }: { children: React.ReactNode }) => {
   const currentUser = await getCurrentUser();
@@ -12,15 +13,25 @@ const layout = async ({ children }: { children: React.ReactNode }) => {
   if (!currentUser) {
     redirect('/sign-in');
   }
+
   return (
     <main className="flex h-screen">
-      <Sidebar {...currentUser} />
+      <Sidebar
+        fullName={currentUser.name || 'Unknown User'}
+        avatar={currentUser.prefs?.avatar || avatarPlaceholderUrl}
+        email={currentUser.email}
+        role={currentUser.role || 'manager'}
+      />
       <section className="flex h-full w-full flex-1 flex-col">
-        <MobileNavigation {...currentUser} />
-        <DashboardHeader2
-          userId={currentUser.$id}
+        <MobileNavigation
+          $id={currentUser.$id}
           accountId={currentUser.accountId}
+          fullName={currentUser.fullName || currentUser.name || 'Unknown User'}
+          avatar={currentUser.prefs?.avatar || avatarPlaceholderUrl}
+          email={currentUser.email}
+          role={currentUser.role || 'manager'}
         />
+        <DashboardHeader user={currentUser} />
         <div className="main-content">{children}</div>
       </section>
       <Toaster />
