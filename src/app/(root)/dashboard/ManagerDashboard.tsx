@@ -1,6 +1,6 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   FileText,
   Calendar,
@@ -8,87 +8,85 @@ import {
   Clock,
   Upload,
   MessageSquare,
-} from "lucide-react";
+} from 'lucide-react';
+import { createAdminClient } from '@/lib/appwrite';
+import { appwriteConfig } from '@/lib/appwrite/config';
 
-const ManagerDashboard = () => {
-  const myContracts = [
-    {
-      id: 1,
-      name: "Operations Facility Management",
-      expiration: "2024-12-15",
-      status: "active",
-      amount: "$2.5M",
-      daysUntilExpiry: 45,
-      compliance: "up-to-date",
-    },
-    {
-      id: 2,
-      name: "Supply Chain Agreement",
-      expiration: "2024-08-30",
-      status: "expiring",
-      amount: "$850K",
-      daysUntilExpiry: 8,
-      compliance: "action-required",
-    },
-    {
-      id: 3,
-      name: "Technology Services Contract",
-      expiration: "2025-03-22",
-      status: "active",
-      amount: "$1.2M",
-      daysUntilExpiry: 178,
-      compliance: "up-to-date",
-    },
-  ];
+type Contract = {
+  $id: string;
+  contractName: string;
+  contractExpiryDate?: string;
+  status?: string;
+  amount?: number;
+  daysUntilExpiry?: number;
+  compliance?: string;
+  assignedManagers?: string[];
+  fileId?: string;
+  fileRef?: unknown;
+};
+
+const ManagerDashboard = async () => {
+  // Fetch contracts from the database
+  const { databases } = await createAdminClient();
+  let contracts: Contract[] = [];
+  try {
+    const res = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.contractsCollectionId
+    );
+    contracts = res.documents as unknown as Contract[];
+  } catch {
+    contracts = [];
+  }
 
   const upcomingTasks = [
     {
       id: 1,
-      task: "Submit Q3 compliance report",
-      deadline: "2024-07-25",
-      priority: "high",
+      task: 'Submit Q3 compliance report',
+      deadline: '2024-07-25',
+      priority: 'high',
     },
     {
       id: 2,
-      task: "Review vendor performance metrics",
-      deadline: "2024-07-28",
-      priority: "medium",
+      task: 'Review vendor performance metrics',
+      deadline: '2024-07-28',
+      priority: 'medium',
     },
     {
       id: 3,
-      task: "Update training records",
-      deadline: "2024-08-02",
-      priority: "low",
+      task: 'Update training records',
+      deadline: '2024-08-02',
+      priority: 'low',
     },
     {
       id: 4,
-      task: "Prepare contract renewal documentation",
-      deadline: "2024-08-15",
-      priority: "high",
+      task: 'Prepare contract renewal documentation',
+      deadline: '2024-08-15',
+      priority: 'high',
     },
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
-        return "text-green-600 bg-green-100";
-      case "expiring":
-        return "text-red-600 bg-red-100";
+      case 'active':
+        return 'text-green-600 bg-green-100';
+      case 'expiring':
+        return 'text-red-600 bg-red-100';
       default:
-        return "text-gray-600 bg-gray-100";
+        return 'text-gray-600 bg-gray-100';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high":
-        return "text-red-600 bg-red-100";
-      case "medium":
-        return "text-yellow-600 bg-yellow-100";
-      case "low":
-        return "text-green-600 bg-green-100";
+      case 'high':
+        return 'text-red-600 bg-red-100';
+      case 'medium':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'low':
+        return 'text-green-600 bg-green-100';
       default:
-        return "text-gray-600 bg-gray-100";
+        return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -118,7 +116,7 @@ const ManagerDashboard = () => {
                   My Contracts
                 </p>
                 <p className="text-3xl font-bold text-navy">
-                  {myContracts.length}
+                  {contracts.length}
                 </p>
               </div>
               <FileText className="h-8 w-8 text-blue" />
@@ -158,35 +156,46 @@ const ManagerDashboard = () => {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* My Contracts */}
+        {/* All Contracts */}
         <Card>
           <CardHeader>
-            <CardTitle>My Department Contracts</CardTitle>
+            <CardTitle>All Contracts</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {myContracts.map((contract) => (
+              {contracts.length === 0 && (
+                <div className="text-gray-500">No contracts found.</div>
+              )}
+              {contracts.map((contract) => (
                 <div
-                  key={contract.id}
+                  key={contract.$id}
                   className="border border-border rounded-lg p-4"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-navy">{contract.name}</h4>
+                    <h4 className="font-medium text-navy">
+                      {contract.contractName}
+                    </h4>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        contract.status
+                        contract.status || 'pending'
                       )}`}
                     >
-                      {contract.status}
+                      {contract.status || 'pending'}
                     </span>
                   </div>
                   <div className="text-sm text-slate-dark space-y-1">
-                    <p>Amount: {contract.amount}</p>
                     <p>
-                      Expires: {contract.expiration} ({contract.daysUntilExpiry}{" "}
-                      days)
+                      Amount: {contract.amount ? `$${contract.amount}` : 'N/A'}
                     </p>
-                    <p>Compliance: {contract.compliance}</p>
+                    <p>
+                      Expires:{' '}
+                      {contract.contractExpiryDate
+                        ? contract.contractExpiryDate.split('T')[0]
+                        : 'N/A'}
+                      {contract.daysUntilExpiry !== undefined &&
+                        ` (${contract.daysUntilExpiry} days)`}
+                    </p>
+                    <p>Compliance: {contract.compliance || 'N/A'}</p>
                   </div>
                   <div className="mt-3 flex space-x-2">
                     <Button size="sm" variant="outline">

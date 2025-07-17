@@ -7,6 +7,8 @@ import { ID, Models, Query } from 'node-appwrite';
 import { constructFileUrl, getFileType, parseStringify } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './user.actions';
+import fs from 'fs';
+import path from 'path';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
@@ -17,13 +19,14 @@ export const uploadFile = async ({
   file,
   ownerId,
   accountId,
-  path,
+  path: revalidatePathArg,
 }: UploadFileProps) => {
   const { storage, databases } = await createAdminClient();
 
   try {
     const inputFile = InputFile.fromBuffer(file, file.name);
 
+    // Always upload to Appwrite storage
     const bucketFile = await storage.createFile(
       appwriteConfig.bucketId,
       ID.unique(),
@@ -54,7 +57,82 @@ export const uploadFile = async ({
         handleError(error, 'Failed to create file document');
       });
 
-    revalidatePath(path);
+    if (!newFile) {
+      throw new Error('File document creation failed');
+    }
+
+    // Check if filename contains "contract" (case-insensitive)
+    if (bucketFile.name.toLowerCase().includes('contract')) {
+      // Add to Contracts collection as well
+      // 1. Extract expiry date from file using your /api/extract-expiry endpoint
+      let contractExpiryDate: string | undefined = undefined;
+      if (bucketFile.name.toLowerCase().includes('contract')) {
+        try {
+          // Call your API endpoint to extract the expiry date
+          const formData = new FormData();
+          formData.append('file', file, bucketFile.name);
+          const response = await fetch(
+            'http://localhost:3000/api/extract-expiry',
+            {
+              method: 'POST',
+              body: formData,
+            }
+          );
+          const data = await response.json();
+          contractExpiryDate =
+            data.expiryDate || new Date().toISOString().split('T')[0];
+        } catch {
+          contractExpiryDate = new Date().toISOString().split('T')[0]; // fallback
+        }
+
+        const contractDocument = {
+          contractName: bucketFile.name,
+          contractExpiryDate,
+          status: contractExpiryDate ? 'pending' : 'action-required',
+          amount: undefined,
+          daysUntilExpiry: undefined,
+          compliance: undefined,
+          assignedManagers: [],
+          fileId: newFile.$id,
+          fileRef: newFile.$id,
+        };
+        await databases.createDocument(
+          appwriteConfig.databaseId,
+          appwriteConfig.contractsCollectionId,
+          ID.unique(),
+          contractDocument
+        );
+      }
+    } else {
+      // Save file to /uploads directory
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir);
+      }
+      const filePath = path.join(uploadsDir, bucketFile.name);
+      // Ensure file is a Buffer or convert from ArrayBuffer
+      let fileBuffer: Buffer;
+      if (Buffer.isBuffer(file)) {
+        fileBuffer = file;
+      } else if (file instanceof ArrayBuffer) {
+        fileBuffer = Buffer.from(file);
+      } else if (file instanceof Uint8Array) {
+        fileBuffer = Buffer.from(file);
+      } else if (
+        typeof file === 'object' &&
+        file !== null &&
+        'buffer' in file &&
+        file.buffer instanceof ArrayBuffer
+      ) {
+        // For typed arrays with a buffer property
+        fileBuffer = Buffer.from(file.buffer);
+      } else {
+        throw new Error('Unsupported file type for saving to disk');
+      }
+      fs.writeFileSync(filePath, fileBuffer);
+    }
+
+    revalidatePath(revalidatePathArg);
     return parseStringify(newFile);
   } catch (error) {
     handleError(error, 'Failed to upload file');
