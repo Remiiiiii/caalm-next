@@ -54,7 +54,12 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       {filteredDocuments.length > 0 ? (
         <section className="file-list">
           {filteredDocuments.map((file: Models.Document) => (
-            <Card key={file.$id} file={file} status={file.status} />
+            <Card
+              key={file.$id}
+              file={file}
+              status={file.status}
+              expirationDate={file.expirationDate}
+            />
           ))}
         </section>
       ) : (

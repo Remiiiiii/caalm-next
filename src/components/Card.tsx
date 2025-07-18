@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import Thumbnail from './Thumbnail';
 import { convertFileSize } from '@/lib/utils';
 import FormattedDateTime from './FormattedDateTime';
+import { FormattedDate } from './FormattedDateTime';
 import ActionDropdown from './ActionDropdown';
 
 // Map contract status to badge color and label
@@ -42,16 +43,20 @@ const statusBadge = (status: string) => {
 interface CardProps {
   file: Models.Document;
   status?: string;
+  expirationDate?: string;
 }
 
-const Card = ({ file, status }: CardProps) => {
+const Card = ({ file, status, expirationDate }: CardProps) => {
   const [contractStatus, setContractStatus] = useState<string | undefined>(
     status || file.status
   );
+  const [contractExpiryDate, setContractExpiryDate] = useState<
+    string | undefined
+  >(expirationDate || file.contractExpiryDate);
 
   useEffect(() => {
     // If status is not present but contractId exists, fetch the contract status
-    if (!status && !file.status && file.contractId) {
+    if (!status && !file.status && !expirationDate && file.contractId) {
       (async () => {
         // Dynamically import to avoid SSR issues
         const { getContracts } = await import('@/lib/actions/file.actions');
@@ -65,9 +70,13 @@ const Card = ({ file, status }: CardProps) => {
         if (contract && contract.status) {
           setContractStatus(contract.status);
         }
+
+        if (contract && contract.contractExpiryDate) {
+          setContractExpiryDate(contract.contractExpiryDate);
+        }
       })();
     }
-  }, [file.contractId, status, file.status]);
+  }, [file.contractId, status, file.status, expirationDate]);
 
   return (
     <Link href={file.url} target="_blank" className="file-card">
@@ -87,10 +96,24 @@ const Card = ({ file, status }: CardProps) => {
       <div className="file-card-details">
         <p className="subtitle-2 line-clamp-1">{file.name}</p>
         {contractStatus && statusBadge(contractStatus)}
-        <FormattedDateTime
-          date={file.$createdAt}
-          className="body-2 text-slate-700"
-        />
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-row gap-2">
+            <p className="body-2 text-slate-700">Uploaded on:</p>
+            <FormattedDateTime
+              date={file.$createdAt}
+              className="body-2 text-slate-700"
+            />
+          </div>
+          {contractExpiryDate && (
+            <div className="flex flex-row gap-2">
+              <p className="body-2 text-slate-700">Expires on:</p>
+              <FormattedDate
+                date={contractExpiryDate}
+                className="body-2 text-slate-700"
+              />
+            </div>
+          )}
+        </div>
         <p className="caption line-clamp-1 text-light-200">
           By: {file.owner.fullName}
         </p>
