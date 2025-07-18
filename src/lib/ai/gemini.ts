@@ -93,59 +93,100 @@ export const analyzeDocument = async (
 ): Promise<DocumentAnalysis> => {
   try {
     const prompt = `
-      Analyze the following document and provide a comprehensive analysis:
+      Analyze the following document and provide a comprehensive analysis in plain text:
       
       Document Name: ${fileName}
       Document Type: ${fileType}
       ${fileContent ? `Content: ${fileContent}` : ''}
       ${fileUrl ? `URL: ${fileUrl}` : ''}
       
-      Please provide:
-      1. A concise summary (2-3 sentences)
-      2. Key points or findings (5-7 bullet points)
-      3. Main topics or themes discussed
-      4. Document type classification
+      Please provide your analysis in this exact format:
       
-      Format your response as JSON:
-      {
-        "summary": "brief summary",
-        "keyPoints": ["point1", "point2", "point3"],
-        "topics": ["topic1", "topic2", "topic3"],
-        "documentType": "classification"
-      }
+      SUMMARY:
+      [Provide a concise 2-3 sentence summary of the document]
+      
+      KEY POINTS:
+      • [First key point]
+      • [Second key point]
+      • [Third key point]
+      • [Fourth key point]
+      • [Fifth key point]
+      
+      TOPICS:
+      [List main topics or themes discussed, separated by commas]
+      
+      DOCUMENT TYPE:
+      [Classify the document type]
     `;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
-    // Try to parse JSON response, fallback to structured text if needed
-    let analysis;
-    try {
-      analysis = JSON.parse(text);
-    } catch {
-      // Fallback parsing if JSON is malformed
-      analysis = {
-        summary: text.split('\n')[0] || 'Document analysis completed',
-        keyPoints: text
-          .split('\n')
-          .filter(
-            (line) => line.trim().startsWith('-') || line.trim().startsWith('•')
-          )
-          .slice(0, 5),
-        topics: [],
-        documentType: fileType,
-      };
+    // Parse the plain text response
+    const lines = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    let summary = '';
+    let keyPoints: string[] = [];
+    let topics: string[] = [];
+    let documentType = fileType;
+
+    let currentSection = '';
+
+    for (const line of lines) {
+      if (line.startsWith('SUMMARY:')) {
+        currentSection = 'summary';
+        continue;
+      } else if (line.startsWith('KEY POINTS:')) {
+        currentSection = 'keyPoints';
+        continue;
+      } else if (line.startsWith('TOPICS:')) {
+        currentSection = 'topics';
+        continue;
+      } else if (line.startsWith('DOCUMENT TYPE:')) {
+        currentSection = 'documentType';
+        continue;
+      }
+
+      if (currentSection === 'summary' && line) {
+        summary = line;
+      } else if (currentSection === 'keyPoints' && line.startsWith('•')) {
+        keyPoints.push(line.substring(1).trim());
+      } else if (currentSection === 'topics' && line) {
+        topics = line
+          .split(',')
+          .map((t) => t.trim())
+          .filter((t) => t.length > 0);
+      } else if (currentSection === 'documentType' && line) {
+        documentType = line;
+      }
     }
 
-    const suggestedQuestions = getSuggestedQuestions(fileType);
+    // Fallback if parsing fails
+    if (!summary) {
+      summary = text.split('\n')[0] || 'Document analysis completed';
+    }
+    if (keyPoints.length === 0) {
+      keyPoints = text
+        .split('\n')
+        .filter(
+          (line) => line.trim().startsWith('•') || line.trim().startsWith('-')
+        )
+        .map((line) => line.replace(/^[•\-]\s*/, ''))
+        .slice(0, 5);
+    }
+
+    const suggestedQuestions = getSuggestedQuestions(documentType);
 
     return {
-      summary: analysis.summary || 'Document analysis completed',
-      keyPoints: analysis.keyPoints || [],
+      summary: summary || 'Document analysis completed',
+      keyPoints: keyPoints,
       suggestedQuestions,
-      documentType: analysis.documentType || fileType,
-      topics: analysis.topics || [],
+      documentType: documentType,
+      topics: topics,
     };
   } catch (error) {
     console.error('Error analyzing document:', error);
@@ -193,42 +234,20 @@ export const answerQuestion = async (
       
       Question: ${question}
       
-      Please provide:
-      1. A clear, accurate answer based on the document content
-      2. If the information is not available in the document, clearly state that
-      3. If you're making assumptions, clearly indicate them
-      4. Provide specific references or quotes from the document when possible
+      Please provide a clear, accurate answer based on the document content. If the information is not available in the document, clearly state that. If you're making assumptions, clearly indicate them. Provide specific references or quotes from the document when possible.
       
-      Format your response as JSON:
-      {
-        "answer": "your detailed answer",
-        "confidence": 0.95,
-        "sources": ["specific reference 1", "specific reference 2"]
-      }
+      Answer in plain text format - no JSON, no special formatting, just a natural, human-readable response.
     `;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
-    // Try to parse JSON response, fallback to plain text if needed
-    let aiResponse;
-    try {
-      aiResponse = JSON.parse(text);
-    } catch {
-      aiResponse = {
-        answer: text,
-        confidence: 0.8,
-        sources: [],
-      };
-    }
-
+    // The response is now plain text, so we can use it directly
     return {
-      answer:
-        aiResponse.answer ||
-        "I'm unable to provide a specific answer at this time.",
-      confidence: aiResponse.confidence || 0.5,
-      sources: aiResponse.sources || [],
+      answer: text || "I'm unable to provide a specific answer at this time.",
+      confidence: 0.8, // Default confidence for plain text responses
+      sources: [], // We'll extract sources from the text if needed in the future
     };
   } catch (error) {
     console.error('Error answering question:', error);

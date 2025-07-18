@@ -4,7 +4,6 @@ import {
   Send,
   Download,
   Share2,
-  MessageCircle,
   FileText,
   Calendar,
   // User,
@@ -52,23 +51,60 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [isClosing, setIsClosing] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(true);
-  const [aiSummary, setAiSummary] = useState<string>('');
-  const [aiKeyPoints, setAiKeyPoints] = useState<string[]>([]);
+
   const [aiSuggestedQuestions, setAiSuggestedQuestions] = useState<string[]>(
     []
   );
   const [aiLoading, setAiLoading] = useState(false);
+  const [fileContent, setFileContent] = useState<string>('');
+  const [contentLoading, setContentLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   //const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Analyze document on open
+  // Reset all AI state when DocumentViewer opens or file changes
+  useEffect(() => {
+    if (isOpen) {
+      setAiSuggestedQuestions([]);
+      setChatMessages([]);
+      setNewMessage('');
+      setIsLoading(false);
+      setAiLoading(false);
+    }
+  }, [isOpen, file.id]);
+
+  // Fetch file content and analyze document on open
   useEffect(() => {
     if (!isOpen) return;
     let ignore = false;
+
+    const fetchFileContent = async () => {
+      if (
+        ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts'].includes(
+          file.type.toLowerCase()
+        )
+      ) {
+        setContentLoading(true);
+        try {
+          const response = await fetch(file.url);
+          const content = await response.text();
+          if (!ignore) {
+            setFileContent(content);
+          }
+        } catch (error) {
+          console.error('Error fetching file content:', error);
+          if (!ignore) {
+            setFileContent('Error loading file content');
+          }
+        } finally {
+          if (!ignore) {
+            setContentLoading(false);
+          }
+        }
+      }
+    };
+
     const analyze = async () => {
       setAiLoading(true);
-      setAiSummary('');
-      setAiKeyPoints([]);
       setAiSuggestedQuestions([]);
       setChatMessages([]);
       let fileContent = '';
@@ -103,45 +139,27 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         const analysis = await response.json();
         if (ignore) return;
 
-        setAiSummary(analysis.summary);
-        setAiKeyPoints(analysis.keyPoints);
         setAiSuggestedQuestions(analysis.suggestedQuestions);
         setAiLoading(false);
-        // Add welcome/summary message to chat
-        setChatMessages([
-          {
-            id: 'ai-summary',
-            text: `**Summary:** ${
-              analysis.summary
-            }\n\n**Key Points:**\n${analysis.keyPoints
-              .map((k: string) => `- ${k}`)
-              .join('\n')}`,
-            sender: 'assistant',
-            timestamp: new Date(),
-          },
-        ]);
       } catch (error) {
         console.error('AI Analysis failed:', error);
         if (ignore) return;
         setAiLoading(false);
-        setChatMessages([
-          {
-            id: 'ai-error',
-            text: 'Sorry, I encountered an error while analyzing the document. Please try again.',
-            sender: 'assistant',
-            timestamp: new Date(),
-          },
-        ]);
       }
     };
+
+    // Fetch content and analyze
+    fetchFileContent();
     analyze();
+
     return () => {
       ignore = true;
     };
   }, [isOpen, file]);
 
   useEffect(() => {
-    if (chatEndRef.current) {
+    // Only scroll to bottom when new messages are added (not on initial load)
+    if (chatEndRef.current && chatMessages.length > 1) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages]);
@@ -336,14 +354,20 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
       return (
         <div className="h-full flex flex-col">
           <div className="flex-1 p-4 overflow-auto">
-            <pre className="text-sm text-gray-800 bg-gray-50 p-4 rounded-lg h-full overflow-auto">
-              <code>
-                {/* For text files, we'd need to fetch the content */}
-                {/* This is a placeholder - in a real implementation, you'd fetch the file content */}
-                {file.description ||
-                  'Text file content would be displayed here'}
-              </code>
-            </pre>
+            {contentLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-500">
+                    Loading file content...
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <pre className="text-sm text-gray-800 bg-white p-4 rounded-lg h-full overflow-auto border">
+                <code>{fileContent || 'No content available'}</code>
+              </pre>
+            )}
           </div>
         </div>
       );
@@ -474,7 +498,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
           {/* Document Preview */}
-          <div className="flex-1 border-r bg-gray-50 relative">
+          <div className="w-2/3 border-r bg-gray-50 relative">
             {previewError ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
@@ -499,135 +523,181 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </div>
 
           {/* Chat Interface */}
-          <div className="w-96 flex flex-col bg-white">
-            {/* AI Summary & Suggestions */}
-            <div className="p-4 border-b bg-gray-50">
-              <div className="flex items-center space-x-2 mb-2">
-                <MessageCircle className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold text-gray-900">
-                  Document Assistant
-                </h3>
-              </div>
-              {aiLoading ? (
-                <div className="text-sm text-gray-500">
-                  Analyzing document...
-                </div>
-              ) : (
-                <>
-                  {aiSummary && (
-                    <div className="mb-2">
-                      <div className="font-semibold">Summary:</div>
-                      <div className="text-sm text-gray-700">{aiSummary}</div>
-                    </div>
-                  )}
-                  {aiKeyPoints.length > 0 && (
-                    <div className="mb-2">
-                      <div className="font-semibold">Key Points:</div>
-                      <ul className="list-disc ml-5 text-sm text-gray-700">
-                        {aiKeyPoints.map((point, idx) => (
-                          <li key={idx}>{point}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Chat Messages */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {chatMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.sender === 'user'
-                        ? 'justify-end'
-                        : 'justify-start'
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
-                        message.sender === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-line">
-                        {message.text}
-                      </p>
-                      <p
-                        className={`text-xs mt-1 ${
-                          message.sender === 'user'
-                            ? 'text-blue-100'
-                            : 'text-gray-500'
-                        }`}
-                      >
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-lg p-3">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: '0.1s' }}
-                        ></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: '0.2s' }}
-                        ></div>
+          <div className="w-1/3 flex flex-col bg-gray-50">
+            {/* Scrollable Content */}
+            <ScrollArea className="flex-1">
+              <div className="p-4">
+                {/* Welcome Message */}
+                {!aiLoading && chatMessages.length === 0 && (
+                  <div className="flex justify-start mb-6">
+                    <div className="flex items-start space-x-3 max-w-[85%]">
+                      <div className="flex-shrink-0">
+                        <Image
+                          src="/assets/images/logo.svg"
+                          alt="AI Assistant"
+                          width={32}
+                          height={32}
+                          className="w-8 h-8 rounded-full bg-blue-100 p-1"
+                        />
+                      </div>
+                      <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border">
+                        <p className="text-sm text-gray-700">
+                          Hi! I&apos;m your document assistant. I can help you
+                          understand and analyze this document. What would you
+                          like to know about it?
+                        </p>
                       </div>
                     </div>
                   </div>
                 )}
-                <div ref={chatEndRef} />
+
+                {/* Loading State */}
+                {aiLoading && (
+                  <div className="flex justify-start mb-6">
+                    <div className="flex items-start space-x-3 max-w-[85%]">
+                      <div className="flex-shrink-0">
+                        <Image
+                          src="/assets/images/logo.svg"
+                          alt="AI Assistant"
+                          width={32}
+                          height={32}
+                          className="w-8 h-8 rounded-full bg-blue-100 p-1"
+                        />
+                      </div>
+                      <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                          <div
+                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                            style={{ animationDelay: '0.1s' }}
+                          ></div>
+                          <div
+                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                            style={{ animationDelay: '0.2s' }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Chat Messages */}
+                <div className="space-y-4">
+                  {chatMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${
+                        message.sender === 'user'
+                          ? 'justify-end'
+                          : 'justify-start'
+                      }`}
+                    >
+                      {message.sender === 'assistant' && (
+                        <div className="flex items-start space-x-3 max-w-[95%]">
+                          <div className="flex-shrink-0">
+                            <Image
+                              src="/assets/images/logo.svg"
+                              alt="AI Assistant"
+                              width={32}
+                              height={32}
+                              className="w-8 h-8 rounded-full bg-blue-100 p-1"
+                            />
+                          </div>
+                          <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border">
+                            <p className="text-sm text-gray-700 whitespace-pre-line">
+                              {message.text}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {message.sender === 'user' && (
+                        <div className="bg-blue-600 text-white rounded-2xl px-4 py-3 max-w-[85%] shadow-sm">
+                          <p className="text-sm whitespace-pre-line">
+                            {message.text}
+                          </p>
+                          <p className="text-xs text-blue-100 mt-2">
+                            {message.timestamp.toLocaleTimeString()}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="flex items-start space-x-3 max-w-[85%]">
+                        <div className="flex-shrink-0">
+                          <Image
+                            src="/assets/images/logo.svg"
+                            alt="AI Assistant"
+                            width={32}
+                            height={32}
+                            className="w-8 h-8 rounded-full bg-blue-100 p-1"
+                          />
+                        </div>
+                        <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              style={{ animationDelay: '0.1s' }}
+                            ></div>
+                            <div
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              style={{ animationDelay: '0.2s' }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Chat Input */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="flex space-x-2">
+                    <Input
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Ask about this document..."
+                      className="flex-1 bg-white border-gray-200 rounded-full px-4 py-2"
+                      disabled={isLoading}
+                    />
+                    <Button
+                      onClick={() => handleSendMessage()}
+                      disabled={!newMessage.trim() || isLoading}
+                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* Suggested Questions */}
+                  {aiSuggestedQuestions.length > 0 && (
+                    <div className="mt-3">
+                      <div className="flex flex-wrap gap-2">
+                        {aiSuggestedQuestions.slice(0, 4).map((q, idx) => (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs rounded-full bg-white border-gray-200 hover:bg-gray-50"
+                            onClick={() => handleSendMessage(q)}
+                            disabled={isLoading}
+                          >
+                            {q}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </ScrollArea>
-
-            {/* Chat Input */}
-            <div className="p-4 border-t">
-              <div className="flex space-x-2">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ask about this document..."
-                  className="flex-1"
-                  disabled={isLoading}
-                />
-                <Button
-                  onClick={() => handleSendMessage()}
-                  disabled={!newMessage.trim() || isLoading}
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Suggested Questions */}
-              {aiSuggestedQuestions.length > 0 && (
-                <div className="mt-3">
-                  <div className="flex flex-wrap gap-2">
-                    {aiSuggestedQuestions.slice(0, 4).map((q, idx) => (
-                      <Button
-                        key={idx}
-                        variant="outline"
-                        size="sm"
-                        className="text-xs rounded-full"
-                        onClick={() => handleSendMessage(q)}
-                        disabled={isLoading}
-                      >
-                        {q}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
