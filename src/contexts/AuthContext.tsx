@@ -28,6 +28,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     setMounted(true);
+
+    // Validate Appwrite configuration
+    if (!appwriteConfig.endpointUrl || !appwriteConfig.projectId) {
+      console.error('Appwrite configuration is incomplete:', appwriteConfig);
+      setLoading(false);
+      return;
+    }
+
     const client = new Client()
       .setEndpoint(appwriteConfig.endpointUrl)
       .setProject(appwriteConfig.projectId);
@@ -52,6 +60,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = async () => {
+    if (!appwriteConfig.endpointUrl || !appwriteConfig.projectId) {
+      console.error('Appwrite configuration is incomplete for logout');
+      setUser(null);
+      return;
+    }
+
     const client = new Client()
       .setEndpoint(appwriteConfig.endpointUrl)
       .setProject(appwriteConfig.projectId);

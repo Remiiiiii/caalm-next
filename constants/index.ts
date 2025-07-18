@@ -39,19 +39,14 @@ export const navItems = [
 
 export const actionsDropdownItems = [
   {
-    label: 'Status',
-    icon: '/assets/icons/contract-status.svg',
-    value: 'status',
-  },
-  {
     label: 'Assign',
     icon: '/assets/icons/assign.svg',
     value: 'assign',
   },
   {
-    label: 'Rename',
-    icon: '/assets/icons/edit.svg',
-    value: 'rename',
+    label: 'Delete',
+    icon: '/assets/icons/delete.svg',
+    value: 'delete',
   },
   {
     label: 'Details',
@@ -59,19 +54,29 @@ export const actionsDropdownItems = [
     value: 'details',
   },
   {
-    label: 'Share',
-    icon: '/assets/icons/share.svg',
-    value: 'share',
-  },
-  {
     label: 'Download',
     icon: '/assets/icons/download.svg',
     value: 'download',
   },
   {
-    label: 'Delete',
-    icon: '/assets/icons/delete.svg',
-    value: 'delete',
+    label: 'Rename',
+    icon: '/assets/icons/edit.svg',
+    value: 'rename',
+  },
+  {
+    label: 'Review',
+    icon: '/assets/icons/review.svg',
+    value: 'review',
+  },
+  {
+    label: 'Share',
+    icon: '/assets/icons/share.svg',
+    value: 'share',
+  },
+  {
+    label: 'Status',
+    icon: '/assets/icons/contract-status.svg',
+    value: 'status',
   },
 ];
 

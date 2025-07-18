@@ -35,6 +35,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import UserManagement from './UserManagement';
+import FileUploader from '@/components/FileUploader';
 
 const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
@@ -53,7 +54,11 @@ interface Invitation {
   $createdAt: string;
 }
 
-const ExecutiveDashboard = () => {
+interface ExecutiveDashboardProps {
+  user?: { $id: string; accountId?: string };
+}
+
+const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const stats = [
     {
       title: 'Total Contracts',
@@ -248,6 +253,12 @@ const ExecutiveDashboard = () => {
                 <Calendar className="mr-2 h-4 w-4 text-coral" />
                 Schedule Review
               </Button>
+              {user && (
+                <FileUploader
+                  ownerId={user.$id}
+                  accountId={user.accountId || user.$id}
+                />
+              )}
               <Button>
                 <TrendingUp className="mr-2 h-4 w-4 text-coral" />
                 Generate Report

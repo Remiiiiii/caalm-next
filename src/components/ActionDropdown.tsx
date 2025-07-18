@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Models } from 'node-appwrite';
 import { actionsDropdownItems } from '../../constants';
-import { constructDownloadUrl } from '@/lib/utils';
+import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -37,6 +37,7 @@ import {
 } from './ui/card';
 import { useContractStatusEnums } from '@/hooks/useContractStatusEnums';
 import { useUpdateContractStatus } from '@/hooks/useUpdateContractStatus';
+import DocumentViewer from './DocumentViewer';
 
 const ActionDropdown = ({
   file,
@@ -59,6 +60,7 @@ const ActionDropdown = ({
   const path = usePathname() || '';
   const { enums: statusOptions, error: statusError } = useContractStatusEnums();
   const { updateStatus } = useUpdateContractStatus({ onStatusChange });
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   // Fetch managers when Assign dialog is opened
   useEffect(() => {
@@ -543,6 +545,10 @@ const ActionDropdown = ({
         </div>
       );
     }
+
+    if (value === 'review') {
+      return null; // DocumentViewer is rendered separately
+    }
   };
 
   // Safety check: ensure file object exists and has required properties
@@ -582,7 +588,9 @@ const ActionDropdown = ({
               className="shad-dropdown-item"
               onClick={() => {
                 setAction(actionItem);
-                if (
+                if (actionItem.value === 'review') {
+                  setIsViewerOpen(true);
+                } else if (
                   [
                     'assign',
                     'rename',
@@ -627,6 +635,21 @@ const ActionDropdown = ({
         </DropdownMenuContent>
       </DropdownMenu>
       {renderDialogContent()}
+      <DocumentViewer
+        isOpen={isViewerOpen}
+        onClose={() => setIsViewerOpen(false)}
+        file={{
+          id: file.$id,
+          name: file.name || file.contractName || '',
+          type: file.extension || 'pdf',
+          size: file.size || 'Unknown',
+          url: constructFileUrl(file.bucketFileId),
+          createdAt: file.$createdAt,
+          expiresAt: file.contractExpiryDate,
+          createdBy: file.owner || 'Unknown',
+          description: file.description || '',
+        }}
+      />
     </Dialog>
   );
 };

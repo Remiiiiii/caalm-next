@@ -12,6 +12,10 @@ import { appwriteConfig } from './config';
 import { cookies } from 'next/headers';
 
 export const createSessionClient = async () => {
+  if (!appwriteConfig.endpointUrl || !appwriteConfig.projectId) {
+    throw new Error('Appwrite configuration is incomplete');
+  }
+
   const client = new Client()
     .setEndpoint(appwriteConfig.endpointUrl)
     .setProject(appwriteConfig.projectId);
@@ -35,6 +39,14 @@ export const createSessionClient = async () => {
 };
 
 export const createAdminClient = async () => {
+  if (
+    !appwriteConfig.endpointUrl ||
+    !appwriteConfig.projectId ||
+    !appwriteConfig.secretKey
+  ) {
+    throw new Error('Appwrite configuration is incomplete');
+  }
+
   const client = new Client()
     .setEndpoint(appwriteConfig.endpointUrl)
     .setProject(appwriteConfig.projectId)

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+// import Link from 'next/link'; // Removed since we no longer use Link component
 import { Models } from 'node-appwrite';
 import React, { useEffect, useState } from 'react';
 import Thumbnail from './Thumbnail';
@@ -78,8 +78,15 @@ const Card = ({ file, status, expirationDate }: CardProps) => {
     }
   }, [file.contractId, status, file.status, expirationDate]);
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent the default link behavior - we don't want to open files in new tabs anymore
+    e.preventDefault();
+    e.stopPropagation();
+    // The file viewing is now handled by the DocumentViewer modal through the ActionDropdown
+  };
+
   return (
-    <Link href={file.url} target="_blank" className="file-card">
+    <div className="file-card" onClick={handleCardClick}>
       <div className="flex justify-between text-slate-700">
         <Thumbnail
           type={file.type}
@@ -118,7 +125,7 @@ const Card = ({ file, status, expirationDate }: CardProps) => {
           By: {file.owner.fullName}
         </p>
       </div>
-    </Link>
+    </div>
   );
 };
 

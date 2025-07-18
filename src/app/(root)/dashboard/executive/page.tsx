@@ -9,5 +9,5 @@ export default async function ExecutiveDashboardPage() {
     redirect('/sign-in');
   }
 
-  return <ExecutiveDashboard />;
+  return <ExecutiveDashboard user={currentUser} />;
 }
