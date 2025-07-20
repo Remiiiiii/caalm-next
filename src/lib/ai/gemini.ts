@@ -92,12 +92,20 @@ export const analyzeDocument = async (
   fileUrl?: string
 ): Promise<DocumentAnalysis> => {
   try {
+    console.log('Starting document analysis:', {
+      fileName,
+      fileType,
+      hasContent: !!fileContent,
+      contentLength: fileContent?.length || 0,
+      hasUrl: !!fileUrl,
+    });
+
     const prompt = `
       Analyze the following document and provide a comprehensive analysis in plain text:
       
       Document Name: ${fileName}
       Document Type: ${fileType}
-      ${fileContent ? `Content: ${fileContent}` : ''}
+      ${fileContent ? `Content: ${fileContent}` : 'No content available'}
       ${fileUrl ? `URL: ${fileUrl}` : ''}
       
       Please provide your analysis in this exact format:
@@ -119,9 +127,11 @@ export const analyzeDocument = async (
       [Classify the document type]
     `;
 
+    console.log('Sending prompt to Gemini AI...');
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    console.log('Received AI response, length:', text.length);
 
     // Parse the plain text response
     const lines = text
@@ -181,6 +191,13 @@ export const analyzeDocument = async (
 
     const suggestedQuestions = getSuggestedQuestions(documentType);
 
+    console.log('Analysis completed successfully:', {
+      summaryLength: summary.length,
+      keyPointsCount: keyPoints.length,
+      topicsCount: topics.length,
+      suggestedQuestionsCount: suggestedQuestions.length,
+    });
+
     return {
       summary: summary || 'Document analysis completed',
       keyPoints: keyPoints,
@@ -194,6 +211,7 @@ export const analyzeDocument = async (
       fileName,
       fileType,
       hasContent: !!fileContent,
+      contentLength: fileContent?.length || 0,
       hasUrl: !!fileUrl,
       apiKeyExists: !!process.env.GOOGLE_API_KEY,
       apiKeyLength: process.env.GOOGLE_API_KEY?.length || 0,
@@ -265,23 +283,147 @@ export const extractDocumentContent = async (
   fileUrl: string,
   fileType: string
 ): Promise<string> => {
-  // This is a placeholder - in a real implementation, you would:
-  // 1. For PDFs: Use a PDF parsing library
-  // 2. For images: Use OCR to extract text
-  // 3. For text files: Fetch and read the content
-  // 4. For other formats: Use appropriate parsers
-
   try {
-    if (fileType.toLowerCase() === 'txt' || fileType.toLowerCase() === 'md') {
+    console.log('Starting content extraction:', { fileUrl, fileType });
+    const fileTypeLower = fileType.toLowerCase();
+
+    // For text files, fetch and return content directly
+    if (
+      [
+        'txt',
+        'md',
+        'json',
+        'xml',
+        'html',
+        'css',
+        'js',
+        'ts',
+        'jsx',
+        'tsx',
+      ].includes(fileTypeLower)
+    ) {
+      console.log('Extracting text file content...');
       const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch text file: ${response.statusText}`);
+      }
       const content = await response.text();
+      console.log('Text file content extracted, length:', content.length);
       return content;
     }
 
-    // For other file types, return a placeholder
-    return `Document content for ${fileType} file. In a full implementation, this would contain the actual extracted content.`;
+    // For PDFs, extract text using pdf-parse
+    if (fileTypeLower === 'pdf') {
+      console.log('Extracting PDF content...');
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Use dynamic import to avoid module loading issues
+      const pdfParse = (await import('pdf-parse')).default;
+      const data = await pdfParse(buffer);
+      const text = data.text || 'No text content found in PDF';
+      console.log('PDF content extracted, length:', text.length);
+      return text;
+    }
+
+    // For images, use OCR to extract text
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileTypeLower)) {
+      console.log('Extracting image content using OCR...');
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Use dynamic import to avoid module loading issues
+      const Tesseract = (await import('tesseract.js')).default;
+      const {
+        data: { text },
+      } = await Tesseract.recognize(buffer, 'eng');
+
+      const extractedText = text || 'No text found in image';
+      console.log('Image OCR completed, length:', extractedText.length);
+      return extractedText;
+    }
+
+    // For Microsoft Office documents
+    if (['docx', 'doc'].includes(fileTypeLower)) {
+      console.log('Extracting Word document content...');
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch Word document: ${response.statusText}`
+        );
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Use dynamic import to avoid module loading issues
+      const mammoth = (await import('mammoth')).default;
+      const result = await mammoth.extractRawText({ buffer });
+      const text = result.value || 'No text content found in Word document';
+      console.log('Word document content extracted, length:', text.length);
+      return text;
+    }
+
+    if (['xlsx', 'xls'].includes(fileTypeLower)) {
+      console.log('Extracting Excel document content...');
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch Excel document: ${response.statusText}`
+        );
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Use dynamic import to avoid module loading issues
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      let text = '';
+
+      // Extract text from all sheets
+      workbook.SheetNames.forEach((sheetName: string) => {
+        const sheet = workbook.Sheets[sheetName];
+        const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const sheetText = sheetData
+          .map((row: unknown) =>
+            Array.isArray(row) ? row.join('\t') : JSON.stringify(row)
+          )
+          .join('\n');
+        text += `Sheet: ${sheetName}\n${sheetText}\n\n`;
+      });
+
+      const extractedText = text || 'No text content found in Excel document';
+      console.log(
+        'Excel document content extracted, length:',
+        extractedText.length
+      );
+      return extractedText;
+    }
+
+    if (['pptx', 'ppt'].includes(fileTypeLower)) {
+      console.log('PowerPoint document detected, returning placeholder');
+      return `PowerPoint document (${fileTypeLower}). PowerPoint text extraction requires additional libraries like pptxjs or similar.`;
+    }
+
+    // For other file types, return a generic message
+    console.log('Unsupported file type:', fileTypeLower);
+    return `File type ${fileTypeLower} is not yet supported for text extraction. The AI will work with the file metadata and any available description.`;
   } catch (error) {
     console.error('Error extracting document content:', error);
-    return '';
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Content extraction failed for:', {
+      fileUrl,
+      fileType,
+      errorMessage,
+    });
+    return `Error extracting content from ${fileType} file: ${errorMessage}`;
   }
 };

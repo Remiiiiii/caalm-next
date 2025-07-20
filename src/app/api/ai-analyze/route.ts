@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeDocument, answerQuestion } from '@/lib/ai/gemini';
+import {
+  analyzeDocument,
+  answerQuestion,
+  extractDocumentContent,
+} from '@/lib/ai/gemini';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,18 +23,38 @@ export async function POST(request: NextRequest) {
       fileName,
       fileType,
       hasContent: !!fileContent,
+      hasUrl: !!fileUrl,
     });
+
+    // Extract file content if not provided but URL is available
+    let extractedContent = fileContent;
+    if (!fileContent && fileUrl) {
+      console.log('Extracting content from file URL...');
+      try {
+        extractedContent = await extractDocumentContent(fileUrl, fileType);
+        console.log(
+          'Content extraction successful, length:',
+          extractedContent.length
+        );
+      } catch (extractError) {
+        console.error('Content extraction failed:', extractError);
+        extractedContent = `Unable to extract content from ${fileType} file. Error: ${
+          extractError instanceof Error ? extractError.message : 'Unknown error'
+        }`;
+      }
+    }
 
     if (action === 'analyze') {
       const result = await analyzeDocument(
         fileName,
         fileType,
-        fileContent,
+        extractedContent,
         fileUrl
       );
       console.log('AI Analysis Result:', {
         summary: result.summary,
         keyPointsCount: result.keyPoints.length,
+        suggestedQuestionsCount: result.suggestedQuestions.length,
       });
       return NextResponse.json(result);
     } else if (action === 'question') {
@@ -38,7 +62,7 @@ export async function POST(request: NextRequest) {
         question,
         fileName,
         fileType,
-        fileContent,
+        extractedContent,
         fileUrl,
         previousContext
       );

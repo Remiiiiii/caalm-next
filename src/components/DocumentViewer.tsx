@@ -15,7 +15,6 @@ import { Badge } from './ui/badge';
 import Image from 'next/image';
 //import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 //import { Separator } from './ui/separator';
-import { extractDocumentContent } from '@/lib/ai/gemini';
 
 interface DocumentViewerProps {
   isOpen: boolean;
@@ -106,16 +105,15 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     const analyze = async () => {
       setAiLoading(true);
       setAiSuggestedQuestions([]);
-      setChatMessages([]);
-      let fileContent = '';
-      // Try to extract content for text files
-      if (
-        ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts'].includes(
-          file.type.toLowerCase()
-        )
-      ) {
-        fileContent = await extractDocumentContent(file.url, file.type);
-      }
+      // Always start with the greeting message
+      setChatMessages([
+        {
+          id: 'greeting',
+          text: "Hi! I'm your document assistant. I can help you understand and analyze this document. What would you like to know about it?",
+          sender: 'assistant',
+          timestamp: new Date(),
+        },
+      ]);
 
       try {
         const response = await fetch('/api/ai-analyze', {
@@ -127,7 +125,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             action: 'analyze',
             fileName: file.name,
             fileType: file.type,
-            fileContent,
             fileUrl: file.url,
           }),
         });
@@ -184,16 +181,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     setIsLoading(true);
 
     try {
-      // Optionally, pass file content for better answers
-      let fileContent = '';
-      if (
-        ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts'].includes(
-          file.type.toLowerCase()
-        )
-      ) {
-        fileContent = await extractDocumentContent(file.url, file.type);
-      }
-
       const response = await fetch('/api/ai-analyze', {
         method: 'POST',
         headers: {
@@ -204,7 +191,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           question: message,
           fileName: file.name,
           fileType: file.type,
-          fileContent,
           fileUrl: file.url,
         }),
       });
@@ -423,17 +409,25 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+      style={{
+        pointerEvents: 'auto',
+      }}
       onClick={(e) => {
+        e.stopPropagation();
+
         if (e.target === e.currentTarget && !isClosing) {
           setIsClosing(true);
           onClose();
         }
       }}
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl h-[90vh] flex flex-col">
+      <div
+        className="bg-white rounded-3xl shadow-drop-2 w-full max-w-7xl h-[90vh] flex flex-col border border-light-300"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="rounded-3xl flex items-center justify-between p-6 border-b border-light-300 bg-gradient-to-r from-light-400 to-white">
           <div className="flex items-center space-x-4">
             <div className="text-3xl">{getFileIcon(file.type)}</div>
             <div>
@@ -462,8 +456,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             <Button
               variant="outline"
               size="sm"
+              className="border-light-300 hover:border-[#00C1CB] hover:bg-light-400 transition-all duration-200"
               onClick={(e) => {
-                e.preventDefault();
                 e.stopPropagation();
                 if (isOpen && !isClosing) {
                   const link = document.createElement('a');
@@ -477,18 +471,25 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               <Download className="w-4 h-4 mr-2" />
               Download
             </Button>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-light-300 hover:border-[#00C1CB] hover:bg-light-400 transition-all duration-200"
+            >
               <Share2 className="w-4 h-4 mr-2" />
               Share
             </Button>
             <Button
               variant="outline"
               size="sm"
+              className="border-light-300 hover:border-[#00C1CB] hover:bg-light-400 transition-all duration-200"
               onClick={() => {
                 setIsClosing(true);
                 onClose();
               }}
-              disabled={isClosing}
+              style={{
+                pointerEvents: 'auto',
+              }}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -496,9 +497,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="rounded-3xl flex-1 flex overflow-hidden">
           {/* Document Preview */}
-          <div className="w-2/3 border-r bg-gray-50 relative">
+          <div className="w-2/3 border-r border-light-300 bg-light-400 relative">
             {previewError ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
@@ -523,34 +524,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </div>
 
           {/* Chat Interface */}
-          <div className="w-1/3 flex flex-col bg-gray-50">
+          <div
+            className="w-1/3 flex flex-col bg-light-400"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Scrollable Content */}
-            <ScrollArea className="flex-1">
-              <div className="p-4">
-                {/* Welcome Message */}
-                {!aiLoading && chatMessages.length === 0 && (
-                  <div className="flex justify-start mb-6">
-                    <div className="flex items-start space-x-3 max-w-[85%]">
-                      <div className="flex-shrink-0">
-                        <Image
-                          src="/assets/images/logo.svg"
-                          alt="AI Assistant"
-                          width={32}
-                          height={32}
-                          className="w-8 h-8 rounded-full bg-blue-100 p-1"
-                        />
-                      </div>
-                      <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border">
-                        <p className="text-sm text-gray-700">
-                          Hi! I&apos;m your document assistant. I can help you
-                          understand and analyze this document. What would you
-                          like to know about it?
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
+            <ScrollArea className="flex-1" onClick={(e) => e.stopPropagation()}>
+              <div className="p-4" onClick={(e) => e.stopPropagation()}>
                 {/* Loading State */}
                 {aiLoading && (
                   <div className="flex justify-start mb-6">
@@ -564,7 +544,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                           className="w-8 h-8 rounded-full bg-blue-100 p-1"
                         />
                       </div>
-                      <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border">
+                      <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
                         <div className="flex space-x-1">
                           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                           <div
@@ -582,7 +562,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 )}
 
                 {/* Chat Messages */}
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {chatMessages.map((message) => (
                     <div
                       key={message.id}
@@ -603,7 +583,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                               className="w-8 h-8 rounded-full bg-blue-100 p-1"
                             />
                           </div>
-                          <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border">
+                          <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
                             <p className="text-sm text-gray-700 whitespace-pre-line">
                               {message.text}
                             </p>
@@ -614,7 +594,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         </div>
                       )}
                       {message.sender === 'user' && (
-                        <div className="bg-blue-600 text-white rounded-2xl px-4 py-3 max-w-[85%] shadow-sm">
+                        <div className="bg-gradient-to-r from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] text-white rounded-2xl px-4 py-3 max-w-[85%] shadow-drop-1">
                           <p className="text-sm whitespace-pre-line">
                             {message.text}
                           </p>
@@ -637,7 +617,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                             className="w-8 h-8 rounded-full bg-blue-100 p-1"
                           />
                         </div>
-                        <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border">
+                        <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
                           <div className="flex space-x-1">
                             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                             <div
@@ -657,20 +637,24 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 </div>
 
                 {/* Chat Input */}
-                <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="mt-8 pt-4 border-t border-light-300">
                   <div className="flex space-x-2">
                     <Input
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
+                      onClick={(e) => e.stopPropagation()}
                       placeholder="Ask about this document..."
-                      className="flex-1 bg-white border-gray-200 rounded-full px-4 py-2"
+                      className="flex-1 bg-white rounded-full border-none px-4 py-2 shadow-drop-1 focus:border-[#00C1CB] focus:ring-1 focus:ring-[#00C1CB] focus:outline-none transition-all duration-200"
                       disabled={isLoading}
                     />
                     <Button
-                      onClick={() => handleSendMessage()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSendMessage();
+                      }}
                       disabled={!newMessage.trim() || isLoading}
-                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2"
+                      className="bg-gradient-to-r from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] hover:from-[#078FAB] hover:via-[#0E638F] hover:via-[#11487D] hover:via-[#162768] hover:to-[#00C1CB] text-white rounded-full p-2 shadow-drop-1 transition-all duration-300"
                     >
                       <Send className="w-4 h-4" />
                     </Button>
@@ -685,8 +669,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                             key={idx}
                             variant="outline"
                             size="sm"
-                            className="text-xs rounded-full bg-white border-gray-200 hover:bg-gray-50"
-                            onClick={() => handleSendMessage(q)}
+                            className="text-xs rounded-full bg-white border-light-300 hover:bg-light-400 hover:border-[#00C1CB] focus:ring-2 focus:ring-[#078FAB] focus:outline-none transition-all duration-200 shadow-drop-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSendMessage(q);
+                            }}
                             disabled={isLoading}
                           >
                             {q}
