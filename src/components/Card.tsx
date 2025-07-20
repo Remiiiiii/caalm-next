@@ -4,8 +4,7 @@
 import { Models } from 'node-appwrite';
 import React, { useEffect, useState } from 'react';
 import Thumbnail from './Thumbnail';
-import { convertFileSize } from '@/lib/utils';
-import FormattedDateTime from './FormattedDateTime';
+import { convertFileSize, formatDateTime } from '@/lib/utils';
 import { FormattedDate } from './FormattedDateTime';
 import ActionDropdown from './ActionDropdown';
 
@@ -104,12 +103,10 @@ const Card = ({ file, status, expirationDate }: CardProps) => {
         <p className="subtitle-2 line-clamp-1">{file.name}</p>
         {contractStatus && statusBadge(contractStatus)}
         <div className="flex flex-col gap-1">
-          <div className="flex flex-row gap-2">
-            <p className="body-2 text-slate-700">Uploaded on:</p>
-            <FormattedDateTime
-              date={file.$createdAt}
-              className="body-2 text-slate-700"
-            />
+          <div className="flex">
+            <span className="body-2 text-slate-700">
+              Uploaded on: {formatDateTime(file.$createdAt)}
+            </span>
           </div>
           {contractExpiryDate && (
             <div className="flex flex-row gap-2">
