@@ -162,3 +162,14 @@ export const avatarPlaceholderUrl =
   'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg';
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+// Department type - will be populated from database
+export type Department = string;
+
+// Helper function to format department names for display
+export const formatDepartmentName = (department: string): string => {
+  return department
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};

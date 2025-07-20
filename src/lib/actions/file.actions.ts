@@ -98,6 +98,7 @@ export const uploadFile = async ({
           daysUntilExpiry: undefined,
           compliance: undefined,
           assignedManagers: [],
+          department: undefined, // Will be set when contract is assigned to a department
           fileId: newFile.$id, // Save file.$id in the contract document
           fileRef: newFile.$id,
         };

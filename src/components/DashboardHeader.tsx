@@ -6,10 +6,8 @@ import { FileText, Bell, Mail, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NotificationCenter from '@/components/NotificationCenter';
 import { Models } from 'appwrite';
-import {
-  signOutUser,
-  getUnreadNotificationsCount,
-} from '@/lib/actions/user.actions';
+import { signOutUser } from '@/lib/actions/user.actions';
+import { getUnreadNotificationsCount } from '@/lib/actions/notification.actions';
 
 interface DashboardHeaderProps {
   user?: (Models.User<Models.Preferences> & { role?: string }) | null;

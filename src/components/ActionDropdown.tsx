@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Models } from 'node-appwrite';
-import { actionsDropdownItems } from '../../constants';
+import { actionsDropdownItems, formatDepartmentName } from '../../constants';
 import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Input } from './ui/input';
@@ -24,7 +24,8 @@ import {
   updateFileUsers,
   assignContract,
 } from '@/lib/actions/file.actions';
-import { listAllUsers, AppUser } from '@/lib/actions/user.actions';
+import { assignContractToDepartment } from '@/lib/actions/notification.actions';
+import { AppUser } from '@/lib/actions/user.actions';
 import { usePathname } from 'next/navigation';
 import { FileDetails } from './ActionsModalContent';
 import { ShareInput } from '@/components/ActionsModalContent';
@@ -37,6 +38,7 @@ import {
 } from './ui/card';
 import { useContractStatusEnums } from '@/hooks/useContractStatusEnums';
 import { useUpdateContractStatus } from '@/hooks/useUpdateContractStatus';
+import { useDepartmentAssignment } from '@/hooks/useDepartmentAssignment';
 import DocumentViewer from './DocumentViewer';
 
 const ActionDropdown = ({
@@ -52,41 +54,30 @@ const ActionDropdown = ({
   const [name, setName] = useState(file?.name || file?.contractName || '');
   const [isLoading, setIsLoading] = useState(false);
   const [emails, setEmails] = useState<string[]>([]);
-  const [managers, setManagers] = useState<AppUser[]>([]);
-  const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
+
   const [selectedStatus, setSelectedStatus] = useState<string>(
     file?.status || ''
   );
+  const {
+    departmentEnums,
+    filteredManagers,
+    selectedDepartment,
+    selectedManagers,
+    fetchData: fetchDeptData,
+    handleDepartmentChange,
+    handleManagerToggle,
+  } = useDepartmentAssignment();
   const path = usePathname() || '';
   const { enums: statusOptions, error: statusError } = useContractStatusEnums();
   const { updateStatus } = useUpdateContractStatus({ onStatusChange });
   const [isViewerOpen, setIsViewerOpen] = useState(false);
 
-  // Fetch managers when Assign dialog is opened
+  // Fetch department data when Assign dialog is opened
   useEffect(() => {
     if (action?.value === 'assign') {
-      (async () => {
-        const users = await listAllUsers();
-        if (users) {
-          setManagers(
-            (users as Models.Document[])
-              .filter((u) => u.role === 'manager')
-              .map((u) => ({
-                fullName: u.fullName,
-                email: u.email,
-                avatar: u.avatar,
-                accountId: u.accountId,
-                role: u.role,
-                department: u.department,
-                status: u.status,
-              }))
-          );
-        } else {
-          setManagers([]);
-        }
-      })();
+      fetchDeptData();
     }
-  }, [action]);
+  }, [action?.value, fetchDeptData]);
 
   const closeAllModals = (event?: React.MouseEvent) => {
     if (event) {
@@ -106,12 +97,23 @@ const ActionDropdown = ({
     let success = false;
 
     const actions = {
-      assign: () =>
-        assignContract({
+      assign: async () => {
+        const assignResult = await assignContract({
           fileId: file.$id,
           managerAccountIds: selectedManagers,
           path,
-        }),
+        });
+
+        // Also assign department if selected
+        if (selectedDepartment) {
+          await assignContractToDepartment({
+            contractId: file.contractId || file.$id,
+            department: selectedDepartment,
+          });
+        }
+
+        return assignResult;
+      },
       rename: () => {
         // Remove extension if user included it
         let baseName = name;
@@ -206,6 +208,36 @@ const ActionDropdown = ({
           >
             {dialogHeader}
             <CardContent>
+              <div className="mb-4">
+                <div className="mb-2 text-sm text-slate-700">
+                  Select department for this contract:
+                </div>
+                <div className="flex flex-col gap-2 mb-4">
+                  {departmentEnums.length > 0 ? (
+                    departmentEnums.map((dept) => (
+                      <label key={dept} className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="contract-department"
+                          value={dept}
+                          checked={selectedDepartment === dept}
+                          onChange={() => handleDepartmentChange(dept)}
+                          disabled={isLoading}
+                        />
+                        <span className="text-sm">
+                          {formatDepartmentName(dept)}
+                        </span>
+                      </label>
+                    ))
+                  ) : (
+                    <div className="text-sm text-slate-500">
+                      {isLoading
+                        ? 'Loading departments...'
+                        : 'No departments available'}
+                    </div>
+                  )}
+                </div>
+              </div>
               <div className="mb-2 text-sm text-slate-700">
                 Select manager(s) to assign this contract:
               </div>
@@ -232,31 +264,42 @@ const ActionDropdown = ({
                     className="text-slate-700 text-sm"
                     style={{ pointerEvents: 'auto' }}
                   >
-                    {managers.map((manager: AppUser) => (
-                      <tr key={manager.accountId}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={selectedManagers.includes(
-                              manager.accountId
-                            )}
-                            onChange={() => {
-                              setSelectedManagers((prev) =>
-                                prev.includes(manager.accountId)
-                                  ? prev.filter(
-                                      (id) => id !== manager.accountId
-                                    )
-                                  : [...prev, manager.accountId]
-                              );
-                            }}
-                          />
+                    {filteredManagers.length > 0 ? (
+                      filteredManagers.map((manager: AppUser) => (
+                        <tr key={manager.accountId}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedManagers.includes(
+                                manager.accountId
+                              )}
+                              onChange={() =>
+                                handleManagerToggle(manager.accountId)
+                              }
+                            />
+                          </td>
+                          <td className="px-2 py-1">{manager.fullName}</td>
+                          <td className="px-2 py-1">
+                            {manager.department
+                              ? formatDepartmentName(manager.department)
+                              : 'N/A'}
+                          </td>
+                          <td className="px-2 py-1">{manager.role}</td>
+                          <td className="px-2 py-1">{manager.status}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="text-center py-4 text-slate-500"
+                        >
+                          {isLoading
+                            ? 'Loading managers...'
+                            : 'No managers available'}
                         </td>
-                        <td className="px-2 py-1">{manager.fullName}</td>
-                        <td className="px-2 py-1">{manager.department}</td>
-                        <td className="px-2 py-1">{manager.role}</td>
-                        <td className="px-2 py-1">{manager.status}</td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -276,11 +319,15 @@ const ActionDropdown = ({
                   e.preventDefault();
                   handleAction();
                 }}
-                disabled={isLoading || selectedManagers.length === 0}
+                disabled={
+                  isLoading ||
+                  selectedManagers.length === 0 ||
+                  !selectedDepartment
+                }
                 className="modal-submit-button"
                 style={{ pointerEvents: 'auto' }}
               >
-                <p className="capitalize">Assign</p>
+                <p className="capitalize">Assign Contract</p>
                 {isLoading && (
                   <Image
                     src="/assets/icons/loader.svg"

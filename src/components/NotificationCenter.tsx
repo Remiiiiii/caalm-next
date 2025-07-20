@@ -5,8 +5,11 @@ import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser } from '@/lib/actions/user.actions';
-import { Client, Databases, Query } from 'node-appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
+import {
+  getNotifications,
+  markNotificationAsRead,
+  deleteNotification,
+} from '@/lib/actions/notification.actions';
 
 interface Notification {
   $id: string;
@@ -41,16 +44,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       try {
         const user = await getCurrentUser();
         if (!user || !user.accountId) throw new Error('User not found');
-        const client = new Client()
-          .setEndpoint(appwriteConfig.endpointUrl)
-          .setProject(appwriteConfig.projectId);
-        const db = new Databases(client);
-        const res = await db.listDocuments(
-          appwriteConfig.databaseId,
-          'notifications',
-          [Query.equal('userId', user.accountId), Query.orderDesc('$createdAt')]
-        );
-        setNotifications(res.documents as unknown as Notification[]);
+        const res = await getNotifications(user.accountId);
+        if (res) {
+          setNotifications(res.documents as unknown as Notification[]);
+        }
       } catch (err) {
         console.log(err);
         toast({
@@ -82,22 +79,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const markAsRead = async (ids: string[]) => {
     setLoadingAction(true);
     try {
-      const client = new Client();
-      client
-        .setEndpoint(appwriteConfig.endpointUrl)
-        .setProject(appwriteConfig.projectId);
-      const databases = new Databases(client);
-      await Promise.all(
-        ids.map((id) =>
-          databases.updateDocument(
-            appwriteConfig.databaseId,
-            'notifications',
-            id,
-            { read: true }
-          )
-        )
-      );
-      // fetchNotifications(); // This line was removed as per the new_code
+      await Promise.all(ids.map((id) => markNotificationAsRead(id)));
       setSelected([]);
     } finally {
       setLoadingAction(false);
@@ -107,21 +89,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const deleteNotifications = async (ids: string[]) => {
     setLoadingAction(true);
     try {
-      const client = new Client();
-      client
-        .setEndpoint(appwriteConfig.endpointUrl)
-        .setProject(appwriteConfig.projectId);
-      const databases = new Databases(client);
-      await Promise.all(
-        ids.map((id) =>
-          databases.deleteDocument(
-            appwriteConfig.databaseId,
-            'notifications',
-            id
-          )
-        )
-      );
-      // fetchNotifications(); // This line was removed as per the new_code
+      await Promise.all(ids.map((id) => deleteNotification(id)));
       setSelected([]);
     } finally {
       setLoadingAction(false);
