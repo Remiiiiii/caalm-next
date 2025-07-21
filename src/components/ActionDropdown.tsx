@@ -98,16 +98,23 @@ const ActionDropdown = ({
 
     const actions = {
       assign: async () => {
+        if (!file.contractId) {
+          throw new Error(
+            'This file does not have an associated contract. Only contract files can be assigned.'
+          );
+        }
+
         const assignResult = await assignContract({
-          fileId: file.$id,
+          fileId: file.contractId,
           managerAccountIds: selectedManagers,
           path,
+          fileDocumentId: file.$id, // Pass the file document ID
         });
 
         // Also assign department if selected
         if (selectedDepartment) {
           await assignContractToDepartment({
-            contractId: file.contractId || file.$id,
+            contractId: file.contractId,
             department: selectedDepartment,
           });
         }
@@ -186,26 +193,15 @@ const ActionDropdown = ({
     const dialogHeader = (
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="sidebar-gradient-text">{label}</CardTitle>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={closeAllModals}
-          style={{ pointerEvents: 'auto' }}
-        >
+        <Button variant="ghost" size="icon" onClick={closeAllModals}>
           <span className="sr-only">Close</span>×
         </Button>
       </CardHeader>
     );
     if (value === 'assign') {
       return (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-          style={{ pointerEvents: 'none' }}
-        >
-          <Card
-            className="w-[500px] max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg"
-            style={{ pointerEvents: 'none' }}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <Card className="w-[500px] max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg">
             {dialogHeader}
             <CardContent>
               <div className="mb-4">
@@ -215,7 +211,10 @@ const ActionDropdown = ({
                 <div className="flex flex-col gap-2 mb-4">
                   {departmentEnums.length > 0 ? (
                     departmentEnums.map((dept) => (
-                      <label key={dept} className="flex items-center gap-2">
+                      <label
+                        key={dept}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded"
+                      >
                         <input
                           type="radio"
                           name="contract-department"
@@ -223,8 +222,9 @@ const ActionDropdown = ({
                           checked={selectedDepartment === dept}
                           onChange={() => handleDepartmentChange(dept)}
                           disabled={isLoading}
+                          className="cursor-pointer"
                         />
-                        <span className="text-sm">
+                        <span className="text-sm cursor-pointer">
                           {formatDepartmentName(dept)}
                         </span>
                       </label>
@@ -260,22 +260,36 @@ const ActionDropdown = ({
                       </th>
                     </tr>
                   </thead>
-                  <tbody
-                    className="text-slate-700 text-sm"
-                    style={{ pointerEvents: 'auto' }}
-                  >
+                  <tbody className="text-slate-700 text-sm">
                     {filteredManagers.length > 0 ? (
                       filteredManagers.map((manager: AppUser) => (
-                        <tr key={manager.accountId}>
-                          <td>
+                        <tr
+                          key={manager.accountId}
+                          className={`hover:bg-slate-50 cursor-pointer ${
+                            selectedManagers.includes(manager.accountId)
+                              ? 'bg-blue-50'
+                              : ''
+                          }`}
+                          onClick={() => handleManagerToggle(manager.accountId)}
+                        >
+                          <td
+                            className="p-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <input
                               type="checkbox"
+                              key={`${
+                                manager.accountId
+                              }-${selectedManagers.includes(
+                                manager.accountId
+                              )}`}
                               checked={selectedManagers.includes(
                                 manager.accountId
                               )}
                               onChange={() =>
                                 handleManagerToggle(manager.accountId)
                               }
+                              className="cursor-pointer"
                             />
                           </td>
                           <td className="px-2 py-1">{manager.fullName}</td>
@@ -308,7 +322,6 @@ const ActionDropdown = ({
               <Button
                 onClick={(e) => closeAllModals(e)}
                 className="modal-cancel-button"
-                style={{ pointerEvents: 'auto' }}
               >
                 Cancel
               </Button>
@@ -325,7 +338,6 @@ const ActionDropdown = ({
                   !selectedDepartment
                 }
                 className="modal-submit-button"
-                style={{ pointerEvents: 'auto' }}
               >
                 <p className="capitalize">Assign Contract</p>
                 {isLoading && (

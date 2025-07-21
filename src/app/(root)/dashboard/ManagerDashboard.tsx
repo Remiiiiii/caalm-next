@@ -10,7 +10,8 @@ import {
   Upload,
   MessageSquare,
 } from 'lucide-react';
-import { getContracts } from '@/lib/actions/user.actions';
+import { getContractsForManager } from '@/lib/actions/file.actions';
+import { getCurrentUser } from '@/lib/actions/user.actions';
 import ActionDropdown from '@/components/ActionDropdown';
 import { Models } from 'node-appwrite';
 
@@ -33,7 +34,17 @@ const ManagerDashboard = () => {
 
   const refreshContracts = async () => {
     try {
-      const contractsData = await getContracts();
+      // Get current user first
+      const user = await getCurrentUser();
+      if (!user) {
+        console.error('No current user found');
+        setContracts([]);
+        return;
+      }
+
+      // Get contracts assigned to this manager
+      const contractsData = await getContractsForManager(user.$id);
+
       // Ensure all contracts have the required properties
       const validatedContracts = (contractsData as Contract[]).map(
         (contract) => ({
@@ -98,7 +109,7 @@ const ManagerDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-navy">Operations Dashboard</h1>
+        <h1 className="text-3xl font-bold text-navy">Manager Dashboard</h1>
         <div className="flex space-x-2">
           <Button variant="outline">
             <Upload className="mr-2 h-4 w-4 text-coral" />
@@ -161,10 +172,10 @@ const ManagerDashboard = () => {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* All Contracts */}
+        {/* Assigned Contracts */}
         <Card>
           <CardHeader>
-            <CardTitle>All Contracts</CardTitle>
+            <CardTitle>My Assigned Contracts</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

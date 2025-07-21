@@ -29,15 +29,17 @@ export const useDepartmentAssignment = () => {
       // Fetch all managers
       const allManagers = await getAllManagers();
       if (allManagers) {
-        const managerUsers = (allManagers as Models.Document[]).map((u) => ({
-          fullName: u.fullName,
-          email: u.email,
-          avatar: u.avatar,
-          accountId: u.accountId,
-          role: u.role,
-          department: u.department,
-          status: u.status,
-        }));
+        const managerUsers = (allManagers as Models.Document[]).map((u) => {
+          return {
+            fullName: u.fullName,
+            email: u.email,
+            avatar: u.avatar,
+            accountId: u.$id || u.accountId, // Try $id first, fallback to accountId
+            role: u.role,
+            department: u.department,
+            status: u.status,
+          };
+        });
         setManagers(managerUsers);
         setFilteredManagers(managerUsers);
       }
@@ -67,11 +69,12 @@ export const useDepartmentAssignment = () => {
   };
 
   const handleManagerToggle = (managerId: string) => {
-    setSelectedManagers((prev) =>
-      prev.includes(managerId)
+    setSelectedManagers((prev) => {
+      const newSelection = prev.includes(managerId)
         ? prev.filter((id) => id !== managerId)
-        : [...prev, managerId]
-    );
+        : [...prev, managerId];
+      return newSelection;
+    });
   };
 
   const resetSelection = () => {

@@ -346,35 +346,58 @@ export interface AssignContractProps {
   fileId: string;
   managerAccountIds: string[];
   path: string;
+  fileDocumentId?: string; // Add file document ID for updating isContract
 }
 
 export const assignContract = async ({
   fileId,
   managerAccountIds,
   path,
+  fileDocumentId,
 }: AssignContractProps) => {
   const { databases } = await createAdminClient();
   try {
     // Fetch the contract document from the contracts collection
-    const contractDoc = await databases.getDocument(
-      appwriteConfig.databaseId,
-      'contracts',
-      fileId
-    );
+    let contractDoc;
+    try {
+      contractDoc = await databases.getDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.contractsCollectionId,
+        fileId
+      );
+    } catch (error) {
+      console.error('Contract document not found with ID:', fileId, error);
+      throw new Error(
+        `Contract document not found. Please ensure the file is properly uploaded as a contract.`
+      );
+    }
+
     // Only allow assignment if contractName/title contains 'Contract'
     if (!contractDoc.contractName.toLowerCase().includes('contract')) {
       throw new Error('Document is not a contract and cannot be assigned.');
     }
-    // Update the contract document: set isContract true and assign manager(s)
+
+    // Update the contract document: assign manager(s)
     const updatedContract = await databases.updateDocument(
       appwriteConfig.databaseId,
-      'contracts',
+      appwriteConfig.contractsCollectionId,
       fileId,
       {
-        isContract: true,
         assignedManagers: managerAccountIds,
       }
     );
+
+    // Update the file document: set isContract true (if fileDocumentId is provided)
+    if (fileDocumentId) {
+      await databases.updateDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.filesCollectionId,
+        fileDocumentId,
+        {
+          isContract: true,
+        }
+      );
+    }
     revalidatePath(path);
     return parseStringify(updatedContract);
   } catch (error) {
@@ -441,5 +464,21 @@ export const getContracts = async () => {
     return parseStringify(contracts);
   } catch (error) {
     handleError(error, 'Failed to get contracts');
+  }
+};
+
+// Get contracts assigned to a specific manager
+export const getContractsForManager = async (managerAccountId: string) => {
+  const { databases } = await createAdminClient();
+  try {
+    // Fetch contracts where the manager's accountId is in the assignedManagers array
+    const contracts = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.contractsCollectionId,
+      [Query.search('assignedManagers', managerAccountId)]
+    );
+    return parseStringify(contracts.documents);
+  } catch (error) {
+    handleError(error, 'Failed to get contracts for manager');
   }
 };

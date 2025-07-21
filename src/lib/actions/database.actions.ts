@@ -14,7 +14,7 @@ export const getContractDepartmentEnums = async () => {
   try {
     const attr = (await databases.getAttribute(
       appwriteConfig.databaseId,
-      'contracts',
+      appwriteConfig.contractsCollectionId,
       'department'
     )) as { elements?: string[] };
     return attr.elements || [];
@@ -28,7 +28,7 @@ export const getUserDepartmentEnums = async () => {
   try {
     const attr = (await databases.getAttribute(
       appwriteConfig.databaseId,
-      '685ed8a60030f6d7b1f3',
+      appwriteConfig.usersCollectionId,
       'department'
     )) as { elements?: string[] };
     return attr.elements || [];
@@ -42,7 +42,7 @@ export const getUsersByDepartment = async (department: string) => {
   try {
     const users = await databases.listDocuments(
       appwriteConfig.databaseId,
-      '685ed8a60030f6d7b1f3',
+      appwriteConfig.usersCollectionId,
       [Query.equal('department', department), Query.equal('role', 'manager')]
     );
     return users.documents;
@@ -56,7 +56,7 @@ export const getAllManagers = async () => {
   try {
     const users = await databases.listDocuments(
       appwriteConfig.databaseId,
-      '685ed8a60030f6d7b1f3',
+      appwriteConfig.usersCollectionId,
       [Query.equal('role', 'manager')]
     );
     return users.documents;
