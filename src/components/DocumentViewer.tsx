@@ -13,6 +13,7 @@ import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
+import { formatAIResponse } from '@/lib/utils/aiResponseFormatter';
 //import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 //import { Separator } from './ui/separator';
 
@@ -57,6 +58,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [aiLoading, setAiLoading] = useState(false);
   const [fileContent, setFileContent] = useState<string>('');
   const [contentLoading, setContentLoading] = useState(false);
+  const [showUploadPrompt, setShowUploadPrompt] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [welcomeMessageLoaded, setWelcomeMessageLoaded] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   //const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,6 +73,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
       setNewMessage('');
       setIsLoading(false);
       setAiLoading(false);
+      setShowUploadPrompt(false); // Reset upload prompt state
+      setFileContent(''); // Reset file content
+      setWelcomeMessageLoaded(false); // Reset welcome message loaded state
     }
   }, [isOpen, file.id]);
 
@@ -77,17 +85,26 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     let ignore = false;
 
     const fetchFileContent = async () => {
-      if (
-        ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts'].includes(
-          file.type.toLowerCase()
-        )
-      ) {
+      const fileType = file.type.toLowerCase();
+
+      // Handle text-based files
+      if (['txt', 'md', 'json', 'xml', 'html', 'js', 'ts'].includes(fileType)) {
         setContentLoading(true);
         try {
           const response = await fetch(file.url);
           const content = await response.text();
           if (!ignore) {
             setFileContent(content);
+            // Trigger AI analysis for text files after content is loaded
+            if (
+              ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts'].includes(
+                fileType
+              )
+            ) {
+              setTimeout(() => {
+                analyze();
+              }, 100);
+            }
           }
         } catch (error) {
           console.error('Error fetching file content:', error);
@@ -100,54 +117,100 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           }
         }
       }
-    };
 
-    const analyze = async () => {
-      setAiLoading(true);
-      setAiSuggestedQuestions([]);
-      // Always start with the greeting message
-      setChatMessages([
-        {
-          id: 'greeting',
-          text: "Hi! I'm your document assistant. I can help you understand and analyze this document. What would you like to know about it?",
-          sender: 'assistant',
-          timestamp: new Date(),
-        },
-      ]);
+      // Handle PDF files for AI analysis
+      if (fileType === 'pdf') {
+        setContentLoading(true);
+        try {
+          console.log('PDF file URL:', file.url);
+          console.log('PDF file name:', file.name);
 
-      try {
-        const response = await fetch('/api/ai-analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: 'analyze',
-            fileName: file.name,
-            fileType: file.type,
-            fileUrl: file.url,
-          }),
-        });
+          // Check if it's a local file (file:// URL or blob URL)
+          if (
+            file.url.startsWith('file://') ||
+            file.url.startsWith('blob:') ||
+            file.url.startsWith('data:')
+          ) {
+            console.log(
+              'Detected local file URL, cannot fetch directly:',
+              file.url
+            );
+            setShowUploadPrompt(true);
+            setContentLoading(false);
+            return;
+          }
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          // Use the dedicated PDF extraction API
+          const response = await fetch('/api/extract-pdf-text', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              fileUrl: file.url,
+              fileName: file.name,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`PDF extraction failed: ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (!ignore) {
+            setFileContent(result.text || 'No text content extracted from PDF');
+            console.log('PDF extraction method:', result.method);
+            console.log('Extracted text length:', result.text?.length || 0);
+
+            // Trigger AI analysis for remote PDF files after content is extracted
+            if (
+              !file.url.startsWith('file://') &&
+              !file.url.startsWith('blob:') &&
+              !file.url.startsWith('data:')
+            ) {
+              setTimeout(() => {
+                analyze();
+              }, 100);
+            }
+          }
+        } catch (error) {
+          console.error('Error extracting PDF content:', error);
+          if (!ignore) {
+            setFileContent(
+              'Error extracting PDF content. The AI assistant may not be able to analyze this PDF.'
+            );
+          }
+        } finally {
+          if (!ignore) {
+            setContentLoading(false);
+          }
         }
-
-        const analysis = await response.json();
-        if (ignore) return;
-
-        setAiSuggestedQuestions(analysis.suggestedQuestions);
-        setAiLoading(false);
-      } catch (error) {
-        console.error('AI Analysis failed:', error);
-        if (ignore) return;
-        setAiLoading(false);
       }
     };
 
+    // Debug: Log file information
+    console.log('DocumentViewer opened with file:', {
+      name: file.name,
+      type: file.type,
+      url: file.url,
+      isLocalFile:
+        file.url.startsWith('file://') ||
+        file.url.startsWith('blob:') ||
+        file.url.startsWith('data:'),
+      isPdf: file.type.toLowerCase() === 'pdf',
+    });
+
     // Fetch content and analyze
     fetchFileContent();
-    analyze();
+
+    // Trigger AI analysis for non-local files or after content is loaded
+    if (
+      !file.url.startsWith('file://') &&
+      !file.url.startsWith('blob:') &&
+      !file.url.startsWith('data:')
+    ) {
+      analyze();
+    }
 
     return () => {
       ignore = true;
@@ -181,6 +244,29 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     setIsLoading(true);
 
     try {
+      // For PDFs, use the extracted content if available
+      const contentToAnalyze = fileContent;
+      let urlToUse = file.url;
+
+      // If it's a local PDF and we have extracted content, use that
+      if (
+        file.type.toLowerCase() === 'pdf' &&
+        file.url.startsWith('file://') &&
+        fileContent
+      ) {
+        urlToUse = ''; // Don't pass the file:// URL to the AI API
+      }
+
+      console.log('Sending AI question request:', {
+        action: 'question',
+        question: message,
+        fileName: file.name,
+        fileType: file.type,
+        fileUrl: urlToUse,
+        hasFileContent: !!contentToAnalyze,
+        fileContentLength: contentToAnalyze?.length || 0,
+      });
+
       const response = await fetch('/api/ai-analyze', {
         method: 'POST',
         headers: {
@@ -191,7 +277,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           question: message,
           fileName: file.name,
           fileType: file.type,
-          fileUrl: file.url,
+          fileUrl: urlToUse,
+          fileContent: contentToAnalyze, // Pass the extracted content if available
         }),
       });
 
@@ -204,7 +291,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         ...prev,
         {
           id: Date.now().toString() + '-ai',
-          text: ai.answer,
+          text: formatAIResponse(ai.answer),
           sender: 'assistant',
           timestamp: new Date(),
         },
@@ -228,6 +315,118 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const analyze = async () => {
+    setAiLoading(true);
+    setAiSuggestedQuestions([]);
+    // Always start with the greeting message
+    setChatMessages([
+      {
+        id: 'greeting',
+        text: "Hi! I'm your document assistant. I can help you understand and analyze this document. What would you like to know about it?",
+        sender: 'assistant',
+        timestamp: new Date(),
+      },
+    ]);
+    setWelcomeMessageLoaded(true);
+
+    try {
+      // For PDFs, use the extracted content if available
+      const contentToAnalyze = fileContent;
+      let urlToUse = file.url;
+
+      // If it's a local PDF and we have extracted content, use that
+      if (
+        file.type.toLowerCase() === 'pdf' &&
+        file.url.startsWith('file://') &&
+        fileContent
+      ) {
+        urlToUse = ''; // Don't pass the file:// URL to the AI API
+      }
+
+      console.log('Sending AI analysis request:', {
+        action: 'analyze',
+        fileName: file.name,
+        fileType: file.type,
+        fileUrl: urlToUse,
+        hasFileContent: !!contentToAnalyze,
+        fileContentLength: contentToAnalyze?.length || 0,
+      });
+
+      const response = await fetch('/api/ai-analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'analyze',
+          fileName: file.name,
+          fileType: file.type,
+          fileUrl: urlToUse,
+          fileContent: contentToAnalyze, // Pass the extracted content if available
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const analysis = await response.json();
+
+      setAiSuggestedQuestions(analysis.suggestedQuestions);
+      setAiLoading(false);
+    } catch (error) {
+      console.error('AI Analysis failed:', error);
+      setAiLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const uploadedFile = event.target.files?.[0];
+    if (!uploadedFile) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+
+      const response = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setFileContent(result.text);
+        setShowUploadPrompt(false);
+        console.log('PDF uploaded and text extracted successfully');
+        console.log('Extracted text length:', result.text?.length || 0);
+
+        // Trigger AI analysis after successful upload
+        setTimeout(() => {
+          analyze();
+        }, 100);
+      } else {
+        setFileContent(`Upload failed: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('File upload error:', error);
+      setFileContent(
+        `Upload error: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
+      );
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -310,6 +509,60 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
 
     if (isPdfFile(fileType)) {
+      // Debug: Log PDF rendering state
+      console.log('PDF rendering state:', {
+        showUploadPrompt,
+        fileUrl: file.url,
+        isLocalFile:
+          file.url.startsWith('file://') ||
+          file.url.startsWith('blob:') ||
+          file.url.startsWith('data:'),
+        fileType,
+      });
+
+      // Show upload prompt for local files
+      if (
+        showUploadPrompt ||
+        file.url.startsWith('file://') ||
+        file.url.startsWith('blob:') ||
+        file.url.startsWith('data:')
+      ) {
+        return (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center max-w-md">
+              <div className="text-6xl mb-4">📄</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Local PDF Detected
+              </h3>
+              <p className="text-gray-500 mb-6">
+                To enable AI analysis, please upload this PDF file to the
+                server.
+              </p>
+              <div className="space-y-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full"
+                >
+                  {uploading ? 'Uploading...' : 'Upload PDF for AI Analysis'}
+                </Button>
+                <p className="text-xs text-gray-400">
+                  Your file will be processed securely and text will be
+                  extracted for AI analysis.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="h-full flex flex-col">
           {isPreviewLoading && (
@@ -532,16 +785,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             <ScrollArea className="flex-1" onClick={(e) => e.stopPropagation()}>
               <div className="p-4" onClick={(e) => e.stopPropagation()}>
                 {/* Loading State */}
-                {aiLoading && (
+                {aiLoading && !welcomeMessageLoaded && (
                   <div className="flex justify-start mb-6">
                     <div className="flex items-start space-x-3 max-w-[85%]">
                       <div className="flex-shrink-0">
                         <Image
-                          src="/assets/images/logo.svg"
+                          src="/assets/images/assistant.svg"
                           alt="AI Assistant"
-                          width={32}
-                          height={32}
-                          className="w-8 h-8 rounded-full bg-blue-100 p-1"
+                          width={54}
+                          height={54}
+                          className="w-12 h-12 rounded-full bg-blue-100 p-1"
                         />
                       </div>
                       <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
@@ -563,6 +816,31 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
                 {/* Chat Messages */}
                 <div className="space-y-6">
+                  {/* Default welcome message if no messages */}
+                  {chatMessages.length === 0 &&
+                    !aiLoading &&
+                    !welcomeMessageLoaded && (
+                      <div className="flex justify-start">
+                        <div className="flex items-start space-x-3 max-w-[95%]">
+                          <div className="flex-shrink-0">
+                            <Image
+                              src="/assets/images/assistant.svg"
+                              alt="AI Assistant"
+                              width={54}
+                              height={54}
+                              className="w-12 h-12 rounded-full bg-blue-100 p-1"
+                            />
+                          </div>
+                          <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
+                            <p className="text-sm text-gray-700">
+                              Hi! I&apos;m your document assistant. I can help
+                              you understand and analyze this document. What
+                              would you like to know about it?
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   {chatMessages.map((message) => (
                     <div
                       key={message.id}
@@ -576,11 +854,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         <div className="flex items-start space-x-3 max-w-[95%]">
                           <div className="flex-shrink-0">
                             <Image
-                              src="/assets/images/logo.svg"
+                              src="/assets/images/assistant.svg"
                               alt="AI Assistant"
-                              width={32}
-                              height={32}
-                              className="w-8 h-8 rounded-full bg-blue-100 p-1"
+                              width={54}
+                              height={54}
+                              className="w-12 h-12 rounded-full bg-blue-100 p-1"
                             />
                           </div>
                           <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
@@ -610,11 +888,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       <div className="flex items-start space-x-3 max-w-[85%]">
                         <div className="flex-shrink-0">
                           <Image
-                            src="/assets/images/logo.svg"
+                            src="/assets/images/assistant.svg"
                             alt="AI Assistant"
-                            width={32}
-                            height={32}
-                            className="w-8 h-8 rounded-full bg-blue-100 p-1"
+                            width={54}
+                            height={54}
+                            className="w-12 h-12 rounded-full bg-blue-100 p-1"
                           />
                         </div>
                         <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
@@ -661,10 +939,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                   </div>
 
                   {/* Suggested Questions */}
-                  {aiSuggestedQuestions.length > 0 && (
+                  {(aiSuggestedQuestions.length > 0 ||
+                    (chatMessages.length === 0 && welcomeMessageLoaded)) && (
                     <div className="mt-3">
                       <div className="flex flex-wrap gap-2">
-                        {aiSuggestedQuestions.slice(0, 4).map((q, idx) => (
+                        {(aiSuggestedQuestions.length > 0
+                          ? aiSuggestedQuestions.slice(0, 4)
+                          : [
+                              'What is this document about?',
+                              'What are the key terms?',
+                              'What are the important dates?',
+                              'Summarize the main points',
+                            ]
+                        ).map((q, idx) => (
                           <Button
                             key={idx}
                             variant="outline"

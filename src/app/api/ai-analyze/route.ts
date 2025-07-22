@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
       fileName,
       fileType,
       hasContent: !!fileContent,
+      contentLength: fileContent?.length || 0,
       hasUrl: !!fileUrl,
+      fileUrl: fileUrl ? fileUrl.substring(0, 100) + '...' : null,
     });
 
     // Extract file content if not provided but URL is available
@@ -31,17 +33,55 @@ export async function POST(request: NextRequest) {
     if (!fileContent && fileUrl) {
       console.log('Extracting content from file URL...');
       try {
-        extractedContent = await extractDocumentContent(fileUrl, fileType);
-        console.log(
-          'Content extraction successful, length:',
-          extractedContent.length
-        );
+        // For PDFs, use the dedicated extraction API
+        if (fileType.toLowerCase() === 'pdf') {
+          console.log('Using dedicated PDF extraction API...');
+          const extractResponse = await fetch(
+            `${
+              process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+            }/api/extract-pdf-text`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileUrl, fileName }),
+            }
+          );
+
+          if (!extractResponse.ok) {
+            throw new Error(`PDF extraction failed: ${extractResponse.status}`);
+          }
+
+          const extractResult = await extractResponse.json();
+          extractedContent =
+            extractResult.text || 'No text content extracted from PDF';
+          console.log(
+            'PDF extraction successful, length:',
+            extractedContent.length
+          );
+        } else {
+          // For other file types, use the existing extractDocumentContent function
+          extractedContent = await extractDocumentContent(fileUrl, fileType);
+          console.log(
+            'Content extraction successful, length:',
+            extractedContent.length
+          );
+        }
       } catch (extractError) {
-        console.error('Content extraction failed:', extractError);
+        console.error('Content extraction failed for:', {
+          fileUrl,
+          fileType,
+          errorMessage:
+            extractError instanceof Error
+              ? extractError.message
+              : 'Unknown error',
+        });
         extractedContent = `Unable to extract content from ${fileType} file. Error: ${
           extractError instanceof Error ? extractError.message : 'Unknown error'
         }`;
       }
+    } else if (fileContent) {
+      console.log('Using provided file content, length:', fileContent.length);
+      extractedContent = fileContent;
     }
 
     if (action === 'analyze') {

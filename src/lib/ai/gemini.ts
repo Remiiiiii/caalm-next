@@ -323,7 +323,7 @@ export const extractDocumentContent = async (
       const buffer = Buffer.from(arrayBuffer);
 
       // Use dynamic import to avoid module loading issues
-      const pdfParse = (await import('pdf-parse')).default;
+      const pdfParse = (await import('pdf-parse-debugging-disabled')).default;
       const data = await pdfParse(buffer);
       const text = data.text || 'No text content found in PDF';
       console.log('PDF content extracted, length:', text.length);
