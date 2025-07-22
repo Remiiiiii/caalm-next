@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Bell, Mail, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NotificationCenter from '@/components/NotificationCenter';
+import NotificationBadge from '@/components/NotificationBadge';
 import { Models } from 'appwrite';
 import { signOutUser } from '@/lib/actions/user.actions';
 import { getUnreadNotificationsCount } from '@/lib/actions/notification.actions';
@@ -72,11 +73,11 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
               className="relative hover:bg-white/40 text-slate-700"
             >
               <Bell className="w-6 h-6" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-xs rounded-full px-1.5 py-0.5 border-2 border-white animate-pulse">
-                  {unreadCount}
-                </span>
-              )}
+              <NotificationBadge
+                count={unreadCount}
+                size="sm"
+                className="absolute -top-1 -right-1"
+              />
             </Button>
             <Button
               variant="ghost"

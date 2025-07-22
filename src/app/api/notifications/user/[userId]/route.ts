@@ -4,15 +4,16 @@ import { Query } from 'node-appwrite';
 
 export async function GET(
   request: Request,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params;
     const client = await createAdminClient();
 
     const res = await client.databases.listDocuments(
       '685ed87c0009d8189fc7',
       'notifications',
-      [Query.equal('userId', params.userId)]
+      [Query.equal('userId', userId)]
     );
 
     return NextResponse.json(res);

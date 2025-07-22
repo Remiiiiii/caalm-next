@@ -458,6 +458,92 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               </CardContent>
             </Card>
 
+            {/* Calendar View - Placeholder for future implementation */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                  Calendar View
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-center h-64 text-slate-500">
+                  <p>Calendar feature coming soon...</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent files uploaded and Pending Approvals */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Recent files uploaded */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                  Recent files uploaded
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingFiles ? (
+                  <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="border border-border rounded-lg p-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="animate-pulse bg-gray-200 h-10 w-10 rounded"></div>
+                          <div className="flex-1">
+                            <div className="animate-pulse bg-gray-200 h-4 w-32 rounded mb-2"></div>
+                            <div className="animate-pulse bg-gray-200 h-3 w-24 rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : files && files.length > 0 ? (
+                  <div className="space-y-4">
+                    {files.map((file: Models.Document) => (
+                      <div
+                        key={file.$id}
+                        className="border border-border rounded-lg p-4"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <Thumbnail
+                              type={file.type}
+                              extension={file.extension}
+                              url={file.url}
+                            />
+                            <div className="flex flex-col gap-1 min-w-0 flex-1">
+                              <h4 className="font-medium text-navy truncate max-w-[200px]">
+                                {file.name}
+                              </h4>
+                              <p className="text-sm text-slate-dark">
+                                <FormattedDateTime
+                                  date={file.$createdAt}
+                                  className="text-xs text-slate-light"
+                                />
+                              </p>
+                            </div>
+                          </div>
+                          <div className="ml-3 flex-shrink-0">
+                            <ActionDropdown
+                              file={file}
+                              onStatusChange={refreshFiles}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-slate-light">
+                    No files uploaded
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Pending Approvals */}
             <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
               <CardHeader>
@@ -511,75 +597,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               </CardContent>
             </Card>
           </div>
-
-          {/* Recent files uploaded */}
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:w-1/2">
-            <CardHeader>
-              <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                Recent files uploaded
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingFiles ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="border border-border rounded-lg p-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="animate-pulse bg-gray-200 h-10 w-10 rounded"></div>
-                        <div className="flex-1">
-                          <div className="animate-pulse bg-gray-200 h-4 w-32 rounded mb-2"></div>
-                          <div className="animate-pulse bg-gray-200 h-3 w-24 rounded"></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : files && files.length > 0 ? (
-                <div className="space-y-4">
-                  {files.map((file: Models.Document) => (
-                    <div
-                      key={file.$id}
-                      className="border border-border rounded-lg p-4"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <Thumbnail
-                            type={file.type}
-                            extension={file.extension}
-                            url={file.url}
-                          />
-                          <div className="flex flex-col gap-1 min-w-0 flex-1">
-                            <h4 className="font-medium text-navy truncate max-w-[200px]">
-                              {file.name}
-                            </h4>
-                            <p className="text-sm text-slate-dark">
-                              <FormattedDateTime
-                                date={file.$createdAt}
-                                className="text-xs text-slate-light"
-                              />
-                            </p>
-                          </div>
-                        </div>
-                        <div className="ml-3 flex-shrink-0">
-                          <ActionDropdown
-                            file={file}
-                            onStatusChange={refreshFiles}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-slate-light">
-                  No files uploaded
-                </p>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Invitation Management Section */}
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">

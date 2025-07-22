@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
 
         // Combine text items
         const pageText = textContent.items
-          .map((item: any) => item.str || '')
+          .map((item) => ('str' in item ? item.str || '' : ''))
           .join(' ');
 
         fullText += pageText + '\n';

@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { getCurrentUser } from '@/lib/actions/user.actions';
 import {
   markNotificationAsRead,
   deleteNotification,
@@ -22,8 +21,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Search, Bell, Check, Trash } from 'lucide-react';
-import Image from 'next/image';
+import {
+  Search,
+  Bell,
+  Check,
+  Trash,
+  RefreshCw,
+  Settings,
+  AlertTriangle,
+  Info,
+  CheckCircle,
+  Clock,
+  Calendar,
+  FileText,
+  Users,
+  Shield,
+  TrendingUp,
+  Zap,
+  GripVertical,
+} from 'lucide-react';
+import NotificationSettings from './NotificationSettings';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Notification {
   $id: string;
@@ -32,42 +66,91 @@ interface Notification {
   message: string;
   type: string;
   read: boolean;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  actionUrl?: string;
+  actionText?: string;
   $createdAt: string;
   $updatedAt: string;
 }
 
-// Notification type constants
+// Enhanced notification type constants
 const NOTIFICATION_TYPES = {
   'contract-expiry': {
     label: 'Contract Expiry',
-    icon: '📅',
+    icon: <Calendar className="w-4 h-4" />,
     color: 'bg-red-100 text-red-800',
-    bgColor: 'bg-red-50/30 border-red-400',
+    bgColor: 'bg-destructive/10 border-destructive/30',
+    priority: 'high' as const,
   },
-  system: {
-    label: 'System',
-    icon: '⚙️',
-    color: 'bg-blue-100 text-blue-800',
-    bgColor: 'bg-blue-50/30 border-blue-400',
+  'contract-renewal': {
+    label: 'Contract Renewal',
+    icon: <RefreshCw className="w-4 h-4" />,
+    color: 'bg-orange-100 text-orange-800',
+    bgColor: 'bg-orange-50/30 border-orange-400',
+    priority: 'medium' as const,
   },
-  user: {
-    label: 'User',
-    icon: '👤',
-    color: 'bg-green-100 text-green-800',
-    bgColor: 'bg-green-50/30 border-green-400',
-  },
-  file: {
-    label: 'File',
-    icon: (
-      <Image
-        src="/assets/icons/documents.svg"
-        alt="contracts"
-        width={12}
-        height={12}
-      />
-    ),
+  'audit-due': {
+    label: 'Audit Due',
+    icon: <Shield className="w-4 h-4" />,
     color: 'bg-purple-100 text-purple-800',
     bgColor: 'bg-purple-50/30 border-purple-400',
+    priority: 'high' as const,
+  },
+  'compliance-alert': {
+    label: 'Compliance Alert',
+    icon: <AlertTriangle className="w-4 h-4" />,
+    color: 'bg-yellow-100 text-yellow-800',
+    bgColor: 'bg-yellow-50/30 border-yellow-400',
+    priority: 'urgent' as const,
+  },
+  'file-uploaded': {
+    label: 'File Uploaded',
+    icon: <FileText className="w-4 h-4" />,
+    color: 'bg-blue-100 text-blue-800',
+    bgColor: 'bg-blue-50/30 border-blue-400',
+    priority: 'low' as const,
+  },
+  'user-invited': {
+    label: 'User Invited',
+    icon: <Users className="w-4 h-4" />,
+    color: 'bg-green-100 text-green-800',
+    bgColor: 'bg-green-50/30 border-green-400',
+    priority: 'medium' as const,
+  },
+  'system-update': {
+    label: 'System Update',
+    icon: <Zap className="w-4 h-4" />,
+    color: 'bg-indigo-100 text-indigo-800',
+    bgColor: 'bg-indigo-50/30 border-indigo-400',
+    priority: 'low' as const,
+  },
+  'performance-metric': {
+    label: 'Performance Metric',
+    icon: <TrendingUp className="w-4 h-4" />,
+    color: 'bg-emerald-100 text-emerald-800',
+    bgColor: 'bg-emerald-50/30 border-emerald-400',
+    priority: 'medium' as const,
+  },
+  'deadline-approaching': {
+    label: 'Deadline Approaching',
+    icon: <Clock className="w-4 h-4" />,
+    color: 'bg-pink-100 text-pink-800',
+    bgColor: 'bg-pink-50/30 border-pink-400',
+    priority: 'high' as const,
+  },
+  'task-completed': {
+    label: 'Task Completed',
+    icon: <CheckCircle className="w-4 h-4" />,
+    color: 'bg-teal-100 text-teal-800',
+    bgColor: 'bg-teal-50/30 border-teal-400',
+    priority: 'low' as const,
+  },
+  info: {
+    label: 'Information',
+    icon: <Info className="w-4 h-4" />,
+    color: 'bg-gray-100 text-gray-800',
+    bgColor: 'bg-gray-50/30 border-gray-400',
+    priority: 'low' as const,
   },
 } as const;
 
@@ -90,71 +173,86 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(6);
+  const [perPage, setPerPage] = useState(10);
   const [selected, setSelected] = useState<string[]>([]);
   const [loadingAction, setLoadingAction] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('date');
+  const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      let targetUserId = userId;
-      if (!targetUserId) {
-        const user = await getCurrentUser();
-        if (!user || !user.$id) throw new Error('User not found');
-        targetUserId = user.$id;
+      if (!userId) return;
+
+      const response = await fetch(`/api/notifications/user/${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.documents || []);
       }
-      console.log('Fetching notifications for user ID:', targetUserId);
-      console.log('Passed userId prop:', userId);
-
-      // Fetch notifications for the specific user
-      const res = await fetch(`/api/notifications/user/${targetUserId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to fetch notifications');
-      }
-
-      const data = await res.json();
-
-      console.log('Notifications found for user:', data.documents.length);
-
-      if (data) {
-        setNotifications(data.documents as unknown as Notification[]);
-      }
-    } catch (err) {
-      console.log('Error fetching notifications:', err);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load notifications',
+        description: 'Failed to fetch notifications',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, toast]);
 
   useEffect(() => {
-    if (!open) return;
-    fetchNotifications();
-  }, [open, toast]);
+    if (open && userId) {
+      fetchNotifications();
+    }
+  }, [open, userId, fetchNotifications]);
 
-  // Poll for new notifications every 10s
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // fetchNotifications(); // This line was removed as per the new_code
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [notifications]); // Added notifications to dependency array
+  // Filter and sort notifications
+  const filtered = notifications.filter((notification) => {
+    const matchesSearch =
+      notification.title.toLowerCase().includes(search.toLowerCase()) ||
+      notification.message.toLowerCase().includes(search.toLowerCase());
+    const matchesType =
+      typeFilter === 'all' || notification.type === typeFilter;
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'read' && notification.read) ||
+      (statusFilter === 'unread' && !notification.read);
+    const matchesPriority =
+      priorityFilter === 'all' || notification.priority === priorityFilter;
+
+    return matchesSearch && matchesType && matchesStatus && matchesPriority;
+  });
+
+  // Sort notifications
+  const sorted = [...filtered].sort((a, b) => {
+    switch (sortBy) {
+      case 'date':
+        return (
+          new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime()
+        );
+      case 'priority':
+        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+        const aPriority = priorityOrder[a.priority || 'low'] || 1;
+        const bPriority = priorityOrder[b.priority || 'low'] || 1;
+        return bPriority - aPriority;
+      case 'type':
+        return a.type.localeCompare(b.type);
+      default:
+        return 0;
+    }
+  });
+
+  // Pagination
+  const paginated = sorted.slice((page - 1) * perPage, page * perPage);
 
   const handleSelect = (id: string) => {
     setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
@@ -162,11 +260,23 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     setLoadingAction(true);
     try {
       await Promise.all(ids.map((id) => markNotificationAsRead(id)));
+      setNotifications((prev) =>
+        prev.map((n) => (ids.includes(n.$id) ? { ...n, read: true } : n))
+      );
       setSelected([]);
-      // Refresh notifications after marking as read
-      await fetchNotifications();
-      // Notify parent to refresh unread count
+      toast({
+        title: 'Success',
+        description: `Marked ${ids.length} notification${
+          ids.length > 1 ? 's' : ''
+        } as read`,
+      });
       onRefresh?.();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to mark notifications as read',
+        variant: 'destructive',
+      });
     } finally {
       setLoadingAction(false);
     }
@@ -176,27 +286,33 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     setLoadingAction(true);
     try {
       await Promise.all(ids.map((id) => deleteNotification(id)));
+      setNotifications((prev) => prev.filter((n) => !ids.includes(n.$id)));
       setSelected([]);
-      // Refresh notifications after deletion
-      await fetchNotifications();
-      // Notify parent to refresh unread count
+      toast({
+        title: 'Success',
+        description: `Deleted ${ids.length} notification${
+          ids.length > 1 ? 's' : ''
+        }`,
+      });
       onRefresh?.();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete notifications',
+        variant: 'destructive',
+      });
     } finally {
       setLoadingAction(false);
     }
   };
 
-  // Search and pagination
-  const filtered = notifications.filter((n) => {
-    const matchesSearch =
-      n.title.toLowerCase().includes(search.toLowerCase()) ||
-      n.message.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === 'all' || n.type === typeFilter;
-    return matchesSearch && matchesType;
-  });
-  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+  const markAllAsRead = async () => {
+    const unreadIds = notifications.filter((n) => !n.read).map((n) => n.$id);
+    if (unreadIds.length > 0) {
+      await markAsRead(unreadIds);
+    }
+  };
 
-  // Helper function to format notification data
   const formatNotificationTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -212,15 +328,92 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     return date.toLocaleDateString();
   };
 
+  const getPriorityColor = (priority?: string) => {
+    switch (priority) {
+      case 'urgent':
+        return 'text-red-600 bg-red-50 border-red-200';
+      case 'high':
+        return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'medium':
+        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'low':
+        return 'text-green-600 bg-green-50 border-green-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
+    }
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setNotifications((items) => {
+        const oldIndex = items.findIndex((item) => item.$id === active.id);
+        const newIndex = items.findIndex((item) => item.$id === over?.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+
+      toast({
+        title: 'Reordered',
+        description: 'Notification order updated',
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-4xl bg-white/95 backdrop-blur border border-white/40 shadow-xl">
+      <DialogContent className="w-full max-w-6xl bg-white/95 backdrop-blur border border-white/40 shadow-xl">
         <DialogHeader className="pb-4">
-          <div className="flex items-center gap-3">
-            <Bell className="w-6 h-6 text-cyan-600" />
-            <DialogTitle className="text-xl font-bold sidebar-gradient-text">
-              Notifications
-            </DialogTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Bell className="w-6 h-6 text-cyan-600" />
+              <DialogTitle className="text-xl font-bold sidebar-gradient-text">
+                Notifications
+              </DialogTitle>
+              <span className="text-sm text-gray-500">
+                {notifications.filter((n) => !n.read).length} unread
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={markAllAsRead}
+                disabled={!notifications.some((n) => !n.read)}
+                className="text-sm"
+              >
+                <Check className="w-4 h-4 mr-1" />
+                Mark all read
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchNotifications}
+                disabled={loading}
+                className="text-sm"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`}
+                />
+                Refresh
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSettings(true)}
+                className="text-sm"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           <DialogDescription className="sr-only">
             View and manage your notifications
@@ -228,8 +421,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Search and Filter Bar */}
-          <div className="flex gap-3">
+          {/* Enhanced Search and Filter Bar */}
+          <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
@@ -253,16 +446,72 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                     className="shad-select-item"
                     value={key}
                   >
-                    {value.icon} {value.label}
+                    <div className="flex items-center gap-2">
+                      {value.icon}
+                      {value.label}
+                    </div>
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="sort-select">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="sort-select-content">
+                <SelectItem className="shad-select-item" value="all">
+                  All Status
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="unread">
+                  Unread
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="read">
+                  Read
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="sort-select">
+                <SelectValue placeholder="All Priorities" />
+              </SelectTrigger>
+              <SelectContent className="sort-select-content">
+                <SelectItem className="shad-select-item" value="all">
+                  All Priorities
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="urgent">
+                  Urgent
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="high">
+                  High
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="medium">
+                  Medium
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="low">
+                  Low
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Sort Options */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Sort by:</span>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-32 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Date</SelectItem>
+                <SelectItem value="priority">Priority</SelectItem>
+                <SelectItem value="type">Type</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Bulk Actions */}
           {selected.length > 0 && (
-            <div className="flex gap-2 p-3  rounded-lg border border-cyan-200/30">
+            <div className="flex gap-2 p-3 rounded-lg border border-cyan-200/30 bg-cyan-50/20">
               <Button
                 size="sm"
                 onClick={() => markAsRead(selected)}
@@ -278,137 +527,60 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 className="h-8 flex items-center gap-2 bg-destructive/10 text-destructive border-destructive hover:bg-destructive/20"
               >
                 <Trash className="w-4 h-4 mr-1" />
-                <span>{selected.length}</span>
+                Delete ({selected.length})
               </Button>
             </div>
           )}
 
-          {/* Notifications Table */}
-          <div className="overflow-x-auto border rounded">
-            <table className="min-w-full text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-center align-middle">
-                    <Checkbox
-                      checked={
-                        selected.length === paginated.length &&
-                        paginated.length > 0
-                      }
-                      onCheckedChange={(v) =>
-                        setSelected(v ? paginated.map((n) => n.$id) : [])
-                      }
-                    />
-                  </th>
-                  <th className="text-slate-700">Title</th>
-                  <th className="text-slate-700">Message</th>
-                  <th className="text-slate-700">Type</th>
-                  <th className="text-slate-700">Status</th>
-                  <th className="text-slate-700">Date</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
+          {/* Enhanced Notifications List */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={paginated.map((n) => n.$id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2 max-h-96 overflow-y-auto">
                 {loading ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-400">
-                      Loading notifications...
-                    </td>
-                  </tr>
+                  <div className="text-center py-8 text-gray-400">
+                    <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                    Loading notifications...
+                  </div>
                 ) : paginated.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-400">
-                      <div className="flex flex-col items-center">
-                        <Bell className="w-12 h-12 mb-3 text-gray-300" />
-                        <p className="text-lg font-medium">
-                          No notifications found
-                        </p>
-                        <p className="text-sm">You&apos;re all caught up!</p>
-                      </div>
-                    </td>
-                  </tr>
+                  <div className="text-center py-8 text-gray-400">
+                    <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-lg font-medium">
+                      No notifications found
+                    </p>
+                    <p className="text-sm">You&apos;re all caught up!</p>
+                  </div>
                 ) : (
-                  paginated.map((n) => (
-                    <tr
-                      key={n.$id}
-                      className={`border-b hover:bg-gray-50 transition`}
-                    >
-                      <td className="text-center align-middle py-4">
-                        <Checkbox
-                          checked={selected.includes(n.$id)}
-                          onCheckedChange={() => handleSelect(n.$id)}
-                        />
-                      </td>
-                      <td className="pl-2 font-medium text-slate-900 max-w-xs">
-                        <div className="truncate">{n.title}</div>
-                      </td>
-                      <td className="text-slate-700 max-w-md">
-                        <div className="line-clamp-2">{n.message}</div>
-                      </td>
-                      <td>
-                        <span
-                          className="flex items-center gap-2 px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800'
-                         "
-                        >
-                          {NOTIFICATION_TYPES[n.type as NotificationType]
-                            ?.icon || '📢'}{' '}
-                          {NOTIFICATION_TYPES[n.type as NotificationType]
-                            ?.label || n.type}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                            n.read
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                        >
-                          {n.read ? 'Read' : 'Unread'}
-                        </span>
-                      </td>
-                      <td className="text-slate-500">
-                        {formatNotificationTime(n.$createdAt)}
-                      </td>
-                      <td>
-                        {!n.read && (
-                          <Button variant="link" size="sm">
-                            Mark as read
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  paginated.map((notification) => {
+                    const typeConfig =
+                      NOTIFICATION_TYPES[notification.type as NotificationType];
+                    return (
+                      <SortableNotificationItem
+                        key={notification.$id}
+                        notification={notification}
+                        isSelected={selected.includes(notification.$id)}
+                        onSelect={handleSelect}
+                        onMarkAsRead={(id) => markAsRead([id])}
+                        typeConfig={typeConfig}
+                        getPriorityColor={getPriorityColor}
+                        formatNotificationTime={formatNotificationTime}
+                      />
+                    );
+                  })
                 )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Bulk Actions */}
-          {selected.length > 0 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600">
-                  {selected.length} notification
-                  {selected.length !== 1 ? 's' : ''} selected
-                </span>
               </div>
-              <div className="flex items-center gap-2">
-                {/* <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => markAsRead(selected)}
-                  disabled={loadingAction}
-                >
-                  <Check className="w-4 h-4 mr-1" />
-                  Mark as read
-                </Button> */}
-              </div>
-            </div>
-          )}
+            </SortableContext>
+          </DndContext>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-4">
-            <div>
+          {/* Enhanced Pagination */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+            <div className="flex items-center gap-4">
               <label className="text-xs text-slate-700">
                 Items per page:
                 <select
@@ -416,14 +588,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   value={perPage}
                   onChange={(e) => setPerPage(Number(e.target.value))}
                 >
-                  {[6, 10, 20].map((n) => (
+                  {[5, 10, 20, 50].map((n) => (
                     <option key={n} value={n}>
                       {n}
                     </option>
                   ))}
                 </select>
               </label>
-              <span className="ml-4 text-gray-500">
+              <span className="text-sm text-gray-500">
                 {`${(page - 1) * perPage + 1}-${Math.min(
                   page * perPage,
                   filtered.length
@@ -437,8 +609,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 disabled={page === 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                Prev
+                Previous
               </Button>
+              <span className="flex items-center px-3 text-sm">
+                Page {page} of {Math.ceil(filtered.length / perPage)}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
@@ -451,7 +626,150 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
           </div>
         </div>
       </DialogContent>
+
+      <NotificationSettings
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        userId={userId}
+      />
     </Dialog>
+  );
+};
+
+interface SortableNotificationItemProps {
+  notification: Notification;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+  onMarkAsRead: (id: string) => void;
+  typeConfig: (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
+  getPriorityColor: (priority?: string) => string;
+  formatNotificationTime: (dateString: string) => string;
+}
+
+const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
+  notification,
+  isSelected,
+  onSelect,
+  onMarkAsRead,
+  typeConfig,
+  getPriorityColor,
+  formatNotificationTime,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: notification.$id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`p-4 rounded-lg border transition-all hover:shadow-md ${
+        notification.read
+          ? typeConfig?.bgColor || 'bg-white/50 border-gray-200'
+          : typeConfig?.bgColor || 'bg-blue-50/50 border-blue-200 shadow-sm'
+      } ${isDragging ? 'opacity-50 shadow-lg' : ''}`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onSelect(notification.$id)}
+            className="mt-1"
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-1">
+                  {typeConfig?.icon || <Bell className="w-4 h-4" />}
+                  <span className="text-sm font-medium text-gray-900">
+                    {notification.title}
+                  </span>
+                </div>
+                {notification.priority && (
+                  <span
+                    className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(
+                      notification.priority
+                    )}`}
+                  >
+                    {notification.priority}
+                  </span>
+                )}
+                {!notification.read && (
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                {notification.message}
+              </p>
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <span>{formatNotificationTime(notification.$createdAt)}</span>
+                {typeConfig && (
+                  <span className={`px-2 py-0.5 rounded ${typeConfig.color}`}>
+                    {typeConfig.label}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              {!notification.read && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onMarkAsRead(notification.$id)}
+                  className="h-6 px-2 text-xs"
+                >
+                  Mark read
+                </Button>
+              )}
+              {/* Drag Handle */}
+              <div
+                {...attributes}
+                {...listeners}
+                className="flex-shrink-0 cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+                title="Drag to reorder"
+              >
+                <GripVertical className="w-5 h-5 text-gray-400" />
+              </div>
+              {/* <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(notification.$id)}
+                className="h-6 px-2 text-xs text-red-600 hover:text-red-700"
+              >
+                <Trash className="w-3 h-3" />
+              </Button> */}
+            </div>
+          </div>
+
+          {notification.actionUrl && notification.actionText && (
+            <div className="mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(notification.actionUrl, '_blank')}
+                className="text-xs"
+              >
+                {notification.actionText}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
