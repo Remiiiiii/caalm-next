@@ -23,7 +23,7 @@ interface Props {
   fullName: string;
   avatar: string;
   email: string;
-  role: 'executive' | 'hr' | 'manager';
+  role: 'executive' | 'admin' | 'manager';
 }
 
 const MobileNavigation = ({

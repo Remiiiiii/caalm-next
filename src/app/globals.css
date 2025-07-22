@@ -136,7 +136,7 @@
   .primary-btn,
   .shad-active,
   .shad-submit-btn {
-    @apply text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center;
+    @apply text-white font-semibold rounded-full shadow-md px-4 py-2 sm:px-6 transition-all duration-200 w-full sm:w-auto flex items-center justify-center;
     background-image: linear-gradient(
       to right,
       #00c1cb,

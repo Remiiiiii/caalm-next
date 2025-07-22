@@ -13,8 +13,8 @@ export async function signInHandler(email: string) {
       redirect('/dashboard/executive');
     case 'manager':
       redirect('/dashboard/manager');
-    case 'hr':
-      redirect('/dashboard/hr');
+    case 'admin':
+      redirect('/dashboard/admin');
     default:
       redirect('/');
   }

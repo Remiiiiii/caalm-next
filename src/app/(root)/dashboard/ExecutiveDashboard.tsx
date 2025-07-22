@@ -1,32 +1,30 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Chart } from '@/components/Chart';
 import {
-  Users,
-  FileText,
-  AlertTriangle,
-  CheckCircle,
-  Calendar,
-  TrendingUp,
-} from 'lucide-react';
+  SelectScrollable,
+  SelectItem,
+} from '@/components/ui/select-scrollable';
+import { Users, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   createInvitation,
   listPendingInvitations,
   revokeInvitation,
+  getUninvitedUsers,
+  getActiveUsersCount,
 } from '@/lib/actions/user.actions';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
-import Link from 'next/link';
 import ActionDropdown from '@/components/ActionDropdown';
 import FormattedDateTime from '@/components/FormattedDateTime';
 import Thumbnail from '@/components/Thumbnail';
-import { Separator } from '@/components/ui/separator';
-import { getFiles, getTotalSpaceUsed } from '@/lib/actions/file.actions';
-import { convertFileSize, getUsageSummary } from '@/lib/utils';
+import {
+  getFiles,
+  getTotalContractsCount,
+  getExpiringContractsCount,
+} from '@/lib/actions/file.actions';
 import { Models } from 'node-appwrite';
 import {
   Dialog,
@@ -34,8 +32,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import UserManagement from './UserManagement';
-import FileUploader from '@/components/FileUploader';
 
 const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
@@ -54,37 +50,53 @@ interface Invitation {
   $createdAt: string;
 }
 
+// Add UninvitedUser type
+interface UninvitedUser {
+  $id: string;
+  email: string;
+  fullName: string;
+  $createdAt: string;
+}
+
 interface ExecutiveDashboardProps {
-  user?: { $id: string; accountId?: string };
+  user?:
+    | (Models.User<Models.Preferences> & {
+        $id: string;
+        accountId?: string;
+        fullName?: string;
+        role?: string;
+        department?: string;
+      })
+    | null;
 }
 
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
-  const stats = [
+  const [stats, setStats] = useState([
     {
       title: 'Total Contracts',
-      value: '156',
+      value: '0',
       icon: FileText,
-      color: 'text-blue-600',
+      color: 'text-[#524E4E]',
     },
     {
       title: 'Expiring Soon',
-      value: '12',
+      value: '0',
       icon: AlertTriangle,
-      color: 'text-red-600',
+      color: 'text-[#FF7474]',
     },
     {
       title: 'Active Users',
-      value: '24',
+      value: '0',
       icon: Users,
-      color: 'text-green-600',
+      color: 'text-[#56B8FF]',
     },
     {
       title: 'Compliance Rate',
       value: '94%',
       icon: CheckCircle,
-      color: 'text-green-600',
+      color: 'text-[#3DD9B3]',
     },
-  ];
+  ]);
 
   const recentActivity = [
     {
@@ -136,85 +148,183 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
   // Invitation management state
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [uninvitedUsers, setUninvitedUsers] = useState<UninvitedUser[]>([]);
   const [inviteForm, setInviteForm] = useState({
-    name: '',
-    email: '',
-    role: 'manager',
+    selectedUserId: '',
+    role: '',
   });
   const [loading, setLoading] = useState(false);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(true);
+  const [isLoadingInvitations, setIsLoadingInvitations] = useState(true);
   const orgId = 'TODO_ORG_ID'; // Replace with actual orgId from context or props
   const adminName = 'Executive'; // Replace with actual admin name
   const [resendingToken, setResendingToken] = useState<string | null>(null);
 
   // File usage and recent files state
   const [files, setFiles] = useState<Models.Document[] | null>(null);
-  interface FileTypeSummary {
-    size: number;
-    latestDate: string;
-  }
-  interface TotalSpace {
-    document: FileTypeSummary;
-    image: FileTypeSummary;
-    video: FileTypeSummary;
-    audio: FileTypeSummary;
-    other: FileTypeSummary;
-    used: number;
-    all: number;
-  }
-  const [totalSpace, setTotalSpace] = useState<TotalSpace | null>(null);
 
   const refreshFiles = async () => {
     const filesRes = await getFiles({ types: [], limit: 10 });
     setFiles(filesRes.documents);
   };
 
-  // User management state
-  useEffect(() => {
-    // Fetch pending invitations on mount
-    const fetchInvites = async () => {
-      const data = await listPendingInvitations({ orgId });
-      // Map Document[] to Invitation[]
-      setInvitations(data.map((inv: unknown) => inv as Invitation));
-    };
-    fetchInvites();
+  // Lightweight caching state
+  const [cachedData, setCachedData] = useState<{
+    stats: typeof stats;
+    files: Models.Document[] | null;
+    invitations: Invitation[];
+    uninvitedUsers: UninvitedUser[];
+    lastFetch: number;
+  } | null>(null);
 
-    // Fetch files and usage data in parallel
-    const fetchData = async () => {
-      const [filesRes, totalSpaceRes] = await Promise.all([
-        getFiles({ types: [], limit: 10 }),
-        getTotalSpaceUsed(),
-      ]);
-      setFiles(filesRes.documents); // <-- Use .documents if that's the structure
-      setTotalSpace(totalSpaceRes as TotalSpace);
-    };
-    fetchData();
-  }, [orgId]);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+  const isFetchingRef = useRef(false);
 
-  const handleInviteChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setInviteForm({ ...inviteForm, [e.target.name]: e.target.value });
+  // Simple cache check
+  const isCacheValid = () => {
+    if (!cachedData) return false;
+    return Date.now() - cachedData.lastFetch < CACHE_DURATION;
   };
+
+  // Single optimized data fetch
+  const fetchAllData = useCallback(
+    async (forceRefresh = false) => {
+      // Prevent multiple simultaneous calls
+      if (isFetchingRef.current) return;
+
+      // Use cached data if available and not expired
+      if (!forceRefresh && isCacheValid() && cachedData) {
+        setStats(cachedData.stats);
+        setFiles(cachedData.files);
+        setInvitations(cachedData.invitations);
+        setUninvitedUsers(cachedData.uninvitedUsers);
+        return;
+      }
+
+      isFetchingRef.current = true;
+
+      // Set loading states
+      setIsLoadingStats(true);
+      setIsLoadingFiles(true);
+      setIsLoadingInvitations(true);
+
+      try {
+        // Fetch all data in parallel
+        const [
+          totalContracts,
+          expiringContracts,
+          activeUsers,
+          filesRes,
+          invitationsData,
+          uninvitedUsersData,
+        ] = await Promise.all([
+          getTotalContractsCount(),
+          getExpiringContractsCount(),
+          getActiveUsersCount(),
+          getFiles({ types: [], limit: 10 }),
+          listPendingInvitations({ orgId }),
+          getUninvitedUsers(),
+        ]);
+
+        // Create new stats array without depending on current stats state
+        const newStats = [
+          {
+            title: 'Total Contracts',
+            value: totalContracts.toString(),
+            icon: FileText,
+            color: 'text-[#524E4E]',
+          },
+          {
+            title: 'Expiring Soon',
+            value: expiringContracts.toString(),
+            icon: AlertTriangle,
+            color: 'text-[#FF7474]',
+          },
+          {
+            title: 'Active Users',
+            value: activeUsers.toString(),
+            icon: Users,
+            color: 'text-[#56B8FF]',
+          },
+          {
+            title: 'Compliance Rate',
+            value: '95%',
+            icon: CheckCircle,
+            color: 'text-[#4CAF50]',
+          },
+        ];
+
+        // Update all state
+        setStats(newStats);
+        setFiles(filesRes.documents);
+        setInvitations(
+          invitationsData.map((inv: unknown) => inv as Invitation)
+        );
+        setUninvitedUsers(uninvitedUsersData);
+
+        // Cache the data
+        setCachedData({
+          stats: newStats,
+          files: filesRes.documents,
+          invitations: invitationsData.map((inv: unknown) => inv as Invitation),
+          uninvitedUsers: uninvitedUsersData,
+          lastFetch: Date.now(),
+        });
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      } finally {
+        setIsLoadingStats(false);
+        setIsLoadingFiles(false);
+        setIsLoadingInvitations(false);
+        isFetchingRef.current = false;
+      }
+    },
+    [orgId] // Only depend on orgId, not stats or cachedData
+  );
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!inviteForm.selectedUserId) {
+      alert('Please select a user to invite');
+      return;
+    }
+
     setLoading(true);
+
+    // Find the selected user
+    const selectedUser = uninvitedUsers.find(
+      (u) => u.$id === inviteForm.selectedUserId
+    );
+    if (!selectedUser) {
+      alert('Selected user not found');
+      setLoading(false);
+      return;
+    }
+
     await createInvitation({
-      ...inviteForm,
+      email: selectedUser.email,
+      name: selectedUser.fullName,
+      role: inviteForm.role,
       orgId,
       invitedBy: adminName,
     });
-    // Refresh invitations
-    const data = await listPendingInvitations({ orgId });
-    setInvitations(data.map((inv: unknown) => inv as Invitation));
-    setInviteForm({ name: '', email: '', role: 'executive' });
+
+    // Force refresh cache to get updated data
+    await fetchAllData(true);
+    setInviteForm({ selectedUserId: '', role: '' });
     setLoading(false);
   };
 
   const handleRevoke = async (token: string) => {
     await revokeInvitation({ token });
-    const data = await listPendingInvitations({ orgId });
-    setInvitations(data.map((inv: unknown) => inv as Invitation));
+    // Force refresh cache to get updated data
+    await fetchAllData(true);
   };
 
   const resendInvitation = async () => {
@@ -229,6 +339,19 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     setResendingToken(null);
   };
 
+  const getRoleDisplay = (role: string) => {
+    switch (role) {
+      case 'executive':
+        return 'Executive';
+      case 'manager':
+        return 'Manager';
+      case 'admin':
+        return 'Admin';
+      default:
+        return role;
+    }
+  };
+
   return (
     <div className="relative">
       {/* Background Video */}
@@ -241,142 +364,75 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       >
         <source src="/assets/video/wave.mp4" type="video/mp4" />
       </video>
-      {/* Dashboard Content */}
-      <div className="relative z-10">
-        <div className="space-y-6">
+      {/* Cache Status */}
+      {cachedData && (
+        <div className="flex justify-between items-end mb-4">
+          <div className="h2 font-bold sidebar-gradient-text">
+            {getRoleDisplay(user?.role || '')}
+          </div>
+          <div className="text-xs text-slate-500">
+            Last updated: {new Date(cachedData.lastFetch).toLocaleTimeString()}
+          </div>
+        </div>
+      )}
+      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mb-6">
+        <CardContent className="p-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-navy">
-              Executive Dashboard
+            <h1 className="text-lg font-bold text-slate-700">
+              {user?.fullName || ''}{' '}
+              <span className="text-lg text-slate-light">
+                {`| ${user?.department || 'Unknown Department'}`}
+              </span>
             </h1>
-            <div className="flex space-x-2">
-              <Button variant="outline">
-                <Calendar className="mr-2 h-4 w-4 text-coral" />
-                Schedule Review
-              </Button>
-              {user && (
-                <FileUploader
-                  ownerId={user.$id}
-                  accountId={user.accountId || user.$id}
-                />
-              )}
-              <Button>
-                <TrendingUp className="mr-2 h-4 w-4 text-coral" />
-                Generate Report
-              </Button>
-            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-dark">
-                        {stat.title}
-                      </p>
-                      <p className="text-3xl font-bold text-navy">
-                        {stat.value}
-                      </p>
-                    </div>
-                    <stat.icon
-                      className={`h-8 w-8 ${stat.color.replace(
-                        'text-',
-                        'text-'
-                      )}`}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* File Usage Overview Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* File Usage Overview */}
-            <section className="bg-white rounded-xl shadow p-6 flex flex-col">
-              <div className="flex justify-center items-center mb-6">
-                <Chart used={totalSpace?.used || 0} />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <Card
+            key={index}
+            className="bg-white/30 backdrop-blur border border-white/40 shadow-lg"
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm  font-medium sidebar-gradient-text">
+                    {stat.title}
+                  </p>
+                  <p className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                    {isLoadingStats ? (
+                      <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
+                    ) : (
+                      stat.value
+                    )}
+                    <span className="inline-block ml-2 pb-1">
+                      <stat.icon
+                        className={`h-8 w-8 ${stat.color.replace(
+                          'text-',
+                          'text-'
+                        )}`}
+                      />
+                    </span>
+                  </p>
+                </div>
               </div>
-              {/* Uploaded file type summaries */}
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {totalSpace &&
-                  getUsageSummary(totalSpace).map((summary) => (
-                    <Link
-                      href={summary.url}
-                      key={summary.title}
-                      className="flex flex-col bg-slate-50 rounded-lg p-4 hover:shadow transition border border-border"
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <Image
-                          src={summary.icon}
-                          width={40}
-                          height={40}
-                          alt="uploaded image"
-                          className="rounded-full"
-                        />
-                        <h4 className="text-lg font-semibold text-navy">
-                          {convertFileSize(summary.size) || 0}
-                        </h4>
-                      </div>
-                      <h5 className="text-sm font-medium text-slate-dark mb-1">
-                        {summary.title}
-                      </h5>
-                      <Separator className="bg-light-400 my-2" />
-                      <FormattedDateTime
-                        date={summary.latestDate}
-                        className="text-center text-xs text-slate-light"
-                      />
-                    </Link>
-                  ))}
-              </ul>
-            </section>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-            {/* Recent files uploaded */}
-            <section className="dashboard-recent-files">
-              <h2 className="h3 xl:h2 text-light-100">Recent files uploaded</h2>
-              {files && files.length > 0 ? (
-                <ul className="mt-5 flex flex-col gap-5">
-                  {files.map((file: Models.Document) => (
-                    <Link
-                      href={file.url}
-                      target="_blank"
-                      className="flex items-center gap-3"
-                      key={file.$id}
-                    >
-                      <Thumbnail
-                        type={file.type}
-                        extension={file.extension}
-                        url={file.url}
-                      />
-                      <div className="recent-file-details">
-                        <div className="flex flex-col gap-1">
-                          <p className="recent-file-name">{file.name}</p>
-                          <FormattedDateTime
-                            date={file.$createdAt}
-                            className="caption"
-                          />
-                        </div>
-                        <ActionDropdown
-                          file={file}
-                          onStatusChange={refreshFiles}
-                        />
-                      </div>
-                    </Link>
-                  ))}
-                </ul>
-              ) : (
-                <p className="empty-list">No files uploaded</p>
-              )}
-            </section>
-          </div>
-
+      {/* Dashboard Content */}
+      <div className="relative z-10 py-8">
+        <div className="space-y-6">
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Recent Activity */}
-            <Card>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
+                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                  Recent Activity
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -403,9 +459,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             </Card>
 
             {/* Pending Approvals */}
-            <Card>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
               <CardHeader>
-                <CardTitle>Pending Approvals</CardTitle>
+                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                  Pending Approvals
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -419,10 +477,19 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                           {approval.type}
                         </h4>
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="outline">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                          >
                             Deny
                           </Button>
-                          <Button size="sm">Approve</Button>
+                          <Button
+                            size="sm"
+                            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                          >
+                            Approve
+                          </Button>
                         </div>
                       </div>
                       <p className="text-sm text-slate-dark">
@@ -445,117 +512,235 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             </Card>
           </div>
 
-          {/* Invitation Management Section */}
-          <Card>
+          {/* Recent files uploaded */}
+          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:w-1/2">
             <CardHeader>
-              <CardTitle>Invite User</CardTitle>
+              <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                Recent files uploaded
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingFiles ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="border border-border rounded-lg p-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="animate-pulse bg-gray-200 h-10 w-10 rounded"></div>
+                        <div className="flex-1">
+                          <div className="animate-pulse bg-gray-200 h-4 w-32 rounded mb-2"></div>
+                          <div className="animate-pulse bg-gray-200 h-3 w-24 rounded"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : files && files.length > 0 ? (
+                <div className="space-y-4">
+                  {files.map((file: Models.Document) => (
+                    <div
+                      key={file.$id}
+                      className="border border-border rounded-lg p-4"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Thumbnail
+                            type={file.type}
+                            extension={file.extension}
+                            url={file.url}
+                          />
+                          <div className="flex flex-col gap-1 min-w-0 flex-1">
+                            <h4 className="font-medium text-navy truncate max-w-[200px]">
+                              {file.name}
+                            </h4>
+                            <p className="text-sm text-slate-dark">
+                              <FormattedDateTime
+                                date={file.$createdAt}
+                                className="text-xs text-slate-light"
+                              />
+                            </p>
+                          </div>
+                        </div>
+                        <div className="ml-3 flex-shrink-0">
+                          <ActionDropdown
+                            file={file}
+                            onStatusChange={refreshFiles}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-slate-light">
+                  No files uploaded
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Invitation Management Section */}
+          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                Invite User
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <form
                 className="flex flex-col md:flex-row gap-4 items-center"
                 onSubmit={handleInviteSubmit}
               >
-                <Input
-                  name="name"
-                  placeholder="Full Name"
-                  value={inviteForm.name}
-                  onChange={handleInviteChange}
-                  required
-                />
-                <Input
-                  name="email"
-                  type="email"
-                  placeholder="Email"
-                  value={inviteForm.email}
-                  onChange={handleInviteChange}
-                  required
-                />
-                <select
-                  name="role"
-                  value={inviteForm.role}
-                  onChange={handleInviteChange}
-                  className="border rounded px-2 py-1"
+                <SelectScrollable
+                  value={inviteForm.selectedUserId}
+                  onValueChange={(value) =>
+                    setInviteForm({ ...inviteForm, selectedUserId: value })
+                  }
+                  placeholder="Select a user to invite"
+                  className="min-w-[200px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                 >
-                  <option value="executive">Executive</option>
-                  <option value="manager">Manager</option>
-                  <option value="hr">HR</option>
-                </select>
-                <Button type="submit" disabled={loading}>
+                  {uninvitedUsers.map((user) => (
+                    <SelectItem key={user.$id} value={user.$id}>
+                      {user.fullName} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectScrollable>
+                <SelectScrollable
+                  value={inviteForm.role}
+                  onValueChange={(value) =>
+                    setInviteForm({ ...inviteForm, role: value })
+                  }
+                  placeholder="Select role"
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                >
+                  <SelectItem value="executive">Executive</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectScrollable>
+                <Button
+                  type="submit"
+                  disabled={loading || uninvitedUsers.length === 0}
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                >
                   {loading ? 'Inviting...' : 'Send Invite'}
                 </Button>
               </form>
+              {uninvitedUsers.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2 text-center">
+                  No users waiting for invitation
+                </p>
+              )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader>
-              <CardTitle>Pending Invitations</CardTitle>
+              <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                Pending Invitations
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <table className="w-full text-left">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Invited</th>
-                    <th>Expires</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invitations.length === 0 ? (
+              <div className="overflow-x-auto border rounded">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-50 text-center">
                     <tr>
-                      <td
-                        colSpan={7}
-                        className="text-center text-slate-light py-4"
-                      >
-                        No pending invitations
-                      </td>
+                      <th className="text-slate-700 text-center px-4 py-2">
+                        Name
+                      </th>
+                      <th className="text-slate-700 text-center px-4 py-2">
+                        Email
+                      </th>
+                      <th className="text-slate-700 text-center px-4 py-2">
+                        Role
+                      </th>
+                      <th className="text-slate-700 text-center px-4 py-2">
+                        Invited
+                      </th>
+                      <th className="text-slate-700 text-center px-4 py-2">
+                        Expires
+                      </th>
+                      <th className="text-slate-700 text-center px-4 py-2">
+                        Status
+                      </th>
+                      <th className="text-slate-700 text-center px-4 py-2">
+                        Actions
+                      </th>
                     </tr>
-                  ) : (
-                    invitations.map((inv) => (
-                      <tr key={inv.$id}>
-                        <td>{inv.name}</td>
-                        <td>{inv.email}</td>
-                        <td>{inv.role}</td>
-                        <td>
-                          <ClientDate dateString={inv.$createdAt} />
-                        </td>
-                        <td>
-                          <ClientDate dateString={inv.expiresAt} />
-                        </td>
-                        <td>{inv.status}</td>
-                        <td className="space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleRevoke(inv.token)}
-                          >
-                            Revoke
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleResend(inv.token)}
-                            disabled={resendingToken === inv.token}
-                          >
-                            {resendingToken === inv.token
-                              ? 'Resending...'
-                              : 'Resend'}
-                          </Button>
+                  </thead>
+                  <tbody>
+                    {isLoadingInvitations ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-8">
+                          <div className="flex justify-center space-x-2">
+                            {[...Array(5)].map((_, i) => (
+                              <div
+                                key={i}
+                                className="animate-pulse bg-gray-200 h-4 w-16 rounded"
+                              ></div>
+                            ))}
+                          </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : invitations.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="text-center py-8 text-gray-400"
+                        >
+                          No pending invitations
+                        </td>
+                      </tr>
+                    ) : (
+                      invitations.map((inv) => (
+                        <tr
+                          key={inv.$id}
+                          className="border-b text-center hover:bg-gray-50 transition"
+                        >
+                          <td className="pl-2 ">{inv.name}</td>
+                          <td>{inv.email}</td>
+                          <td>{inv.role}</td>
+                          <td>
+                            <ClientDate dateString={inv.$createdAt} />
+                          </td>
+                          <td>
+                            <ClientDate dateString={inv.expiresAt} />
+                          </td>
+                          <td>
+                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-[#B3EBF2] text-[#12477D]">
+                              {inv.status}
+                            </span>
+                          </td>
+                          <td className="space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRevoke(inv.token)}
+                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                            >
+                              Revoke
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleResend(inv.token)}
+                              disabled={resendingToken === inv.token}
+                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                            >
+                              {resendingToken === inv.token
+                                ? 'Resending...'
+                                : 'Resend'}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
-
-          {/* User Management Table (Executive only) */}
-          <UserManagement />
 
           {/* Edit User Modal */}
           <Dialog open={false} onOpenChange={() => {}}>
@@ -563,7 +748,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               <DialogHeader>
                 <DialogTitle>Edit User</DialogTitle>
               </DialogHeader>
-              <form onSubmit={() => {}} className="space-y-4">
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium">Full Name</label>
                   <Input
@@ -589,6 +774,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     <option value="behavioralhealth">Behavioral Health</option>
                     <option value="finance">Finance</option>
                     <option value="operations">Operations</option>
+                    <option value="administration">Administration</option>
+                    <option value="c-suite">C-Suite</option>
+                    <option value="managerial">Managerial</option>
                   </select>
                 </div>
                 <div>
@@ -602,7 +790,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   >
                     <option value="executive">Executive</option>
                     <option value="manager">Manager</option>
-                    <option value="hr">HR</option>
+                    <option value="admin">Admin</option>
                   </select>
                 </div>
                 {/* editError && (

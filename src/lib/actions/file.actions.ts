@@ -482,3 +482,45 @@ export const getContractsForManager = async (managerAccountId: string) => {
     handleError(error, 'Failed to get contracts for manager');
   }
 };
+
+export const getTotalContractsCount = async () => {
+  const { databases } = await createAdminClient();
+  try {
+    const contracts = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.contractsCollectionId,
+      []
+    );
+    return contracts.total;
+  } catch (error) {
+    console.error('Failed to fetch total contracts count:', error);
+    return 0;
+  }
+};
+
+export const getExpiringContractsCount = async () => {
+  const { databases } = await createAdminClient();
+  try {
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+    const contracts = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.contractsCollectionId,
+      [
+        Query.lessThanEqual(
+          'contractExpiryDate',
+          thirtyDaysFromNow.toISOString().split('T')[0]
+        ),
+        Query.greaterThan(
+          'contractExpiryDate',
+          new Date().toISOString().split('T')[0]
+        ),
+      ]
+    );
+    return contracts.total;
+  } catch (error) {
+    console.error('Failed to fetch expiring contracts count:', error);
+    return 0;
+  }
+};

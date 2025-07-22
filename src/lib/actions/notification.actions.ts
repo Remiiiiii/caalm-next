@@ -127,7 +127,7 @@ export const checkContractExpirations = async () => {
     );
 
     // Get all users with allowed roles
-    const allowedRoles = ['executive', 'manager', 'hr'];
+    const allowedRoles = ['executive', 'manager', 'admin'];
     const users = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
@@ -159,8 +159,8 @@ export const checkContractExpirations = async () => {
       for (const user of users.documents) {
         let shouldNotify = false;
 
-        // Executive and HR get notifications for all contracts
-        if (user.role === 'executive' || user.role === 'hr') {
+        // Executive and Admin get notifications for all contracts
+        if (user.role === 'executive' || user.role === 'admin') {
           shouldNotify = true;
         }
         // Manager only gets notifications for contracts in their department

@@ -193,7 +193,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 router.push('/dashboard/executive');
               else if (user?.role === 'manager')
                 router.push('/dashboard/manager');
-              else if (user?.role === 'hr') router.push('/dashboard/hr');
+              else if (user?.role === 'admin') router.push('/dashboard/admin');
               else router.push('/dashboard');
             }}
           />

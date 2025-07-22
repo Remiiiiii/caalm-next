@@ -1,6 +1,6 @@
 'use server';
 
-import { ID, Query } from 'node-appwrite';
+import { ID, Query, Models } from 'node-appwrite';
 import { createAdminClient, createSessionClient } from '../appwrite';
 import { appwriteConfig } from '../appwrite/config';
 import { parseStringify } from '../utils';
@@ -16,7 +16,14 @@ export type AppUser = {
   avatar: string;
   accountId: string;
   role: string;
-  department?: 'childwelfare' | 'behavioralhealth' | 'finance' | 'operations';
+  department?:
+    | 'childwelfare'
+    | 'behavioralhealth'
+    | 'finance'
+    | 'operations'
+    | 'administration'
+    | 'c-suite'
+    | 'managerial';
   status?: 'active' | 'inactive';
 };
 
@@ -222,7 +229,7 @@ interface ListPendingInvitationsParams {
   orgId: string;
 }
 
-const allowedRoles = ['executive', 'hr', 'manager'] as const;
+const allowedRoles = ['executive', 'admin', 'manager'] as const;
 
 type AllowedRole = (typeof allowedRoles)[number];
 
@@ -442,7 +449,14 @@ export const updateUserProfile = async ({
 }: {
   accountId: string;
   fullName?: string;
-  department?: 'childwelfare' | 'behavioralhealth' | 'finance' | 'operations';
+  department?:
+    | 'childwelfare'
+    | 'behavioralhealth'
+    | 'finance'
+    | 'operations'
+    | 'administration'
+    | 'c-suite'
+    | 'managerial';
   role?: string;
 }) => {
   try {
@@ -490,6 +504,21 @@ export const listAllUsers = async () => {
   }
 };
 
+export const getActiveUsersCount = async () => {
+  try {
+    const { databases } = await createAdminClient();
+    const result = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      [Query.equal('status', 'active')]
+    );
+    return result.total;
+  } catch (error) {
+    console.error('Failed to fetch active users count:', error);
+    return 0;
+  }
+};
+
 /**
  * Delete a user document from the users collection by $id.
  * @param {string} userId - The $id of the user document to delete
@@ -534,5 +563,54 @@ export const getUnreadNotificationsCount = async (userId: string) => {
   } catch (error) {
     console.error('Failed to fetch unread notifications:', error);
     return 0;
+  }
+};
+
+// Get users who have signed up but haven't been invited yet
+export const getUninvitedUsers = async () => {
+  const { databases } = await createAdminClient();
+  try {
+    // Get all Auth users
+    const client = new sdk.Client()
+      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+      .setKey(process.env.NEXT_APPWRITE_KEY!);
+    const users = new sdk.Users(client);
+    const authUsers = await users.list();
+
+    // Get all users in the users collection (invited users)
+    const invitedUsers = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId
+    );
+
+    // Get all pending invitations
+    const pendingInvitations = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      'invitations',
+      [Query.equal('status', 'pending')]
+    );
+
+    // Filter out users who are already in the users collection or have pending invitations
+    const invitedEmails = new Set([
+      ...invitedUsers.documents.map((u: Models.Document) => u.email as string),
+      ...pendingInvitations.documents.map(
+        (inv: Models.Document) => inv.email as string
+      ),
+    ]);
+
+    const uninvitedUsers = authUsers.users.filter(
+      (authUser) => !invitedEmails.has(authUser.email)
+    );
+
+    return uninvitedUsers.map((user) => ({
+      $id: user.$id,
+      email: user.email,
+      fullName: user.name || 'Unknown',
+      $createdAt: user.$createdAt,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch uninvited users:', error);
+    return [];
   }
 };

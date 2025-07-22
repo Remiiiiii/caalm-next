@@ -1,6 +1,6 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Users,
   GraduationCap,
@@ -8,106 +8,104 @@ import {
   Bell,
   Upload,
   UserPlus,
-} from "lucide-react";
+} from 'lucide-react';
 
 const HRDashboard = () => {
   const trainingStats = [
     {
-      title: "Active Employees",
-      value: "187",
+      title: 'Active Employees',
+      value: '187',
       icon: Users,
-      color: "text-blue",
+      color: 'text-blue',
     },
     {
-      title: "Training Completed",
-      value: "94%",
+      title: 'Training Completed',
+      value: '94%',
       icon: GraduationCap,
-      color: "text-green",
+      color: 'text-green',
     },
     {
-      title: "Certifications Due",
-      value: "23",
+      title: 'Certifications Due',
+      value: '23',
       icon: FileCheck,
-      color: "text-orange",
+      color: 'text-orange',
     },
     {
-      title: "Compliance Alerts",
-      value: "5",
+      title: 'Compliance Alerts',
+      value: '5',
       icon: Bell,
-      color: "text-coral",
+      color: 'text-coral',
     },
   ];
 
   const employeeTraining = [
     {
       id: 1,
-      employee: "John Smith",
-      department: "IT",
-      certification: "Security Clearance",
-      status: "expired",
-      dueDate: "2024-06-15",
-      contractRequirement: "Federal IT Services Contract",
+      employee: 'John Smith',
+      department: 'IT',
+      certification: 'Security Clearance',
+      status: 'expired',
+      dueDate: '2024-06-15',
+      contractRequirement: 'Federal IT Services Contract',
     },
     {
       id: 2,
-      employee: "Mary Johnson",
-      department: "Operations",
-      certification: "Safety Training",
-      status: "due-soon",
-      dueDate: "2024-08-10",
-      contractRequirement: "Municipal Services Contract",
+      employee: 'Mary Johnson',
+      department: 'Operations',
+      certification: 'Safety Training',
+      status: 'due-soon',
+      dueDate: '2024-08-10',
+      contractRequirement: 'Municipal Services Contract',
     },
     {
       id: 3,
-      employee: "Robert Davis",
-      department: "Finance",
-      certification: "Financial Compliance",
-      status: "current",
-      dueDate: "2025-01-15",
-      contractRequirement: "State Audit Requirements",
+      employee: 'Robert Davis',
+      department: 'Finance',
+      certification: 'Financial Compliance',
+      status: 'current',
+      dueDate: '2025-01-15',
+      contractRequirement: 'State Audit Requirements',
     },
   ];
 
   const pendingDocuments = [
     {
       id: 1,
-      type: "Training Certificate",
-      employee: "Alice Wilson",
-      uploaded: "2 hours ago",
+      type: 'Training Certificate',
+      employee: 'Alice Wilson',
+      uploaded: '2 hours ago',
     },
     {
       id: 2,
-      type: "Background Check",
-      employee: "David Brown",
-      uploaded: "1 day ago",
+      type: 'Background Check',
+      employee: 'David Brown',
+      uploaded: '1 day ago',
     },
     {
       id: 3,
-      type: "License Renewal",
-      employee: "Sarah Miller",
-      uploaded: "3 days ago",
+      type: 'License Renewal',
+      employee: 'Sarah Miller',
+      uploaded: '3 days ago',
     },
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "current":
-        return "text-green bg-accent-green";
-      case "due-soon":
-        return "text-orange bg-accent-orange";
-      case "expired":
-        return "text-coral bg-coral/10";
+      case 'current':
+        return 'text-green bg-accent-green';
+      case 'due-soon':
+        return 'text-orange bg-accent-orange';
+      case 'expired':
+        return 'text-coral bg-coral/10';
       default:
-        return "text-slate-dark bg-background";
+        return 'text-slate-dark bg-background';
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-navy">
-          HR Administration Dashboard
-        </h1>
+        <h1 className="text-3xl font-bold text-navy">Admin Dashboard</h1>
         <div className="flex space-x-2">
           <Button variant="default">
             <UserPlus className="mr-2 h-4 w-4 text-coral" />
@@ -166,7 +164,7 @@ const HRDashboard = () => {
                         record.status
                       )}`}
                     >
-                      {record.status.replace("-", " ")}
+                      {record.status.replace('-', ' ')}
                     </span>
                   </div>
                   <div className="text-sm text-slate-dark space-y-1">
@@ -177,7 +175,7 @@ const HRDashboard = () => {
                       <strong>Due Date:</strong> {record.dueDate}
                     </p>
                     <p>
-                      <strong>Required for:</strong>{" "}
+                      <strong>Required for:</strong>{' '}
                       {record.contractRequirement}
                     </p>
                   </div>

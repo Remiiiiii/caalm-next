@@ -2,6 +2,7 @@ import React from 'react';
 import Sidebar from '@/components/Sidebar';
 import MobileNavigation from '@/components/MobileNavigation';
 import DashboardHeader from '@/components/DashboardHeader';
+import QuickActions from '@/components/QuickActions';
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';
 import { Toaster } from '@/components/ui/toaster';
@@ -31,7 +32,10 @@ const layout = async ({ children }: { children: React.ReactNode }) => {
           email={currentUser.email}
           role={currentUser.role || 'manager'}
         />
-        <DashboardHeader user={currentUser} />
+        <div className="flex justify-between items-center px-4">
+          <QuickActions user={currentUser} />
+          <DashboardHeader user={currentUser} />
+        </div>
         <div className="main-content">{children}</div>
       </section>
       <Toaster />

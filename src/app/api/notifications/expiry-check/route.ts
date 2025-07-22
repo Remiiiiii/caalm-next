@@ -75,7 +75,7 @@ export async function POST(_req: NextRequest) {
   const users = new Users(client);
 
   // 1. Fetch all users with allowed roles
-  const allowedRoles = ['executive', 'manager', 'hr'];
+  const allowedRoles = ['executive', 'manager', 'admin'];
   const userList = await users.list([
     Query.or(allowedRoles.map((role) => Query.equal('role', role))),
   ]);

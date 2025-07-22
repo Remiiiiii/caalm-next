@@ -26,7 +26,8 @@ export default function AcceptInviteClient() {
             window.location.href = '/dashboard/executive';
           else if (data.role === 'manager')
             window.location.href = '/dashboard/manager';
-          else if (data.role === 'hr') window.location.href = '/dashboard/hr';
+          else if (data.role === 'admin')
+            window.location.href = '/dashboard/admin';
           else window.location.href = '/dashboard';
         } else {
           setError(data?.error || 'Failed to accept invitation.');

@@ -256,6 +256,20 @@ const UserManagement = () => {
           </Button>
         </div>
 
+        {/* Bulk Actions */}
+        {selectedUserIds.length > 0 && (
+          <div className="flex gap-2 p-3 rounded-lg border border-cyan-200/30 mb-4">
+            <Button
+              onClick={() => setShowBulkDeleteDialog(true)}
+              disabled={bulkDeleteLoading}
+              className="mb-2 flex items-center gap-2 bg-destructive/10 text-destructive border-destructive hover:bg-destructive/20"
+            >
+              <Trash className="w-4 h-4 mr-1" />
+              <span>{selectedUserIds.length}</span>
+            </Button>
+          </div>
+        )}
+
         {/* Table */}
         <div className="overflow-x-auto border rounded">
           <table className="min-w-full text-xs">
@@ -370,16 +384,6 @@ const UserManagement = () => {
             </Button>
           </div>
         </div>
-        {/* Add Delete Selected button above the table */}
-        <Button
-          variant="destructive"
-          className="mb-2 flex items-center gap-2 bg-destructive/10 text-destructive border-destructive"
-          disabled={selectedUserIds.length === 0 || bulkDeleteLoading}
-          onClick={() => setShowBulkDeleteDialog(true)}
-        >
-          <Trash className="w-4 h-4" />
-          <span>{selectedUserIds.length}</span>
-        </Button>
       </CardContent>
       {/* Edit User Modal */}
       <Dialog open={!!editUser} onOpenChange={closeEditModal}>
@@ -411,6 +415,9 @@ const UserManagement = () => {
                 <option value="behavioralhealth">Behavioral Health</option>
                 <option value="finance">Finance</option>
                 <option value="operations">Operations</option>
+                <option value="administration">Administration</option>
+                <option value="c-suite">C-Suite</option>
+                <option value="managerial">Managerial</option>
               </select>
             </div>
             <div>
@@ -424,7 +431,7 @@ const UserManagement = () => {
               >
                 <option value="executive">Executive</option>
                 <option value="manager">Manager</option>
-                <option value="hr">HR</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
             {editError && (

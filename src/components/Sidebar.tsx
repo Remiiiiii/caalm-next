@@ -9,7 +9,7 @@ interface Props {
   fullName: string;
   avatar: string;
   email: string;
-  role: 'executive' | 'hr' | 'manager';
+  role: 'executive' | 'admin' | 'manager';
 }
 
 const Sidebar = ({ fullName, avatar, email, role }: Props) => {
@@ -30,10 +30,10 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
           roles: ['manager'],
         },
         {
-          name: 'HR',
+          name: 'Admin',
           icon: '/assets/icons/dashboard.svg',
-          url: '/dashboard/hr',
-          roles: ['hr'],
+          url: '/dashboard/admin',
+          roles: ['admin'],
         },
       ],
     },
@@ -44,13 +44,13 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
           name: 'All Contracts',
           icon: '/assets/icons/documents.svg',
           url: '/contracts',
-          roles: ['executive', 'manager', 'hr'],
+          roles: ['executive', 'manager', 'admin'],
         },
         {
           name: 'My Department Contracts',
           icon: '/assets/icons/documents.svg',
           url: '/contracts/department',
-          roles: ['manager', 'hr'],
+          roles: ['manager', 'admin'],
         },
         {
           name: 'Proposals & Approvals',
@@ -67,25 +67,25 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
           name: 'Uploads',
           icon: '/assets/icons/uploads.svg',
           url: '/uploads', // This should match the [type] param
-          roles: ['executive', 'manager', 'hr'],
+          roles: ['executive', 'manager', 'admin'],
         },
         {
           name: 'Images',
           icon: '/assets/icons/images.svg',
           url: '/images',
-          roles: ['executive', 'manager', 'hr'],
+          roles: ['executive', 'manager', 'admin'],
         },
         {
           name: 'Media',
           icon: '/assets/icons/media.svg',
           url: '/media',
-          roles: ['executive', 'manager', 'hr'],
+          roles: ['executive', 'manager', 'admin'],
         },
         {
           name: 'Others',
           icon: '/assets/icons/others.svg',
           url: '/others',
-          roles: ['executive', 'manager', 'hr'],
+          roles: ['executive', 'manager', 'admin'],
         },
       ],
     },
@@ -96,7 +96,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
           name: 'Training & Certifications',
           icon: '/assets/icons/calendar.svg',
           url: '/compliance/training',
-          roles: ['hr'],
+          roles: ['admin'],
         },
         {
           name: 'Compliance Status',

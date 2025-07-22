@@ -60,7 +60,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
       case 'manager':
         return 'Manager';
       case 'hr_admin':
-        return 'HR Administrator';
+        return 'Admin';
       default:
         return role;
     }
