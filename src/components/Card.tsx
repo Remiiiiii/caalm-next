@@ -4,10 +4,10 @@
 import { Models } from 'node-appwrite';
 import React, { useEffect, useState } from 'react';
 import Thumbnail from './Thumbnail';
-import { convertFileSize, formatDateTime } from '@/lib/utils';
+import { convertFileSize } from '@/lib/utils';
+import FormattedDateTime from './FormattedDateTime';
 import { FormattedDate } from './FormattedDateTime';
 import ActionDropdown from './ActionDropdown';
-import { formatDepartmentName, type Department } from '../../constants';
 
 // Map contract status to badge color and label
 const statusBadge = (status: string) => {
@@ -44,30 +44,19 @@ interface CardProps {
   file: Models.Document;
   status?: string;
   expirationDate?: string;
-  department?: Department;
 }
 
-const Card = ({ file, status, expirationDate, department }: CardProps) => {
+const Card = ({ file, status, expirationDate }: CardProps) => {
   const [contractStatus, setContractStatus] = useState<string | undefined>(
     status || file.status
   );
   const [contractExpiryDate, setContractExpiryDate] = useState<
     string | undefined
   >(expirationDate || file.contractExpiryDate);
-  const [contractDepartment, setContractDepartment] = useState<
-    Department | undefined
-  >(department || file.department);
 
   useEffect(() => {
-    // Only fetch if we don't have the data and contractId exists
-    if (
-      !status &&
-      !file.status &&
-      !expirationDate &&
-      file.contractId &&
-      !contractStatus &&
-      !contractExpiryDate
-    ) {
+    // If status is not present but contractId exists, fetch the contract status
+    if (!status && !file.status && !expirationDate && file.contractId) {
       (async () => {
         // Dynamically import to avoid SSR issues
         const { getContracts } = await import('@/lib/actions/file.actions');
@@ -85,20 +74,9 @@ const Card = ({ file, status, expirationDate, department }: CardProps) => {
         if (contract && contract.contractExpiryDate) {
           setContractExpiryDate(contract.contractExpiryDate);
         }
-
-        if (contract && contract.department) {
-          setContractDepartment(contract.department);
-        }
       })();
     }
-  }, [
-    file.contractId,
-    status,
-    file.status,
-    expirationDate,
-    contractStatus,
-    contractExpiryDate,
-  ]);
+  }, [file.contractId, status, file.status, expirationDate]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent the default link behavior - we don't want to open files in new tabs anymore
@@ -126,10 +104,12 @@ const Card = ({ file, status, expirationDate, department }: CardProps) => {
         <p className="subtitle-2 line-clamp-1">{file.name}</p>
         {contractStatus && statusBadge(contractStatus)}
         <div className="flex flex-col gap-1">
-          <div className="flex">
-            <span className="body-2 text-slate-700">
-              Uploaded on: {formatDateTime(file.$createdAt)}
-            </span>
+          <div className="flex flex-row gap-2">
+            <p className="body-2 text-slate-700">Uploaded on:</p>
+            <FormattedDateTime
+              date={file.$createdAt}
+              className="body-2 text-slate-700"
+            />
           </div>
           {contractExpiryDate && (
             <div className="flex flex-row gap-2">
@@ -138,14 +118,6 @@ const Card = ({ file, status, expirationDate, department }: CardProps) => {
                 date={contractExpiryDate}
                 className="body-2 text-slate-700"
               />
-            </div>
-          )}
-          {contractDepartment && (
-            <div className="flex flex-row gap-2">
-              <p className="body-2 text-slate-700">Department:</p>
-              <span className="body-2 text-slate-700 font-medium">
-                {formatDepartmentName(contractDepartment)}
-              </span>
             </div>
           )}
         </div>
