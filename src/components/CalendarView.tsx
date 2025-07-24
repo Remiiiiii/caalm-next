@@ -210,11 +210,36 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   const getEventTypeConfig = (type: LocalCalendarEvent['type']) => {
     const configs = {
-      contract: { label: 'Contract', color: 'bg-blue-500', icon: FileText },
-      deadline: { label: 'Deadline', color: 'bg-red-500', icon: Clock },
-      meeting: { label: 'Meeting', color: 'bg-green-500', icon: Users },
-      review: { label: 'Review', color: 'bg-yellow-500', icon: FileText },
-      audit: { label: 'Audit', color: 'bg-purple-500', icon: FileText },
+      contract: {
+        label: 'Contract',
+        color: 'bg-blue-500',
+        borderColor: '#737373',
+        icon: FileText,
+      },
+      deadline: {
+        label: 'Deadline',
+        color: 'bg-red-500',
+        borderColor: '#FF7474',
+        icon: Clock,
+      },
+      meeting: {
+        label: 'Meeting',
+        color: 'bg-green-500',
+        borderColor: '#DB83ED',
+        icon: Users,
+      },
+      review: {
+        label: 'Review',
+        color: 'bg-yellow-500',
+        borderColor: '#5558F9',
+        icon: FileText,
+      },
+      audit: {
+        label: 'Audit',
+        color: 'bg-purple-500',
+        borderColor: '#F9AB72',
+        icon: FileText,
+      },
     };
     return configs[type];
   };
@@ -402,7 +427,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                         return (
                           <div
                             key={event.id}
-                            className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer"
+                            className="flex items-start gap-3 p-3 bg-white border-l-4 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                            style={{ borderLeftColor: config.borderColor }}
                             onClick={() => onEventClick?.(event)}
                           >
                             <div
