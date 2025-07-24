@@ -124,6 +124,72 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       contract: 'Municipal Services Contract',
       time: '1 day ago',
     },
+    {
+      id: 5,
+      action: 'Budget review completed',
+      contract: 'Q4 Financial Report',
+      time: '1 day ago',
+    },
+    {
+      id: 6,
+      action: 'Vendor agreement signed',
+      user: 'Tech Solutions Inc.',
+      time: '2 days ago',
+    },
+    {
+      id: 7,
+      action: 'Compliance audit scheduled',
+      contract: 'Annual Security Review',
+      time: '2 days ago',
+    },
+    {
+      id: 8,
+      action: 'Staff training completed',
+      user: 'Sarah Martinez - HR',
+      time: '3 days ago',
+    },
+    {
+      id: 9,
+      action: 'Policy update published',
+      contract: 'Data Protection Guidelines',
+      time: '3 days ago',
+    },
+    {
+      id: 10,
+      action: 'Equipment procurement approved',
+      user: 'IT Department',
+      time: '4 days ago',
+    },
+    {
+      id: 11,
+      action: 'Client meeting scheduled',
+      contract: 'Strategic Partnership Discussion',
+      time: '4 days ago',
+    },
+    {
+      id: 12,
+      action: 'Performance review submitted',
+      user: 'Michael Chen - Operations',
+      time: '5 days ago',
+    },
+    {
+      id: 13,
+      action: 'Risk assessment completed',
+      contract: 'Cybersecurity Evaluation',
+      time: '5 days ago',
+    },
+    {
+      id: 14,
+      action: 'New department created',
+      user: 'Innovation Team',
+      time: '1 week ago',
+    },
+    {
+      id: 15,
+      action: 'Annual report finalized',
+      contract: '2024 Strategic Overview',
+      time: '1 week ago',
+    },
   ];
 
   const pendingApprovals = [
@@ -427,41 +493,43 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       {/* Dashboard Content */}
       <div className="relative z-10 py-8">
         <div className="space-y-6">
-          <div className="grid lg:grid-cols-3 gap-6">
+          <div className="grid lg:grid-cols-6 gap-6">
             {/* Recent Activity */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-1">
-              <CardHeader>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-3">
+              <CardHeader className="pb-3">
                 <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
                   Recent Activity
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div
-                      key={activity.id}
-                      className="flex justify-between items-start border-b border-border pb-3 last:border-b-0"
-                    >
-                      <div>
-                        <p className="font-medium text-navy">
-                          {activity.action}
-                        </p>
-                        <p className="text-sm text-slate-dark">
-                          {activity.contract || activity.user}
-                        </p>
+              <CardContent className="pt-0">
+                <div className="h-[400px] overflow-y-auto">
+                  <div className="space-y-3 py-4">
+                    {recentActivity.map((activity) => (
+                      <div
+                        key={activity.id}
+                        className="flex justify-between mr-4 items-start border-b border-border pb-2 last:border-b-0"
+                      >
+                        <div>
+                          <p className="font-medium text-navy text-sm">
+                            {activity.action}
+                          </p>
+                          <p className="text-xs text-slate-dark">
+                            {activity.contract || activity.user}
+                          </p>
+                        </div>
+                        <span className="text-xs text-slate-light">
+                          {activity.time}
+                        </span>
                       </div>
-                      <span className="text-xs text-slate-light">
-                        {activity.time}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Calendar View */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-2">
-              <CardContent className="p-6">
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-3">
+              <CardContent className="p-4">
                 <CalendarView
                   onEventClick={(event) => {
                     console.log('Event clicked:', event);
