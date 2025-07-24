@@ -468,11 +468,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   <p className="text-sm  font-medium sidebar-gradient-text">
                     {stat.title}
                   </p>
-                  <p className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                  <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
                     {isLoadingStats ? (
                       <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
                     ) : (
-                      stat.value
+                      <span>{stat.value}</span>
                     )}
                     <span className="inline-block ml-2 pb-1">
                       <stat.icon
@@ -482,7 +482,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                         )}`}
                       />
                     </span>
-                  </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -531,6 +531,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-3">
               <CardContent className="p-4">
                 <CalendarView
+                  user={user}
                   onEventClick={(event) => {
                     console.log('Event clicked:', event);
                     // TODO: Implement event details modal or navigation
@@ -541,8 +542,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   }}
                   onEventCreate={(event) => {
                     console.log('New event created:', event);
-                    // TODO: Implement event creation in backend
-                    // For now, just show a success message
+                    // Event is now automatically saved to database
                     alert(`Event "${event.title}" created successfully!`);
                   }}
                 />

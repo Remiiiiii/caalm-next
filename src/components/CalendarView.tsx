@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,12 +43,18 @@ import {
   eachDayOfInterval,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  CalendarEvent as DBCalendarEvent,
+  getCalendarEventsByMonth,
+  createCalendarEvent,
+} from '@/lib/actions/calendar.client';
+import { useToast } from '@/hooks/use-toast';
 
-// Event interface
-interface CalendarEvent {
+// Local event interface for component use
+interface LocalCalendarEvent {
   id: string;
   title: string;
-  date: Date;
+  date?: Date;
   type: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit';
   description?: string;
   participants?: string[];
@@ -58,73 +64,78 @@ interface CalendarEvent {
   endTime?: string;
 }
 
-// Mock data - replace with actual data from your backend
-const mockEvents: CalendarEvent[] = [
-  {
-    id: '1',
-    title: 'Contract Renewal',
-    date: new Date(2024, 11, 15),
-    type: 'contract',
-    description: 'Federal IT Services Contract renewal deadline',
-    contractName: 'Federal IT Services Contract',
-    amount: '$2.5M',
-    startTime: '09:00',
-    endTime: '10:30',
-  },
-  {
-    id: '2',
-    title: 'Audit Review',
-    date: new Date(2024, 11, 20),
-    type: 'audit',
-    description: 'Annual compliance audit review meeting',
-    participants: ['Legal Team', 'Finance Team'],
-    startTime: '14:00',
-    endTime: '16:00',
-  },
-  {
-    id: '3',
-    title: 'Vendor Meeting',
-    date: new Date(2024, 11, 22),
-    type: 'meeting',
-    description: 'New vendor agreement discussion',
-    participants: ['Procurement', 'Legal'],
-    startTime: '11:00',
-    endTime: '12:00',
-  },
-  {
-    id: '4',
-    title: 'Document Review',
-    date: new Date(2024, 11, 25),
-    type: 'review',
-    description: 'Review quarterly compliance documents',
-    contractName: 'State Licensing Agreement',
-    startTime: '13:00',
-    endTime: '15:00',
-  },
-];
+// Internal state interface for new event form
+interface NewEventForm {
+  title: string;
+  dateString: string; // Store as string to avoid timezone issues
+  type: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit';
+  description: string;
+  startTime: string;
+  endTime: string;
+  amount: string;
+  contractName: string;
+}
+
+// Convert database event to local event format
+const convertDBEventToLocal = (
+  dbEvent: DBCalendarEvent
+): LocalCalendarEvent => {
+  const dbDate = new Date(dbEvent.date);
+  // Create a date string in YYYY-MM-DD format to avoid timezone issues
+  const year = dbDate.getFullYear();
+  const month = String(dbDate.getMonth() + 1).padStart(2, '0');
+  const day = String(dbDate.getDate()).padStart(2, '0');
+  const dateString = `${year}-${month}-${day}`;
+
+  const normalizedDate = new Date(dateString);
+
+  return {
+    id: dbEvent.$id || '',
+    title: dbEvent.title,
+    date: normalizedDate,
+    type: dbEvent.type,
+    description: dbEvent.description,
+    participants: dbEvent.participants ? dbEvent.participants.split(', ') : [],
+    contractName: dbEvent.contractName,
+    amount: dbEvent.amount,
+    startTime: dbEvent.startTime,
+    endTime: dbEvent.endTime,
+  };
+};
 
 interface CalendarViewProps {
-  events?: CalendarEvent[];
-  onEventClick?: (event: CalendarEvent) => void;
+  events?: LocalCalendarEvent[];
+  onEventClick?: (event: LocalCalendarEvent) => void;
   onDateSelect?: (date: Date) => void;
-  onEventCreate?: (event: Omit<CalendarEvent, 'id'>) => void;
+  onEventCreate?: (event: Omit<LocalCalendarEvent, 'id'>) => void;
+  user?: {
+    $id: string;
+    fullName?: string;
+    role?: string;
+    department?: string;
+  } | null;
 }
 
 const CalendarView: React.FC<CalendarViewProps> = ({
-  events = mockEvents,
+  events = [],
   onEventClick,
   onDateSelect,
   onEventCreate,
+  user,
 }) => {
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
   );
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
-  const [newEvent, setNewEvent] = useState<Omit<CalendarEvent, 'id'>>({
+  const [dbEvents, setDbEvents] = useState<LocalCalendarEvent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [newEvent, setNewEvent] = useState<NewEventForm>({
     title: '',
-    date: new Date(),
+    dateString: '',
     type: 'meeting',
     description: '',
     startTime: '',
@@ -133,16 +144,71 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     contractName: '',
   });
 
+  // Fetch events from database
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1;
+        console.log('Fetching events for:', year, month);
+        const dbEventsData = await getCalendarEventsByMonth(year, month);
+        console.log('Database events:', dbEventsData);
+        const localEvents = dbEventsData.map(convertDBEventToLocal);
+        console.log('Local events:', localEvents);
+        setDbEvents(localEvents);
+      } catch (error) {
+        console.error('Error fetching calendar events:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, [currentMonth]);
+
+  // Combine database events with prop events
+  const allEvents = [...dbEvents, ...events];
+
   const handleDateSelect = (date: Date | undefined) => {
+    // Don't allow selecting past dates
+    if (date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (date < today) {
+        toast({
+          title: 'Error',
+          description: 'Cannot select dates in the past',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setSelectedDate(date);
     onDateSelect?.(date!);
+
+    // Pre-fill the date in the new event form if modal is open
+    if (date && isAddEventOpen) {
+      // Create a date string in YYYY-MM-DD format to avoid timezone issues
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+
+      setNewEvent((prev) => ({
+        ...prev,
+        dateString: dateString,
+      }));
+    }
   };
 
   const handleMonthChange = (month: Date) => {
     setCurrentMonth(month);
   };
 
-  const getEventTypeConfig = (type: CalendarEvent['type']) => {
+  const getEventTypeConfig = (type: LocalCalendarEvent['type']) => {
     const configs = {
       contract: { label: 'Contract', color: 'bg-blue-500', icon: FileText },
       deadline: { label: 'Deadline', color: 'bg-red-500', icon: Clock },
@@ -153,20 +219,122 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return configs[type];
   };
 
-  const handleAddEvent = () => {
-    if (newEvent.title.trim()) {
-      onEventCreate?.(newEvent);
-      setNewEvent({
-        title: '',
-        date: new Date(),
-        type: 'meeting',
-        description: '',
-        startTime: '',
-        endTime: '',
-        amount: '',
-        contractName: '',
+  const handleAddEvent = async () => {
+    if (!newEvent.title.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter an event title',
+        variant: 'destructive',
       });
-      setIsAddEventOpen(false);
+      return;
+    }
+
+    if (!newEvent.dateString) {
+      toast({
+        title: 'Error',
+        description: 'Please select a date for the event',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate that the selected date is not in the past
+    const selectedDate = new Date(newEvent.dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      toast({
+        title: 'Error',
+        description: 'Cannot create events for dates in the past',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'User information not available. Please refresh the page.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCreatingEvent(true);
+    try {
+      // Create event in database
+      const eventData = {
+        title: newEvent.title.trim(),
+        date: `${newEvent.dateString}T00:00:00.000Z`,
+        type: newEvent.type,
+        description: newEvent.description?.trim() || '',
+        contractName: newEvent.contractName?.trim() || '',
+        amount: newEvent.amount?.trim() || '',
+        startTime: newEvent.startTime || '',
+        endTime: newEvent.endTime || '',
+        participants: '',
+        createdBy: user.fullName || user.$id,
+      };
+
+      const createdEvent = await createCalendarEvent(eventData);
+
+      if (createdEvent) {
+        // Call the callback with the correct format
+        const eventForCallback: Omit<LocalCalendarEvent, 'id'> = {
+          title: newEvent.title,
+          date: new Date(newEvent.dateString),
+          type: newEvent.type,
+          description: newEvent.description,
+          startTime: newEvent.startTime,
+          endTime: newEvent.endTime,
+          amount: newEvent.amount,
+          contractName: newEvent.contractName,
+        };
+        onEventCreate?.(eventForCallback);
+
+        // Show success toast
+        toast({
+          title: 'Success',
+          description: `Event "${newEvent.title}" created successfully!`,
+        });
+
+        // Reset form
+        setNewEvent({
+          title: '',
+          dateString: '',
+          type: 'meeting',
+          description: '',
+          startTime: '',
+          endTime: '',
+          amount: '',
+          contractName: '',
+        });
+        setIsAddEventOpen(false);
+
+        // Refresh events
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1;
+        const dbEventsData = await getCalendarEventsByMonth(year, month);
+        const localEvents = dbEventsData.map(convertDBEventToLocal);
+        setDbEvents(localEvents);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to create event. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error creating calendar event:', error);
+      toast({
+        title: 'Error',
+        description:
+          'Error creating event. Please check your connection and try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingEvent(false);
     }
   };
 
@@ -202,8 +370,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         <div className="h-[280px] overflow-y-auto border rounded-lg w-full">
           <div className="space-y-0">
             {weekDays.map((day) => {
-              const dayEvents = events.filter((event) =>
-                isSameDay(event.date, day)
+              const dayEvents = allEvents.filter(
+                (event) => event.date && isSameDay(event.date, day)
               );
               const isSelected = selectedDate && isSameDay(day, selectedDate);
 
@@ -350,13 +518,25 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         <div className="flex justify-center">
           <Card className="bg-white/95 backdrop-blur border border-white/60 shadow-xl w-full">
             <CardContent className="pl-0 pr-2 py-3">
+              {loading && (
+                <div className="flex justify-center items-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                </div>
+              )}
               {viewMode === 'month' ? (
                 <div className="[&_.rdp-caption]:!hidden [&_.rdp-nav]:!hidden">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={handleDateSelect}
+                    month={currentMonth}
                     onMonthChange={handleMonthChange}
+                    disabled={(date) => {
+                      // Disable dates prior to today
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today;
+                    }}
                     className="w-full"
                     classNames={{
                       months:
@@ -434,7 +614,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                     onValueChange={(value) =>
                       setNewEvent({
                         ...newEvent,
-                        type: value as CalendarEvent['type'],
+                        type: value as LocalCalendarEvent['type'],
                       })
                     }
                   >
@@ -458,13 +638,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   <Input
                     id="date"
                     type="date"
-                    value={format(newEvent.date, 'yyyy-MM-dd')}
-                    onChange={(e) =>
+                    value={newEvent.dateString}
+                    min={(() => {
+                      const today = new Date();
+                      const year = today.getFullYear();
+                      const month = String(today.getMonth() + 1).padStart(
+                        2,
+                        '0'
+                      );
+                      const day = String(today.getDate()).padStart(2, '0');
+                      return `${year}-${month}-${day}`;
+                    })()}
+                    onChange={(e) => {
                       setNewEvent({
                         ...newEvent,
-                        date: new Date(e.target.value),
-                      })
-                    }
+                        dateString: e.target.value,
+                      });
+                    }}
                   />
                 </div>
                 <div>
@@ -540,10 +730,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 </Button>
                 <Button
                   onClick={handleAddEvent}
-                  disabled={!newEvent.title.trim()}
-                  className="bg-blue-500 hover:bg-blue-600"
+                  disabled={!newEvent.title.trim() || creatingEvent}
+                  className="bg-blue-500 hover:bg-blue-600 text-slate-500 "
                 >
-                  Create Event
+                  {creatingEvent ? 'Creating...' : 'Create Event'}
                 </Button>
               </div>
             </div>
