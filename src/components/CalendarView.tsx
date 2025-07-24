@@ -584,20 +584,27 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           <DialogTrigger asChild>
             <Button
               size="lg"
-              className="w-full max-w-md bg-blue-500 hover:bg-blue-600 text-slate-700 font-medium py-3 px-6 shadow-lg"
+              className="w-full max-w-md bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 font-medium py-3 px-6"
             >
               <Plus className="h-5 w-5 mr-3" />
               Add Event
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
             <DialogHeader>
-              <DialogTitle>Add New Event</DialogTitle>
+              <DialogTitle className="sidebar-gradient-text">
+                Add New Event
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="title">Event Title</Label>
+                  <Label
+                    htmlFor="title"
+                    className="block text-sm font-medium text-slate-700 mb-1"
+                  >
+                    Event Title
+                  </Label>
                   <Input
                     id="title"
                     value={newEvent.title}
@@ -608,7 +615,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="type">Event Type</Label>
+                  <Label
+                    htmlFor="type"
+                    className="block text-sm font-medium text-slate-700 mb-1"
+                  >
+                    Event Type
+                  </Label>
                   <Select
                     value={newEvent.type}
                     onValueChange={(value) =>
@@ -634,7 +646,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="date">Date</Label>
+                  <Label
+                    htmlFor="date"
+                    className="block text-sm font-medium text-slate-700 mb-1"
+                  >
+                    Date
+                  </Label>
                   <Input
                     id="date"
                     type="date"
@@ -655,10 +672,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                         dateString: e.target.value,
                       });
                     }}
+                    className="bg-white/30 backdrop-blur border border-white/40 shadow-md"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="amount">Amount (Optional)</Label>
+                  <Label
+                    htmlFor="amount"
+                    className="block text-sm font-medium text-slate-700 mb-1"
+                  >
+                    Amount (Optional)
+                  </Label>
                   <Input
                     id="amount"
                     value={newEvent.amount || ''}
@@ -666,13 +689,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                       setNewEvent({ ...newEvent, amount: e.target.value })
                     }
                     placeholder="Enter amount"
+                    className="bg-white/30 backdrop-blur border border-white/40 shadow-md"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="startTime">Start Time</Label>
+                  <Label
+                    htmlFor="startTime"
+                    className="block text-sm font-medium text-slate-700 mb-1"
+                  >
+                    Start Time
+                  </Label>
                   <Input
                     id="startTime"
                     type="time"
@@ -680,10 +709,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                     onChange={(e) =>
                       setNewEvent({ ...newEvent, startTime: e.target.value })
                     }
+                    className="bg-white/30 backdrop-blur border border-white/40 shadow-md"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="endTime">End Time</Label>
+                  <Label
+                    htmlFor="endTime"
+                    className="block text-sm font-medium text-slate-700 mb-1"
+                  >
+                    End Time
+                  </Label>
                   <Input
                     id="endTime"
                     type="time"
@@ -691,12 +726,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                     onChange={(e) =>
                       setNewEvent({ ...newEvent, endTime: e.target.value })
                     }
+                    className="bg-white/30 backdrop-blur border border-white/40 shadow-md"
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="contractName">Contract Name (Optional)</Label>
+                <Label
+                  htmlFor="contractName"
+                  className="block text-sm font-medium text-slate-700 mb-1"
+                >
+                  Contract Name (Optional)
+                </Label>
                 <Input
                   id="contractName"
                   value={newEvent.contractName || ''}
@@ -704,11 +745,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                     setNewEvent({ ...newEvent, contractName: e.target.value })
                   }
                   placeholder="Enter contract name"
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md"
                 />
               </div>
 
               <div>
-                <Label htmlFor="description">Description</Label>
+                <Label
+                  htmlFor="description"
+                  className="block text-sm font-medium text-slate-700 mb-1"
+                >
+                  Description
+                </Label>
                 <textarea
                   id="description"
                   value={newEvent.description}
@@ -717,7 +764,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   }
                   placeholder="Enter event description"
                   rows={3}
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#03afbf] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50  backdrop-blur  shadow-md"
                 />
               </div>
 
@@ -725,13 +772,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 <Button
                   variant="outline"
                   onClick={() => setIsAddEventOpen(false)}
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleAddEvent}
                   disabled={!newEvent.title.trim() || creatingEvent}
-                  className="bg-blue-500 hover:bg-blue-600 text-slate-500 "
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
                   {creatingEvent ? 'Creating...' : 'Create Event'}
                 </Button>

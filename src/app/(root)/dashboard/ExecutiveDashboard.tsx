@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
@@ -72,6 +73,7 @@ interface ExecutiveDashboardProps {
 }
 
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
+  const { toast } = useToast();
   const [stats, setStats] = useState([
     {
       title: 'Total Contracts',
@@ -358,7 +360,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteForm.selectedUserId) {
-      alert('Please select a user to invite');
+      toast({
+        title: 'Error',
+        description: 'Please select a user to invite',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -369,7 +375,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       (u) => u.$id === inviteForm.selectedUserId
     );
     if (!selectedUser) {
-      alert('Selected user not found');
+      toast({
+        title: 'Error',
+        description: 'Selected user not found',
+        variant: 'destructive',
+      });
       setLoading(false);
       return;
     }
@@ -543,7 +553,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   onEventCreate={(event) => {
                     console.log('New event created:', event);
                     // Event is now automatically saved to database
-                    alert(`Event "${event.title}" created successfully!`);
+                    toast({
+                      title: 'Success',
+                      description: `Event "${event.title}" created successfully!`,
+                    });
                   }}
                 />
               </CardContent>
