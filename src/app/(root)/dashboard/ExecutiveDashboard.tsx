@@ -20,6 +20,7 @@ import dynamic from 'next/dynamic';
 import ActionDropdown from '@/components/ActionDropdown';
 import FormattedDateTime from '@/components/FormattedDateTime';
 import Thumbnail from '@/components/Thumbnail';
+import CalendarView from '@/components/CalendarView';
 import {
   getFiles,
   getTotalContractsCount,
@@ -94,7 +95,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       title: 'Compliance Rate',
       value: '94%',
       icon: CheckCircle,
-      color: 'text-[#3DD9B3]',
+      color: 'text-[#03AFBF]',
     },
   ]);
 
@@ -251,7 +252,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             title: 'Compliance Rate',
             value: '95%',
             icon: CheckCircle,
-            color: 'text-[#4CAF50]',
+            color: 'text-[#03AFBF]',
           },
         ];
 
@@ -426,9 +427,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       {/* Dashboard Content */}
       <div className="relative z-10 py-8">
         <div className="space-y-6">
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid lg:grid-cols-3 gap-6">
             {/* Recent Activity */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-1">
               <CardHeader>
                 <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
                   Recent Activity
@@ -458,17 +459,25 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               </CardContent>
             </Card>
 
-            {/* Calendar View - Placeholder for future implementation */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                  Calendar View
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center h-64 text-slate-500">
-                  <p>Calendar feature coming soon...</p>
-                </div>
+            {/* Calendar View */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-2">
+              <CardContent className="p-6">
+                <CalendarView
+                  onEventClick={(event) => {
+                    console.log('Event clicked:', event);
+                    // TODO: Implement event details modal or navigation
+                  }}
+                  onDateSelect={(date) => {
+                    console.log('Date selected:', date);
+                    // TODO: Implement date-specific actions
+                  }}
+                  onEventCreate={(event) => {
+                    console.log('New event created:', event);
+                    // TODO: Implement event creation in backend
+                    // For now, just show a success message
+                    alert(`Event "${event.title}" created successfully!`);
+                  }}
+                />
               </CardContent>
             </Card>
           </div>
