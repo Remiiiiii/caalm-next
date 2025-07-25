@@ -110,7 +110,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     },
     {
       id: 2,
-      action: 'New user registration',
+      action: 'New user invitation',
       user: 'Alice Johnson - Accounting',
       time: '4 hours ago',
     },
@@ -122,7 +122,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     },
     {
       id: 4,
-      action: 'Deadline alert triggered',
+      action: 'Contract expiration notification',
       contract: 'Municipal Services Contract',
       time: '1 day ago',
     },
@@ -152,27 +152,27 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     },
     {
       id: 9,
-      action: 'Policy update published',
+      action: 'Policy update uploaded',
       contract: 'Data Protection Guidelines',
       time: '3 days ago',
     },
     {
       id: 10,
-      action: 'Equipment procurement approved',
-      user: 'IT Department',
+      action: 'Vendor meeting scheduled',
+      contract: 'Strategic Partnership Discussion',
       time: '4 days ago',
     },
     {
       id: 11,
-      action: 'Client meeting scheduled',
+      action: 'Vendor meeting scheduled',
       contract: 'Strategic Partnership Discussion',
       time: '4 days ago',
     },
     {
       id: 12,
-      action: 'Performance review submitted',
-      user: 'Michael Chen - Operations',
-      time: '5 days ago',
+      action: 'Department meeting scheduled',
+      user: 'IT Department',
+      time: '4 days ago',
     },
     {
       id: 13,
@@ -182,8 +182,8 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     },
     {
       id: 14,
-      action: 'New department created',
-      user: 'Innovation Team',
+      action: 'New contract uploaded',
+      department: 'Child Welfare',
       time: '1 week ago',
     },
     {
@@ -192,14 +192,35 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       contract: '2024 Strategic Overview',
       time: '1 week ago',
     },
+    {
+      id: 16,
+      action: 'Performance review submitted',
+      user: 'Michael Chen - Admin',
+      time: '5 days ago',
+    },
+    {
+      id: 17,
+      action: 'New event added',
+      eventType: [
+        'Meeting',
+        'Contract',
+        'Audit',
+        'License',
+        'Training',
+        'Review',
+        'External Engagement',
+      ],
+      contract: 'State Licensing Agreement',
+      time: '6 hours ago',
+    },
   ];
 
   const pendingApprovals = [
     {
       id: 1,
       type: 'User Registration',
-      requester: 'David Wilson - Operations',
-      department: 'Operations',
+      requester: 'David Wilson - Admin',
+      department: 'Admin',
     },
     {
       id: 2,
@@ -251,10 +272,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const isFetchingRef = useRef(false);
 
   // Simple cache check
-  const isCacheValid = () => {
+  const isCacheValid = useCallback(() => {
     if (!cachedData) return false;
     return Date.now() - cachedData.lastFetch < CACHE_DURATION;
-  };
+  }, [cachedData, CACHE_DURATION]);
 
   // Single optimized data fetch
   const fetchAllData = useCallback(
@@ -349,7 +370,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         isFetchingRef.current = false;
       }
     },
-    [orgId] // Only depend on orgId, not stats or cachedData
+    [orgId, isCacheValid, cachedData] // Only depend on orgId, not stats or cachedData
   );
 
   // Initial data fetch
@@ -880,8 +901,8 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     <option value="childwelfare">Child Welfare</option>
                     <option value="behavioralhealth">Behavioral Health</option>
                     <option value="finance">Finance</option>
-                    <option value="operations">Operations</option>
-                    <option value="administration">Administration</option>
+                    <option value="admin">Administration</option>
+                    <option value="admin">Administration</option>
                     <option value="c-suite">C-Suite</option>
                     <option value="managerial">Managerial</option>
                   </select>

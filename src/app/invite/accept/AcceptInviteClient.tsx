@@ -7,9 +7,9 @@ import OTPModal from '@/components/OTPModal';
 export default function AcceptInviteClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-  const email = searchParams.get('email');
-  const accountId = searchParams.get('accountId');
+  const token = searchParams?.get('token');
+  const email = searchParams?.get('email');
+  const accountId = searchParams?.get('accountId');
   const [error, setError] = useState('');
 
   useEffect(() => {

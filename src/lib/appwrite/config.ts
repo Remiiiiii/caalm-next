@@ -18,6 +18,9 @@ export const appwriteConfig = {
     process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_EVENTS_COLLECTION ||
     'calendar_events',
 
+  recentActivityCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_RECENT_ACTIVITIES_COLLECTION || '',
+
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET || '',
 
   secretKey: process.env.NEXT_APPWRITE_KEY || '',
