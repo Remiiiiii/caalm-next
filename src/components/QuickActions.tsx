@@ -1,16 +1,23 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar, TrendingUp } from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
+import ReportGenerator from '@/components/ReportGenerator';
 import { Models } from 'appwrite';
 
 interface QuickActionsProps {
-  user?: Models.User<Models.Preferences> | null;
+  user?:
+    | (Models.User<Models.Preferences> & {
+        department?: string;
+      })
+    | null;
 }
 
 const QuickActions = ({ user }: QuickActionsProps) => {
+  const [reportOpen, setReportOpen] = useState(false);
+
   useEffect(() => {
     // Auto refresh every 30 minutes (30 * 60 * 1000 = 1,800,000 ms)
     const interval = setInterval(() => {
@@ -34,10 +41,19 @@ const QuickActions = ({ user }: QuickActionsProps) => {
         <Calendar className="h-4 w-4" />
         Schedule Review
       </Button>
-      <Button className="primary-btn h-10 gap-2 px-4 shadow-drop-1 text-sm">
+      <Button
+        className="primary-btn h-10 gap-2 px-4 shadow-drop-1 text-sm"
+        onClick={() => setReportOpen(true)}
+      >
         <TrendingUp className="h-4 w-4" />
         Generate Report
       </Button>
+      <ReportGenerator
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        department={user?.department}
+        user={user}
+      />
     </div>
   );
 };

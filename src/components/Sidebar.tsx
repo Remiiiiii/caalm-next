@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import React from 'react';
+import React, { Fragment } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
@@ -297,8 +297,8 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                 <div className="relative ml-3">
                   <ul className="flex flex-col gap-1 relative z-10">
                     {sectionItems.map(({ url, name, subItems }, index) => (
-                      <>
-                        <li key={name} className="relative flex items-center">
+                      <Fragment key={name}>
+                        <li className="relative flex items-center">
                           {/* Main vertical line for all sections */}
                           {index < sectionItems.length + 1 && (
                             <span
@@ -479,7 +479,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                             ))}
                           </div>
                         )}
-                      </>
+                      </Fragment>
                     ))}
                   </ul>
                 </div>

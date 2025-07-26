@@ -41,6 +41,12 @@ const UserManagement = () => {
     pollingInterval: 15000, // 15 seconds
   });
 
+  // Ensure users have the proper type
+  const typedUsers = users as (AppUser & {
+    $id: string;
+    department?: string;
+  })[];
+
   // User edit handlers
   const closeEditModal = () => {
     setEditUser(null);
@@ -234,7 +240,7 @@ const UserManagement = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {users.map((user) => (
+                      {typedUsers.map((user) => (
                         <tr key={user.$id} className="hover:bg-gray-50">
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center">

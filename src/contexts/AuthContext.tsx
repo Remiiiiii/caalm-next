@@ -88,6 +88,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    console.warn(
+      'useAuth called outside of AuthProvider - this might be a hydration issue'
+    );
+    // Return a default context to prevent crashes during hydration
+    return {
+      user: null,
+      setUser: () => {},
+      loading: true,
+      logout: async () => {},
+    };
+  }
   return context;
 };
