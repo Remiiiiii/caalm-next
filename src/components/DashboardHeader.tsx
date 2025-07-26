@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Bell, Mail, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -25,14 +25,14 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchUnread = async () => {
+  const fetchUnread = useCallback(async () => {
     // Fetch unread notifications for the current user
     try {
       if (!user) return;
       const count = await getUnreadNotificationsCount(user.$id);
       setUnreadCount(count);
     } catch {}
-  };
+  }, [user]);
 
   useEffect(() => {
     // Initial fetch
@@ -42,7 +42,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
     const interval = setInterval(fetchUnread, 300000); // Poll every 5 minutes
 
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, fetchUnread]);
 
   // Refresh count when notification center is closed
   const handleNotificationClose = () => {

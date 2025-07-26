@@ -133,28 +133,48 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
       header: 'Reports & Analytics',
       items: [
         {
-          name: 'Operations',
+          name: 'Administration',
           icon: '/assets/icons/chart.svg',
           url: '/analytics',
-          roles: ['executive', 'manager'],
+          roles: ['executive', 'admin'],
         },
         {
-          name: 'Finance',
+          name: 'C-Suite',
           icon: '/assets/icons/chart.svg',
           url: '/analytics',
-          roles: ['executive', 'manager'],
+          roles: ['executive'],
         },
         {
-          name: 'Child Welfare',
-          icon: '/assets/icons/chart.svg',
+          name: 'Management',
           url: '/analytics',
           roles: ['executive', 'manager'],
-        },
-        {
-          name: 'Behavioral Health',
-          icon: '/assets/icons/chart.svg',
-          url: '/analytics',
-          roles: ['executive', 'manager'],
+          subItems: [
+            {
+              name: 'CFS',
+              url: '/analytics/cfs',
+              roles: ['executive', 'manager'],
+            },
+            {
+              name: 'Behavioral Health',
+              url: '/analytics/behavioral-health',
+              roles: ['executive', 'manager'],
+            },
+            {
+              name: 'Child Welfare',
+              url: '/analytics/child-welfare',
+              roles: ['executive', 'manager'],
+            },
+            {
+              name: 'Clinic',
+              url: '/analytics/clinic',
+              roles: ['executive', 'manager'],
+            },
+            {
+              name: 'Residential',
+              url: '/analytics/residential',
+              roles: ['executive', 'manager'],
+            },
+          ],
         },
       ],
     },
@@ -204,7 +224,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
               <div key={section.header} className="mb-4">
                 <li
                   className={cn(
-                    'sidebar-section-header  mb-0  lg:mb-1 font-bold text-lg lg:text-xl'
+                    'sidebar-section-header mb-0  lg:mb-1 font-bold text-lg lg:text-xl'
                   )}
                 >
                   <span className="flex items-center gap-2">
@@ -275,162 +295,191 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                   </span>
                 </li>
                 <div className="relative ml-3">
-                  <span
-                    className="absolute left-0 top-0 h-full w-4 border-l border-[#BFBFBF]"
-                    style={{ zIndex: 0 }}
-                  ></span>
                   <ul className="flex flex-col gap-1 relative z-10">
-                    {sectionItems.map(({ url, name }) => (
-                      <li key={name} className="relative flex items-center">
-                        <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
-                        <Link
-                          href={url}
-                          className="ml-4 lg:w-full flex items-start gap-3"
-                        >
-                          {/* Render only the corresponding icon for each item, no generic icon */}
-                          {section.header === 'Dashboard' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/department.svg"
-                                alt="department"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
+                    {sectionItems.map(({ url, name, subItems }, index) => (
+                      <>
+                        <li key={name} className="relative flex items-center">
+                          {/* Main vertical line for all sections */}
+                          {index < sectionItems.length + 1 && (
+                            <span
+                              className="absolute left-0 top-0 h-[24px] w-4 border-l border-[#BFBFBF]"
+                              style={{ zIndex: 0 }}
+                            ></span>
                           )}
-                          {name === 'All Contracts' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/all-contracts.svg"
-                                alt="all-contracts"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Proposals & Approvals' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/proposal-approval.svg"
-                                alt="proposal-approval"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Uploads' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/uploads.svg"
-                                alt="upload"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Images' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/images.svg"
-                                alt="images"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Media' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/media.svg"
-                                alt="video"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Others' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/others.svg"
-                                alt="others"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Compliance Status' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/compliance-status.svg"
-                                alt="compliance-status"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Audit Logs' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/audit-logs.svg"
-                                alt="audit-logs"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'User Management' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/user-management.svg"
-                                alt="team"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Operations' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/department.svg"
-                                alt="reports-analytics"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Finance' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/department.svg"
-                                alt="reports-analytics"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Child Welfare' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/department.svg"
-                                alt="reports-analytics"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          {name === 'Behavioral Health' && (
-                            <span className="gap-1">
-                              <Image
-                                src="/assets/icons/department.svg"
-                                alt="reports-analytics"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
-                          )}
-                          <p className="text-sm text-slate-700">{name}</p>
-                        </Link>
-                      </li>
+                          <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
+                          <Link
+                            href={url}
+                            className="ml-4 lg:w-full flex items-start gap-3"
+                          >
+                            {/* Render only the corresponding icon for each item, no generic icon */}
+                            {section.header === 'Dashboard' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="department"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'All Contracts' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/all-contracts.svg"
+                                  alt="all-contracts"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Proposals & Approvals' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/proposal-approval.svg"
+                                  alt="proposal-approval"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Uploads' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/uploads.svg"
+                                  alt="upload"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Images' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/images.svg"
+                                  alt="images"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Media' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/media.svg"
+                                  alt="video"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Others' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/others.svg"
+                                  alt="others"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Compliance Status' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/compliance-status.svg"
+                                  alt="compliance-status"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Audit Logs' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/audit-logs.svg"
+                                  alt="audit-logs"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'User Management' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/user-management.svg"
+                                  alt="team"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {/* Reports & Analytics */}
+                            {name === 'Administration' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="reports-analytics"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'C-Suite' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="reports-analytics"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Management' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="reports-analytics"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+
+                            <p className="text-sm text-slate-700">{name}</p>
+                          </Link>
+                        </li>
+                        {subItems && (
+                          <div className="relative ml-12">
+                            <span
+                              className="absolute left-0 top-0 h-full w-4 border-l border-[#BFBFBF]"
+                              style={{ zIndex: 0 }}
+                            ></span>
+                            {subItems.map((subItem) => (
+                              <li
+                                key={subItem.name}
+                                className="relative flex items-center"
+                              >
+                                <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
+                                <Link
+                                  href={subItem.url}
+                                  className="ml-4 lg:w-full flex items-start gap-3"
+                                >
+                                  <span className="gap-1">
+                                    <Image
+                                      src="/assets/icons/department.svg"
+                                      alt="department"
+                                      width={20}
+                                      height={20}
+                                    />
+                                  </span>
+                                  <p className="text-sm text-slate-700">
+                                    {subItem.name}
+                                  </p>
+                                </Link>
+                              </li>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     ))}
                   </ul>
                 </div>
