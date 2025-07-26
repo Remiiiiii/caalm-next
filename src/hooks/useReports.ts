@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Models } from 'appwrite';
 
@@ -25,12 +25,11 @@ interface UseReportsOptions {
 
 export function useReports(options: UseReportsOptions = {}) {
   const { user } = useAuth();
-  const extendedUser = user as ExtendedUser;
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -38,8 +37,8 @@ export function useReports(options: UseReportsOptions = {}) {
       setError(null);
 
       const params = new URLSearchParams({
-        userRole: extendedUser.role || 'user',
-        userDepartment: extendedUser.department || '',
+        userRole: (user as ExtendedUser)?.role || 'user',
+        userDepartment: (user as ExtendedUser)?.department || '',
         ...(options.department && { department: options.department }),
         ...(options.limit && { limit: options.limit.toString() }),
       });
@@ -58,7 +57,7 @@ export function useReports(options: UseReportsOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, options.department, options.limit]);
 
   const generateReport = async (department: string) => {
     if (!user) return null;
@@ -71,9 +70,10 @@ export function useReports(options: UseReportsOptions = {}) {
         },
         body: JSON.stringify({
           userId: user.$id,
-          userRole: extendedUser.role || 'user',
+          userRole: (user as ExtendedUser)?.role || 'user',
           department,
-          userName: extendedUser.fullName || user.email || 'Unknown User',
+          userName:
+            (user as ExtendedUser)?.fullName || user.email || 'Unknown User',
         }),
       });
 
@@ -98,7 +98,7 @@ export function useReports(options: UseReportsOptions = {}) {
 
   useEffect(() => {
     fetchReports();
-  }, [user, options.department]);
+  }, [user, options.department, fetchReports]);
 
   return {
     reports,

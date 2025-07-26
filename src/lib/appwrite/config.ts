@@ -22,6 +22,9 @@ export const appwriteConfig = {
     process.env.NEXT_PUBLIC_APPWRITE_RECENT_ACTIVITIES_COLLECTION ||
     '6883bd610000fa195147',
 
+  reportsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_REPORTS_COLLECTION || '',
+
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET || '',
 
   secretKey: process.env.NEXT_APPWRITE_KEY || '',

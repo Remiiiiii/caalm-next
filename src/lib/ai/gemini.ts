@@ -8,7 +8,9 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey || '');
 
 // Initialize the model - Use the correct model name
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+export const model = genAI.getGenerativeModel({
+  model: 'gemini-2.0-flash-exp',
+});
 
 export interface DocumentAnalysis {
   summary: string;

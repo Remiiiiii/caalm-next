@@ -9,6 +9,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserAccessibleDepartments } from '@/lib/actions/report.actions';
 import { useReports } from '@/hooks/useReports';
 import ReportGenerator from './ReportGenerator';
+import { Models } from 'appwrite';
+
+type ExtendedUser = Models.User<Models.Preferences> & {
+  role?: string;
+  department?: string;
+  fullName?: string;
+};
 
 interface ReportCard {
   id: string;
@@ -42,8 +49,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
     const fetchDepartments = async () => {
       if (user) {
         const departments = await getUserAccessibleDepartments(
-          (user as any).role || 'user',
-          (user as any).department
+          (user as ExtendedUser)?.role || 'user',
+          (user as ExtendedUser)?.department
         );
         setAccessibleDepartments(departments);
       }

@@ -3,7 +3,7 @@
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Query } from 'node-appwrite';
-// import { generateAIAnalysis } from '@/lib/ai/gemini';
+import { model } from '@/lib/ai/gemini';
 
 export interface GenerateReportData {
   userId: string;
@@ -13,18 +13,19 @@ export interface GenerateReportData {
 }
 
 export interface ReportData {
-  id: string;
+  $id: string;
   title: string;
   department: string;
   generatedAt: string;
   status: 'generating' | 'completed' | 'failed';
   content?: string;
-  metrics?: {
-    contracts: number;
-    users: number;
-    events: number;
-    files: number;
-  };
+  contractsCount: number;
+  usersCount: number;
+  eventsCount: number;
+  filesCount: number;
+  userId: string;
+  userName: string;
+  userRole: string;
 }
 
 /**
@@ -33,15 +34,14 @@ export interface ReportData {
 export async function generateReport(
   data: GenerateReportData
 ): Promise<ReportData> {
+  const adminClient = await createAdminClient();
+
   try {
-    // Fetch metrics based on department and role
-    const metrics = await getMetricsForDepartment(
-      data.department,
-      data.userRole
-    );
+    // Fetch metrics for all collections
+    const metrics = await getMetricsForDepartment();
 
     // Generate AI analysis
-    const aiContent = await generateMockAIAnalysis({
+    const aiContent = await generateAIAnalysis({
       department: data.department,
       metrics,
       userRole: data.userRole,
@@ -55,46 +55,66 @@ export async function generateReport(
     } Report - ${new Date().toLocaleDateString()}`;
 
     const reportData = {
-      id: reportId,
+      $id: reportId,
       title: reportTitle,
       department: data.department,
       generatedAt: new Date().toISOString(),
       status: 'completed' as const,
       content: aiContent,
-      metrics,
+      contractsCount: metrics.contracts,
+      usersCount: metrics.users,
+      eventsCount: metrics.events,
+      filesCount: metrics.files,
       userId: data.userId,
       userName: data.userName,
       userRole: data.userRole,
     };
 
-    // Store report in database (if you have a reports collection)
-    // await adminClient.databases.createDocument(
-    //   appwriteConfig.databaseId,
-    //   'reports', // You'll need to create this collection
-    //   reportId,
-    //   reportData
-    // );
+    console.log('Creating report document:', {
+      databaseId: appwriteConfig.databaseId,
+      collectionId: appwriteConfig.reportsCollectionId,
+      reportId,
+      reportDataKeys: Object.keys(reportData),
+    });
+
+    await adminClient.databases.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.reportsCollectionId,
+      reportId,
+      reportData
+    );
+
+    console.log('Report document created successfully');
 
     return reportData;
   } catch (error) {
     console.error('Error generating report:', error);
-    throw new Error('Failed to generate report');
+    console.error('Error details:', {
+      userId: data.userId,
+      userRole: data.userRole,
+      department: data.department,
+      userName: data.userName,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+    throw new Error(
+      `Failed to generate report: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`
+    );
   }
 }
 
 /**
  * Get metrics for a specific department
  */
-async function getMetricsForDepartment(department: string, userRole: string) {
+async function getMetricsForDepartment() {
   const adminClient = await createAdminClient();
 
   try {
     // Fetch contracts count
     const contractsQuery = [Query.limit(1)];
-    if (department !== 'all') {
-      contractsQuery.push(Query.equal('department', department));
-    }
-
+    // Note: Contracts may not have department field, so we'll get all contracts
     const contractsResponse = await adminClient.databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId || 'contracts',
@@ -103,10 +123,7 @@ async function getMetricsForDepartment(department: string, userRole: string) {
 
     // Fetch users count
     const usersQuery = [Query.limit(1)];
-    if (department !== 'all' && userRole !== 'executive') {
-      usersQuery.push(Query.equal('department', department));
-    }
-
+    // Note: Users may not have department field, so we'll get all users
     const usersResponse = await adminClient.databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId || 'users',
@@ -115,10 +132,7 @@ async function getMetricsForDepartment(department: string, userRole: string) {
 
     // Fetch events count
     const eventsQuery = [Query.limit(1)];
-    if (department !== 'all') {
-      eventsQuery.push(Query.equal('department', department));
-    }
-
+    // Note: Calendar events may not have department field, so we'll get all events
     const eventsResponse = await adminClient.databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId || 'calendar',
@@ -127,10 +141,7 @@ async function getMetricsForDepartment(department: string, userRole: string) {
 
     // Fetch files count
     const filesQuery = [Query.limit(1)];
-    if (department !== 'all') {
-      filesQuery.push(Query.equal('department', department));
-    }
-
+    // Note: Files may not have department field, so we'll get all files
     const filesResponse = await adminClient.databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.filesCollectionId || 'files',
@@ -145,6 +156,10 @@ async function getMetricsForDepartment(department: string, userRole: string) {
     };
   } catch (error) {
     console.error('Error fetching metrics:', error);
+    console.error('Metrics error details:', {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     return {
       contracts: 0,
       users: 0,
@@ -231,9 +246,9 @@ export async function uploadReport(
 }
 
 /**
- * Mock AI analysis function (replace with actual AI integration)
+ * Generate AI-powered report analysis using Gemini
  */
-async function generateMockAIAnalysis(data: {
+async function generateAIAnalysis(data: {
   department: string;
   metrics: {
     contracts: number;
@@ -246,40 +261,133 @@ async function generateMockAIAnalysis(data: {
 }): Promise<string> {
   const { department, metrics, userRole, userName } = data;
 
-  return `
-    <h2>${
-      department === 'all' ? 'All Departments' : department
-    } Department Report</h2>
-    <p><strong>Generated by:</strong> ${userName} (${userRole})</p>
-    <p><strong>Generated on:</strong> ${new Date().toLocaleString()}</p>
-    
-    <h3>Executive Summary</h3>
-    <p>This report provides a comprehensive overview of the ${
-      department === 'all' ? 'organization' : department
-    } department's current status and performance metrics.</p>
-    
-    <h3>Key Metrics</h3>
-    <ul>
-      <li><strong>Total Contracts:</strong> ${metrics.contracts}</li>
-      <li><strong>Active Users:</strong> ${metrics.users}</li>
-      <li><strong>Scheduled Events:</strong> ${metrics.events}</li>
-      <li><strong>Stored Files:</strong> ${metrics.files}</li>
-    </ul>
-    
-    <h3>Analysis</h3>
-    <p>Based on the current metrics, the department shows ${
-      metrics.contracts > 10 ? 'strong' : 'moderate'
-    } contract management activity with ${
-    metrics.users
-  } active users contributing to operations.</p>
-    
-    <h3>Recommendations</h3>
-    <ul>
-      <li>Continue monitoring contract expiration dates</li>
-      <li>Ensure regular compliance training completion</li>
-      <li>Maintain organized file management practices</li>
-    </ul>
-  `;
+  console.log('Starting AI analysis generation:', {
+    department,
+    metrics,
+    userRole,
+    userName,
+  });
+
+  try {
+    const prompt = `
+      You are an AI business analyst creating a comprehensive department report for a healthcare organization.
+      
+      Department: ${department === 'all' ? 'All Departments' : department}
+      Generated by: ${userName} (${userRole})
+      Generated on: ${new Date().toLocaleString()}
+      
+      Current Metrics:
+      - Total Contracts: ${metrics.contracts}
+      - Active Users: ${metrics.users}
+      - Scheduled Events: ${metrics.events}
+      - Stored Files: ${metrics.files}
+      
+      Please create a professional, business-style report in HTML format that includes:
+      
+      1. Executive Summary (2-3 paragraphs)
+      2. Key Performance Indicators analysis
+      3. Department-specific insights and trends
+      4. Risk assessment and compliance considerations
+      5. Strategic recommendations for improvement
+      6. Action items and next steps
+      
+      The report should be:
+      - Professional and business-focused
+      - Data-driven with specific insights
+      - Actionable with clear recommendations
+      - Suitable for executive presentation
+      - Written in a healthcare/medical context
+      
+      Format the response as clean HTML with proper headings (h2, h3), paragraphs, lists, and emphasis tags.
+      Do not include any meta tags, DOCTYPE, or full HTML document structure - just the content.
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    // Ensure the response is properly formatted HTML
+    const formattedResponse = text
+      .replace(/```html/g, '')
+      .replace(/```/g, '')
+      .trim();
+
+    return (
+      formattedResponse ||
+      `
+      <h2>${
+        department === 'all' ? 'All Departments' : department
+      } Department Report</h2>
+      <p><strong>Generated by:</strong> ${userName} (${userRole})</p>
+      <p><strong>Generated on:</strong> ${new Date().toLocaleString()}</p>
+      
+      <h3>Executive Summary</h3>
+      <p>This report provides a comprehensive overview of the ${
+        department === 'all' ? 'organization' : department
+      } department's current status and performance metrics.</p>
+      
+      <h3>Key Metrics</h3>
+      <ul>
+        <li><strong>Total Contracts:</strong> ${metrics.contracts}</li>
+        <li><strong>Active Users:</strong> ${metrics.users}</li>
+        <li><strong>Scheduled Events:</strong> ${metrics.events}</li>
+        <li><strong>Stored Files:</strong> ${metrics.files}</li>
+      </ul>
+      
+      <h3>Analysis</h3>
+      <p>Based on the current metrics, the department shows ${
+        metrics.contracts > 10 ? 'strong' : 'moderate'
+      } contract management activity with ${
+        metrics.users
+      } active users contributing to operations.</p>
+      
+      <h3>Recommendations</h3>
+      <ul>
+        <li>Continue monitoring contract expiration dates</li>
+        <li>Ensure regular compliance training completion</li>
+        <li>Maintain organized file management practices</li>
+      </ul>
+    `
+    );
+  } catch (error) {
+    console.error('Error generating AI analysis:', error);
+
+    // Fallback to a basic report if AI fails
+    return `
+      <h2>${
+        department === 'all' ? 'All Departments' : department
+      } Department Report</h2>
+      <p><strong>Generated by:</strong> ${userName} (${userRole})</p>
+      <p><strong>Generated on:</strong> ${new Date().toLocaleString()}</p>
+      
+      <h3>Executive Summary</h3>
+      <p>This report provides a comprehensive overview of the ${
+        department === 'all' ? 'organization' : department
+      } department's current status and performance metrics.</p>
+      
+      <h3>Key Metrics</h3>
+      <ul>
+        <li><strong>Total Contracts:</strong> ${metrics.contracts}</li>
+        <li><strong>Active Users:</strong> ${metrics.users}</li>
+        <li><strong>Scheduled Events:</strong> ${metrics.events}</li>
+        <li><strong>Stored Files:</strong> ${metrics.files}</li>
+      </ul>
+      
+      <h3>Analysis</h3>
+      <p>Based on the current metrics, the department shows ${
+        metrics.contracts > 10 ? 'strong' : 'moderate'
+      } contract management activity with ${
+      metrics.users
+    } active users contributing to operations.</p>
+      
+      <h3>Recommendations</h3>
+      <ul>
+        <li>Continue monitoring contract expiration dates</li>
+        <li>Ensure regular compliance training completion</li>
+        <li>Maintain organized file management practices</li>
+      </ul>
+    `;
+  }
 }
 
 /**
