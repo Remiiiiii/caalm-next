@@ -74,6 +74,21 @@ export const markNotificationAsRead = async (notificationId: string) => {
   }
 };
 
+export const markNotificationAsUnread = async (notificationId: string) => {
+  const { databases } = await createAdminClient();
+  try {
+    const notification = await databases.updateDocument(
+      appwriteConfig.databaseId,
+      'notifications',
+      notificationId,
+      { read: false }
+    );
+    return notification;
+  } catch (error) {
+    handleError(error, 'Failed to mark notification as unread');
+  }
+};
+
 export const deleteNotification = async (notificationId: string) => {
   const { databases } = await createAdminClient();
   try {

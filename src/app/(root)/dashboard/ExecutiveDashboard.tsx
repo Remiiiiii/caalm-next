@@ -21,6 +21,7 @@ import ActionDropdown from '@/components/ActionDropdown';
 import FormattedDateTime from '@/components/FormattedDateTime';
 import Thumbnail from '@/components/Thumbnail';
 import CalendarView from '@/components/CalendarView';
+import RecentActivity from '@/components/RecentActivity';
 import {
   getFiles,
   getTotalContractsCount,
@@ -100,120 +101,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       color: 'text-[#03AFBF]',
     },
   ]);
-
-  const recentActivity = [
-    {
-      id: 1,
-      action: 'Contract renewal approved',
-      contract: 'Federal IT Services Contract',
-      time: '2 hours ago',
-    },
-    {
-      id: 2,
-      action: 'New user invitation',
-      user: 'Alice Johnson - Accounting',
-      time: '4 hours ago',
-    },
-    {
-      id: 3,
-      action: 'Audit document uploaded',
-      contract: 'State Licensing Agreement',
-      time: '6 hours ago',
-    },
-    {
-      id: 4,
-      action: 'Contract expiration notification',
-      contract: 'Municipal Services Contract',
-      time: '1 day ago',
-    },
-    {
-      id: 5,
-      action: 'Budget review completed',
-      contract: 'Q4 Financial Report',
-      time: '1 day ago',
-    },
-    {
-      id: 6,
-      action: 'Vendor agreement signed',
-      user: 'Tech Solutions Inc.',
-      time: '2 days ago',
-    },
-    {
-      id: 7,
-      action: 'Compliance audit scheduled',
-      contract: 'Annual Security Review',
-      time: '2 days ago',
-    },
-    {
-      id: 8,
-      action: 'Staff training completed',
-      user: 'Sarah Martinez - HR',
-      time: '3 days ago',
-    },
-    {
-      id: 9,
-      action: 'Policy update uploaded',
-      contract: 'Data Protection Guidelines',
-      time: '3 days ago',
-    },
-    {
-      id: 10,
-      action: 'Vendor meeting scheduled',
-      contract: 'Strategic Partnership Discussion',
-      time: '4 days ago',
-    },
-    {
-      id: 11,
-      action: 'Vendor meeting scheduled',
-      contract: 'Strategic Partnership Discussion',
-      time: '4 days ago',
-    },
-    {
-      id: 12,
-      action: 'Department meeting scheduled',
-      user: 'IT Department',
-      time: '4 days ago',
-    },
-    {
-      id: 13,
-      action: 'Risk assessment completed',
-      contract: 'Cybersecurity Evaluation',
-      time: '5 days ago',
-    },
-    {
-      id: 14,
-      action: 'New contract uploaded',
-      department: 'Child Welfare',
-      time: '1 week ago',
-    },
-    {
-      id: 15,
-      action: 'Annual report finalized',
-      contract: '2024 Strategic Overview',
-      time: '1 week ago',
-    },
-    {
-      id: 16,
-      action: 'Performance review submitted',
-      user: 'Michael Chen - Admin',
-      time: '5 days ago',
-    },
-    {
-      id: 17,
-      action: 'New event added',
-      eventType: [
-        'Meeting',
-        'Contract',
-        'Audit',
-        'License',
-        'Training',
-        'Review',
-        'External Engagement',
-      ],
-      contract: 'State Licensing Agreement',
-      time: '6 hours ago',
-    },
-  ];
 
   const pendingApprovals = [
     {
@@ -526,37 +413,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         <div className="space-y-6">
           <div className="grid lg:grid-cols-6 gap-6">
             {/* Recent Activity */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-3">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="h-[400px] overflow-y-auto">
-                  <div className="space-y-3 py-4">
-                    {recentActivity.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex justify-between mr-4 items-start border-b border-border pb-2 last:border-b-0"
-                      >
-                        <div>
-                          <p className="font-medium text-navy text-sm">
-                            {activity.action}
-                          </p>
-                          <p className="text-xs text-slate-dark">
-                            {activity.contract || activity.user}
-                          </p>
-                        </div>
-                        <span className="text-xs text-slate-light">
-                          {activity.time}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="lg:col-span-3">
+              <RecentActivity />
+            </div>
 
             {/* Calendar View */}
             <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-3">

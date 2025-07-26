@@ -63,6 +63,8 @@ export const createCalendarEvent = async (
   eventData: CreateCalendarEventData
 ): Promise<CalendarEvent | null> => {
   try {
+    console.log('Sending event data to API:', eventData);
+
     const response = await fetch(`${API_BASE}/events`, {
       method: 'POST',
       headers: {
@@ -70,12 +72,23 @@ export const createCalendarEvent = async (
       },
       body: JSON.stringify(eventData),
     });
+
+    console.log('Response status:', response.status);
+
     if (!response.ok) {
-      throw new Error('Failed to create calendar event');
+      const errorData = await response.json();
+      console.error('API Error response:', errorData);
+      throw new Error(
+        errorData.details ||
+          `Failed to create calendar event: ${response.status}`
+      );
     }
-    return await response.json();
+
+    const result = await response.json();
+    console.log('Successfully created event:', result);
+    return result;
   } catch (error) {
     console.error('Error creating calendar event:', error);
-    return null;
+    throw error; // Re-throw to let the component handle it
   }
 };

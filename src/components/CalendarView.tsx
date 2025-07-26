@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,12 +43,9 @@ import {
   eachDayOfInterval,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
-import {
-  CalendarEvent as DBCalendarEvent,
-  getCalendarEventsByMonth,
-  createCalendarEvent,
-} from '@/lib/actions/calendar.client';
+import { createCalendarEvent } from '@/lib/actions/calendar.client';
 import { useToast } from '@/hooks/use-toast';
+import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 
 // Local event interface for component use
 interface LocalCalendarEvent {
@@ -75,33 +72,6 @@ interface NewEventForm {
   amount: string;
   contractName: string;
 }
-
-// Convert database event to local event format
-const convertDBEventToLocal = (
-  dbEvent: DBCalendarEvent
-): LocalCalendarEvent => {
-  const dbDate = new Date(dbEvent.date);
-  // Create a date string in YYYY-MM-DD format to avoid timezone issues
-  const year = dbDate.getFullYear();
-  const month = String(dbDate.getMonth() + 1).padStart(2, '0');
-  const day = String(dbDate.getDate()).padStart(2, '0');
-  const dateString = `${year}-${month}-${day}`;
-
-  const normalizedDate = new Date(dateString);
-
-  return {
-    id: dbEvent.$id || '',
-    title: dbEvent.title,
-    date: normalizedDate,
-    type: dbEvent.type,
-    description: dbEvent.description,
-    participants: dbEvent.participants ? dbEvent.participants.split(', ') : [],
-    contractName: dbEvent.contractName,
-    amount: dbEvent.amount,
-    startTime: dbEvent.startTime,
-    endTime: dbEvent.endTime,
-  };
-};
 
 interface CalendarViewProps {
   events?: LocalCalendarEvent[];
@@ -130,8 +100,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
-  const [dbEvents, setDbEvents] = useState<LocalCalendarEvent[]>([]);
-  const [loading, setLoading] = useState(false);
   const [creatingEvent, setCreatingEvent] = useState(false);
   const [newEvent, setNewEvent] = useState<NewEventForm>({
     title: '',
@@ -144,31 +112,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     contractName: '',
   });
 
-  // Fetch events from database
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setLoading(true);
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth() + 1;
-        console.log('Fetching events for:', year, month);
-        const dbEventsData = await getCalendarEventsByMonth(year, month);
-        console.log('Database events:', dbEventsData);
-        const localEvents = dbEventsData.map(convertDBEventToLocal);
-        console.log('Local events:', localEvents);
-        setDbEvents(localEvents);
-      } catch (error) {
-        console.error('Error fetching calendar events:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEvents();
-  }, [currentMonth]);
+  // Use SWR hook for calendar events
+  const {
+    events: fetchedEvents,
+    isLoading,
+    refresh,
+  } = useCalendarEvents({
+    month: currentMonth,
+    enableRealTime: true,
+    pollingInterval: 10000,
+  });
 
   // Combine database events with prop events
-  const allEvents = [...dbEvents, ...events];
+  const allEvents = [...fetchedEvents, ...events];
 
   const handleDateSelect = (date: Date | undefined) => {
     // Don't allow selecting past dates
@@ -338,11 +294,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         setIsAddEventOpen(false);
 
         // Refresh events
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth() + 1;
-        const dbEventsData = await getCalendarEventsByMonth(year, month);
-        const localEvents = dbEventsData.map(convertDBEventToLocal);
-        setDbEvents(localEvents);
+        refresh();
       } else {
         toast({
           title: 'Error',
@@ -352,10 +304,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       }
     } catch (error) {
       console.error('Error creating calendar event:', error);
+
+      // Show more detailed error message
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: 'Error',
-        description:
-          'Error creating event. Please check your connection and try again.',
+        description: `Failed to create event: ${errorMessage}`,
         variant: 'destructive',
       });
     } finally {
@@ -543,8 +498,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         {/* Centered Calendar */}
         <div className="flex justify-center">
           <Card className="bg-white/95 backdrop-blur border border-white/60 shadow-xl w-full">
-            <CardContent className="pl-0 pr-2 py-3">
-              {loading && (
+            <CardContent className="mx-auto py-3">
+              {isLoading && (
                 <div className="flex justify-center items-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                 </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+// import { Bell, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NotificationBadgeProps {
@@ -13,7 +13,7 @@ interface NotificationBadgeProps {
 const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   count,
   priority = 'medium',
-  type,
+  // type,
   size = 'md',
   className,
 }) => {
@@ -24,9 +24,9 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
       case 'urgent':
         return 'bg-red-500 text-white border-red-600';
       case 'high':
-        return 'bg-orange-500 text-white border-orange-600';
+        return 'bg-[orange-500] text-white border-orange-600';
       case 'medium':
-        return 'bg-yellow-500 text-white border-yellow-600';
+        return 'bg-[#F9AB72] text-white border-yellow-600';
       case 'low':
         return 'bg-green-500 text-white border-green-600';
       default:
@@ -47,19 +47,19 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
     }
   };
 
-  const getIcon = () => {
-    switch (type) {
-      case 'compliance-alert':
-      case 'contract-expiry':
-        return <AlertTriangle className="w-3 h-3" />;
-      case 'task-completed':
-        return <CheckCircle className="w-3 h-3" />;
-      case 'info':
-        return <Info className="w-3 h-3" />;
-      default:
-        return <Bell className="w-3 h-3" />;
-    }
-  };
+  // const getIcon = () => {
+  //   switch (type) {
+  //     case 'compliance-alert':
+  //     case 'contract-expiry':
+  //       return <AlertTriangle className="w-3 h-3" />;
+  //     case 'task-completed':
+  //       return <CheckCircle className="w-3 h-3" />;
+  //     case 'info':
+  //       return <Info className="w-3 h-3" />;
+  //     default:
+  //       return <CheckCircle className="w-3 h-3" />;
+  //   }
+  // };
 
   const displayCount = count > 99 ? '99+' : count.toString();
 
@@ -73,7 +73,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
       )}
       title={`${count} notification${count !== 1 ? 's' : ''}`}
     >
-      {count <= 3 && <span className="mr-1">{getIcon()}</span>}
+      {/* {count <= 3 && <span className="mr-1">{getIcon()}</span>} */}
       {displayCount}
     </div>
   );

@@ -7,6 +7,10 @@ import { ID, Models, Query } from 'node-appwrite';
 import { constructFileUrl, getFileType, parseStringify } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './user.actions';
+import {
+  createFileActivity,
+  createContractActivity,
+} from './recentActivity.actions';
 import fs from 'fs';
 import path from 'path';
 
@@ -143,6 +147,20 @@ export const uploadFile = async ({
         throw new Error('Unsupported file type for saving to disk');
       }
       fs.writeFileSync(filePath, fileBuffer);
+    }
+
+    // Create a recent activity for the file upload
+    try {
+      await createFileActivity(
+        'File Uploaded',
+        bucketFile.name,
+        ownerId,
+        'User', // We'll get the actual user name later if needed
+        'General' // We'll get the actual department later if needed
+      );
+    } catch (error) {
+      console.error('Failed to create file upload activity:', error);
+      // Don't throw error here as the file upload was successful
     }
 
     revalidatePath(revalidatePathArg);
@@ -443,6 +461,21 @@ export const contractStatus = async ({
       fileId,
       { status }
     );
+
+    // Create a recent activity for the contract status change
+    try {
+      await createContractActivity(
+        `Contract ${status.replace('-', ' ')}`,
+        updated.contractName || 'Contract',
+        fileId,
+        'User', // We'll get the actual user name later if needed
+        'User' // We'll get the actual user name later if needed
+      );
+    } catch (error) {
+      console.error('Failed to create contract status activity:', error);
+      // Don't throw error here as the status update was successful
+    }
+
     revalidatePath(path);
     return parseStringify(updated);
   } catch (error) {

@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/appwrite';
 import { ID, Query } from 'node-appwrite';
 import { appwriteConfig } from '../appwrite/config';
+import { createEventActivity } from './recentActivity.actions';
 
 export interface CalendarEvent {
   $id?: string;
@@ -120,6 +121,16 @@ export const createCalendarEvent = async (
       ID.unique(),
       eventData
     );
+
+    // Create a recent activity for the new event
+    await createEventActivity(
+      'New Event Added',
+      eventData.title,
+      response.$id,
+      eventData.createdBy,
+      eventData.createdBy
+    );
+
     return response as unknown as CalendarEvent;
   } catch (error) {
     console.error('Error creating calendar event:', error);

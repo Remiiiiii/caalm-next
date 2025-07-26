@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   markNotificationAsRead,
   deleteNotification,
+  markNotificationAsUnread,
 } from '@/lib/actions/notification.actions';
 import {
   Dialog,
@@ -282,6 +283,32 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     }
   };
 
+  const markAsUnread = async (ids: string[]) => {
+    setLoadingAction(true);
+    try {
+      await Promise.all(ids.map((id) => markNotificationAsUnread(id)));
+      setNotifications((prev) =>
+        prev.map((n) => (ids.includes(n.$id) ? { ...n, read: false } : n))
+      );
+      setSelected([]);
+      toast({
+        title: 'Success',
+        description: `Marked ${ids.length} notification${
+          ids.length > 1 ? 's' : ''
+        } as unread`,
+      });
+      onRefresh?.();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to mark notifications as unread',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   const deleteNotifications = async (ids: string[]) => {
     setLoadingAction(true);
     try {
@@ -310,6 +337,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     const unreadIds = notifications.filter((n) => !n.read).map((n) => n.$id);
     if (unreadIds.length > 0) {
       await markAsRead(unreadIds);
+    }
+  };
+
+  const markAllAsUnread = async () => {
+    const readIds = notifications.filter((n) => n.read).map((n) => n.$id);
+    if (readIds.length > 0) {
+      await markAsUnread(readIds);
     }
   };
 
@@ -392,6 +426,16 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               >
                 <Check className="w-4 h-4 mr-1" />
                 Mark all read
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={markAllAsUnread}
+                disabled={!notifications.some((n) => !n.read)}
+                className="text-sm"
+              >
+                <Check className="w-4 h-4 mr-1" />
+                Mark all unread
               </Button>
               <Button
                 variant="ghost"
@@ -522,6 +566,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 Mark as Read ({selected.length})
               </Button>
               <Button
+                size="sm"
+                onClick={() => markAsUnread(selected)}
+                disabled={loadingAction}
+                className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                Mark as Unread ({selected.length})
+              </Button>
+              <Button
                 onClick={() => deleteNotifications(selected)}
                 disabled={loadingAction}
                 className="h-8 flex items-center gap-2 bg-destructive/10 text-destructive border-destructive hover:bg-destructive/20"
@@ -567,6 +620,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                         isSelected={selected.includes(notification.$id)}
                         onSelect={handleSelect}
                         onMarkAsRead={(id) => markAsRead([id])}
+                        onMarkAsUnread={(id) => markAsUnread([id])}
                         typeConfig={typeConfig}
                         getPriorityColor={getPriorityColor}
                         formatNotificationTime={formatNotificationTime}
@@ -641,6 +695,7 @@ interface SortableNotificationItemProps {
   isSelected: boolean;
   onSelect: (id: string) => void;
   onMarkAsRead: (id: string) => void;
+  onMarkAsUnread: (id: string) => void;
   typeConfig: (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
   getPriorityColor: (priority?: string) => string;
   formatNotificationTime: (dateString: string) => string;
@@ -651,6 +706,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
   isSelected,
   onSelect,
   onMarkAsRead,
+  onMarkAsUnread,
   typeConfig,
   getPriorityColor,
   formatNotificationTime,
@@ -733,6 +789,16 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
                   className="h-6 px-2 text-xs"
                 >
                   Mark read
+                </Button>
+              )}
+              {notification.read && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onMarkAsUnread(notification.$id)}
+                  className="h-6 px-2 text-xs"
+                >
+                  Mark unread
                 </Button>
               )}
               {/* Drag Handle */}

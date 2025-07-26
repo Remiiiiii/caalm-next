@@ -9,6 +9,7 @@ import {
   Upload,
   UserPlus,
 } from 'lucide-react';
+import RecentActivity from '@/components/RecentActivity';
 
 const HRDashboard = () => {
   const trainingStats = [
@@ -137,7 +138,7 @@ const HRDashboard = () => {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Employee Training Status */}
         <Card>
           <CardHeader>
@@ -233,6 +234,9 @@ const HRDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Recent Activity */}
+        <RecentActivity />
       </div>
     </div>
   );
