@@ -44,18 +44,41 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
           name: 'All Contracts',
           icon: '/assets/icons/documents.svg',
           url: '/contracts',
-          roles: ['executive', 'manager', 'admin'],
+          roles: ['executive', 'admin'],
         },
         {
           name: 'My Department Contracts',
           icon: '/assets/icons/documents.svg',
           url: '/contracts/department',
-          roles: ['manager', 'admin'],
+          roles: ['executive', 'manager', 'admin'],
         },
         {
           name: 'Proposals & Approvals',
           icon: '/assets/icons/edit.svg',
           url: '/contracts/approvals',
+          roles: ['executive', 'manager', 'admin'],
+        },
+      ],
+    },
+    {
+      header: 'Licenses',
+      items: [
+        {
+          name: 'All Licenses',
+          icon: '/assets/icons/documents.svg',
+          url: '/licenses',
+          roles: ['executive', 'admin'],
+        },
+        {
+          name: 'My Department Licenses',
+          icon: '/assets/icons/department.svg',
+          url: '/licenses/department',
+          roles: ['executive', 'manager', 'admin'],
+        },
+        {
+          name: 'Proposals & Approvals',
+          icon: '/assets/icons/edit.svg',
+          url: '/licenses/approvals',
           roles: ['executive', 'manager'],
         },
       ],
@@ -90,7 +113,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
       ],
     },
     {
-      header: 'Compliance',
+      header: 'Audits',
       items: [
         {
           name: 'Training & Certifications',
@@ -99,16 +122,16 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
           roles: ['admin'],
         },
         {
-          name: 'Compliance Status',
-          icon: '/assets/icons/file-check.svg',
-          url: '/compliance/status',
-          roles: ['executive', 'manager'],
-        },
-        {
           name: 'Audit Logs',
           icon: '/assets/icons/documents.svg',
           url: '/compliance/audit',
           roles: ['executive'],
+        },
+        {
+          name: 'Compliance Status',
+          icon: '/assets/icons/file-check.svg',
+          url: '/compliance/status',
+          roles: ['executive', 'manager'],
         },
       ],
     },
@@ -252,6 +275,15 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                           height={24}
                         />
                       </span>
+                    ) : section.header === 'Licenses' ? (
+                      <span className="text-[#03AFBF]">
+                        <Image
+                          src="/assets/icons/license.svg"
+                          alt="license"
+                          width={24}
+                          height={24}
+                        />
+                      </span>
                     ) : section.header === 'Documents' ? (
                       <span className="text-[#03AFBF]">
                         <Image
@@ -261,11 +293,11 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                           height={20}
                         />
                       </span>
-                    ) : section.header === 'Compliance' ? (
+                    ) : section.header === 'Audits' ? (
                       <span className="text-[#03AFBF]">
                         <Image
-                          src="/assets/icons/compliance.svg"
-                          alt="compliance"
+                          src="/assets/icons/audit.svg"
+                          alt="audits"
                           width={24}
                           height={24}
                         />
@@ -332,11 +364,41 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                                 />
                               </span>
                             )}
+                            {name === 'My Department Contracts' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="department"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
                             {name === 'Proposals & Approvals' && (
                               <span className="gap-1">
                                 <Image
                                   src="/assets/icons/proposal-approval.svg"
                                   alt="proposal-approval"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'All Licenses' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/licenses.svg"
+                                  alt="all-licenses"
+                                  width={25}
+                                  height={25}
+                                />
+                              </span>
+                            )}
+                            {name === 'My Department Licenses' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="all-licenses"
                                   width={20}
                                   height={20}
                                 />
