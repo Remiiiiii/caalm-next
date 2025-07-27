@@ -1,8 +1,39 @@
 import React from 'react';
-import ReportsPage from '@/components/ReportsPage';
+import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+const ResidentialAnalytics = () => {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Residential Analytics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600">
+            Residential analytics dashboard will be implemented tomorrow.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 const ResidentialAnalyticsPage = () => {
-  return <ReportsPage department="Residential" />;
+  const departmentData = {
+    totalContracts: 167,
+    totalBudget: '$2.3M',
+    staffCount: 112,
+    complianceRate: '87%',
+    trend: 'up' as const,
+    change: '+6%',
+  };
+
+  return (
+    <AnalyticsLayout department="residential" departmentData={departmentData}>
+      <ResidentialAnalytics />
+    </AnalyticsLayout>
+  );
 };
 
 export default ResidentialAnalyticsPage;

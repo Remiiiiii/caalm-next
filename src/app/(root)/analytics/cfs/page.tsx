@@ -1,8 +1,39 @@
 import React from 'react';
-import ReportsPage from '@/components/ReportsPage';
+import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+const CFSAnalytics = () => {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>CFS Analytics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600">
+            CFS analytics dashboard will be implemented tomorrow.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 const CFSAnalyticsPage = () => {
-  return <ReportsPage department="CFS" />;
+  const departmentData = {
+    totalContracts: 145,
+    totalBudget: '$1.6M',
+    staffCount: 98,
+    complianceRate: '91%',
+    trend: 'up' as const,
+    change: '+7%',
+  };
+
+  return (
+    <AnalyticsLayout department="cfs" departmentData={departmentData}>
+      <CFSAnalytics />
+    </AnalyticsLayout>
+  );
 };
 
 export default CFSAnalyticsPage;
