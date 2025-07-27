@@ -118,19 +118,19 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
         {
           name: 'Training & Certifications',
           icon: '/assets/icons/calendar.svg',
-          url: '/compliance/training',
+          url: '/audits/training',
           roles: ['admin'],
         },
         {
           name: 'Audit Logs',
           icon: '/assets/icons/documents.svg',
-          url: '/compliance/audit',
+          url: '/audits/audit',
           roles: ['executive'],
         },
         {
           name: 'Compliance Status',
           icon: '/assets/icons/file-check.svg',
-          url: '/compliance/status',
+          url: '/audits/status',
           roles: ['executive', 'manager'],
         },
       ],
