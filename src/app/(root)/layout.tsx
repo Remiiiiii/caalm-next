@@ -1,7 +1,7 @@
 import React from 'react';
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';
-import AuthenticatedLayout from '@/components/AuthenticatedLayout';
+import ClientLayout from '@/components/ClientLayout';
 
 const Layout = async ({ children }: { children: React.ReactNode }) => {
   const currentUser = await getCurrentUser();
@@ -10,9 +10,7 @@ const Layout = async ({ children }: { children: React.ReactNode }) => {
     redirect('/sign-in');
   }
 
-  return (
-    <AuthenticatedLayout user={currentUser}>{children}</AuthenticatedLayout>
-  );
+  return <ClientLayout user={currentUser}>{children}</ClientLayout>;
 };
 
 export default Layout;
