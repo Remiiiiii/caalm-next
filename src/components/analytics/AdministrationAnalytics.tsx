@@ -135,365 +135,314 @@ const kpiData = [
 
 const AdministrationAnalytics = () => {
   const handleRefresh = () => {
-    // TODO: Implement refresh logic
+    // Refresh data logic
     console.log('Refreshing analytics data...');
   };
 
   const handleExport = () => {
-    // TODO: Implement export logic
+    // Export logic
     console.log('Exporting analytics data...');
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Header Actions */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Administration Analytics
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Comprehensive overview of administrative operations and performance
-            metrics
+          <h2 className="h2 text-dark-200">Administration Analytics</h2>
+          <p className="body-1 text-light-200">
+            Comprehensive overview of administrative operations
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handleRefresh}>
+        <div className="flex space-x-3">
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button onClick={handleExport}>
+          <Button
+            onClick={handleExport}
+            className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+          >
             <Download className="h-4 w-4 mr-2" />
-            Export Report
+            Export
           </Button>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiData.map((kpi, index) => (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                {kpi.title}
-              </CardTitle>
-              <kpi.icon className="h-4 w-4 text-gray-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
-                {kpi.value}
-              </div>
-              <div className="flex items-center space-x-2">
-                {kpi.trend === 'up' ? (
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                )}
-                <span
-                  className={`text-sm ${
-                    kpi.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {kpi.change}
-                </span>
-                <span className="text-sm text-gray-500">from last month</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">{kpi.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="body-2 text-light-200">
+              Total Contracts
+            </CardTitle>
+            <FileText className="h-4 w-4 text-light-200" />
+          </CardHeader>
+          <CardContent>
+            <div className="h3 text-dark-200 font-bold">156</div>
+            <p className="text-xs text-light-200">+12% from last month</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="body-2 text-light-200">
+              Total Budget
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-light-200" />
+          </CardHeader>
+          <CardContent>
+            <div className="h3 text-dark-200 font-bold">$1.9M</div>
+            <p className="text-xs text-light-200">+8% from last month</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="body-2 text-light-200">Staff Count</CardTitle>
+            <Users className="h-4 w-4 text-light-200" />
+          </CardHeader>
+          <CardContent>
+            <div className="h3 text-dark-200 font-bold">89</div>
+            <p className="text-xs text-light-200">+3 new hires</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="body-2 text-light-200">
+              Compliance Rate
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-light-200" />
+          </CardHeader>
+          <CardContent>
+            <div className="h3 text-dark-200 font-bold">85%</div>
+            <p className="text-xs text-light-200">+2% from last month</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main Analytics Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="contracts">Contracts</TabsTrigger>
-          <TabsTrigger value="budget">Budget</TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
-        </TabsList>
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Contract Trends */}
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader>
+            <CardTitle className="h4 text-dark-200">Contract Trends</CardTitle>
+            <CardDescription className="text-light-200">
+              Monthly contract status overview
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={mockData.contractTrends}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.1)"
+                />
+                <XAxis dataKey="month" stroke="rgba(255,255,255,0.6)" />
+                <YAxis stroke="rgba(255,255,255,0.6)" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="active"
+                  stroke="#10B981"
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="pending"
+                  stroke="#F59E0B"
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="expired"
+                  stroke="#EF4444"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Contract Trends */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Contract Trends</CardTitle>
-                <CardDescription>
-                  Monthly contract status over the last 6 months
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={mockData.contractTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="active"
-                      stackId="1"
-                      stroke="#10B981"
-                      fill="#10B981"
-                      fillOpacity={0.6}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="pending"
-                      stackId="1"
-                      stroke="#F59E0B"
-                      fill="#F59E0B"
-                      fillOpacity={0.6}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="expired"
-                      stackId="1"
-                      stroke="#EF4444"
-                      fill="#EF4444"
-                      fillOpacity={0.6}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+        {/* Budget Allocation */}
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader>
+            <CardTitle className="h4 text-dark-200">
+              Budget Allocation
+            </CardTitle>
+            <CardDescription className="text-light-200">
+              Department budget distribution
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={mockData.budgetAllocation}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.1)"
+                />
+                <XAxis dataKey="department" stroke="rgba(255,255,255,0.6)" />
+                <YAxis stroke="rgba(255,255,255,0.6)" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="budget" fill="#3B82F6" />
+                <Bar dataKey="spent" fill="#10B981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
-            {/* Staff Distribution */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Staff Distribution</CardTitle>
-                <CardDescription>Current staff count by role</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={mockData.staffDistribution}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ role, percent }) =>
-                        `${role} ${(percent * 100).toFixed(0)}%`
-                      }
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {mockData.staffDistribution.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={
-                            ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'][
-                              index % 4
-                            ]
-                          }
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Contracts Tab */}
-        <TabsContent value="contracts" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Contract Types */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Contract Types Distribution</CardTitle>
-                <CardDescription>
-                  Breakdown of contracts by type
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={mockData.contractTypes}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ type, percent }) =>
-                        `${type} ${(percent * 100).toFixed(0)}%`
-                      }
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {mockData.contractTypes.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Contract Trends Line Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Contract Growth</CardTitle>
-                <CardDescription>
-                  Active contracts growth over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={mockData.contractTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="active"
-                      stroke="#10B981"
-                      strokeWidth={3}
-                      dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Budget Tab */}
-        <TabsContent value="budget" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Budget Allocation */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Department Budget Allocation</CardTitle>
-                <CardDescription>
-                  Budget vs actual spending by department
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={mockData.budgetAllocation}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="department"
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="budget" fill="#3B82F6" name="Budget" />
-                    <Bar dataKey="spent" fill="#10B981" name="Spent" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Monthly Expenses */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Expenses Trend</CardTitle>
-                <CardDescription>
-                  Total monthly expenses over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <AreaChart data={mockData.monthlyExpenses}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area
-                      type="monotone"
-                      dataKey="expenses"
-                      stroke="#8B5CF6"
-                      fill="#8B5CF6"
-                      fillOpacity={0.3}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Compliance Tab */}
-        <TabsContent value="compliance" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* License Compliance */}
-            <Card>
-              <CardHeader>
-                <CardTitle>License Compliance Status</CardTitle>
-                <CardDescription>
-                  Current compliance status across all licenses
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={mockData.licenseCompliance}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ status, percent }) =>
-                        `${status} ${(percent * 100).toFixed(0)}%`
-                      }
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {mockData.licenseCompliance.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Compliance Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Compliance Summary</CardTitle>
-                <CardDescription>
-                  Detailed breakdown of compliance status
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {mockData.licenseCompliance.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="font-medium">{item.status}</span>
-                      </div>
-                      <Badge variant="secondary">{item.count} licenses</Badge>
-                    </div>
+      {/* Additional Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* License Compliance */}
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader>
+            <CardTitle className="h4 text-dark-200">
+              License Compliance
+            </CardTitle>
+            <CardDescription className="text-light-200">
+              Current compliance status
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={mockData.licenseCompliance}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {mockData.licenseCompliance.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Monthly Expenses */}
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader>
+            <CardTitle className="h4 text-dark-200">Monthly Expenses</CardTitle>
+            <CardDescription className="text-light-200">
+              Expense trends over time
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={mockData.monthlyExpenses}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.1)"
+                />
+                <XAxis dataKey="month" stroke="rgba(255,255,255,0.6)" />
+                <YAxis stroke="rgba(255,255,255,0.6)" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="expenses"
+                  stroke="#8B5CF6"
+                  fill="#8B5CF6"
+                  fillOpacity={0.3}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Staff and Contract Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader>
+            <CardTitle className="h4 text-dark-200">
+              Staff Distribution
+            </CardTitle>
+            <CardDescription className="text-light-200">
+              Staff by role and department
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {mockData.staffDistribution.map((item, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <span className="body-2 text-light-200">{item.role}</span>
+                  <Badge
+                    variant="secondary"
+                    className="bg-white/20 backdrop-blur border border-white/40"
+                  >
+                    {item.count}
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <CardHeader>
+            <CardTitle className="h4 text-dark-200">Contract Types</CardTitle>
+            <CardDescription className="text-light-200">
+              Distribution by contract type
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {mockData.contractTypes.map((item, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <span className="body-2 text-light-200">{item.type}</span>
+                  <Badge
+                    variant="secondary"
+                    className="bg-white/20 backdrop-blur border border-white/40"
+                  >
+                    {item.count}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

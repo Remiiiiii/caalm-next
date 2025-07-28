@@ -9,11 +9,7 @@ const CFSAnalytics = () => {
         <CardHeader>
           <CardTitle>CFS Analytics</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">
-            CFS analytics dashboard will be implemented tomorrow.
-          </p>
-        </CardContent>
+        <CardContent></CardContent>
       </Card>
     </div>
   );

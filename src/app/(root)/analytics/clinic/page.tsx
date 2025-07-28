@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 const ClinicAnalytics = () => {
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle>Clinic Analytics</CardTitle>
+          <CardTitle className="h3 text-dark-200">Clinic Analytics</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">
-            Clinic analytics dashboard will be implemented tomorrow.
+        <CardContent className="text-light-200">
+          <p className="body-1">
+            Clinic analytics content will be displayed here.
           </p>
         </CardContent>
       </Card>

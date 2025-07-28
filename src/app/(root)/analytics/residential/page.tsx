@@ -9,11 +9,7 @@ const ResidentialAnalytics = () => {
         <CardHeader>
           <CardTitle>Residential Analytics</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">
-            Residential analytics dashboard will be implemented tomorrow.
-          </p>
-        </CardContent>
+        <CardContent></CardContent>
       </Card>
     </div>
   );

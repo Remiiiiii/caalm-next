@@ -19,11 +19,12 @@ export type AppUser = {
   department?:
     | 'childwelfare'
     | 'behavioralhealth'
-    | 'finance'
-    | 'operations'
+    | 'clinic'
+    | 'residential'
+    | 'cins-fins-snap'
     | 'administration'
     | 'c-suite'
-    | 'managerial';
+    | 'management';
   status?: 'active' | 'inactive';
 };
 
@@ -141,7 +142,7 @@ export const getCurrentUser = async () => {
       [Query.equal('accountId', result.$id)]
     );
 
-    if (user.total < 0) return null;
+    if (user.total === 0) return null;
 
     return parseStringify(user.documents[0]);
   } catch (error) {
@@ -452,11 +453,12 @@ export const updateUserProfile = async ({
   department?:
     | 'childwelfare'
     | 'behavioralhealth'
-    | 'finance'
-    | 'operations'
+    | 'clinic'
+    | 'residential'
+    | 'cins-fins-snap'
     | 'administration'
     | 'c-suite'
-    | 'managerial';
+    | 'management';
   role?: string;
 }) => {
   try {

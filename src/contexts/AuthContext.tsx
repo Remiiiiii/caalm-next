@@ -7,8 +7,8 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import { Client, Account, Models } from 'appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
+import { Models } from 'appwrite';
+import { getSessionUser } from '@/lib/actions/auth.actions';
 
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null;
@@ -29,49 +29,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     setMounted(true);
 
-    // Validate Appwrite configuration
-    if (!appwriteConfig.endpointUrl || !appwriteConfig.projectId) {
-      console.error('Appwrite configuration is incomplete:', appwriteConfig);
-      setLoading(false);
-      return;
-    }
-
-    const client = new Client()
-      .setEndpoint(appwriteConfig.endpointUrl)
-      .setProject(appwriteConfig.projectId);
-    const account = new Account(client);
-
     const checkSession = async () => {
       try {
         setLoading(true);
-        // Only call if a session exists (e.g., check localStorage/cookie or try/catch)
-        const user = await account.get();
-        setUser(user);
+
+        const sessionUser = await getSessionUser();
+
+        if (sessionUser) {
+          setUser(sessionUser);
+        } else {
+          setUser(null);
+        }
       } catch (error) {
-        console.log(error);
-        // 401 Unauthorized: No session, handle gracefully
+        console.error('AuthContext: Session check failed:', error);
         setUser(null);
-        // Optionally: redirect to login or show guest UI
       } finally {
         setLoading(false);
       }
     };
+
     checkSession();
   }, []);
 
   const logout = async () => {
-    if (!appwriteConfig.endpointUrl || !appwriteConfig.projectId) {
-      console.error('Appwrite configuration is incomplete for logout');
-      setUser(null);
-      return;
-    }
+    try {
+      // Call the server action to logout
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
 
-    const client = new Client()
-      .setEndpoint(appwriteConfig.endpointUrl)
-      .setProject(appwriteConfig.projectId);
-    const account = new Account(client);
-    await account.deleteSession('current');
-    setUser(null);
+      if (response.ok) {
+        setUser(null);
+      } else {
+        console.error('Logout failed');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      setUser(null);
+    }
   };
 
   // Don't render children until mounted to prevent hydration mismatches

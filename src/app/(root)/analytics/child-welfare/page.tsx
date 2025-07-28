@@ -9,11 +9,7 @@ const ChildWelfareAnalytics = () => {
         <CardHeader>
           <CardTitle>Child Welfare Analytics</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">
-            Child Welfare analytics dashboard will be implemented tomorrow.
-          </p>
-        </CardContent>
+        <CardContent></CardContent>
       </Card>
     </div>
   );

@@ -10,9 +10,33 @@ interface Props {
   avatar: string;
   email: string;
   role: 'executive' | 'admin' | 'manager';
+  department?: string;
 }
 
-const Sidebar = ({ fullName, avatar, email, role }: Props) => {
+const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
+  // Map database department values to sidebar department values
+  const mapDepartmentToSidebar = (
+    dbDepartment?: string
+  ): string | undefined => {
+    if (!dbDepartment) return undefined;
+
+    const departmentMap: Record<string, string> = {
+      childwelfare: 'childwelfare',
+      behavioralhealth: 'behavioralhealth',
+      clinic: 'clinic',
+      residential: 'residential',
+      'cins-fins-snap': 'cins-fins-snap', // CFS full name in database
+      administration: 'administration',
+      'c-suite': 'c-suite',
+      managerial: 'management',
+      finance: 'finance',
+      operations: 'operations',
+    };
+
+    return departmentMap[dbDepartment] || dbDepartment;
+  };
+
+  const mappedDepartment = mapDepartmentToSidebar(department);
   const groupedNav = [
     {
       header: 'Dashboard',
@@ -158,42 +182,48 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
         {
           name: 'Administration',
           icon: '/assets/icons/chart.svg',
-          url: '/analytics',
+          url: '/analytics/administration',
           roles: ['executive', 'admin'],
         },
         {
           name: 'C-Suite',
           icon: '/assets/icons/chart.svg',
-          url: '/analytics',
+          url: '/analytics/c-suite',
           roles: ['executive'],
         },
         {
           name: 'Management',
-          url: '/analytics',
+          department: 'management',
+          // url: '/analytics/management',
           roles: ['executive', 'manager'],
           subItems: [
             {
               name: 'CFS',
+              department: 'cins-fins-snap',
               url: '/analytics/cfs',
               roles: ['executive', 'manager'],
             },
             {
               name: 'Behavioral Health',
+              department: 'behavioralhealth',
               url: '/analytics/behavioral-health',
               roles: ['executive', 'manager'],
             },
             {
               name: 'Child Welfare',
+              department: 'childwelfare',
               url: '/analytics/child-welfare',
               roles: ['executive', 'manager'],
             },
             {
               name: 'Clinic',
+              department: 'clinic',
               url: '/analytics/clinic',
               roles: ['executive', 'manager'],
             },
             {
               name: 'Residential',
+              department: 'residential',
               url: '/analytics/residential',
               roles: ['executive', 'manager'],
             },
@@ -202,6 +232,17 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
       ],
     },
   ];
+
+  // Debug logging
+  console.log('Sidebar Debug:', {
+    role,
+    department,
+    mappedDepartment,
+    hasSubItems: groupedNav
+      .find((section) => section.header === 'Reports & Analytics')
+      ?.items.some((item) => item.subItems),
+  });
+
   return (
     <aside className="sidebar">
       <Link href="/">
@@ -240,6 +281,41 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
               sectionItems = section.items.filter((item) =>
                 item.roles.includes(role)
               );
+
+              // For managers, filter subitems based on their department
+              if (
+                role === 'manager' &&
+                section.header === 'Reports & Analytics'
+              ) {
+                console.log('Filtering manager subitems:', {
+                  mappedDepartment,
+                  sectionItems: sectionItems.map((item) => ({
+                    name: item.name,
+                    subItems: item.subItems?.map((sub) => ({
+                      name: sub.name,
+                      department: sub.department,
+                    })),
+                  })),
+                });
+
+                sectionItems = sectionItems.map((item) => {
+                  if (item.subItems && mappedDepartment) {
+                    // Filter subitems to only show the manager's department
+                    const filteredSubItems = item.subItems.filter(
+                      (subItem) => subItem.department === mappedDepartment
+                    );
+                    console.log(
+                      `Filtered subitems for ${item.name}:`,
+                      filteredSubItems.map((sub) => sub.name)
+                    );
+                    return {
+                      ...item,
+                      subItems: filteredSubItems,
+                    };
+                  }
+                  return item;
+                });
+              }
             }
             if (sectionItems.length === 0) return null;
             // Bracket/curve and icon design for all sections
@@ -340,7 +416,7 @@ const Sidebar = ({ fullName, avatar, email, role }: Props) => {
                           )}
                           <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
                           <Link
-                            href={url}
+                            href={url || ''}
                             className="ml-4 lg:w-full flex items-start gap-3"
                           >
                             {/* Render only the corresponding icon for each item, no generic icon */}

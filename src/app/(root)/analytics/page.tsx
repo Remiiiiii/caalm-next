@@ -15,20 +15,6 @@ import Link from 'next/link';
 const AnalyticsPage = () => {
   const departments = [
     {
-      id: 'administration',
-      name: 'Administration',
-      description: 'Administrative operations and performance metrics',
-      icon: Building,
-      color: 'bg-blue-500',
-      route: '/analytics/administration',
-      stats: {
-        contracts: 156,
-        budget: '$1.9M',
-        staff: 89,
-        compliance: '85%',
-      },
-    },
-    {
       id: 'child-welfare',
       name: 'Child Welfare',
       description: 'Child welfare services and program metrics',
@@ -98,16 +84,28 @@ const AnalyticsPage = () => {
         compliance: '94%',
       },
     },
+    {
+      id: 'administration',
+      name: 'Administration',
+      description: 'Administrative operations and performance metrics',
+      icon: Building,
+      color: 'bg-blue-500',
+      route: '/analytics/administration',
+      stats: {
+        contracts: 156,
+        budget: '$1.9M',
+        staff: 89,
+        compliance: '85%',
+      },
+    },
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Reports & Analytics
-        </h1>
-        <p className="text-gray-600">
+        <h1 className="h1 text-dark-200 mb-2">Reports & Analytics</h1>
+        <p className="body-1 text-light-200">
           Comprehensive analytics and reporting for all departments
         </p>
       </div>
@@ -117,52 +115,60 @@ const AnalyticsPage = () => {
         {departments.map((dept) => {
           const IconComponent = dept.icon;
           return (
-            <Card key={dept.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
+            <Card
+              key={dept.id}
+              className="bg-white/30 backdrop-blur border border-white/40 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+            >
+              <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${dept.color}`}>
-                      <IconComponent className="h-5 w-5 text-white" />
+                    <div className={`p-3 rounded-xl ${dept.color} shadow-lg`}>
+                      <IconComponent className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{dept.name}</CardTitle>
-                      <p className="text-sm text-gray-600">
+                      <CardTitle className="h4 text-dark-200">
+                        {dept.name}
+                      </CardTitle>
+                      <p className="body-2 text-light-200 mt-1">
                         {dept.description}
                       </p>
                     </div>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
+                    <div className="h3 text-dark-200 font-bold">
                       {dept.stats.contracts}
                     </div>
-                    <div className="text-xs text-gray-600">Contracts</div>
+                    <div className="caption text-light-200">Contracts</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
+                    <div className="h3 text-dark-200 font-bold">
                       {dept.stats.budget}
                     </div>
-                    <div className="text-xs text-gray-600">Budget</div>
+                    <div className="caption text-light-200">Budget</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
+                    <div className="h3 text-dark-200 font-bold">
                       {dept.stats.staff}
                     </div>
-                    <div className="text-xs text-gray-600">Staff</div>
+                    <div className="caption text-light-200">Staff</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
+                    <div className="h3 text-dark-200 font-bold">
                       {dept.stats.compliance}
                     </div>
-                    <div className="text-xs text-gray-600">Compliance</div>
+                    <div className="caption text-light-200">Compliance</div>
                   </div>
                 </div>
                 <Link href={dept.route}>
-                  <Button className="w-full" variant="outline">
-                    View Analytics
+                  <Button
+                    className="w-full bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+                    variant="outline"
+                  >
+                    <span className="body-2">View Analytics</span>
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </Link>
@@ -173,11 +179,11 @@ const AnalyticsPage = () => {
       </div>
 
       {/* Reports Section */}
-      <div className="border-t pt-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          Generated Reports
-        </h2>
-        <ReportsPage />
+      <div className="border-t border-white/20 pt-6">
+        <h2 className="h2 text-dark-200 mb-6">Generated Reports</h2>
+        <div className="bg-white/30 backdrop-blur border border-white/40 rounded-xl shadow-lg">
+          <ReportsPage />
+        </div>
       </div>
     </div>
   );
