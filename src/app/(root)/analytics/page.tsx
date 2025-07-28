@@ -1,4 +1,7 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ReportsPage from '@/components/ReportsPage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,9 +14,63 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const AnalyticsPage = () => {
-  const departments = [
+  const { role, department: userDepartment, loading } = useUserRole();
+  const router = useRouter();
+
+  // Map database department values to route department values
+  const mapDatabaseToRouteDepartment = (dbDepartment: string): string => {
+    const mapping: Record<string, string> = {
+      childwelfare: 'child-welfare',
+      behavioralhealth: 'behavioral-health',
+      'cins-fins-snap': 'cfs',
+      administration: 'administration',
+      residential: 'residential',
+      clinic: 'clinic',
+    };
+    return mapping[dbDepartment] || dbDepartment;
+  };
+
+  // Redirect managers and admins to their department page
+  useEffect(() => {
+    if (!loading && role && userDepartment) {
+      if (role === 'manager') {
+        const routeDepartment = mapDatabaseToRouteDepartment(userDepartment);
+        router.replace(`/analytics/${routeDepartment}`);
+      } else if (role === 'admin') {
+        router.replace('/analytics/administration');
+      }
+    }
+  }, [loading, role, userDepartment, router]);
+
+  // Show loading while redirecting
+  if (loading || (role === 'manager' && userDepartment) || role === 'admin') {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-white/20 rounded-xl w-1/3 mb-4"></div>
+          <div className="h-4 bg-white/20 rounded-xl w-1/2 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-48 bg-white/20 rounded-xl backdrop-blur"
+              ></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Only executives should see this page
+  if (role !== 'executive') {
+    return null;
+  }
+
+  const allDepartments = [
     {
       id: 'child-welfare',
       name: 'Child Welfare',
@@ -99,6 +156,9 @@ const AnalyticsPage = () => {
       },
     },
   ];
+
+  // For executives, show all departments
+  const departments = allDepartments;
 
   return (
     <div className="space-y-6">

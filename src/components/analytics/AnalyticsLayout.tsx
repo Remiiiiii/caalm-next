@@ -74,12 +74,25 @@ const departmentConfig = {
   },
 };
 
+// Map database department values to route department values
+const mapDatabaseToRouteDepartment = (dbDepartment: string): string => {
+  const mapping: Record<string, string> = {
+    childwelfare: 'child-welfare',
+    behavioralhealth: 'behavioral-health',
+    'cins-fins-snap': 'cfs',
+    administration: 'administration',
+    residential: 'residential',
+    clinic: 'clinic',
+  };
+  return mapping[dbDepartment] || dbDepartment;
+};
+
 const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
   department,
   children,
   departmentData,
 }) => {
-  const { role, loading } = useUserRole();
+  const { role, department: userDepartment, loading } = useUserRole();
   const config = departmentConfig[department as keyof typeof departmentConfig];
   const IconComponent = config?.icon || Building;
 
@@ -94,7 +107,11 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
         case 'admin':
           return department === 'administration'; // Admin can only access administration
         case 'manager':
-          return department !== 'administration'; // Manager can access all except administration
+          // Manager can only access their specific department
+          if (!userDepartment) return false;
+          const userRouteDepartment =
+            mapDatabaseToRouteDepartment(userDepartment);
+          return department === userRouteDepartment;
         default:
           return false;
       }
@@ -115,8 +132,12 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
           ([key]) => key === 'administration'
         );
       case 'manager':
+        // Manager can only see their specific department
+        if (!userDepartment) return [];
+        const userRouteDepartment =
+          mapDatabaseToRouteDepartment(userDepartment);
         return Object.entries(departmentConfig).filter(
-          ([key]) => key !== 'administration'
+          ([key]) => key === userRouteDepartment
         );
       default:
         return [];
@@ -174,8 +195,8 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             department.
           </p>
           <Link href="/analytics">
-            <Button className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+            <Button className="bg-white/20 backdrop-blur border text-slate-700 border-white/40 hover:bg-white/30 transition-all duration-300">
+              <ArrowLeft className="h-4 w-4 mr-2 text-slate-700" />
               Back to Analytics
             </Button>
           </Link>

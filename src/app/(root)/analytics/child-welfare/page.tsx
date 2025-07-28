@@ -5,11 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 const ChildWelfareAnalytics = () => {
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle>Child Welfare Analytics</CardTitle>
+          <CardTitle className="h3 text-dark-200">
+            Child Welfare Analytics
+          </CardTitle>
         </CardHeader>
-        <CardContent></CardContent>
+        <CardContent className="text-light-200">
+          <p className="body-1">
+            Child welfare analytics content will be displayed here.
+          </p>
+        </CardContent>
       </Card>
     </div>
   );

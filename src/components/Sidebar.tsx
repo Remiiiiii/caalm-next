@@ -21,11 +21,11 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
     if (!dbDepartment) return undefined;
 
     const departmentMap: Record<string, string> = {
-      childwelfare: 'childwelfare',
-      behavioralhealth: 'behavioralhealth',
+      childwelfare: 'child-welfare',
+      behavioralhealth: 'behavioral-health',
       clinic: 'clinic',
       residential: 'residential',
-      'cins-fins-snap': 'cins-fins-snap', // CFS full name in database
+      'cins-fins-snap': 'cfs',
       administration: 'administration',
       'c-suite': 'c-suite',
       managerial: 'management',
@@ -37,6 +37,20 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
   };
 
   const mappedDepartment = mapDepartmentToSidebar(department);
+
+  // Map database department to route department for direct linking
+  const mapDatabaseToRouteDepartment = (dbDepartment: string): string => {
+    const mapping: Record<string, string> = {
+      childwelfare: 'child-welfare',
+      behavioralhealth: 'behavioral-health',
+      'cins-fins-snap': 'cfs',
+      administration: 'administration',
+      residential: 'residential',
+      clinic: 'clinic',
+    };
+    return mapping[dbDepartment] || dbDepartment;
+  };
+
   const groupedNav = [
     {
       header: 'Dashboard',
@@ -179,69 +193,93 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
     {
       header: 'Reports & Analytics',
       items: [
-        {
-          name: 'Administration',
-          icon: '/assets/icons/chart.svg',
-          url: '/analytics/administration',
-          roles: ['executive', 'admin'],
-        },
-        {
-          name: 'C-Suite',
-          icon: '/assets/icons/chart.svg',
-          url: '/analytics/c-suite',
-          roles: ['executive'],
-        },
-        {
-          name: 'Management',
-          department: 'management',
-          // url: '/analytics/management',
-          roles: ['executive', 'manager'],
-          subItems: [
-            {
-              name: 'CFS',
-              department: 'cins-fins-snap',
-              url: '/analytics/cfs',
-              roles: ['executive', 'manager'],
-            },
-            {
-              name: 'Behavioral Health',
-              department: 'behavioralhealth',
-              url: '/analytics/behavioral-health',
-              roles: ['executive', 'manager'],
-            },
-            {
-              name: 'Child Welfare',
-              department: 'childwelfare',
-              url: '/analytics/child-welfare',
-              roles: ['executive', 'manager'],
-            },
-            {
-              name: 'Clinic',
-              department: 'clinic',
-              url: '/analytics/clinic',
-              roles: ['executive', 'manager'],
-            },
-            {
-              name: 'Residential',
-              department: 'residential',
-              url: '/analytics/residential',
-              roles: ['executive', 'manager'],
-            },
-          ],
-        },
+        // For executives, show main analytics page
+        ...(role === 'executive'
+          ? [
+              {
+                name: 'All Analytics',
+                icon: '/assets/icons/chart.svg',
+                url: '/analytics',
+                roles: ['executive'],
+              },
+            ]
+          : []),
+        // For admins, show administration analytics
+        ...(role === 'admin'
+          ? [
+              {
+                name: 'Administration',
+                icon: '/assets/icons/chart.svg',
+                url: '/analytics/administration',
+                roles: ['admin'],
+              },
+            ]
+          : []),
+        // For managers, show their department analytics
+        ...(role === 'manager' && department
+          ? [
+              {
+                name: mapDatabaseToRouteDepartment(department)
+                  .split('-')
+                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' '),
+                icon: '/assets/icons/chart.svg',
+                url: `/analytics/${mapDatabaseToRouteDepartment(department)}`,
+                roles: ['manager'],
+              },
+            ]
+          : []),
+        // For executives, show all department options
+        ...(role === 'executive'
+          ? [
+              {
+                name: 'Administration',
+                icon: '/assets/icons/chart.svg',
+                url: '/analytics/administration',
+                roles: ['executive'],
+              },
+              {
+                name: 'Management',
+                department: 'management',
+                roles: ['executive'],
+                subItems: [
+                  {
+                    name: 'CFS',
+                    department: 'cins-fins-snap',
+                    url: '/analytics/cfs',
+                    roles: ['executive'],
+                  },
+                  {
+                    name: 'Behavioral Health',
+                    department: 'behavioralhealth',
+                    url: '/analytics/behavioral-health',
+                    roles: ['executive'],
+                  },
+                  {
+                    name: 'Child Welfare',
+                    department: 'childwelfare',
+                    url: '/analytics/child-welfare',
+                    roles: ['executive'],
+                  },
+                  {
+                    name: 'Clinic',
+                    department: 'clinic',
+                    url: '/analytics/clinic',
+                    roles: ['executive'],
+                  },
+                  {
+                    name: 'Residential',
+                    department: 'residential',
+                    url: '/analytics/residential',
+                    roles: ['executive'],
+                  },
+                ],
+              },
+            ]
+          : []),
       ],
     },
   ];
-
-  // Debug logging
-  console.log('Sidebar Debug:', {
-    role,
-    department,
-    mappedDepartment,
-    hasSubItems: groupedNav
-      .find((section) => section.header === 'Reports & Analytics')
-      ?.items.some((item) => item.subItems),
-  });
 
   return (
     <aside className="sidebar">
@@ -287,26 +325,11 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                 role === 'manager' &&
                 section.header === 'Reports & Analytics'
               ) {
-                console.log('Filtering manager subitems:', {
-                  mappedDepartment,
-                  sectionItems: sectionItems.map((item) => ({
-                    name: item.name,
-                    subItems: item.subItems?.map((sub) => ({
-                      name: sub.name,
-                      department: sub.department,
-                    })),
-                  })),
-                });
-
                 sectionItems = sectionItems.map((item) => {
                   if (item.subItems && mappedDepartment) {
                     // Filter subitems to only show the manager's department
                     const filteredSubItems = item.subItems.filter(
                       (subItem) => subItem.department === mappedDepartment
-                    );
-                    console.log(
-                      `Filtered subitems for ${item.name}:`,
-                      filteredSubItems.map((sub) => sub.name)
                     );
                     return {
                       ...item,
@@ -425,6 +448,16 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                 <Image
                                   src="/assets/icons/department.svg"
                                   alt="department"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'All Analytics' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/analytics.svg"
+                                  alt="all-analytics"
                                   width={20}
                                   height={20}
                                 />
@@ -582,7 +615,13 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                               </span>
                             )}
 
-                            <p className="text-sm text-slate-700">{name}</p>
+                            <p
+                              className={`text-sm text-slate-700 ${
+                                name === 'Administration' ? '-ml-[1px]' : ''
+                              }`}
+                            >
+                              {name}
+                            </p>
                           </Link>
                         </li>
                         {subItems && (
