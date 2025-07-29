@@ -47,9 +47,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         suppressHydrationWarning={true}
       >
         <ClientOnly>
-          <Suspense fallback={null}>
-            <SignupBanner />
-          </Suspense>
+          <Suspense fallback={null}>{/* <SignupBanner /> */}</Suspense>
         </ClientOnly>
         <AuthProvider>{children}</AuthProvider>
       </body>

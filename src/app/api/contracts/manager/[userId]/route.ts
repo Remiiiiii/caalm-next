@@ -3,10 +3,10 @@ import { getContractsForManager } from '@/lib/actions/file.actions';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     console.log('Fetching contracts for manager:', userId);
 
     const contracts = await getContractsForManager(userId);

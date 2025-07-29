@@ -13,7 +13,7 @@ import {
   createInvitation,
   listPendingInvitations,
   revokeInvitation,
-  getUninvitedUsers,
+  getAllAuthUsers,
   getActiveUsersCount,
 } from '@/lib/actions/user.actions';
 import dynamic from 'next/dynamic';
@@ -35,6 +35,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import Avatar from '@/components/ui/avatar';
 
 const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
@@ -125,10 +126,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
   // Invitation management state
   const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [uninvitedUsers, setUninvitedUsers] = useState<UninvitedUser[]>([]);
+  const [authUsers, setAuthUsers] = useState<UninvitedUser[]>([]);
   const [inviteForm, setInviteForm] = useState({
     selectedUserId: '',
     role: '',
+    department: '',
   });
   const [loading, setLoading] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
@@ -151,7 +153,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     stats: typeof stats;
     files: Models.Document[] | null;
     invitations: Invitation[];
-    uninvitedUsers: UninvitedUser[];
+    authUsers: UninvitedUser[];
     lastFetch: number;
   } | null>(null);
 
@@ -175,7 +177,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         setStats(cachedData.stats);
         setFiles(cachedData.files);
         setInvitations(cachedData.invitations);
-        setUninvitedUsers(cachedData.uninvitedUsers);
+        setAuthUsers(cachedData.authUsers);
         return;
       }
 
@@ -194,14 +196,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
           activeUsers,
           filesRes,
           invitationsData,
-          uninvitedUsersData,
+          authUsersData,
         ] = await Promise.all([
           getTotalContractsCount(),
           getExpiringContractsCount(),
           getActiveUsersCount(),
           getFiles({ types: [], limit: 10 }),
           listPendingInvitations({ orgId }),
-          getUninvitedUsers(),
+          getAllAuthUsers(),
         ]);
 
         // Create new stats array without depending on current stats state
@@ -238,14 +240,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         setInvitations(
           invitationsData.map((inv: unknown) => inv as Invitation)
         );
-        setUninvitedUsers(uninvitedUsersData);
+        setAuthUsers(authUsersData);
 
         // Cache the data
         setCachedData({
           stats: newStats,
           files: filesRes.documents,
           invitations: invitationsData.map((inv: unknown) => inv as Invitation),
-          uninvitedUsers: uninvitedUsersData,
+          authUsers: authUsersData,
           lastFetch: Date.now(),
         });
       } catch (error) {
@@ -279,7 +281,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     setLoading(true);
 
     // Find the selected user
-    const selectedUser = uninvitedUsers.find(
+    const selectedUser = authUsers.find(
       (u) => u.$id === inviteForm.selectedUserId
     );
     if (!selectedUser) {
@@ -296,13 +298,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       email: selectedUser.email,
       name: selectedUser.fullName,
       role: inviteForm.role,
+      department: inviteForm.department,
       orgId,
       invitedBy: adminName,
     });
 
     // Force refresh cache to get updated data
     await fetchAllData(true);
-    setInviteForm({ selectedUserId: '', role: '' });
+    setInviteForm({ selectedUserId: '', role: '', department: '' });
     setLoading(false);
   };
 
@@ -336,6 +339,28 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         return role;
     }
   };
+  // const getDepartmentDisplay = (department: string) => {
+  //   switch (department) {
+  //     case 'childwelfare':
+  //       return 'Child Welfare';
+  //     case 'management':
+  //       return 'Management';
+  //     case 'admin':
+  //       return 'Admin';
+  //     case 'behavioralhealth':
+  //       return 'Behavioral Health';
+  //     case 'clinic':
+  //       return 'Clinic';
+  //     case 'residential':
+  //       return 'Residential';
+  //     case 'cins-fins-snap':
+  //       return 'CFS';
+  //     case 'c-suite':
+  //       return 'C-Suite';
+  //     default:
+  //       return department;
+  //   }
+  // };
 
   return (
     <div className="relative">
@@ -572,7 +597,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader>
               <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                Invite User
+                Invite New User to Caalm
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -585,12 +610,22 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   onValueChange={(value) =>
                     setInviteForm({ ...inviteForm, selectedUserId: value })
                   }
-                  placeholder="Select a user to invite"
+                  placeholder="Select a user 
+                  "
                   className="min-w-[200px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                 >
-                  {uninvitedUsers.map((user) => (
+                  {authUsers.map((user) => (
                     <SelectItem key={user.$id} value={user.$id}>
-                      {user.fullName} ({user.email})
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          name={user.fullName}
+                          userId={user.$id}
+                          size="sm"
+                        />
+                        <span>
+                          {user.fullName} ({user.email})
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectScrollable>
@@ -606,17 +641,37 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectScrollable>
+
+                <SelectScrollable
+                  value={inviteForm.department}
+                  onValueChange={(value) =>
+                    setInviteForm({ ...inviteForm, department: value })
+                  }
+                  placeholder="Select department"
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                >
+                  <SelectItem value="childwelfare">Child Welfare</SelectItem>
+                  <SelectItem value="management">Management</SelectItem>
+                  <SelectItem value="admin">Administration</SelectItem>
+                  <SelectItem value="behavioralhealth">
+                    Behavioral Health
+                  </SelectItem>
+                  <SelectItem value="clinic">Clinic</SelectItem>
+                  <SelectItem value="residential">Residential</SelectItem>
+                  <SelectItem value="cins-fins-snap">CFS</SelectItem>
+                  <SelectItem value="c-suite">C-Suite</SelectItem>
+                </SelectScrollable>
                 <Button
                   type="submit"
-                  disabled={loading || uninvitedUsers.length === 0}
+                  disabled={loading || authUsers.length === 0}
                   className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
                   {loading ? 'Inviting...' : 'Send Invite'}
                 </Button>
               </form>
-              {uninvitedUsers.length === 0 && (
+              {authUsers.length === 0 && (
                 <p className="text-sm text-gray-500 mt-2 text-center">
-                  No users waiting for invitation
+                  No users found in Auth database
                 </p>
               )}
             </CardContent>

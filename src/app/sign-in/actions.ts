@@ -7,15 +7,16 @@ export async function signInHandler(email: string) {
   if (!user) throw new Error('User not found');
   // verifySecret will set the session cookie if successful
 
-  // Redirect based on user role
+  // All users must complete 2FA setup before accessing the application
+  // Redirect to settings to complete mandatory 2FA setup
   switch (user.role) {
     case 'executive':
-      redirect('/dashboard/executive');
+      redirect('/settings');
     case 'manager':
-      redirect('/dashboard/manager');
+      redirect('/settings');
     case 'admin':
-      redirect('/dashboard/admin');
+      redirect('/settings');
     default:
-      redirect('/');
+      redirect('/settings');
   }
 }

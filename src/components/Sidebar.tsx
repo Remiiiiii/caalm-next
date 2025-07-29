@@ -4,6 +4,7 @@ import Link from 'next/link';
 import React, { Fragment } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import Avatar from '@/components/ui/avatar';
 
 interface Props {
   fullName: string;
@@ -184,7 +185,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
         },
         {
           name: 'Assign Tasks',
-          icon: '/assets/icons/edit.svg',
+          icon: '/assets/icons/task.svg',
           url: '/team/tasks',
           roles: ['manager'],
         },
@@ -614,7 +615,66 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                 />
                               </span>
                             )}
-
+                            {name === 'Assign Tasks' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/task.svg"
+                                  alt="reports-analytics"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Child Welfare' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="reports-analytics"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Behavioral Health' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="reports-analytics"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Residential' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="reports-analytics"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'CFS' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="reports-analytics"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Clinic' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/department.svg"
+                                  alt="reports-analytics"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
                             <p
                               className={`text-sm text-slate-700 ${
                                 name === 'Administration' ? '-ml-[1px]' : ''
@@ -665,21 +725,35 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
           })}
         </ul>
       </nav>
-      <Image
-        src="/assets/images/files-2.png"
-        alt="logo"
-        width={506}
-        height={418}
-        className="w-full"
-        priority
-      />
+      <Link href="/settings">
+        <div className="flex items-center gap-2 mt-8">
+          <Image
+            src="/assets/icons/settings.svg"
+            alt="logo"
+            width={25}
+            height={25}
+            className="cursor-pointer"
+            priority
+          />
+          <span className="font-bold text-base sidebar-gradient-text">
+            Settings
+          </span>
+        </div>
+      </Link>
       <div className="sidebar-user-info">
-        {avatar && (
+        {avatar ? (
           <Image
             src={avatar}
             alt="avatar"
             width={44}
             height={44}
+            className="sidebar-user-avatar"
+          />
+        ) : (
+          <Avatar
+            name={fullName}
+            userId={email}
+            size="lg"
             className="sidebar-user-avatar"
           />
         )}

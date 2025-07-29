@@ -23,6 +23,7 @@ import {
   getUserByEmail,
 } from '@/lib/actions/user.actions';
 import OTPModal from '@/components/OTPModal';
+import TwoFactorModal from '@/components/TwoFactorModal';
 import { useRouter } from 'next/navigation';
 
 type FormType = 'sign-in' | 'sign-up';
@@ -42,11 +43,13 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [accountId, setAccountId] = useState<string | null>(null); // Only used for sign-in OTP
+  const [userId, setUserId] = useState<string | null>(null); // For 2FA verification
   const [success, setSuccess] = useState(false);
   const [pendingSignup, setPendingSignup] = useState<{
     email: string;
     fullName: string;
   } | null>(null);
+  const [show2FA, setShow2FA] = useState(false);
 
   const formSchema = authFormSchema(type);
 
@@ -187,7 +190,32 @@ const AuthForm = ({ type }: { type: FormType }) => {
             email={form.getValues('email')}
             accountId={accountId}
             onSuccess={async () => {
-              // After successful OTP verification for sign-in, fetch user and redirect by role
+              // After successful OTP verification, check if user needs 2FA
+              const user = await getUserByEmail(form.getValues('email'));
+              if (user?.$id) {
+                setUserId(user.$id);
+                setShow2FA(true);
+              } else {
+                // Fallback to direct redirect if user not found
+                if (user?.role === 'executive')
+                  router.push('/dashboard/executive');
+                else if (user?.role === 'manager')
+                  router.push('/dashboard/manager');
+                else if (user?.role === 'admin')
+                  router.push('/dashboard/admin');
+                else router.push('/dashboard');
+              }
+            }}
+          />
+        )}
+        {type === 'sign-in' && show2FA && userId && (
+          <TwoFactorModal
+            email={form.getValues('email')}
+            userId={userId}
+            isOpen={show2FA}
+            onClose={() => setShow2FA(false)}
+            onSuccess={async () => {
+              // After successful 2FA verification, redirect by role
               const user = await getUserByEmail(form.getValues('email'));
               if (user?.role === 'executive')
                 router.push('/dashboard/executive');

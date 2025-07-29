@@ -1,6 +1,6 @@
 'use server';
 
-import { ID, Query, Models } from 'node-appwrite';
+import { ID, Query } from 'node-appwrite';
 import { createAdminClient, createSessionClient } from '../appwrite';
 import { appwriteConfig } from '../appwrite/config';
 import { parseStringify } from '../utils';
@@ -103,7 +103,15 @@ export const finalizeAccountAfterEmailVerification = async ({
   await users.updateEmailVerification(accountId, true);
 
   // 3. Add messaging target so user can be added as a subscriber manually
-  await addUserEmailTarget(accountId, email);
+  try {
+    await addUserEmailTarget(accountId, email);
+  } catch (error) {
+    console.warn(
+      'Failed to add email target, but continuing with account creation:',
+      error
+    );
+    // Don't throw error here as the main account creation should still succeed
+  }
 
   // Do NOT create users collection document here
   return { accountId };
@@ -151,13 +159,15 @@ export const getCurrentUser = async () => {
 };
 
 export const signOutUser = async () => {
-  const { account } = await createSessionClient();
   try {
+    // Try to get session client, but don't fail if no session exists
+    const { account } = await createSessionClient();
     await account.deleteSession('current');
-    (await cookies()).delete('appwrite-session');
   } catch (error) {
-    handleError(error, 'Failed to sign out user');
+    console.log('No active session to delete:', error);
   } finally {
+    // Always delete the session cookie and redirect
+    (await cookies()).delete('appwrite-session');
     redirect('/sign-in');
   }
 };
@@ -193,7 +203,6 @@ export const signInUser = async ({ email }: { email: string }) => {
           avatar: avatarPlaceholderUrl,
           accountId: authUser.$id,
           role: '',
-          department: undefined,
         }
       );
       await sendEmailOTP({ email });
@@ -213,6 +222,7 @@ interface CreateInvitationParams {
   email: string;
   orgId: string;
   role: string;
+  department: string;
   name: string;
   expiresInDays?: number;
   invitedBy: string;
@@ -238,6 +248,7 @@ export const createInvitation = async ({
   email,
   orgId,
   role,
+  department,
   name,
   expiresInDays = 7,
   invitedBy,
@@ -266,6 +277,7 @@ export const createInvitation = async ({
       email,
       orgId,
       role: normalizedRole,
+      department,
       name,
       token,
       expiresAt,
@@ -286,7 +298,7 @@ export const createInvitation = async ({
     await messaging.createEmail(
       ID.unique(),
       "You're invited to join CAALM Solutions",
-      `You have been invited! Click the link to join: <a href="${inviteLink}">${inviteLink}</a>`,
+      `You have been invited to! Click the link to join Caalm: <a href="${inviteLink}">${inviteLink}</a>`,
       ['68659c97003b73e38fcb'], // topics
       [], // targets
       [],
@@ -343,6 +355,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
         avatar: avatarPlaceholderUrl,
         accountId,
         role: normalizedRole,
+        department: invite.department,
       }
     );
     user = await getUserByEmail(invite.email);
@@ -363,6 +376,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     email: invite.email,
     accountId: user.accountId,
     role: user.role,
+    department: user.department,
   };
 };
 
@@ -407,18 +421,46 @@ export const addUserEmailTarget = async (userId: string, email: string) => {
     .setKey(process.env.NEXT_APPWRITE_KEY!);
 
   const users = new sdk.Users(client);
-  const newUserId = userId; // The ID of the user you want to add the target to
-  const targetType = sdk.MessagingProviderType.Email; // The type of target you are adding
+  const targetType = sdk.MessagingProviderType.Email;
 
   try {
+    // First, check if a target already exists for this user and email
+    const existingTargets = await users.listTargets(userId);
+    const existingEmailTarget = existingTargets.targets.find(
+      (target) => target.providerType === 'email' && target.identifier === email
+    );
+
+    if (existingEmailTarget) {
+      console.log('Email target already exists for user:', userId);
+      return existingEmailTarget;
+    }
+
+    // If no existing target, create a new one with a more specific ID
+    const targetId = `email_${userId}_${Date.now()}`;
     const response = await users.createTarget(
-      newUserId,
-      ID.unique(),
+      userId,
+      targetId,
       targetType,
       email
     );
     return response;
   } catch (error) {
+    // If the error is about duplicate ID, try with a different approach
+    if (error instanceof Error && error.message.includes('already exists')) {
+      console.log('Target ID conflict, trying with unique ID...');
+      try {
+        const response = await users.createTarget(
+          userId,
+          ID.unique(),
+          targetType,
+          email
+        );
+        return response;
+      } catch (retryError) {
+        console.error('Error creating email target on retry:', retryError);
+        throw retryError;
+      }
+    }
     console.error('Error creating email target:', error);
     throw error;
   }
@@ -568,6 +610,29 @@ export const getUnreadNotificationsCount = async (userId: string) => {
   }
 };
 
+// Get all users from Auth database
+export const getAllAuthUsers = async () => {
+  try {
+    // Get all Auth users
+    const client = new sdk.Client()
+      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+      .setKey(process.env.NEXT_APPWRITE_KEY!);
+    const users = new sdk.Users(client);
+    const authUsers = await users.list();
+
+    return authUsers.users.map((user) => ({
+      $id: user.$id,
+      email: user.email,
+      fullName: user.name || 'Unknown',
+      $createdAt: user.$createdAt,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch Auth users:', error);
+    return [];
+  }
+};
+
 // Get users who have signed up but haven't been invited yet
 export const getUninvitedUsers = async () => {
   const { databases } = await createAdminClient();
@@ -595,9 +660,11 @@ export const getUninvitedUsers = async () => {
 
     // Filter out users who are already in the users collection or have pending invitations
     const invitedEmails = new Set([
-      ...invitedUsers.documents.map((u: Models.Document) => u.email as string),
+      ...invitedUsers.documents.map(
+        (u: Record<string, unknown>) => u.email as string
+      ),
       ...pendingInvitations.documents.map(
-        (inv: Models.Document) => inv.email as string
+        (inv: Record<string, unknown>) => inv.email as string
       ),
     ]);
 

@@ -3,6 +3,7 @@
 import Spline from '@splinetool/react-spline';
 import { useAnimationFrame } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
+import SignupBanner from './SignupBanner';
 import {
   Database,
   Bell,
@@ -160,6 +161,7 @@ const HeroIntro = () => {
 
   return (
     <section className="relative flex flex-col items-center justify-center pt-20 pb-8 bg-gradient-to-b from-white to-blue-50 overflow-hidden">
+      <SignupBanner />
       {/* Video crossfade background */}
       {videoDuration !== null && (
         <>
