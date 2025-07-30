@@ -15,13 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Shield,
-  QrCode,
   Smartphone,
   RefreshCw,
   Eye,
   EyeOff,
   CheckCircle,
-  XCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -41,51 +39,14 @@ const TwoFactorModal = ({
   onClose,
   onSuccess,
 }: TwoFactorModalProps) => {
-  const [step, setStep] = useState<'check' | 'setup' | 'verify' | 'success'>(
-    'check'
-  );
+  const [step, setStep] = useState<'setup' | 'verify' | 'success'>('setup');
   const [isLoading, setIsLoading] = useState(false);
   const [qrCode, setQrCode] = useState('');
   const [secret, setSecret] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [showSecret, setShowSecret] = useState(false);
-  const [has2FA, setHas2FA] = useState(false);
   const [factorId, setFactorId] = useState('');
   const { toast } = useToast();
-
-  // Check if user has 2FA enabled
-  useEffect(() => {
-    if (isOpen) {
-      checkTwoFactorStatus();
-    }
-  }, [isOpen]);
-
-  const checkTwoFactorStatus = async () => {
-    try {
-      setIsLoading(true);
-      // TODO: Replace with actual Appwrite MFA check
-      const response = await fetch('/api/2fa/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-
-      const data = await response.json();
-      setHas2FA(data.has2FA);
-
-      if (data.has2FA) {
-        setStep('verify');
-      } else {
-        setStep('setup');
-      }
-    } catch (error) {
-      console.error('Error checking 2FA status:', error);
-      // If check fails, assume no 2FA and show setup
-      setStep('setup');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const setupTwoFactor = async () => {
     try {
@@ -160,7 +121,7 @@ const TwoFactorModal = ({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          factorId: has2FA ? factorId : factorId,
+          factorId,
           code: verificationCode,
         }),
       });
@@ -170,7 +131,7 @@ const TwoFactorModal = ({
       if (data.success) {
         setStep('success');
         toast({
-          title: '2FA Verified Successfully',
+          title: '2FA Setup Complete',
           description:
             'Your account is now protected with two-factor authentication',
         });
@@ -218,33 +179,13 @@ const TwoFactorModal = ({
     setFactorId('');
   };
 
-  if (isLoading && step === 'check') {
-    return (
-      <AlertDialog open={isOpen} onOpenChange={onClose}>
-        <AlertDialogContent className="shad-alert-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="sr-only">
-              Checking 2FA Status
-            </AlertDialogTitle>
-          </AlertDialogHeader>
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="h-6 w-6 animate-spin text-blue-500" />
-            <span className="ml-2 text-sm text-light-200">
-              Checking 2FA status...
-            </span>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-    );
-  }
-
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="shad-alert-dialog max-w-md">
         <AlertDialogHeader className="relative flex justify-center">
           <AlertDialogTitle className="h2 text-center flex items-center gap-2">
             <Shield className="h-5 w-5 text-blue-500" />
-            Two-Factor Authentication
+            Two-Factor Authentication Setup
             <Image
               src="/assets/icons/close-dark.svg"
               alt="close"
@@ -258,8 +199,8 @@ const TwoFactorModal = ({
             {step === 'setup' &&
               'Two-factor authentication is required for account security'}
             {step === 'verify' &&
-              'Enter your 2FA verification code to continue'}
-            {step === 'success' && '2FA verification successful!'}
+              'Scan the QR code and enter the verification code'}
+            {step === 'success' && '2FA setup successful!'}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -293,7 +234,7 @@ const TwoFactorModal = ({
 
         {step === 'verify' && (
           <div className="space-y-4">
-            {qrCode && !has2FA && (
+            {qrCode && (
               <Card className="bg-white/20 backdrop-blur border border-white/40">
                 <CardContent className="p-4">
                   <div className="flex flex-col items-center space-y-4">
@@ -341,9 +282,7 @@ const TwoFactorModal = ({
 
             <div className="space-y-3">
               <p className="text-sm text-light-200 text-center">
-                {has2FA
-                  ? 'Enter the 6-digit verification code from your authenticator app:'
-                  : 'After scanning the QR code, enter the 6-digit verification code:'}
+                After scanning the QR code, enter the 6-digit verification code:
               </p>
               <Input
                 type="text"
@@ -382,7 +321,7 @@ const TwoFactorModal = ({
           <div className="space-y-4 text-center">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
             <p className="text-sm text-light-200">
-              Two-factor authentication has been successfully verified.
+              Two-factor authentication has been successfully set up.
               Redirecting...
             </p>
           </div>

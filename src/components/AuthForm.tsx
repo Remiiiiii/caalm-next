@@ -24,6 +24,7 @@ import {
 } from '@/lib/actions/user.actions';
 import OTPModal from '@/components/OTPModal';
 import TwoFactorModal from '@/components/TwoFactorModal';
+import TwoFactorVerificationModal from '@/components/TwoFactorVerificationModal';
 import { useRouter } from 'next/navigation';
 
 type FormType = 'sign-in' | 'sign-up';
@@ -49,7 +50,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
     email: string;
     fullName: string;
   } | null>(null);
-  const [show2FA, setShow2FA] = useState(false);
+  const [show2FASetup, setShow2FASetup] = useState(false);
+  const [show2FAVerification, setShow2FAVerification] = useState(false);
 
   const formSchema = authFormSchema(type);
 
@@ -97,6 +99,35 @@ const AuthForm = ({ type }: { type: FormType }) => {
       } finally {
         setIsLoading(false);
       }
+    }
+  };
+
+  const checkTwoFactorStatus = async (userId: string) => {
+    try {
+      const response = await fetch('/api/2fa/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (data.has2FA) {
+          // User has 2FA enabled - show TOTP verification only
+          setShow2FAVerification(true);
+        } else {
+          // User doesn't have 2FA - show setup
+          setShow2FASetup(true);
+        }
+      } else {
+        // If check fails, assume no 2FA and show setup
+        setShow2FASetup(true);
+      }
+    } catch (error) {
+      console.error('Error checking 2FA status:', error);
+      // If check fails, assume no 2FA and show setup
+      setShow2FASetup(true);
     }
   };
 
@@ -194,7 +225,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
               const user = await getUserByEmail(form.getValues('email'));
               if (user?.$id) {
                 setUserId(user.$id);
-                setShow2FA(true);
+                await checkTwoFactorStatus(user.$id);
               } else {
                 // Fallback to direct redirect if user not found
                 if (user?.role === 'executive')
@@ -208,14 +239,15 @@ const AuthForm = ({ type }: { type: FormType }) => {
             }}
           />
         )}
-        {type === 'sign-in' && show2FA && userId && (
+
+        {type === 'sign-in' && show2FASetup && userId && (
           <TwoFactorModal
             email={form.getValues('email')}
             userId={userId}
-            isOpen={show2FA}
-            onClose={() => setShow2FA(false)}
+            isOpen={show2FASetup}
+            onClose={() => setShow2FASetup(false)}
             onSuccess={async () => {
-              // After successful 2FA verification, redirect by role
+              // After successful 2FA setup, redirect by role
               const user = await getUserByEmail(form.getValues('email'));
               if (user?.role === 'executive')
                 router.push('/dashboard/executive');
@@ -226,6 +258,25 @@ const AuthForm = ({ type }: { type: FormType }) => {
             }}
           />
         )}
+
+        {type === 'sign-in' && show2FAVerification && userId && (
+          <TwoFactorVerificationModal
+            userId={userId}
+            email={form.getValues('email')}
+            onSuccess={async () => {
+              // After successful TOTP verification, redirect by role
+              const user = await getUserByEmail(form.getValues('email'));
+              if (user?.role === 'executive')
+                router.push('/dashboard/executive');
+              else if (user?.role === 'manager')
+                router.push('/dashboard/manager');
+              else if (user?.role === 'admin') router.push('/dashboard/admin');
+              else router.push('/dashboard');
+            }}
+            onClose={() => setShow2FAVerification(false)}
+          />
+        )}
+
         {type === 'sign-up' && pendingSignup && (
           <OTPModal
             email={pendingSignup.email}

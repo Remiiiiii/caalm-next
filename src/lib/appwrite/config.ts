@@ -28,6 +28,10 @@ export const appwriteConfig = {
     process.env.NEXT_PUBLIC_APPWRITE_REPORTS_COLLECTION ||
     '6885147d003d9de593d3',
 
+  otpTokensCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_OTPTOKENS_COLLECTION ||
+    '688a64a900046399bc54',
+
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET || '685edb60000bb7a088a2',
 
   secretKey: process.env.NEXT_APPWRITE_KEY || '',

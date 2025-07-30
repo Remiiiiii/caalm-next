@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-// import { Client, Users } from 'node-appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
+import { createAdminClient } from '@/lib/appwrite';
 import {
   generateTOTPSecret,
   generateTOTPQRUrl,
   verifyTOTPCode,
 } from '@/lib/totp';
-
-// const client = new Client()
-//   .setEndpoint(appwriteConfig.endpointUrl)
-//   .setProject(appwriteConfig.projectId)
-//   .setKey(appwriteConfig.secretKey);
-
-// const users = new Users(client); // Will be used when implementing actual user lookup
+import { Query } from 'node-appwrite';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +44,7 @@ export async function POST(request: NextRequest) {
     // Store the secret in temporary storage for verification
     tempSecrets.set(factorId, {
       secret: secret,
+      userId: userId,
       timestamp: Date.now(),
     });
 
@@ -68,7 +63,14 @@ export async function POST(request: NextRequest) {
 }
 
 // In-memory storage for demo purposes (in production, use a database)
-const tempSecrets = new Map<string, { secret: string; timestamp: number }>();
+const tempSecrets = new Map<
+  string,
+  {
+    secret: string;
+    userId: string;
+    timestamp: number;
+  }
+>();
 
 // Cleanup expired secrets every 10 minutes
 setInterval(() => {
@@ -115,28 +117,84 @@ export async function PUT(request: NextRequest) {
     const isValid = verifyTOTPCode(storedData.secret, code);
 
     if (isValid) {
-      // Clean up the temporary secret
-      tempSecrets.delete(factorId);
+      // Store the verified secret in the user's profile
+      try {
+        const client = await createAdminClient();
 
-      // In production, you would:
-      // 1. Store the verified secret securely in your database
-      // 2. Mark the user as having 2FA enabled
-      // 3. Create a session or token
+        // First, check if the user exists
+        const userResponse = await client.databases.listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.usersCollectionId,
+          [Query.equal('$id', storedData.userId)]
+        );
 
-      const response = NextResponse.json({
-        success: true,
-        message: '2FA setup completed successfully',
-      });
+        if (userResponse.documents.length === 0) {
+          return NextResponse.json(
+            { error: 'User not found' },
+            { status: 404 }
+          );
+        }
 
-      // Set cookie to indicate 2FA is completed
-      response.cookies.set('2fa_completed', 'true', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-      });
+        // Update the user's profile with 2FA information
+        // Only include fields that exist in the schema to avoid errors
+        const updateData: Record<string, unknown> = {
+          twoFactorEnabled: true,
+          twoFactorSecret: storedData.secret,
+          twoFactorFactorId: factorId,
+        };
 
-      return response;
+        // Try to add the setup timestamp if the field exists
+        try {
+          updateData.twoFactorSetupAt = new Date().toISOString();
+        } catch {
+          console.warn('twoFactorSetupAt field not available in schema');
+        }
+
+        await client.databases.updateDocument(
+          appwriteConfig.databaseId,
+          appwriteConfig.usersCollectionId,
+          storedData.userId,
+          updateData
+        );
+
+        // Clean up the temporary secret
+        tempSecrets.delete(factorId);
+
+        const response = NextResponse.json({
+          success: true,
+          message: '2FA setup completed successfully',
+        });
+
+        // Set cookie to indicate 2FA is completed
+        response.cookies.set('2fa_completed', 'true', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+        });
+
+        return response;
+      } catch (error) {
+        console.error('Error storing 2FA secret:', error);
+
+        // Provide more specific error information
+        if (error instanceof Error) {
+          if (error.message.includes('Attribute')) {
+            return NextResponse.json(
+              {
+                error:
+                  'Database schema does not support 2FA fields. Please add the required attributes to the users collection.',
+              },
+              { status: 500 }
+            );
+          }
+        }
+
+        return NextResponse.json(
+          { error: 'Failed to store 2FA configuration' },
+          { status: 500 }
+        );
+      }
     } else {
       return NextResponse.json(
         { error: 'Invalid verification code' },

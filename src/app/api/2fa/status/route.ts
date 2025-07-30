@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-// import { Client, Users } from 'node-appwrite';
-// import { appwriteConfig } from '@/lib/appwrite/config';
-
-// const client = new Client()
-//   .setEndpoint(appwriteConfig.endpointUrl)
-//   .setProject(appwriteConfig.projectId)
-//   .setKey(appwriteConfig.secretKey);
-
-// const users = new Users(client); // Will be used when implementing actual 2FA status check
+import { createAdminClient } from '@/lib/appwrite';
+import { appwriteConfig } from '@/lib/appwrite/config';
+import { Query } from 'node-appwrite';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,14 +14,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For demo purposes, we'll return a mock response
-    // In production, you would check the user's actual 2FA status from your database
-    const has2FA = false; // This should be retrieved from your user's profile
+    const client = await createAdminClient();
 
-    return NextResponse.json({
-      success: true,
-      has2FA,
-    });
+    try {
+      // Check if user has 2FA enabled by looking for stored 2FA data
+      // In production, you would store this in a separate collection or user profile
+      const userResponse = await client.databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.usersCollectionId,
+        [Query.equal('$id', userId)]
+      );
+
+      if (userResponse.documents.length > 0) {
+        const user = userResponse.documents[0];
+
+        // Check if user has 2FA enabled according to the schema
+        // All 4 fields must be populated for 2FA to be considered "enabled"
+        const has2FA =
+          user.twoFactorEnabled === true &&
+          user.twoFactorSecret !== null &&
+          user.twoFactorSecret !== undefined &&
+          user.twoFactorFactorId !== null &&
+          user.twoFactorFactorId !== undefined &&
+          user.twoFactorSetupAt !== null &&
+          user.twoFactorSetupAt !== undefined;
+
+        return NextResponse.json({
+          success: true,
+          has2FA,
+          twoFactorEnabled: user.twoFactorEnabled,
+          twoFactorSecret: user.twoFactorSecret,
+          twoFactorFactorId: user.twoFactorFactorId,
+          twoFactorSetupAt: user.twoFactorSetupAt,
+        });
+      } else {
+        return NextResponse.json({
+          success: true,
+          has2FA: false,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user from database:', error);
+
+      // If we can't fetch from database, return false (no 2FA)
+      return NextResponse.json({
+        success: true,
+        has2FA: false,
+      });
+    }
   } catch (error) {
     console.error('Error checking 2FA status:', error);
     return NextResponse.json(
