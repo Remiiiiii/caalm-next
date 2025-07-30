@@ -5,6 +5,8 @@ import Sidebar from '@/components/Sidebar';
 import MobileNavigation from '@/components/MobileNavigation';
 import DashboardHeader from '@/components/DashboardHeader';
 import QuickActions from '@/components/QuickActions';
+import InactivityDialog from '@/components/InactivityDialog';
+import { useInactivityTimer } from '@/hooks/useInactivityTimer';
 
 import { Toaster } from '@/components/ui/toaster';
 import { avatarPlaceholderUrl } from '../../constants';
@@ -34,6 +36,10 @@ const AuthenticatedLayout = ({
   const currentUser = serverUser;
   const user = currentUser as ExtendedUser;
 
+  // Initialize inactivity timer
+  const { showDialog, handleContinue, handleLogout, handleClose } =
+    useInactivityTimer();
+
   return (
     <main className="flex h-screen">
       <Sidebar
@@ -59,6 +65,14 @@ const AuthenticatedLayout = ({
         <div className="main-content">{children}</div>
       </section>
       <Toaster />
+
+      {/* Inactivity Dialog */}
+      <InactivityDialog
+        isOpen={showDialog}
+        onClose={handleClose}
+        onContinue={handleContinue}
+        onLogout={handleLogout}
+      />
     </main>
   );
 };

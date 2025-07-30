@@ -34,6 +34,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import Avatar from '@/components/ui/avatar';
 
@@ -139,6 +149,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const orgId = 'TODO_ORG_ID'; // Replace with actual orgId from context or props
   const adminName = 'Executive'; // Replace with actual admin name
   const [resendingToken, setResendingToken] = useState<string | null>(null);
+
+  // Revoke confirmation dialog state
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
+  const [revokeToken, setRevokeToken] = useState<string | null>(null);
+  const [revokeEmail, setRevokeEmail] = useState<string | null>(null);
 
   // File usage and recent files state
   const [files, setFiles] = useState<Models.Document[] | null>(null);
@@ -309,10 +324,41 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     setLoading(false);
   };
 
-  const handleRevoke = async (token: string) => {
-    await revokeInvitation({ token });
-    // Force refresh cache to get updated data
-    await fetchAllData(true);
+  const handleRevoke = async (token: string, email: string) => {
+    setRevokeToken(token);
+    setRevokeEmail(email);
+    setShowRevokeDialog(true);
+  };
+
+  const confirmRevoke = async () => {
+    if (!revokeToken) return;
+
+    try {
+      await revokeInvitation({ token: revokeToken });
+      // Force refresh cache to get updated data
+      await fetchAllData(true);
+
+      toast({
+        title: 'Invitation Revoked',
+        description: 'The invitation has been successfully revoked.',
+      });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to revoke invitation. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setShowRevokeDialog(false);
+      setRevokeToken(null);
+      setRevokeEmail(null);
+    }
+  };
+
+  const cancelRevoke = () => {
+    setShowRevokeDialog(false);
+    setRevokeToken(null);
+    setRevokeEmail(null);
   };
 
   const resendInvitation = async () => {
@@ -650,16 +696,16 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   placeholder="Select department"
                   className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                 >
-                  <SelectItem value="childwelfare">Child Welfare</SelectItem>
-                  <SelectItem value="management">Management</SelectItem>
                   <SelectItem value="admin">Administration</SelectItem>
                   <SelectItem value="behavioralhealth">
                     Behavioral Health
                   </SelectItem>
-                  <SelectItem value="clinic">Clinic</SelectItem>
-                  <SelectItem value="residential">Residential</SelectItem>
-                  <SelectItem value="cins-fins-snap">CFS</SelectItem>
                   <SelectItem value="c-suite">C-Suite</SelectItem>
+                  <SelectItem value="cins-fins-snap">CFS</SelectItem>
+                  <SelectItem value="childwelfare">Child Welfare</SelectItem>
+                  <SelectItem value="clinic">Clinic</SelectItem>
+                  {/* <SelectItem value="management">Management</SelectItem> */}
+                  <SelectItem value="residential">Residential</SelectItem>
                 </SelectScrollable>
                 <Button
                   type="submit"
@@ -758,7 +804,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleRevoke(inv.token)}
+                              onClick={() => handleRevoke(inv.token, inv.email)}
                               className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                             >
                               Revoke
@@ -859,6 +905,72 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Enhanced Revoke Confirmation Dialog */}
+          <AlertDialog
+            open={showRevokeDialog}
+            onOpenChange={setShowRevokeDialog}
+          >
+            <AlertDialogContent className="bg-[#F6F7FA] backdrop-blur border border-white/50 shadow-xl rounded-xl max-w-md mx-4">
+              <AlertDialogHeader className="text-center pb-4">
+                <div className="flex justify-center mb-3">
+                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">⚠️</span>
+                  </div>
+                </div>
+                <AlertDialogTitle className="text-xl sidebar-gradient-text">
+                  Revoke this invitation?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-slate-600 text-sm mt-2">
+                  User won&apos;t be able to accept it afterward.
+                </AlertDialogDescription>
+                <div className="border border-b-0 border-slate-300 "></div>
+              </AlertDialogHeader>
+
+              <div className="px-6 pb-4">
+                <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                  {revokeEmail && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">
+                        Email:
+                      </span>
+                      <span className="text-sm text-slate-600">
+                        {revokeEmail}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-700">
+                      Date:
+                    </span>
+                    <span className="text-sm text-slate-600">
+                      {new Date().toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs text-amber-800 font-medium">
+                    ⚠️ This action can&apos;t be undone
+                  </p>
+                </div>
+              </div>
+              <AlertDialogFooter className="flex-col sm:flex-row gap-3 px-6 pb-6">
+                <AlertDialogCancel
+                  onClick={cancelRevoke}
+                  className="w-full sm:w-auto bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 transition-colors rounded-lg px-4 py-2 font-medium"
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmRevoke}
+                  className="w-full sm:w-auto bg-red-500/80 backdrop-blur border border-red-400/50 shadow-md text-slate-700 hover:bg-red-600/80 transition-colors rounded-lg px-4 py-2 font-medium"
+                >
+                  Revoke
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>
