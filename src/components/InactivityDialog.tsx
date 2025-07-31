@@ -12,8 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Clock, LogOut, RefreshCw } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Clock, LogOut, RefreshCw, AlertTriangle } from 'lucide-react';
 import { getTimerValues, formatTime } from '@/lib/inactivity-config';
 
 interface InactivityDialogProps {
@@ -32,11 +31,17 @@ export default function InactivityDialog({
   const { countdownTime } = getTimerValues();
   const initialSeconds = Math.floor(countdownTime / 1000);
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
-  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    onLogout();
-    router.push('/sign-in');
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await onLogout();
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force close dialog even if logout fails
+      onClose();
+    }
   };
 
   const handleContinue = () => {
@@ -48,6 +53,7 @@ export default function InactivityDialog({
   useEffect(() => {
     if (isOpen) {
       setSecondsLeft(initialSeconds);
+      setIsLoggingOut(false);
     }
   }, [isOpen, initialSeconds]);
 
@@ -70,10 +76,10 @@ export default function InactivityDialog({
 
   // Handle logout when countdown reaches 0
   useEffect(() => {
-    if (isOpen && secondsLeft <= 0) {
+    if (isOpen && secondsLeft <= 0 && !isLoggingOut) {
       handleLogout();
     }
-  }, [isOpen, secondsLeft, handleLogout]);
+  }, [isOpen, secondsLeft, isLoggingOut]);
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -83,26 +89,37 @@ export default function InactivityDialog({
             <Clock className="h-5 w-5 text-orange-500" />
             Session Expiring
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            Due to inactivity, you'll be signed out in{' '}
-            <span className="font-mono font-bold text-red-600">
-              {formatTime(secondsLeft)}
-            </span>{' '}
-            seconds.
+          <AlertDialogDescription className="space-y-2">
+            <p>
+              Due to inactivity, you'll be signed out in{' '}
+              <span className="font-mono font-bold text-red-600">
+                {formatTime(secondsLeft)}
+              </span>{' '}
+              seconds.
+            </p>
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-amber-800">
+                For security reasons, your session will be completely terminated
+                and you'll need to sign in again.
+              </p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter className="flex gap-2">
           <AlertDialogCancel
             onClick={handleLogout}
-            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white"
+            disabled={isLoggingOut}
+            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white disabled:opacity-50"
           >
             <LogOut className="h-4 w-4" />
-            Sign Out
+            {isLoggingOut ? 'Signing Out...' : 'Sign Out Now'}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleContinue}
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+            disabled={isLoggingOut}
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
           >
             <RefreshCw className="h-4 w-4" />
             Continue Session

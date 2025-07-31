@@ -13,9 +13,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   createAccount,
   signInUser,
@@ -26,6 +27,8 @@ import OTPModal from '@/components/OTPModal';
 import TwoFactorModal from '@/components/TwoFactorModal';
 import TwoFactorVerificationModal from '@/components/TwoFactorVerificationModal';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, Clock, Shield } from 'lucide-react';
+import { getLogoutMessage } from '@/lib/auth-utils';
 
 type FormType = 'sign-in' | 'sign-up';
 
@@ -43,6 +46,7 @@ const authFormSchema = (formType: FormType) => {
 const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [logoutMessage, setLogoutMessage] = useState('');
   const [accountId, setAccountId] = useState<string | null>(null); // Only used for sign-in OTP
   const [userId, setUserId] = useState<string | null>(null); // For 2FA verification
   const [success, setSuccess] = useState(false);
@@ -54,6 +58,16 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const [show2FAVerification, setShow2FAVerification] = useState(false);
 
   const formSchema = authFormSchema(type);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Check for logout reason in URL params
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    if (reason) {
+      setLogoutMessage(getLogoutMessage(reason));
+    }
+  }, [searchParams]);
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof formSchema>>({
@@ -65,12 +79,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
     },
   });
 
-  const router = useRouter();
-
   // 2. Define a submit handler.
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     setErrorMessage('');
+    setLogoutMessage(''); // Clear logout message on new submission
     setSuccess(false);
 
     if (type === 'sign-in') {
@@ -196,6 +209,17 @@ const AuthForm = ({ type }: { type: FormType }) => {
             )}
           </Button>
 
+          {logoutMessage && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+              <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-800">
+                  Session Expired
+                </p>
+                <p className="text-sm text-red-700">{logoutMessage}</p>
+              </div>
+            </div>
+          )}
           {errorMessage && <p className="error-message">*{errorMessage}</p>}
           {success && (
             <p className="text-green-500 text-center">

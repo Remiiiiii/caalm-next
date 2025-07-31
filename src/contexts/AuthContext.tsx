@@ -9,12 +9,14 @@ import React, {
 } from 'react';
 import { Models } from 'appwrite';
 import { getSessionUser } from '@/lib/actions/auth.actions';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null;
   setUser: (user: Models.User<Models.Preferences> | null) => void;
   loading: boolean;
-  logout: () => Promise<void>;
+  logout: (reason?: 'manual' | 'inactivity') => Promise<void>;
+  isSessionValid: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +27,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [isSessionValid, setIsSessionValid] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -37,12 +41,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (sessionUser) {
           setUser(sessionUser);
+          setIsSessionValid(true);
         } else {
           setUser(null);
+          setIsSessionValid(false);
         }
       } catch (error) {
         console.error('AuthContext: Session check failed:', error);
         setUser(null);
+        setIsSessionValid(false);
       } finally {
         setLoading(false);
       }
@@ -51,21 +58,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
   }, []);
 
-  const logout = async () => {
+  const logout = async (reason: 'manual' | 'inactivity' = 'manual') => {
     try {
       // Call the server action to logout
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason }),
       });
 
       if (response.ok) {
         setUser(null);
+        setIsSessionValid(false);
+
+        // Clear any client-side storage
+        localStorage.removeItem('session');
+        sessionStorage.clear();
+
+        // Redirect based on reason
+        if (reason === 'inactivity') {
+          router.push('/sign-in?reason=inactivity');
+        } else {
+          router.push('/sign-in');
+        }
       } else {
         console.error('Logout failed');
+        // Force logout even if API fails
+        setUser(null);
+        setIsSessionValid(false);
+        router.push('/sign-in');
       }
     } catch (error) {
       console.error('Logout error:', error);
+      // Force logout even if API fails
       setUser(null);
+      setIsSessionValid(false);
+      router.push('/sign-in');
     }
   };
 
@@ -75,7 +105,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, logout }}>
+    <AuthContext.Provider
+      value={{ user, setUser, loading, logout, isSessionValid }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -93,6 +125,7 @@ export const useAuth = () => {
       setUser: () => {},
       loading: true,
       logout: async () => {},
+      isSessionValid: false,
     };
   }
   return context;

@@ -14,6 +14,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -34,6 +39,7 @@ import {
   ChevronRight,
   Grid3X3,
   CalendarDays,
+  ChevronDownIcon,
 } from 'lucide-react';
 import {
   format,
@@ -46,6 +52,7 @@ import { cn } from '@/lib/utils';
 import { createCalendarEvent } from '@/lib/actions/calendar.client';
 import { useToast } from '@/hooks/use-toast';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import ExpandedCalendarView from '@/components/ExpandedCalendarView';
 
 // Local event interface for component use
 interface LocalCalendarEvent {
@@ -64,7 +71,7 @@ interface LocalCalendarEvent {
 // Internal state interface for new event form
 interface NewEventForm {
   title: string;
-  dateString: string; // Store as string to avoid timezone issues
+  date: Date | undefined;
   type: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit';
   description: string;
   startTime: string;
@@ -103,7 +110,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const [creatingEvent, setCreatingEvent] = useState(false);
   const [newEvent, setNewEvent] = useState<NewEventForm>({
     title: '',
-    dateString: '',
+    date: new Date(),
     type: 'meeting',
     description: '',
     startTime: '',
@@ -147,15 +154,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
     // Pre-fill the date in the new event form if modal is open
     if (date && isAddEventOpen) {
-      // Create a date string in YYYY-MM-DD format to avoid timezone issues
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const dateString = `${year}-${month}-${day}`;
-
       setNewEvent((prev) => ({
         ...prev,
-        dateString: dateString,
+        date: date,
       }));
     }
   };
@@ -210,7 +211,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       return;
     }
 
-    if (!newEvent.dateString) {
+    if (!newEvent.date) {
       toast({
         title: 'Error',
         description: 'Please select a date for the event',
@@ -220,7 +221,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
 
     // Validate that the selected date is not in the past
-    const selectedDate = new Date(newEvent.dateString);
+    const selectedDate = new Date(newEvent.date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -247,7 +248,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       // Create event in database
       const eventData = {
         title: newEvent.title.trim(),
-        date: `${newEvent.dateString}T00:00:00.000Z`,
+        date: newEvent.date?.toISOString() || new Date().toISOString(),
         type: newEvent.type,
         description: newEvent.description?.trim() || '',
         contractName: newEvent.contractName?.trim() || '',
@@ -264,7 +265,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         // Call the callback with the correct format
         const eventForCallback: Omit<LocalCalendarEvent, 'id'> = {
           title: newEvent.title,
-          date: new Date(newEvent.dateString),
+          date: newEvent.date || new Date(),
           type: newEvent.type,
           description: newEvent.description,
           startTime: newEvent.startTime,
@@ -283,7 +284,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         // Reset form
         setNewEvent({
           title: '',
-          dateString: '',
+          date: new Date(),
           type: 'meeting',
           description: '',
           startTime: '',
@@ -490,6 +491,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               </TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {/* Expand Button */}
+          <ExpandedCalendarView
+            events={events}
+            onEventClick={onEventClick}
+            onDateSelect={onDateSelect}
+            onEventCreate={onEventCreate}
+            user={user}
+          />
         </div>
       </div>
 
@@ -633,28 +643,33 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   >
                     Date
                   </Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={newEvent.dateString}
-                    min={(() => {
-                      const today = new Date();
-                      const year = today.getFullYear();
-                      const month = String(today.getMonth() + 1).padStart(
-                        2,
-                        '0'
-                      );
-                      const day = String(today.getDate()).padStart(2, '0');
-                      return `${year}-${month}-${day}`;
-                    })()}
-                    onChange={(e) => {
-                      setNewEvent({
-                        ...newEvent,
-                        dateString: e.target.value,
-                      });
-                    }}
-                    className="bg-white/30 backdrop-blur border border-white/40 shadow-md"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        id="date"
+                        className="w-full justify-between font-normal bg-white/30 backdrop-blur border border-white/40 shadow-md"
+                      >
+                        {newEvent.date
+                          ? newEvent.date.toLocaleDateString()
+                          : 'Select date'}
+                        <ChevronDownIcon className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-auto overflow-hidden p-0"
+                      align="start"
+                    >
+                      <Calendar
+                        mode="single"
+                        selected={newEvent.date}
+                        captionLayout="dropdown"
+                        onSelect={(date) => {
+                          setNewEvent({ ...newEvent, date });
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label

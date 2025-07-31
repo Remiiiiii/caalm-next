@@ -347,7 +347,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
               <div key={section.header} className="mb-4">
                 <li
                   className={cn(
-                    'sidebar-section-header mb-0  lg:mb-1 font-bold text-lg lg:text-xl'
+                    'sidebar-section-header mb-0 sidebar-gradient-text lg:mb-1 font-bold text-lg lg:text-xl'
                   )}
                 >
                   <span className="flex items-center gap-2">
@@ -421,7 +421,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                         />
                       </span>
                     ) : null}
-                    <span className="font-bold text-base">
+                    <span className="font-bold text-base text-slate-700">
                       {section.header}
                     </span>
                   </span>
@@ -676,7 +676,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                               </span>
                             )}
                             <p
-                              className={`text-sm text-slate-700 ${
+                              className={`text-sm text-slate-900 font-medium ${
                                 name === 'Administration' ? '-ml-[1px]' : ''
                               }`}
                             >
@@ -708,7 +708,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                       height={20}
                                     />
                                   </span>
-                                  <p className="text-sm text-slate-700">
+                                  <p className="text-sm text-slate-900 font-medium">
                                     {subItem.name}
                                   </p>
                                 </Link>
