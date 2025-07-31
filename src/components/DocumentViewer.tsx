@@ -1,21 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  X,
-  Send,
-  Download,
-  Share2,
-  FileText,
-  Calendar,
-  // User,
-} from 'lucide-react';
+import { useDocumentViewer } from '@/hooks/useDocumentViewer';
+import { X, Send, Download, Share2, FileText, Calendar } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { formatAIResponse } from '@/lib/utils/aiResponseFormatter';
-//import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-//import { Separator } from './ui/separator';
 
 interface DocumentViewerProps {
   isOpen: boolean;
@@ -51,142 +42,56 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [isClosing, setIsClosing] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(true);
-
-  const [aiSuggestedQuestions, setAiSuggestedQuestions] = useState<string[]>(
-    []
-  );
-  const [aiLoading, setAiLoading] = useState(false);
-  const [fileContent, setFileContent] = useState<string>('');
-  const [contentLoading, setContentLoading] = useState(false);
   const [showUploadPrompt, setShowUploadPrompt] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [welcomeMessageLoaded, setWelcomeMessageLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  //const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Use SWR hook for document data
+  const {
+    fileContent,
+    contentLoading,
+    analysisLoading: aiLoading,
+    extractText,
+    analyzeWithAI,
+    refreshAll,
+  } = useDocumentViewer(file.id);
 
   // Reset all AI state when DocumentViewer opens or file changes
   useEffect(() => {
     if (isOpen) {
-      setAiSuggestedQuestions([]);
       setChatMessages([]);
       setNewMessage('');
       setIsLoading(false);
-      setAiLoading(false);
-      setShowUploadPrompt(false); // Reset upload prompt state
-      setFileContent(''); // Reset file content
-      setWelcomeMessageLoaded(false); // Reset welcome message loaded state
+      setShowUploadPrompt(false);
+      setWelcomeMessageLoaded(false);
     }
   }, [isOpen, file.id]);
 
-  // Fetch file content and analyze document on open
+  // Trigger file content extraction and AI analysis when document viewer opens
   useEffect(() => {
     if (!isOpen) return;
-    let ignore = false;
 
-    const fetchFileContent = async () => {
-      const fileType = file.type.toLowerCase();
+    const fileType = file.type.toLowerCase();
 
-      // Handle text-based files
-      if (['txt', 'md', 'json', 'xml', 'html', 'js', 'ts'].includes(fileType)) {
-        setContentLoading(true);
-        try {
-          const response = await fetch(file.url);
-          const content = await response.text();
-          if (!ignore) {
-            setFileContent(content);
-            // Trigger AI analysis for text files after content is loaded
-            if (
-              ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts'].includes(
-                fileType
-              )
-            ) {
-              setTimeout(() => {
-                analyze();
-              }, 100);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching file content:', error);
-          if (!ignore) {
-            setFileContent('Error loading file content');
-          }
-        } finally {
-          if (!ignore) {
-            setContentLoading(false);
-          }
-        }
-      }
+    // Check if it's a local file (file:// URL or blob URL)
+    if (
+      file.url.startsWith('file://') ||
+      file.url.startsWith('blob:') ||
+      file.url.startsWith('data:')
+    ) {
+      console.log('Detected local file URL, cannot fetch directly:', file.url);
+      setShowUploadPrompt(true);
+      return;
+    }
 
-      // Handle PDF files for AI analysis
-      if (fileType === 'pdf') {
-        setContentLoading(true);
-        try {
-          console.log('PDF file URL:', file.url);
-          console.log('PDF file name:', file.name);
-
-          // Check if it's a local file (file:// URL or blob URL)
-          if (
-            file.url.startsWith('file://') ||
-            file.url.startsWith('blob:') ||
-            file.url.startsWith('data:')
-          ) {
-            console.log(
-              'Detected local file URL, cannot fetch directly:',
-              file.url
-            );
-            setShowUploadPrompt(true);
-            setContentLoading(false);
-            return;
-          }
-
-          // Use the dedicated PDF extraction API
-          const response = await fetch('/api/extract-pdf-text', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              fileUrl: file.url,
-              fileName: file.name,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error(`PDF extraction failed: ${response.status}`);
-          }
-
-          const result = await response.json();
-          if (!ignore) {
-            setFileContent(result.text || 'No text content extracted from PDF');
-            console.log('PDF extraction method:', result.method);
-            console.log('Extracted text length:', result.text?.length || 0);
-
-            // Trigger AI analysis for remote PDF files after content is extracted
-            if (
-              !file.url.startsWith('file://') &&
-              !file.url.startsWith('blob:') &&
-              !file.url.startsWith('data:')
-            ) {
-              setTimeout(() => {
-                analyze();
-              }, 100);
-            }
-          }
-        } catch (error) {
-          console.error('Error extracting PDF content:', error);
-          if (!ignore) {
-            setFileContent(
-              'Error extracting PDF content. The AI assistant may not be able to analyze this PDF.'
-            );
-          }
-        } finally {
-          if (!ignore) {
-            setContentLoading(false);
-          }
-        }
-      }
-    };
+    // Extract text content for text files and PDFs
+    if (
+      ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts', 'pdf'].includes(fileType)
+    ) {
+      extractText();
+    }
 
     // Debug: Log file information
     console.log('DocumentViewer opened with file:', {
@@ -199,23 +104,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         file.url.startsWith('data:'),
       isPdf: file.type.toLowerCase() === 'pdf',
     });
-
-    // Fetch content and analyze
-    fetchFileContent();
-
-    // Trigger AI analysis for non-local files or after content is loaded
-    if (
-      !file.url.startsWith('file://') &&
-      !file.url.startsWith('blob:') &&
-      !file.url.startsWith('data:')
-    ) {
-      analyze();
-    }
-
-    return () => {
-      ignore = true;
-    };
-  }, [isOpen, file]);
+  }, [isOpen, file.id, file.url, file.type, extractText]);
 
   useEffect(() => {
     // Only scroll to bottom when new messages are added (not on initial load)
@@ -264,7 +153,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         fileType: file.type,
         fileUrl: urlToUse,
         hasFileContent: !!contentToAnalyze,
-        fileContentLength: contentToAnalyze?.length || 0,
+        fileContentLength: contentToAnalyze?.content?.length || 0,
       });
 
       const response = await fetch('/api/ai-analyze', {
@@ -278,7 +167,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           fileName: file.name,
           fileType: file.type,
           fileUrl: urlToUse,
-          fileContent: contentToAnalyze, // Pass the extracted content if available
+          fileContent: contentToAnalyze,
         }),
       });
 
@@ -319,8 +208,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   };
 
   const analyze = async () => {
-    setAiLoading(true);
-    setAiSuggestedQuestions([]);
     // Always start with the greeting message
     setChatMessages([
       {
@@ -333,53 +220,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     setWelcomeMessageLoaded(true);
 
     try {
-      // For PDFs, use the extracted content if available
-      const contentToAnalyze = fileContent;
-      let urlToUse = file.url;
-
-      // If it's a local PDF and we have extracted content, use that
-      if (
-        file.type.toLowerCase() === 'pdf' &&
-        file.url.startsWith('file://') &&
-        fileContent
-      ) {
-        urlToUse = ''; // Don't pass the file:// URL to the AI API
-      }
-
-      console.log('Sending AI analysis request:', {
-        action: 'analyze',
-        fileName: file.name,
-        fileType: file.type,
-        fileUrl: urlToUse,
-        hasFileContent: !!contentToAnalyze,
-        fileContentLength: contentToAnalyze?.length || 0,
-      });
-
-      const response = await fetch('/api/ai-analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'analyze',
-          fileName: file.name,
-          fileType: file.type,
-          fileUrl: urlToUse,
-          fileContent: contentToAnalyze, // Pass the extracted content if available
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const analysis = await response.json();
-
-      setAiSuggestedQuestions(analysis.suggestedQuestions);
-      setAiLoading(false);
+      // Use SWR hook to analyze the document
+      await analyzeWithAI();
     } catch (error) {
       console.error('AI Analysis failed:', error);
-      setAiLoading(false);
     }
   };
 
@@ -406,7 +250,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
       const result = await response.json();
 
       if (result.success) {
-        setFileContent(result.text);
+        // Update the file content using SWR
+        await refreshAll();
         setShowUploadPrompt(false);
         console.log('PDF uploaded and text extracted successfully');
         console.log('Extracted text length:', result.text?.length || 0);
@@ -416,15 +261,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           analyze();
         }, 100);
       } else {
-        setFileContent(`Upload failed: ${result.error || 'Unknown error'}`);
+        console.error('Upload failed:', result.error);
       }
     } catch (error) {
       console.error('File upload error:', error);
-      setFileContent(
-        `Upload error: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`
-      );
     } finally {
       setUploading(false);
     }
@@ -509,17 +349,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
 
     if (isPdfFile(fileType)) {
-      // Debug: Log PDF rendering state
-      console.log('PDF rendering state:', {
-        showUploadPrompt,
-        fileUrl: file.url,
-        isLocalFile:
-          file.url.startsWith('file://') ||
-          file.url.startsWith('blob:') ||
-          file.url.startsWith('data:'),
-        fileType,
-      });
-
       // Show upload prompt for local files
       if (
         showUploadPrompt ||
@@ -604,7 +433,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               </div>
             ) : (
               <pre className="text-sm text-gray-800 bg-white p-4 rounded-lg h-full overflow-auto border">
-                <code>{fileContent || 'No content available'}</code>
+                <code>{fileContent?.content || 'No content available'}</code>
               </pre>
             )}
           </div>
@@ -939,19 +768,15 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                   </div>
 
                   {/* Suggested Questions */}
-                  {(aiSuggestedQuestions.length > 0 ||
-                    (chatMessages.length === 0 && welcomeMessageLoaded)) && (
+                  {chatMessages.length === 0 && welcomeMessageLoaded && (
                     <div className="mt-3">
                       <div className="flex flex-wrap gap-2">
-                        {(aiSuggestedQuestions.length > 0
-                          ? aiSuggestedQuestions.slice(0, 4)
-                          : [
-                              'What is this document about?',
-                              'What are the key terms?',
-                              'What are the important dates?',
-                              'Summarize the main points',
-                            ]
-                        ).map((q, idx) => (
+                        {[
+                          'What is this document about?',
+                          'What are the key terms?',
+                          'What are the important dates?',
+                          'Summarize the main points',
+                        ].map((q, idx) => (
                           <Button
                             key={idx}
                             variant="outline"

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,24 +9,14 @@ import {
 } from '@/components/ui/select-scrollable';
 import { Users, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import {
-  createInvitation,
-  listPendingInvitations,
-  revokeInvitation,
-  getAllAuthUsers,
-  getActiveUsersCount,
-} from '@/lib/actions/user.actions';
+
 import dynamic from 'next/dynamic';
 import ActionDropdown from '@/components/ActionDropdown';
 import FormattedDateTime from '@/components/FormattedDateTime';
 import Thumbnail from '@/components/Thumbnail';
 import CalendarView from '@/components/CalendarView';
 import RecentActivity from '@/components/RecentActivity';
-import {
-  getFiles,
-  getTotalContractsCount,
-  getExpiringContractsCount,
-} from '@/lib/actions/file.actions';
+
 import { Models } from 'node-appwrite';
 import {
   Dialog,
@@ -45,7 +35,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import Avatar from '@/components/ui/avatar';
+import ClientTimestamp from '@/components/ClientTimestamp';
 
 const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
@@ -86,32 +79,50 @@ interface ExecutiveDashboardProps {
 
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const { toast } = useToast();
-  const [stats, setStats] = useState([
+  const { orgId } = useOrganization();
+  const adminName = 'Executive'; // Replace with actual admin name
+
+  // Use SWR hook for dashboard data
+  const {
+    stats: dashboardStats,
+    files,
+    invitations,
+    authUsers,
+    statsLoading,
+    filesLoading,
+    invitationsLoading,
+    createInvitation,
+    revokeInvitation,
+    refreshAll,
+  } = useDashboardData(orgId || 'default_organization');
+
+  // Transform dashboard stats to match component format
+  const stats = [
     {
       title: 'Total Contracts',
-      value: '0',
+      value: dashboardStats.totalContracts?.toString() || '0',
       icon: FileText,
       color: 'text-[#524E4E]',
     },
     {
       title: 'Expiring Soon',
-      value: '0',
+      value: dashboardStats.expiringContracts?.toString() || '0',
       icon: AlertTriangle,
       color: 'text-[#FF7474]',
     },
     {
       title: 'Active Users',
-      value: '0',
+      value: dashboardStats.activeUsers?.toString() || '0',
       icon: Users,
       color: 'text-[#56B8FF]',
     },
     {
       title: 'Compliance Rate',
-      value: '94%',
+      value: dashboardStats.complianceRate || '94%',
       icon: CheckCircle,
       color: 'text-[#03AFBF]',
     },
-  ]);
+  ];
 
   const pendingApprovals = [
     {
@@ -135,152 +146,31 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   ];
 
   // Invitation management state
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [authUsers, setAuthUsers] = useState<UninvitedUser[]>([]);
   const [inviteForm, setInviteForm] = useState({
     selectedUserId: '',
     role: '',
     department: '',
   });
   const [loading, setLoading] = useState(false);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [isLoadingFiles, setIsLoadingFiles] = useState(true);
-  const [isLoadingInvitations, setIsLoadingInvitations] = useState(true);
-  const orgId = 'TODO_ORG_ID'; // Replace with actual orgId from context or props
-  const adminName = 'Executive'; // Replace with actual admin name
   const [resendingToken, setResendingToken] = useState<string | null>(null);
 
   // Revoke confirmation dialog state
   const [showRevokeDialog, setShowRevokeDialog] = useState(false);
   const [revokeToken, setRevokeToken] = useState<string | null>(null);
   const [revokeEmail, setRevokeEmail] = useState<string | null>(null);
-
-  // File usage and recent files state
-  const [files, setFiles] = useState<Models.Document[] | null>(null);
-
-  const refreshFiles = async () => {
-    const filesRes = await getFiles({ types: [], limit: 10 });
-    setFiles(filesRes.documents);
-  };
-
-  // Lightweight caching state
-  const [cachedData, setCachedData] = useState<{
-    stats: typeof stats;
-    files: Models.Document[] | null;
-    invitations: Invitation[];
-    authUsers: UninvitedUser[];
-    lastFetch: number;
-  } | null>(null);
-
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
-  const isFetchingRef = useRef(false);
-
-  // Simple cache check
-  const isCacheValid = useCallback(() => {
-    if (!cachedData) return false;
-    return Date.now() - cachedData.lastFetch < CACHE_DURATION;
-  }, [cachedData, CACHE_DURATION]);
-
-  // Single optimized data fetch
-  const fetchAllData = useCallback(
-    async (forceRefresh = false) => {
-      // Prevent multiple simultaneous calls
-      if (isFetchingRef.current) return;
-
-      // Use cached data if available and not expired
-      if (!forceRefresh && isCacheValid() && cachedData) {
-        setStats(cachedData.stats);
-        setFiles(cachedData.files);
-        setInvitations(cachedData.invitations);
-        setAuthUsers(cachedData.authUsers);
-        return;
-      }
-
-      isFetchingRef.current = true;
-
-      // Set loading states
-      setIsLoadingStats(true);
-      setIsLoadingFiles(true);
-      setIsLoadingInvitations(true);
-
-      try {
-        // Fetch all data in parallel
-        const [
-          totalContracts,
-          expiringContracts,
-          activeUsers,
-          filesRes,
-          invitationsData,
-          authUsersData,
-        ] = await Promise.all([
-          getTotalContractsCount(),
-          getExpiringContractsCount(),
-          getActiveUsersCount(),
-          getFiles({ types: [], limit: 10 }),
-          listPendingInvitations({ orgId }),
-          getAllAuthUsers(),
-        ]);
-
-        // Create new stats array without depending on current stats state
-        const newStats = [
-          {
-            title: 'Total Contracts',
-            value: totalContracts.toString(),
-            icon: FileText,
-            color: 'text-[#524E4E]',
-          },
-          {
-            title: 'Expiring Soon',
-            value: expiringContracts.toString(),
-            icon: AlertTriangle,
-            color: 'text-[#FF7474]',
-          },
-          {
-            title: 'Active Users',
-            value: activeUsers.toString(),
-            icon: Users,
-            color: 'text-[#56B8FF]',
-          },
-          {
-            title: 'Compliance Rate',
-            value: '95%',
-            icon: CheckCircle,
-            color: 'text-[#03AFBF]',
-          },
-        ];
-
-        // Update all state
-        setStats(newStats);
-        setFiles(filesRes.documents);
-        setInvitations(
-          invitationsData.map((inv: unknown) => inv as Invitation)
-        );
-        setAuthUsers(authUsersData);
-
-        // Cache the data
-        setCachedData({
-          stats: newStats,
-          files: filesRes.documents,
-          invitations: invitationsData.map((inv: unknown) => inv as Invitation),
-          authUsers: authUsersData,
-          lastFetch: Date.now(),
-        });
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
-      } finally {
-        setIsLoadingStats(false);
-        setIsLoadingFiles(false);
-        setIsLoadingInvitations(false);
-        isFetchingRef.current = false;
-      }
-    },
-    [orgId, isCacheValid, cachedData] // Only depend on orgId, not stats or cachedData
+  const [revokingToken, setRevokingToken] = useState<string | null>(null);
+  const [removingInvitations, setRemovingInvitations] = useState<Set<string>>(
+    new Set()
+  );
+  const [addingInvitations, setAddingInvitations] = useState<Set<string>>(
+    new Set()
   );
 
-  // Initial data fetch
-  useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+  const refreshFiles = async () => {
+    refreshAll();
+  };
+
+  // SWR handles all data fetching automatically - no manual fetch needed
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -297,7 +187,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
     // Find the selected user
     const selectedUser = authUsers.find(
-      (u) => u.$id === inviteForm.selectedUserId
+      (u: UninvitedUser) => u.$id === inviteForm.selectedUserId
     );
     if (!selectedUser) {
       toast({
@@ -309,19 +199,46 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       return;
     }
 
-    await createInvitation({
-      email: selectedUser.email,
-      name: selectedUser.fullName,
-      role: inviteForm.role,
-      department: inviteForm.department,
-      orgId,
-      invitedBy: adminName,
-    });
+    try {
+      // Mark as adding for visual feedback
+      const tempToken = `temp_token_${Date.now()}`;
+      setAddingInvitations((prev) => new Set(prev).add(tempToken));
 
-    // Force refresh cache to get updated data
-    await fetchAllData(true);
-    setInviteForm({ selectedUserId: '', role: '', department: '' });
-    setLoading(false);
+      await createInvitation({
+        email: selectedUser.email,
+        name: selectedUser.fullName,
+        role: inviteForm.role,
+        department: inviteForm.department,
+        orgId,
+        invitedBy: adminName,
+      });
+
+      // Success feedback
+      toast({
+        title: 'Invitation Sent',
+        description: `Invitation sent to ${selectedUser.fullName} (${selectedUser.email})`,
+      });
+
+      // Reset form
+      setInviteForm({ selectedUserId: '', role: '', department: '' });
+
+      // Clear the adding state after animation
+      setTimeout(() => {
+        setAddingInvitations((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(tempToken);
+          return newSet;
+        });
+      }, 300);
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to send invitation. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRevoke = async (token: string, email: string) => {
@@ -334,9 +251,12 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     if (!revokeToken) return;
 
     try {
-      await revokeInvitation({ token: revokeToken });
-      // Force refresh cache to get updated data
-      await fetchAllData(true);
+      // Add visual feedback - mark as revoking
+      setRevokingToken(revokeToken);
+      setRemovingInvitations((prev) => new Set(prev).add(revokeToken));
+
+      await revokeInvitation(revokeToken);
+      // SWR will automatically refresh the data
 
       toast({
         title: 'Invitation Revoked',
@@ -352,6 +272,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       setShowRevokeDialog(false);
       setRevokeToken(null);
       setRevokeEmail(null);
+      setRevokingToken(null);
+      // Clear the removing state after a short delay to allow animation
+      setTimeout(() => {
+        setRemovingInvitations((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(revokeToken!);
+          return newSet;
+        });
+      }, 300);
     }
   };
 
@@ -420,17 +349,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       >
         <source src="/assets/video/wave.mp4" type="video/mp4" />
       </video>
-      {/* Cache Status */}
-      {cachedData && (
-        <div className="flex justify-between items-end mb-4">
-          <div className="h2 font-bold sidebar-gradient-text">
-            {getRoleDisplay(user?.role || '')}
-          </div>
-          <div className="text-xs text-slate-500">
-            Last updated: {new Date(cachedData.lastFetch).toLocaleTimeString()}
-          </div>
+      {/* Dashboard Header */}
+      <div className="flex justify-between items-end mb-4">
+        <div className="h2 font-bold sidebar-gradient-text">
+          {getRoleDisplay(user?.role || '')}
         </div>
-      )}
+        <div className="text-xs text-slate-500">
+          Last updated: <ClientTimestamp />
+        </div>
+      </div>
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mb-6">
         <CardContent className="p-6">
           <div className="flex justify-between items-center">
@@ -458,7 +385,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     {stat.title}
                   </p>
                   <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-                    {isLoadingStats ? (
+                    {statsLoading ? (
                       <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
                     ) : (
                       <span>{stat.value}</span>
@@ -524,7 +451,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {isLoadingFiles ? (
+                {filesLoading ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
                       <div
@@ -660,7 +587,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   "
                   className="min-w-[200px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                 >
-                  {authUsers.map((user) => (
+                  {authUsers.map((user: UninvitedUser) => (
                     <SelectItem key={user.$id} value={user.$id}>
                       <div className="flex items-center gap-3">
                         <Avatar
@@ -758,7 +685,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {isLoadingInvitations ? (
+                    {invitationsLoading ? (
                       <tr>
                         <td colSpan={7} className="text-center py-8">
                           <div className="flex justify-center space-x-2">
@@ -781,10 +708,16 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                         </td>
                       </tr>
                     ) : (
-                      invitations.map((inv) => (
+                      invitations.map((inv: Invitation) => (
                         <tr
                           key={inv.$id}
-                          className="border-b text-center hover:bg-gray-50 transition"
+                          className={`border-b text-center hover:bg-gray-50 transition-all duration-300 ${
+                            removingInvitations.has(inv.token)
+                              ? 'invitation-removing'
+                              : addingInvitations.has(inv.token)
+                              ? 'invitation-adding'
+                              : ''
+                          }`}
                         >
                           <td className="pl-2 ">{inv.name}</td>
                           <td>{inv.email}</td>
@@ -805,9 +738,12 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                               size="sm"
                               variant="outline"
                               onClick={() => handleRevoke(inv.token, inv.email)}
+                              disabled={revokingToken === inv.token}
                               className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                             >
-                              Revoke
+                              {revokingToken === inv.token
+                                ? 'Revoking...'
+                                : 'Revoke'}
                             </Button>
                             <Button
                               size="sm"

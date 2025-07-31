@@ -1,110 +1,204 @@
-import { useState, useEffect, useCallback } from 'react';
+import useSWR, { mutate } from 'swr';
 import { useAuth } from '@/contexts/AuthContext';
-import { Models } from 'appwrite';
 
-type ExtendedUser = Models.User<Models.Preferences> & {
-  role?: string;
-  department?: string;
-  fullName?: string;
-};
+interface DepartmentInfo {
+  $id: string;
+  name: string;
+  code: string;
+  userCount: number;
+  contractCount: number;
+  activeContracts: number;
+  expiringContracts: number;
+}
 
-export interface Report {
-  id: string;
+interface ReportData {
+  $id: string;
+  type: 'contract' | 'user' | 'compliance' | 'financial';
   title: string;
-  department: string;
+  data: any;
   generatedAt: string;
   generatedBy: string;
-  status: 'completed' | 'generating' | 'failed';
-  type: 'department' | 'executive' | 'management';
-}
-
-interface UseReportsOptions {
   department?: string;
-  limit?: number;
 }
 
-export function useReports(options: UseReportsOptions = {}) {
+interface ReportFilters {
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  department?: string;
+  type?: string;
+  status?: string;
+}
+
+const fetcher = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error('Failed to fetch report data');
+  }
+  return response.json();
+};
+
+export const useReports = () => {
   const { user } = useAuth();
-  const [reports, setReports] = useState<Report[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchReports = useCallback(async () => {
-    if (!user) return;
+  // Department information
+  const {
+    data: departments,
+    error: departmentsError,
+    isLoading: departmentsLoading,
+  } = useSWR(`/api/reports/departments`, fetcher, {
+    refreshInterval: 300000, // Refresh every 5 minutes
+    revalidateOnFocus: true,
+  });
 
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams({
-        userRole: (user as ExtendedUser)?.role || 'user',
-        userDepartment: (user as ExtendedUser)?.department || '',
-        ...(options.department && { department: options.department }),
-        ...(options.limit && { limit: options.limit.toString() }),
-      });
-
-      const response = await fetch(`/api/reports?${params}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch reports');
-      }
-
-      const data = await response.json();
-      setReports(data.reports || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch reports');
-      console.error('Error fetching reports:', err);
-    } finally {
-      setIsLoading(false);
+  // Recent reports
+  const {
+    data: recentReports,
+    error: reportsError,
+    isLoading: reportsLoading,
+  } = useSWR(
+    user?.$id ? `/api/reports/recent?userId=${user.$id}` : null,
+    fetcher,
+    {
+      refreshInterval: 60000, // Refresh every minute
     }
-  }, [user, options.department, options.limit]);
+  );
 
-  const generateReport = async (department: string) => {
-    if (!user) return null;
+  // Report templates
+  const {
+    data: reportTemplates,
+    error: templatesError,
+    isLoading: templatesLoading,
+  } = useSWR(`/api/reports/templates`, fetcher, {
+    refreshInterval: 600000, // Refresh every 10 minutes
+  });
 
+  // Generate report
+  const generateReport = async (reportType: string, filters: ReportFilters) => {
     try {
-      const response = await fetch('/api/reports', {
+      const response = await fetch('/api/reports/generate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.$id,
-          userRole: (user as ExtendedUser)?.role || 'user',
-          department,
-          userName:
-            (user as ExtendedUser)?.fullName || user.email || 'Unknown User',
+          type: reportType,
+          filters,
+          generatedBy: user?.$id,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate report');
-      }
+      if (!response.ok) throw new Error('Failed to generate report');
 
-      const data = await response.json();
-
-      // Add the new report to the list
-      setReports((prev) => [data.report, ...prev]);
-
-      return data.report;
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to generate report'
+      // Optimistic update
+      mutate(
+        `/api/reports/recent?userId=${user?.$id}`,
+        (current: ReportData[]) => [response.data, ...(current || [])],
+        false
       );
-      console.error('Error generating report:', err);
-      return null;
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      throw error;
     }
   };
 
-  useEffect(() => {
-    fetchReports();
-  }, [user, options.department, fetchReports]);
+  // Export report
+  const exportReport = async (
+    reportId: string,
+    format: 'pdf' | 'excel' | 'csv'
+  ) => {
+    try {
+      const response = await fetch(`/api/reports/${reportId}/export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          format,
+          exportedBy: user?.$id,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to export report');
+
+      return response;
+    } catch (error) {
+      console.error('Failed to export report:', error);
+      throw error;
+    }
+  };
+
+  // Schedule report
+  const scheduleReport = async (reportType: string, schedule: any) => {
+    try {
+      const response = await fetch('/api/reports/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: reportType,
+          schedule,
+          scheduledBy: user?.$id,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to schedule report');
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to schedule report:', error);
+      throw error;
+    }
+  };
+
+  // Delete report
+  const deleteReport = async (reportId: string) => {
+    try {
+      await fetch(`/api/reports/${reportId}`, {
+        method: 'DELETE',
+      });
+
+      // Optimistic update
+      mutate(
+        `/api/reports/recent?userId=${user?.$id}`,
+        (current: ReportData[]) =>
+          current?.filter((report) => report.$id !== reportId),
+        false
+      );
+    } catch (error) {
+      console.error('Failed to delete report:', error);
+      throw error;
+    }
+  };
+
+  // Refresh all data
+  const refreshAll = () => {
+    mutate(`/api/reports/departments`);
+    mutate(`/api/reports/recent?userId=${user?.$id}`);
+    mutate(`/api/reports/templates`);
+  };
 
   return {
-    reports,
-    isLoading,
-    error,
-    fetchReports,
+    // Data
+    departments: departments?.data || [],
+    recentReports: recentReports?.data || [],
+    reportTemplates: reportTemplates?.data || [],
+
+    // Loading states
+    isLoading: departmentsLoading || reportsLoading || templatesLoading,
+    departmentsLoading,
+    reportsLoading,
+    templatesLoading,
+
+    // Errors
+    error: departmentsError || reportsError || templatesError,
+    departmentsError,
+    reportsError,
+    templatesError,
+
+    // Actions
     generateReport,
+    exportReport,
+    scheduleReport,
+    deleteReport,
+    refreshAll,
   };
-}
+};

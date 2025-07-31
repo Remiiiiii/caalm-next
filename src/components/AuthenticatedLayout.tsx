@@ -7,6 +7,7 @@ import DashboardHeader from '@/components/DashboardHeader';
 import QuickActions from '@/components/QuickActions';
 import InactivityDialog from '@/components/InactivityDialog';
 import { useInactivityTimer } from '@/hooks/useInactivityTimer';
+import { OrganizationProvider } from '@/contexts/OrganizationContext';
 
 import { Toaster } from '@/components/ui/toaster';
 import { avatarPlaceholderUrl } from '../../constants';
@@ -41,39 +42,41 @@ const AuthenticatedLayout = ({
     useInactivityTimer();
 
   return (
-    <main className="flex h-screen">
-      <Sidebar
-        fullName={user.name || 'Unknown User'}
-        avatar={user.prefs?.avatar || avatarPlaceholderUrl}
-        email={currentUser.email}
-        role={user.role || 'manager'}
-        department={user.department}
-      />
-      <section className="flex h-full w-full flex-1 flex-col">
-        <MobileNavigation
-          $id={currentUser.$id}
-          accountId={user.accountId || currentUser.$id}
-          fullName={user.fullName || user.name || 'Unknown User'}
+    <OrganizationProvider>
+      <main className="flex h-screen">
+        <Sidebar
+          fullName={user.name || 'Unknown User'}
           avatar={user.prefs?.avatar || avatarPlaceholderUrl}
           email={currentUser.email}
           role={user.role || 'manager'}
+          department={user.department}
         />
-        <div className="flex justify-between items-center px-4">
-          <QuickActions user={currentUser} />
-          <DashboardHeader user={currentUser} />
-        </div>
-        <div className="main-content">{children}</div>
-      </section>
-      <Toaster />
+        <section className="flex h-full w-full flex-1 flex-col">
+          <MobileNavigation
+            $id={currentUser.$id}
+            accountId={user.accountId || currentUser.$id}
+            fullName={user.fullName || user.name || 'Unknown User'}
+            avatar={user.prefs?.avatar || avatarPlaceholderUrl}
+            email={currentUser.email}
+            role={user.role || 'manager'}
+          />
+          <div className="flex justify-between items-center px-4">
+            <QuickActions user={currentUser} />
+            <DashboardHeader user={currentUser} />
+          </div>
+          <div className="main-content">{children}</div>
+        </section>
+        <Toaster />
 
-      {/* Inactivity Dialog */}
-      <InactivityDialog
-        isOpen={showDialog}
-        onClose={handleClose}
-        onContinue={handleContinue}
-        onLogout={handleLogout}
-      />
-    </main>
+        {/* Inactivity Dialog */}
+        <InactivityDialog
+          isOpen={showDialog}
+          onClose={handleClose}
+          onContinue={handleContinue}
+          onLogout={handleLogout}
+        />
+      </main>
+    </OrganizationProvider>
   );
 };
 

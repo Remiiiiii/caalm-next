@@ -4,6 +4,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { INACTIVITY_CONFIG, getTimerValues } from '@/lib/inactivity-config';
 
 export function useInactivityTimer() {
+  // Early return if not in browser environment
+  if (typeof window === 'undefined') {
+    return {
+      showDialog: false,
+      handleContinue: () => {},
+      handleLogout: () => {},
+      handleClose: () => {},
+    };
+  }
   const [showDialog, setShowDialog] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);

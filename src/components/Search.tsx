@@ -1,57 +1,54 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import { Input } from './ui/input';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { getFiles } from '@/lib/actions/file.actions';
-import { Models } from 'node-appwrite';
 import Thumbnail from './Thumbnail';
 import FormattedDateTime from './FormattedDateTime';
-import { useDebounce } from 'use-debounce';
+import { useSearch } from '@/hooks/useSearch';
 
 const Search = () => {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Models.Document[]>([]);
-  const [open, setOpen] = useState(false);
-  const [debouncedQuery] = useDebounce(query, 300);
   const searchParams = useSearchParams();
   const searchQuery = searchParams?.get('query') || '';
   const router = useRouter();
   const path = usePathname();
 
-  useEffect(() => {
-    const fetchFiles = async () => {
-      if (debouncedQuery.length === 0) {
-        setResults([]);
-        setOpen(false);
-        return router.push(
-          (path ?? '').replace(
-            (searchParams && searchParams.toString()) || '',
-            ''
-          )
-        );
-      }
-      const files = await getFiles({
-        types: [],
-        searchText: debouncedQuery,
-      });
-      setResults(files.documents);
-      setOpen(true);
-    };
+  // Use SWR hook for search functionality
+  const {
+    query,
+    setQuery,
+    searchResults: results,
+    isLoading,
+    error,
+    performSearch,
+    saveSearch,
+  } = useSearch();
 
-    fetchFiles();
-  }, [debouncedQuery, path, router, searchParams]);
+  // Handle search query changes
+  React.useEffect(() => {
+    if (query.length === 0) {
+      return router.push(
+        (path ?? '').replace(
+          (searchParams && searchParams.toString()) || '',
+          ''
+        )
+      );
+    }
+  }, [query, path, router, searchParams]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!searchQuery) {
       setQuery('');
     }
-  }, [searchQuery]);
+  }, [searchQuery, setQuery]);
 
-  const handleClickItem = (file: Models.Document) => {
-    setOpen(false);
-    setResults([]);
+  // Show results when we have them
+  const open = results.length > 0 || (query.length > 0 && !isLoading);
+
+  const handleClickItem = (file: any) => {
+    // Save the search query
+    saveSearch(query);
 
     router.push(
       `/${

@@ -34,6 +34,16 @@ export default function InactivityDialog({
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const router = useRouter();
 
+  const handleLogout = () => {
+    onLogout();
+    router.push('/sign-in');
+  };
+
+  const handleContinue = () => {
+    onContinue();
+    onClose();
+  };
+
   // Reset countdown when dialog opens
   useEffect(() => {
     if (isOpen) {
@@ -49,7 +59,6 @@ export default function InactivityDialog({
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(countdownTimer);
-          handleLogout();
           return 0;
         }
         return prev - 1;
@@ -59,15 +68,12 @@ export default function InactivityDialog({
     return () => clearInterval(countdownTimer);
   }, [isOpen]);
 
-  const handleLogout = () => {
-    onLogout();
-    router.push('/sign-in');
-  };
-
-  const handleContinue = () => {
-    onContinue();
-    onClose();
-  };
+  // Handle logout when countdown reaches 0
+  useEffect(() => {
+    if (isOpen && secondsLeft <= 0) {
+      handleLogout();
+    }
+  }, [isOpen, secondsLeft, handleLogout]);
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>

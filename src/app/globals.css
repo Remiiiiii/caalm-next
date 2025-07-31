@@ -621,3 +621,41 @@
   background-clip: text;
   color: transparent;
 }
+
+/* Invitation removal animation */
+.invitation-removing {
+  animation: fadeOutScale 0.3s ease-out forwards;
+}
+
+@keyframes fadeOutScale {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+}
+
+/* Invitation addition animation */
+.invitation-adding {
+  animation: fadeInScale 0.3s ease-out forwards;
+}
+
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+    background-color: #fef3c7; /* Light yellow background */
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    background-color: transparent;
+  }
+}
