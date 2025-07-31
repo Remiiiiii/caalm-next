@@ -38,36 +38,36 @@ export const useDocumentViewer = (fileId: string) => {
   const { user } = useAuth();
 
   // File Content (PDF text extraction)
-  const { data: fileContent, error: contentError, isLoading: contentLoading } = useSWR(
-    fileId ? `/api/documents/${fileId}/content` : null,
-    fetcher,
-    {
-      revalidateOnFocus: false, // Don't revalidate on focus for large content
-      revalidateOnReconnect: true,
-      dedupingInterval: 300000, // 5 minutes deduping
-    }
-  );
+  const {
+    data: fileContent,
+    error: contentError,
+    isLoading: contentLoading,
+  } = useSWR(fileId ? `/api/documents/${fileId}/content` : null, fetcher, {
+    revalidateOnFocus: false, // Don't revalidate on focus for large content
+    revalidateOnReconnect: true,
+    dedupingInterval: 300000, // 5 minutes deduping
+  });
 
   // AI Analysis
-  const { data: aiAnalysis, error: analysisError, isLoading: analysisLoading } = useSWR(
-    fileId ? `/api/documents/${fileId}/analysis` : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 600000, // 10 minutes deduping for AI analysis
-    }
-  );
+  const {
+    data: aiAnalysis,
+    error: analysisError,
+    isLoading: analysisLoading,
+  } = useSWR(fileId ? `/api/documents/${fileId}/analysis` : null, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 600000, // 10 minutes deduping for AI analysis
+  });
 
   // PDF Metadata
-  const { data: pdfMetadata, error: metadataError, isLoading: metadataLoading } = useSWR(
-    fileId ? `/api/documents/${fileId}/metadata` : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-    }
-  );
+  const {
+    data: pdfMetadata,
+    error: metadataError,
+    isLoading: metadataLoading,
+  } = useSWR(fileId ? `/api/documents/${fileId}/metadata` : null, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  });
 
   // Extract PDF text
   const extractText = async () => {
@@ -80,7 +80,7 @@ export const useDocumentViewer = (fileId: string) => {
 
       // Optimistic update
       mutate(`/api/documents/${fileId}/content`, response.data, false);
-      
+
       return response.data;
     } catch (error) {
       console.error('Failed to extract text:', error);
@@ -99,7 +99,7 @@ export const useDocumentViewer = (fileId: string) => {
 
       // Optimistic update
       mutate(`/api/documents/${fileId}/analysis`, response.data, false);
-      
+
       return response.data;
     } catch (error) {
       console.error('Failed to analyze document:', error);
@@ -137,4 +137,4 @@ export const useDocumentViewer = (fileId: string) => {
     analyzeWithAI,
     refreshAll,
   };
-}; 
+};
