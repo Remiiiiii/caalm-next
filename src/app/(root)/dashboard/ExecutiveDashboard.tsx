@@ -11,7 +11,7 @@ import { Users, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 import dynamic from 'next/dynamic';
-import ActionDropdown from '@/components/ActionDropdown';
+
 import FormattedDateTime from '@/components/FormattedDateTime';
 import Thumbnail from '@/components/Thumbnail';
 import CalendarView from '@/components/CalendarView';
@@ -65,6 +65,21 @@ interface UninvitedUser {
   $createdAt: string;
 }
 
+// Add File type
+interface FileDocument {
+  $id: string;
+  $createdAt: string;
+  type: string;
+  name: string;
+  url: string;
+  extension: string;
+  size?: number;
+  owner?: string;
+  accountId?: string;
+  users?: string[];
+  bucketFileId?: string;
+}
+
 interface ExecutiveDashboardProps {
   user?:
     | (Models.User<Models.Preferences> & {
@@ -93,7 +108,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     invitationsLoading,
     createInvitation,
     revokeInvitation,
-    refreshAll,
   } = useDashboardData(orgId || 'default_organization');
 
   // Transform dashboard stats to match component format
@@ -165,10 +179,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const [addingInvitations, setAddingInvitations] = useState<Set<string>>(
     new Set()
   );
-
-  const refreshFiles = async () => {
-    refreshAll();
-  };
 
   // SWR handles all data fetching automatically - no manual fetch needed
 
@@ -447,7 +457,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
               <CardHeader>
                 <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                  Recent files uploaded
+                  Recent Files Uploaded
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -469,40 +479,50 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     ))}
                   </div>
                 ) : files && files.length > 0 ? (
-                  <div className="space-y-4">
-                    {files.map((file: Models.Document) => (
-                      <div
-                        key={file.$id}
-                        className="border border-border rounded-lg p-4"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <Thumbnail
-                              type={file.type}
-                              extension={file.extension}
-                              url={file.url}
-                            />
-                            <div className="flex flex-col gap-1 min-w-0 flex-1">
-                              <h4 className="font-medium text-navy truncate max-w-[200px]">
-                                {file.name}
-                              </h4>
-                              <p className="text-sm text-slate-dark">
-                                <FormattedDateTime
-                                  date={file.$createdAt}
-                                  className="text-xs text-slate-light"
-                                />
-                              </p>
+                  <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4">
+                    {files.slice(0, 10).map((file: Models.Document) => {
+                      const fileDoc = file as unknown as FileDocument;
+                      return (
+                        <div
+                          key={file.$id}
+                          className="border border-border rounded-lg p-4"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <Thumbnail
+                                type={fileDoc.type}
+                                extension={fileDoc.extension}
+                                url={fileDoc.url}
+                              />
+                              <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                <h4 className="font-medium text-navy truncate max-w-[200px]">
+                                  {fileDoc.name}
+                                </h4>
+                                <p className="text-sm text-slate-dark">
+                                  <FormattedDateTime
+                                    date={file.$createdAt}
+                                    className="text-xs text-slate-light"
+                                  />
+                                </p>
+                              </div>
+                            </div>
+                            <div className="ml-3 flex-shrink-0">
+                              {/* <ActionDropdown
+                                file={file}
+                                onStatusChange={refreshFiles}
+                              /> */}
                             </div>
                           </div>
-                          <div className="ml-3 flex-shrink-0">
-                            <ActionDropdown
-                              file={file}
-                              onStatusChange={refreshFiles}
-                            />
-                          </div>
                         </div>
+                      );
+                    })}
+                    {files.length > 10 && (
+                      <div className="text-center py-2">
+                        <p className="text-xs text-slate-light">
+                          +{files.length - 10} more files
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 ) : (
                   <p className="text-center text-slate-light">

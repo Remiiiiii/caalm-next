@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFiles } from '@/lib/actions/file.actions';
+import { createAdminClient } from '@/lib/appwrite';
+import { appwriteConfig } from '@/lib/appwrite/config';
+import { Query } from 'node-appwrite';
+import { parseStringify } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,14 +11,19 @@ export async function GET(request: NextRequest) {
       ? parseInt(searchParams.get('limit')!)
       : 10;
 
-    // Fetch recent files
-    const filesResponse = await getFiles({
-      types: [],
-      limit,
-      sort: '$createdAt-desc', // Most recent first
-    });
+    const { databases } = await createAdminClient();
 
-    return NextResponse.json({ data: filesResponse.documents || [] });
+    // Fetch all recent files (not filtered by owner for dashboard)
+    const files = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.filesCollectionId,
+      [
+        Query.limit(limit),
+        Query.orderDesc('$createdAt'), // Most recent first
+      ]
+    );
+
+    return NextResponse.json({ data: parseStringify(files).documents || [] });
   } catch (error) {
     console.error('Failed to fetch dashboard files:', error);
     return NextResponse.json(
