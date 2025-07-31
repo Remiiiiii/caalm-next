@@ -128,12 +128,17 @@ export const verifySecret = async ({
     const { account } = await createAdminClient();
     const session = await account.createSession(accountId, password);
 
-    (await cookies()).set('appwrite-session', session.secret, {
+    const cookieStore = await cookies();
+    cookieStore.set('appwrite-session', session.secret, {
       path: '/',
       httpOnly: true,
       sameSite: 'strict',
       secure: true,
     });
+
+    // Note: 2fa_completed cookie will be set after 2FA setup/verification
+    // This is just the OTP verification step
+
     return parseStringify({ sessionId: session.$id });
   } catch (error) {
     handleError(error, 'Failed to verify OTP');

@@ -48,11 +48,11 @@ export async function POST(request: NextRequest) {
             message: '2FA verification successful (test mode)',
           });
 
-          response.cookies.set('2fa_verified', 'true', {
+          response.cookies.set('2fa_completed', 'true', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 60 * 60 * 24, // 24 hours
+            maxAge: 60 * 60 * 24 * 30, // 30 days (same as setup)
           });
 
           return response;
@@ -84,11 +84,11 @@ export async function POST(request: NextRequest) {
         });
 
         // Set a cookie to indicate 2FA verification is complete
-        response.cookies.set('2fa_verified', 'true', {
+        response.cookies.set('2fa_completed', 'true', {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
-          maxAge: 60 * 60 * 24, // 24 hours
+          maxAge: 60 * 60 * 24 * 30, // 30 days (same as setup)
         });
 
         return response;

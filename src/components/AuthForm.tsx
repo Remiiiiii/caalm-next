@@ -245,20 +245,40 @@ const AuthForm = ({ type }: { type: FormType }) => {
             email={form.getValues('email')}
             accountId={accountId}
             onSuccess={async () => {
-              // After successful OTP verification, check if user needs 2FA
-              const user = await getUserByEmail(form.getValues('email'));
-              if (user?.$id) {
-                setUserId(user.$id);
-                await checkTwoFactorStatus(user.$id);
-              } else {
-                // Fallback to direct redirect if user not found
-                if (user?.role === 'executive')
-                  router.push('/dashboard/executive');
-                else if (user?.role === 'manager')
-                  router.push('/dashboard/manager');
-                else if (user?.role === 'admin')
-                  router.push('/dashboard/admin');
-                else router.push('/dashboard');
+              // After successful OTP verification, check 2FA status via API
+              try {
+                const response = await fetch('/api/auth/check-2fa-status');
+                const data = await response.json();
+
+                if (data.has2FA) {
+                  // User has 2FA enabled - show TOTP verification
+                  setUserId(data.user.$id);
+                  setShow2FAVerification(true);
+                } else if (data.needsSetup) {
+                  // User needs to set up 2FA
+                  setUserId(data.user.$id);
+                  setShow2FASetup(true);
+                } else {
+                  // User already has 2FA completed, redirect to dashboard
+                  const user = data.user;
+                  if (user?.role === 'executive')
+                    router.push('/dashboard/executive');
+                  else if (user?.role === 'manager')
+                    router.push('/dashboard/manager');
+                  else if (user?.role === 'admin')
+                    router.push('/dashboard/admin');
+                  else router.push('/dashboard');
+                }
+              } catch (error) {
+                console.error('Error checking 2FA status:', error);
+                // Fallback to original method
+                const user = await getUserByEmail(form.getValues('email'));
+                if (user?.$id) {
+                  setUserId(user.$id);
+                  await checkTwoFactorStatus(user.$id);
+                } else {
+                  router.push('/dashboard');
+                }
               }
             }}
           />
