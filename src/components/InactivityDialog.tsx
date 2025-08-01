@@ -89,20 +89,22 @@ export default function InactivityDialog({
             <Clock className="h-5 w-5 text-orange-500" />
             Session Expiring
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2">
-            <p>
-              Due to inactivity, you'll be signed out in{' '}
-              <span className="font-mono font-bold text-red-600">
-                {formatTime(secondsLeft)}
-              </span>{' '}
-              seconds.
-            </p>
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-amber-800">
-                For security reasons, your session will be completely terminated
-                and you'll need to sign in again.
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              <p>
+                Due to inactivity, you'll be signed out in{' '}
+                <span className="font-mono font-bold text-red-600">
+                  {formatTime(secondsLeft)}
+                </span>{' '}
+                seconds.
               </p>
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-amber-800">
+                  For security reasons, your session will be completely
+                  terminated and you'll need to sign in again.
+                </p>
+              </div>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

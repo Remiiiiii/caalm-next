@@ -97,6 +97,12 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
           url: '/contracts/approvals',
           roles: ['executive', 'manager', 'admin'],
         },
+        {
+          name: 'Advanced Resources',
+          icon: '/assets/icons/search.svg',
+          url: '/contracts/advanced-resources',
+          roles: ['executive', 'admin'],
+        },
       ],
     },
     {
@@ -469,6 +475,16 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                 <Image
                                   src="/assets/icons/all-contracts.svg"
                                   alt="all-contracts"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Advanced Resources' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/resources.svg"
+                                  alt="resources"
                                   width={20}
                                   height={20}
                                 />

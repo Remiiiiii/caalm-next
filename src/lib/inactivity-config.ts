@@ -22,7 +22,7 @@ export const INACTIVITY_CONFIG = {
   DEV_MODE: process.env.NODE_ENV === 'development',
 
   // Development timers (when DEV_MODE is true)
-  DEV_INACTIVITY_LIMIT: 5000, // 10 min for testing
+  DEV_INACTIVITY_LIMIT: 600000, // 10 min for testing
   DEV_COUNTDOWN_TIME: 10000, // 10 seconds for testing
 };
 
