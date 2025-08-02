@@ -5,6 +5,8 @@ import React, { Fragment } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import Avatar from '@/components/ui/avatar';
+import { useRouter } from 'next/navigation';
+import { useAnalyticsPrefetch } from '@/hooks/useAnalyticsPrefetch';
 
 interface Props {
   fullName: string;
@@ -15,6 +17,8 @@ interface Props {
 }
 
 const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
+  const router = useRouter();
+  const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
   // Map database department values to sidebar department values
   const mapDepartmentToSidebar = (
     dbDepartment?: string
@@ -66,13 +70,13 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
           name: 'Manager',
           icon: '/assets/icons/dashboard.svg',
           url: '/dashboard/manager',
-          roles: ['manager'],
+          roles: ['manager', 'executive'],
         },
         {
           name: 'Admin',
           icon: '/assets/icons/dashboard.svg',
           url: '/dashboard/admin',
-          roles: ['admin'],
+          roles: ['admin', 'executive'],
         },
       ],
     },
@@ -96,6 +100,12 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
           icon: '/assets/icons/edit.svg',
           url: '/contracts/approvals',
           roles: ['executive', 'manager', 'admin'],
+        },
+        {
+          name: 'Advanced Resources',
+          icon: '/assets/icons/search.svg',
+          url: '/contracts/advanced-resources',
+          roles: ['executive', 'admin'],
         },
       ],
     },
@@ -158,7 +168,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
           name: 'Training & Certifications',
           icon: '/assets/icons/calendar.svg',
           url: '/audits/training',
-          roles: ['admin'],
+          roles: ['admin', 'executive'],
         },
         {
           name: 'Audit Logs',
@@ -187,7 +197,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
           name: 'Assign Tasks',
           icon: '/assets/icons/task.svg',
           url: '/team/tasks',
-          roles: ['manager'],
+          roles: ['manager', 'executive'],
         },
       ],
     },
@@ -442,6 +452,21 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                           <Link
                             href={url || ''}
                             className="ml-4 lg:w-full flex items-start gap-3"
+                            onMouseEnter={() => {
+                              // Prefetch analytics data on hover for better performance
+                              if (url?.includes('/analytics')) {
+                                router.prefetch(url);
+                                // Extract department from URL for analytics prefetching
+                                const departmentMatch = url.match(
+                                  /\/analytics\/([^\/]+)/
+                                );
+                                if (departmentMatch) {
+                                  prefetchDepartmentAnalytics(
+                                    departmentMatch[1]
+                                  );
+                                }
+                              }
+                            }}
                           >
                             {/* Render only the corresponding icon for each item, no generic icon */}
                             {section.header === 'Dashboard' && (
@@ -469,6 +494,16 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                 <Image
                                   src="/assets/icons/all-contracts.svg"
                                   alt="all-contracts"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Advanced Resources' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/resources.svg"
+                                  alt="resources"
                                   width={20}
                                   height={20}
                                 />
@@ -699,6 +734,21 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                 <Link
                                   href={subItem.url}
                                   className="ml-4 lg:w-full flex items-start gap-3"
+                                  onMouseEnter={() => {
+                                    // Prefetch analytics data on hover for better performance
+                                    if (subItem.url?.includes('/analytics')) {
+                                      router.prefetch(subItem.url);
+                                      // Extract department from URL for analytics prefetching
+                                      const departmentMatch = subItem.url.match(
+                                        /\/analytics\/([^\/]+)/
+                                      );
+                                      if (departmentMatch) {
+                                        prefetchDepartmentAnalytics(
+                                          departmentMatch[1]
+                                        );
+                                      }
+                                    }
+                                  }}
                                 >
                                   <span className="gap-1">
                                     <Image

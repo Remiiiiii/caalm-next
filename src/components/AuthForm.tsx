@@ -27,7 +27,7 @@ import OTPModal from '@/components/OTPModal';
 import TwoFactorModal from '@/components/TwoFactorModal';
 import TwoFactorVerificationModal from '@/components/TwoFactorVerificationModal';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Clock, Shield } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { getLogoutMessage } from '@/lib/auth-utils';
 
 type FormType = 'sign-in' | 'sign-up';
@@ -63,7 +63,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
   // Check for logout reason in URL params
   useEffect(() => {
-    const reason = searchParams.get('reason');
+    const reason = searchParams?.get('reason');
     if (reason) {
       setLogoutMessage(getLogoutMessage(reason));
     }
@@ -148,7 +148,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
     <>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="auth-form">
-          <h1 className="form-title">
+          <h1 className="form-title sidebar-gradient-text">
             {type === 'sign-in' ? 'Sign In' : 'Sign Up'}
           </h1>
           {type === 'sign-up' && (

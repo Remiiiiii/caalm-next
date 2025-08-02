@@ -1,26 +1,6 @@
 import useSWR, { mutate } from 'swr';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface DepartmentInfo {
-  $id: string;
-  name: string;
-  code: string;
-  userCount: number;
-  contractCount: number;
-  activeContracts: number;
-  expiringContracts: number;
-}
-
-interface ReportData {
-  $id: string;
-  type: 'contract' | 'user' | 'compliance' | 'financial';
-  title: string;
-  data: any;
-  generatedAt: string;
-  generatedBy: string;
-  department?: string;
-}
-
 interface ReportFilters {
   dateRange?: {
     start: string;
@@ -31,6 +11,10 @@ interface ReportFilters {
   status?: string;
 }
 
+interface UseReportsOptions {
+  department?: string;
+}
+
 const fetcher = async (url: string) => {
   const response = await fetch(url);
   if (!response.ok) {
@@ -39,43 +23,60 @@ const fetcher = async (url: string) => {
   return response.json();
 };
 
-export const useReports = () => {
+export const useReports = (options: UseReportsOptions = {}) => {
   const { user } = useAuth();
+  const { department } = options;
+
+  // Reports data with department filtering
+  const {
+    data: reportsData,
+    error: reportsError,
+    isLoading: reportsLoading,
+    mutate: mutateReports,
+  } = useSWR(
+    user?.$id
+      ? `/api/reports/recent?userId=${user.$id}${
+          department ? `&department=${department}` : ''
+        }`
+      : null,
+    fetcher,
+    {
+      refreshInterval: 30000, // Refresh every 30 seconds
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10000, // Dedupe requests within 10 seconds
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+    }
+  );
 
   // Department information
   const {
-    data: departments,
+    data: departmentsData,
     error: departmentsError,
     isLoading: departmentsLoading,
   } = useSWR(`/api/reports/departments`, fetcher, {
     refreshInterval: 300000, // Refresh every 5 minutes
-    revalidateOnFocus: true,
+    revalidateOnFocus: false,
+    dedupingInterval: 60000, // Dedupe requests within 1 minute
   });
-
-  // Recent reports
-  const {
-    data: recentReports,
-    error: reportsError,
-    isLoading: reportsLoading,
-  } = useSWR(
-    user?.$id ? `/api/reports/recent?userId=${user.$id}` : null,
-    fetcher,
-    {
-      refreshInterval: 60000, // Refresh every minute
-    }
-  );
 
   // Report templates
   const {
-    data: reportTemplates,
+    data: reportTemplatesData,
     error: templatesError,
     isLoading: templatesLoading,
   } = useSWR(`/api/reports/templates`, fetcher, {
     refreshInterval: 600000, // Refresh every 10 minutes
+    revalidateOnFocus: false,
+    dedupingInterval: 300000, // Dedupe requests within 5 minutes
   });
 
   // Generate report
-  const generateReport = async (reportType: string, filters: ReportFilters) => {
+  const generateReport = async (
+    reportType: string,
+    filters: ReportFilters = {}
+  ) => {
     try {
       const response = await fetch('/api/reports/generate', {
         method: 'POST',
@@ -89,14 +90,18 @@ export const useReports = () => {
 
       if (!response.ok) throw new Error('Failed to generate report');
 
+      const newReport = (await response.json()) as { data: unknown };
+
       // Optimistic update
-      mutate(
-        `/api/reports/recent?userId=${user?.$id}`,
-        (current: ReportData[]) => [response.data, ...(current || [])],
+      mutateReports(
+        (current: { data?: unknown[] } | undefined) => ({
+          ...current,
+          data: [newReport.data, ...(current?.data || [])],
+        }),
         false
       );
 
-      return response.data;
+      return newReport.data;
     } catch (error) {
       console.error('Failed to generate report:', error);
       throw error;
@@ -128,7 +133,10 @@ export const useReports = () => {
   };
 
   // Schedule report
-  const scheduleReport = async (reportType: string, schedule: any) => {
+  const scheduleReport = async (
+    reportType: string,
+    schedule: Record<string, unknown>
+  ) => {
     try {
       const response = await fetch('/api/reports/schedule', {
         method: 'POST',
@@ -142,7 +150,7 @@ export const useReports = () => {
 
       if (!response.ok) throw new Error('Failed to schedule report');
 
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Failed to schedule report:', error);
       throw error;
@@ -157,10 +165,13 @@ export const useReports = () => {
       });
 
       // Optimistic update
-      mutate(
-        `/api/reports/recent?userId=${user?.$id}`,
-        (current: ReportData[]) =>
-          current?.filter((report) => report.$id !== reportId),
+      mutateReports(
+        (current: { data?: unknown[] } | undefined) => ({
+          ...current,
+          data: current?.data?.filter(
+            (report) => (report as { id?: string }).id !== reportId
+          ),
+        }),
         false
       );
     } catch (error) {
@@ -171,27 +182,38 @@ export const useReports = () => {
 
   // Refresh all data
   const refreshAll = () => {
+    mutateReports();
     mutate(`/api/reports/departments`);
-    mutate(`/api/reports/recent?userId=${user?.$id}`);
     mutate(`/api/reports/templates`);
   };
 
+  // Prefetch data for better performance
+  const prefetchReports = () => {
+    if (user?.$id) {
+      mutate(
+        `/api/reports/recent?userId=${user.$id}${
+          department ? `&department=${department}` : ''
+        }`
+      );
+    }
+  };
+
   return {
-    // Data
-    departments: departments?.data || [],
-    recentReports: recentReports?.data || [],
-    reportTemplates: reportTemplates?.data || [],
+    // Data - match the interface expected by ReportsPage
+    reports: reportsData?.data || [],
+    departments: departmentsData?.data || [],
+    reportTemplates: reportTemplatesData?.data || [],
 
     // Loading states
-    isLoading: departmentsLoading || reportsLoading || templatesLoading,
-    departmentsLoading,
+    isLoading: reportsLoading || departmentsLoading || templatesLoading,
     reportsLoading,
+    departmentsLoading,
     templatesLoading,
 
     // Errors
-    error: departmentsError || reportsError || templatesError,
-    departmentsError,
+    error: reportsError || departmentsError || templatesError,
     reportsError,
+    departmentsError,
     templatesError,
 
     // Actions
@@ -200,5 +222,6 @@ export const useReports = () => {
     scheduleReport,
     deleteReport,
     refreshAll,
+    prefetchReports,
   };
 };

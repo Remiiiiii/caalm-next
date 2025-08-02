@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAnalyticsData } from '@/hooks/useAnalyticsData';
 
 interface AnalyticsLayoutProps {
   department: string;
@@ -93,6 +94,8 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
   departmentData,
 }) => {
   const { role, department: userDepartment, loading } = useUserRole();
+  const { stats: analyticsStats, isLoading: analyticsLoading } =
+    useAnalyticsData(department);
   const config = departmentConfig[department as keyof typeof departmentConfig];
   const IconComponent = config?.icon || Building;
 
@@ -105,7 +108,8 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
         case 'executive':
           return true; // Executive can access all departments
         case 'admin':
-          return department === 'administration'; // Admin can only access administration
+          // Admin can access administration department
+          return department === 'administration';
         case 'manager':
           // Manager can only access their specific department
           if (!userDepartment) return false;
@@ -128,9 +132,8 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
       case 'executive':
         return Object.entries(departmentConfig);
       case 'admin':
-        return Object.entries(departmentConfig).filter(
-          ([key]) => key === 'administration'
-        );
+        // Admin can see all departments but only access administration
+        return Object.entries(departmentConfig);
       case 'manager':
         // Manager can only see their specific department
         if (!userDepartment) return [];
@@ -146,7 +149,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
 
   const accessibleDepartments = getAccessibleDepartments();
 
-  if (loading) {
+  if (loading || analyticsLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -194,6 +197,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             You don&apos;t have permission to view analytics for this
             department.
           </p>
+
           <Link href="/analytics">
             <Button className="bg-white/20 backdrop-blur border text-slate-700 border-white/40 hover:bg-white/30 transition-all duration-300">
               <ArrowLeft className="h-4 w-4 mr-2 text-slate-700" />
@@ -239,7 +243,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
       </div>
 
       {/* Quick Stats */}
-      {departmentData && (
+      {(departmentData || analyticsStats) && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -250,7 +254,9 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             </CardHeader>
             <CardContent>
               <div className="h3 text-dark-200 font-bold">
-                {departmentData.totalContracts || 'N/A'}
+                {analyticsStats?.totalContracts ||
+                  departmentData?.totalContracts ||
+                  'N/A'}
               </div>
             </CardContent>
           </Card>
@@ -264,7 +270,9 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             </CardHeader>
             <CardContent>
               <div className="h3 text-dark-200 font-bold">
-                {departmentData.totalBudget || 'N/A'}
+                {analyticsStats?.totalBudget ||
+                  departmentData?.totalBudget ||
+                  'N/A'}
               </div>
             </CardContent>
           </Card>
@@ -278,7 +286,9 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             </CardHeader>
             <CardContent>
               <div className="h3 text-dark-200 font-bold">
-                {departmentData.staffCount || 'N/A'}
+                {analyticsStats?.staffCount ||
+                  departmentData?.staffCount ||
+                  'N/A'}
               </div>
             </CardContent>
           </Card>
@@ -292,7 +302,9 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             </CardHeader>
             <CardContent>
               <div className="h3 text-dark-200 font-bold">
-                {departmentData.complianceRate || 'N/A'}
+                {analyticsStats?.complianceRate ||
+                  departmentData?.complianceRate ||
+                  'N/A'}
               </div>
             </CardContent>
           </Card>
