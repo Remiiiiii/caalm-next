@@ -183,7 +183,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
                     <Input
                       placeholder="Enter your email"
                       {...field}
-                      className="shad-input"
+                      className="bg-transparent"
                     />
                   </FormControl>
                 </div>
@@ -193,20 +193,28 @@ const AuthForm = ({ type }: { type: FormType }) => {
           />
           <Button
             type="submit"
-            className="form-submit-button"
+            className="form-submit-button relative overflow-hidden group"
             disabled={isLoading}
           >
-            {type === 'sign-in' ? 'Sign In' : 'Sign Up'}
+            {/* Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 group-hover:from-blue-600 group-hover:via-cyan-600 group-hover:to-blue-700 transition-all duration-300"></div>
 
-            {isLoading && (
-              <Image
-                src="/assets/icons/loader.svg"
-                alt="loader"
-                width={24}
-                height={24}
-                className="ml-2 animate-spin"
-              />
-            )}
+            {/* Shimmer Effect */}
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+
+            {/* Button Content */}
+            <span className="relative z-10 flex items-center justify-center">
+              {type === 'sign-in' ? 'Sign In' : 'Sign Up'}
+              {isLoading && (
+                <Image
+                  src="/assets/icons/loader.svg"
+                  alt="loader"
+                  width={20}
+                  height={20}
+                  className="ml-2 animate-spin"
+                />
+              )}
+            </span>
           </Button>
 
           {logoutMessage && (
@@ -234,7 +242,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
             </p>
             <Link
               href={type === 'sign-in' ? '/sign-up' : 'sign-in'}
-              className="ml-1 font-medium text-brand"
+              className="ml-1 font-medium sidebar-gradient-text"
             >
               {type === 'sign-in' ? 'Sign Up' : 'Sign In'}
             </Link>

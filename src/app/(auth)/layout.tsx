@@ -1,6 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Spline from '@splinetool/react-spline';
+import OrbitingBlocks from '@/components/OrbitingBlocks';
 
 const layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -15,8 +16,6 @@ const layout = ({ children }: { children: React.ReactNode }) => {
       >
         <source src="/assets/video/wave.mp4" type="video/mp4" />
       </video>
-
-      {/* Overlay */}
 
       {/* Content */}
       <div className="relative z-10 flex w-full">
@@ -48,10 +47,16 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                   licenses.
                 </p>
               </div>
-              <Spline
-                scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
-                className="w-full h-96"
-              />
+
+              {/* Spline Component with OrbitingBlocks */}
+              {/* Spline Component with OrbitingBlocks */}
+              <div className="relative mt-8">
+                <Spline
+                  scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
+                  className="w-full h-96 relative z-10"
+                />
+                <OrbitingBlocks />
+              </div>
             </div>
           </div>
         </section>

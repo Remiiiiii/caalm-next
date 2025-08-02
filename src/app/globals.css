@@ -163,7 +163,7 @@
     @apply flex h-[78px] flex-col justify-center rounded-xl border border-light-300 px-4 shadow-drop-1;
   }
   .shad-form-label {
-    @apply text-light-100 pt-2 body-2 w-full !important;
+    @apply text-light-100 p-1 ml-2  body-2 w-full !important;
   }
   .shad-form-message {
     @apply text-red body-2 ml-4 !important;
