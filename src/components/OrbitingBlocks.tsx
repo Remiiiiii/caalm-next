@@ -83,7 +83,7 @@ const OrbitingBlocks = () => {
         const finalScale = baseScale + scaleVariation * Math.sin(angle * 2);
 
         // Opacity based on depth
-        const baseOpacity = isBehind ? 0.4 : 0.8;
+        const baseOpacity = isBehind ? 0.9 : 0.8;
         const opacityVariation = 0.2;
         const finalOpacity =
           baseOpacity + opacityVariation * Math.sin(angle * 3);
@@ -99,10 +99,10 @@ const OrbitingBlocks = () => {
               opacity: finalOpacity,
               zIndex,
             }}
-            className="transition-transform duration-200 ease-out"
+            className="transition-transform duration-500 ease-in-out"
           >
             <div className="w-14 h-14 rounded-xl bg-white/90 backdrop-blur-sm border border-white/20 shadow-lg flex items-center justify-center">
-              <Icon className="w-6 h-6" style={{ color: feature.color }} />
+              <Icon className="w-10 h-10" style={{ color: feature.color }} />
             </div>
           </div>
         );

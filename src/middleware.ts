@@ -4,8 +4,9 @@ import type { NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for auth pages, API routes, static assets, and settings
+  // Skip middleware for auth pages, API routes, static assets, settings, and landing page
   if (
+    pathname === '/' ||
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/sign-up') ||
     pathname.startsWith('/settings') ||

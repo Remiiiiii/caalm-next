@@ -3,6 +3,8 @@ import Image from 'next/image';
 import Spline from '@splinetool/react-spline';
 import OrbitingBlocks from '@/components/OrbitingBlocks';
 
+import CountUp from '@/components/CountUp';
+
 const layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex min-h-screen bg-white relative overflow-hidden">
@@ -35,14 +37,14 @@ const layout = ({ children }: { children: React.ReactNode }) => {
             </div>
 
             {/* 3D Robot/Character Illustration */}
-            <div className="rounded-2xl shadow-lg p-8 border border-gray-100 backdrop-blur-lg">
+            <div className="rounded-2xl shadow-lg p-8 border-2 border-white backdrop-blur-lg">
               {/* Marketing Content */}
               <div className="space-y-6">
                 <h1 className="text-xl lg:text-3xl font-bold sidebar-gradient-text leading-tight">
                   Eliminate Missed Deadlines and Compliance Risks with
                   Centralized Document Management
                 </h1>
-                <p className="text-xl text-gray-600 leading-relaxed">
+                <p className="text-lg text-gray-600 leading-relaxed">
                   The perfect place to manage your contracts, audits, and
                   licenses.
                 </p>
@@ -50,12 +52,47 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 
               {/* Spline Component with OrbitingBlocks */}
               {/* Spline Component with OrbitingBlocks */}
-              <div className="relative mt-8">
+              <div className="relative mt-[-30px] mb-10">
                 <Spline
                   scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
                   className="w-full h-96 relative z-10"
                 />
                 <OrbitingBlocks />
+              </div>
+              <div className="flex items-center gap-2 mt-6 justify-center ">
+                <div className="flex -space-x-2">
+                  <Image
+                    src="/assets/images/1.png"
+                    alt="avatar"
+                    width={32}
+                    height={32}
+                    className="rounded-full border-3 border-white shadow-lg"
+                  />
+                  <Image
+                    src="/assets/images/2.png"
+                    alt="avatar"
+                    width={32}
+                    height={32}
+                    className="rounded-full border-3 border-white shadow-lg"
+                  />
+                  <Image
+                    src="/assets/images/3.png"
+                    alt="avatar"
+                    width={32}
+                    height={32}
+                    className="rounded-full border-3 border-white shadow-lg"
+                  />
+                  <Image
+                    src="/assets/images/5.png"
+                    alt="avatar"
+                    width={32}
+                    height={32}
+                    className="rounded-full border-3 border-white shadow-lg"
+                  />
+                </div>
+                <span className="text-md text-gray-600">
+                  Trusted by <CountUp />+ innovators worldwide
+                </span>
               </div>
             </div>
           </div>
