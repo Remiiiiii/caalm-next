@@ -56,7 +56,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     extractText,
     analyzeWithAI,
     refreshAll,
-  } = useDocumentViewer(file.id);
+  } = useDocumentViewer(file?.id || '');
 
   // Reset all AI state when DocumentViewer opens or file changes
   useEffect(() => {
@@ -88,9 +88,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
     // Extract text content for text files and PDFs
     if (
-      ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts', 'pdf'].includes(fileType)
+      ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts', 'pdf'].includes(fileType) &&
+      extractText
     ) {
-      extractText();
+      try {
+        extractText();
+      } catch (error) {
+        console.error('Failed to extract text:', error);
+      }
     }
 
     // Debug: Log file information
@@ -487,7 +492,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     );
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !file || !file.id) return null;
 
   return (
     <div

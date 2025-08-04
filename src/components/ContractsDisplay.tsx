@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,30 +24,44 @@ import {
   FileText,
   AlertCircle,
   RefreshCw,
+  Eye,
 } from 'lucide-react';
-import { useContractSearch } from '@/hooks/useContracts';
+import {
+  useSAMOpportunities,
+  UseSAMOpportunitiesFilters,
+} from '@/hooks/useSAMOpportunities';
 import {
   SAMContract,
-  SAMContractSearchParams,
   NOTICE_TYPES,
-  SET_ASIDE_TYPES,
+  SET_ASIDE_CODES,
   formatContractAmount,
   formatContractDate,
   getContractTypeDisplay,
   getSetAsideDisplay,
+  RESPONSE_DEADLINE_OPTIONS,
 } from '@/lib/sam-config';
+import ContractDocumentViewer from '@/components/ContractDocumentViewer';
 
 interface ContractCardProps {
   contract: SAMContract;
+  onViewDocument?: (contract: SAMContract) => void;
 }
 
-const ContractCard = ({ contract }: ContractCardProps) => {
+const ContractCard = ({ contract, onViewDocument }: ContractCardProps) => {
+  const handleCardClick = () => {
+    if (!onViewDocument) return;
+    onViewDocument(contract);
+  };
+
   return (
-    <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg hover:shadow-xl transition-shadow">
+    <Card
+      className="bg-white/30 backdrop-blur border border-white/40 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer hover:border-blue-300 hover:bg-white/40"
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg font-semibold text-slate-800 leading-tight mb-2">
+            <CardTitle className="text-lg font-semibold sidebar-gradient-text leading-tight mb-2">
               {contract.title}
             </CardTitle>
             {contract.solicitationNumber && (
@@ -69,7 +83,7 @@ const ContractCard = ({ contract }: ContractCardProps) => {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="relative space-y-4">
         {/* Agency Information */}
         {(contract.department || contract.office) && (
           <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -155,29 +169,43 @@ const ContractCard = ({ contract }: ContractCardProps) => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-2">
-          {contract.uiLink && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => window.open(contract.uiLink, '_blank')}
-              className="flex items-center gap-2"
-            >
-              <ExternalLink className="h-4 w-4" />
-              View on SAM.gov
-            </Button>
-          )}
-          {contract.additionalInfoLink && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => window.open(contract.additionalInfoLink, '_blank')}
-              className="flex items-center gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Details
-            </Button>
-          )}
+        <div className="flex justify-between items-center pt-2">
+          <div className="flex gap-2">
+            {contract.uiLink && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(contract.uiLink, '_blank');
+                }}
+                className="flex items-center gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                SAM.gov
+              </Button>
+            )}
+            {contract.additionalInfoLink && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(contract.additionalInfoLink, '_blank');
+                }}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Details
+              </Button>
+            )}
+          </div>
+
+          {/* Click indicator */}
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <Eye className="h-4 w-4" />
+            <span>Click to view PDF</span>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -185,68 +213,110 @@ const ContractCard = ({ contract }: ContractCardProps) => {
 };
 
 export default function ContractsDisplay() {
-  const { searchContracts, contracts, totalRecords, loading, error } =
-    useContractSearch();
-
-  const [searchParams, setSearchParams] = useState({
-    keyword: '',
-    noticeType: 'all',
-    setAside: 'all',
-    state: '',
-    dept: '',
-    limit: 25,
-    offset: 0,
-  });
-
-  const [hasSearched, setHasSearched] = useState(false);
-
-  const handleSearch = async () => {
-    try {
-      setHasSearched(true);
-      const params = Object.fromEntries(
-        Object.entries(searchParams).filter(
-          ([key, value]) =>
-            value !== '' &&
-            value !== 'all' &&
-            !(key === 'offset' && value === 0)
-        )
-      ) as Omit<SAMContractSearchParams, 'api_key'>;
-      await searchContracts(params);
-    } catch (err) {
-      console.error('Search failed:', err);
-    }
-  };
-
-  const handleReset = () => {
-    setSearchParams({
+  // Enhanced search parameters with new SAM.gov API features
+  const [searchFilters, setSearchFilters] =
+    useState<UseSAMOpportunitiesFilters>({
       keyword: '',
-      noticeType: 'all',
-      setAside: 'all',
+      procurementType: '',
+      setAsideType: '',
       state: '',
-      dept: '',
+      organizationName: '',
+      responseDeadlineOption: 'Anytime',
       limit: 25,
       offset: 0,
     });
-    setHasSearched(false);
-  };
 
-  const loadMore = async () => {
-    const newParams = {
-      ...searchParams,
-      offset: searchParams.offset + searchParams.limit,
+  // Document Viewer State
+  const [selectedContract, setSelectedContract] = useState<SAMContract | null>(
+    null
+  );
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false);
+
+  // Use the new SAM opportunities hook with SWR caching
+  const {
+    opportunities: contracts,
+    loading,
+    error,
+    totalRecords,
+    currentPage,
+    totalPages,
+    searchOpportunities,
+    clearResults,
+    hasSearched,
+  } = useSAMOpportunities();
+
+  // Debounced search function following best practices
+  const handleSearch = useCallback(async () => {
+    try {
+      // Filter out empty and default values
+      const cleanFilters: UseSAMOpportunitiesFilters = Object.fromEntries(
+        Object.entries(searchFilters).filter(([key, value]) => {
+          if (typeof value === 'string') {
+            return value !== '' && value !== 'all';
+          }
+          if (typeof value === 'number') {
+            return key === 'limit' || key === 'offset' || value > 0;
+          }
+          return value !== null && value !== undefined;
+        })
+      ) as UseSAMOpportunitiesFilters;
+
+      // Execute search with enhanced filters
+      await searchOpportunities(cleanFilters);
+    } catch (err) {
+      console.error('Enhanced SAM search failed:', err);
+    }
+  }, [searchFilters, searchOpportunities]);
+
+  // Auto-search when user stops typing (debounced)
+  useEffect(() => {
+    if (searchFilters.keyword && searchFilters.keyword.length >= 2) {
+      const timeoutId = setTimeout(() => {
+        handleSearch();
+      }, 500); // 500ms debounce for better UX
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [searchFilters.keyword, handleSearch]);
+
+  const handleReset = useCallback(() => {
+    setSearchFilters({
+      keyword: '',
+      procurementType: '',
+      setAsideType: '',
+      state: '',
+      organizationName: '',
+      responseDeadlineOption: 'Anytime',
+      limit: 25,
+      offset: 0,
+    });
+    clearResults();
+  }, [clearResults]);
+
+  const loadMore = useCallback(async () => {
+    const currentOffset = searchFilters.offset || 0;
+    const currentLimit = searchFilters.limit || 25;
+
+    const newFilters = {
+      ...searchFilters,
+      offset: currentOffset + currentLimit,
     };
-    setSearchParams(newParams);
+    setSearchFilters(newFilters);
 
-    // Filter params for API call
-    const apiParams = Object.fromEntries(
-      Object.entries(newParams).filter(
-        ([key, value]) =>
-          value !== '' && value !== 'all' && !(key === 'offset' && value === 0)
-      )
-    ) as Omit<SAMContractSearchParams, 'api_key'>;
+    // Search with updated pagination
+    await searchOpportunities(newFilters);
+  }, [searchFilters, searchOpportunities]);
 
-    await searchContracts(apiParams);
-  };
+  // Document Viewer Handlers
+  const handleViewDocument = useCallback((contract: SAMContract) => {
+    setSelectedContract(contract);
+    setShowDocumentViewer(true);
+  }, []);
+
+  const handleCloseDocumentViewer = useCallback(() => {
+    setShowDocumentViewer(false);
+    setSelectedContract(null);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -265,7 +335,7 @@ export default function ContractsDisplay() {
       {/* Search Form */}
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 sidebar-gradient-text">
             <Search className="h-5 w-5" />
             Search Contracts
           </CardTitle>
@@ -277,10 +347,10 @@ export default function ContractsDisplay() {
               <Label htmlFor="keyword">Keyword</Label>
               <Input
                 id="keyword"
-                placeholder="Enter search terms..."
-                value={searchParams.keyword}
+                placeholder="Enter search terms... (auto-search after 2+ chars)"
+                value={searchFilters.keyword}
                 onChange={(e) =>
-                  setSearchParams((prev) => ({
+                  setSearchFilters((prev) => ({
                     ...prev,
                     keyword: e.target.value,
                   }))
@@ -290,11 +360,14 @@ export default function ContractsDisplay() {
             </div>
 
             <div>
-              <Label htmlFor="noticeType">Notice Type</Label>
+              <Label htmlFor="procurementType">Procurement Type</Label>
               <Select
-                value={searchParams.noticeType}
+                value={searchFilters.procurementType || 'all'}
                 onValueChange={(value) =>
-                  setSearchParams((prev) => ({ ...prev, noticeType: value }))
+                  setSearchFilters((prev) => ({
+                    ...prev,
+                    procurementType: value === 'all' ? '' : value,
+                  }))
                 }
               >
                 <SelectTrigger>
@@ -314,9 +387,12 @@ export default function ContractsDisplay() {
             <div>
               <Label htmlFor="setAside">Set-Aside Type</Label>
               <Select
-                value={searchParams.setAside}
+                value={searchFilters.setAsideType || 'all'}
                 onValueChange={(value) =>
-                  setSearchParams((prev) => ({ ...prev, setAside: value }))
+                  setSearchFilters((prev) => ({
+                    ...prev,
+                    setAsideType: value === 'all' ? '' : value,
+                  }))
                 }
               >
                 <SelectTrigger>
@@ -324,7 +400,7 @@ export default function ContractsDisplay() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Set-Asides</SelectItem>
-                  {Object.entries(SET_ASIDE_TYPES).map(([code, name]) => (
+                  {Object.entries(SET_ASIDE_CODES).map(([code, name]) => (
                     <SelectItem key={code} value={code}>
                       {name}
                     </SelectItem>
@@ -335,15 +411,15 @@ export default function ContractsDisplay() {
           </div>
 
           {/* Secondary Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="state">State</Label>
               <Input
                 id="state"
                 placeholder="e.g., FL, CA, TX"
-                value={searchParams.state}
+                value={searchFilters.state}
                 onChange={(e) =>
-                  setSearchParams((prev) => ({
+                  setSearchFilters((prev) => ({
                     ...prev,
                     state: e.target.value,
                   }))
@@ -352,15 +428,43 @@ export default function ContractsDisplay() {
             </div>
 
             <div>
-              <Label htmlFor="dept">Department</Label>
+              <Label htmlFor="organization">Organization</Label>
               <Input
-                id="dept"
-                placeholder="e.g., Defense, Agriculture"
-                value={searchParams.dept}
+                id="organization"
+                placeholder="e.g., GSA, Defense, Agriculture"
+                value={searchFilters.organizationName}
                 onChange={(e) =>
-                  setSearchParams((prev) => ({ ...prev, dept: e.target.value }))
+                  setSearchFilters((prev) => ({
+                    ...prev,
+                    organizationName: e.target.value,
+                  }))
                 }
               />
+            </div>
+
+            <div>
+              <Label htmlFor="responseDeadline">Response Due</Label>
+              <Select
+                value={searchFilters.responseDeadlineOption}
+                onValueChange={(value) =>
+                  setSearchFilters((prev) => ({
+                    ...prev,
+                    responseDeadlineOption:
+                      value as keyof typeof RESPONSE_DEADLINE_OPTIONS,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Anytime" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(RESPONSE_DEADLINE_OPTIONS).map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -386,20 +490,66 @@ export default function ContractsDisplay() {
         </CardContent>
       </Card>
 
-      {/* Results */}
+      {/* Enhanced Error Display with Setup Instructions */}
       {error && (
         <div className="space-y-4">
           <Card className="bg-red-50 border border-red-200">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-red-800">
+              <div className="flex items-center gap-2 text-red-800 mb-3">
                 <AlertCircle className="h-5 w-5" />
                 <span className="font-medium">Error loading contracts</span>
               </div>
-              <p className="text-red-700 mt-1">
-                {typeof error === 'string'
-                  ? error
-                  : error?.message || 'An unknown error occurred'}
+              <p className="text-red-700 mb-3">
+                {error || 'An unknown error occurred'}
               </p>
+
+              {/* Show setup instructions if API key is missing */}
+              {error?.includes('API key') && (
+                <div className="bg-white p-4 rounded-lg border border-red-200">
+                  <h4 className="font-medium text-red-800 mb-2">
+                    SAM.gov API Key Setup Required
+                  </h4>
+                  <p className="text-sm text-red-700 mb-3">
+                    To use SAM.gov contract search, you need an API key:
+                  </p>
+                  <ol className="text-sm text-red-700 space-y-1 list-decimal list-inside">
+                    <li>
+                      Visit{' '}
+                      <a
+                        href="https://sam.gov/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline"
+                      >
+                        sam.gov
+                      </a>{' '}
+                      and sign in
+                    </li>
+                    <li>Navigate to Account Details page</li>
+                    <li>Request an API Key (40 characters)</li>
+                    <li>
+                      Set the{' '}
+                      <code className="bg-red-100 px-1 rounded">
+                        GOV_API_KEY
+                      </code>{' '}
+                      environment variable
+                    </li>
+                    <li>Restart the development server</li>
+                  </ol>
+                  <p className="text-xs text-red-600 mt-3">
+                    Note: According to{' '}
+                    <a
+                      href="https://api.sam.gov/docs/api-key/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      SAM.gov API documentation
+                    </a>
+                    , request limits apply based on your role.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -407,14 +557,25 @@ export default function ContractsDisplay() {
 
       {hasSearched && !loading && !error && (
         <div className="space-y-4">
-          {/* Results Header */}
+          {/* Enhanced Results Header with Pagination Info */}
           <div className="flex justify-between items-center">
-            <p className="text-slate-600">
-              Found {totalRecords.toLocaleString()} contracts
+            <div className="text-slate-600">
+              <p className="font-medium">
+                Found {totalRecords.toLocaleString()} contracts
+              </p>
               {contracts.length > 0 && (
-                <span> (showing {contracts.length})</span>
+                <p className="text-sm">
+                  Page {currentPage} of {totalPages} • Showing{' '}
+                  {contracts.length} results
+                </p>
               )}
-            </p>
+            </div>
+
+            {/* Search Performance Indicator */}
+            <div className="flex items-center gap-2 text-green-600">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm">Live SAM.gov data</span>
+            </div>
           </div>
 
           {/* Contracts Grid */}
@@ -422,7 +583,11 @@ export default function ContractsDisplay() {
             <>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {contracts.map((contract) => (
-                  <ContractCard key={contract.noticeId} contract={contract} />
+                  <ContractCard
+                    key={contract.noticeId}
+                    contract={contract}
+                    onViewDocument={handleViewDocument}
+                  />
                 ))}
               </div>
 
@@ -458,7 +623,7 @@ export default function ContractsDisplay() {
         </div>
       )}
 
-      {/* Initial State */}
+      {/* Enhanced Initial State */}
       {!hasSearched && !loading && (
         <div className="space-y-6">
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
@@ -467,14 +632,37 @@ export default function ContractsDisplay() {
               <h3 className="text-lg font-medium text-slate-700 mb-2">
                 Search Government Contracts
               </h3>
-              <p className="text-slate-500">
+              <p className="text-slate-500 mb-4">
                 Enter search criteria above to find contract opportunities from
                 SAM.gov
               </p>
+
+              {/* Feature Highlights */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 text-sm">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <RefreshCw className="h-4 w-4 text-blue-500" />
+                  <span>Auto-search as you type</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Calendar className="h-4 w-4 text-green-500" />
+                  <span>Response deadline filtering</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Building2 className="h-4 w-4 text-purple-500" />
+                  <span>Enhanced set-aside codes</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
       )}
+
+      {/* Contract Document Viewer Modal */}
+      <ContractDocumentViewer
+        isOpen={showDocumentViewer}
+        onClose={handleCloseDocumentViewer}
+        contract={selectedContract}
+      />
     </div>
   );
 }

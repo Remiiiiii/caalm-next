@@ -710,6 +710,16 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                 />
                               </span>
                             )}
+                            {name === 'Training & Certifications' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/training-cert.svg"
+                                  alt="training-cert"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
                             <p
                               className={`text-sm text-slate-900 font-medium ${
                                 name === 'Administration' ? '-ml-[1px]' : ''

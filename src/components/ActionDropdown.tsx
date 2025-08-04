@@ -694,21 +694,23 @@ const ActionDropdown = ({
         </DropdownMenuContent>
       </DropdownMenu>
       {renderDialogContent()}
-      <DocumentViewer
-        isOpen={isViewerOpen}
-        onClose={() => setIsViewerOpen(false)}
-        file={{
-          id: file.$id,
-          name: file.name || file.contractName || '',
-          type: file.extension || 'pdf',
-          size: file.size || 'Unknown',
-          url: constructFileUrl(file.bucketFileId),
-          createdAt: file.$createdAt,
-          expiresAt: file.contractExpiryDate,
-          createdBy: file.owner || 'Unknown',
-          description: file.description || '',
-        }}
-      />
+      {file && file.$id && (
+        <DocumentViewer
+          isOpen={isViewerOpen}
+          onClose={() => setIsViewerOpen(false)}
+          file={{
+            id: file.$id,
+            name: file.name || file.contractName || '',
+            type: file.extension || 'pdf',
+            size: file.size || 'Unknown',
+            url: constructFileUrl(file.bucketFileId),
+            createdAt: file.$createdAt,
+            expiresAt: file.contractExpiryDate,
+            createdBy: file.owner || 'Unknown',
+            description: file.description || '',
+          }}
+        />
+      )}
     </Dialog>
   );
 };
