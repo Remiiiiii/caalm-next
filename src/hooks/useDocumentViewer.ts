@@ -37,88 +37,60 @@ const fetcher = async (url: string) => {
 export const useDocumentViewer = (fileId: string) => {
   const { user } = useAuth();
 
-  // File Content (PDF text extraction)
-  const {
-    data: fileContent,
-    error: contentError,
-    isLoading: contentLoading,
-  } = useSWR(fileId ? `/api/documents/${fileId}/content` : null, fetcher, {
-    revalidateOnFocus: false, // Don't revalidate on focus for large content
-    revalidateOnReconnect: true,
-    dedupingInterval: 300000, // 5 minutes deduping
-  });
+  // File Content (PDF text extraction) - Disabled as API doesn't exist
+  const fileContent = null;
+  const contentError = null;
+  const contentLoading = false;
 
-  // AI Analysis
-  const {
-    data: aiAnalysis,
-    error: analysisError,
-    isLoading: analysisLoading,
-  } = useSWR(fileId ? `/api/documents/${fileId}/analysis` : null, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 600000, // 10 minutes deduping for AI analysis
-  });
+  // AI Analysis - Disabled as API doesn't exist
+  const aiAnalysis = null;
+  const analysisError = null;
+  const analysisLoading = false;
 
-  // PDF Metadata
-  const {
-    data: pdfMetadata,
-    error: metadataError,
-    isLoading: metadataLoading,
-  } = useSWR(fileId ? `/api/documents/${fileId}/metadata` : null, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-  });
+  // PDF Metadata - Disabled as API doesn't exist
+  const pdfMetadata = null;
+  const metadataError = null;
+  const metadataLoading = false;
 
-  // Extract PDF text
+  // Extract PDF text - Disabled as API doesn't exist
   const extractText = async () => {
-    try {
-      const response = await fetch(`/api/documents/${fileId}/extract`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) throw new Error('Failed to extract text');
-
-      // Optimistic update
-      mutate(`/api/documents/${fileId}/content`, response.data, false);
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to extract text:', error);
-      throw error;
+    if (!fileId || fileId.trim() === '') {
+      console.warn('extractText called with empty fileId');
+      return null;
     }
+
+    console.warn('extractText: API endpoints do not exist in this application');
+    return null;
   };
 
-  // Analyze with AI
+  // Analyze with AI - Disabled as API doesn't exist
   const analyzeWithAI = async () => {
-    try {
-      const response = await fetch(`/api/documents/${fileId}/analyze`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) throw new Error('Failed to analyze document');
-
-      // Optimistic update
-      mutate(`/api/documents/${fileId}/analysis`, response.data, false);
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to analyze document:', error);
-      throw error;
+    if (!fileId || fileId.trim() === '') {
+      console.warn('analyzeWithAI called with empty fileId');
+      return null;
     }
+
+    console.warn(
+      'analyzeWithAI: API endpoints do not exist in this application'
+    );
+    return null;
   };
 
-  // Refresh all data
+  // Refresh all data - Disabled as API doesn't exist
   const refreshAll = () => {
-    mutate(`/api/documents/${fileId}/content`);
-    mutate(`/api/documents/${fileId}/analysis`);
-    mutate(`/api/documents/${fileId}/metadata`);
+    if (!fileId || fileId.trim() === '') {
+      console.warn('refreshAll called with empty fileId');
+      return;
+    }
+
+    console.warn('refreshAll: API endpoints do not exist in this application');
   };
 
   return {
     // Data
-    fileContent: fileContent?.data as FileContent | null,
-    aiAnalysis: aiAnalysis?.data as AIAnalysis | null,
-    pdfMetadata: pdfMetadata?.data as PDFMetadata | null,
+    fileContent: fileContent as FileContent | null,
+    aiAnalysis: aiAnalysis as AIAnalysis | null,
+    pdfMetadata: pdfMetadata as PDFMetadata | null,
 
     // Loading states
     isLoading: contentLoading || analysisLoading || metadataLoading,

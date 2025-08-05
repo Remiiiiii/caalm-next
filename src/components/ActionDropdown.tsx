@@ -694,7 +694,7 @@ const ActionDropdown = ({
         </DropdownMenuContent>
       </DropdownMenu>
       {renderDialogContent()}
-      {file && file.$id && (
+      {file && file.$id && file.bucketFileId && (
         <DocumentViewer
           isOpen={isViewerOpen}
           onClose={() => setIsViewerOpen(false)}

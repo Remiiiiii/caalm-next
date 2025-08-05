@@ -172,7 +172,7 @@ const HeroIntro = () => {
             muted
             loop={false}
             playsInline
-            className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-[1500ms]"
+            className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity"
             style={{
               opacity: showA ? 1 : fade ? 0.5 : 0,
               zIndex: showA ? 2 : 1,
@@ -186,7 +186,7 @@ const HeroIntro = () => {
             muted
             loop={false}
             playsInline
-            className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-[1500ms]"
+            className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity"
             style={{
               opacity: !showA ? 1 : fade ? 0.5 : 0,
               zIndex: !showA ? 2 : 1,

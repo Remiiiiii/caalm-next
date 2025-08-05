@@ -17,7 +17,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   size = 'md',
   className,
 }) => {
-  if (count === 0) return null;
+  if (!count || count === 0) return null;
 
   const getPriorityStyles = () => {
     switch (priority) {
@@ -61,7 +61,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   //   }
   // };
 
-  const displayCount = count > 99 ? '99+' : count.toString();
+  const displayCount = count > 99 ? '99+' : (count || 0).toString();
 
   return (
     <div
@@ -71,7 +71,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
         getSizeStyles(),
         className
       )}
-      title={`${count} notification${count !== 1 ? 's' : ''}`}
+      title={`${count || 0} notification${(count || 0) !== 1 ? 's' : ''}`}
     >
       {/* {count <= 3 && <span className="mr-1">{getIcon()}</span>} */}
       {displayCount}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useDocumentViewer } from '@/hooks/useDocumentViewer';
 import { X, Send, Download, Share2, FileText, Calendar } from 'lucide-react';
 import { Button } from './ui/button';
@@ -58,6 +58,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     refreshAll,
   } = useDocumentViewer(file?.id || '');
 
+  // Debug logging for file.id
+  useEffect(() => {
+    console.log('DocumentViewer file.id:', file?.id, 'type:', typeof file?.id);
+  }, [file?.id]);
+
   // Reset all AI state when DocumentViewer opens or file changes
   useEffect(() => {
     if (isOpen) {
@@ -88,11 +93,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
     // Extract text content for text files and PDFs
     if (
-      ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts', 'pdf'].includes(fileType) &&
-      extractText
+      ['txt', 'md', 'json', 'xml', 'html', 'js', 'ts', 'pdf'].includes(
+        fileType
+      ) &&
+      extractText &&
+      file.id &&
+      file.id.trim() !== ''
     ) {
       try {
-        extractText();
+        extractText().catch((error) => {
+          console.error('Failed to extract text:', error);
+        });
       } catch (error) {
         console.error('Failed to extract text:', error);
       }
@@ -123,6 +134,33 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     setPreviewError(null);
     setIsPreviewLoading(true);
   }, [file.url]);
+
+  const analyze = useCallback(async () => {
+    // Always start with the greeting message
+    setChatMessages([
+      {
+        id: 'greeting',
+        text: "Hi! I'm your document assistant. I can help you understand and analyze this document. What would you like to know about it?",
+        sender: 'assistant',
+        timestamp: new Date(),
+      },
+    ]);
+    setWelcomeMessageLoaded(true);
+
+    try {
+      // Use SWR hook to analyze the document
+      await analyzeWithAI();
+    } catch (error) {
+      console.error('AI Analysis failed:', error);
+    }
+  }, [analyzeWithAI]);
+
+  // Initialize with welcome message and suggested questions when component opens
+  useEffect(() => {
+    if (isOpen && !welcomeMessageLoaded && chatMessages.length === 0) {
+      analyze();
+    }
+  }, [isOpen, welcomeMessageLoaded, chatMessages.length, analyze]);
 
   const handleSendMessage = async (msg?: string) => {
     const message = msg || newMessage;
@@ -209,26 +247,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
-    }
-  };
-
-  const analyze = async () => {
-    // Always start with the greeting message
-    setChatMessages([
-      {
-        id: 'greeting',
-        text: "Hi! I'm your document assistant. I can help you understand and analyze this document. What would you like to know about it?",
-        sender: 'assistant',
-        timestamp: new Date(),
-      },
-    ]);
-    setWelcomeMessageLoaded(true);
-
-    try {
-      // Use SWR hook to analyze the document
-      await analyzeWithAI();
-    } catch (error) {
-      console.error('AI Analysis failed:', error);
     }
   };
 
@@ -518,7 +536,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
           <div className="flex items-center space-x-4">
             <div className="text-3xl">{getFileIcon(file.type)}</div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold sidebar-gradient-text">
                 {file.name}
               </h2>
               <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
@@ -668,7 +686,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                           <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
                             <p className="text-sm text-gray-700">
                               Hi! I&apos;m your document assistant. I can help
-                              you understand and analyze this document. What
+                              you understand and analyze this contract. What
                               would you like to know about it?
                             </p>
                           </div>
@@ -773,14 +791,21 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                   </div>
 
                   {/* Suggested Questions */}
-                  {chatMessages.length === 0 && welcomeMessageLoaded && (
-                    <div className="mt-3">
+                  {chatMessages.length <= 1 && welcomeMessageLoaded && (
+                    <div className="mt-4">
+                      <div className="mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Quick Questions
+                        </h4>
+                      </div>
+
                       <div className="flex flex-wrap gap-2">
                         {[
                           'What is this document about?',
-                          'What are the key terms?',
-                          'What are the important dates?',
                           'Summarize the main points',
+                          'What are the key terms and conditions?',
+                          'What actions do I need to take?',
                         ].map((q, idx) => (
                           <Button
                             key={idx}

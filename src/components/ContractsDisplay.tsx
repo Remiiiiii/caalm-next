@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,170 +47,166 @@ interface ContractCardProps {
   onViewDocument?: (contract: SAMContract) => void;
 }
 
-const ContractCard = ({ contract, onViewDocument }: ContractCardProps) => {
-  const handleCardClick = () => {
-    if (!onViewDocument) return;
-    onViewDocument(contract);
-  };
+const ContractCard = React.memo(
+  ({ contract, onViewDocument }: ContractCardProps) => {
+    const handleCardClick = useCallback(() => {
+      if (!onViewDocument) return;
+      onViewDocument(contract);
+    }, [contract, onViewDocument]);
 
-  return (
-    <Card
-      className="bg-white/30 backdrop-blur border border-white/40 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer hover:border-blue-300 hover:bg-white/40"
-      onClick={handleCardClick}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg font-semibold sidebar-gradient-text leading-tight mb-2">
-              {contract.title}
-            </CardTitle>
-            {contract.solicitationNumber && (
-              <p className="text-sm text-slate-600 font-mono">
-                Notice ID: {contract.solicitationNumber}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-2 items-end">
-            <Badge variant="outline" className="text-xs">
-              {getContractTypeDisplay(contract.type)}
-            </Badge>
-            {contract.typeOfSetAside && (
-              <Badge variant="secondary" className="text-xs">
-                {getSetAsideDisplay(contract.typeOfSetAside)}
+    return (
+      <Card
+        className="bg-white/30 backdrop-blur border border-white/40 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer hover:border-blue-300 hover:bg-white/40"
+        onClick={handleCardClick}
+      >
+        <CardContent className="p-4 space-y-4">
+          {/* First row: Set Aside and Contract Type */}
+          <div className="flex justify-between items-center">
+            <div>
+              {contract.typeOfSetAside && (
+                <Badge variant="outline" className="text-xs">
+                  {getSetAsideDisplay(contract.typeOfSetAside)}
+                </Badge>
+              )}
+            </div>
+            <div>
+              <Badge variant="outline" className="text-xs">
+                {getContractTypeDisplay(contract.type)}
               </Badge>
-            )}
+            </div>
           </div>
-        </div>
-      </CardHeader>
 
-      <CardContent className="relative space-y-4">
-        {/* Agency Information */}
-        {(contract.department || contract.office) && (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Building2 className="h-4 w-4" />
-            <span>
-              {[contract.department, contract.subTier, contract.office]
-                .filter(Boolean)
-                .join(' • ')}
-            </span>
+          {/* Second row: Contract Title */}
+          <div className="w-full">
+            <h3 className="text-lg font-semibold sidebar-gradient-text leading-tight">
+              {contract.title}
+            </h3>
           </div>
-        )}
 
-        {/* Description */}
-        {contract.description && (
-          <p className="text-sm text-slate-700 line-clamp-3">
-            {contract.description}
-          </p>
-        )}
-
-        {/* Key Dates */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center gap-2 text-slate-600">
-            <Calendar className="h-4 w-4" />
-            <span>Posted: {formatContractDate(contract.postedDate)}</span>
-          </div>
-          {contract.responseDeadLine && (
-            <div className="flex items-center gap-2 text-slate-600">
-              <AlertCircle className="h-4 w-4" />
-              <span>Due: {formatContractDate(contract.responseDeadLine)}</span>
+          {/* Third row: Notice ID */}
+          {contract.solicitationNumber && (
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <span>Notice ID: {contract.solicitationNumber}</span>
             </div>
           )}
-        </div>
 
-        {/* Award Information */}
-        {contract.award && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-sm text-green-800 mb-2">
-              <DollarSign className="h-4 w-4" />
-              <span className="font-medium">Award Information</span>
+          {/* Fourth row: Restructured content */}
+          <div className="space-y-4">
+            {/* Posted and Due Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center gap-2 text-slate-600">
+                <Calendar className="h-4 w-4" />
+                <span>Posted: {formatContractDate(contract.postedDate)}</span>
+              </div>
+              {contract.responseDeadLine && (
+                <div className="flex items-center gap-2 text-slate-600">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>
+                    Due: {formatContractDate(contract.responseDeadLine)}
+                  </span>
+                </div>
+              )}
             </div>
-            {contract.award.amount && (
-              <p className="text-sm text-green-700">
-                Amount: {formatContractAmount(contract.award.amount)}
-              </p>
-            )}
-            {contract.award.awardee?.name && (
-              <p className="text-sm text-green-700">
-                Awardee: {contract.award.awardee.name}
-              </p>
-            )}
-            {contract.award.date && (
-              <p className="text-sm text-green-700">
-                Date: {formatContractDate(contract.award.date)}
-              </p>
-            )}
-          </div>
-        )}
 
-        {/* Location */}
-        {contract.placeOfPerformance && (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <MapPin className="h-4 w-4" />
-            <span>
-              {[
-                contract.placeOfPerformance.city?.name,
-                contract.placeOfPerformance.state?.name,
-              ]
-                .filter(Boolean)
-                .join(', ')}
-            </span>
-          </div>
-        )}
-
-        {/* NAICS Code */}
-        {contract.naicsCode && (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <FileText className="h-4 w-4" />
-            <span>
-              NAICS: {contract.naicsCode}
-              {contract.naicsDescription && ` - ${contract.naicsDescription}`}
-            </span>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-2">
-          <div className="flex gap-2">
-            {contract.uiLink && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(contract.uiLink, '_blank');
-                }}
-                className="flex items-center gap-2"
-              >
-                <ExternalLink className="h-4 w-4" />
-                SAM.gov
-              </Button>
+            {/* Award Information */}
+            {contract.award && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-sm text-green-800 mb-2">
+                  <DollarSign className="h-4 w-4" />
+                  <span className="font-medium">Award Information</span>
+                </div>
+                {contract.award.amount && (
+                  <p className="text-sm text-green-700">
+                    Amount: {formatContractAmount(contract.award.amount)}
+                  </p>
+                )}
+                {contract.award.awardee?.name && (
+                  <p className="text-sm text-green-700">
+                    Awardee: {contract.award.awardee.name}
+                  </p>
+                )}
+                {contract.award.date && (
+                  <p className="text-sm text-green-700">
+                    Date: {formatContractDate(contract.award.date)}
+                  </p>
+                )}
+              </div>
             )}
-            {contract.additionalInfoLink && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(contract.additionalInfoLink, '_blank');
-                }}
-                className="flex items-center gap-2"
-              >
+
+            {/* Location */}
+            {contract.placeOfPerformance && (
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <MapPin className="h-4 w-4" />
+                <span>
+                  {[
+                    contract.placeOfPerformance.city?.name,
+                    contract.placeOfPerformance.state?.name,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+
+            {/* NAICS Code */}
+            {contract.naicsCode && (
+              <div className="flex items-center gap-2 text-sm text-slate-600">
                 <FileText className="h-4 w-4" />
-                Details
-              </Button>
+                <span>
+                  NAICS: {contract.naicsCode}
+                  {contract.naicsDescription &&
+                    ` - ${contract.naicsDescription}`}
+                </span>
+              </div>
             )}
-          </div>
 
-          {/* Click indicator */}
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Eye className="h-4 w-4" />
-            <span>Click to view PDF</span>
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center pt-2">
+              <div className="flex gap-2">
+                {contract.uiLink && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(contract.uiLink, '_blank');
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    SAM.gov
+                  </Button>
+                )}
+                {contract.additionalInfoLink && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(contract.additionalInfoLink, '_blank');
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Details
+                  </Button>
+                )}
+              </div>
+
+              {/* Click indicator */}
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <Eye className="h-4 w-4" />
+                <span>Click to view contract details</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+        </CardContent>
+      </Card>
+    );
+  }
+);
+
+ContractCard.displayName = 'ContractCard';
 
 export default function ContractsDisplay() {
   // Enhanced search parameters with new SAM.gov API features
@@ -231,6 +227,7 @@ export default function ContractsDisplay() {
     null
   );
   const [showDocumentViewer, setShowDocumentViewer] = useState(false);
+  const [isNewSearch, setIsNewSearch] = useState(false);
 
   // Use the new SAM opportunities hook with SWR caching
   const {
@@ -245,10 +242,72 @@ export default function ContractsDisplay() {
     hasSearched,
   } = useSAMOpportunities();
 
-  // Debounced search function following best practices
+  // Remove auto-search - only search when button is clicked
+  // useEffect(() => {
+  //   if (searchFilters.keyword && searchFilters.keyword.length >= 2) {
+  //     const timeoutId = setTimeout(async () => {
+  //       try {
+  //         // Only set loading state if we don't have results yet
+  //         if (contracts.length === 0) {
+  //           // Add a small delay before showing loading to prevent flickering
+  //           const loadingTimeoutId = setTimeout(() => {
+  //             setIsNewSearch(true);
+  //           }, 100);
+  //
+  //           // Execute search with enhanced filters
+  //           const cleanFilters: UseSAMOpportunitiesFilters = Object.fromEntries(
+  //             Object.entries(searchFilters).filter(([key, value]) => {
+  //               if (typeof value === 'string') {
+  //                 return value !== '' && value !== 'all';
+  //               }
+  //               if (typeof value === 'number') {
+  //                 return key === 'limit' || key === 'offset' || value > 0;
+  //               }
+  //               return value !== null && value !== undefined;
+  //             })
+  //           ) as UseSAMOpportunitiesFilters;
+
+  //           await searchOpportunities(cleanFilters);
+  //           clearTimeout(loadingTimeoutId);
+  //           setIsNewSearch(false);
+  //         } else {
+  //           // If we have results, just update without showing loading
+  //           const cleanFilters: UseSAMOpportunitiesFilters = Object.fromEntries(
+  //             Object.entries(searchFilters).filter(([key, value]) => {
+  //               if (typeof value === 'string') {
+  //                 return value !== '' && value !== 'all';
+  //               }
+  //               if (typeof value === 'number') {
+  //                 return key === 'limit' || key === 'offset' || value > 0;
+  //               }
+  //               return value !== null && value !== undefined;
+  //             })
+  //           ) as UseSAMOpportunitiesFilters;
+
+  //           await searchOpportunities(cleanFilters);
+  //         }
+  //       } catch (err) {
+  //         console.error('Enhanced SAM search failed:', err);
+  //         setIsNewSearch(false);
+  //       }
+  //     }, 500); // 500ms debounce for better UX
+
+  //     return () => clearTimeout(timeoutId);
+  //   }
+  // }, [
+  //   searchFilters.keyword,
+  //   searchFilters.procurementType,
+  //   searchFilters.setAsideType,
+  //   searchFilters.state,
+  //   searchFilters.organizationName,
+  //   searchFilters.responseDeadlineOption,
+  //   searchOpportunities,
+  //   contracts.length,
+  // ]);
+
   const handleSearch = useCallback(async () => {
+    setIsNewSearch(true);
     try {
-      // Filter out empty and default values
       const cleanFilters: UseSAMOpportunitiesFilters = Object.fromEntries(
         Object.entries(searchFilters).filter(([key, value]) => {
           if (typeof value === 'string') {
@@ -260,24 +319,13 @@ export default function ContractsDisplay() {
           return value !== null && value !== undefined;
         })
       ) as UseSAMOpportunitiesFilters;
-
-      // Execute search with enhanced filters
       await searchOpportunities(cleanFilters);
+      setIsNewSearch(false);
     } catch (err) {
       console.error('Enhanced SAM search failed:', err);
+      setIsNewSearch(false);
     }
   }, [searchFilters, searchOpportunities]);
-
-  // Auto-search when user stops typing (debounced)
-  useEffect(() => {
-    if (searchFilters.keyword && searchFilters.keyword.length >= 2) {
-      const timeoutId = setTimeout(() => {
-        handleSearch();
-      }, 500); // 500ms debounce for better UX
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [searchFilters.keyword, handleSearch]);
 
   const handleReset = useCallback(() => {
     setSearchFilters({
@@ -294,18 +342,20 @@ export default function ContractsDisplay() {
   }, [clearResults]);
 
   const loadMore = useCallback(async () => {
-    const currentOffset = searchFilters.offset || 0;
-    const currentLimit = searchFilters.limit || 25;
+    setSearchFilters((prevFilters) => {
+      const currentOffset = prevFilters.offset || 0;
+      const currentLimit = prevFilters.limit || 25;
 
-    const newFilters = {
-      ...searchFilters,
-      offset: currentOffset + currentLimit,
-    };
-    setSearchFilters(newFilters);
+      const newFilters = {
+        ...prevFilters,
+        offset: currentOffset + currentLimit,
+      };
 
-    // Search with updated pagination
-    await searchOpportunities(newFilters);
-  }, [searchFilters, searchOpportunities]);
+      // Search with updated pagination
+      searchOpportunities(newFilters);
+      return newFilters;
+    });
+  }, [searchOpportunities]);
 
   // Document Viewer Handlers
   const handleViewDocument = useCallback((contract: SAMContract) => {
@@ -319,7 +369,7 @@ export default function ContractsDisplay() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 transition-all duration-300 ease-in-out">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -347,7 +397,7 @@ export default function ContractsDisplay() {
               <Label htmlFor="keyword">Keyword</Label>
               <Input
                 id="keyword"
-                placeholder="Enter search terms... (auto-search after 2+ chars)"
+                placeholder="Enter search terms and press Enter or click Search"
                 value={searchFilters.keyword}
                 onChange={(e) =>
                   setSearchFilters((prev) => ({
@@ -355,7 +405,11 @@ export default function ContractsDisplay() {
                     keyword: e.target.value,
                   }))
                 }
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
               />
             </div>
 
@@ -473,7 +527,7 @@ export default function ContractsDisplay() {
             <Button
               onClick={handleSearch}
               disabled={loading}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 primary-btn"
             >
               {loading ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
@@ -482,7 +536,11 @@ export default function ContractsDisplay() {
               )}
               Search Contracts
             </Button>
-            <Button variant="outline" onClick={handleReset}>
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              className="primary-btn"
+            >
               <Filter className="h-4 w-4 mr-2" />
               Reset
             </Button>
@@ -579,52 +637,73 @@ export default function ContractsDisplay() {
           </div>
 
           {/* Contracts Grid */}
-          {contracts.length > 0 ? (
-            <>
+          <div className="transition-opacity duration-300 ease-in-out">
+            {loading && isNewSearch && contracts.length === 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {contracts.map((contract) => (
-                  <ContractCard
-                    key={contract.noticeId}
-                    contract={contract}
-                    onViewDocument={handleViewDocument}
-                  />
+                {[...Array(4)].map((_, index) => (
+                  <Card
+                    key={`loading-${index}`}
+                    className="bg-white/30 backdrop-blur border border-white/40 shadow-lg animate-pulse"
+                  >
+                    <CardContent className="p-4 space-y-4">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-6 bg-gray-200 rounded w-full"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
-
-              {/* Load More */}
-              {contracts.length < totalRecords && (
-                <div className="text-center pt-6">
-                  <Button
-                    onClick={loadMore}
-                    disabled={loading}
-                    variant="outline"
-                  >
-                    {loading ? (
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    Load More Contracts
-                  </Button>
+            ) : contracts.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {contracts.map((contract, index) => (
+                    <ContractCard
+                      key={
+                        contract.noticeId ||
+                        contract.solicitationNumber ||
+                        `${contract.title?.slice(0, 20)}-${index}`
+                      }
+                      contract={contract}
+                      onViewDocument={handleViewDocument}
+                    />
+                  ))}
                 </div>
-              )}
-            </>
-          ) : (
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-              <CardContent className="p-8 text-center">
-                <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-700 mb-2">
-                  No contracts found
-                </h3>
-                <p className="text-slate-500">
-                  Try adjusting your search criteria or keywords
-                </p>
-              </CardContent>
-            </Card>
-          )}
+
+                {/* Load More */}
+                {contracts.length < totalRecords && (
+                  <div className="text-center pt-6">
+                    <Button
+                      onClick={loadMore}
+                      disabled={loading}
+                      variant="outline"
+                    >
+                      {loading ? (
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Load More Contracts
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+                <CardContent className="p-8 text-center">
+                  <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-700 mb-2">
+                    No contracts found
+                  </h3>
+                  <p className="text-slate-500">
+                    Try adjusting your search criteria or keywords
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Enhanced Initial State */}
-      {!hasSearched && !loading && (
+      {/* Enhanced Initial State - Hidden by default */}
+      {false && !hasSearched && !loading && (
         <div className="space-y-6">
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
             <CardContent className="p-8 text-center">
@@ -633,15 +712,15 @@ export default function ContractsDisplay() {
                 Search Government Contracts
               </h3>
               <p className="text-slate-500 mb-4">
-                Enter search criteria above to find contract opportunities from
-                SAM.gov
+                Enter search criteria above and click &ldquo;Search
+                Contracts&rdquo; to find contract opportunities from SAM.gov
               </p>
 
               {/* Feature Highlights */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 text-sm">
                 <div className="flex items-center gap-2 text-slate-600">
-                  <RefreshCw className="h-4 w-4 text-blue-500" />
-                  <span>Auto-search as you type</span>
+                  <Search className="h-4 w-4 text-blue-500" />
+                  <span>Manual search with button click</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-600">
                   <Calendar className="h-4 w-4 text-green-500" />
