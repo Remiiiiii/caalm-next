@@ -721,7 +721,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                               </span>
                             )}
                             <p
-                              className={`text-sm text-slate-900 font-medium ${
+                              className={`text-sm text-slate-900 px-2 hover:underline decoration-[#03AFBF] underline-offset-4 font-medium ${
                                 name === 'Administration' ? '-ml-[1px]' : ''
                               }`}
                             >
@@ -738,7 +738,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                             {subItems.map((subItem) => (
                               <li
                                 key={subItem.name}
-                                className="relative flex items-center"
+                                className="relative flex items-center hover:underline decoration-[#03AFBF] underline-offset-4"
                               >
                                 <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
                                 <Link

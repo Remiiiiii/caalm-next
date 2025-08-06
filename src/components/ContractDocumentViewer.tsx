@@ -542,29 +542,16 @@ This document contains all available information about the government contract o
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="shadow-drop-1 border-cyan-500 hover:border-cyan-600 focus:border-cyan-600"
-              >
-                <Star className="h-4 w-4 mr-2" />
-                Saved
+              <Button size="sm" className="primary-btn">
+                <Star className="h-4 w-4" />
+                Save
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                className="shadow-drop-1 border-cyan-500 hover:border-cyan-600 focus:border-cyan-600"
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                View
-              </Button>
-              <Button
-                variant="outline"
                 size="sm"
                 onClick={() => setShowAiPanel(!showAiPanel)}
                 className="shadow-drop-1 primary-btn"
               >
-                <Bot className="h-4 w-4 mr-2" />
+                <Bot className="h-4 w-4" />
                 AI Analysis
               </Button>
             </div>
@@ -648,9 +635,9 @@ This document contains all available information about the government contract o
             </Card>
 
             {/* 3-Column Information Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col lg:flex-row lg:space-x-6">
               {/* Left Column */}
-              <div className="space-y-4">
+              <div className="flex-1 space-y-4">
                 {/* Office */}
                 <div className="flex items-center gap-3">
                   <Building className="h-10 w-10 text-cyan-600" />
@@ -723,8 +710,11 @@ This document contains all available information about the government contract o
                 </div>
               </div>
 
+              {/* Vertical Divider */}
+              <div className="hidden lg:block w-px bg-gray-300 self-stretch mx-3"></div>
+
               {/* Middle Column */}
-              <div className="space-y-4">
+              <div className="flex-1 space-y-4">
                 {/* Buyer */}
                 <div className="flex items-center gap-3">
                   <Building className="h-10 w-10 text-cyan-600" />
@@ -790,8 +780,11 @@ This document contains all available information about the government contract o
                 </div>
               </div>
 
+              {/* Vertical Divider */}
+              <div className="hidden lg:block w-px bg-gray-300 self-stretch mx-3"></div>
+
               {/* Right Column - Timeline */}
-              <div className="space-y-4">
+              <div className="flex-1 space-y-4">
                 <div className="relative">
                   {/* Timeline Line */}
                   <div className="absolute left-[5px] top-5 bottom-5 w-0.5 h-[70px] bg-gray-300"></div>

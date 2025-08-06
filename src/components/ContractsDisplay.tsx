@@ -536,12 +536,8 @@ export default function ContractsDisplay() {
               )}
               Search Contracts
             </Button>
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              className="primary-btn"
-            >
-              <Filter className="h-4 w-4 mr-2" />
+            <Button onClick={handleReset} className="primary-btn">
+              <Filter className="h-4 w-4" />
               Reset
             </Button>
           </div>
