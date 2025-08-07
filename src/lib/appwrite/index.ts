@@ -12,6 +12,14 @@ import { appwriteConfig } from './config';
 import { cookies } from 'next/headers';
 
 export const createSessionClient = async () => {
+  if (!appwriteConfig.endpointUrl || !appwriteConfig.projectId) {
+    console.error('Appwrite configuration is incomplete:', {
+      endpointUrl: appwriteConfig.endpointUrl,
+      projectId: appwriteConfig.projectId,
+    });
+    throw new Error('Appwrite configuration is incomplete');
+  }
+
   const client = new Client()
     .setEndpoint(appwriteConfig.endpointUrl)
     .setProject(appwriteConfig.projectId);
@@ -19,6 +27,7 @@ export const createSessionClient = async () => {
   const session = (await cookies()).get('appwrite-session');
 
   if (!session || !session.value) {
+    console.error('createSessionClient: No session found');
     throw new Error('No session found');
   }
 
@@ -35,6 +44,14 @@ export const createSessionClient = async () => {
 };
 
 export const createAdminClient = async () => {
+  if (
+    !appwriteConfig.endpointUrl ||
+    !appwriteConfig.projectId ||
+    !appwriteConfig.secretKey
+  ) {
+    throw new Error('Appwrite configuration is incomplete');
+  }
+
   const client = new Client()
     .setEndpoint(appwriteConfig.endpointUrl)
     .setProject(appwriteConfig.projectId)

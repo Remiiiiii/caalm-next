@@ -7,9 +7,9 @@ import OTPModal from '@/components/OTPModal';
 export default function AcceptInviteClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-  const email = searchParams.get('email');
-  const accountId = searchParams.get('accountId');
+  const token = searchParams?.get('token');
+  const email = searchParams?.get('email');
+  const accountId = searchParams?.get('accountId');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -26,7 +26,8 @@ export default function AcceptInviteClient() {
             window.location.href = '/dashboard/executive';
           else if (data.role === 'manager')
             window.location.href = '/dashboard/manager';
-          else if (data.role === 'hr') window.location.href = '/dashboard/hr';
+          else if (data.role === 'admin')
+            window.location.href = '/dashboard/admin';
           else window.location.href = '/dashboard';
         } else {
           setError(data?.error || 'Failed to accept invitation.');

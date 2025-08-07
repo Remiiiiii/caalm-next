@@ -32,6 +32,7 @@ const OTPModal = ({
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
 
   const handleVerify = async () => {
     setIsLoading(true);
@@ -41,6 +42,12 @@ const OTPModal = ({
         if (res?.sessionId) {
           onSuccess();
         } else {
+          setAttempts((prev) => prev + 1);
+          if (attempts >= 2) {
+            // 3 attempts total
+            setError('Too many failed attempts. Please try again later.');
+            return;
+          }
           setError('Invalid OTP. Try again.');
         }
       } else {
@@ -90,6 +97,12 @@ const OTPModal = ({
         </InputOTP>
 
         {error && <div className="text-red-500 text-center">{error}</div>}
+
+        {attempts > 0 && (
+          <div className="text-orange-600 text-center text-sm">
+            Failed attempts: {attempts}/3
+          </div>
+        )}
 
         <AlertDialogFooter>
           <div className="flex w-full flex-col gap-4">

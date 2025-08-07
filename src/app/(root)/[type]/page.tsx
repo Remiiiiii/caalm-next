@@ -1,9 +1,10 @@
 import React from 'react';
 import Sort from '@/components/Sort';
-import { getFiles } from '@/lib/actions/file.actions';
+import { getFiles, getTotalSpaceUsed } from '@/lib/actions/file.actions';
 import { Models } from 'node-appwrite';
 import Card from '@/components/Card';
 import { getFileTypesParams } from '@/lib/utils';
+import FileUsageOverview from '@/components/FileUsageOverview';
 
 const Page = async ({ searchParams, params }: SearchParamProps) => {
   const type = ((await params)?.type as string) || '';
@@ -13,6 +14,9 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
   const types = getFileTypesParams(type) as FileType[];
 
   const files = await getFiles({ types, searchText, sort });
+
+  // Fetch total space data for File Usage Overview
+  const totalSpace = await getTotalSpaceUsed();
 
   // If type is 'images', filter to only png, jpg, jpeg
   let filteredDocuments = files.documents;
@@ -34,9 +38,14 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
   return (
     <div className="page-container">
+      <h1 className="h1 capitalize mr-auto">{type}</h1>
+      {/* File Usage Overview Section - Only show on uploads page */}
+      {(!type || type.toLowerCase() === 'uploads') && (
+        <section className="mb-8 w-full">
+          <FileUsageOverview totalSpace={totalSpace} />
+        </section>
+      )}
       <section className="w-full">
-        <h1 className="h1 capitalize">{type}</h1>
-
         <div className="total-size-section">
           <p className="body-1">
             Total: <span className="h5">{totalSizeFormatted}</span>
@@ -54,7 +63,12 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       {filteredDocuments.length > 0 ? (
         <section className="file-list">
           {filteredDocuments.map((file: Models.Document) => (
-            <Card key={file.$id} file={file} />
+            <Card
+              key={file.$id}
+              file={file}
+              status={file.status}
+              expirationDate={file.expirationDate}
+            />
           ))}
         </section>
       ) : (

@@ -13,7 +13,7 @@ export const navItems = [
   {
     name: 'Dashboard',
     icon: '/assets/icons/dashboard.svg',
-    url: ['/dashboard/executive', '/dashboard/manager', '/dashboard/hr'],
+    url: ['/dashboard/executive', '/dashboard/manager', '/dashboard/admin'],
   },
   {
     name: 'Documents',
@@ -39,9 +39,14 @@ export const navItems = [
 
 export const actionsDropdownItems = [
   {
-    label: 'Rename',
-    icon: '/assets/icons/edit.svg',
-    value: 'rename',
+    label: 'Assign',
+    icon: '/assets/icons/assign.svg',
+    value: 'assign',
+  },
+  {
+    label: 'Delete',
+    icon: '/assets/icons/delete.svg',
+    value: 'delete',
   },
   {
     label: 'Details',
@@ -49,19 +54,29 @@ export const actionsDropdownItems = [
     value: 'details',
   },
   {
-    label: 'Share',
-    icon: '/assets/icons/share.svg',
-    value: 'share',
-  },
-  {
     label: 'Download',
     icon: '/assets/icons/download.svg',
     value: 'download',
   },
   {
-    label: 'Delete',
-    icon: '/assets/icons/delete.svg',
-    value: 'delete',
+    label: 'Rename',
+    icon: '/assets/icons/edit.svg',
+    value: 'rename',
+  },
+  {
+    label: 'Review',
+    icon: '/assets/icons/review.svg',
+    value: 'review',
+  },
+  {
+    label: 'Share',
+    icon: '/assets/icons/share.svg',
+    value: 'share',
+  },
+  {
+    label: 'Status',
+    icon: '/assets/icons/contract-status.svg',
+    value: 'status',
   },
 ];
 
@@ -147,3 +162,14 @@ export const avatarPlaceholderUrl =
   'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg';
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+// Department type - will be populated from database
+export type Department = string;
+
+// Helper function to format department names for display
+export const formatDepartmentName = (department: string): string => {
+  return department
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};

@@ -1,17 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { FileText, Bell, Mail, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NotificationCenter from '@/components/NotificationCenter';
 import { Client, Databases, Query } from 'appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
+import { Models } from 'appwrite';
+import { signOutUser } from '@/lib/actions/user.actions';
 
-const DashboardHeader = () => {
-  const { user, logout } = useAuth();
-  console.log('Current user ID:', user?.$id);
+interface DashboardHeaderProps {
+  user?: Models.User<Models.Preferences> | null;
+}
+
+const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   const router = useRouter();
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -39,9 +42,15 @@ const DashboardHeader = () => {
     return () => clearInterval(interval);
   }, [user]);
 
-  const handleLogout = () => {
-    logout();
-    router.push('/sign-in');
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+      router.push('/sign-in');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Fallback: redirect anyway
+      router.push('/sign-in');
+    }
   };
 
   const getRoleDisplay = (role: string) => {
@@ -51,7 +60,7 @@ const DashboardHeader = () => {
       case 'manager':
         return 'Manager';
       case 'hr_admin':
-        return 'HR Administrator';
+        return 'Admin';
       default:
         return role;
     }
@@ -69,39 +78,53 @@ const DashboardHeader = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-foreground">
-              <p className="font-medium text-navy">{user?.name}</p>
-              <p className="text-xs text-slate-dark">
-                {getRoleDisplay(user?.prefs.role || '')} -{' '}
-                {user?.prefs.department}
-              </p>
-            </div>
+            {user ? (
+              <>
+                <div className="text-sm text-foreground">
+                  <p className="font-medium text-navy">{user.name}</p>
+                  <p className="text-xs text-slate-dark">
+                    {getRoleDisplay(user.prefs?.role || '')} -{' '}
+                    {user.prefs?.department || 'Unknown Department'}
+                  </p>
+                </div>
 
-            <Button
-              variant="ghost"
-              onClick={() => setNotifOpen(true)}
-              className="relative"
-            >
-              <Bell className="w-6 h-6" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-xs rounded-full px-1.5 py-0.5 border-2 border-white animate-pulse">
-                  {unreadCount}
-                </span>
-              )}
-            </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setNotifOpen(true)}
+                  className="relative"
+                >
+                  <Bell className="w-6 h-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-xs rounded-full px-1.5 py-0.5 border-2 border-white animate-pulse">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
 
-            <Button variant="ghost" size="icon" className="hover:bg-coral/10">
-              <Mail className="h-5 w-5 text-slate-dark" />
-            </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:bg-coral/10"
+                >
+                  <Mail className="h-5 w-5 text-slate-dark" />
+                </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="hover:bg-coral/10"
-            >
-              <LogOut className="h-5 w-5 text-slate-dark" />
-            </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="hover:bg-coral/10"
+                >
+                  <LogOut className="h-5 w-5 text-slate-dark" />
+                </Button>
+              </>
+            ) : (
+              // Guest/loading state
+              <div className="text-sm text-foreground">
+                <p className="font-medium text-navy">Welcome</p>
+                <p className="text-xs text-slate-dark">Loading...</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -8,7 +8,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import Image from 'next/image';
 
-const ImageThumbnail = ({ file }: Models.Document) => (
+const ImageThumbnail = ({ file }: { file: Models.Document }) => (
   <div className="file-details-thumbnail">
     <Thumbnail type={file.type} extension={file.extension} url={file.url} />
     <div className="flex flex-col">
@@ -50,14 +50,21 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
     <>
       <ImageThumbnail file={file} />
 
-      <div className="share-wrapper">
-        <p className="subtitle-2 pl-1 text-light-100">
+      <div className="share-wrapper" style={{ pointerEvents: 'none' }}>
+        <p
+          className="subtitle-2 pl-1 text-light-100"
+          style={{ pointerEvents: 'none' }}
+        >
           Share file with other users
         </p>
         <Input
           type="email"
           placeholder="Enter email addresses"
           onChange={(e) => onInputChange(e.target.value.trim().split(','))}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           className="share-input-field"
         />
         <div className="pt-4">
@@ -92,7 +99,7 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
         </div>
         <DetailRow label="Format" value={file.extension} />
         <DetailRow label="Size" value={convertFileSize(file.size)} />
-        <DetailRow label="Owner" value={file.owner.fulName} />
+        <DetailRow label="Owner" value={file.owner.fullName} />
         <DetailRow label="Format" value={formatDateTime(file.$updatedAt)} />
       </div>
     </>

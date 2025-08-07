@@ -20,9 +20,6 @@ const CTADynamic = dynamic(() => import('../components/CTA'));
 export default function HomePage() {
   return (
     <>
-      <Suspense fallback={<div>Loading...</div>}>
-        <SignupBannerWrapper />
-      </Suspense>
       <Header />
       <main>
         <HeroIntro />

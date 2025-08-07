@@ -1,48 +1,48 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Crown, UserCheck, Users } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Crown, UserCheck, Users } from 'lucide-react';
 
 const UserRoles = () => {
   const roles = [
     {
-      title: "Executives",
+      title: 'Executives',
       icon: Crown,
-      color: "text-coral",
-      bgColor: "bg-accent-purple",
+      color: 'text-coral',
+      bgColor: 'bg-accent-purple',
       description:
-        "Oversee, approve, assign, and strategically manage all contracts, licenses, audits, and critical business agreements.",
+        'Oversee, approve, assign, and strategically manage all contracts, licenses, audits, and critical business agreements.',
       responsibilities: [
-        "Review and authorize high-priority contracts",
-        "Assign ownership to relevant teams",
-        "Access real-time compliance dashboards",
-        "Ensure regulatory policy adherence",
+        'Review and authorize high-priority contracts',
+        'Assign ownership to relevant teams',
+        'Access real-time compliance dashboards',
+        'Ensure regulatory policy adherence',
       ],
     },
     {
-      title: "Mid-Level Managers",
+      title: 'Mid-Level Managers',
       icon: UserCheck,
-      color: "text-blue",
-      bgColor: "bg-accent-blue",
+      color: 'text-blue',
+      bgColor: 'bg-accent-blue',
       description:
-        "Monitor and report on the status of contracts, licenses, and audits within their assigned units.",
+        'Monitor and report on the status of contracts, licenses, and audits within their assigned units.',
       responsibilities: [
-        "Track deadlines and renewals",
-        "Submit status updates to executives",
-        "Escalate compliance issues",
-        "Coordinate with HR on training requirements",
+        'Track deadlines and renewals',
+        'Submit status updates to executives',
+        'Escalate compliance issues',
+        'Coordinate with Admin on training requirements',
       ],
     },
     {
-      title: "HR & Administrative Staff",
+      title: 'Admin & Administrative Staff',
       icon: Users,
-      color: "text-green",
-      bgColor: "bg-accent-green",
+      color: 'text-green',
+      bgColor: 'bg-accent-green',
       description:
-        "Maintain records of staff training and documentation tied to contract requirements.",
+        'Maintain records of staff training and documentation tied to contract requirements.',
       responsibilities: [
-        "Log employee training certifications",
-        "Notify managers of pending actions",
-        "Upload supporting documentation",
-        "Maintain audit evidence records",
+        'Log employee training certifications',
+        'Notify managers of pending actions',
+        'Upload supporting documentation',
+        'Maintain audit evidence records',
       ],
     },
   ];
@@ -76,8 +76,8 @@ const UserRoles = () => {
                     <li key={respIndex} className="flex items-start">
                       <div
                         className={`w-2 h-2 ${role.color.replace(
-                          "text-",
-                          "bg-"
+                          'text-',
+                          'bg-'
                         )} rounded-full mt-2 mr-3 flex-shrink-0`}
                       ></div>
                       <span className="text-sm text-navy">{resp}</span>
