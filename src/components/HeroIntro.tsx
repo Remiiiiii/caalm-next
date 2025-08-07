@@ -2,7 +2,6 @@
 
 import { useAnimationFrame } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
-import SignupBanner from './SignupBanner';
 import {
   Database,
   Bell,
@@ -51,7 +50,8 @@ function OrbitingBlocks() {
         const angle = ((baseAngle - now * 0.018) * Math.PI) / 180;
         const minScale = 0.6;
         const maxScale = 1.2;
-        const scale = minScale + ((maxScale - minScale) * (1 + Math.sin(angle))) / 2;
+        const scale =
+          minScale + ((maxScale - minScale) * (1 + Math.sin(angle))) / 2;
         const x = Math.cos(angle) * RADIUS_X;
         const y = Math.sin(angle) * RADIUS_Y;
         const t = (y + RADIUS_Y) / (2 * RADIUS_Y);

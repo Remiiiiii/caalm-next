@@ -38,7 +38,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           sizes="96x96"
         /> */}
       </head>
-      <body className={`${poppins.variable} font-poppins antialiased`}>{children}</body>
+      <body
+        suppressHydrationWarning
+        className={`${poppins.variable} font-poppins antialiased`}
+      >
+        {children}
+      </body>
     </html>
   );
 }

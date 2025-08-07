@@ -717,7 +717,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         </div>
                       )}
                       {message.sender === 'user' && (
-                        <div className="bg-gradient-to-r from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] text-white rounded-2xl px-4 py-3 max-w-[85%] shadow-drop-1">
+                        <div className="bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white rounded-2xl px-4 py-3 max-w-[85%] shadow-drop-1">
                           <p className="text-sm whitespace-pre-line">
                             {message.text}
                           </p>
@@ -777,7 +777,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         handleSendMessage();
                       }}
                       disabled={!newMessage.trim() || isLoading}
-                      className="bg-gradient-to-r from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] hover:from-[#078FAB] hover:via-[#0E638F] hover:via-[#11487D] hover:via-[#162768] hover:to-[#00C1CB] text-white rounded-full p-2 shadow-drop-1 transition-all duration-300"
+                      className="bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] hover:from-[#078FAB] hover:via-[#11487D] hover:to-[#00C1CB] text-white rounded-full p-2 shadow-drop-1 transition-all duration-300"
                     >
                       <Send className="w-4 h-4" />
                     </Button>
