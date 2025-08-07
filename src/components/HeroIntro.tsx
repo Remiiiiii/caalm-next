@@ -1,6 +1,5 @@
 'use client';
 
-import Spline from '@splinetool/react-spline';
 import { useAnimationFrame } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
 import SignupBanner from './SignupBanner';
@@ -16,35 +15,19 @@ import {
 } from 'lucide-react';
 
 const features = [
-  {
-    icon: Database,
-  },
-  {
-    icon: Bell,
-  },
-  {
-    icon: GitBranch,
-  },
-  {
-    icon: BarChart3,
-  },
-  {
-    icon: Lock,
-  },
-  {
-    icon: Calendar,
-  },
-  {
-    icon: FileCheck,
-  },
-  {
-    icon: Users2,
-  },
+  { icon: Database },
+  { icon: Bell },
+  { icon: GitBranch },
+  { icon: BarChart3 },
+  { icon: Lock },
+  { icon: Calendar },
+  { icon: FileCheck },
+  { icon: Users2 },
 ];
 
 const NUM_BLOCKS = 8;
-const RADIUS_X = 400; // further increased horizontal radius for more oval shape
-const RADIUS_Y = 110; // reduced vertical radius for shorter orbit height
+const RADIUS_X = 400;
+const RADIUS_Y = 110;
 const CODE_NUMBERS = [9, 10, 11, 12, 13, 14, 15, 16];
 
 function OrbitingBlocks() {
@@ -62,19 +45,13 @@ function OrbitingBlocks() {
           zIndex: 100,
           pointerEvents: 'none',
         }}
-      ></div>
+      />
       {CODE_NUMBERS.map((num, i) => {
-        // Animate angle over time (counterclockwise)
         const baseAngle = (360 / NUM_BLOCKS) * i;
-        const angle = ((baseAngle - now * 0.018) * Math.PI) / 180; // slower rotation
-        // Reverse: Grow as approaching the red X (top), shrink as passing it (counterclockwise)
+        const angle = ((baseAngle - now * 0.018) * Math.PI) / 180;
         const minScale = 0.6;
         const maxScale = 1.2;
-        // At angle = -90deg (top), sin(angle) = -1 => scale = maxScale
-        // At angle = 90deg (bottom), sin(angle) = 1 => scale = minScale
-        const scale =
-          minScale + ((maxScale - minScale) * (1 + Math.sin(angle))) / 2;
-        // Elliptical orbit for hula hoop effect
+        const scale = minScale + ((maxScale - minScale) * (1 + Math.sin(angle))) / 2;
         const x = Math.cos(angle) * RADIUS_X;
         const y = Math.sin(angle) * RADIUS_Y;
         const t = (y + RADIUS_Y) / (2 * RADIUS_Y);
@@ -109,7 +86,7 @@ function OrbitingBlocks() {
 }
 
 const VIDEO_SRC = '/assets/video/wave.mp4';
-const FADE_DURATION = 1500; // ms
+const FADE_DURATION = 1500;
 
 const HeroIntro = () => {
   const videoA = useRef<HTMLVideoElement | null>(null);
@@ -118,7 +95,6 @@ const HeroIntro = () => {
   const [fade, setFade] = useState(false);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
 
-  // Get video duration dynamically
   useEffect(() => {
     const video = document.createElement('video');
     video.src = VIDEO_SRC;
@@ -134,7 +110,6 @@ const HeroIntro = () => {
       const timeToFade = videoDuration! * 1000 - FADE_DURATION;
       loopTimeout = setTimeout(() => {
         setFade(true);
-        // Start the other video from the beginning
         if (showA && videoB.current) {
           videoB.current.currentTime = 0;
           videoB.current.play();
@@ -142,7 +117,6 @@ const HeroIntro = () => {
           videoA.current.currentTime = 0;
           videoA.current.play();
         }
-        // After fade, swap videos
         fadeTimeout = setTimeout(() => {
           setShowA((prev) => !prev);
           setFade(false);
@@ -160,9 +134,7 @@ const HeroIntro = () => {
   }, [showA, videoDuration]);
 
   return (
-    <section className="relative flex flex-col items-center justify-center pt-20 pb-8 bg-gradient-to-b from-white to-blue-50 overflow-hidden">
-      <SignupBanner />
-      {/* Video crossfade background */}
+    <section className="relative flex flex-col items-center justify-center pt-20 pb-8 bg-gradient-to-b from.white to-blue-50 overflow-hidden">
       {videoDuration !== null && (
         <>
           <video
@@ -195,7 +167,6 @@ const HeroIntro = () => {
           />
         </>
       )}
-      {/* Subtle grid background */}
       <div
         className="absolute inset-0 z-10 pointer-events-none"
         style={{
@@ -204,17 +175,9 @@ const HeroIntro = () => {
           backgroundSize: '40px 40px',
         }}
       />
-      {/* Glassy logo, Spline, and orbiting images */}
       <div className="mb-8 flex items-center justify-center relative w-[340px] h-[340px] sm:w-[420px] sm:h-[420px] md:w-[500px] md:h-[500px] z-10">
-        {/* Orbiting images */}
         <OrbitingBlocks />
-        {/* Spline scene */}
-        <Spline
-          scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
-          className="w-full h-full z-10"
-        />
       </div>
-      {/* Headline and subheadline */}
       <div className="relative z-30 w-full flex flex-col items-center">
         <h1 className="text-2xl md:text-[3.5em] font-bold text-center mb-4 leading-tight bg-gradient-to-r from-[#059BB2] via-[#00C1CB] to-[#162768] bg-clip-text text-transparent">
           Centralize
@@ -225,7 +188,6 @@ const HeroIntro = () => {
           Your journey to data management and compliance starts here
         </p>
       </div>
-      {/* Fade-out overlay at the bottom for smooth transition */}
       <div
         className="pointer-events-none absolute left-0 right-0 bottom-0 h-[48px] z-20"
         style={{

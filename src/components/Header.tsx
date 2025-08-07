@@ -3,8 +3,6 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import AOS from 'aos';
-import 'aos/dist/aos.css';
 import clsx from 'clsx';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
@@ -33,10 +31,16 @@ export const Header = () => {
   );
 
   useEffect(() => {
-    AOS.init({
-      duration: 1500,
-      once: true,
-    });
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      const AOS = (await import('aos')).default;
+      await import('aos/dist/aos.css');
+      AOS.init({ duration: 1500, once: true });
+      cleanup = () => AOS.refreshHard();
+    })();
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, []);
 
   // Close menu on outside click
