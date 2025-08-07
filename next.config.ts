@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  compress: true,
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -13,6 +14,7 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -27,6 +29,19 @@ const nextConfig: NextConfig = {
         hostname: 'cloud.appwrite.io',
       },
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: '/:all*(js|css|svg|png|jpg|jpeg|gif|webp|avif)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
   },
 };
 

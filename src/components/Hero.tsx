@@ -186,6 +186,8 @@ const Hero = () => {
               width={400}
               height={400}
               className="rounded-xl shadow-xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-90 pointer-events-none"
+              priority
+              fetchPriority="high"
             />
           </div>
         </div>
