@@ -1,12 +1,15 @@
-declare module 'pdf-parse-debugging-disabled' {
+declare module 'pdf-parse' {
   interface PDFData {
     text: string;
     numpages: number;
-    info: any;
-    metadata: any;
+    info: Record<string, unknown>;
+    metadata: Record<string, unknown>;
     version: string;
   }
 
-  function pdfParse(buffer: Buffer): Promise<PDFData>;
-  export = pdfParse;
+  function PDFParse(
+    dataBuffer: Buffer,
+    options?: Record<string, unknown>
+  ): Promise<PDFData>;
+  export = PDFParse;
 }

@@ -3,7 +3,6 @@ import './globals.css';
 import type { ReactNode } from 'react';
 import { Poppins } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
-import SignupBanner from '@/components/SignupBanner';
 import ClientOnly from '@/components/ClientOnly';
 import { Suspense } from 'react';
 

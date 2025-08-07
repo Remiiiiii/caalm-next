@@ -2,15 +2,15 @@ import useSWR, { mutate } from 'swr';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface SearchResult {
-  $id: string;
-  type: 'file' | 'contract' | 'user' | 'notification';
-  title: string;
-  description: string;
-  url: string;
-  relevance: number;
-  createdAt: string;
-}
+// interface SearchResult {
+//   $id: string;
+//   type: 'file' | 'contract' | 'user' | 'notification';
+//   title: string;
+//   description: string;
+//   url: string;
+//   relevance: number;
+//   createdAt: string;
+// }
 
 interface SearchFilters {
   type?: string[];
@@ -75,17 +75,17 @@ export const useSearch = () => {
   }, [debouncedQuery, filters, user?.$id]);
 
   // Search results
-  const { data: searchResults, error, isLoading } = useSWR(
-    searchUrl,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 60000, // 1 minute deduping
-      onSuccess: () => setIsSearching(false),
-      onError: () => setIsSearching(false),
-    }
-  );
+  const {
+    data: searchResults,
+    error,
+    isLoading,
+  } = useSWR(searchUrl, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 60000, // 1 minute deduping
+    onSuccess: () => setIsSearching(false),
+    onError: () => setIsSearching(false),
+  });
 
   // Recent searches
   const { data: recentSearches } = useSWR(
@@ -95,7 +95,9 @@ export const useSearch = () => {
 
   // Search suggestions
   const { data: suggestions } = useSWR(
-    debouncedQuery.length >= 2 ? `/api/search/suggestions?q=${debouncedQuery}` : null,
+    debouncedQuery.length >= 2
+      ? `/api/search/suggestions?q=${debouncedQuery}`
+      : null,
     fetcher,
     {
       dedupingInterval: 300000, // 5 minutes for suggestions
@@ -104,12 +106,17 @@ export const useSearch = () => {
 
   // Search stats
   const { data: searchStats } = useSWR(
-    searchUrl ? `/api/search/stats?${new URLSearchParams({ q: debouncedQuery })}` : null,
+    searchUrl
+      ? `/api/search/stats?${new URLSearchParams({ q: debouncedQuery })}`
+      : null,
     fetcher
   );
 
   // Perform search
-  const performSearch = async (searchQuery: string, searchFilters?: SearchFilters) => {
+  const performSearch = async (
+    searchQuery: string,
+    searchFilters?: SearchFilters
+  ) => {
     setIsSearching(true);
     setQuery(searchQuery);
     if (searchFilters) {
@@ -182,4 +189,4 @@ export const useSearch = () => {
     saveSearch,
     clearSearchHistory,
   };
-}; 
+};

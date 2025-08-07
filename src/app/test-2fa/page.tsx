@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,8 +52,7 @@ export default function Test2FAPage() {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const { toast } = useToast();
 
-  // Fetch existing users
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/test-users');
@@ -75,7 +74,7 @@ export default function Test2FAPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedUser, toast]);
 
   // Create a new test user
   const createTestUser = async () => {
@@ -232,7 +231,7 @@ export default function Test2FAPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   const handleSetupSuccess = () => {
     console.log('2FA Setup completed successfully');

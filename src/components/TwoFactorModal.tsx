@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -33,7 +32,6 @@ interface TwoFactorModalProps {
 }
 
 const TwoFactorModal = ({
-  email,
   userId,
   isOpen,
   onClose,
@@ -171,13 +169,13 @@ const TwoFactorModal = ({
     }
   };
 
-  const handleRetry = () => {
-    setStep('setup');
-    setQrCode('');
-    setSecret('');
-    setVerificationCode('');
-    setFactorId('');
-  };
+  // const handleRetry = () => {
+  //   setStep('setup');
+  //   setQrCode('');
+  //   setSecret('');
+  //   setVerificationCode('');
+  //   setFactorId('');
+  // };
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>

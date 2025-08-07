@@ -1,5 +1,5 @@
-import useSWR, { mutate } from 'swr';
-import { useAuth } from '@/contexts/AuthContext';
+// import useSWR, { mutate } from 'swr';
+// import { useAuth } from '@/contexts/AuthContext';
 
 interface FileContent {
   $id: string;
@@ -26,16 +26,16 @@ interface PDFMetadata {
   subject?: string;
 }
 
-const fetcher = async (url: string) => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error('Failed to fetch document data');
-  }
-  return response.json();
-};
+// const fetcher = async (url: string) => {
+//   const response = await fetch(url);
+//   if (!response.ok) {
+//     throw new Error('Failed to fetch document data');
+//   }
+//   return response.json();
+// };
 
 export const useDocumentViewer = (fileId: string) => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
 
   // File Content (PDF text extraction) - Disabled as API doesn't exist
   const fileContent = null;

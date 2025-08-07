@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const client = await createAdminClient();
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -26,7 +25,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   CalendarIcon,
   Plus,
@@ -41,8 +40,6 @@ import {
   Share2,
   Filter,
   Printer,
-  X,
-  Search,
   UserPlus,
   Link,
   Eye,
@@ -118,7 +115,6 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
   onEventClick,
   onDateSelect,
   onEventCreate,
-  user,
 }) => {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -283,7 +279,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
       }
 
       setIsShareOpen(false);
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to share event',
@@ -636,8 +632,11 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
               </Label>
               <Select
                 value={newEvent.type}
-                onValueChange={(value: any) =>
-                  setNewEvent({ ...newEvent, type: value })
+                onValueChange={(value: string) =>
+                  setNewEvent({
+                    ...newEvent,
+                    type: value as LocalCalendarEvent['type'],
+                  })
                 }
               >
                 <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md">

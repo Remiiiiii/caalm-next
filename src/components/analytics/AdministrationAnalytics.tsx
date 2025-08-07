@@ -27,14 +27,11 @@ import {
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   TrendingUp,
-  TrendingDown,
   Users,
   FileText,
   DollarSign,
-  Calendar,
   Download,
   RefreshCw,
 } from 'lucide-react';
@@ -97,7 +94,8 @@ const mockData = {
   ],
 };
 
-// KPI Cards Data
+// KPI Cards Data - Commented out as not used
+/*
 const kpiData = [
   {
     title: 'Total Contracts',
@@ -132,6 +130,7 @@ const kpiData = [
     description: 'License compliance rate',
   },
 ];
+*/
 
 const AdministrationAnalytics = () => {
   const handleRefresh = () => {

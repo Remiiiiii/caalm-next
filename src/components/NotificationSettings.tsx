@@ -122,10 +122,8 @@ const NOTIFICATION_TYPES = {
 const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   open,
   onClose,
-  userId,
 }) => {
   const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [globalSettings, setGlobalSettings] = useState({
     emailNotifications: true,
@@ -158,7 +156,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   const handlePreferenceChange = (
     type: string,
     field: keyof NotificationPreference,
-    value: any
+    value: boolean | string
   ) => {
     setPreferences((prev) =>
       prev.map((pref) =>
@@ -167,7 +165,10 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     );
   };
 
-  const handleGlobalSettingChange = (field: string, value: any) => {
+  const handleGlobalSettingChange = (
+    field: string,
+    value: boolean | string | number
+  ) => {
     setGlobalSettings((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -183,7 +184,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
         description: 'Your notification preferences have been updated.',
       });
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to save notification settings.',

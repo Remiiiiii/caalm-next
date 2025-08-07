@@ -98,29 +98,22 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
       ) &&
       extractText &&
       file.id &&
-      file.id.trim() !== ''
+      file.name
     ) {
-      try {
-        extractText().catch((error) => {
-          console.error('Failed to extract text:', error);
-        });
-      } catch (error) {
-        console.error('Failed to extract text:', error);
-      }
+      console.log('Extracting text content for file:', {
+        id: file.id,
+        name: file.name,
+        type: file.type,
+        url: file.url,
+        isLocalFile:
+          file.url.startsWith('file://') ||
+          file.url.startsWith('blob:') ||
+          file.url.startsWith('data:'),
+        isPdf: file.type.toLowerCase() === 'pdf',
+      });
+      extractText();
     }
-
-    // Debug: Log file information
-    console.log('DocumentViewer opened with file:', {
-      name: file.name,
-      type: file.type,
-      url: file.url,
-      isLocalFile:
-        file.url.startsWith('file://') ||
-        file.url.startsWith('blob:') ||
-        file.url.startsWith('data:'),
-      isPdf: file.type.toLowerCase() === 'pdf',
-    });
-  }, [isOpen, file.id, file.url, file.type, extractText]);
+  }, [isOpen, file.id, file.url, file.type, file.name, extractText]);
 
   useEffect(() => {
     // Only scroll to bottom when new messages are added (not on initial load)
@@ -133,7 +126,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     // Reset preview state when document changes
     setPreviewError(null);
     setIsPreviewLoading(true);
-  }, [file.url]);
+  }, [file.url, file.name]);
 
   const analyze = useCallback(async () => {
     // Always start with the greeting message

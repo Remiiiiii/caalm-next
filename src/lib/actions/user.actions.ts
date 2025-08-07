@@ -9,6 +9,7 @@ import { avatarPlaceholderUrl } from '../../../constants';
 import { redirect } from 'next/navigation';
 import crypto from 'crypto';
 import * as sdk from 'node-appwrite';
+import { triggerUserInvitationNotification } from '../utils/notificationTriggers';
 
 export type AppUser = {
   fullName: string;
@@ -316,6 +317,18 @@ export const createInvitation = async ({
   } catch (error) {
     console.error('Failed to send invite email:', error);
     throw error;
+  }
+
+  // Trigger user invitation notification
+  try {
+    await triggerUserInvitationNotification(
+      invitedBy, // Notify the person who sent the invitation
+      email,
+      name
+    );
+  } catch (error) {
+    console.error('Failed to trigger user invitation notification:', error);
+    // Don't throw error here as the invitation was created successfully
   }
 
   return { email, token, expiresAt };

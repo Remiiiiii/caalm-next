@@ -1,14 +1,14 @@
 import useSWR, { mutate } from 'swr';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface UserEmail {
-  $id: string;
-  email: string;
-  fullName: string;
-  department: string;
-  role: string;
-  avatar?: string;
-}
+// interface UserEmail {
+//   $id: string;
+//   email: string;
+//   fullName: string;
+//   department: string;
+//   role: string;
+//   avatar?: string;
+// }
 
 interface FileAction {
   $id: string;
@@ -32,27 +32,33 @@ export const useActionDropdown = (fileId?: string) => {
   const { user } = useAuth();
 
   // User emails for assignment/sharing
-  const { data: userEmails, error: emailsError, isLoading: emailsLoading } = useSWR(
-    `/api/users/emails`,
-    fetcher,
-    {
-      refreshInterval: 120000, // Refresh every 2 minutes
-      revalidateOnFocus: true,
-    }
-  );
+  const {
+    data: userEmails,
+    error: emailsError,
+    isLoading: emailsLoading,
+  } = useSWR(`/api/users/emails`, fetcher, {
+    refreshInterval: 120000, // Refresh every 2 minutes
+    revalidateOnFocus: true,
+  });
 
   // File actions history
-  const { data: fileActions, error: actionsError, isLoading: actionsLoading } = useSWR(
-    fileId ? `/api/files/${fileId}/actions` : null,
-    fetcher,
-    {
-      refreshInterval: 30000, // Refresh every 30 seconds
-    }
-  );
+  const {
+    data: fileActions,
+    error: actionsError,
+    isLoading: actionsLoading,
+  } = useSWR(fileId ? `/api/files/${fileId}/actions` : null, fetcher, {
+    refreshInterval: 30000, // Refresh every 30 seconds
+  });
 
   // User permissions for file
-  const { data: userPermissions, error: permissionsError, isLoading: permissionsLoading } = useSWR(
-    fileId && user?.$id ? `/api/files/${fileId}/permissions?userId=${user.$id}` : null,
+  const {
+    data: userPermissions,
+    error: permissionsError,
+    isLoading: permissionsLoading,
+  } = useSWR(
+    fileId && user?.$id
+      ? `/api/files/${fileId}/permissions?userId=${user.$id}`
+      : null,
     fetcher,
     {
       revalidateOnFocus: true,
@@ -285,4 +291,4 @@ export const useActionDropdown = (fileId?: string) => {
     deleteFile,
     downloadFile,
   };
-}; 
+};

@@ -32,6 +32,14 @@ export const appwriteConfig = {
     process.env.NEXT_PUBLIC_APPWRITE_OTPTOKENS_COLLECTION ||
     '688a64a900046399bc54',
 
+  notificationsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATIONS_COLLECTION ||
+    'notifications',
+
+  notificationTypesCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_TYPES_COLLECTION ||
+    'notification_types',
+
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET || '685edb60000bb7a088a2',
 
   secretKey: process.env.NEXT_APPWRITE_KEY || '',

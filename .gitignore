@@ -131,3 +131,10 @@ dist
 
 # Directory used by Appwrite CLI for local development
 .appwrite
+
+# Playwright test results
+test-results/
+playwright-report/
+
+# Feature documentation
+docs/

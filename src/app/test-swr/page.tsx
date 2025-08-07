@@ -86,7 +86,7 @@ export default function TestSWRPage() {
             </div>
           ) : files && files.length > 0 ? (
             <div className="space-y-2">
-              {files.slice(0, 5).map((file: any) => (
+              {files.slice(0, 5).map((file: Record<string, unknown>) => (
                 <div key={file.$id} className="p-2 bg-gray-50 rounded">
                   {file.name}
                 </div>
@@ -119,7 +119,7 @@ export default function TestSWRPage() {
             </div>
           ) : invitations && invitations.length > 0 ? (
             <div className="space-y-2">
-              {invitations.slice(0, 5).map((inv: any) => (
+              {invitations.slice(0, 5).map((inv: Record<string, unknown>) => (
                 <div key={inv.$id} className="p-2 bg-gray-50 rounded">
                   {inv.email} - {inv.role}
                 </div>
@@ -152,7 +152,7 @@ export default function TestSWRPage() {
             </div>
           ) : authUsers && authUsers.length > 0 ? (
             <div className="space-y-2">
-              {authUsers.slice(0, 5).map((user: any) => (
+              {authUsers.slice(0, 5).map((user: Record<string, unknown>) => (
                 <div key={user.$id} className="p-2 bg-gray-50 rounded">
                   {user.email} - {user.fullName}
                 </div>

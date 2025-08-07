@@ -6,7 +6,11 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "playwright test",
+    "test:clean": "playwright test --reporter=html && rm -rf test-results",
+    "test:ui": "playwright test --ui",
+    "clean:test-results": "rm -rf test-results"
   },
   "dependencies": {
     "@adobe/pdfservices-node-sdk": "^4.1.0",
@@ -97,6 +101,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.54.2",
     "@tailwindcss/postcss": "^4",
     "@types/aos": "^3.0.7",
     "@types/formidable": "^3.4.5",

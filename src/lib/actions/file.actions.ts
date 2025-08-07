@@ -11,6 +11,11 @@ import {
   createFileActivity,
   createContractActivity,
 } from './recentActivity.actions';
+import {
+  triggerFileUploadNotification,
+  triggerContractExpiryNotification,
+  triggerContractRenewalNotification,
+} from '@/lib/utils/notificationTriggers';
 import fs from 'fs';
 import path from 'path';
 
@@ -28,7 +33,9 @@ export const uploadFile = async ({
   const { storage, databases } = await createAdminClient();
 
   try {
-    const inputFile = InputFile.fromBuffer(file, file.name);
+    // Convert File to ArrayBuffer for InputFile.fromBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    const inputFile = InputFile.fromBuffer(Buffer.from(arrayBuffer), file.name);
 
     // Always upload to Appwrite storage
     const bucketFile = await storage.createFile(
@@ -75,7 +82,11 @@ export const uploadFile = async ({
         try {
           // Call your API endpoint to extract the expiry date
           const formData = new FormData();
-          formData.append('file', file, bucketFile.name);
+          // Create a new File object from the arrayBuffer for FormData
+          const fileForFormData = new File([arrayBuffer], bucketFile.name, {
+            type: file.type,
+          });
+          formData.append('file', fileForFormData);
           const response = await fetch(
             'http://localhost:3000/api/extract-expiry',
             {
@@ -89,7 +100,8 @@ export const uploadFile = async ({
             contractExpiryDate = new Date().toISOString().split('T')[0];
             status = 'action-required';
           }
-        } catch {
+        } catch (error) {
+          console.error('Error extracting contract expiry date:', error);
           contractExpiryDate = new Date().toISOString().split('T')[0]; // fallback
           status = 'action-required';
         }
@@ -119,6 +131,33 @@ export const uploadFile = async ({
           newFile.$id,
           { contractId: contract.$id }
         );
+
+        // Trigger contract expiry notification if expiry date is set
+        if (contractExpiryDate) {
+          try {
+            const expiryDate = new Date(contractExpiryDate);
+            const today = new Date();
+            const daysUntilExpiry = Math.ceil(
+              (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            if (daysUntilExpiry <= 90) {
+              // Only notify if within 90 days
+              await triggerContractExpiryNotification(
+                ownerId,
+                bucketFile.name,
+                contractExpiryDate,
+                daysUntilExpiry
+              );
+            }
+          } catch (error) {
+            console.error(
+              'Failed to trigger contract expiry notification:',
+              error
+            );
+            // Don't throw error here as the contract creation was successful
+          }
+        }
       }
     } else {
       // Save file to /uploads directory
@@ -127,26 +166,16 @@ export const uploadFile = async ({
         fs.mkdirSync(uploadsDir);
       }
       const filePath = path.join(uploadsDir, bucketFile.name);
-      // Ensure file is a Buffer or convert from ArrayBuffer
-      let fileBuffer: Buffer;
-      if (Buffer.isBuffer(file)) {
-        fileBuffer = file;
-      } else if (file instanceof ArrayBuffer) {
-        fileBuffer = Buffer.from(file);
-      } else if (file instanceof Uint8Array) {
-        fileBuffer = Buffer.from(file);
-      } else if (
-        typeof file === 'object' &&
-        file !== null &&
-        'buffer' in file &&
-        file.buffer instanceof ArrayBuffer
-      ) {
-        // For typed arrays with a buffer property
-        fileBuffer = Buffer.from(file.buffer);
-      } else {
-        throw new Error('Unsupported file type for saving to disk');
+
+      // Convert File to Buffer for saving to disk
+      try {
+        // We already have the arrayBuffer from earlier, so use it directly
+        const fileBuffer = Buffer.from(arrayBuffer);
+        fs.writeFileSync(filePath, fileBuffer);
+      } catch (error) {
+        console.error('Error converting file to buffer:', error);
+        throw new Error('Failed to process file for disk storage');
       }
-      fs.writeFileSync(filePath, fileBuffer);
     }
 
     // Create a recent activity for the file upload
@@ -160,6 +189,19 @@ export const uploadFile = async ({
       );
     } catch (error) {
       console.error('Failed to create file upload activity:', error);
+      // Don't throw error here as the file upload was successful
+    }
+
+    // Trigger file upload notification
+    try {
+      await triggerFileUploadNotification(
+        ownerId,
+        bucketFile.name,
+        getFileType(bucketFile.name).type,
+        bucketFile.sizeOriginal
+      );
+    } catch (error) {
+      console.error('Failed to trigger file upload notification:', error);
       // Don't throw error here as the file upload was successful
     }
 
@@ -474,6 +516,23 @@ export const contractStatus = async ({
     } catch (error) {
       console.error('Failed to create contract status activity:', error);
       // Don't throw error here as the status update was successful
+    }
+
+    // Trigger contract renewal notification if status is 'renewed'
+    if (status === 'renewed' && updated.contractExpiryDate) {
+      try {
+        await triggerContractRenewalNotification(
+          updated.owner || 'system', // Use owner if available, otherwise 'system'
+          updated.contractName || 'Contract',
+          updated.contractExpiryDate
+        );
+      } catch (error) {
+        console.error(
+          'Failed to trigger contract renewal notification:',
+          error
+        );
+        // Don't throw error here as the status update was successful
+      }
     }
 
     revalidatePath(path);

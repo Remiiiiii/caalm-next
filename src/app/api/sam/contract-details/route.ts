@@ -114,15 +114,21 @@ export async function GET(request: NextRequest) {
 }
 
 function parseSAMApiResponse(
-  apiData: any,
+  apiData: Record<string, unknown>,
   noticeId: string
 ): SAMContractDetails {
   try {
     const contractDetails: SAMContractDetails = {
       noticeId,
-      title: apiData.title || apiData.noticeTitle || '',
-      description: apiData.description || apiData.noticeDescription || '',
-      fullDescription: apiData.fullDescription || apiData.description || '',
+      title: (apiData.title as string) || (apiData.noticeTitle as string) || '',
+      description:
+        (apiData.description as string) ||
+        (apiData.noticeDescription as string) ||
+        '',
+      fullDescription:
+        (apiData.fullDescription as string) ||
+        (apiData.description as string) ||
+        '',
       resourceLinks: [],
       attachments: [],
       additionalInfo: {
@@ -133,29 +139,41 @@ function parseSAMApiResponse(
 
     // Parse resource links if available
     if (apiData.resourceLinks && Array.isArray(apiData.resourceLinks)) {
-      contractDetails.resourceLinks = apiData.resourceLinks
-        .filter((link: any) => link && (link.url || link.href))
-        .map((link: any) => ({
-          title: link.title || link.name || 'Resource Link',
-          url: link.url || link.href || '#',
-          type: link.type || link.category || 'document',
+      contractDetails.resourceLinks = (
+        apiData.resourceLinks as Array<Record<string, unknown>>
+      )
+        .filter(
+          (link: Record<string, unknown>) => link && (link.url || link.href)
+        )
+        .map((link: Record<string, unknown>) => ({
+          title:
+            (link.title as string) || (link.name as string) || 'Resource Link',
+          url: (link.url as string) || (link.href as string) || '#',
+          type:
+            (link.type as string) || (link.category as string) || 'document',
         }));
     }
 
     // Parse attachments if available
     if (apiData.attachments && Array.isArray(apiData.attachments)) {
-      contractDetails.attachments = apiData.attachments
+      contractDetails.attachments = (
+        apiData.attachments as Array<Record<string, unknown>>
+      )
         .filter(
-          (attachment: any) => attachment && (attachment.url || attachment.href)
+          (attachment: Record<string, unknown>) =>
+            attachment && (attachment.url || attachment.href)
         )
-        .map((attachment: any) => ({
+        .map((attachment: Record<string, unknown>) => ({
           title:
-            attachment.title ||
-            attachment.name ||
-            attachment.filename ||
+            (attachment.title as string) ||
+            (attachment.name as string) ||
+            (attachment.filename as string) ||
             'Attachment',
-          url: attachment.url || attachment.href || '#',
-          type: attachment.type || attachment.fileType || 'document',
+          url: (attachment.url as string) || (attachment.href as string) || '#',
+          type:
+            (attachment.type as string) ||
+            (attachment.fileType as string) ||
+            'document',
         }));
     }
 
@@ -179,10 +197,10 @@ function parseSAMApiResponse(
     // Return basic fallback data
     return {
       noticeId,
-      title: apiData.title || apiData.noticeTitle || '',
+      title: (apiData.title as string) || (apiData.noticeTitle as string) || '',
       description:
-        apiData.description ||
-        apiData.noticeDescription ||
+        (apiData.description as string) ||
+        (apiData.noticeDescription as string) ||
         'No description available.',
       resourceLinks: [],
       attachments: [],

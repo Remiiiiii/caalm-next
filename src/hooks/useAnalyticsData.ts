@@ -1,21 +1,20 @@
 import useSWR from 'swr';
-import { useAuth } from '@/contexts/AuthContext';
 
-interface AnalyticsStats {
-  totalContracts: number;
-  totalBudget: string;
-  staffCount: number;
-  complianceRate: string;
-  trend: 'up' | 'down';
-  change: string;
-}
+// interface AnalyticsStats {
+//   totalContracts: number;
+//   totalBudget: string;
+//   staffCount: number;
+//   complianceRate: string;
+//   trend: 'up' | 'down';
+//   change: string;
+// }
 
-interface DepartmentAnalytics {
-  stats: AnalyticsStats;
-  contracts: any[];
-  compliance: any[];
-  performance: any[];
-}
+// interface DepartmentAnalytics {
+//   stats: AnalyticsStats;
+//   contracts: any[];
+//   compliance: any[];
+//   performance: any[];
+// }
 
 const fetcher = async (url: string) => {
   const response = await fetch(url);
@@ -26,7 +25,7 @@ const fetcher = async (url: string) => {
 };
 
 export const useAnalyticsData = (department?: string) => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
 
   // Department stats
   const {

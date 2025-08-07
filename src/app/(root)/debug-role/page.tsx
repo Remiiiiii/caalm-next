@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import AdminRoleManager from '@/components/AdminRoleManager';
 
 export const metadata: Metadata = {
@@ -37,14 +38,14 @@ export default function DebugRolePage() {
 
           <div className="mt-8 text-center">
             <p className="text-sm text-slate-500">
-              After updating your role to "admin", refresh the page and try
-              accessing
-              <a
+              After updating your role to &quot;admin&quot;, refresh the page
+              and try accessing
+              <Link
                 href="/analytics/administration"
                 className="text-blue-600 hover:underline ml-1"
               >
                 /analytics/administration
-              </a>
+              </Link>
             </p>
           </div>
         </div>

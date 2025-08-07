@@ -45,7 +45,6 @@ import {
   File,
   // MessageCircle,
   Star,
-  Eye,
   ChevronRight,
   ChevronDown as ChevronDownIcon,
   // Clock,
@@ -143,24 +142,17 @@ const ContractDocumentViewer: React.FC<ContractDocumentViewerProps> = ({
     }
   }, [swrError]);
 
-  // Generate document content from contract data
-  useEffect(() => {
-    if (contract) {
-      const documentContent = generateDocumentContent(contract);
-      setContent(contractContent || documentContent);
-    }
-  }, [contract, contractContent, contractDetails]);
-
   // Generate document content from contract object
-  const generateDocumentContent = (contract: SAMContract): string => {
-    const description =
-      contractDetails?.description ||
-      contract.description ||
-      'No description available.';
-    const resourceLinks =
-      contractDetails?.resourceLinks || contract.resourceLinks || [];
+  const generateDocumentContent = useCallback(
+    (contract: SAMContract): string => {
+      const description =
+        contractDetails?.description ||
+        contract.description ||
+        'No description available.';
+      const resourceLinks =
+        contractDetails?.resourceLinks || contract.resourceLinks || [];
 
-    return `
+      return `
 GOVERNMENT CONTRACT OPPORTUNITY
 
 Document ID: ${contract.noticeId}
@@ -178,27 +170,27 @@ IMPORTANT DATES
 ===============
 
 Posted Date: ${
-      contract.postedDate
-        ? new Date(contract.postedDate).toLocaleDateString()
-        : 'N/A'
-    }
+        contract.postedDate
+          ? new Date(contract.postedDate).toLocaleDateString()
+          : 'N/A'
+      }
 Response Due Date: ${
-      contract.responseDeadLine
-        ? new Date(contract.responseDeadLine).toLocaleDateString()
-        : 'N/A'
-    }
+        contract.responseDeadLine
+          ? new Date(contract.responseDeadLine).toLocaleDateString()
+          : 'N/A'
+      }
 Archive Date: ${
-      contract.archiveDate
-        ? new Date(contract.archiveDate).toLocaleDateString()
-        : 'N/A'
-    }
+        contract.archiveDate
+          ? new Date(contract.archiveDate).toLocaleDateString()
+          : 'N/A'
+      }
 
 LOCATION INFORMATION
 ===================
 
 Office: ${contract.officeAddress?.city || 'N/A'}, ${
-      contract.officeAddress?.state || 'N/A'
-    } ${contract.officeAddress?.zipcode || ''}
+        contract.officeAddress?.state || 'N/A'
+      } ${contract.officeAddress?.zipcode || ''}
 Point of Contact: ${contract.pointOfContact?.[0]?.fullName || 'N/A'}
 Email: ${contract.pointOfContact?.[0]?.email || 'N/A'}
 Phone: ${contract.pointOfContact?.[0]?.phone || 'N/A'}
@@ -244,23 +236,18 @@ ${contractDetails.attachments
 `
     : ''
 }
+    `;
+    },
+    [contractDetails]
+  );
 
-${
-  contractDetails?.additionalInfo?.content
-    ? `
-ADDITIONAL INFORMATION
-=====================
-
-${contractDetails.additionalInfo.content}
-`
-    : ''
-}
-
----
-
-This document contains all available information about the government contract opportunity. Please review all sections carefully and note important dates and requirements.
-    `.trim();
-  };
+  // Generate document content from contract data
+  useEffect(() => {
+    if (contract) {
+      const documentContent = generateDocumentContent(contract);
+      setContent(contractContent || documentContent);
+    }
+  }, [contract, contractContent, contractDetails, generateDocumentContent]);
 
   // Helper function to get time ago
   const getTimeAgo = (dateString: string) => {

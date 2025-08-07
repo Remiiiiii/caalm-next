@@ -29,7 +29,6 @@ interface TwoFactorVerificationModalProps {
 
 const TwoFactorVerificationModal = ({
   userId,
-  email,
   onSuccess,
   onClose,
 }: TwoFactorVerificationModalProps) => {

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Bell, Mail, MessageSquare, Save } from 'lucide-react';
+import { Bell, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const NotificationSettings = () => {

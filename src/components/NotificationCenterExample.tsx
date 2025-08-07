@@ -28,7 +28,7 @@ export default function NotificationCenterExample() {
         title: 'Success',
         description: 'Notification marked as read',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to mark notification as read',
@@ -44,7 +44,7 @@ export default function NotificationCenterExample() {
         title: 'Success',
         description: 'All notifications marked as read',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to mark all notifications as read',
@@ -60,7 +60,7 @@ export default function NotificationCenterExample() {
         title: 'Success',
         description: 'Notification deleted',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete notification',
@@ -158,7 +158,7 @@ export default function NotificationCenterExample() {
                 No notifications
               </h3>
               <p className="text-gray-500">
-                You're all caught up! Check back later for new updates.
+                You&apos;re all caught up! Check back later for new updates.
               </p>
             </div>
           ) : (

@@ -174,17 +174,22 @@ export async function fetchContractDetails(
 /**
  * Parse resource links from SAM.gov API response
  */
-function parseResourceLinks(links: any[]): SAMContractDetails['resourceLinks'] {
+function parseResourceLinks(
+  links: Array<Record<string, unknown>>
+): SAMContractDetails['resourceLinks'] {
   if (!Array.isArray(links)) return [];
 
   return links
     .filter((link) => link && link.href)
     .map((link) => ({
-      rel: link.rel || 'related',
-      href: link.href,
-      title: link.title || link.description || 'Resource Link',
-      type: link.type || 'application/octet-stream',
-      description: link.description || link.title || '',
+      rel: (link.rel as string) || 'related',
+      href: link.href as string,
+      title:
+        (link.title as string) ||
+        (link.description as string) ||
+        'Resource Link',
+      type: (link.type as string) || 'application/octet-stream',
+      description: (link.description as string) || (link.title as string) || '',
     }));
 }
 
@@ -192,18 +197,23 @@ function parseResourceLinks(links: any[]): SAMContractDetails['resourceLinks'] {
  * Parse attachments from SAM.gov API response
  */
 function parseAttachments(
-  attachments: any[]
+  attachments: Array<Record<string, unknown>>
 ): SAMContractDetails['attachments'] {
   if (!Array.isArray(attachments)) return [];
 
   return attachments
     .filter((attachment) => attachment && attachment.url)
     .map((attachment) => ({
-      filename: attachment.filename || attachment.name || 'Attachment',
-      url: attachment.url || attachment.href,
-      size: attachment.size || attachment.fileSize,
+      filename:
+        (attachment.filename as string) ||
+        (attachment.name as string) ||
+        'Attachment',
+      url: (attachment.url as string) || (attachment.href as string),
+      size: (attachment.size as number) || (attachment.fileSize as number),
       type:
-        attachment.type || attachment.mimeType || 'application/octet-stream',
+        (attachment.type as string) ||
+        (attachment.mimeType as string) ||
+        'application/octet-stream',
     }));
 }
 
@@ -211,16 +221,19 @@ function parseAttachments(
  * Parse additional links from SAM.gov API response
  */
 function parseAdditionalLinks(
-  links: any[]
+  links: Array<Record<string, unknown>>
 ): Array<{ href: string; title?: string; type?: string }> {
   if (!Array.isArray(links)) return [];
 
   return links
     .filter((link) => link && link.href)
     .map((link) => ({
-      href: link.href,
-      title: link.title || link.description || 'Additional Link',
-      type: link.type || 'text/html',
+      href: link.href as string,
+      title:
+        (link.title as string) ||
+        (link.description as string) ||
+        'Additional Link',
+      type: (link.type as string) || 'text/html',
     }));
 }
 
@@ -229,14 +242,17 @@ function parseAdditionalLinks(
  */
 export function generateFallbackContractDetails(
   noticeId: string,
-  basicContract: any
+  basicContract: Record<string, unknown>
 ): SAMContractDetails {
   return {
     noticeId,
-    title: basicContract.title || 'Contract Details',
+    title: (basicContract.title as string) || 'Contract Details',
     description:
-      basicContract.description || 'No detailed description available.',
-    resourceLinks: basicContract.resourceLinks || [],
+      (basicContract.description as string) ||
+      'No detailed description available.',
+    resourceLinks:
+      (basicContract.resourceLinks as SAMContractDetails['resourceLinks']) ||
+      [],
     attachments: [],
     additionalInfo: {
       content:
@@ -278,4 +294,106 @@ export function extractNoticeId(url: string): string | null {
 export function validateSAMApiKey(apiKey: string): boolean {
   // SAM.gov API keys are typically 32-64 character alphanumeric strings
   return /^[a-zA-Z0-9]{32,64}$/.test(apiKey);
+}
+
+export function parseSAMApiResponse(
+  apiData: Record<string, unknown>,
+  noticeId: string
+): SAMContractDetails {
+  const contractDetails: SAMContractDetails = {
+    noticeId,
+    title: '',
+    description: '',
+    resourceLinks: [],
+    attachments: [],
+    additionalInfo: {
+      content: '',
+      links: [],
+    },
+  };
+
+  try {
+    // Parse title
+    contractDetails.title =
+      (apiData.title as string) || (apiData.noticeTitle as string) || '';
+
+    // Parse description
+    contractDetails.description =
+      (apiData.description as string) ||
+      (apiData.noticeDescription as string) ||
+      '';
+
+    // Parse resource links if available
+    if (apiData.resourceLinks && Array.isArray(apiData.resourceLinks)) {
+      contractDetails.resourceLinks = (
+        apiData.resourceLinks as Array<Record<string, unknown>>
+      )
+        .filter(
+          (link: Record<string, unknown>) => link && (link.url || link.href)
+        )
+        .map((link: Record<string, unknown>) => ({
+          title:
+            (link.title as string) || (link.name as string) || 'Resource Link',
+          url: (link.url as string) || (link.href as string) || '#',
+          type:
+            (link.type as string) || (link.category as string) || 'document',
+        }));
+    }
+
+    // Parse attachments if available
+    if (apiData.attachments && Array.isArray(apiData.attachments)) {
+      contractDetails.attachments = (
+        apiData.attachments as Array<Record<string, unknown>>
+      )
+        .filter(
+          (attachment: Record<string, unknown>) =>
+            attachment && (attachment.url || attachment.href)
+        )
+        .map((attachment: Record<string, unknown>) => ({
+          title:
+            (attachment.title as string) ||
+            (attachment.name as string) ||
+            (attachment.filename as string) ||
+            'Attachment',
+          url: (attachment.url as string) || (attachment.href as string) || '#',
+          type:
+            (attachment.type as string) ||
+            (attachment.fileType as string) ||
+            'document',
+        }));
+    }
+
+    // Parse additional information
+    if (apiData.additionalInfo || apiData.otherInformation) {
+      const additionalContent =
+        apiData.additionalInfo || apiData.otherInformation;
+      contractDetails.additionalInfo = {
+        content:
+          typeof additionalContent === 'string'
+            ? additionalContent
+            : JSON.stringify(additionalContent),
+        links: [],
+      };
+    }
+
+    return contractDetails;
+  } catch (parseError) {
+    console.error('Error parsing SAM.gov API response:', parseError);
+
+    // Return basic fallback data
+    return {
+      noticeId,
+      title: (apiData.title as string) || (apiData.noticeTitle as string) || '',
+      description:
+        (apiData.description as string) ||
+        (apiData.noticeDescription as string) ||
+        'No description available.',
+      resourceLinks: [],
+      attachments: [],
+      additionalInfo: {
+        content: '',
+        links: [],
+      },
+    };
+  }
 }

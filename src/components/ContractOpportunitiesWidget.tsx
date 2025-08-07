@@ -215,7 +215,7 @@ export default function ContractOpportunitiesWidget({
           <div className="text-center py-6">
             <Search className="h-8 w-8 text-slate-400 mx-auto mb-2" />
             <p className="text-sm text-slate-500 mb-3">
-              No opportunities found for "{currentKeyword}"
+              No opportunities found for &quot;{currentKeyword}&quot;
             </p>
             <Link href="/contracts/advanced-resources">
               <Button

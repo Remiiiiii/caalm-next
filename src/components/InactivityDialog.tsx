@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,7 +11,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 import { Clock, LogOut, RefreshCw, AlertTriangle } from 'lucide-react';
 import { getTimerValues, formatTime } from '@/lib/inactivity-config';
 
@@ -33,7 +32,7 @@ export default function InactivityDialog({
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
     try {
       await onLogout();
@@ -42,7 +41,7 @@ export default function InactivityDialog({
       // Force close dialog even if logout fails
       onClose();
     }
-  };
+  }, [onLogout, onClose]);
 
   const handleContinue = () => {
     onContinue();
@@ -79,7 +78,7 @@ export default function InactivityDialog({
     if (isOpen && secondsLeft <= 0 && !isLoggingOut) {
       handleLogout();
     }
-  }, [isOpen, secondsLeft, isLoggingOut]);
+  }, [isOpen, secondsLeft, isLoggingOut, handleLogout]);
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -92,7 +91,7 @@ export default function InactivityDialog({
           <AlertDialogDescription asChild>
             <div className="space-y-2">
               <p>
-                Due to inactivity, you'll be signed out in{' '}
+                Due to inactivity, you&apos;ll be signed out in{' '}
                 <span className="font-mono font-bold text-red-600">
                   {formatTime(secondsLeft)}
                 </span>{' '}
@@ -102,7 +101,7 @@ export default function InactivityDialog({
                 <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-amber-800">
                   For security reasons, your session will be completely
-                  terminated and you'll need to sign in again.
+                  terminated and you&apos;ll need to sign in again.
                 </p>
               </div>
             </div>
@@ -121,7 +120,7 @@ export default function InactivityDialog({
           <AlertDialogAction
             onClick={handleContinue}
             disabled={isLoggingOut}
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
+            className="text-slate-900flex items-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
           >
             <RefreshCw className="h-4 w-4" />
             Continue Session

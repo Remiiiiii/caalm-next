@@ -18,7 +18,7 @@ const getDaysUntil = (dateStr: string) => {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
-const getDocInfo = (doc: any, type: string) => {
+const getDocInfo = (doc: Record<string, unknown>, type: string) => {
   if (type === 'contracts') {
     return { name: doc.contractName, expiry: doc.contractExpiryDate };
   } else if (type === 'audits') {
@@ -30,7 +30,6 @@ const getDocInfo = (doc: any, type: string) => {
 };
 
 async function sendExpiryEmail({
-  to,
   subject,
   message,
 }: {

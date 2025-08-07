@@ -20,8 +20,6 @@ const Search = () => {
     setQuery,
     searchResults: results,
     isLoading,
-    error,
-    performSearch,
     saveSearch,
   } = useSearch();
 
@@ -46,7 +44,7 @@ const Search = () => {
   // Show results when we have them
   const open = results.length > 0 || (query.length > 0 && !isLoading);
 
-  const handleClickItem = (file: any) => {
+  const handleClickItem = (file: Record<string, unknown>) => {
     // Save the search query
     saveSearch(query);
 

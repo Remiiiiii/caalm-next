@@ -5,20 +5,13 @@ import { INACTIVITY_CONFIG, getTimerValues } from '@/lib/inactivity-config';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function useInactivityTimer() {
-  // Early return if not in browser environment
-  if (typeof window === 'undefined') {
-    return {
-      showDialog: false,
-      handleContinue: () => {},
-      handleLogout: () => {},
-      handleClose: () => {},
-    };
-  }
-
   const { logout, isSessionValid } = useAuth();
   const [showDialog, setShowDialog] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if we're in browser environment
+  const isBrowser = typeof window !== 'undefined';
 
   const clearTimers = useCallback(() => {
     if (inactivityTimerRef.current) {
@@ -32,8 +25,8 @@ export function useInactivityTimer() {
   }, []);
 
   const resetInactivityTimer = useCallback(() => {
-    // Only set timer if session is valid
-    if (!isSessionValid) {
+    // Only set timer if session is valid and in browser
+    if (!isSessionValid || !isBrowser) {
       return;
     }
 
@@ -49,7 +42,7 @@ export function useInactivityTimer() {
     inactivityTimerRef.current = setTimeout(() => {
       setShowDialog(true);
     }, inactivityLimit);
-  }, [isSessionValid]);
+  }, [isSessionValid, isBrowser]);
 
   const handleContinue = useCallback(() => {
     setShowDialog(false);
@@ -61,8 +54,10 @@ export function useInactivityTimer() {
     setShowDialog(false);
 
     // Use the auth context logout with inactivity reason
-    await logout('inactivity');
-  }, [clearTimers, logout]);
+    if (isBrowser) {
+      await logout('inactivity');
+    }
+  }, [clearTimers, logout, isBrowser]);
 
   const handleClose = useCallback(() => {
     setShowDialog(false);
@@ -70,8 +65,8 @@ export function useInactivityTimer() {
 
   // Set up event listeners
   useEffect(() => {
-    // Check if inactivity timer is enabled and session is valid
-    if (!INACTIVITY_CONFIG.ENABLED || !isSessionValid) {
+    // Check if inactivity timer is enabled, session is valid, and in browser
+    if (!INACTIVITY_CONFIG.ENABLED || !isSessionValid || !isBrowser) {
       return;
     }
 
@@ -97,17 +92,23 @@ export function useInactivityTimer() {
       });
       clearTimers();
     };
-  }, [resetInactivityTimer, clearTimers, showDialog, isSessionValid]);
+  }, [
+    resetInactivityTimer,
+    clearTimers,
+    showDialog,
+    isSessionValid,
+    isBrowser,
+  ]);
 
   // Reset timer when session validity changes
   useEffect(() => {
-    if (isSessionValid) {
+    if (isSessionValid && isBrowser) {
       resetInactivityTimer();
     } else {
       clearTimers();
       setShowDialog(false);
     }
-  }, [isSessionValid, resetInactivityTimer, clearTimers]);
+  }, [isSessionValid, resetInactivityTimer, clearTimers, isBrowser]);
 
   return {
     showDialog,

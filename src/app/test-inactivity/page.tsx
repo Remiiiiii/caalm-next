@@ -167,8 +167,8 @@ export default function TestInactivityPage() {
               <li>
                 The inactivity dialog will appear with a 30-second countdown
               </li>
-              <li>Choose "Continue Session" to reset the timer</li>
-              <li>Or choose "Sign Out" to log out immediately</li>
+              <li>Choose &quot;Continue Session&quot; to reset the timer</li>
+              <li>Or choose &quot;Sign Out&quot; to log out immediately</li>
             </ol>
           </div>
 

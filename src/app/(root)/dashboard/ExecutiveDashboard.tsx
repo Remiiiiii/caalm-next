@@ -1,5 +1,7 @@
 'use client';
 
+// In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
+import { NotificationDemoButton } from '@/components/NotificationDemoButton';
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -362,6 +364,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       {/* Dashboard Header */}
       <div className="flex justify-between items-end mb-4">
         <div className="h2 font-bold sidebar-gradient-text">
+          <NotificationDemoButton />
           {getRoleDisplay(user?.role || '')}
         </div>
         <div className="text-xs text-slate-500">

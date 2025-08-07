@@ -34,7 +34,7 @@ export async function GET() {
           name: user.name,
         },
       });
-    } catch (error) {
+    } catch {
       // Session is invalid
       return NextResponse.json(
         { valid: false, reason: 'invalid_session' },

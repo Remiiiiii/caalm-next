@@ -1,12 +1,12 @@
 import useSWR, { mutate } from 'swr';
-import { useAuth } from '@/contexts/AuthContext';
+// import { useAuth } from '@/contexts/AuthContext';
 
-interface DashboardStats {
-  totalContracts: number;
-  expiringContracts: number;
-  activeUsers: number;
-  complianceRate: string;
-}
+// interface DashboardStats {
+//   totalContracts: number;
+//   expiringContracts: number;
+//   activeUsers: number;
+//   complianceRate: string;
+// }
 
 interface Invitation {
   $id: string;
@@ -20,12 +20,12 @@ interface Invitation {
   $createdAt: string;
 }
 
-interface UninvitedUser {
-  $id: string;
-  email: string;
-  fullName: string;
-  $createdAt: string;
-}
+// interface UninvitedUser {
+//   $id: string;
+//   email: string;
+//   fullName: string;
+//   $createdAt: string;
+// }
 
 const fetcher = async (url: string) => {
   const response = await fetch(url);
@@ -36,7 +36,7 @@ const fetcher = async (url: string) => {
 };
 
 export const useDashboardData = (orgId: string) => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
 
   // Dashboard Stats
   const {
@@ -76,7 +76,7 @@ export const useDashboardData = (orgId: string) => {
   });
 
   // Mutations for optimistic updates
-  const createInvitation = async (invitationData: any) => {
+  const createInvitation = async (invitationData: Record<string, unknown>) => {
     try {
       // Optimistic update - add the invitation immediately to the UI
       const optimisticInvitation: Invitation = {
@@ -94,7 +94,7 @@ export const useDashboardData = (orgId: string) => {
       // Apply optimistic update immediately
       mutate(
         `/api/dashboard/invitations?orgId=${orgId}`,
-        (current: any) => {
+        (current: Invitation[] | undefined) => {
           if (!current || !Array.isArray(current))
             return [optimisticInvitation];
           return [...current, optimisticInvitation];
@@ -127,7 +127,7 @@ export const useDashboardData = (orgId: string) => {
       // Replace the optimistic update with real data
       mutate(
         `/api/dashboard/invitations?orgId=${orgId}`,
-        (current: any) => {
+        (current: Invitation[] | undefined) => {
           if (!current || !Array.isArray(current)) return [realInvitation];
           return current.map((inv: Invitation) =>
             inv.$id === optimisticInvitation.$id ? realInvitation : inv
@@ -153,7 +153,7 @@ export const useDashboardData = (orgId: string) => {
       // Store the current state for potential rollback
       const currentData = await mutate(
         `/api/dashboard/invitations?orgId=${orgId}`,
-        (current: any) => {
+        (current: Invitation[] | undefined) => {
           if (!current || !Array.isArray(current)) return current;
           return current.filter((inv: Invitation) => inv.token !== token);
         },

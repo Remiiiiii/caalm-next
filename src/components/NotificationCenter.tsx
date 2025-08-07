@@ -48,7 +48,6 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
@@ -175,22 +174,31 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
   const [showSettings, setShowSettings] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Use SWR hook for notifications
   const {
     notifications,
-    stats,
     isLoading: loading,
-    error,
+    error: swrError,
     markAsRead,
     markAllAsRead,
     deleteNotification,
     mutate,
   } = useNotifications(userId);
 
+  // Set error state from SWR error
+  React.useEffect(() => {
+    if (swrError) {
+      setError(swrError.message || 'Failed to load notifications');
+    } else {
+      setError(null);
+    }
+  }, [swrError]);
+
   // Filter and sort notifications
-  const filtered = notifications.filter((notification) => {
+  const filtered = notifications.filter((notification: Notification) => {
     const matchesSearch =
       notification.title.toLowerCase().includes(search.toLowerCase()) ||
       notification.message.toLowerCase().includes(search.toLowerCase());
@@ -215,8 +223,12 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         );
       case 'priority':
         const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        const aPriority = priorityOrder[a.priority || 'low'] || 1;
-        const bPriority = priorityOrder[b.priority || 'low'] || 1;
+        const aPriority =
+          priorityOrder[(a.priority || 'low') as keyof typeof priorityOrder] ||
+          1;
+        const bPriority =
+          priorityOrder[(b.priority || 'low') as keyof typeof priorityOrder] ||
+          1;
         return bPriority - aPriority;
       case 'type':
         return a.type.localeCompare(b.type);
@@ -313,7 +325,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   };
 
   const handleMarkAllAsUnread = async () => {
-    const readIds = notifications.filter((n) => n.read).map((n) => n.$id);
+    const readIds = notifications
+      .filter((n: Notification) => n.read)
+      .map((n: Notification) => n.$id);
     if (readIds.length > 0) {
       await handleMarkAsUnread(readIds);
     }
@@ -361,18 +375,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
     if (active.id !== over?.id) {
       // Update the notifications order optimistically
-      mutate((currentNotifications) => {
-        if (!currentNotifications) return currentNotifications;
-
-        const oldIndex = currentNotifications.findIndex(
-          (item) => item.$id === active.id
-        );
-        const newIndex = currentNotifications.findIndex(
-          (item) => item.$id === over?.id
-        );
-
-        return arrayMove(currentNotifications, oldIndex, newIndex);
-      }, false);
+      // Note: We can't do optimistic updates with the bound mutate function
+      // from useNotifications, so we'll just revalidate
+      mutate();
 
       toast({
         title: 'Reordered',
@@ -383,7 +388,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-6xl bg-white/95 backdrop-blur border border-white/40 shadow-xl">
+      <DialogContent
+        className="w-full max-w-6xl bg-white/95 backdrop-blur border border-white/40 shadow-xl"
+        data-testid="notification-center"
+      >
         <DialogHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -391,16 +399,20 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               <DialogTitle className="text-xl font-bold sidebar-gradient-text">
                 Notifications
               </DialogTitle>
-              <span className="text-sm text-gray-500">
-                {notifications.filter((n) => !n.read).length} unread
+              <span
+                className="text-sm text-gray-500"
+                data-testid="unread-count"
+              >
+                {notifications.filter((n: Notification) => !n.read).length}{' '}
+                unread
               </span>
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={markAllAsRead}
-                disabled={!notifications.some((n) => !n.read)}
+                onClick={handleMarkAllAsRead}
+                disabled={!notifications.some((n: Notification) => !n.read)}
                 className="text-sm"
               >
                 <Check className="w-4 h-4 mr-1" />
@@ -410,7 +422,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={handleMarkAllAsUnread}
-                disabled={!notifications.some((n) => !n.read)}
+                disabled={!notifications.some((n: Notification) => !n.read)}
                 className="text-sm"
               >
                 <Check className="w-4 h-4 mr-1" />
@@ -445,7 +457,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
         <div className="space-y-4">
           {/* Enhanced Search and Filter Bar */}
-          <div className="flex gap-2">
+          <div className="flex gap-2" data-testid="notification-filters">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
@@ -456,7 +468,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="sort-select">
+              <SelectTrigger className="sort-select" data-testid="type-filter">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent className="sort-select-content">
@@ -494,7 +506,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               </SelectContent>
             </Select>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="sort-select">
+              <SelectTrigger
+                className="sort-select"
+                data-testid="priority-filter"
+              >
                 <SelectValue placeholder="All Priorities" />
               </SelectTrigger>
               <SelectContent className="sort-select-content">
@@ -518,7 +533,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
           </div>
 
           {/* Sort Options */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" data-testid="sort-controls">
             <span className="text-sm text-gray-600">Sort by:</span>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-32 h-8 text-xs">
@@ -574,14 +589,31 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               items={paginated.map((n) => n.$id)}
               strategy={verticalListSortingStrategy}
             >
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              <div
+                className="space-y-2 max-h-96 overflow-y-auto"
+                data-testid="notification-list"
+              >
                 {loading ? (
                   <div className="text-center py-8 text-gray-400">
                     <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin" />
                     Loading notifications...
                   </div>
+                ) : error ? (
+                  <div
+                    className="text-center py-8 text-red-400"
+                    data-testid="error-message"
+                  >
+                    <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-red-300" />
+                    <p className="text-lg font-medium text-red-600">
+                      Error loading notifications
+                    </p>
+                    <p className="text-sm text-red-500">{error}</p>
+                  </div>
                 ) : paginated.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">
+                  <div
+                    className="text-center py-8 text-gray-400"
+                    data-testid="empty-state"
+                  >
                     <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p className="text-lg font-medium">
                       No notifications found
@@ -612,7 +644,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
           </DndContext>
 
           {/* Enhanced Pagination */}
-          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+          <div
+            className="flex items-center justify-between mt-4 pt-4 border-t"
+            data-testid="pagination"
+          >
             <div className="flex items-center gap-4">
               <label className="text-xs text-slate-700">
                 Items per page:
@@ -708,6 +743,10 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
+      data-testid="notification-item"
+      data-read={notification.read.toString()}
+      data-priority={notification.priority || 'low'}
+      data-date={notification.$createdAt}
       className={`p-4 rounded-lg border transition-all hover:shadow-md ${
         notification.read
           ? typeConfig?.bgColor || 'bg-white/50 border-gray-200'
