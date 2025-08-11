@@ -1,10 +1,12 @@
 import AuthForm from '@/components/AuthForm';
-import React from 'react';
+import React, { Suspense } from 'react';
 
 const SignUp = () => {
   return (
     <div>
-      <AuthForm type="sign-up" />
+      <Suspense fallback={null}>
+        <AuthForm type="sign-up" />
+      </Suspense>
     </div>
   );
 };
