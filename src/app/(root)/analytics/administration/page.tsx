@@ -2,6 +2,8 @@ import React from 'react';
 import AdministrationAnalytics from '@/components/analytics/AdministrationAnalytics';
 import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
 
+export const dynamic = 'force-dynamic';
+
 const AdministrationAnalyticsPage = () => {
   const departmentData = {
     totalContracts: 156,

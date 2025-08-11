@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
