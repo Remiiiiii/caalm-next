@@ -2,6 +2,8 @@ import React from 'react';
 import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+export const dynamic = 'force-dynamic';
+
 const ResidentialAnalytics = () => {
   return (
     <div className="space-y-6">

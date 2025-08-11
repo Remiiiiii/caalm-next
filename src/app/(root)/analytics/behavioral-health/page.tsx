@@ -2,7 +2,7 @@ import React from 'react';
 import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-gitexport const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 const BehavioralHealthAnalytics = () => {
   return (
