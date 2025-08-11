@@ -35,6 +35,7 @@
   .recharts-responsive-container {
     height: initial !important;
   }
+
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
@@ -136,7 +137,7 @@
   .primary-btn,
   .shad-active,
   .shad-submit-btn {
-    @apply text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center;
+    @apply text-white font-semibold rounded-full shadow-md px-4 py-2 sm:px-6 transition-all duration-200 w-full sm:w-auto flex items-center justify-center;
     background-image: linear-gradient(
       to right,
       #00c1cb,
@@ -156,14 +157,14 @@
     @apply outline-none ring-offset-transparent focus:ring-transparent focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0 !important;
   }
   .shad-input {
-    @apply border-none w-[500px] shadow-none p-0 shad-no-focus placeholder:text-light-200 body-2 !important;
+    @apply border-none w-full shadow-none p-0 shad-no-focus placeholder:text-light-200 body-2 !important;
   }
 
   .shad-form-item {
     @apply flex h-[78px] flex-col justify-center rounded-xl border border-light-300 px-4 shadow-drop-1;
   }
   .shad-form-label {
-    @apply text-light-100 pt-2 body-2 w-full !important;
+    @apply text-light-100 p-1 ml-2  body-2 w-full !important;
   }
   .shad-form-message {
     @apply text-red body-2 ml-4 !important;
@@ -217,7 +218,7 @@
 
   /* Root Layout */
   .main-content {
-    @apply remove-scrollbar h-full flex-1 overflow-auto bg-light-400 px-5 py-7 sm:mr-7 sm:rounded-[30px] md:mb-7 md:px-9 md:py-10 !important;
+    @apply remove-scrollbar text-slate-700 h-full flex-1 overflow-auto bg-light-400 px-5 py-7 sm:mr-7 sm:rounded-[30px] md:mb-7 md:px-9 md:py-10 !important;
   }
 
   /* Dashboard */
@@ -326,10 +327,10 @@
 
   /* Card */
   .file-card {
-    @apply flex cursor-pointer flex-col gap-6 rounded-[18px] bg-white p-5 shadow-sm transition-all hover:shadow-drop-3 !important;
+    @apply flex cursor-pointer flex-col gap-6 rounded-[18px] text-slate-700 bg-white p-5 shadow-sm transition-all hover:shadow-drop-3 !important;
   }
   .file-card-details {
-    @apply flex flex-col gap-2 text-light-100 !important;
+    @apply flex flex-col gap-2 text-slate-700 !important;
   }
 
   /* Chart */
@@ -449,7 +450,7 @@
     max-width: 90px;
   }
   .sidebar-nav {
-    @apply h5 mt-9 flex-1 gap-1 sidebar-gradient-text bg-gradient-to-r bg-clip-text text-transparent !important;
+    @apply h5 mt-9 flex-1 gap-1 !important;
   }
   .sidebar-nav-item {
     @apply flex text-light-100 gap-4 rounded-xl lg:w-full justify-center lg:justify-start items-center h5 lg:px-[30px] h-[52px] lg:rounded-full !important;
@@ -608,16 +609,230 @@
   transition: opacity 3.5s;
 }
 
+/* Custom gradient text for sidebar */
 .sidebar-gradient-text {
-  background-image: linear-gradient(
-    to right,
-    #00c1cb,
-    #078fab,
-    #0e638f,
-    #11487d,
-    #162768
-  );
+  background: linear-gradient(135deg, #12477d 0%, #03afbf 100%);
   -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   background-clip: text;
-  color: transparent;
+}
+
+/* Invitation animations */
+.invitation-removing {
+  animation: fadeOutSlide 0.3s ease-out forwards;
+}
+
+.invitation-adding {
+  animation: fadeInSlide 0.3s ease-out forwards;
+}
+
+@keyframes fadeOutSlide {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes fadeInSlide {
+  0% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Expanded Calendar Animations */
+.expanded-calendar-enter {
+  animation: expandedCalendarEnter 0.3s ease-out forwards;
+}
+
+.expanded-calendar-exit {
+  animation: expandedCalendarExit 0.3s ease-in forwards;
+}
+
+@keyframes expandedCalendarEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes expandedCalendarExit {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+}
+
+/* Calendar event hover effects */
+.calendar-event {
+  transition: all 0.2s ease-in-out;
+}
+
+.calendar-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Calendar day hover effects */
+.calendar-day {
+  transition: all 0.2s ease-in-out;
+}
+
+.calendar-day:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Modal backdrop blur */
+.modal-backdrop {
+  backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Focus trap for accessibility */
+.focus-trap:focus {
+  outline: 2px solid #03afbf;
+  outline-offset: 2px;
+}
+
+/* Loading states */
+.calendar-loading {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Error states */
+.calendar-error {
+  border-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.calendar-error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+/* Share dialog animations */
+.share-dialog-enter {
+  animation: shareDialogEnter 0.3s ease-out forwards;
+}
+
+@keyframes shareDialogEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Event conflict highlighting */
+.event-conflict {
+  border: 2px solid #f59e0b;
+  background-color: rgba(245, 158, 11, 0.1);
+  animation: conflictPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes conflictPulse {
+  0% {
+    border-color: #f59e0b;
+    background-color: rgba(245, 158, 11, 0.1);
+  }
+  100% {
+    border-color: #d97706;
+    background-color: rgba(245, 158, 11, 0.2);
+  }
+}
+
+/* Responsive calendar grid */
+@media (max-width: 768px) {
+  .calendar-grid {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+  }
+
+  .calendar-day {
+    min-height: 80px;
+    font-size: 0.75rem;
+  }
+
+  .calendar-event {
+    font-size: 0.625rem;
+    padding: 2px 4px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .expanded-calendar-modal {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    max-width: none !important;
+  }
+
+  .calendar-header {
+    display: none;
+  }
+
+  .calendar-content {
+    page-break-inside: avoid;
+  }
+}
+
+/* Calendar component styles */
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #03afbf;
+  --rdp-background-color: #e6f7f8;
+  --rdp-accent-color-dark: #0284a8;
+  --rdp-background-color-dark: #180270;
+  --rdp-outline: 2px solid var(--rdp-accent-color);
+  --rdp-outline-selected: 2px solid rgba(0, 0, 0, 0.75);
+  margin: 1em;
+}
+
+.rdp-day_selected,
+.rdp-day_selected:focus-visible,
+.rdp-day_selected:hover {
+  color: white;
+  opacity: 1;
+  background-color: var(--rdp-accent-color);
+}
+
+.rdp-day_today {
+  font-weight: bold;
+  color: var(--rdp-accent-color);
+}
+
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: var(--rdp-background-color);
 }

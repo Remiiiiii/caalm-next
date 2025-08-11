@@ -14,6 +14,9 @@ export async function PATCH(req: NextRequest) {
       'behavioralhealth',
       'finance',
       'operations',
+      'administration',
+      'c-suite',
+      'managerial',
     ];
     let departmentValue = undefined;
     if (department !== undefined) {

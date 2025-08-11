@@ -1,11 +1,13 @@
-import DashboardHeader from "../DashboardHeader";
-import ManagerDashboard from "../ManagerDashboard";
+import ManagerDashboard from '../ManagerDashboard';
+import { getCurrentUser } from '@/lib/actions/user.actions';
+import { redirect } from 'next/navigation';
 
-export default function ManagerDashboardPage() {
-  return (
-    <>
-      <DashboardHeader />
-      <ManagerDashboard />
-    </>
-  );
+export default async function ManagerDashboardPage() {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    redirect('/sign-in');
+  }
+
+  return <ManagerDashboard />;
 }

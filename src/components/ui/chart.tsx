@@ -132,7 +132,6 @@ const ChartTooltipContent = React.forwardRef<
       labelFormatter,
       labelClassName,
       formatter,
-      color,
       nameKey,
       labelKey,
     },
@@ -194,8 +193,21 @@ const ChartTooltipContent = React.forwardRef<
         <div className="grid gap-1.5">
           {payload.map((item: Payload<ValueType, NameType>, index: number) => {
             const key = `${nameKey || item.name || item.dataKey || 'value'}`;
-            const itemConfig = getPayloadConfigFromPayload(config, item, key);
-            const indicatorColor = item.payload.fill || item.color;
+            // Recharts payloads are not strictly typed, so we use 'any' here for compatibility.
+            // This is intentional and safe in this context.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const safeItem = item as any;
+            const itemConfig = getPayloadConfigFromPayload(
+              config,
+              safeItem,
+              key
+            );
+            const indicatorColor =
+              safeItem.payload &&
+              typeof safeItem.payload === 'object' &&
+              'fill' in safeItem.payload
+                ? safeItem.payload.fill || safeItem.color
+                : safeItem.color;
 
             return (
               <div
@@ -247,13 +259,15 @@ const ChartTooltipContent = React.forwardRef<
                       <div className="grid gap-1.5">
                         {nestLabel ? tooltipLabel : null}
                         <span className="text-muted-foreground">
-                          {itemConfig?.label || item.name}
+                          {itemConfig &&
+                          'label' in itemConfig &&
+                          itemConfig.label
+                            ? itemConfig.label
+                            : safeItem.name}
                         </span>
                       </div>
-                      {item.value && (
-                        <span className="font-mono font-medium tabular-nums text-foreground">
-                          {item.value.toLocaleString()}
-                        </span>
+                      {typeof item.value === 'number' && (
+                        <ChartValueClient value={item.value} />
                       )}
                     </div>
                   </>
@@ -377,3 +391,15 @@ export {
   ChartLegendContent,
   ChartStyle,
 };
+
+function ChartValueClient({ value }: { value: number }) {
+  const [formatted, setFormatted] = React.useState<string>('');
+  React.useEffect(() => {
+    setFormatted(value.toLocaleString());
+  }, [value]);
+  return (
+    <span className="font-mono font-medium tabular-nums text-foreground">
+      {formatted || '...'}
+    </span>
+  );
+}
