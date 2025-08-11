@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import ExecutiveDashboard from '../ExecutiveDashboard';
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';

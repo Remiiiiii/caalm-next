@@ -1,7 +1,7 @@
 'use client';
 
 import AuthForm from '@/components/AuthForm';
-import React from 'react';
+import React, { Suspense } from 'react';
 
 const SignIn = () => {
   return (
@@ -18,7 +18,9 @@ const SignIn = () => {
         </div>
       </div>
 
-      <AuthForm type="sign-in" />
+      <Suspense fallback={null}>
+        <AuthForm type="sign-in" />
+      </Suspense>
     </div>
   );
 };
