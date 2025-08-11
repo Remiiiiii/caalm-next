@@ -1,5 +1,4 @@
 'use client';
-import dynamic from 'next/dynamic';
 import React, { useEffect, useMemo, useState } from 'react';
 
 interface Contract {
@@ -25,9 +24,7 @@ function daysUntil(dateISO: string): number | null {
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
-const Spline = dynamic(() => import('@splinetool/react-spline'), {
-  ssr: false,
-});
+// NOTE: Using an iframe embed for Spline to avoid package export issues on Vercel
 
 export default function ContractExpiryNotifier({
   contracts,
@@ -99,8 +96,18 @@ export default function ContractExpiryNotifier({
             background: 'transparent',
           }}
         >
-          {/* Client-only Spline render */}
-          <Spline scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode" />
+          {/* Spline iframe embed for compatibility */}
+          <iframe
+            src="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              border: 'none',
+            }}
+            title="Contract Expiry Spline"
+          />
           <div
             style={{
               position: 'absolute',
