@@ -12,3 +12,7 @@ export const databases = new Databases(client);
 export const storage = new Storage(client);
 
 export { client };
+
+// Firebase Web Push (client-side helper)
+// Note: Web push (FCM) is intentionally removed. Mobile apps will register
+// their own FCM tokens and save to Appwrite via server endpoints.

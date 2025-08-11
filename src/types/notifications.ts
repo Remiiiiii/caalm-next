@@ -1,3 +1,24 @@
+export interface NotificationSettingsDoc {
+  $id: string;
+  user_id: string;
+  email_enabled: boolean;
+  push_enabled: boolean;
+  phone_number?: string;
+  notification_types: string[];
+  frequency: 'instant' | 'daily' | 'weekly';
+  fcm_token?: string;
+}
+
+export interface UpsertNotificationSettingsRequest {
+  userId: string;
+  emailEnabled?: boolean;
+  pushEnabled?: boolean;
+  phoneNumber?: string;
+  notificationTypes?: string[];
+  frequency?: 'instant' | 'daily' | 'weekly';
+  fcmToken?: string;
+}
+
 // Enhanced Notification System Types
 
 export interface NotificationType {

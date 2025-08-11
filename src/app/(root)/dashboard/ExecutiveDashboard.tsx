@@ -1,8 +1,8 @@
 'use client';
 
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
-import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import React, { useState } from 'react';
+// import { NotificationDemoButton } from '@/components/NotificationDemoButton';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,6 +41,12 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import Avatar from '@/components/ui/avatar';
 import ClientTimestamp from '@/components/ClientTimestamp';
+import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
+import { databases } from '@/lib/appwrite/client';
+import { appwriteConfig } from '@/lib/appwrite/config';
+import { Query } from 'appwrite';
+
+type NotifierContract = { id: string; name: string; expiryDate: string };
 
 const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
@@ -183,6 +189,51 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   );
 
   // SWR handles all data fetching automatically - no manual fetch needed
+
+  // Contracts for expiry notifier
+  const [expiryContracts, setExpiryContracts] = useState<NotifierContract[]>(
+    []
+  );
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await databases.listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.contractsCollectionId,
+          [
+            Query.isNotNull('contractExpiryDate'),
+            Query.orderAsc('contractExpiryDate'),
+            Query.limit(100),
+          ]
+        );
+        if (!cancelled) {
+          type RawDoc = { $id: unknown; contractName?: unknown; name?: unknown; contractExpiryDate: unknown };
+          const items: NotifierContract[] = (res.documents || []).map((raw: RawDoc) => {
+            const id = typeof raw.$id === 'string' ? raw.$id : String(raw.$id ?? '');
+            const nm =
+              typeof raw.contractName === 'string'
+                ? raw.contractName
+                : typeof raw.name === 'string'
+                ? raw.name
+                : 'Contract';
+            const exp = typeof raw.contractExpiryDate === 'string' ? raw.contractExpiryDate : String(raw.contractExpiryDate ?? '');
+            return { id, name: nm, expiryDate: exp };
+          });
+          setExpiryContracts(items);
+        }
+      } catch {
+        // silent
+      }
+    };
+    load();
+    // re-check at midnight to keep notifier accurate without reloads
+    const timer = setInterval(load, 12 * 60 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -351,6 +402,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
   return (
     <div className="relative">
+      <ContractExpiryNotifier contracts={expiryContracts} />
       {/* Background Video */}
       <video
         autoPlay
@@ -364,7 +416,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       {/* Dashboard Header */}
       <div className="flex justify-between items-end mb-4">
         <div className="h2 font-bold sidebar-gradient-text">
-          <NotificationDemoButton />
           {getRoleDisplay(user?.role || '')}
         </div>
         <div className="text-xs text-slate-500">
@@ -937,3 +988,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 };
 
 export default ExecutiveDashboard;
+
+// Overlay notifier at root of dashboard
+// Note: Place after export if using layout; otherwise render inside JSX above.
+// Here we render inside the component tree at the top-level container.

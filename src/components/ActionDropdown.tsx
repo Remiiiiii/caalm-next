@@ -12,7 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Models } from 'node-appwrite';
+//
+import type { UIFileDoc } from '@/types/files';
 import { actionsDropdownItems, formatDepartmentName } from '../../constants';
 import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
 import Link from 'next/link';
@@ -45,13 +46,15 @@ const ActionDropdown = ({
   file,
   onStatusChange,
 }: {
-  file: Models.Document;
+  file: UIFileDoc;
   onStatusChange?: () => void;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [action, setAction] = useState<ActionType | null>(null);
-  const [name, setName] = useState(file?.name || file?.contractName || '');
+  const [name, setName] = useState<string>(
+    file?.name || file?.contractName || ''
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [emails, setEmails] = useState<string[]>([]);
 
@@ -145,7 +148,7 @@ const ActionDropdown = ({
       delete: () =>
         deleteFile({
           fileId: file.$id,
-          bucketFileId: file.bucketFileId,
+          bucketFileId: file.bucketFileId || '',
           path,
         }),
     };
@@ -422,7 +425,7 @@ const ActionDropdown = ({
             <CardFooter className="flex flex-col gap-3 md:flex-row">
               <Button
                 onClick={(e) => closeAllModals(e)}
-                className="modal-cancel-button"
+                className="primary-btn !w-full"
                 style={{ pointerEvents: 'auto' }}
               >
                 Cancel
@@ -665,7 +668,7 @@ const ActionDropdown = ({
             >
               {actionItem.value === 'download' ? (
                 <Link
-                  href={constructDownloadUrl(file.bucketFileId)}
+                  href={constructDownloadUrl(file.bucketFileId || '')}
                   download={file.name || file.contractName}
                   className="flex items-center gap-2"
                   onClick={(e) => e.stopPropagation()}
@@ -702,11 +705,14 @@ const ActionDropdown = ({
             id: file.$id,
             name: file.name || file.contractName || '',
             type: file.extension || 'pdf',
-            size: file.size || 'Unknown',
+            size: String(file.size ?? 'Unknown'),
             url: constructFileUrl(file.bucketFileId),
             createdAt: file.$createdAt,
             expiresAt: file.contractExpiryDate,
-            createdBy: file.owner || 'Unknown',
+            createdBy:
+              typeof file.owner === 'string'
+                ? file.owner
+                : file.owner?.fullName || 'Unknown',
             description: file.description || '',
           }}
         />

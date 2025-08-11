@@ -1,23 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Bell, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const NotificationSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    contractUpdates: true,
-    licenseExpiry: true,
-    taskAssignments: true,
-    systemAlerts: false,
-    weeklyReports: true,
+    emailNotifications: false,
+    pushNotifications: false,
+    weeklyReports: false,
   });
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleToggle = (key: string) => {
     setNotifications((prev) => ({
@@ -26,11 +25,40 @@ const NotificationSettings = () => {
     }));
   };
 
+  useEffect(() => {
+    const load = async () => {
+      if (!user?.$id) return;
+      try {
+        const res = await fetch(
+          `/api/notification-settings?userId=${user.$id}`
+        );
+        const { data } = await res.json();
+        if (data) {
+          setNotifications((prev) => ({
+            ...prev,
+            emailNotifications: !!data.email_enabled,
+            pushNotifications: !!data.push_enabled,
+            weeklyReports: data.frequency === 'weekly',
+          }));
+        }
+      } catch {}
+    };
+    load();
+  }, [user?.$id]);
+
   const handleSave = async () => {
     try {
       setIsLoading(true);
-      // TODO: Implement notification settings update logic with Appwrite
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+      await fetch('/api/notification-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.$id,
+          emailEnabled: notifications.emailNotifications,
+          pushEnabled: notifications.pushNotifications,
+          frequency: notifications.weeklyReports ? 'weekly' : 'instant',
+        }),
+      });
 
       toast({
         title: 'Settings Saved',
@@ -74,53 +102,14 @@ const NotificationSettings = () => {
 
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label className="text-sm text-light-200">Contract Updates</Label>
+            <Label className="text-sm text-light-200">Push Notifications</Label>
             <p className="text-xs text-light-200">
-              Get notified about contract changes
+              Enable browser push notifications
             </p>
           </div>
           <Switch
-            checked={notifications.contractUpdates}
-            onCheckedChange={() => handleToggle('contractUpdates')}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label className="text-sm text-light-200">License Expiry</Label>
-            <p className="text-xs text-light-200">
-              Reminders for expiring licenses
-            </p>
-          </div>
-          <Switch
-            checked={notifications.licenseExpiry}
-            onCheckedChange={() => handleToggle('licenseExpiry')}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label className="text-sm text-light-200">Task Assignments</Label>
-            <p className="text-xs text-light-200">
-              Notifications for new task assignments
-            </p>
-          </div>
-          <Switch
-            checked={notifications.taskAssignments}
-            onCheckedChange={() => handleToggle('taskAssignments')}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label className="text-sm text-light-200">System Alerts</Label>
-            <p className="text-xs text-light-200">
-              Important system maintenance alerts
-            </p>
-          </div>
-          <Switch
-            checked={notifications.systemAlerts}
-            onCheckedChange={() => handleToggle('systemAlerts')}
+            checked={notifications.pushNotifications}
+            onCheckedChange={() => handleToggle('pushNotifications')}
           />
         </div>
 

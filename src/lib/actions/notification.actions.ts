@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Query } from 'node-appwrite';
 import { formatDepartmentName, type Department } from '../../../constants';
+import { notificationService } from '@/lib/services/notificationService';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
@@ -39,6 +40,19 @@ export const createNotification = async ({
         read,
       }
     );
+    // Attempt FCM send if user has a token saved
+    try {
+      const settings = await notificationService.getNotificationSettings(
+        userId
+      );
+      if (settings?.fcm_token) {
+        // TODO: Replace with your server-side FCM send implementation
+        // This is a placeholder hook where you would enqueue/send via Firebase Admin SDK
+        console.log('Would send FCM to token:', settings.fcm_token);
+      }
+    } catch (e) {
+      console.warn('FCM send skipped:', e);
+    }
     return notification;
   } catch (error) {
     handleError(error, 'Failed to create notification');

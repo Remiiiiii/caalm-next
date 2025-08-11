@@ -40,9 +40,17 @@ export const appwriteConfig = {
     process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_TYPES_COLLECTION ||
     'notification_types',
 
+  notificationSettingsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_SETTINGS_COLLECTION ||
+    'notification_settings',
+
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET || '685edb60000bb7a088a2',
 
   secretKey: process.env.NEXT_APPWRITE_KEY || '',
 
   govApiKey: process.env.GOV_API_KEY || '',
+
+  // Firebase (for native mobile push) – optional client hints
+  firebaseApiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+  firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
 };

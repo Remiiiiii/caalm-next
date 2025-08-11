@@ -9,6 +9,8 @@ import {
   NotificationFilters,
   NotificationSort,
   NotificationsResponse,
+  NotificationSettingsDoc,
+  UpsertNotificationSettingsRequest,
 } from '@/types/notifications';
 import { Query } from 'appwrite';
 
@@ -492,6 +494,65 @@ class NotificationService {
     } catch (error) {
       console.error('Failed to get recent notifications:', error);
       throw new Error('Failed to get recent notifications');
+    }
+  }
+
+  // Notification Settings
+  async getNotificationSettings(
+    userId: string
+  ): Promise<NotificationSettingsDoc | null> {
+    try {
+      const { databases } = await this.getClient();
+      const response = await databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.notificationSettingsCollectionId,
+        [Query.equal('user_id', userId), Query.limit(1)]
+      );
+      return (
+        (response.documents[0] as unknown as NotificationSettingsDoc) || null
+      );
+    } catch (error) {
+      console.error('Failed to get notification settings:', error);
+      throw new Error('Failed to get notification settings');
+    }
+  }
+
+  async upsertNotificationSettings(
+    payload: UpsertNotificationSettingsRequest
+  ): Promise<NotificationSettingsDoc> {
+    try {
+      const { databases } = await this.getClient();
+      const existing = await this.getNotificationSettings(payload.userId);
+
+      const doc = {
+        user_id: payload.userId,
+        email_enabled: payload.emailEnabled ?? existing?.email_enabled ?? false,
+        push_enabled: payload.pushEnabled ?? existing?.push_enabled ?? false,
+        phone_number: payload.phoneNumber ?? existing?.phone_number,
+        notification_types:
+          payload.notificationTypes ?? existing?.notification_types ?? [],
+        frequency: payload.frequency ?? existing?.frequency ?? 'instant',
+        fcm_token: payload.fcmToken ?? existing?.fcm_token,
+      };
+
+      const response = existing
+        ? await databases.updateDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.notificationSettingsCollectionId,
+            existing.$id,
+            doc
+          )
+        : await databases.createDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.notificationSettingsCollectionId,
+            'unique()',
+            doc
+          );
+
+      return response as unknown as NotificationSettingsDoc;
+    } catch (error) {
+      console.error('Failed to upsert notification settings:', error);
+      throw new Error('Failed to upsert notification settings');
     }
   }
 }

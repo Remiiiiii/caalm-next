@@ -22,7 +22,6 @@ import {
   Bell,
   Settings,
   Mail,
-  Smartphone,
   Clock,
   Shield,
   Calendar,
@@ -35,6 +34,10 @@ import {
   Info,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { appwriteConfig } from '@/lib/appwrite/config';
+import { client } from '@/lib/appwrite/client';
+import { RealtimeResponseEvent } from 'appwrite';
 
 interface NotificationSettingsProps {
   open: boolean;
@@ -126,8 +129,8 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
   const [saving, setSaving] = useState(false);
   const [globalSettings, setGlobalSettings] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
+    emailNotifications: false,
+    pushNotifications: false,
     inAppNotifications: true,
     quietHours: false,
     quietHoursStart: '22:00',
@@ -135,23 +138,88 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     digestFrequency: 'daily',
     maxNotificationsPerDay: 50,
   });
+  const { user } = useAuth();
   const { toast } = useToast();
+  // Push notifications removed
 
-  // Initialize preferences
+  // Load settings from API on open
   useEffect(() => {
-    if (open) {
-      const defaultPreferences: NotificationPreference[] = Object.entries(
-        NOTIFICATION_TYPES
-      ).map(([type, config]) => ({
-        type,
-        email: true,
-        push: true,
-        inApp: true,
-        priority: config.defaultPriority,
-      }));
-      setPreferences(defaultPreferences);
-    }
-  }, [open]);
+    if (!open || !user?.$id) return;
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const res = await fetch(
+          `/api/notification-settings?userId=${user.$id}`,
+          {
+            signal: controller.signal,
+          }
+        );
+        const { data } = await res.json();
+        let defaultPreferences: NotificationPreference[] = Object.entries(
+          NOTIFICATION_TYPES
+        ).map(([type, config]) => ({
+          type,
+          email: false,
+          push: false,
+          inApp: true,
+          priority: config.defaultPriority,
+        }));
+        if (data?.notification_types?.length) {
+          const enabled = new Set<string>(data.notification_types);
+          defaultPreferences = defaultPreferences.map((pref) => ({
+            ...pref,
+            email: enabled.has(pref.type),
+            push: enabled.has(pref.type),
+          }));
+        }
+        setPreferences(defaultPreferences);
+        if (data) {
+          setGlobalSettings((prev) => ({
+            ...prev,
+            emailNotifications: !!data.email_enabled,
+            pushNotifications: !!data.push_enabled,
+            digestFrequency: (data.frequency as string) || 'daily',
+          }));
+        }
+      } catch {
+        // noop
+      }
+    };
+    load();
+    return () => controller.abort();
+  }, [open, user?.$id]);
+
+  // Realtime updates
+  useEffect(() => {
+    if (!open || !user?.$id) return;
+    const sub = client.subscribe(
+      `databases.${appwriteConfig.databaseId}.collections.${appwriteConfig.notificationSettingsCollectionId}.documents`,
+      (event: RealtimeResponseEvent<Record<string, unknown>>) => {
+        const payload = event.payload as Record<string, unknown> & {
+          user_id?: string;
+          email_enabled?: boolean;
+          push_enabled?: boolean;
+          frequency?: string;
+          phone_number?: string;
+        };
+        if (payload.user_id === user.$id) {
+          setGlobalSettings((prev) => ({
+            ...prev,
+            emailNotifications: !!payload.email_enabled,
+            pushNotifications: !!payload.push_enabled,
+            digestFrequency:
+              (payload.frequency as string) || prev.digestFrequency,
+          }));
+          // phone number is retained in DB; UI entry removed
+        }
+      }
+    );
+    return () => {
+      try {
+        sub();
+      } catch {}
+    };
+  }, [open, user?.$id]);
 
   const handlePreferenceChange = (
     type: string,
@@ -175,9 +243,25 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   const saveSettings = async () => {
     setSaving(true);
     try {
-      // Here you would typically save to your backend
-      // For now, we'll just simulate a save
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const res = await fetch('/api/notification-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.$id,
+          emailEnabled: globalSettings.emailNotifications,
+          pushEnabled: globalSettings.pushNotifications,
+          // phoneNumber removed from UI; use stored DB value if needed
+          phoneNumber: undefined,
+          notificationTypes: preferences
+            .filter((p) => p.email || p.push || p.inApp)
+            .map((p) => p.type),
+          frequency: globalSettings.digestFrequency as
+            | 'daily'
+            | 'weekly'
+            | 'instant',
+        }),
+      });
+      if (!res.ok) throw new Error('Save failed');
 
       toast({
         title: 'Settings Saved',
@@ -243,7 +327,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-5">
                   <Label className="flex items-center gap-2">
                     <Mail className="w-4 h-4" />
                     Email Notifications
@@ -256,20 +340,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
-                    <Smartphone className="w-4 h-4" />
-                    Push Notifications
-                  </Label>
-                  <Switch
-                    checked={globalSettings.pushNotifications}
-                    onCheckedChange={(checked) =>
-                      handleGlobalSettingChange('pushNotifications', checked)
-                    }
-                  />
-                </div>
+                {/* Push Notifications removed */}
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <Label className="flex items-center gap-2">
                     <Bell className="w-4 h-4" />
                     In-App Notifications
@@ -284,7 +357,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <Label className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Quiet Hours
@@ -342,8 +415,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="realtime">Real-time</SelectItem>
-                      <SelectItem value="hourly">Hourly</SelectItem>
+                      <SelectItem value="instant">Instant</SelectItem>
                       <SelectItem value="daily">Daily</SelectItem>
                       <SelectItem value="weekly">Weekly</SelectItem>
                     </SelectContent>
@@ -405,25 +477,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                         </Label>
                       </div>
 
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`${preference.type}-push`}
-                          checked={preference.push}
-                          onCheckedChange={(checked) =>
-                            handlePreferenceChange(
-                              preference.type,
-                              'push',
-                              checked
-                            )
-                          }
-                        />
-                        <Label
-                          htmlFor={`${preference.type}-push`}
-                          className="text-sm"
-                        >
-                          Push
-                        </Label>
-                      </div>
+                      {/* Push channel removed */}
 
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -499,6 +553,8 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             </Button>
           </div>
         </div>
+
+        {/* Phone dialog removed */}
       </DialogContent>
     </Dialog>
   );

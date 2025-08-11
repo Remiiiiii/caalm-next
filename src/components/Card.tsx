@@ -40,8 +40,10 @@ const statusBadge = (status: string) => {
   return <span className={`inline-block px-2 py-1 ${color}`}>{label}</span>;
 };
 
+import type { UIFileDoc } from '@/types/files';
+
 interface CardProps {
-  file: Models.Document;
+  file: UIFileDoc;
   status?: string;
   expirationDate?: string;
 }
@@ -122,7 +124,8 @@ const Card = ({ file, status, expirationDate }: CardProps) => {
           )}
         </div>
         <p className="caption line-clamp-1 text-light-200">
-          By: {file.owner.fullName}
+          By:{' '}
+          {typeof file.owner === 'string' ? file.owner : file.owner.fullName}
         </p>
       </div>
     </div>
