@@ -46,6 +46,7 @@ export default function Logo() {
             width={52}
             height={52}
             priority
+            sizes="52px"
           />
         </div>
       </div>

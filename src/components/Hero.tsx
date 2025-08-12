@@ -32,7 +32,7 @@ const Hero = () => {
       ref={ref}
       className={`transition-opacity duration-700 ${
         visible ? 'opacity-100' : 'opacity-0'
-      } relative flex flex-col md:flex-row items-center justify-between py-4 px-4 bg-gradient-to-b from-white to-blue-50 overflow-hidden`}
+      } relative flex flex-col md:flex-row items-center justify-between py-10 md:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-blue-50 overflow-hidden`}
     >
       {/* Subtle grid background */}
       <div
@@ -43,21 +43,28 @@ const Hero = () => {
           backgroundSize: '40px 40px',
         }}
       />
-      <div className="max-w-7xl ml-12 mt-20">
+      <div className="max-w-7xl w-full ml-12 mx-auto mt-10 md:mt-20">
         <div className="flex flex-col md:flex-row items-center justify-between">
           {/* Left: Text, Buttons, Testimonial */}
-          <div className="relative z-10 flex-1 flex flex-col gap-2">
+          <div className="relative z-10 flex-1 flex flex-col gap-2 px-2 sm:px-0">
             <h1
-              className="text-base md:text-[2.25em]  mb-4 leading-tight sidebar-gradient-text"
+              className="text-2xl sm:text-3xl md:text-[2.25em] mb-1leading-tight sidebar-gradient-text"
               style={{
                 backgroundImage:
                   'linear-gradient(to right, #00C1CB, #078FAB, #0E638F, #11487D, #162768)',
               }}
             >
-              Track Compliance, Users, and Contract Activity
+              Track Compliance, Users,
+            </h1>
+            <h1 className="text-2xl sm:text-3xl md:text-[2.25em] mb-4 leading-tight sidebar-gradient-text">
+              and Contract Activity
             </h1>
             {/* Crossfade paragraphs */}
-            <div className="mt-1 relative h-16 max-w-full mb-2 sm:mb-4 text-slate-700">
+            <div
+              className="mt-1 relative h-16 max-w-full mb-2 sm:mb-4 text-slate-700"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               <p
                 className={`absolute inset-0 transition-opacity duration-700 ${
                   crossfadeIndex === 0
@@ -92,42 +99,52 @@ const Hero = () => {
             {/* Original styled buttons with arrows and hover arrow animation */}
 
             {/* Avatars and rating */}
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-3">
               <div className="flex -space-x-2">
                 <Image
                   src="/assets/images/1.png"
-                  alt="avatar"
+                  alt=""
                   width={32}
                   height={32}
                   className="rounded-full border-2 border-white"
+                  sizes="(max-width: 640px) 28px, 32px"
+                  aria-hidden
                 />
                 <Image
                   src="/assets/images/2.png"
-                  alt="avatar"
+                  alt=""
                   width={32}
                   height={32}
                   className="rounded-full border-2 border-white"
+                  sizes="(max-width: 640px) 28px, 32px"
+                  aria-hidden
                 />
                 <Image
                   src="/assets/images/3.png"
-                  alt="avatar"
+                  alt=""
                   width={32}
                   height={32}
                   className="rounded-full border-2 border-white"
+                  sizes="(max-width: 640px) 28px, 32px"
+                  aria-hidden
                 />
                 <Image
                   src="/assets/images/4.png"
-                  alt="avatar"
+                  alt=""
                   width={32}
                   height={32}
                   className="rounded-full border-2 border-white"
+                  sizes="(max-width: 640px) 28px, 32px"
+                  aria-hidden
                 />
                 <Image
                   src="/assets/images/5.png"
-                  alt="avatar"
+                  alt=""
                   width={32}
                   height={32}
                   className="rounded-full border-2 border-white"
+                  sizes="(max-width: 640px) 28px, 32px"
+                  aria-hidden
                 />
               </div>
               <span className="ml-2 text-yellow-500 text-lg">★★★★★</span>
@@ -150,6 +167,8 @@ const Hero = () => {
                   width={32}
                   height={32}
                   className="rounded-full"
+                  loading="lazy"
+                  sizes="32px"
                 />
                 <div>
                   <div className="text-blue-900 font-semibold text-sm">
@@ -172,6 +191,7 @@ const Hero = () => {
               className="rounded-xl shadow-xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-90 pointer-events-none"
               priority
               fetchPriority="high"
+              sizes="(max-width: 640px) 320px, (max-width: 1024px) 360px, 400px"
             />
           </div>
         </div>

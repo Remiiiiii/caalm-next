@@ -18,8 +18,8 @@ export default function HomePage() {
       <main>
         <HeroIntro />
         <Hero />
-        <BrandMarquee />
         <FeaturesDynamic />
+        <BrandMarquee />
         <ProblemSolutionDynamic />
         <CTADynamic />
       </main>

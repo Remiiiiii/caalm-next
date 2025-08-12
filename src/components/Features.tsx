@@ -4,6 +4,8 @@ import { useInView } from 'react-intersection-observer';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { features } from '../../constants';
+import { CloudCog } from 'lucide-react';
+import SectionDivider2 from './SectionDivider2';
 
 const Features = () => {
   const { ref, inView } = useInView({
@@ -46,10 +48,20 @@ const Features = () => {
       />
       <div className="max-w-7xl mx-auto mt-[50px] relative z-10">
         <div className="text-center mb-10 sm:mb-14 md:mb-16">
-          <h2 className="text-2xl md:text-[3.5em] font-bold text-center mb-4 leading-tight bg-gradient-to-r from-[#059BB2] via-[#00C1CB] to-[#162768] bg-clip-text text-transparent">
+          <div className="mb-4 flex justify-center">
+            <div className="inline-flex mb-6 items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF]  px-3 py-1 shadow-sm">
+              <span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
+                <CloudCog className="h-3.5 w-3.5 text-slate-700" />
+              </span>
+              <span className="text-slate-700 text-sm">
+                Effortless Automation & Deployment
+              </span>
+            </div>
+          </div>
+          <h2 className="text-2xl sm:text-3xl md:text-[2.75em] text-center mb-4 leading-tight sidebar-gradient-text">
             Powerful Features for Complete Control
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-slate-700 max-w-2xl sm:max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-md text-slate-700 max-w-2xl sm:max-w-3xl mx-auto">
             Everything you need to streamline compliance, reduce risk, and
             safeguard your organization&apos;s critical agreements.
           </p>
@@ -85,6 +97,7 @@ const Features = () => {
             );
           })}
         </div>
+        <SectionDivider2 />
       </div>
     </section>
   );

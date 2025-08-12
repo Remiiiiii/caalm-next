@@ -48,15 +48,29 @@ const HeroIntro = () => {
   const [showA, setShowA] = useState(true);
   const [fade, setFade] = useState(false);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
-    const video = document.createElement('video');
-    video.src = VIDEO_SRC;
-    video.onloadedmetadata = () => setVideoDuration(video.duration);
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotionPreference = () =>
+      setPrefersReducedMotion(mediaQuery.matches);
+    updateMotionPreference();
+    mediaQuery.addEventListener('change', updateMotionPreference);
+
+    if (!mediaQuery.matches) {
+      const video = document.createElement('video');
+      video.src = VIDEO_SRC;
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => setVideoDuration(video.duration);
+    }
+
+    return () =>
+      mediaQuery.removeEventListener('change', updateMotionPreference);
   }, []);
 
   useEffect(() => {
     if (!videoDuration) return;
+    if (prefersReducedMotion) return;
     let fadeTimeout: NodeJS.Timeout;
     let loopTimeout: NodeJS.Timeout;
 
@@ -85,11 +99,11 @@ const HeroIntro = () => {
       clearTimeout(fadeTimeout);
       clearTimeout(loopTimeout);
     };
-  }, [showA, videoDuration]);
+  }, [showA, videoDuration, prefersReducedMotion]);
 
   return (
-    <section className="relative flex flex-col items-center justify-center pt-20 pb-8 bg-gradient-to-b from.white to-blue-50 overflow-hidden">
-      {videoDuration !== null && (
+    <section className="relative flex flex-col items-center justify-center pt-20 pb-8 bg-gradient-to-b from-white to-blue-50 overflow-hidden">
+      {videoDuration !== null && !prefersReducedMotion && (
         <>
           <video
             ref={videoA}
@@ -98,6 +112,7 @@ const HeroIntro = () => {
             muted
             loop={false}
             playsInline
+            preload="metadata"
             className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity"
             style={{
               opacity: showA ? 1 : fade ? 0.5 : 0,
@@ -112,6 +127,7 @@ const HeroIntro = () => {
             muted
             loop={false}
             playsInline
+            preload="metadata"
             className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity"
             style={{
               opacity: !showA ? 1 : fade ? 0.5 : 0,
@@ -141,12 +157,12 @@ const HeroIntro = () => {
         <Logo />
       </div>
       <div className="relative z-30 w-full flex flex-col items-center mt-5">
-        <h1 className="text-base md:text-[2.25em] text-center mb-4 leading-tight sidebar-gradient-text">
+        <h1 className="text-base md:text-[2.75em] text-center mb-4 leading-tight sidebar-gradient-text">
           Centralize Contracts Audits and Licenses
         </h1>
-        <h1 className="text-base md:text-[2.75em] text-center mb-4 leading-tight sidebar-gradient-text">
+        <h2 className="text-base md:text-[2.75em] text-center mb-4 leading-tight sidebar-gradient-text">
           Powered by AI
-        </h1>
+        </h2>
         <p className="text-lg md:text-md text-slate-600 text-center mx-auto">
           Your journey to data management and compliance starts here
         </p>
