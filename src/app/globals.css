@@ -491,6 +491,12 @@
   .thumbnail-image {
     @apply size-full object-cover object-center !important;
   }
+
+  /* Logo */
+  .logo {
+    /* Tailwind utilities */
+    @apply rounded-[10px] box-border w-min h-min flex flex-row justify-center items-center p-4 overflow-visible content-center flex-nowrap gap-[10px] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] pointer-events-auto !important;
+  }
 }
 
 @layer base {

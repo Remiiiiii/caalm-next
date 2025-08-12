@@ -1,89 +1,43 @@
 'use client';
 
-import { useAnimationFrame } from 'framer-motion';
+// import { useAnimationFrame } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
-import {
-  Database,
-  Bell,
-  GitBranch,
-  BarChart3,
-  Lock,
-  Calendar,
-  FileCheck,
-  Users2,
-} from 'lucide-react';
+// import {
+//   Database,
+//   Bell,
+//   GitBranch,
+//   BarChart3,
+//   Lock,
+//   Calendar,
+//   FileCheck,
+//   Users2,
+// } from 'lucide-react';
+import Logo from './Logo';
+import SectionDivider from './SectionDivider';
+import TrustedBrands from './TrustedBrands';
+import { ArrowRight } from 'lucide-react';
 
-const features = [
-  { icon: Database },
-  { icon: Bell },
-  { icon: GitBranch },
-  { icon: BarChart3 },
-  { icon: Lock },
-  { icon: Calendar },
-  { icon: FileCheck },
-  { icon: Users2 },
-];
+// const features = [
+//   { icon: Database },
+//   { icon: Bell },
+//   { icon: GitBranch },
+//   { icon: BarChart3 },
+//   { icon: Lock },
+//   { icon: Calendar },
+//   { icon: FileCheck },
+//   { icon: Users2 },
+// ];
 
-const NUM_BLOCKS = 8;
-const RADIUS_X = 400;
-const RADIUS_Y = 110;
-const CODE_NUMBERS = [9, 10, 11, 12, 13, 14, 15, 16];
+// const NUM_BLOCKS = 8;
+// const RADIUS_X = 400;
+// const RADIUS_Y = 110;
+// const CODE_NUMBERS = [9, 10, 11, 12, 13, 14, 15, 16];
 
-function OrbitingBlocks() {
-  const [now, setNow] = useState(0);
-  useAnimationFrame((t) => setNow(t));
-
-  return (
-    <div className="absolute inset-0 pointer-events-none mb-20">
-      <div
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: `calc(50% - ${RADIUS_Y}px)`,
-          transform: 'translate(-50%, -50%)',
-          zIndex: 100,
-          pointerEvents: 'none',
-        }}
-      />
-      {CODE_NUMBERS.map((num, i) => {
-        const baseAngle = (360 / NUM_BLOCKS) * i;
-        const angle = ((baseAngle - now * 0.018) * Math.PI) / 180;
-        const minScale = 0.6;
-        const maxScale = 1.2;
-        const scale =
-          minScale + ((maxScale - minScale) * (1 + Math.sin(angle))) / 2;
-        const x = Math.cos(angle) * RADIUS_X;
-        const y = Math.sin(angle) * RADIUS_Y;
-        const t = (y + RADIUS_Y) / (2 * RADIUS_Y);
-        const opacity = 0.6 + 0.4 * t;
-        const zIndex = Math.round(10 + 10 * t);
-
-        const Icon = features[i].icon;
-        return (
-          <div
-            key={num}
-            style={{
-              position: 'absolute',
-              left: `calc(50% + ${x}px)`,
-              top: `calc(50% + ${y}px)`,
-              transform: `translate(-50%, -50%) scale(${scale})`,
-              opacity,
-              zIndex,
-              pointerEvents: 'none',
-            }}
-          >
-            <div className="orbit-animated-border w-[70px] h-[70px]">
-              <Icon
-                className="orbit-3d w-full h-full p-4 rounded-2xl shadow-xl border border-slate-200 text-[#059BB2] ring-2 ring-cyan-100/40 orbiting-icon"
-                style={{ willChange: 'transform' }}
-              />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// function OrbitingBlocks() {
+//   const [now, setNow] = useState(0);
+//   useAnimationFrame((t) => setNow(t));
+//   return null;
+// }
 
 const VIDEO_SRC = '/assets/video/wave.mp4';
 const FADE_DURATION = 1500;
@@ -175,18 +129,43 @@ const HeroIntro = () => {
           backgroundSize: '40px 40px',
         }}
       />
-      <div className="mb-8 flex items-center justify-center relative w-[340px] h-[340px] sm:w-[420px] sm:h-[420px] md:w-[500px] md:h-[500px] z-10">
-        <OrbitingBlocks />
+      {/* Divider directly below the fixed header */}
+      <div className="relative z-20 w-full mt-5">
+        <SectionDivider />
       </div>
-      <div className="relative z-30 w-full flex flex-col items-center">
-        <h1 className="text-2xl md:text-[3.5em] font-bold text-center mb-4 leading-tight bg-gradient-to-r from-[#059BB2] via-[#00C1CB] to-[#162768] bg-clip-text text-transparent">
-          Centralize
-          <br />
-          Contracts Audits and Licenses
+      <div className="relative z-20 w-full mt-6">
+        <TrustedBrands />
+      </div>
+      <div className="mt-24 mb-24 flex items-center justify-center relative z-10">
+        {/* <OrbitingBlocks /> */}
+        <Logo />
+      </div>
+      <div className="relative z-30 w-full flex flex-col items-center mt-5">
+        <h1 className="text-base md:text-[2.25em] text-center mb-4 leading-tight sidebar-gradient-text">
+          Centralize Contracts Audits and Licenses
         </h1>
-        <p className="text-lg md:text-xl text-slate-600 text-center mx-auto">
+        <h1 className="text-base md:text-[2.75em] text-center mb-4 leading-tight sidebar-gradient-text">
+          Powered by AI
+        </h1>
+        <p className="text-lg md:text-md text-slate-600 text-center mx-auto">
           Your journey to data management and compliance starts here
         </p>
+        <div className="mt-10 flex justify-center sm:flex-row gap-3 sm:gap-4 w-full max-w-xs sm:max-w-none mx-auto">
+          <button
+            className="group bg-gradient-to-r from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] hover:from-[#162768] hover:via-[#11487D] hover:via-[#0E638F] hover:via-[#078FAB] hover:to-[#00C1CB] text-white  rounded-full shadow-md px-4 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center"
+            style={{ fontSize: '1rem' }}
+          >
+            Get Started
+            <ArrowRight className="ml-2 h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1.5" />
+          </button>
+          <button
+            className="group bg-gradient-to-r from-slate-500 to-slate-700 hover:from-slate-700 hover:to-slate-500 text-white rounded-full shadow-md px-4 py-2 sm:px-8 transition-all duration-200 hover:text-white w-full sm:w-auto flex items-center justify-center"
+            style={{ fontSize: '1rem' }}
+          >
+            Schedule Demo
+            <ArrowRight className="ml-2 h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1.5" />
+          </button>
+        </div>
       </div>
       <div
         className="pointer-events-none absolute left-0 right-0 bottom-0 h-[48px] z-20"

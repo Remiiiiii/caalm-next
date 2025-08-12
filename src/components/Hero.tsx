@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useInView } from 'react-intersection-observer';
 import { useEffect, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
 // import Spline from '@splinetool/react-spline';
 
 const Hero = () => {
@@ -44,12 +43,12 @@ const Hero = () => {
           backgroundSize: '40px 40px',
         }}
       />
-      <div className="max-w-7xl ml-12">
+      <div className="max-w-7xl ml-12 mt-20">
         <div className="flex flex-col md:flex-row items-center justify-between">
           {/* Left: Text, Buttons, Testimonial */}
-          <div className="relative z-10 flex-1 flex flex-col gap-6">
+          <div className="relative z-10 flex-1 flex flex-col gap-2">
             <h1
-              className="text-4xl md:text-6xl font-bold leading-tight mt-20 bg-gradient-to-r bg-clip-text text-transparent"
+              className="text-base md:text-[2.25em]  mb-4 leading-tight sidebar-gradient-text"
               style={{
                 backgroundImage:
                   'linear-gradient(to right, #00C1CB, #078FAB, #0E638F, #11487D, #162768)',
@@ -58,7 +57,7 @@ const Hero = () => {
               Track Compliance, Users, and Contract Activity
             </h1>
             {/* Crossfade paragraphs */}
-            <div className="mt-4 relative h-16 max-w-full mb-2 sm:mb-4 text-slate-700">
+            <div className="mt-1 relative h-16 max-w-full mb-2 sm:mb-4 text-slate-700">
               <p
                 className={`absolute inset-0 transition-opacity duration-700 ${
                   crossfadeIndex === 0
@@ -91,24 +90,9 @@ const Hero = () => {
               </p>
             </div>
             {/* Original styled buttons with arrows and hover arrow animation */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-xs sm:max-w-none mx-auto">
-              <button
-                className="group bg-gradient-to-r from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] hover:from-[#162768] hover:via-[#11487D] hover:via-[#0E638F] hover:via-[#078FAB] hover:to-[#00C1CB] text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center"
-                style={{ fontSize: '1.125rem' }}
-              >
-                Start Free Trial
-                <ArrowRight className="ml-2 h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1.5" />
-              </button>
-              <button
-                className="group bg-gradient-to-r from-slate-500 to-slate-700 hover:from-slate-700 hover:to-slate-500 text-white font-semibold rounded-full shadow-md px-6 py-2 sm:px-8 transition-all duration-200 hover:text-white w-full sm:w-auto flex items-center justify-center"
-                style={{ fontSize: '1.125rem' }}
-              >
-                Schedule Demo
-                <ArrowRight className="ml-2 h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1.5" />
-              </button>
-            </div>
+
             {/* Avatars and rating */}
-            <div className="flex items-center gap-2 mt-6">
+            <div className="flex items-center gap-2 mt-1">
               <div className="flex -space-x-2">
                 <Image
                   src="/assets/images/1.png"

@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import OrbitingBlocks from '@/components/OrbitingBlocks';
+// import OrbitingBlocks from '@/components/OrbitingBlocks';
 
 import CountUp from '@/components/CountUp';
 
@@ -49,7 +49,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                 </p>
               </div>
 
-              {/* Spline Component with OrbitingBlocks */}
+              {/* Spline Component */}
               <div className="relative mt-[-30px] mb-10">
                 <iframe
                   src="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
@@ -57,7 +57,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                   style={{ border: 'none' }}
                   title="Auth Spline"
                 />
-                <OrbitingBlocks />
+                {/* <OrbitingBlocks /> */}
               </div>
               <div className="flex items-center gap-2 mt-6 justify-center ">
                 <div className="flex -space-x-2">

@@ -3,38 +3,68 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import clsx from 'clsx';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef(null);
-  const { scrollY } = useScroll();
+  // Brute-force: Toggle a boolean once scrollTop >= 64, animate via variants
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el =
+      (document.querySelector('.main-content') as HTMLElement) || window;
+    let raf = 0;
+    const readScroll = () => {
+      const top =
+        el instanceof Window
+          ? window.scrollY || document.documentElement.scrollTop || 0
+          : el.scrollTop || 0;
+      setScrolled(top >= 64);
+    };
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(readScroll);
+    };
+    readScroll();
+    el.addEventListener('scroll', onScroll, { passive: true } as any);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener('scroll', onScroll as any);
+    };
+  }, []);
 
-  // Animate only after 64px scroll
-  const width = useTransform(scrollY, [0, 64], ['100%', '70%']);
-  const borderRadius = useTransform(scrollY, [0, 64], [0, 24]);
-  const margin = useTransform(scrollY, [0, 64], ['0px', '16px auto']);
-  const boxShadow = useTransform(
-    scrollY,
-    [0, 64],
-    [
-      'none',
-      '0 4px 32px 0 rgba(16,30,54,0.10), 0 1.5px 4px 0 rgba(16,30,54,0.03)',
-    ]
-  );
-  const background = useTransform(
-    scrollY,
-    [0, 64],
-    ['rgba(255,255,255,0.85)', 'rgba(255,255,255,0.65)']
-  );
+  const wrapperVariants = {
+    // Opposite mapping:
+    // - At top (no scroll) show solid, rounded pill (Image 1)
+    // - After threshold show minimal transparent bar (Image 2)
+    top: {
+      width: '70%',
+      height: 70,
+      borderRadius: 24,
+      marginTop: 16,
+      boxShadow:
+        '0 4px 32px 0 rgba(16,30,54,0.10), 0 1.5px 4px 0 rgba(16,30,54,0.03)',
+      background: 'rgba(255,255,255,0.85)',
+      border: '1px solid rgba(200,200,200,0.18)',
+      transition: { type: 'spring', stiffness: 260, damping: 28 },
+    },
+    scrolled: {
+      width: '100%',
+      height: 70,
+      borderRadius: 0,
+      marginTop: 0,
+      boxShadow: 'none',
+      background: 'transparent',
+      border: '1px solid transparent',
+      transition: { type: 'spring', stiffness: 260, damping: 28 },
+    },
+  } as const;
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     (async () => {
       const AOS = (await import('aos')).default;
-      await import('aos/dist/aos.css');
       AOS.init({ duration: 1500, once: true });
       cleanup = () => AOS.refreshHard();
     })();
@@ -59,78 +89,63 @@ export const Header = () => {
     <motion.header
       ref={headerRef}
       style={{
-        width,
-        borderRadius,
-        margin,
-        boxShadow,
-        background,
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         zIndex: 50,
-        height: 72,
-        border: '1px solid rgba(200,200,200,0.18)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 2rem',
-        transition: 'all 0.3s cubic-bezier(.4,0,.2,1)',
+        background: 'transparent',
       }}
-      className="transition-all duration-500"
     >
-      <div
-        className={clsx(
-          'flex items-center justify-between w-full px-3 sm:px-4 md:px-6 transition-all duration-500 container mx-auto'
-          // hasScrolled ? 'h-14 sm:h-16' : 'h-16 sm:h-20' // Removed hasScrolled
-        )}
+      <motion.div
+        variants={wrapperVariants}
+        initial={false}
+        animate={scrolled ? 'scrolled' : 'top'}
+        style={{
+          marginLeft: 'auto',
+          marginRight: 'auto',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(200,200,200,0.18)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 2rem',
+        }}
+        className="transition-all duration-500"
       >
         <div className="flex items-center ">
           <Image
             src="/assets/images/logo.svg"
             alt="Logo"
-            width={50}
-            height={50}
+            width={40}
+            height={40}
           />
           <span className="ml-1 text-2xl sm:text-xl font-bold text-slate-700">
             Caalm
           </span>
         </div>
-        <nav className="hidden items-center space-x-4 sm:space-x-6 md:flex">
+        <nav className="hidden items-center space-x-4 sm:space-x-6 md:flex text-sm md:text-[0.95rem]">
           <a
-            data-aos="fade-down"
-            data-aos-easing="linear"
-            data-aos-duration="500"
-            className="text-transparent bg-gradient-to-r bg-clip-text from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] transition-all duration-200 font-medium relative"
+            className=" bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
             href="#features"
           >
             Features
           </a>
           <a
-            data-aos="fade-down"
-            data-aos-easing="linear"
-            data-aos-duration="1000"
-            className="text-transparent bg-gradient-to-r bg-clip-text from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] transition-all duration-200 font-medium relative"
+            className=" bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
             href="#solutions"
           >
             Solutions
           </a>
           <a
-            data-aos="fade-down"
-            data-aos-easing="linear"
-            data-aos-duration="1500"
-            className="text-transparent bg-gradient-to-r bg-clip-text from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] transition-all duration-200 font-medium relative"
+            className=" bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
             href="#pricing"
           >
             Pricing
           </a>
           <a
-            data-aos="fade-down"
-            data-aos-easing="linear"
-            data-aos-duration="2000"
-            className="text-transparent bg-gradient-to-r bg-clip-text from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] transition-all duration-200 font-medium relative"
+            className=" bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
             href="#contact"
           >
             Contact
@@ -139,10 +154,7 @@ export const Header = () => {
 
         <div className="hidden md:flex items-center space-x-2 sm:space-x-4">
           <Link href="/sign-in">
-            <Button
-              variant="ghost"
-              className="text-navy hover:text-[#2563eb] hover:bg-[#2563eb] hover:bg-opacity-10"
-            >
+            <Button variant="ghost" className="text-slate-700 text-sm">
               Sign In
             </Button>
           </Link>
@@ -170,7 +182,7 @@ export const Header = () => {
             }`}
           ></span>
         </button>
-      </div>
+      </motion.div>
 
       {isOpen && (
         <>
@@ -183,7 +195,7 @@ export const Header = () => {
             ref={menuRef}
             className="fixed top-16 left-0 right-0 z-20 md:hidden py-6 border-t border-border bg-white w-full px-6 shadow-xl animate-fadeIn"
           >
-            <nav className="flex flex-col space-y-4">
+            <nav className="flex flex-col space-y-4 text-sm">
               <a
                 href="#features"
                 className="text-navy font-medium"
