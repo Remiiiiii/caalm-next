@@ -144,27 +144,33 @@ const AdministrationAnalytics = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {/* Background Video to match ExecutiveDashboard styling */}
+
+      <source src="/assets/video/wave.mp4" type="video/mp4" />
+
       {/* Header Actions */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-end">
         <div>
-          <h2 className="h2 text-dark-200">Administration Analytics</h2>
-          <p className="body-1 text-light-200">
+          <h2 className="h3 font-bold sidebar-gradient-text">
+            Administration Analytics
+          </h2>
+          <p className="body-1 text-slate-700">
             Comprehensive overview of administrative operations
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button
+          {/* <Button
             onClick={handleRefresh}
             variant="outline"
             className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
-          </Button>
+          </Button> */}
           <Button
             onClick={handleExport}
-            className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+            className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
           >
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -174,53 +180,47 @@ const AdministrationAnalytics = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="body-2 text-light-200">
-              Total Contracts
-            </CardTitle>
-            <FileText className="h-4 w-4 text-light-200" />
+            <CardTitle className="body-2 text-navy">Total Contracts</CardTitle>
+            <FileText className="h-4 w-4" style={{ color: '#524E4E' }} />
           </CardHeader>
           <CardContent>
-            <div className="h3 text-dark-200 font-bold">156</div>
-            <p className="text-xs text-light-200">+12% from last month</p>
+            <div className="h2 text-navy font-bold">156</div>
+            <p className="text-xs text-[#10B981]">+12% from last month</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="body-2 text-light-200">
-              Total Budget
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-light-200" />
+            <CardTitle className="body-2 text-navy">Total Budget</CardTitle>
+            <DollarSign className="h-4 w-4" style={{ color: '#03AFBF' }} />
           </CardHeader>
           <CardContent>
-            <div className="h3 text-dark-200 font-bold">$1.9M</div>
-            <p className="text-xs text-light-200">+8% from last month</p>
+            <div className="h2 text-navy font-bold">$1.9M</div>
+            <p className="text-xs text-[#10B981]">+8% from last month</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="body-2 text-light-200">Staff Count</CardTitle>
-            <Users className="h-4 w-4 text-light-200" />
+            <CardTitle className="body-2 text-navy">Staff Count</CardTitle>
+            <Users className="h-4 w-4" style={{ color: '#56B8FF' }} />
           </CardHeader>
           <CardContent>
-            <div className="h3 text-dark-200 font-bold">89</div>
-            <p className="text-xs text-light-200">+3 new hires</p>
+            <div className="h2 text-navy font-bold">89</div>
+            <p className="text-xs text-[#10B981]">+3 new hires</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="body-2 text-light-200">
-              Compliance Rate
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-light-200" />
+            <CardTitle className="body-2 text-navy">Compliance Rate</CardTitle>
+            <TrendingUp className="h-4 w-4" style={{ color: '#03AFBF' }} />
           </CardHeader>
           <CardContent>
-            <div className="h3 text-dark-200 font-bold">85%</div>
-            <p className="text-xs text-light-200">+2% from last month</p>
+            <div className="h2 text-navy font-bold">85%</div>
+            <p className="text-xs text-[#10B981]">+2% from last month</p>
           </CardContent>
         </Card>
       </div>
@@ -230,8 +230,10 @@ const AdministrationAnalytics = () => {
         {/* Contract Trends */}
         <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h4 text-dark-200">Contract Trends</CardTitle>
-            <CardDescription className="text-light-200">
+            <CardTitle className="h3 sidebar-gradient-text">
+              Contract Trends
+            </CardTitle>
+            <CardDescription className="text-slate-700">
               Monthly contract status overview
             </CardDescription>
           </CardHeader>
@@ -278,10 +280,10 @@ const AdministrationAnalytics = () => {
         {/* Budget Allocation */}
         <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h4 text-dark-200">
+            <CardTitle className="h3 sidebar-gradient-text">
               Budget Allocation
             </CardTitle>
-            <CardDescription className="text-light-200">
+            <CardDescription className="text-slate-700">
               Department budget distribution
             </CardDescription>
           </CardHeader>
@@ -315,10 +317,10 @@ const AdministrationAnalytics = () => {
         {/* License Compliance */}
         <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h4 text-dark-200">
+            <CardTitle className="h3 sidebar-gradient-text">
               License Compliance
             </CardTitle>
-            <CardDescription className="text-light-200">
+            <CardDescription className="text-slate-700">
               Current compliance status
             </CardDescription>
           </CardHeader>
@@ -331,7 +333,9 @@ const AdministrationAnalytics = () => {
                   cy="50%"
                   labelLine={false}
                   label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
+                    `${name ?? ''} ${(((percent ?? 0) * 100) as number).toFixed(
+                      0
+                    )}%`
                   }
                   outerRadius={80}
                   fill="#8884d8"
@@ -356,8 +360,10 @@ const AdministrationAnalytics = () => {
         {/* Monthly Expenses */}
         <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h4 text-dark-200">Monthly Expenses</CardTitle>
-            <CardDescription className="text-light-200">
+            <CardTitle className="h3 sidebar-gradient-text">
+              Monthly Expenses
+            </CardTitle>
+            <CardDescription className="text-slate-700">
               Expense trends over time
             </CardDescription>
           </CardHeader>
@@ -392,12 +398,12 @@ const AdministrationAnalytics = () => {
 
       {/* Staff and Contract Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h4 text-dark-200">
+            <CardTitle className="h3 sidebar-gradient-text">
               Staff Distribution
             </CardTitle>
-            <CardDescription className="text-light-200">
+            <CardDescription className="text-slate-700">
               Staff by role and department
             </CardDescription>
           </CardHeader>
@@ -405,10 +411,11 @@ const AdministrationAnalytics = () => {
             <div className="space-y-4">
               {mockData.staffDistribution.map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
-                  <span className="body-2 text-light-200">{item.role}</span>
+                  <span className="body-2 text-slate-700">{item.role}</span>
                   <Badge
                     variant="secondary"
                     className="bg-white/20 backdrop-blur border border-white/40"
+                    style={{ color: '#524E4E' }}
                   >
                     {item.count}
                   </Badge>
@@ -418,10 +425,12 @@ const AdministrationAnalytics = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h4 text-dark-200">Contract Types</CardTitle>
-            <CardDescription className="text-light-200">
+            <CardTitle className="h3 sidebar-gradient-text">
+              Contract Types
+            </CardTitle>
+            <CardDescription className="text-slate-700">
               Distribution by contract type
             </CardDescription>
           </CardHeader>
@@ -429,10 +438,11 @@ const AdministrationAnalytics = () => {
             <div className="space-y-4">
               {mockData.contractTypes.map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
-                  <span className="body-2 text-light-200">{item.type}</span>
+                  <span className="body-2 text-slate-700">{item.type}</span>
                   <Badge
                     variant="secondary"
                     className="bg-white/20 backdrop-blur border border-white/40"
+                    style={{ color: '#524E4E' }}
                   >
                     {item.count}
                   </Badge>

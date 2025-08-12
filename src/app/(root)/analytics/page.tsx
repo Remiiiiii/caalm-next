@@ -167,7 +167,7 @@ const AnalyticsPage = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="h1 text-dark-200 mb-2">Reports & Analytics</h1>
-        <p className="body-1 text-light-200">
+        <p className="body-1 text-slate-700">
           Comprehensive analytics and reporting for all departments
         </p>
       </div>
@@ -191,7 +191,7 @@ const AnalyticsPage = () => {
                       <CardTitle className="h4 text-dark-200">
                         {dept.name}
                       </CardTitle>
-                      <p className="body-2 text-light-200 mt-1">
+                      <p className="body-2 text-slate-700 mt-1">
                         {dept.description}
                       </p>
                     </div>
@@ -204,25 +204,25 @@ const AnalyticsPage = () => {
                     <div className="h3 text-dark-200 font-bold">
                       {dept.stats.contracts}
                     </div>
-                    <div className="caption text-light-200">Contracts</div>
+                    <div className="caption text-slate-700">Contracts</div>
                   </div>
                   <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
                     <div className="h3 text-dark-200 font-bold">
                       {dept.stats.budget}
                     </div>
-                    <div className="caption text-light-200">Budget</div>
+                    <div className="caption text-slate-700">Budget</div>
                   </div>
                   <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
                     <div className="h3 text-dark-200 font-bold">
                       {dept.stats.staff}
                     </div>
-                    <div className="caption text-light-200">Staff</div>
+                    <div className="caption text-slate-700">Staff</div>
                   </div>
                   <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
                     <div className="h3 text-dark-200 font-bold">
                       {dept.stats.compliance}
                     </div>
-                    <div className="caption text-light-200">Compliance</div>
+                    <div className="caption text-slate-700">Compliance</div>
                   </div>
                 </div>
                 <Link href={dept.route}>

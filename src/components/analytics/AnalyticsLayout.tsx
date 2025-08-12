@@ -3,7 +3,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BarChart3,
@@ -97,7 +96,6 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
   const { stats: analyticsStats, isLoading: analyticsLoading } =
     useAnalyticsData(department);
   const config = departmentConfig[department as keyof typeof departmentConfig];
-  const IconComponent = config?.icon || Building;
 
   // Check if user has access to this specific department
   const hasAccessToDepartment = () => {
@@ -212,48 +210,37 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/analytics">
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-          <div className="flex items-center space-x-3">
-            <div className={`p-3 rounded-xl ${config.color} shadow-lg`}>
-              <IconComponent className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="h1 text-dark-200">{config.name} Analytics</h1>
-              <p className="body-1 text-light-200">{config.description}</p>
-            </div>
-          </div>
-        </div>
-        <Badge
-          variant="secondary"
-          className="text-sm bg-white/20 backdrop-blur border border-white/40"
-        >
-          {department.toUpperCase()}
-        </Badge>
+      <div className="relative flex items-center justify-between">
+        <Link href="/analytics">
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-white/60 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+        </Link>
+        <h1 className="absolute left-1/2 -translate-x-1/2 h1 sidebar-gradient-text text-center w-full pointer-events-none">
+          {config.name} Analytics
+        </h1>
+      </div>
+      <div className="flex items-center justify-center">
+        <p className="body-1 text-light-200">{config.description}</p>
       </div>
 
       {/* Quick Stats */}
       {(departmentData || analyticsStats) && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="body-2 text-light-200">
+              <CardTitle className="body-2 text-slate-700">
                 Total Contracts
               </CardTitle>
-              <FileText className="h-4 w-4 text-light-200" />
+              <FileText className="h-4 w-4" style={{ color: '#524E4E' }} />
             </CardHeader>
             <CardContent>
-              <div className="h3 text-dark-200 font-bold">
+              <div className="h2 text-navy font-bold">
                 {analyticsStats?.totalContracts ||
                   departmentData?.totalContracts ||
                   'N/A'}
@@ -261,15 +248,15 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             </CardContent>
           </Card>
 
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="body-2 text-light-200">
+              <CardTitle className="body-2 text-slate-700">
                 Total Budget
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-light-200" />
+              <TrendingUp className="h-4 w-4" style={{ color: '#03AFBF' }} />
             </CardHeader>
             <CardContent>
-              <div className="h3 text-dark-200 font-bold">
+              <div className="h2 text-navy font-bold">
                 {analyticsStats?.totalBudget ||
                   departmentData?.totalBudget ||
                   'N/A'}
@@ -277,15 +264,15 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             </CardContent>
           </Card>
 
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="body-2 text-light-200">
+              <CardTitle className="body-2 text-slate-700">
                 Staff Count
               </CardTitle>
-              <Users className="h-4 w-4 text-light-200" />
+              <Users className="h-4 w-4" style={{ color: '#56B8FF' }} />
             </CardHeader>
             <CardContent>
-              <div className="h3 text-dark-200 font-bold">
+              <div className="h2 text-navy font-bold">
                 {analyticsStats?.staffCount ||
                   departmentData?.staffCount ||
                   'N/A'}
@@ -293,15 +280,15 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             </CardContent>
           </Card>
 
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="body-2 text-light-200">
+              <CardTitle className="body-2 text-slate-700">
                 Compliance Rate
               </CardTitle>
-              <BarChart3 className="h-4 w-4 text-light-200" />
+              <BarChart3 className="h-4 w-4" style={{ color: '#8B5CF6' }} />
             </CardHeader>
             <CardContent>
-              <div className="h3 text-dark-200 font-bold">
+              <div className="h2 text-navy font-bold">
                 {analyticsStats?.complianceRate ||
                   departmentData?.complianceRate ||
                   'N/A'}
@@ -314,7 +301,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
       {/* Department Navigation */}
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle className="h3 text-dark-200">
+          <CardTitle className="h2 sidebar-gradient-text">
             Department Analytics
           </CardTitle>
         </CardHeader>
@@ -326,7 +313,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
                   key={key}
                   value={key}
                   asChild
-                  className="flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-dark-200"
+                  className="tabs-underline flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-dark-200"
                 >
                   <Link href={dept.route} className="w-full body-2">
                     {dept.name}

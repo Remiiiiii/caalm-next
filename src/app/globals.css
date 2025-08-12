@@ -115,10 +115,10 @@
     @apply text-[14px] leading-[20px] font-semibold;
   }
   .body-1 {
-    @apply text-[16px] leading-[24px] font-normal;
+    @apply text-[16px] leading-[24px] font-normal text-slate-700;
   }
   .body-2 {
-    @apply text-[14px] leading-[20px] font-normal;
+    @apply text-[14px] leading-[20px] font-normal text-slate-700;
   }
   .button {
     @apply text-[14px] leading-[20px] font-medium;
@@ -133,6 +133,28 @@
   /* ===== HELPER CLASSES */
   .container {
     @apply mx-auto max-w-7xl px-5;
+  }
+
+  /* Tabs underline indicator for hover/active/focus */
+  .tabs-underline {
+    position: relative;
+  }
+  .tabs-underline::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 0;
+    height: 2px;
+    width: 0;
+    background-color: #03afbf;
+    border-radius: 1px;
+    transition: width 180ms ease-in-out;
+  }
+  .tabs-underline:hover::after,
+  .tabs-underline[data-state='active']::after,
+  .tabs-underline:focus-visible::after {
+    width: 80%;
   }
   .primary-btn,
   .shad-active,

@@ -129,7 +129,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
       {error && (
         <Card className="mb-6 border-red-200 bg-red-50">
           <CardContent className="pt-4">
-            <p className="text-red-600 text-sm">{error}</p>
+            <p className="text-red-600 text-sm">
+              {typeof error === 'string'
+                ? error
+                : (error as { message?: string })?.message ||
+                  'An unexpected error occurred.'}
+            </p>
           </CardContent>
         </Card>
       )}

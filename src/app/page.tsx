@@ -2,6 +2,7 @@ import Header from '../components/Header';
 import Hero from '../components/Hero';
 import Footer from '../components/Footer';
 import dynamic from 'next/dynamic';
+import Insights from '../components/Insights';
 
 const BrandMarquee = dynamic(() => import('../components/BrandMarquee'));
 const HeroIntro = dynamic(() => import('../components/HeroIntro'));
@@ -19,6 +20,7 @@ export default function HomePage() {
         <HeroIntro />
         <Hero />
         <FeaturesDynamic />
+        <Insights />
         <BrandMarquee />
         <ProblemSolutionDynamic />
         <CTADynamic />

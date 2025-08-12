@@ -5,7 +5,7 @@ import React, { Fragment } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import Avatar from '@/components/ui/avatar';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAnalyticsPrefetch } from '@/hooks/useAnalyticsPrefetch';
 
 interface Props {
@@ -18,6 +18,7 @@ interface Props {
 
 const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
   const router = useRouter();
+  const pathname = usePathname();
   const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
   // Map database department values to sidebar department values
   const mapDepartmentToSidebar = (
@@ -721,9 +722,17 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                               </span>
                             )}
                             <p
-                              className={`text-sm text-slate-900 px-2 hover:underline decoration-[#03AFBF] underline-offset-4 font-medium ${
+                              className={`text-sm text-slate-900 px-2 tabs-underline font-medium ${
                                 name === 'Administration' ? '-ml-[1px]' : ''
                               }`}
+                              data-state={
+                                pathname &&
+                                url &&
+                                (pathname === url ||
+                                  pathname.startsWith(`${url}/`))
+                                  ? 'active'
+                                  : undefined
+                              }
                             >
                               {name}
                             </p>
@@ -738,12 +747,12 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                             {subItems.map((subItem) => (
                               <li
                                 key={subItem.name}
-                                className="relative flex items-center hover:underline decoration-[#03AFBF] underline-offset-4"
+                                className="relative flex items-center"
                               >
                                 <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
                                 <Link
                                   href={subItem.url}
-                                  className="ml-4 lg:w-full flex items-start gap-3"
+                                  className="ml-4 lg:w-full flex items-start gap-3 tabs-underline"
                                   onMouseEnter={() => {
                                     // Prefetch analytics data on hover for better performance
                                     if (subItem.url?.includes('/analytics')) {
@@ -768,7 +777,16 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                       height={20}
                                     />
                                   </span>
-                                  <p className="text-sm text-slate-900 font-medium">
+                                  <p
+                                    className="text-sm text-slate-900 font-medium"
+                                    data-state={
+                                      pathname &&
+                                      (pathname === subItem.url ||
+                                        pathname.startsWith(`${subItem.url}/`))
+                                        ? 'active'
+                                        : undefined
+                                    }
+                                  >
                                     {subItem.name}
                                   </p>
                                 </Link>
