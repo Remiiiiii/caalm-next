@@ -24,7 +24,7 @@ const Features = () => {
       data-aos-duration="3000"
       id="features"
       ref={ref}
-      className={`scroll-mt-20 py-8 sm:py-10 md:py-14 px-2 sm:px-4 bg-[url('/assets/images/features-bg.jpg')] bg-cover bg-center bg-no-repeat transition-opacity duration-700 ${
+      className={`scroll-mt-10 py-8 sm:py-10 md:py-14 px-2 sm:px-4 bg-[url('/assets/images/features-bg.jpg')] bg-cover bg-center bg-no-repeat transition-opacity duration-700 ${
         visible ? 'opacity-100' : 'opacity-0'
       } relative flex flex-col md:flex-row items-center justify-between py-4 px-4 overflow-hidden`}
     >

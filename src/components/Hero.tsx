@@ -34,15 +34,7 @@ const Hero = () => {
         visible ? 'opacity-100' : 'opacity-0'
       } relative flex flex-col md:flex-row items-center justify-between py-10 md:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-blue-50 overflow-hidden`}
     >
-      {/* Subtle grid background */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            'linear-gradient(90deg,rgba(0,0,0,0.03) 1px,transparent 1px),linear-gradient(180deg,rgba(0,0,0,0.03) 1px,transparent 1px)',
-          backgroundSize: '40px 40px',
-        }}
-      />
+      {/* Grid moved to page-level overlay */}
       <div className="max-w-7xl w-full ml-12 mx-auto mt-10 md:mt-20">
         <div className="flex flex-col md:flex-row items-center justify-between">
           {/* Left: Text, Buttons, Testimonial */}

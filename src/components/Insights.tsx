@@ -1,9 +1,29 @@
 'use client';
 
 import { Search } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import CountUp from 'react-countup';
 
 const Insights = () => {
+  const paperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = paperRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.classList.add('is-visible');
+        } else {
+          el.classList.remove('is-visible');
+        }
+      },
+      { threshold: 0.35 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
     <section className="relative flex flex-col items-center justify-center py-14 sm:py-16 md:py-20 bg-gradient-to-b from-white to-blue-50 overflow-hidden">
       {/* Background video (fills entire component) */}
@@ -50,7 +70,10 @@ const Insights = () => {
       </div>
 
       {/* Metrics row recreated as cards (icons + text) */}
-      <div className="relative z-10 w-full max-w-4xl mx-auto px-4 mt-8 rounded-2xl bg-white/70 backdrop-blur border border-white/40 shadow-sm p-4 sm:p-5">
+      <div
+        ref={paperRef}
+        className="paper-3d relative z-10 w-full max-w-4xl mx-auto px-4 mt-8 rounded-2xl bg-white/70 backdrop-blur border border-white/40 shadow-sm p-4 sm:p-5"
+      >
         <h3 className="text-lg text-center font-bold mb-2 sm:text-3xl py-2 md:text-[2em] leading-tight sidebar-gradient-text">
           Administration Analytics
         </h3>
