@@ -12,14 +12,10 @@ export const Header = () => {
   // Brute-force: Toggle a boolean once scrollTop >= 64, animate via variants
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const el =
-      (document.querySelector('.main-content') as HTMLElement) || window;
+    const el = window;
     let raf = 0;
     const readScroll = () => {
-      const top =
-        el instanceof Window
-          ? window.scrollY || document.documentElement.scrollTop || 0
-          : el.scrollTop || 0;
+      const top = window.scrollY || document.documentElement.scrollTop || 0;
       setScrolled(top >= 64);
     };
     const onScroll: EventListener = () => {

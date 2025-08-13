@@ -57,7 +57,11 @@ const Footer = () => {
             </h3>
             <div className="space-y-2 sm:space-y-3 text-slate-light">
               <div className="flex items-center">
-                <Mail className="h-4 w-4 mr-2" />
+                <Mail
+                  className="h-4 w-4 mr-2 text-slate-700"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
                 <span className="text-xs sm:text-sm">
                   support@caalmsolutions.com
                 </span>
