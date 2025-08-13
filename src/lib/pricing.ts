@@ -54,21 +54,99 @@ function extractFeatures(section: string): string[] {
 }
 
 export async function loadPricingFromMarkdown(): Promise<PricingData> {
-  const filePath = path.join(process.cwd(), 'docs', 'PRICING.md');
-  const md = await fs.readFile(filePath, 'utf8');
-
-  const planDefs = [
-    { key: 'starter' as const, name: 'Starter' },
-    { key: 'pro' as const, name: 'Pro' },
-    { key: 'enterprise' as const, name: 'Enterprise' },
+  // Try multiple locations to be resilient on different deploy targets (e.g., Vercel)
+  const candidatePaths = [
+    path.join(process.cwd(), 'docs', 'PRICING.md'),
+    path.join(process.cwd(), 'public', 'docs', 'PRICING.md'),
+    path.join(process.cwd(), 'public', 'PRICING.md'),
   ];
 
-  const plans: PricingPlan[] = planDefs.map(({ key, name }) => {
-    const sec = sectionFor(md, name) || '';
-    const { monthly, yearly } = extractPrices(sec);
-    const features = extractFeatures(sec);
-    return { key, name, monthly, yearly, features };
-  });
+  let md: string | null = null;
+  for (const p of candidatePaths) {
+    try {
+      md = await fs.readFile(p, 'utf8');
+      break;
+    } catch (err) {
+      console.error(err);
+      // continue trying next path
+    }
+  }
 
-  return { plans };
+  if (md) {
+    const planDefs = [
+      { key: 'starter' as const, name: 'Starter' },
+      { key: 'pro' as const, name: 'Pro' },
+      { key: 'enterprise' as const, name: 'Enterprise' },
+    ];
+
+    const plans: PricingPlan[] = planDefs.map(({ key, name }) => {
+      const sec = sectionFor(md as string, name) || '';
+      const { monthly, yearly } = extractPrices(sec);
+      const features = extractFeatures(sec);
+      return { key, name, monthly, yearly, features };
+    });
+
+    return { plans };
+  }
+
+  // Fallback defaults if markdown is not found at build time
+  const starterMonthly = 79;
+  const proMonthly = 299;
+  const enterpriseMonthly = 999;
+
+  const defaults: PricingPlan[] = [
+    {
+      key: 'starter',
+      name: 'Starter',
+      monthly: starterMonthly,
+      yearly: Math.round(starterMonthly * 12 * 0.8 * 100) / 100,
+      features: [
+        'Up to **3 departments**',
+        'Up to **10 staff users**',
+        'Up to **100 active contracts** tracked',
+        '**Analytics** for Admin + 2 departments',
+        '**Reports** (basic) via `ReportsPage`',
+        '**Email support**',
+        '**Analytical data retention**: 90 days',
+        '**Storage**: 5GB',
+      ],
+    },
+    {
+      key: 'pro',
+      name: 'Pro',
+      monthly: proMonthly,
+      yearly: Math.round(proMonthly * 12 * 0.8 * 100) / 100,
+      features: [
+        'Includes everything in Starter, plus:',
+        'Up to **6 departments**',
+        'Up to **100 staff users**',
+        'Up to **2,500 active contracts**',
+        '**Full analytics suite** across all departments',
+        '**Report scheduling**',
+        '**Webhooks/API access** for integrations',
+        '**Priority support**',
+        '**Storage**: 100GB',
+      ],
+    },
+    {
+      key: 'enterprise',
+      name: 'Enterprise',
+      monthly: enterpriseMonthly,
+      yearly: Math.round(enterpriseMonthly * 12 * 0.8 * 100) / 100,
+      features: [
+        'Includes everything in Pro, plus:',
+        '**Unlimited departments**',
+        '**Up to 1,000 staff users** (higher limits upon request)',
+        '**25,000 active contracts** (higher upon request)',
+        '**SSO/SAML & SCIM** (enterprise identity)',
+        '**Advanced audit logs & exports**',
+        '**Custom roles & permissions**, detailed access',
+        '**Uptime SLA** 99.9% and **Dedicated CSM**',
+        '**Storage**: 1 TB (expandable)',
+        '**Custom integrations** and migration assistance',
+      ],
+    },
+  ];
+
+  return { plans: defaults };
 }
