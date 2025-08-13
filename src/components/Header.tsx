@@ -22,15 +22,16 @@ export const Header = () => {
           : el.scrollTop || 0;
       setScrolled(top >= 64);
     };
-    const onScroll = () => {
+    const onScroll: EventListener = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(readScroll);
     };
+    const listenerOptions: AddEventListenerOptions = { passive: true };
     readScroll();
-    el.addEventListener('scroll', onScroll, { passive: true } as any);
+    el.addEventListener('scroll', onScroll, listenerOptions);
     return () => {
       cancelAnimationFrame(raf);
-      el.removeEventListener('scroll', onScroll as any);
+      el.removeEventListener('scroll', onScroll, listenerOptions);
     };
   }, []);
 
@@ -114,20 +115,22 @@ export const Header = () => {
         }}
         className="transition-all duration-500"
       >
-        <div className="flex items-center ">
-          <Image
-            src="/assets/images/logo.svg"
-            alt="Logo"
-            width={40}
-            height={40}
-          />
+        <div className="flex items-center justify-center">
+          <Link href="/">
+            <Image
+              src="/assets/images/logo.svg"
+              alt="Logo"
+              width={40}
+              height={40}
+            />
+          </Link>
           <span className="ml-1 text-2xl sm:text-xl font-bold text-slate-700">
             Caalm
           </span>
         </div>
         <nav className="hidden items-center space-x-4 sm:space-x-6 md:flex text-sm md:text-[0.95rem]">
           <a
-            className=" bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
+            className="bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
             href="#features"
           >
             Features

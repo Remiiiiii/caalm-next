@@ -4,16 +4,15 @@ import type { NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for auth pages, API routes, static assets, settings, and landing page
+  // Public routes that should never require auth
+  const publicPaths = ['/', '/sign-in', '/sign-up', '/terms', '/privacy'];
+
+  // Static and system paths to always allow
+  const systemPathPrefixes = ['/api', '/_next', '/favicon.ico', '/assets'];
+
   if (
-    pathname === '/' ||
-    pathname.startsWith('/sign-in') ||
-    pathname.startsWith('/sign-up') ||
-    pathname.startsWith('/settings') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon.ico') ||
-    pathname.startsWith('/assets')
+    publicPaths.includes(pathname) ||
+    systemPathPrefixes.some((p) => pathname.startsWith(p))
   ) {
     return NextResponse.next();
   }
@@ -29,46 +28,38 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Check if user has completed 2FA setup
-  const hasCompleted2FA = request.cookies.get('2fa_completed');
-  const session = request.cookies.get('appwrite-session');
+  // Define protected route prefixes
+  const protectedPrefixes = [
+    '/dashboard',
+    '/contracts',
+    '/licenses',
+    '/analytics',
+    '/uploads',
+    '/images',
+    '/media',
+    '/others',
+    '/audits',
+    '/team',
+  ];
 
-  // If no session exists, redirect to sign-in
-  if (!session?.value) {
-    return NextResponse.redirect(new URL('/sign-in', request.url));
-  }
+  const isProtectedPath = protectedPrefixes.some((p) => pathname.startsWith(p));
 
-  // If user hasn't completed 2FA and is trying to access protected routes
-  if (
-    !hasCompleted2FA &&
-    (pathname.startsWith('/dashboard') ||
-      pathname.startsWith('/contracts') ||
-      pathname.startsWith('/licenses') ||
-      pathname.startsWith('/analytics') ||
-      pathname.startsWith('/uploads') ||
-      pathname.startsWith('/images') ||
-      pathname.startsWith('/media') ||
-      pathname.startsWith('/others') ||
-      pathname.startsWith('/audits') ||
-      pathname.startsWith('/team'))
-  ) {
-    // Redirect to settings to complete 2FA setup
-    return NextResponse.redirect(new URL('/settings', request.url));
-  }
+  if (isProtectedPath) {
+    const hasCompleted2FA = request.cookies.get('2fa_completed');
+    const session = request.cookies.get('appwrite-session');
 
-  // For protected routes, validate session with Appwrite
-  if (
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/contracts') ||
-    pathname.startsWith('/licenses') ||
-    pathname.startsWith('/analytics') ||
-    pathname.startsWith('/uploads') ||
-    pathname.startsWith('/images') ||
-    pathname.startsWith('/media') ||
-    pathname.startsWith('/others') ||
-    pathname.startsWith('/audits') ||
-    pathname.startsWith('/team')
-  ) {
+    // If no session exists, redirect to sign-in
+    if (!session?.value) {
+      return NextResponse.redirect(new URL('/sign-in', request.url));
+    }
+
+    // If user hasn't completed 2FA and is trying to access protected routes
+    if (!hasCompleted2FA) {
+      // Redirect to settings to complete 2FA setup
+      return NextResponse.redirect(new URL('/settings', request.url));
+    }
+
+    // Validate session for protected routes
     try {
       // Validate session by calling our session validation endpoint
       const sessionValidationUrl = new URL('/api/auth/session', request.url);

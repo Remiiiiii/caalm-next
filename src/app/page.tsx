@@ -3,16 +3,21 @@ import Hero from '../components/Hero';
 import Footer from '../components/Footer';
 import dynamic from 'next/dynamic';
 import Insights from '../components/Insights';
+import Pricing from '../components/Pricing';
+import QA from '../components/QA';
+import Feedback from '../components/Feedback';
+import { loadPricingFromMarkdown } from '../lib/pricing';
 
 const TextMarquee = dynamic(() => import('../components/TextMarquee'));
 const HeroIntro = dynamic(() => import('../components/HeroIntro'));
 const FeaturesDynamic = dynamic(() => import('../components/Features'));
-const ProblemSolutionDynamic = dynamic(
-  () => import('../components/ProblemSolution')
-);
-const CTADynamic = dynamic(() => import('../components/CTA'));
+// const ProblemSolutionDynamic = dynamic(
+//   () => import('../components/ProblemSolution')
+// );
+// const CTADynamic = dynamic(() => import('../components/CTA'));
 
-export default function HomePage() {
+export default async function HomePage() {
+  const pricing = await loadPricingFromMarkdown();
   return (
     <>
       <Header />
@@ -32,11 +37,27 @@ export default function HomePage() {
           <TextMarquee />
           <FeaturesDynamic />
           <Insights />
-          <ProblemSolutionDynamic />
-          <CTADynamic />
+          <Pricing plans={pricing.plans} />
+          <QA />
+          {/* <ProblemSolutionDynamic /> */}
+          {/* <CTADynamic /> */}
         </div>
       </main>
-      <Footer />
+      {/* Shared video background for Feedback + Footer */}
+      <div className="relative">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 w-full h-full object-cover -z-10 pointer-events-none"
+        >
+          <source src="/assets/video/wave.mp4" type="video/mp4" />
+        </video>
+        <Feedback />
+        <Footer />
+      </div>
     </>
   );
 }

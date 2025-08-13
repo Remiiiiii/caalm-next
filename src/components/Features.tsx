@@ -38,13 +38,14 @@ const Features = () => {
             'linear-gradient(to bottom, rgba(255,255,255,0.95) 90%, transparent)',
         }}
       />
-      {/* Bottom fade overlay */}
+      {/* Bottom fade overlay to blend into Insights */}
       <div
-        className="absolute left-0 right-0 bottom-0 h-32 z-10 pointer-events-none"
+        className="absolute left-0 right-0 bottom-0 h-20 sm:h-24 lg:h-28 z-10 pointer-events-none"
         style={{
           background:
-            'linear-gradient(to top, rgba(255,255,255,0.8) 60%, transparent 100%)',
+            'linear-gradient(to top, rgba(255,255,255,0.92) 20%, transparent 100%)',
         }}
+        aria-hidden
       />
       <div className="max-w-7xl mx-auto mt-[50px] relative z-10">
         <div className="text-center mb-10 sm:mb-14 md:mb-16">

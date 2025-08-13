@@ -35,22 +35,14 @@ const Hero = () => {
       } relative flex flex-col md:flex-row items-center justify-between py-10 md:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-blue-50 overflow-hidden`}
     >
       {/* Grid moved to page-level overlay */}
-      <div className="max-w-7xl w-full ml-12 mx-auto mt-10 md:mt-20">
+      <div className="max-w-7xl w-full  mx-auto mt-10 md:mt-20">
         <div className="flex flex-col md:flex-row items-center justify-between">
           {/* Left: Text, Buttons, Testimonial */}
-          <div className="relative z-10 flex-1 flex flex-col gap-2 px-2 sm:px-0">
-            <h1
-              className="text-2xl sm:text-3xl md:text-[2.25em] mb-1leading-tight sidebar-gradient-text"
-              style={{
-                backgroundImage:
-                  'linear-gradient(to right, #00C1CB, #078FAB, #0E638F, #11487D, #162768)',
-              }}
-            >
-              Track Compliance, Users,
+          <div className="relative z-10 flex-1 md:basis-7/12 flex flex-col gap-2 px-2 sm:px-0">
+            <h1 className="text-2xl sm:text-3xl md:text-[3em] mb-1 leading-[1.3] sm:leading-[1.28] md:leading-[1.25] tracking-normal sidebar-gradient-text">
+              Track Compliance, Users, and Contract Activity
             </h1>
-            <h1 className="text-2xl sm:text-3xl md:text-[2.25em] mb-4 leading-tight sidebar-gradient-text">
-              and Contract Activity
-            </h1>
+
             {/* Crossfade paragraphs */}
             <div
               className="mt-1 relative h-16 max-w-full mb-2 sm:mb-4 text-slate-700"
@@ -174,7 +166,7 @@ const Hero = () => {
             </div>
           </div>
           {/* Right: Spline or App Screenshot */}
-          <div className="relative z-10 flex-1 flex items-center justify-center mt-10 md:mt-0">
+          <div className="relative z-10 flex-1 md:basis-5/12 flex items-center justify-center mt-10 md:mt-0">
             <Image
               src="/assets/images/card-main.png"
               alt="App Screenshot"
