@@ -97,7 +97,7 @@ export const Header = () => {
       <motion.div
         variants={wrapperVariants}
         initial={false}
-        animate={scrolled ? 'scrolled' : 'top'}
+        animate={scrolled ? 'top' : 'scrolled'}
         style={{
           marginLeft: 'auto',
           marginRight: 'auto',
