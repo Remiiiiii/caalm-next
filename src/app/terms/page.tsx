@@ -11,7 +11,7 @@ export default function TermsPage() {
   return (
     <>
       <Header />
-      <main className="relative">
+      <main className="relative mt-10">
         <section className="relative z-10 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-slate-700">
             <h1 className="text-3xl sm:text-4xl font-semibold mb-6 sidebar-gradient-text">
