@@ -117,6 +117,20 @@ export default function PrivacyPage() {
                 opt-in data and consent; this information will not be shared
                 with any third parties.
               </p>
+              <p>
+                To opt in and manage your SMS notification preferences, please
+                complete our SMS setup form:{' '}
+                <a
+                  href="https://docs.google.com/forms/d/e/1FAIpQLSdPlNVK_YmEQA6_unkGS1_eqM2IgHFeNIkX_PWfc13Tj_HAsA/viewform?usp=dialog"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  SMS Setup Form
+                </a>
+                . Completing this form allows us to verify your phone number and
+                record your consent consistent with industry standards.
+              </p>
             </section>
 
             <section className="space-y-4 mb-8">

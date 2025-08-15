@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { notificationService } from '@/lib/services/notificationService';
+import { addUserSmsTarget } from '@/lib/actions/user.actions';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +43,19 @@ export async function PUT(request: NextRequest) {
       frequency: body.frequency,
       fcmToken: body.fcmToken,
     });
+
+    // If a phoneNumber was provided and appears valid E.164, add/update Auth SMS target
+    if (
+      typeof body.phoneNumber === 'string' &&
+      /^\+\d{10,15}$/.test(body.phoneNumber)
+    ) {
+      try {
+        await addUserSmsTarget(body.userId, body.phoneNumber);
+      } catch (e) {
+        console.warn('Failed to create SMS target:', e);
+        // Do not fail the request if SMS target creation fails; settings upsert succeeded
+      }
+    }
 
     return NextResponse.json({ data: updated });
   } catch (error) {

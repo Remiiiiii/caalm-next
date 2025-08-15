@@ -12,6 +12,15 @@ import {
   DialogDescription,
 } from './ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -32,6 +41,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
+  MessageSquare,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,6 +60,7 @@ interface NotificationPreference {
   email: boolean;
   push: boolean;
   inApp: boolean;
+  sms: boolean;
   priority: 'low' | 'medium' | 'high' | 'urgent';
 }
 
@@ -132,12 +143,15 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     emailNotifications: false,
     pushNotifications: false,
     inAppNotifications: true,
+    smsNotifications: false,
     quietHours: false,
     quietHoursStart: '22:00',
     quietHoursEnd: '08:00',
     digestFrequency: 'daily',
     maxNotificationsPerDay: 50,
   });
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [showSmsSetupModal, setShowSmsSetupModal] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   // Push notifications removed
@@ -162,6 +176,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           email: false,
           push: false,
           inApp: true,
+          sms: false,
           priority: config.defaultPriority,
         }));
         if (data?.notification_types?.length) {
@@ -178,8 +193,10 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             ...prev,
             emailNotifications: !!data.email_enabled,
             pushNotifications: !!data.push_enabled,
+            smsNotifications: !!data.phone_number,
             digestFrequency: (data.frequency as string) || 'daily',
           }));
+          setPhoneNumber((data.phone_number as string) || '');
         }
       } catch {
         // noop
@@ -188,6 +205,13 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     load();
     return () => controller.abort();
   }, [open, user?.$id]);
+
+  // When SMS is disabled, clear all per-type SMS selections
+  useEffect(() => {
+    if (!globalSettings.smsNotifications) {
+      setPreferences((prev) => prev.map((p) => ({ ...p, sms: false })));
+    }
+  }, [globalSettings.smsNotifications]);
 
   // Realtime updates
   useEffect(() => {
@@ -210,7 +234,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             digestFrequency:
               (payload.frequency as string) || prev.digestFrequency,
           }));
-          // phone number is retained in DB; UI entry removed
+          if (typeof payload.phone_number === 'string') {
+            setPhoneNumber(payload.phone_number);
+          }
         }
       }
     );
@@ -243,6 +269,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   const saveSettings = async () => {
     setSaving(true);
     try {
+      const sanitizedPhone = formatUSPhoneToE164(phoneNumber);
       const res = await fetch('/api/notification-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -250,10 +277,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           userId: user?.$id,
           emailEnabled: globalSettings.emailNotifications,
           pushEnabled: globalSettings.pushNotifications,
-          // phoneNumber removed from UI; use stored DB value if needed
-          phoneNumber: undefined,
+          phoneNumber: sanitizedPhone || undefined,
           notificationTypes: preferences
-            .filter((p) => p.email || p.push || p.inApp)
+            .filter((p) => p.email || p.push || p.inApp || p.sms)
             .map((p) => p.type),
           frequency: globalSettings.digestFrequency as
             | 'daily'
@@ -287,6 +313,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
       email: true,
       push: true,
       inApp: true,
+      sms: false,
       priority: config.defaultPriority,
     }));
     setPreferences(defaultPreferences);
@@ -294,12 +321,22 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
       emailNotifications: true,
       pushNotifications: true,
       inAppNotifications: true,
+      smsNotifications: false,
       quietHours: false,
       quietHoursStart: '22:00',
       quietHoursEnd: '08:00',
       digestFrequency: 'daily',
       maxNotificationsPerDay: 50,
     });
+  };
+
+  const formatUSPhoneToE164 = (input: string): string => {
+    const digits = (input || '').replace(/\D/g, '');
+    if (digits.length === 10) return `+1${digits}`;
+    if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+    if (digits.length === 12 && digits.startsWith('01'))
+      return `+${digits.slice(1)}`;
+    return '';
   };
 
   return (
@@ -354,6 +391,42 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                     }
                   />
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <Label className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    SMS Notifications
+                  </Label>
+                  <Switch
+                    checked={globalSettings.smsNotifications}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        handleGlobalSettingChange('smsNotifications', true);
+                        setShowSmsSetupModal(true);
+                      } else {
+                        handleGlobalSettingChange('smsNotifications', false);
+                      }
+                    }}
+                  />
+                </div>
+
+                {globalSettings.smsNotifications && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">SMS Phone Number (US)</Label>
+                    <Input
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="(555) 123-4567 or +1 555 123 4567"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="text-xs"
+                    />
+                    <p className="text-[11px] text-gray-500">
+                      Enter a valid US number. We&#39;ll store it securely to
+                      enable SMS alerts.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -499,6 +572,32 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                         </Label>
                       </div>
 
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${preference.type}-sms`}
+                          checked={preference.sms}
+                          disabled={!globalSettings.smsNotifications}
+                          onCheckedChange={(checked) =>
+                            handlePreferenceChange(
+                              preference.type,
+                              'sms',
+                              checked
+                            )
+                          }
+                        />
+                        <Label
+                          htmlFor={`${preference.type}-sms`}
+                          className={`text-sm ${
+                            !globalSettings.smsNotifications ? 'opacity-60' : ''
+                          }`}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            <MessageSquare className="w-3.5 h-3.5" /> SMS Text
+                            Messages
+                          </span>
+                        </Label>
+                      </div>
+
                       <div>
                         <Label className="text-xs">Priority</Label>
                         <Select
@@ -554,7 +653,43 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           </div>
         </div>
 
-        {/* Phone dialog removed */}
+        {/* SMS Setup Modal */}
+        <AlertDialog
+          open={showSmsSetupModal}
+          onOpenChange={setShowSmsSetupModal}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Enable SMS Notifications</AlertDialogTitle>
+              <AlertDialogDescription>
+                To receive SMS notifications, please complete our SMS setup
+                form. This helps us verify your phone number and configure your
+                messaging preferences according to industry compliance
+                standards.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex items-center justify-end gap-2">
+              <AlertDialogCancel
+                onClick={() => {
+                  setShowSmsSetupModal(false);
+                  handleGlobalSettingChange('smsNotifications', false);
+                }}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  const url =
+                    'https://docs.google.com/forms/d/e/1FAIpQLSdPlNVK_YmEQA6_unkGS1_eqM2IgHFeNIkX_PWfc13Tj_HAsA/viewform?usp=dialog';
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                  setShowSmsSetupModal(false);
+                }}
+              >
+                Continue to Setup
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );

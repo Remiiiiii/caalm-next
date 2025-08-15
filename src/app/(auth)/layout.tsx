@@ -2,7 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import SplineCanvas from '@/components/SplineCanvas';
 import OrbitingBlocks from '@/components/OrbitingBlocks';
-
+import Link from 'next/link';
 import CountUp from '@/components/CountUp';
 
 const layout = ({ children }: { children: React.ReactNode }) => {
@@ -25,16 +25,18 @@ const layout = ({ children }: { children: React.ReactNode }) => {
         <section className="hidden lg:flex lg:w-1/2 items-center justify-center pl-8 xl:pl-12">
           <div className="flex flex-col max-w-2xl space-y-4 md:space-y-6 mt-6">
             {/* Company Logo */}
-            <div className="flex items-center gap-3 ">
-              <Image
-                src="/assets/images/logo.svg"
-                alt="Caalm Logo"
-                width={48}
-                height={48}
-                className="h-auto"
-              />
-              <span className="text-2xl font-bold text-light-100">Caalm</span>
-            </div>
+            <Link href="/">
+              <div className="flex items-center gap-3 ">
+                <Image
+                  src="/assets/images/logo.svg"
+                  alt="Caalm Logo"
+                  width={48}
+                  height={48}
+                  className="h-auto"
+                />
+                <span className="text-2xl font-bold text-light-100">Caalm</span>
+              </div>
+            </Link>
 
             {/* 3D Robot/Character Illustration */}
             <div className="rounded-2xl shadow-lg p-4 border-2 border-white/60 backdrop-blur-lg md:min-h-[560px] flex flex-col">

@@ -484,6 +484,59 @@ export const addUserEmailTarget = async (userId: string, email: string) => {
   }
 };
 
+export const addUserSmsTarget = async (userId: string, e164Phone: string) => {
+  const client = new sdk.Client()
+    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+    .setKey(process.env.NEXT_APPWRITE_KEY!);
+
+  const users = new sdk.Users(client);
+  const targetType = sdk.MessagingProviderType.Sms;
+
+  try {
+    // Validate E.164 format
+    if (!/^\+\d{10,15}$/.test(e164Phone)) {
+      throw new Error('Phone must be in E.164 format, e.g. +15551234567');
+    }
+
+    // Check if an SMS target already exists for this user and phone
+    const existingTargets = await users.listTargets(userId);
+    const existingSmsTarget = existingTargets.targets.find(
+      (target) =>
+        target.providerType === 'sms' && target.identifier === e164Phone
+    );
+
+    if (existingSmsTarget) {
+      return existingSmsTarget;
+    }
+
+    // Create with deterministic ID, fallback to unique on conflict
+    const targetId = `sms_${userId}_${Date.now()}`;
+    try {
+      const response = await users.createTarget(
+        userId,
+        targetId,
+        targetType,
+        e164Phone
+      );
+      return response;
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('already exists')) {
+        return await users.createTarget(
+          userId,
+          sdk.ID.unique(),
+          targetType,
+          e164Phone
+        );
+      }
+      throw err;
+    }
+  } catch (error) {
+    console.error('Error creating SMS target:', error);
+    throw error;
+  }
+};
+
 export const getInvitationByToken = async (token: string) => {
   const { databases } = await createAdminClient();
   const result = await databases.listDocuments(
