@@ -124,7 +124,7 @@ export default function PrivacyPage() {
                   href="https://docs.google.com/forms/d/e/1FAIpQLSdPlNVK_YmEQA6_unkGS1_eqM2IgHFeNIkX_PWfc13Tj_HAsA/viewform?usp=dialog"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline"
+                  className="underline text-[#0000EE]"
                 >
                   SMS Setup Form
                 </a>

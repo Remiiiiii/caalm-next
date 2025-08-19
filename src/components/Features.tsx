@@ -47,7 +47,7 @@ const Features = () => {
         }}
         aria-hidden
       />
-      <div className="max-w-7xl mx-auto mt-[50px] relative z-10">
+      <div className="max-w-7xl mx-auto mt-2 relative z-10">
         <div className="text-center mb-10 sm:mb-14 md:mb-16">
           <div className="mb-4 flex justify-center">
             <div className="inline-flex mb-6 items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF]  px-3 py-1 shadow-sm">

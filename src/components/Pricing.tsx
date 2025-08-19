@@ -49,7 +49,7 @@ export default function Pricing({ plans }: Props) {
         aria-hidden
       />
 
-      <div className="mb-6 flex justify-center relative z-10 mt-6">
+      <div className="mb-6 flex justify-center relative z-10 mt-2">
         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
           <span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
             <BadgeDollarSign className="h-3.5 w-3.5 text-slate-700" />

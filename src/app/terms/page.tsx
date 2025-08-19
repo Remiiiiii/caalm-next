@@ -227,7 +227,20 @@ export default function TermsPage() {
                 permission to enroll in this service. Standard message and data
                 rates may apply.
               </p>
-
+              <p>
+                To opt in and manage your SMS notification preferences, please
+                complete our SMS setup form:{' '}
+                <a
+                  href="https://docs.google.com/forms/d/e/1FAIpQLSdPlNVK_YmEQA6_unkGS1_eqM2IgHFeNIkX_PWfc13Tj_HAsA/viewform?usp=dialog"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-[#0000EE]"
+                >
+                  SMS Setup Form
+                </a>
+                . Completing this form allows us to verify your phone number and
+                record your consent consistent with industry standards.
+              </p>
               <h3 className="text-lg sm:text-xl font-semibold">
                 Frequency of Messages
               </h3>
