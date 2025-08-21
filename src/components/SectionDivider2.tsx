@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import TextMarquee from './TextMarquee';
 
 export default function SectionDivider() {
   return (

@@ -33,7 +33,6 @@ import {
   FileText,
   DollarSign,
   Download,
-  RefreshCw,
 } from 'lucide-react';
 
 // Mock data for Administration Analytics
@@ -60,10 +59,10 @@ const mockData = {
 
   // License compliance status
   licenseCompliance: [
-    { status: 'Compliant', count: 85, color: '#10B981' },
+    { status: 'Compliant', count: 85, color: '#03AFBF' },
     { status: 'At Risk', count: 12, color: '#F59E0B' },
     { status: 'Non-Compliant', count: 8, color: '#EF4444' },
-    { status: 'Pending Review', count: 15, color: '#6B7280' },
+    { status: 'Pending Review', count: 15, color: '#524E4E' },
   ],
 
   // Monthly expenses
@@ -133,11 +132,6 @@ const kpiData = [
 */
 
 const AdministrationAnalytics = () => {
-  const handleRefresh = () => {
-    // Refresh data logic
-    console.log('Refreshing analytics data...');
-  };
-
   const handleExport = () => {
     // Export logic
     console.log('Exporting analytics data...');
@@ -239,7 +233,10 @@ const AdministrationAnalytics = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockData.contractTrends}>
+              <LineChart
+                data={mockData.contractTrends}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="rgba(255,255,255,0.1)"
@@ -257,19 +254,19 @@ const AdministrationAnalytics = () => {
                 <Line
                   type="monotone"
                   dataKey="active"
-                  stroke="#10B981"
+                  stroke="#03AFBF"
                   strokeWidth={2}
                 />
                 <Line
                   type="monotone"
                   dataKey="pending"
-                  stroke="#F59E0B"
+                  stroke="#56B8FF"
                   strokeWidth={2}
                 />
                 <Line
                   type="monotone"
                   dataKey="expired"
-                  stroke="#EF4444"
+                  stroke="#524E4E"
                   strokeWidth={2}
                 />
               </LineChart>
@@ -289,13 +286,16 @@ const AdministrationAnalytics = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockData.budgetAllocation}>
+              <BarChart
+                data={mockData.budgetAllocation}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.1)"
+                  stroke="rgba(3, 175, 191, 0.1)"
                 />
-                <XAxis dataKey="department" stroke="rgba(255,255,255,0.6)" />
-                <YAxis stroke="rgba(255,255,255,0.6)" />
+                <XAxis dataKey="department" stroke="#524E4E" />
+                <YAxis stroke="#524E4E" />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'rgba(255,255,255,0.9)',
@@ -304,8 +304,8 @@ const AdministrationAnalytics = () => {
                   }}
                 />
                 <Legend />
-                <Bar dataKey="budget" fill="#3B82F6" />
-                <Bar dataKey="spent" fill="#10B981" />
+                <Bar dataKey="budget" fill="#03AFBF" />
+                <Bar dataKey="spent" fill="#56B8FF" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -369,7 +369,10 @@ const AdministrationAnalytics = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={mockData.monthlyExpenses}>
+              <AreaChart
+                data={mockData.monthlyExpenses}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="rgba(255,255,255,0.1)"
@@ -386,8 +389,8 @@ const AdministrationAnalytics = () => {
                 <Area
                   type="monotone"
                   dataKey="expenses"
-                  stroke="#8B5CF6"
-                  fill="#8B5CF6"
+                  stroke="#03AFBF"
+                  fill="#03AFBF"
                   fillOpacity={0.3}
                 />
               </AreaChart>

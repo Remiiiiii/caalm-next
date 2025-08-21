@@ -17,10 +17,11 @@ function mapRouteToDbDepartment(routeDept: string): string {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { department: string } }
+  { params }: { params: Promise<{ department: string }> }
 ) {
   try {
-    const dbDept = mapRouteToDbDepartment(params.department);
+    const resolvedParams = await params;
+    const dbDept = mapRouteToDbDepartment(resolvedParams.department);
     const { databases } = await createAdminClient();
 
     // Use Recent Activities as a simple "performance" proxy: count actions per week
