@@ -9,6 +9,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   BarChart,
   Bar,
   PieChart,
@@ -22,101 +29,43 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-// Enhanced compliance data structure matching requirements
-const complianceData = [
-  {
-    department: 'Administrative',
-    contractId: 'ADM-2024-001',
-    complianceType: 'Training Requirements',
-    required: 12,
-    completed: 12,
-    complianceRate: 100,
-    status: 'Fully Compliant',
-    financialImpact: '$150,000',
-  },
-  {
-    department: 'Operations',
-    contractId: 'OPS-2024-002',
-    complianceType: 'Safety Training',
-    required: 8,
-    completed: 7,
-    complianceRate: 87.5,
-    status: 'At Risk',
-    financialImpact: '$200,000',
-  },
-  {
-    department: 'Finance',
-    contractId: 'FIN-2024-003',
-    complianceType: 'Audit Requirements',
-    required: 4,
-    completed: 2,
-    complianceRate: 50,
-    status: 'Non-Compliant',
-    financialImpact: '$100,000',
-  },
-  {
-    department: 'HR',
-    contractId: 'HR-2024-004',
-    complianceType: 'Policy Adherence',
-    required: 6,
-    completed: 5,
-    complianceRate: 83.3,
-    status: 'Pending Review',
-    financialImpact: '$75,000',
-  },
-];
-
-// Process data for pie chart
-const getCompliancePieData = () => {
-  const statusCounts = {
-    'Fully Compliant': 0,
-    'At Risk': 0,
-    'Non-Compliant': 0,
-    'Pending Review': 0,
-  };
-
-  complianceData.forEach((item) => {
-    statusCounts[item.status as keyof typeof statusCounts]++;
-  });
-
-  return [
-    {
-      name: 'Fully Compliant',
-      value: statusCounts['Fully Compliant'],
-      color: '#10B981',
-      percentage: (
-        (statusCounts['Fully Compliant'] / complianceData.length) *
-        100
-      ).toFixed(1),
-    },
-    {
-      name: 'At Risk',
-      value: statusCounts['At Risk'],
-      color: '#F59E0B',
-      percentage: (
-        (statusCounts['At Risk'] / complianceData.length) *
-        100
-      ).toFixed(1),
-    },
-    {
-      name: 'Non-Compliant',
-      value: statusCounts['Non-Compliant'],
-      color: '#EF4444',
-      percentage: (
-        (statusCounts['Non-Compliant'] / complianceData.length) *
-        100
-      ).toFixed(1),
-    },
-    {
-      name: 'Pending Review',
-      value: statusCounts['Pending Review'],
-      color: '#6B7280',
-      percentage: (
-        (statusCounts['Pending Review'] / complianceData.length) *
-        100
-      ).toFixed(1),
-    },
-  ].filter((item) => item.value > 0);
+// Department-specific compliance data
+const departmentComplianceData = {
+  'All Departments': [
+    { name: 'Fully Compliant', value: 65, color: '#03AFBF' },
+    { name: 'At Risk', value: 25, color: '#56B8FF' },
+    { name: 'Non-Compliant', value: 10, color: '#1E40AF' },
+  ],
+  Administrative: [
+    { name: 'Fully Compliant', value: 65, color: '#03AFBF' },
+    { name: 'At Risk', value: 25, color: '#56B8FF' },
+    { name: 'Non-Compliant', value: 10, color: '#1E40AF' },
+  ],
+  'Child Welfare': [
+    { name: 'Fully Compliant', value: 75, color: '#03AFBF' },
+    { name: 'At Risk', value: 20, color: '#56B8FF' },
+    { name: 'Non-Compliant', value: 5, color: '#1E40AF' },
+  ],
+  'Behavioral Health': [
+    { name: 'Fully Compliant', value: 70, color: '#03AFBF' },
+    { name: 'At Risk', value: 25, color: '#56B8FF' },
+    { name: 'Non-Compliant', value: 5, color: '#1E40AF' },
+  ],
+  'CINS/FINS/SNAP': [
+    { name: 'Fully Compliant', value: 85, color: '#03AFBF' },
+    { name: 'At Risk', value: 12, color: '#56B8FF' },
+    { name: 'Non-Compliant', value: 3, color: '#1E40AF' },
+  ],
+  Residential: [
+    { name: 'Fully Compliant', value: 60, color: '#03AFBF' },
+    { name: 'At Risk', value: 30, color: '#56B8FF' },
+    { name: 'Non-Compliant', value: 10, color: '#1E40AF' },
+  ],
+  Clinic: [
+    { name: 'Fully Compliant', value: 88, color: '#03AFBF' },
+    { name: 'At Risk', value: 10, color: '#56B8FF' },
+    { name: 'Non-Compliant', value: 2, color: '#1E40AF' },
+  ],
 };
 
 // Mock data for Budget Allocation
@@ -133,8 +82,13 @@ const BudgetComplianceCard = () => {
   const [budgetHovered, setBudgetHovered] = useState(false);
   const [complianceHovered, setComplianceHovered] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [selectedDepartment, setSelectedDepartment] =
+    useState('All Departments');
 
-  const pieData = getCompliancePieData();
+  const pieData =
+    departmentComplianceData[
+      selectedDepartment as keyof typeof departmentComplianceData
+    ] || departmentComplianceData['All Departments'];
 
   const CustomTooltip = ({
     active,
@@ -145,28 +99,19 @@ const BudgetComplianceCard = () => {
   }) => {
     if (active && payload && payload.length) {
       const data = payload[0] as {
-        payload: { name: string; percentage: string };
+        payload: { name: string; value: number };
       };
-      const departmentData = complianceData.find(
-        (item) => item.status === data.payload.name
-      );
 
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-900">{data.payload.name}</p>
           <p className="text-sm text-gray-600">
-            {data.payload.percentage}% of contracts
+            {data.payload.value}% of contracts
           </p>
-          {departmentData && (
-            <>
-              <p className="text-xs text-gray-500 mt-1">
-                Contract Value: {departmentData.financialImpact}
-              </p>
-              <p className="text-xs text-gray-500">
-                Compliance: {departmentData.completed}/{departmentData.required}
-                ({departmentData.complianceRate}%)
-              </p>
-            </>
+          {selectedDepartment !== 'All Departments' && (
+            <p className="text-xs text-gray-500 mt-1">
+              Department: {selectedDepartment}
+            </p>
           )}
         </div>
       );
@@ -183,10 +128,10 @@ const BudgetComplianceCard = () => {
   };
 
   return (
-    <div className="z-50 mt-[-200px] grid grid-cols-1 lg:grid-cols-2 gap-6 ml-auto pr-6">
+    <div className="z-50 mt-[-200px] flex gap-6 ml-auto pr-6">
       {/* Contractual Compliance Card */}
       <Card
-        className={`transition-all duration-300 ease-in-out ${
+        className={`transition-all duration-300 ease-in-out w-[490px] ${
           complianceHovered
             ? 'scale-105 shadow-2xl bg-white/70 border-white/50'
             : 'bg-white/60 backdrop-blur-md border-white/40 shadow-lg'
@@ -198,9 +143,24 @@ const BudgetComplianceCard = () => {
           <CardTitle className="text-lg font-bold sidebar-gradient-text transition-colors duration-300">
             Contractual Compliance
           </CardTitle>
-          <CardDescription className="text-sm text-slate-600 transition-colors duration-300">
+          <CardDescription className="text-sm text-slate-600 transition-colors duration-300 mb-3">
             Contract compliance status by department
           </CardDescription>
+          <Select
+            value={selectedDepartment}
+            onValueChange={setSelectedDepartment}
+          >
+            <SelectTrigger className="w-full max-w-xs">
+              <SelectValue placeholder="Select Department" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.keys(departmentComplianceData).map((department) => (
+                <SelectItem key={department} value={department}>
+                  {department}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={250}>
@@ -210,10 +170,13 @@ const BudgetComplianceCard = () => {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percentage }) => `${name} ${percentage}%`}
-                outerRadius={80}
-                innerRadius={40}
-                paddingAngle={3}
+                label={({ name, value }) => `${name} ${value}%`}
+                outerRadius={70}
+                innerRadius={35}
+                paddingAngle={4}
+                fontSize={14}
+                stroke="#fff"
+                strokeWidth={1}
                 dataKey="value"
                 onMouseEnter={onPieEnter}
                 onMouseLeave={onPieLeave}
@@ -230,7 +193,8 @@ const BudgetComplianceCard = () => {
               <Tooltip content={<CustomTooltip />} />
               <Legend
                 verticalAlign="bottom"
-                height={36}
+                height={50}
+                wrapperStyle={{ paddingTop: '20px' }}
                 formatter={(value, entry) => (
                   <span style={{ color: entry.color, fontSize: '12px' }}>
                     {value}

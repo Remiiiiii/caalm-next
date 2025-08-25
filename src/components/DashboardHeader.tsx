@@ -6,6 +6,7 @@ import { Bell, Mail, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NotificationCenter from '@/components/NotificationCenter';
 import NotificationBadge from '@/components/NotificationBadge';
+import QuickActions from '@/components/QuickActions';
 import { Models } from 'appwrite';
 import { signOutUser } from '@/lib/actions/user.actions';
 import { getUnreadNotificationsCount } from '@/lib/actions/notification.actions';
@@ -62,48 +63,51 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   };
 
   return (
-    <header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mt-6 md:px-9 sm:mr-7 rounded-full mb-6 ml-auto w-fit px-4">
-      <div className="flex items-center h-10">
-        {/* Action buttons */}
-        {user && (
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              onClick={() => setNotifOpen(true)}
-              className="relative hover:bg-white/40 text-slate-700"
-            >
-              <Bell className="w-6 h-6" />
-              <NotificationBadge
-                count={unreadCount}
-                size="sm"
-                className="absolute -top-1 -right-1"
-              />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hover:bg-white/40 text-slate-700"
-            >
-              <Mail className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="hover:bg-white/40 text-slate-700"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
-      </div>
-      <NotificationCenter
-        open={notifOpen}
-        onClose={handleNotificationClose}
-        onRefresh={fetchUnread}
-        userId={user?.$id}
-      />
-    </header>
+    <div className="flex gap-4">
+      <QuickActions user={user} />
+      <header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mt-6 md:px-9 sm:mr-7 rounded-full mb-6 ml-auto w-fit px-4">
+        <div className="flex items-center h-10">
+          {/* Action buttons */}
+          {user && (
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                onClick={() => setNotifOpen(true)}
+                className="relative hover:bg-white/40 text-slate-700"
+              >
+                <Bell className="w-6 h-6" />
+                <NotificationBadge
+                  count={unreadCount}
+                  size="sm"
+                  className="absolute -top-1 -right-1"
+                />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-white/40 text-slate-700"
+              >
+                <Mail className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="hover:bg-white/40 text-slate-700"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
+        </div>
+        <NotificationCenter
+          open={notifOpen}
+          onClose={handleNotificationClose}
+          onRefresh={fetchUnread}
+          userId={user?.$id}
+        />
+      </header>
+    </div>
   );
 };
 

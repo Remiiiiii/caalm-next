@@ -188,6 +188,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     mutate,
   } = useNotifications(userId);
 
+  // Force refresh notifications
+  const handleRefresh = () => {
+    mutate();
+    toast({
+      title: 'Refreshing notifications...',
+      description: 'Fetching latest notifications from server.',
+    });
+  };
+
   // Set error state from SWR error
   React.useEffect(() => {
     if (swrError) {
@@ -431,7 +440,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => mutate()}
+                onClick={handleRefresh}
                 disabled={loading}
                 className="text-sm"
               >

@@ -14,6 +14,19 @@ import {
 } from '@/types/notifications';
 import { Query } from 'appwrite';
 
+// Lazy import to avoid initialization errors when messaging service is not configured
+let appwriteMessagingService: any = null;
+
+async function getAppwriteMessagingService() {
+  if (!appwriteMessagingService) {
+    const { appwriteMessagingService: service } = await import(
+      './appwriteMessagingService'
+    );
+    appwriteMessagingService = service;
+  }
+  return appwriteMessagingService;
+}
+
 class NotificationService {
   private async getClient() {
     return await createAdminClient();
@@ -249,6 +262,9 @@ class NotificationService {
         'unique()',
         notificationData
       );
+
+      // Send SMS notification if user has SMS enabled
+      await this.sendSMSNotification(notification.userId, notificationData);
 
       return response as unknown as Notification;
     } catch (error) {
@@ -532,7 +548,6 @@ class NotificationService {
         notification_types:
           payload.notificationTypes ?? existing?.notification_types ?? [],
         frequency: payload.frequency ?? existing?.frequency ?? 'instant',
-        fcm_token: payload.fcmToken ?? existing?.fcm_token,
       };
 
       const response = existing
@@ -554,6 +569,85 @@ class NotificationService {
       console.error('Failed to upsert notification settings:', error);
       throw new Error('Failed to upsert notification settings');
     }
+  }
+
+  /**
+   * Send SMS notification to user if SMS is enabled
+   */
+  private async sendSMSNotification(
+    userId: string,
+    notificationData: {
+      title: string;
+      message: string;
+      priority?: string;
+      actionUrl?: string;
+      type?: string;
+    }
+  ): Promise<void> {
+    try {
+      const messaging = await getAppwriteMessagingService();
+
+      // Check if Appwrite messaging is configured
+      if (!messaging.isConfigured()) {
+        console.log(
+          'Appwrite messaging not configured, skipping SMS notification'
+        );
+        return;
+      }
+
+      // Get user notification settings
+      const settings = await this.getNotificationSettings(userId);
+      if (!settings || !settings.push_enabled) {
+        console.log('SMS notifications disabled for user:', userId);
+        return;
+      }
+
+      // Check if user has enabled this notification type
+      if (settings.notification_types.length > 0) {
+        // TODO: Add notification type filtering here when we have the type
+        // For now, send all notifications
+      }
+
+      // Send SMS via Appwrite messaging
+      await messaging.sendGenericNotification(
+        userId,
+        notificationData.title,
+        notificationData.message
+      );
+
+      console.log(`SMS notification sent to user ${userId}`);
+    } catch (error) {
+      console.error('Failed to send SMS notification:', error);
+      // Don't throw error to avoid breaking notification creation
+    }
+  }
+
+  /**
+   * Format notification data for SMS
+   */
+  private formatSMSMessage(notificationData: {
+    title: string;
+    message: string;
+    priority?: string;
+    actionUrl?: string;
+  }): string {
+    const priority = notificationData.priority || 'medium';
+    const priorityEmoji =
+      {
+        urgent: '🚨',
+        high: '⚠️',
+        medium: 'ℹ️',
+        low: '📝',
+      }[priority] || 'ℹ️';
+
+    let message = `${priorityEmoji} ${notificationData.title}\n\n${notificationData.message}`;
+
+    // Add action URL if available (shortened)
+    if (notificationData.actionUrl) {
+      message += `\n\nView: ${notificationData.actionUrl}`;
+    }
+
+    return message;
   }
 }
 

@@ -1,77 +1,144 @@
-import { notificationService } from '@/lib/services/notificationService';
+// Lazy import to avoid initialization errors when Twilio is not configured
+let notificationService: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-// Notification trigger types based on the notification types in NotificationCenter
-export const NOTIFICATION_TRIGGERS = {
-  // File-related triggers
-  'file-uploaded': {
-    type: 'file-uploaded',
-    priority: 'low' as const,
-    defaultTitle: 'File Uploaded',
-    defaultMessage: 'A new file has been uploaded to the system.',
-  },
-  'contract-expiry': {
-    type: 'contract-expiry',
-    priority: 'high' as const,
-    defaultTitle: 'Contract Expiry Warning',
-    defaultMessage: 'A contract is approaching its expiry date.',
-  },
-  'contract-renewal': {
-    type: 'contract-renewal',
-    priority: 'medium' as const,
-    defaultTitle: 'Contract Renewal',
-    defaultMessage: 'A contract has been renewed.',
-  },
-  'audit-due': {
-    type: 'audit-due',
-    priority: 'high' as const,
-    defaultTitle: 'Audit Due',
-    defaultMessage: 'An audit is due soon.',
-  },
-  'compliance-alert': {
-    type: 'compliance-alert',
-    priority: 'urgent' as const,
-    defaultTitle: 'Compliance Alert',
-    defaultMessage: 'A compliance issue has been detected.',
-  },
-  'user-invited': {
-    type: 'user-invited',
-    priority: 'medium' as const,
-    defaultTitle: 'User Invited',
-    defaultMessage: 'A new user has been invited to the system.',
-  },
-  'system-update': {
-    type: 'system-update',
-    priority: 'low' as const,
-    defaultTitle: 'System Update',
-    defaultMessage: 'A system update has been applied.',
-  },
-  'performance-metric': {
-    type: 'performance-metric',
-    priority: 'medium' as const,
-    defaultTitle: 'Performance Metric',
-    defaultMessage: 'A new performance metric is available.',
-  },
-  'deadline-approaching': {
-    type: 'deadline-approaching',
-    priority: 'high' as const,
-    defaultTitle: 'Deadline Approaching',
-    defaultMessage: 'A deadline is approaching.',
-  },
-  'task-completed': {
-    type: 'task-completed',
-    priority: 'low' as const,
-    defaultTitle: 'Task Completed',
-    defaultMessage: 'A task has been completed.',
-  },
-  info: {
-    type: 'info',
-    priority: 'low' as const,
-    defaultTitle: 'Information',
-    defaultMessage: 'General information notification.',
-  },
-} as const;
+interface NotificationType {
+  type_key: string;
+  label: string;
+  description?: string;
+  icon?: string;
+  color_classes?: string;
+  bg_color_classes?: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  enabled: boolean;
+}
 
-export type NotificationTriggerType = keyof typeof NOTIFICATION_TRIGGERS;
+interface NotificationTrigger {
+  type: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  defaultTitle: string;
+  defaultMessage: string;
+  icon?: string;
+  colorClasses?: string;
+  bgColorClasses?: string;
+}
+
+async function getNotificationService() {
+  if (!notificationService) {
+    const { notificationService: service } = await import(
+      '@/lib/services/notificationService'
+    );
+    notificationService = service;
+  }
+  return notificationService;
+}
+
+// Dynamic notification trigger types that pull from database
+export async function getNotificationTriggers(): Promise<
+  Record<string, NotificationTrigger>
+> {
+  try {
+    const service = await getNotificationService();
+    const notificationTypes =
+      (await service.getNotificationTypes()) as NotificationType[];
+
+    const triggers: Record<string, NotificationTrigger> = {};
+
+    notificationTypes.forEach((type: NotificationType) => {
+      if (type.enabled) {
+        triggers[type.type_key] = {
+          type: type.type_key,
+          priority: type.priority,
+          defaultTitle: type.label,
+          defaultMessage:
+            type.description || `Notification for ${type.label.toLowerCase()}`,
+          icon: type.icon,
+          colorClasses: type.color_classes,
+          bgColorClasses: type.bg_color_classes,
+        };
+      }
+    });
+
+    return triggers;
+  } catch (error) {
+    console.error('Failed to load notification triggers from database:', error);
+    // Fallback to basic triggers if database fails
+    return getFallbackTriggers();
+  }
+}
+
+// Fallback triggers in case database is unavailable
+function getFallbackTriggers(): Record<string, NotificationTrigger> {
+  return {
+    'contract-expiry': {
+      type: 'contract-expiry',
+      priority: 'high' as const,
+      defaultTitle: 'Contract Expiry Warning',
+      defaultMessage: 'A contract is approaching its expiry date.',
+    },
+    'contract-renewal': {
+      type: 'contract-renewal',
+      priority: 'medium' as const,
+      defaultTitle: 'Contract Renewal',
+      defaultMessage: 'A contract has been renewed.',
+    },
+    'audit-due': {
+      type: 'audit-due',
+      priority: 'high' as const,
+      defaultTitle: 'Audit Due',
+      defaultMessage: 'An audit is due soon.',
+    },
+    'compliance-alert': {
+      type: 'compliance-alert',
+      priority: 'urgent' as const,
+      defaultTitle: 'Compliance Alert',
+      defaultMessage: 'A compliance issue has been detected.',
+    },
+    'file-uploaded': {
+      type: 'file-uploaded',
+      priority: 'low' as const,
+      defaultTitle: 'File Uploaded',
+      defaultMessage: 'A new file has been uploaded to the system.',
+    },
+    'user-invited': {
+      type: 'user-invited',
+      priority: 'medium' as const,
+      defaultTitle: 'User Invited',
+      defaultMessage: 'A new user has been invited to the system.',
+    },
+    'system-update': {
+      type: 'system-update',
+      priority: 'low' as const,
+      defaultTitle: 'System Update',
+      defaultMessage: 'A system update has been applied.',
+    },
+    'performance-metric': {
+      type: 'performance-metric',
+      priority: 'medium' as const,
+      defaultTitle: 'Performance Metric',
+      defaultMessage: 'A new performance metric is available.',
+    },
+    'deadline-approaching': {
+      type: 'deadline-approaching',
+      priority: 'high' as const,
+      defaultTitle: 'Deadline Approaching',
+      defaultMessage: 'A deadline is approaching.',
+    },
+    'task-completed': {
+      type: 'task-completed',
+      priority: 'low' as const,
+      defaultTitle: 'Task Completed',
+      defaultMessage: 'A task has been completed.',
+    },
+    info: {
+      type: 'info',
+      priority: 'low' as const,
+      defaultTitle: 'Information',
+      defaultMessage: 'General information notification.',
+    },
+  };
+}
+
+export type NotificationTriggerType = string;
 
 interface NotificationTriggerOptions {
   userId: string;
@@ -89,12 +156,20 @@ export async function triggerNotification(
   options: NotificationTriggerOptions
 ): Promise<void> {
   try {
-    const trigger = NOTIFICATION_TRIGGERS[triggerType];
+    const service = await getNotificationService();
+    const triggers = await getNotificationTriggers();
+    const trigger = triggers[triggerType];
+
+    if (!trigger) {
+      console.warn(`Unknown notification trigger type: ${triggerType}`);
+      return;
+    }
+
     const title = options.title || trigger.defaultTitle;
     const message = options.message || trigger.defaultMessage;
     const priority = options.priority || trigger.priority;
 
-    await notificationService.triggerAutomaticNotification(
+    await service.triggerAutomaticNotification(
       triggerType,
       options.userId,
       title,
@@ -135,7 +210,7 @@ export async function triggerFileUploadNotification(
       fileName,
       fileType,
       fileSize,
-      actionUrl: '/files', // Link to files page
+      actionUrl: '/files',
       actionText: 'View Files',
     },
   });
@@ -420,88 +495,127 @@ export async function triggerBulkNotifications(
 }
 
 /**
- * Demo function to test all notification triggers
- * This can be used for testing or demonstration purposes
+ * Dynamic demo function that uses actual database data
  */
 export async function triggerDemoNotifications(userId: string): Promise<void> {
-  console.log('🎭 Starting notification trigger demo...');
+  console.log('🎭 Starting dynamic notification trigger demo...');
 
-  const demoPromises = [
-    // File upload notification
-    triggerFileUploadNotification(
-      userId,
-      'demo-contract.pdf',
-      'document',
-      2048576
-    ),
+  try {
+    const triggers = await getNotificationTriggers();
+    const enabledTriggers = Object.keys(triggers).filter(
+      (key) => triggers[key]
+    );
 
-    // Contract expiry notification (urgent)
-    triggerContractExpiryNotification(
-      userId,
-      'Vendor Agreement',
-      '2024-02-15',
-      3
-    ),
+    console.log(
+      `Found ${enabledTriggers.length} enabled notification types in database`
+    );
 
-    // Contract renewal notification
-    triggerContractRenewalNotification(
-      userId,
-      'Service Contract',
-      '2025-01-15'
-    ),
+    const demoPromises = enabledTriggers.slice(0, 5).map((triggerType) => {
+      const trigger = triggers[triggerType];
 
-    // User invitation notification
-    triggerUserInvitationNotification(
-      userId,
-      'john.doe@company.com',
-      'Admin User'
-    ),
+      switch (triggerType) {
+        case 'file-uploaded':
+          return triggerFileUploadNotification(
+            userId,
+            'demo-contract.pdf',
+            'document',
+            2048576
+          );
 
-    // Audit due notification (high priority)
-    triggerAuditDueNotification(
-      userId,
-      'Q4 Compliance Audit',
-      '2024-03-01',
-      15
-    ),
+        case 'contract-expiry':
+          return triggerContractExpiryNotification(
+            userId,
+            'Vendor Agreement',
+            '2025-02-15',
+            3
+          );
 
-    // Compliance alert notification (urgent)
-    triggerComplianceAlertNotification(
-      userId,
-      'Data Breach',
-      'Suspicious activity detected in user accounts',
-      'critical'
-    ),
+        case 'contract-renewal':
+          return triggerContractRenewalNotification(
+            userId,
+            'Service Contract',
+            '2025-01-15'
+          );
 
-    // System update notification
-    triggerSystemUpdateNotification(
-      userId,
-      'Security Patch',
-      'Critical security update applied to system'
-    ),
+        case 'user-invited':
+          return triggerUserInvitationNotification(
+            userId,
+            'john.doe@company.com',
+            'Admin User'
+          );
 
-    // Performance metric notification
-    triggerPerformanceMetricNotification(userId, 'Response Time', '2.3s', 'up'),
+        case 'audit-due':
+          return triggerAuditDueNotification(
+            userId,
+            'Q4 Compliance Audit',
+            '2025-03-01',
+            15
+          );
 
-    // Deadline approaching notification
-    triggerDeadlineApproachingNotification(
-      userId,
-      'Project Review',
-      '2024-02-20',
-      2
-    ),
+        case 'compliance-alert':
+          return triggerComplianceAlertNotification(
+            userId,
+            'Data Breach',
+            'Suspicious activity detected in user accounts',
+            'critical'
+          );
 
-    // Task completed notification
-    triggerTaskCompletedNotification(userId, 'Document Review', 'Jane Smith'),
+        case 'system-update':
+          return triggerSystemUpdateNotification(
+            userId,
+            'Security Patch',
+            'Critical security update applied to system'
+          );
 
-    // Information notification
-    triggerInfoNotification(
-      userId,
-      'System Maintenance',
-      'Scheduled maintenance completed successfully'
-    ),
-  ];
+        case 'performance-metric':
+          return triggerPerformanceMetricNotification(
+            userId,
+            'Response Time',
+            '2.3s',
+            'up'
+          );
 
-  await Promise.allSettled(demoPromises);
-  console.log('✅ Demo notifications completed!');
+        case 'deadline-approaching':
+          return triggerDeadlineApproachingNotification(
+            userId,
+            'Project Review',
+            '2025-02-20',
+            2
+          );
+
+        case 'task-completed':
+          return triggerTaskCompletedNotification(
+            userId,
+            'Document Review',
+            'Jane Smith'
+          );
+
+        case 'info':
+          return triggerInfoNotification(
+            userId,
+            'System Maintenance',
+            'Scheduled maintenance completed successfully'
+          );
+
+        default:
+          // For any other trigger types, create a generic notification
+          return triggerNotification(triggerType, {
+            userId,
+            title: trigger.defaultTitle,
+            message: trigger.defaultMessage,
+            priority: trigger.priority,
+            metadata: {
+              demo: true,
+              triggerType,
+              timestamp: new Date().toISOString(),
+            },
+          });
+      }
+    });
+
+    await Promise.allSettled(demoPromises);
+    console.log('✅ Dynamic demo notifications completed!');
+  } catch (error) {
+    console.error('❌ Failed to run dynamic demo notifications:', error);
+  }
 }

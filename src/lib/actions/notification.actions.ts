@@ -40,19 +40,8 @@ export const createNotification = async ({
         read,
       }
     );
-    // Attempt FCM send if user has a token saved
-    try {
-      const settings = await notificationService.getNotificationSettings(
-        userId
-      );
-      if (settings?.fcm_token) {
-        // TODO: Replace with your server-side FCM send implementation
-        // This is a placeholder hook where you would enqueue/send via Firebase Admin SDK
-        console.log('Would send FCM to token:', settings.fcm_token);
-      }
-    } catch (e) {
-      console.warn('FCM send skipped:', e);
-    }
+    // SMS notification is now handled automatically by the notification service
+    // when creating notifications, so no additional action needed here
     return notification;
   } catch (error) {
     handleError(error, 'Failed to create notification');

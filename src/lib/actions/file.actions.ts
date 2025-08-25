@@ -16,8 +16,6 @@ import {
   triggerContractExpiryNotification,
   triggerContractRenewalNotification,
 } from '@/lib/utils/notificationTriggers';
-import fs from 'fs';
-import path from 'path';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
@@ -29,7 +27,8 @@ export const uploadFile = async ({
   ownerId,
   accountId,
   path: revalidatePathArg,
-}: UploadFileProps) => {
+  contractMetadata,
+}: UploadFileProps & { contractMetadata?: Record<string, unknown> }) => {
   const { storage, databases } = await createAdminClient();
 
   try {
@@ -72,17 +71,24 @@ export const uploadFile = async ({
       throw new Error('File document creation failed');
     }
 
-    // Check if filename contains "contract" (case-insensitive)
-    if (bucketFile.name.toLowerCase().includes('contract')) {
+    // Check if filename contains "contract" (case-insensitive) or if contractMetadata is provided
+    if (
+      bucketFile.name.toLowerCase().includes('contract') ||
+      contractMetadata
+    ) {
       // Add to Contracts collection as well
-      // 1. Extract expiry date from file using your /api/extract-expiry endpoint
       let contractExpiryDate: string | undefined = undefined;
       let status: string = 'pending-review'; // Default to pending-review
-      if (bucketFile.name.toLowerCase().includes('contract')) {
+
+      // Use provided metadata or extract from file
+      if (contractMetadata) {
+        // Use provided contract metadata
+        contractExpiryDate = contractMetadata.expiryDate;
+        status = contractMetadata.expiryDate ? 'active' : 'action-required';
+      } else {
+        // Fallback to extraction for files with "contract" in name
         try {
-          // Call your API endpoint to extract the expiry date
           const formData = new FormData();
-          // Create a new File object from the arrayBuffer for FormData
           const fileForFormData = new File([arrayBuffer], bucketFile.name, {
             type: file.type,
           });
@@ -102,79 +108,69 @@ export const uploadFile = async ({
           }
         } catch (error) {
           console.error('Error extracting contract expiry date:', error);
-          contractExpiryDate = new Date().toISOString().split('T')[0]; // fallback
+          contractExpiryDate = new Date().toISOString().split('T')[0];
           status = 'action-required';
         }
+      }
 
-        const contractDocument = {
-          contractName: bucketFile.name,
-          contractExpiryDate,
-          status,
-          amount: undefined,
-          daysUntilExpiry: undefined,
-          compliance: undefined,
-          assignedManagers: [],
-          department: undefined, // Will be set when contract is assigned to a department
-          fileId: newFile.$id, // Save file.$id in the contract document
-          fileRef: newFile.$id,
-        };
-        const contract = await databases.createDocument(
-          appwriteConfig.databaseId,
-          appwriteConfig.contractsCollectionId,
-          ID.unique(),
-          contractDocument
-        );
-        // Save contract.$id in the file document, or file.$id in the contract document
-        await databases.updateDocument(
-          appwriteConfig.databaseId,
-          appwriteConfig.filesCollectionId,
-          newFile.$id,
-          { contractId: contract.$id }
-        );
+      const contractDocument = {
+        contractName: contractMetadata?.contractName || bucketFile.name,
+        contractExpiryDate,
+        status,
+        amount: contractMetadata?.amount || undefined,
+        daysUntilExpiry: undefined,
+        compliance: contractMetadata?.compliance || undefined,
+        assignedManagers: contractMetadata?.assignedManagers || [],
+        department: contractMetadata?.department || undefined,
+        contractType: contractMetadata?.contractType || undefined,
+        vendor: contractMetadata?.vendor || undefined,
+        contractNumber: contractMetadata?.contractNumber || undefined,
+        priority: contractMetadata?.priority || 'medium',
+        description: contractMetadata?.description || undefined,
+        fileId: newFile.$id,
+        fileRef: newFile.$id,
+      };
 
-        // Trigger contract expiry notification if expiry date is set
-        if (contractExpiryDate) {
-          try {
-            const expiryDate = new Date(contractExpiryDate);
-            const today = new Date();
-            const daysUntilExpiry = Math.ceil(
-              (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      const contract = await databases.createDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.contractsCollectionId,
+        ID.unique(),
+        contractDocument
+      );
+
+      // Save contract.$id in the file document, or file.$id in the contract document
+      await databases.updateDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.filesCollectionId,
+        newFile.$id,
+        { contractId: contract.$id }
+      );
+
+      // Trigger contract expiry notification if expiry date is set
+      if (contractExpiryDate) {
+        try {
+          const expiryDate = new Date(contractExpiryDate);
+          const today = new Date();
+          const daysUntilExpiry = Math.ceil(
+            (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          if (daysUntilExpiry <= 90) {
+            // Only notify if within 90 days
+            await triggerContractExpiryNotification(
+              ownerId,
+              bucketFile.name,
+              contractExpiryDate,
+              daysUntilExpiry
             );
-
-            if (daysUntilExpiry <= 90) {
-              // Only notify if within 90 days
-              await triggerContractExpiryNotification(
-                ownerId,
-                bucketFile.name,
-                contractExpiryDate,
-                daysUntilExpiry
-              );
-            }
-          } catch (error) {
-            console.error(
-              'Failed to trigger contract expiry notification:',
-              error
-            );
-            // Don't throw error here as the contract creation was successful
           }
+        } catch (error) {
+          console.error(
+            'Failed to trigger contract expiry notification:',
+            error
+          );
+          // Don't throw error here as the contract creation was successful
         }
-      }
-    } else {
-      // Save file to /uploads directory
-      const uploadsDir = path.join(process.cwd(), 'uploads');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir);
-      }
-      const filePath = path.join(uploadsDir, bucketFile.name);
-
-      // Convert File to Buffer for saving to disk
-      try {
-        // We already have the arrayBuffer from earlier, so use it directly
-        const fileBuffer = Buffer.from(arrayBuffer);
-        fs.writeFileSync(filePath, fileBuffer);
-      } catch (error) {
-        console.error('Error converting file to buffer:', error);
-        throw new Error('Failed to process file for disk storage');
       }
     }
 

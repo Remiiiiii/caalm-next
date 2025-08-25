@@ -796,7 +796,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       <div className="flex flex-wrap gap-2">
                         {[
                           'What is this document about?',
-                          'Summarize the main points',
+                          'When does this contract expire?',
                           'What are the key terms and conditions?',
                           'What actions do I need to take?',
                         ].map((q, idx) => (
