@@ -6,7 +6,7 @@ import { getCurrentUser } from '@/lib/actions/user.actions';
 
 interface UserRole {
   role: string;
-  department?: string;
+  division?: string;
   fullName?: string;
   loading: boolean;
   error: string | null;
@@ -15,7 +15,7 @@ interface UserRole {
 export const useUserRole = (): UserRole => {
   const { user } = useAuth();
   const [role, setRole] = useState<string>('');
-  const [department, setDepartment] = useState<string>('');
+  const [division, setDivision] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export const useUserRole = (): UserRole => {
         }
 
         setRole(currentUser.role || '');
-        setDepartment(currentUser.department || '');
+        setDivision(currentUser.division || '');
         setFullName(currentUser.fullName || '');
         setError(null);
       } catch (err) {
@@ -53,7 +53,7 @@ export const useUserRole = (): UserRole => {
 
   return {
     role,
-    department,
+    division,
     fullName,
     loading,
     error,

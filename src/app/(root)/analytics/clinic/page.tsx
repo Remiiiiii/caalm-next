@@ -22,7 +22,7 @@ const ClinicAnalytics = () => {
 };
 
 const ClinicAnalyticsPage = () => {
-  const departmentData = {
+  const divisionData = {
     totalContracts: 198,
     totalBudget: '$2.5M',
     staffCount: 145,
@@ -32,7 +32,7 @@ const ClinicAnalyticsPage = () => {
   };
 
   return (
-    <AnalyticsLayout department="clinic" departmentData={departmentData}>
+    <AnalyticsLayout division="clinic" divisionData={divisionData}>
       <ClinicAnalytics />
     </AnalyticsLayout>
   );

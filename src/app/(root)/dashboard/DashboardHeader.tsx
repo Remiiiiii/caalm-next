@@ -84,7 +84,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
                   <p className="font-medium text-navy">{user.name}</p>
                   <p className="text-xs text-slate-dark">
                     {getRoleDisplay(user.prefs?.role || '')} -{' '}
-                    {user.prefs?.department || 'Unknown Department'}
+                    {user.prefs?.division || 'Unknown Division'}
                   </p>
                 </div>
 

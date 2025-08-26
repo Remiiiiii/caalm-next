@@ -163,13 +163,92 @@ export const avatarPlaceholderUrl =
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-// Department type - will be populated from database
-export type Department = string;
+// Organizational Hierarchy Types
+export type UserDivision =
+  | 'administration' // Reports to HR Department
+  | 'c-suite' // Reports to Executive Department
+  | 'management' // Reports to Operations Department
+  | 'childwelfare' // Subdivision under Management
+  | 'behavioralhealth' // Subdivision under Management
+  | 'clinic' // Subdivision under Management
+  | 'residential' // Subdivision under Management
+  | 'cins-fins-snap'; // Subdivision under Management
 
-// Helper function to format department names for display
-export const formatDepartmentName = (department: string): string => {
-  return department
+export type ContractDepartment =
+  | 'IT'
+  | 'Finance'
+  | 'HR'
+  | 'Legal'
+  | 'Operations'
+  | 'Sales'
+  | 'Marketing'
+  | 'Executive'
+  | 'Engineering';
+
+// User Division to Parent Department Mapping
+export const DIVISION_TO_DEPARTMENT: Record<UserDivision, string> = {
+  administration: 'HR',
+  'c-suite': 'Executive',
+  management: 'Operations',
+  childwelfare: 'Operations',
+  behavioralhealth: 'Operations',
+  clinic: 'Operations',
+  residential: 'Operations',
+  'cins-fins-snap': 'Operations',
+};
+
+// Contract Departments for upload form
+export const CONTRACT_DEPARTMENTS: ContractDepartment[] = [
+  'IT',
+  'Finance',
+  'HR',
+  'Legal',
+  'Operations',
+  'Sales',
+  'Marketing',
+  'Executive',
+  'Engineering',
+];
+
+// User Divisions for profile settings
+export const USER_DIVISIONS: UserDivision[] = [
+  'administration',
+  'c-suite',
+  'management',
+  'childwelfare',
+  'behavioralhealth',
+  'clinic',
+  'residential',
+  'cins-fins-snap',
+];
+
+// Format division name for display
+export const formatDivisionName = (division: UserDivision): string => {
+  return division
     .split('-')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+};
+
+// Format department name for display
+export const formatDepartmentName = (
+  department: ContractDepartment
+): string => {
+  return department;
+};
+
+// Get parent department for a division
+export const getParentDepartment = (division: UserDivision): string => {
+  return DIVISION_TO_DEPARTMENT[division];
+};
+
+// Check if division is a management subdivision
+export const isManagementSubdivision = (division: UserDivision): boolean => {
+  return [
+    'childwelfare',
+    'behavioralhealth',
+    'clinic',
+    'residential',
+    'cins-fins-snap',
+  ].includes(division);
 };

@@ -24,7 +24,7 @@ const ChildWelfareAnalytics = () => {
 };
 
 const ChildWelfareAnalyticsPage = () => {
-  const departmentData = {
+  const divisionData = {
     totalContracts: 234,
     totalBudget: '$2.8M',
     staffCount: 156,
@@ -34,7 +34,7 @@ const ChildWelfareAnalyticsPage = () => {
   };
 
   return (
-    <AnalyticsLayout department="child-welfare" departmentData={departmentData}>
+    <AnalyticsLayout division="child-welfare" divisionData={divisionData}>
       <ChildWelfareAnalytics />
     </AnalyticsLayout>
   );

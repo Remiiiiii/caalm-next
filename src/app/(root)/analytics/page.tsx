@@ -19,11 +19,11 @@ import Link from 'next/link';
 import { useUserRole } from '@/hooks/useUserRole';
 
 const AnalyticsPage = () => {
-  const { role, department: userDepartment, loading } = useUserRole();
+  const { role, division: userDivision, loading } = useUserRole();
   const router = useRouter();
 
-  // Map database department values to route department values
-  const mapDatabaseToRouteDepartment = (dbDepartment: string): string => {
+  // Map database division values to route division values
+  const mapDatabaseToRouteDivision = (dbDivision: string): string => {
     const mapping: Record<string, string> = {
       childwelfare: 'child-welfare',
       behavioralhealth: 'behavioral-health',
@@ -32,23 +32,23 @@ const AnalyticsPage = () => {
       residential: 'residential',
       clinic: 'clinic',
     };
-    return mapping[dbDepartment] || dbDepartment;
+    return mapping[dbDivision] || dbDivision;
   };
 
-  // Redirect managers and admins to their department page
+  // Redirect managers and admins to their division page
   useEffect(() => {
-    if (!loading && role && userDepartment) {
+    if (!loading && role && userDivision) {
       if (role === 'manager') {
-        const routeDepartment = mapDatabaseToRouteDepartment(userDepartment);
-        router.replace(`/analytics/${routeDepartment}`);
+        const routeDivision = mapDatabaseToRouteDivision(userDivision);
+        router.replace(`/analytics/${routeDivision}`);
       } else if (role === 'admin') {
         router.replace('/analytics/administration');
       }
     }
-  }, [loading, role, userDepartment, router]);
+  }, [loading, role, userDivision, router]);
 
   // Show loading while redirecting
-  if (loading || (role === 'manager' && userDepartment) || role === 'admin') {
+  if (loading || (role === 'manager' && userDivision) || role === 'admin') {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -72,7 +72,7 @@ const AnalyticsPage = () => {
     return null;
   }
 
-  const allDepartments = [
+  const allDivisions = [
     {
       id: 'child-welfare',
       name: 'Child Welfare',
@@ -159,8 +159,8 @@ const AnalyticsPage = () => {
     },
   ];
 
-  // For executives, show all departments
-  const departments = allDepartments;
+  // For executives, show all divisions
+  const divisions = allDivisions;
 
   return (
     <div className="space-y-6">
@@ -172,27 +172,29 @@ const AnalyticsPage = () => {
         </p>
       </div>
 
-      {/* Department Analytics Grid */}
+      {/* Division Analytics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {departments.map((dept) => {
-          const IconComponent = dept.icon;
+        {divisions.map((division) => {
+          const IconComponent = division.icon;
           return (
             <Card
-              key={dept.id}
+              key={division.id}
               className="bg-white/30 backdrop-blur border border-white/40 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
             >
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`p-3 rounded-xl ${dept.color} shadow-lg`}>
+                    <div
+                      className={`p-3 rounded-xl ${division.color} shadow-lg`}
+                    >
                       <IconComponent className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <CardTitle className="h4 text-dark-200">
-                        {dept.name}
+                        {division.name}
                       </CardTitle>
                       <p className="body-2 text-slate-700 mt-1">
-                        {dept.description}
+                        {division.description}
                       </p>
                     </div>
                   </div>
@@ -202,30 +204,30 @@ const AnalyticsPage = () => {
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
                     <div className="h3 text-dark-200 font-bold">
-                      {dept.stats.contracts}
+                      {division.stats.contracts}
                     </div>
                     <div className="caption text-slate-700">Contracts</div>
                   </div>
                   <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
                     <div className="h3 text-dark-200 font-bold">
-                      {dept.stats.budget}
+                      {division.stats.budget}
                     </div>
                     <div className="caption text-slate-700">Budget</div>
                   </div>
                   <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
                     <div className="h3 text-dark-200 font-bold">
-                      {dept.stats.staff}
+                      {division.stats.staff}
                     </div>
                     <div className="caption text-slate-700">Staff</div>
                   </div>
                   <div className="text-center p-3 bg-white/20 rounded-lg backdrop-blur">
                     <div className="h3 text-dark-200 font-bold">
-                      {dept.stats.compliance}
+                      {division.stats.compliance}
                     </div>
                     <div className="caption text-slate-700">Compliance</div>
                   </div>
                 </div>
-                <Link href={dept.route}>
+                <Link href={division.route}>
                   <Button
                     className="w-full bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
                     variant="outline"

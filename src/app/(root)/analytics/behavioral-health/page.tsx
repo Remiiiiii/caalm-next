@@ -24,7 +24,7 @@ const BehavioralHealthAnalytics = () => {
 };
 
 const BehavioralHealthAnalyticsPage = () => {
-  const departmentData = {
+  const divisionData = {
     totalContracts: 189,
     totalBudget: '$2.1M',
     staffCount: 134,
@@ -34,10 +34,7 @@ const BehavioralHealthAnalyticsPage = () => {
   };
 
   return (
-    <AnalyticsLayout
-      department="behavioral-health"
-      departmentData={departmentData}
-    >
+    <AnalyticsLayout division="behavioral-health" divisionData={divisionData}>
       <BehavioralHealthAnalytics />
     </AnalyticsLayout>
   );

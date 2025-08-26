@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation';
 import crypto from 'crypto';
 import * as sdk from 'node-appwrite';
 import { triggerUserInvitationNotification } from '../utils/notificationTriggers';
+import { type UserDivision } from '../../../constants';
 
 export type AppUser = {
   fullName: string;
@@ -17,15 +18,7 @@ export type AppUser = {
   avatar: string;
   accountId: string;
   role: string;
-  department?:
-    | 'childwelfare'
-    | 'behavioralhealth'
-    | 'clinic'
-    | 'residential'
-    | 'cins-fins-snap'
-    | 'administration'
-    | 'c-suite'
-    | 'management';
+  division?: UserDivision;
   status?: 'active' | 'inactive';
 };
 
@@ -505,20 +498,12 @@ export const getInvitationByToken = async (token: string) => {
 export const updateUserProfile = async ({
   accountId,
   fullName,
-  department,
+  division,
   role,
 }: {
   accountId: string;
   fullName?: string;
-  department?:
-    | 'childwelfare'
-    | 'behavioralhealth'
-    | 'clinic'
-    | 'residential'
-    | 'cins-fins-snap'
-    | 'administration'
-    | 'c-suite'
-    | 'management';
+  division?: UserDivision;
   role?: string;
 }) => {
   try {
@@ -535,7 +520,7 @@ export const updateUserProfile = async ({
     const updatePayload: Record<string, unknown> = {};
     if (fullName !== undefined) updatePayload.fullName = fullName;
     if (role !== undefined) updatePayload.role = role;
-    if (department !== undefined) updatePayload.department = department;
+    if (division !== undefined) updatePayload.division = division;
     // Update the user document
     const updatedUser = await databases.updateDocument(
       appwriteConfig.databaseId,

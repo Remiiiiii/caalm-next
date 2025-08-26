@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const department = searchParams.get('department');
     const userRole = searchParams.get('userRole');
-    const userDepartment = searchParams.get('userDepartment');
+    const userDivision = searchParams.get('userDivision');
 
     if (!userRole) {
       return NextResponse.json(
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     // Get accessible departments for the user
     const accessibleDepartments = await getUserAccessibleDepartments(
       userRole,
-      userDepartment || undefined
+      userDivision || undefined
     );
 
     // Filter by department if specified
@@ -33,8 +33,8 @@ export async function GET(request: NextRequest) {
     const mockReports = [
       {
         id: '1',
-        title: 'Administration Department Report',
-        department: 'Administration',
+        title: 'IT Department Report',
+        department: 'IT',
         generatedAt: '2024-01-15T10:30:00Z',
         generatedBy: 'John Admin',
         status: 'completed',
@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
       },
       {
         id: '2',
-        title: 'CFS Department Report',
-        department: 'CFS',
+        title: 'Finance Department Report',
+        department: 'Finance',
         generatedAt: '2024-01-14T14:20:00Z',
         generatedBy: 'Sarah Manager',
         status: 'completed',

@@ -24,7 +24,7 @@ const ResidentialAnalytics = () => {
 };
 
 const ResidentialAnalyticsPage = () => {
-  const departmentData = {
+  const divisionData = {
     totalContracts: 167,
     totalBudget: '$2.3M',
     staffCount: 112,
@@ -34,7 +34,7 @@ const ResidentialAnalyticsPage = () => {
   };
 
   return (
-    <AnalyticsLayout department="residential" departmentData={departmentData}>
+    <AnalyticsLayout division="residential" divisionData={divisionData}>
       <ResidentialAnalytics />
     </AnalyticsLayout>
   );

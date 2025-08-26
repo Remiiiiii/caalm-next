@@ -50,7 +50,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
       if (user) {
         const departments = await getUserAccessibleDepartments(
           (user as ExtendedUser)?.role || 'user',
-          (user as ExtendedUser)?.department
+          (user as ExtendedUser)?.division
         );
         setAccessibleDepartments(departments);
       }

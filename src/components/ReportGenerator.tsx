@@ -16,6 +16,7 @@ import {
   generateReport,
   downloadReport,
   uploadReport,
+  type ReportData,
 } from '@/lib/actions/report.actions';
 
 type ExtendedUser = Models.User<Models.Preferences> & {
@@ -31,30 +32,7 @@ interface ReportGeneratorProps {
   user?: ExtendedUser | null;
 }
 
-const departments = [
-  'Administration',
-  'C-Suite',
-  'CFS',
-  'Behavioral Health',
-  'Child Welfare',
-  'Clinic',
-  'Residential',
-];
-
-interface ReportData {
-  id: string;
-  title: string;
-  department: string;
-  generatedAt: string;
-  status: 'generating' | 'completed' | 'failed';
-  content?: string;
-  metrics?: {
-    contracts: number;
-    users: number;
-    events: number;
-    files: number;
-  };
-}
+import { CONTRACT_DEPARTMENTS } from '../../constants';
 
 const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   open,
@@ -101,7 +79,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     if (!report) return;
 
     try {
-      await downloadReport(report.id, report.title);
+      await downloadReport(report.$id, report.title);
     } catch (err) {
       setError('Failed to download report. Please try again.');
       console.error('Download error:', err);
@@ -112,7 +90,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     if (!report) return;
 
     try {
-      await uploadReport(report.id, report.title, user?.$id);
+      await uploadReport(report.$id, report.title, user?.$id);
       setError(null);
     } catch (err) {
       setError('Failed to upload report. Please try again.');
@@ -169,7 +147,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                   </p>
                   {user?.role === 'executive' ? (
                     <div className="mt-3 space-y-3">
-                      {departments.map((dept) => (
+                      {CONTRACT_DEPARTMENTS.map((dept) => (
                         <div key={dept} className="flex items-center space-x-3">
                           <input
                             type="radio"
@@ -262,26 +240,24 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                 </div>
 
                 {/* Metrics Summary */}
-                {report.metrics && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 min-w-0">
-                    <div className="text-center p-4 bg-blue/10 rounded-xl border border-blue/20 shadow-drop-1">
-                      <p className="h2 text-blue">{report.metrics.contracts}</p>
-                      <p className="caption text-blue">Contracts</p>
-                    </div>
-                    <div className="text-center p-4 bg-green/10 rounded-xl border border-green/20 shadow-drop-1">
-                      <p className="h2 text-green">{report.metrics.users}</p>
-                      <p className="caption text-green">Users</p>
-                    </div>
-                    <div className="text-center p-4 bg-pink/10 rounded-xl border border-pink/20 shadow-drop-1">
-                      <p className="h2 text-pink">{report.metrics.events}</p>
-                      <p className="caption text-pink">Events</p>
-                    </div>
-                    <div className="text-center p-4 bg-orange/10 rounded-xl border border-orange/20 shadow-drop-1">
-                      <p className="h2 text-orange">{report.metrics.files}</p>
-                      <p className="caption text-orange">Files</p>
-                    </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 min-w-0">
+                  <div className="text-center p-4 bg-blue/10 rounded-xl border border-blue/20 shadow-drop-1">
+                    <p className="h2 text-blue">{report.contractsCount}</p>
+                    <p className="caption text-blue">Contracts</p>
                   </div>
-                )}
+                  <div className="text-center p-4 bg-green/10 rounded-xl border border-green/20 shadow-drop-1">
+                    <p className="h2 text-green">{report.usersCount}</p>
+                    <p className="caption text-green">Users</p>
+                  </div>
+                  <div className="text-center p-4 bg-pink/10 rounded-xl border border-pink/20 shadow-drop-1">
+                    <p className="h2 text-pink">{report.eventsCount}</p>
+                    <p className="caption text-pink">Events</p>
+                  </div>
+                  <div className="text-center p-4 bg-orange/10 rounded-xl border border-orange/20 shadow-drop-1">
+                    <p className="h2 text-orange">{report.filesCount}</p>
+                    <p className="caption text-orange">Files</p>
+                  </div>
+                </div>
 
                 {/* Report Content */}
                 {report.content && (

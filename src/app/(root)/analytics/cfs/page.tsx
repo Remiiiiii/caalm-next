@@ -22,7 +22,7 @@ const CFSAnalytics = () => {
 };
 
 const CFSAnalyticsPage = () => {
-  const departmentData = {
+  const divisionData = {
     totalContracts: 145,
     totalBudget: '$1.6M',
     staffCount: 98,
@@ -32,7 +32,7 @@ const CFSAnalyticsPage = () => {
   };
 
   return (
-    <AnalyticsLayout department="cfs" departmentData={departmentData}>
+    <AnalyticsLayout division="cfs" divisionData={divisionData}>
       <CFSAnalytics />
     </AnalyticsLayout>
   );

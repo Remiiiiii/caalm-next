@@ -23,31 +23,31 @@ export const getContractDepartmentEnums = async () => {
   }
 };
 
-export const getUserDepartmentEnums = async () => {
+export const getUserDivisionEnums = async () => {
   const { databases } = await createAdminClient();
   try {
     const attr = (await databases.getAttribute(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
-      'department'
+      'division'
     )) as { elements?: string[] };
     return attr.elements || [];
   } catch (error) {
-    handleError(error, 'Failed to fetch user department enums');
+    handleError(error, 'Failed to fetch user division enums');
   }
 };
 
-export const getUsersByDepartment = async (department: string) => {
+export const getUsersByDivision = async (division: string) => {
   const { databases } = await createAdminClient();
   try {
     const users = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
-      [Query.equal('department', department), Query.equal('role', 'manager')]
+      [Query.equal('division', division), Query.equal('role', 'manager')]
     );
     return users.documents;
   } catch (error) {
-    handleError(error, 'Failed to fetch users by department');
+    handleError(error, 'Failed to fetch users by division');
   }
 };
 

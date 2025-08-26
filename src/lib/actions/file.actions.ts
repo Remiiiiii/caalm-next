@@ -117,7 +117,9 @@ export const uploadFile = async ({
         contractName: contractMetadata?.contractName || bucketFile.name,
         contractExpiryDate,
         status,
-        amount: contractMetadata?.amount || undefined,
+        amount: contractMetadata?.amount
+          ? parseFloat(String(contractMetadata.amount))
+          : undefined,
         daysUntilExpiry: undefined,
         compliance: contractMetadata?.compliance || undefined,
         assignedManagers: contractMetadata?.assignedManagers || [],

@@ -3,8 +3,10 @@
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Query } from 'node-appwrite';
-import { formatDepartmentName, type Department } from '../../../constants';
-import { notificationService } from '@/lib/services/notificationService';
+import {
+  formatDepartmentName,
+  type ContractDepartment,
+} from '../../../constants';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
@@ -222,7 +224,7 @@ export const assignContractToDepartment = async ({
   department,
 }: {
   contractId: string;
-  department: Department;
+  department: ContractDepartment;
 }) => {
   const { databases } = await createAdminClient();
   try {

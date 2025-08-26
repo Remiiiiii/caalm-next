@@ -13,20 +13,18 @@ interface Props {
   avatar: string;
   email: string;
   role: 'executive' | 'admin' | 'manager';
-  department?: string;
+  division?: string;
 }
 
-const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
+const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
   const router = useRouter();
   const pathname = usePathname();
   const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
-  // Map database department values to sidebar department values
-  const mapDepartmentToSidebar = (
-    dbDepartment?: string
-  ): string | undefined => {
-    if (!dbDepartment) return undefined;
+  // Map database division values to sidebar division values
+  const mapDivisionToSidebar = (dbDivision?: string): string | undefined => {
+    if (!dbDivision) return undefined;
 
-    const departmentMap: Record<string, string> = {
+    const divisionMap: Record<string, string> = {
       childwelfare: 'child-welfare',
       behavioralhealth: 'behavioral-health',
       clinic: 'clinic',
@@ -39,13 +37,13 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
       operations: 'operations',
     };
 
-    return departmentMap[dbDepartment] || dbDepartment;
+    return divisionMap[dbDivision] || dbDivision;
   };
 
-  const mappedDepartment = mapDepartmentToSidebar(department);
+  const mappedDivision = mapDivisionToSidebar(division);
 
-  // Map database department to route department for direct linking
-  const mapDatabaseToRouteDepartment = (dbDepartment: string): string => {
+  // Map database division to route division for direct linking
+  const mapDatabaseToRouteDivision = (dbDivision: string): string => {
     const mapping: Record<string, string> = {
       childwelfare: 'child-welfare',
       behavioralhealth: 'behavioral-health',
@@ -54,7 +52,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
       residential: 'residential',
       clinic: 'clinic',
     };
-    return mapping[dbDepartment] || dbDepartment;
+    return mapping[dbDivision] || dbDivision;
   };
 
   const groupedNav = [
@@ -228,15 +226,15 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
             ]
           : []),
         // For managers, show their department analytics
-        ...(role === 'manager' && department
+        ...(role === 'manager' && division
           ? [
               {
-                name: mapDatabaseToRouteDepartment(department)
+                name: mapDatabaseToRouteDivision(division)
                   .split('-')
                   .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
                   .join(' '),
                 icon: '/assets/icons/chart.svg',
-                url: `/analytics/${mapDatabaseToRouteDepartment(department)}`,
+                url: `/analytics/${mapDatabaseToRouteDivision(division)}`,
                 roles: ['manager'],
               },
             ]
@@ -252,36 +250,36 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
               },
               {
                 name: 'Management',
-                department: 'management',
+                division: 'management',
                 roles: ['executive'],
                 subItems: [
                   {
                     name: 'CFS',
-                    department: 'cins-fins-snap',
+                    division: 'cins-fins-snap',
                     url: '/analytics/cfs',
                     roles: ['executive'],
                   },
                   {
                     name: 'Behavioral Health',
-                    department: 'behavioralhealth',
+                    division: 'behavioralhealth',
                     url: '/analytics/behavioral-health',
                     roles: ['executive'],
                   },
                   {
                     name: 'Child Welfare',
-                    department: 'childwelfare',
+                    division: 'childwelfare',
                     url: '/analytics/child-welfare',
                     roles: ['executive'],
                   },
                   {
                     name: 'Clinic',
-                    department: 'clinic',
+                    division: 'clinic',
                     url: '/analytics/clinic',
                     roles: ['executive'],
                   },
                   {
                     name: 'Residential',
-                    department: 'residential',
+                    division: 'residential',
                     url: '/analytics/residential',
                     roles: ['executive'],
                   },
@@ -338,10 +336,10 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                 section.header === 'Reports & Analytics'
               ) {
                 sectionItems = sectionItems.map((item) => {
-                  if (item.subItems && mappedDepartment) {
+                  if (item.subItems && mappedDivision) {
                     // Filter subitems to only show the manager's department
                     const filteredSubItems = item.subItems.filter(
-                      (subItem) => subItem.department === mappedDepartment
+                      (subItem) => subItem.division === mappedDivision
                     );
                     return {
                       ...item,

@@ -4,12 +4,12 @@ import { updateUserProfile } from '@/lib/actions/user.actions';
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { accountId, fullName, role, department } = body;
+    const { accountId, fullName, role, division } = body;
     if (!accountId) {
       return NextResponse.json({ error: 'Missing accountId' }, { status: 400 });
     }
-    // Validate department if provided
-    const allowedDepartments = [
+    // Validate division if provided
+    const allowedDivisions = [
       'childwelfare',
       'behavioralhealth',
       'finance',
@@ -18,21 +18,21 @@ export async function PATCH(req: NextRequest) {
       'c-suite',
       'managerial',
     ];
-    let departmentValue = undefined;
-    if (department !== undefined) {
-      if (!allowedDepartments.includes(department)) {
+    let divisionValue = undefined;
+    if (division !== undefined) {
+      if (!allowedDivisions.includes(division)) {
         return NextResponse.json(
-          { error: 'Invalid department value' },
+          { error: 'Invalid division value' },
           { status: 400 }
         );
       }
-      departmentValue = department;
+      divisionValue = division;
     }
     const updatedUser = await updateUserProfile({
       accountId,
       fullName,
       role,
-      department: departmentValue,
+      division: divisionValue,
     });
     return NextResponse.json({ user: updatedUser });
   } catch (error) {

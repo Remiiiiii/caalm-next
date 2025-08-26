@@ -95,7 +95,7 @@ interface ExecutiveDashboardProps {
         accountId?: string;
         fullName?: string;
         role?: string;
-        department?: string;
+        division?: string;
       })
     | null;
 }
@@ -151,7 +151,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       id: 1,
       type: 'User Registration',
       requester: 'David Wilson - Admin',
-      department: 'Admin',
+      division: 'Admin',
     },
     {
       id: 2,
@@ -171,7 +171,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const [inviteForm, setInviteForm] = useState({
     selectedUserId: '',
     role: '',
-    department: '',
+    division: '',
   });
   const [loading, setLoading] = useState(false);
   const [resendingToken, setResendingToken] = useState<string | null>(null);
@@ -208,18 +208,23 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
           ]
         );
         if (!cancelled) {
-          type RawDoc = { $id: unknown; contractName?: unknown; name?: unknown; contractExpiryDate: unknown };
-          const items: NotifierContract[] = (res.documents || []).map((raw: RawDoc) => {
-            const id = typeof raw.$id === 'string' ? raw.$id : String(raw.$id ?? '');
-            const nm =
-              typeof raw.contractName === 'string'
-                ? raw.contractName
-                : typeof raw.name === 'string'
-                ? raw.name
-                : 'Contract';
-            const exp = typeof raw.contractExpiryDate === 'string' ? raw.contractExpiryDate : String(raw.contractExpiryDate ?? '');
-            return { id, name: nm, expiryDate: exp };
-          });
+          const items: NotifierContract[] = (res.documents || []).map(
+            (raw: Record<string, unknown>) => {
+              const id =
+                typeof raw.$id === 'string' ? raw.$id : String(raw.$id ?? '');
+              const nm =
+                typeof raw.contractName === 'string'
+                  ? raw.contractName
+                  : typeof raw.name === 'string'
+                  ? raw.name
+                  : 'Contract';
+              const exp =
+                typeof raw.contractExpiryDate === 'string'
+                  ? raw.contractExpiryDate
+                  : String(raw.contractExpiryDate ?? '');
+              return { id, name: nm, expiryDate: exp };
+            }
+          );
           setExpiryContracts(items);
         }
       } catch {
@@ -271,7 +276,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         email: selectedUser.email,
         name: selectedUser.fullName,
         role: inviteForm.role,
-        department: inviteForm.department,
+        division: inviteForm.division,
         orgId,
         invitedBy: adminName,
       });
@@ -283,7 +288,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       });
 
       // Reset form
-      setInviteForm({ selectedUserId: '', role: '', department: '' });
+      setInviteForm({ selectedUserId: '', role: '', division: '' });
 
       // Clear the adding state after animation
       setTimeout(() => {
@@ -428,7 +433,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             <h1 className="text-lg font-bold text-slate-700">
               {user?.fullName || ''}{' '}
               <span className="text-lg text-slate-light">
-                {`| ${user?.department || 'Unknown Department'}`}
+                {`| ${user?.division || 'Unknown Division'}`}
               </span>
             </h1>
           </div>
@@ -623,9 +628,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                       <p className="text-sm text-slate-dark">
                         {approval.requester || approval.title}
                       </p>
-                      {approval.department && (
+                      {approval.division && (
                         <p className="text-xs text-slate-light">
-                          Department: {approval.department}
+                          Division: {approval.division}
                         </p>
                       )}
                       {approval.amount && (
@@ -690,11 +695,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 </SelectScrollable>
 
                 <SelectScrollable
-                  value={inviteForm.department}
+                  value={inviteForm.division}
                   onValueChange={(value) =>
-                    setInviteForm({ ...inviteForm, department: value })
+                    setInviteForm({ ...inviteForm, division: value })
                   }
-                  placeholder="Select department"
+                  placeholder="Select division"
                   className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                 >
                   <SelectItem value="admin">Administration</SelectItem>
@@ -857,17 +862,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium">
-                    Department
-                  </label>
+                  <label className="block text-sm font-medium">Division</label>
                   <select
-                    name="department"
+                    name="division"
                     value=""
                     onChange={() => {}}
                     className="w-full border rounded px-2 py-1"
                     required
                   >
-                    <option value="">Select department</option>
+                    <option value="">Select division</option>
                     <option value="childwelfare">Child Welfare</option>
                     <option value="behavioralhealth">Behavioral Health</option>
                     <option value="finance">Finance</option>

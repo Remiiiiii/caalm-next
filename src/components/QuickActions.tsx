@@ -11,7 +11,7 @@ import { Models } from 'appwrite';
 interface QuickActionsProps {
   user?:
     | (Models.User<Models.Preferences> & {
-        department?: string;
+        division?: string;
       })
     | null;
 }
@@ -63,7 +63,7 @@ const QuickActions = ({ user }: QuickActionsProps) => {
       <ReportGenerator
         open={reportOpen}
         onClose={() => setReportOpen(false)}
-        department={user?.department}
+        division={user?.division}
         user={user}
       />
     </div>

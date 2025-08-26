@@ -395,23 +395,35 @@ async function generateAIAnalysis(data: {
  */
 export async function getUserAccessibleDepartments(
   userRole: string,
-  userDepartment?: string
+  userDivision?: string
 ): Promise<string[]> {
   if (userRole === 'executive') {
     return [
-      'Administration',
-      'C-Suite',
-      'Management',
-      'CFS',
-      'Behavioral Health',
-      'Child Welfare',
-      'Clinic',
-      'Residential',
+      'IT',
+      'Finance',
+      'HR',
+      'Legal',
+      'Operations',
+      'Sales',
+      'Marketing',
+      'Engineering',
+      'Other',
     ];
   } else if (userRole === 'admin') {
-    return ['Administration'];
-  } else if (userRole === 'manager' && userDepartment) {
-    return [userDepartment];
+    return ['IT', 'Finance', 'HR', 'Legal', 'Operations'];
+  } else if (userRole === 'manager' && userDivision) {
+    // Managers can access all departments for contract management
+    return [
+      'IT',
+      'Finance',
+      'HR',
+      'Legal',
+      'Operations',
+      'Sales',
+      'Marketing',
+      'Engineering',
+      'Other',
+    ];
   }
 
   return [];

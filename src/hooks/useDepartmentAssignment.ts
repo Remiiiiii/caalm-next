@@ -36,7 +36,7 @@ export const useDepartmentAssignment = () => {
             avatar: u.avatar,
             accountId: u.$id || u.accountId, // Try $id first, fallback to accountId
             role: u.role,
-            department: u.department,
+            division: u.division,
             status: u.status,
           };
         });
@@ -53,10 +53,9 @@ export const useDepartmentAssignment = () => {
   // Filter managers when department selection changes
   useEffect(() => {
     if (selectedDepartment && managers.length > 0) {
-      const filtered = managers.filter(
-        (m) => m.department === selectedDepartment
-      );
-      setFilteredManagers(filtered);
+      // For now, show all managers since we're assigning to contract departments
+      // In the future, we might want to filter by division that corresponds to the department
+      setFilteredManagers(managers);
       // Clear selected managers when department changes
       setSelectedManagers([]);
     } else {

@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
 import pdfParse from 'pdf-parse';
 
 // Add a GET route for testing
@@ -20,6 +17,7 @@ interface ExtractedContractData {
   amount?: string;
   expiryDate?: string;
   startDate?: string;
+  description?: string;
   parties?: string[];
   keyTerms?: string[];
   confidence: number;
@@ -29,10 +27,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('Contract extraction API called');
 
-    // Test if the route is being hit
-    console.log('Request URL:', request.url);
-    console.log('Request method:', request.method);
-
+    // Read the request body only once
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -43,32 +38,56 @@ export async function POST(request: NextRequest) {
 
     console.log('File received:', file.name, file.type, file.size);
 
-    // For now, skip file system operations and just return mock data
-    // This will help us test if the API route is working
-    const mockExtractedData = {
-      contractName: file.name.replace(/\.[^/.]+$/, ''),
-      contractNumber: 'CN-' + Date.now(),
-      vendor: 'Sample Vendor',
-      amount: '$50,000',
-      expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split('T')[0],
-      startDate: new Date().toISOString().split('T')[0],
-      parties: ['Company A', 'Company B'],
-      keyTerms: ['Payment terms', 'Delivery schedule'],
-      confidence: 85,
-    };
+    // Convert file to buffer immediately to avoid stream issues
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-    console.log('Returning mock extracted data:', mockExtractedData);
+    let extractedText = '';
+
+    // Extract text based on file type
+    if (file.type === 'application/pdf') {
+      try {
+        const pdfData = await pdfParse(buffer);
+        extractedText = pdfData.text;
+        console.log('PDF text extracted, length:', extractedText.length);
+      } catch (pdfError) {
+        console.error('PDF parsing error:', pdfError);
+        // Fallback to mock data if PDF parsing fails
+        extractedText = `Contract ${file.name} - This is a fallback text extraction.`;
+      }
+    } else if (file.type.includes('text') || file.name.endsWith('.txt')) {
+      extractedText = buffer.toString('utf-8');
+      console.log('Text file content extracted, length:', extractedText.length);
+    } else if (
+      file.type.includes('word') ||
+      file.name.endsWith('.doc') ||
+      file.name.endsWith('.docx')
+    ) {
+      // For Word documents, we'll use a simple text extraction approach
+      // In a production environment, you might want to use a library like mammoth
+      extractedText = `Contract ${file.name} - Word document content would be extracted here.`;
+      console.log('Word document detected, using fallback text');
+    } else {
+      // For other file types, use filename as fallback
+      extractedText = `Contract ${file.name} - File type not supported for text extraction.`;
+      console.log('Unsupported file type, using fallback text');
+    }
+
+    // Extract contract data from text
+    const extractedData = await extractContractDataFromText(
+      extractedText,
+      file.name
+    );
+
+    console.log('Extracted data:', extractedData);
 
     return NextResponse.json({
       success: true,
-      data: mockExtractedData,
+      data: extractedData,
       filename: file.name,
-      method: 'mock-extraction',
+      method: 'ai-extraction',
+      textLength: extractedText.length,
     });
-
-    // Mock data is already returned above, so we don't need this section
   } catch (error) {
     console.error('Contract data extraction error:', error);
     console.error(
@@ -111,6 +130,9 @@ async function extractContractDataFromText(
   extracted.expiryDate = dates.expiryDate;
   extracted.startDate = dates.startDate;
 
+  // Extract description
+  extracted.description = extractDescription(text);
+
   // Extract parties
   extracted.parties = extractParties(text);
 
@@ -133,6 +155,9 @@ function extractContractName(
     /agreement\s+(?:for|between|with)\s+([^,\n]+)/i,
     /title[:\s]*([^,\n]+)/i,
     /contract\s+title[:\s]*([^,\n]+)/i,
+    /service\s+agreement[:\s]*([^,\n]+)/i,
+    /purchase\s+order[:\s]*([^,\n]+)/i,
+    /license\s+agreement[:\s]*([^,\n]+)/i,
   ];
 
   for (const pattern of namePatterns) {
@@ -145,7 +170,7 @@ function extractContractName(
   // Fallback to filename
   return filename
     .replace(/\.[^/.]+$/, '')
-    .replace(/contract|agreement/i, '')
+    .replace(/contract|agreement|order/i, '')
     .trim();
 }
 
@@ -155,6 +180,8 @@ function extractContractNumber(text: string): string | undefined {
     /agreement\s+(?:number|no\.?)[:\s]*([A-Z0-9\-]+)/i,
     /(?:contract|agreement)\s+id[:\s]*([A-Z0-9\-]+)/i,
     /reference\s+(?:number|no\.?)[:\s]*([A-Z0-9\-]+)/i,
+    /po\s+(?:number|no\.?)[:\s]*([A-Z0-9\-]+)/i,
+    /purchase\s+order\s+(?:number|no\.?)[:\s]*([A-Z0-9\-]+)/i,
   ];
 
   for (const pattern of patterns) {
@@ -174,6 +201,8 @@ function extractVendor(text: string): string | undefined {
     /contractor[:\s]*([^,\n]+)/i,
     /between\s+([^,\n]+)\s+and/i,
     /party\s+(?:b|2)[:\s]*([^,\n]+)/i,
+    /seller[:\s]*([^,\n]+)/i,
+    /provider[:\s]*([^,\n]+)/i,
   ];
 
   for (const pattern of patterns) {
@@ -192,6 +221,7 @@ function extractAmount(text: string): string | undefined {
     /(?:contract\s+)?value[:\s]*\$?([0-9,]+(?:\.[0-9]{2})?)/i,
     /(?:total\s+)?cost[:\s]*\$?([0-9,]+(?:\.[0-9]{2})?)/i,
     /(?:price|fee)[:\s]*\$?([0-9,]+(?:\.[0-9]{2})?)/i,
+    /(?:total\s+)?price[:\s]*\$?([0-9,]+(?:\.[0-9]{2})?)/i,
     /\$([0-9,]+(?:\.[0-9]{2})?)/g,
   ];
 
@@ -217,6 +247,8 @@ function extractDates(text: string): {
     /(?:expiry|expiration|end)\s+date[:\s]*([A-Za-z]+\s+[0-9]{1,2},?\s+[0-9]{4})/i,
     /(?:expiry|expiration|end)\s+date[:\s]*([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
     /(?:expiry|expiration|end)\s+date[:\s]*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4})/i,
+    /(?:term|duration)[:\s]*([0-9]+\s+(?:years?|months?|days?))/i,
+    /(?:valid|effective)\s+until[:\s]*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/i,
   ];
 
   for (const pattern of expiryPatterns) {
@@ -232,6 +264,7 @@ function extractDates(text: string): {
     /(?:start|beginning|effective)\s+date[:\s]*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/i,
     /(?:start|beginning|effective)\s+date[:\s]*([A-Za-z]+\s+[0-9]{1,2},?\s+[0-9]{4})/i,
     /(?:start|beginning|effective)\s+date[:\s]*([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+    /(?:commencement|start)\s+date[:\s]*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/i,
   ];
 
   for (const pattern of startPatterns) {
@@ -245,6 +278,34 @@ function extractDates(text: string): {
   return dates;
 }
 
+function extractDescription(text: string): string | undefined {
+  // Try to extract a brief description from the contract
+  const descriptionPatterns = [
+    /(?:scope|description|summary)[:\s]*([^.\n]{20,200})/i,
+    /(?:purpose|objective)[:\s]*([^.\n]{20,200})/i,
+    /(?:services|deliverables)[:\s]*([^.\n]{20,200})/i,
+    /(?:work|project)[:\s]*([^.\n]{20,200})/i,
+  ];
+
+  for (const pattern of descriptionPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const description = match[1].trim();
+      if (description.length > 20 && description.length < 200) {
+        return description;
+      }
+    }
+  }
+
+  // If no specific description found, create one from key terms
+  const keyTerms = extractKeyTerms(text);
+  if (keyTerms.length > 0) {
+    return `Contract covering ${keyTerms.slice(0, 3).join(', ')}.`;
+  }
+
+  return undefined;
+}
+
 function extractParties(text: string): string[] {
   const parties: string[] = [];
 
@@ -252,6 +313,8 @@ function extractParties(text: string): string[] {
     /between\s+([^,\n]+)\s+and\s+([^,\n]+)/gi,
     /party\s+(?:a|1)[:\s]*([^,\n]+)/gi,
     /party\s+(?:b|2)[:\s]*([^,\n]+)/gi,
+    /client[:\s]*([^,\n]+)/gi,
+    /company[:\s]*([^,\n]+)/gi,
   ];
 
   for (const pattern of patterns) {
@@ -273,6 +336,8 @@ function extractKeyTerms(text: string): string[] {
     /(?:payment|billing)[:\s]*([^,\n]+)/gi,
     /(?:deliverable|scope)[:\s]*([^,\n]+)/gi,
     /(?:termination|cancellation)[:\s]*([^,\n]+)/gi,
+    /(?:service|work)[:\s]*([^,\n]+)/gi,
+    /(?:obligation|requirement)[:\s]*([^,\n]+)/gi,
   ];
 
   for (const pattern of termPatterns) {
@@ -342,10 +407,16 @@ function calculateConfidence(extracted: ExtractedContractData): number {
     total += 10;
   }
 
-  // Parties
-  if (extracted.parties && extracted.parties.length > 0) {
+  // Description
+  if (extracted.description) {
     score += 10;
     total += 10;
+  }
+
+  // Parties
+  if (extracted.parties && extracted.parties.length > 0) {
+    score += 5;
+    total += 5;
   }
 
   // Key terms
