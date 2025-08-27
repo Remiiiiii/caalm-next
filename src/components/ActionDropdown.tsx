@@ -14,7 +14,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 //
 import type { UIFileDoc } from '@/types/files';
-import { actionsDropdownItems, formatDepartmentName } from '../../constants';
+import {
+  actionsDropdownItems,
+  formatDepartmentName,
+  ContractDepartment,
+  DIVISION_TO_DEPARTMENT,
+} from '../../constants';
 import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Input } from './ui/input';
@@ -118,7 +123,7 @@ const ActionDropdown = ({
         if (selectedDepartment) {
           await assignContractToDepartment({
             contractId: file.contractId,
-            department: selectedDepartment,
+            department: selectedDepartment as ContractDepartment,
           });
         }
 
@@ -211,12 +216,12 @@ const ActionDropdown = ({
                 <div className="mb-2 text-sm text-slate-700">
                   Select department for this contract:
                 </div>
-                <div className="flex flex-col gap-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-4">
                   {departmentEnums.length > 0 ? (
                     departmentEnums.map((dept) => (
                       <label
                         key={dept}
-                        className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded"
+                        className="flex items-center gap-2 cursor-pointer hover:rounded-full hover:bg-slate-50 p-2 rounded"
                       >
                         <input
                           type="radio"
@@ -228,12 +233,12 @@ const ActionDropdown = ({
                           className="cursor-pointer"
                         />
                         <span className="text-sm cursor-pointer">
-                          {formatDepartmentName(dept)}
+                          {formatDepartmentName(dept as ContractDepartment)}
                         </span>
                       </label>
                     ))
                   ) : (
-                    <div className="text-sm text-slate-500">
+                    <div className="text-sm text-slate-500 col-span-3">
                       {isLoading
                         ? 'Loading departments...'
                         : 'No departments available'}
@@ -249,16 +254,16 @@ const ActionDropdown = ({
                   <thead className="bg-slate-50/80">
                     <tr>
                       <th></th>
-                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                      <th className="px-2 py-1 text-center text-[14px] font-semibold text-slate-700">
                         Name
                       </th>
-                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                      <th className="px-2 py-1 text-center text-[14px] font-semibold text-slate-700">
                         Department
                       </th>
-                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                      <th className="px-2 py-1 text-center text-[14px] font-semibold text-slate-700">
                         Role
                       </th>
-                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                      <th className="px-2 py-1 text-center text-[14px] font-semibold text-slate-700">
                         Status
                       </th>
                     </tr>
@@ -295,14 +300,24 @@ const ActionDropdown = ({
                               className="cursor-pointer"
                             />
                           </td>
-                          <td className="px-2 py-1">{manager.fullName}</td>
-                          <td className="px-2 py-1">
-                            {manager.department
-                              ? formatDepartmentName(manager.department)
+                          <td className="px-2 py-1 text-center">
+                            {manager.fullName}
+                          </td>
+                          <td className="px-2 py-1 text-center">
+                            {manager.division
+                              ? formatDepartmentName(
+                                  DIVISION_TO_DEPARTMENT[
+                                    manager.division
+                                  ] as ContractDepartment
+                                )
                               : 'N/A'}
                           </td>
-                          <td className="px-2 py-1">{manager.role}</td>
-                          <td className="px-2 py-1">{manager.status}</td>
+                          <td className="px-2 py-1 text-center">
+                            {manager.role}
+                          </td>
+                          <td className="px-2 py-1 text-center">
+                            {manager.status}
+                          </td>
                         </tr>
                       ))
                     ) : (

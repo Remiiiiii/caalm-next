@@ -39,7 +39,7 @@ export const navItems = [
 
 export const actionsDropdownItems = [
   {
-    label: 'Assign',
+    label: 'Re-assign',
     icon: '/assets/icons/assign.svg',
     value: 'assign',
   },
@@ -167,12 +167,15 @@ export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 export type UserDivision =
   | 'administration' // Reports to HR Department
   | 'c-suite' // Reports to Executive Department
-  | 'management' // Reports to Operations Department
-  | 'childwelfare' // Subdivision under Management
-  | 'behavioralhealth' // Subdivision under Management
-  | 'clinic' // Subdivision under Management
-  | 'residential' // Subdivision under Management
-  | 'cins-fins-snap'; // Subdivision under Management
+  | 'childwelfare' // Reports to Operations Department
+  | 'behavioralhealth' // Reports to Operations Department
+  | 'clinic' // Reports to Operations Department
+  | 'residential' // Reports to Operations Department
+  | 'cins-fins-snap' // Reports to Operations Department
+  | 'sales' // Reports to Sales Department
+  | 'engineering' // Reports to Engineering Department
+  | 'support' // Reports to IT Department
+  | 'help-desk'; // Reports to IT Department
 
 export type ContractDepartment =
   | 'IT'
@@ -189,12 +192,15 @@ export type ContractDepartment =
 export const DIVISION_TO_DEPARTMENT: Record<UserDivision, string> = {
   administration: 'HR',
   'c-suite': 'Executive',
-  management: 'Operations',
   childwelfare: 'Operations',
   behavioralhealth: 'Operations',
   clinic: 'Operations',
   residential: 'Operations',
   'cins-fins-snap': 'Operations',
+  sales: 'Sales',
+  engineering: 'Engineering',
+  support: 'IT',
+  'help-desk': 'IT',
 };
 
 // Contract Departments for upload form
@@ -214,12 +220,15 @@ export const CONTRACT_DEPARTMENTS: ContractDepartment[] = [
 export const USER_DIVISIONS: UserDivision[] = [
   'administration',
   'c-suite',
-  'management',
   'childwelfare',
   'behavioralhealth',
   'clinic',
   'residential',
   'cins-fins-snap',
+  'sales',
+  'engineering',
+  'support',
+  'help-desk',
 ];
 
 // Format division name for display
@@ -242,8 +251,8 @@ export const getParentDepartment = (division: UserDivision): string => {
   return DIVISION_TO_DEPARTMENT[division];
 };
 
-// Check if division is a management subdivision
-export const isManagementSubdivision = (division: UserDivision): boolean => {
+// Check if division is an operations subdivision
+export const isOperationsSubdivision = (division: UserDivision): boolean => {
   return [
     'childwelfare',
     'behavioralhealth',

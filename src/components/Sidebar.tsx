@@ -249,8 +249,7 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                 roles: ['executive'],
               },
               {
-                name: 'Management',
-                division: 'management',
+                name: 'Operations',
                 roles: ['executive'],
                 subItems: [
                   {
