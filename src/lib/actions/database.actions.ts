@@ -51,6 +51,20 @@ export const getUsersByDivision = async (division: string) => {
   }
 };
 
+export const getUsersByDepartment = async (department: string) => {
+  const { databases } = await createAdminClient();
+  try {
+    const users = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      [Query.equal('department', department), Query.equal('role', 'manager')]
+    );
+    return users.documents;
+  } catch (error) {
+    handleError(error, 'Failed to fetch users by department');
+  }
+};
+
 export const getAllManagers = async () => {
   const { databases } = await createAdminClient();
   try {

@@ -83,8 +83,14 @@ export const uploadFile = async ({
       // Use provided metadata or extract from file
       if (contractMetadata) {
         // Use provided contract metadata
-        contractExpiryDate = contractMetadata.expiryDate;
-        status = contractMetadata.expiryDate ? 'active' : 'action-required';
+        contractExpiryDate =
+          typeof contractMetadata.expiryDate === 'string'
+            ? contractMetadata.expiryDate
+            : undefined;
+        status =
+          typeof contractMetadata.expiryDate === 'string'
+            ? 'active'
+            : 'action-required';
       } else {
         // Fallback to extraction for files with "contract" in name
         try {
@@ -120,14 +126,72 @@ export const uploadFile = async ({
         amount: contractMetadata?.amount
           ? parseFloat(String(contractMetadata.amount))
           : undefined,
-        daysUntilExpiry: undefined,
-        compliance: contractMetadata?.compliance || undefined,
+        daysUntilExpiry: (() => {
+          if (contractExpiryDate) {
+            try {
+              const expiryDate = new Date(contractExpiryDate);
+              const today = new Date();
+              const timeDiff = expiryDate.getTime() - today.getTime();
+              const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+              return daysDiff;
+            } catch (error) {
+              console.error('Error calculating days until expiry:', error);
+              return undefined;
+            }
+          }
+          return undefined;
+        })(),
+        compliance: (() => {
+          const compliance = contractMetadata?.compliance;
+          if (typeof compliance === 'string') {
+            // Map frontend compliance levels to database enum values
+            const complianceMapping: Record<string, string> = {
+              'Low Risk': 'up-to-date',
+              'Medium Risk': 'action-required',
+              'High Risk': 'action-required',
+              'Critical Risk': 'non-compliant',
+            };
+            return complianceMapping[compliance] || 'action-required';
+          }
+          return 'action-required';
+        })(),
         assignedManagers: contractMetadata?.assignedManagers || [],
         department: contractMetadata?.department || undefined,
-        contractType: contractMetadata?.contractType || undefined,
+        contractType: (() => {
+          const contractType = contractMetadata?.contractType;
+          if (typeof contractType === 'string') {
+            // Map frontend values to database enum values
+            const typeMapping: Record<string, string> = {
+              'Service Agreement': 'Service_Agreement',
+              'Purchase Order': 'Purchase_Order',
+              'License Agreement': 'License_Agreement',
+              NDA: 'NDA_',
+              'Employment Contract': 'Employment_Contract',
+              'Vendor Contract': 'Vendor_Contract',
+              'Lease Agreement': 'Lease_Agreement',
+              'Consulting Agreement': 'Consulting_Agreement',
+              Other: 'Other',
+            };
+            return typeMapping[contractType] || 'Other';
+          }
+          return 'Other';
+        })(),
         vendor: contractMetadata?.vendor || undefined,
         contractNumber: contractMetadata?.contractNumber || undefined,
-        priority: contractMetadata?.priority || 'medium',
+        priority: (() => {
+          const priority = contractMetadata?.priority;
+          if (typeof priority === 'string') {
+            // Map frontend priority values to database enum values
+            const priorityMapping: Record<string, string> = {
+              low: 'Low',
+              medium: 'Medium',
+              high: 'High',
+              urgent: 'Urgent',
+            };
+            return priorityMapping[priority.toLowerCase()] || 'Medium';
+          }
+          return 'Medium';
+        })(),
         description: contractMetadata?.description || undefined,
         fileId: newFile.$id,
         fileRef: newFile.$id,

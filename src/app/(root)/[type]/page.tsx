@@ -1,10 +1,11 @@
 import React from 'react';
 import Sort from '@/components/Sort';
 import { getFiles, getTotalSpaceUsed } from '@/lib/actions/file.actions';
-import { Models } from 'node-appwrite';
+import { getCurrentUser } from '@/lib/actions/user.actions';
 import Card from '@/components/Card';
 import { getFileTypesParams } from '@/lib/utils';
 import FileUsageOverview from '@/components/FileUsageOverview';
+import { UIFileDoc } from '@/types/files';
 
 const Page = async ({ searchParams, params }: SearchParamProps) => {
   const type = ((await params)?.type as string) || '';
@@ -18,10 +19,13 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
   // Fetch total space data for File Usage Overview
   const totalSpace = await getTotalSpaceUsed();
 
+  // Get current user
+  const user = await getCurrentUser();
+
   // If type is 'images', filter to only png, jpg, jpeg
-  let filteredDocuments = files.documents;
+  let filteredDocuments = files.documents as UIFileDoc[];
   if (type.toLowerCase() === 'images') {
-    filteredDocuments = files.documents.filter((file: Models.Document) => {
+    filteredDocuments = files.documents.filter((file: UIFileDoc) => {
       const ext = (file.extension || '').toLowerCase();
       return ext === 'png' || ext === 'jpg' || ext === 'jpeg';
     });
@@ -29,7 +33,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
   // Calculate total size in bytes
   const totalSizeBytes = filteredDocuments.reduce(
-    (sum: number, file: Models.Document) => sum + (file.size || 0),
+    (sum: number, file: UIFileDoc) => sum + (file.size || 0),
     0
   );
   // Format total size using convertFileSize
@@ -42,7 +46,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       {/* File Usage Overview Section - Only show on uploads page */}
       {(!type || type.toLowerCase() === 'uploads') && (
         <section className="mb-8 w-full">
-          <FileUsageOverview totalSpace={totalSpace} />
+          <FileUsageOverview totalSpace={totalSpace} user={user} />
         </section>
       )}
       <section className="w-full">
@@ -62,12 +66,12 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       {/* Render the files */}
       {filteredDocuments.length > 0 ? (
         <section className="file-list">
-          {filteredDocuments.map((file: Models.Document) => (
+          {filteredDocuments.map((file: UIFileDoc) => (
             <Card
               key={file.$id}
               file={file}
               status={file.status}
-              expirationDate={file.expirationDate}
+              expirationDate={file.contractExpiryDate}
             />
           ))}
         </section>

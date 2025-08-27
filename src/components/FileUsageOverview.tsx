@@ -8,6 +8,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import FormattedDateTime from '@/components/FormattedDateTime';
+import FileUploader from './FileUploader';
+import { Models } from 'appwrite';
 
 interface FileTypeSummary {
   size: number;
@@ -26,9 +28,14 @@ interface TotalSpace {
 
 interface FileUsageOverviewProps {
   totalSpace: TotalSpace | null;
+  user?:
+    | (Models.User<Models.Preferences> & {
+        division?: string;
+      })
+    | null;
 }
 
-const FileUsageOverview = ({ totalSpace }: FileUsageOverviewProps) => {
+const FileUsageOverview = ({ user, totalSpace }: FileUsageOverviewProps) => {
   if (!totalSpace) {
     return (
       <section className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-xl p-6 flex flex-col">
@@ -44,9 +51,18 @@ const FileUsageOverview = ({ totalSpace }: FileUsageOverviewProps) => {
 
   return (
     <section className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-xl p-6">
-      <h2 className="flex left-0 text-lg font-bold text-center sidebar-gradient-text mb-6">
-        File Usage Overview
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-bold sidebar-gradient-text">
+          File Usage Overview
+        </h2>
+        {user && (
+          <FileUploader
+            ownerId={user.$id}
+            accountId={user.$id}
+            className="primary-btn h-10 px-4 shadow-drop-1 text-sm"
+          />
+        )}
+      </div>
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Chart on the left */}
         <div className="flex justify-center items-center lg:w-1/3">

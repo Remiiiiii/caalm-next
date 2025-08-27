@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar, TrendingUp } from 'lucide-react';
-import FileUploader from '@/components/FileUploader';
 import ContractUploadForm from '@/components/ContractUploadForm';
 import ReportGenerator from '@/components/ReportGenerator';
 import { Models } from 'appwrite';
@@ -33,11 +32,6 @@ const QuickActions = ({ user }: QuickActionsProps) => {
     <div className="flex items-center space-x-2">
       {user && (
         <>
-          <FileUploader
-            ownerId={user.$id}
-            accountId={user.$id}
-            className="primary-btn h-10 px-4 shadow-drop-1 text-sm"
-          />
           <ContractUploadForm
             ownerId={user.$id}
             accountId={user.$id}
@@ -63,7 +57,7 @@ const QuickActions = ({ user }: QuickActionsProps) => {
       <ReportGenerator
         open={reportOpen}
         onClose={() => setReportOpen(false)}
-        division={user?.division}
+        department={user?.division}
         user={user}
       />
     </div>

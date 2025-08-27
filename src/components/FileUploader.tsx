@@ -79,7 +79,7 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
           width={16}
           height={16}
         />
-        <span className="ml-2">Upload</span>
+        <span>Upload</span>
       </Button>
       {files.length > 0 && (
         <ul className="uploader-preview-list">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,12 +52,26 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { CONTRACT_DEPARTMENTS } from '../../constants';
+import {
+  getAllManagers,
+  getUsersByDepartment,
+} from '@/lib/actions/database.actions';
 
 interface ContractUploadFormProps {
   ownerId: string;
   accountId: string;
   className?: string;
   onSuccess?: () => void;
+}
+
+// Processed file data interface
+interface ProcessedFileData {
+  name: string;
+  type: string;
+  size: number;
+  base64Content: string;
+  arrayBuffer: ArrayBuffer;
+  lastModified: number;
 }
 
 const CONTRACT_TYPES = [
@@ -98,6 +112,7 @@ const contractSchema = z.object({
   compliance: z.string().optional(),
   vendor: z.string().optional(),
   contractNumber: z.string().optional(),
+  assignedManagers: z.array(z.string()).optional(),
 });
 
 const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
@@ -111,12 +126,20 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [processedFileData, setProcessedFileData] =
+    useState<ProcessedFileData | null>(null);
   const [extractedData, setExtractedData] = useState<Record<
     string,
     unknown
   > | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [availableManagers, setAvailableManagers] = useState<
+    Array<{ $id: string; fullName: string; email: string; division?: string }>
+  >([]);
+  const [filteredManagers, setFilteredManagers] = useState<
+    Array<{ $id: string; fullName: string; email: string; division?: string }>
+  >([]);
+  const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof contractSchema>>({
     resolver: zodResolver(contractSchema),
@@ -131,68 +154,178 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       compliance: '',
       vendor: '',
       contractNumber: '',
+      assignedManagers: [],
     },
   });
+
+  // Fetch managers on component mount
+  useEffect(() => {
+    const fetchManagers = async () => {
+      try {
+        const managers = await getAllManagers();
+        if (managers) {
+          const typedManagers = managers.map(
+            (manager: {
+              $id: string;
+              fullName?: string;
+              email?: string;
+              division?: string;
+            }) => ({
+              $id: manager.$id,
+              fullName: manager.fullName || 'Unknown',
+              email: manager.email || '',
+              division: manager.division,
+            })
+          );
+          setAvailableManagers(typedManagers);
+          setFilteredManagers(typedManagers);
+        }
+      } catch (error) {
+        console.error('Failed to fetch managers:', error);
+      }
+    };
+    fetchManagers();
+  }, []);
+
+  // Filter managers when department changes
+  useEffect(() => {
+    const department = form.watch('department');
+    if (department) {
+      // Fetch managers for the selected department
+      const fetchDepartmentManagers = async () => {
+        try {
+          const departmentManagers = await getUsersByDepartment(department);
+          if (departmentManagers) {
+            const typedManagers = departmentManagers.map(
+              (manager: {
+                $id: string;
+                fullName?: string;
+                email?: string;
+                division?: string;
+              }) => ({
+                $id: manager.$id,
+                fullName: manager.fullName || 'Unknown',
+                email: manager.email || '',
+                division: manager.division,
+              })
+            );
+            setFilteredManagers(typedManagers);
+          }
+        } catch (error) {
+          console.error('Failed to fetch department managers:', error);
+          // Fallback to all managers if department filtering fails
+          setFilteredManagers(availableManagers);
+        }
+      };
+      fetchDepartmentManagers();
+    } else {
+      setFilteredManagers(availableManagers);
+    }
+  }, [form.watch('department'), availableManagers]);
+
+  // Synchronous file processing function
+  const processFileSynchronously = useCallback(
+    (file: File): Promise<ProcessedFileData> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = (event) => {
+          try {
+            const arrayBuffer = event.target?.result as ArrayBuffer;
+            const base64Content = btoa(
+              new Uint8Array(arrayBuffer).reduce(
+                (data, byte) => data + String.fromCharCode(byte),
+                ''
+              )
+            );
+
+            const processedData: ProcessedFileData = {
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              base64Content,
+              arrayBuffer,
+              lastModified: file.lastModified,
+            };
+
+            resolve(processedData);
+          } catch (error) {
+            reject(error);
+          }
+        };
+
+        reader.onerror = () => reject(new Error('File reading failed'));
+        reader.readAsArrayBuffer(file);
+      });
+    },
+    []
+  );
 
   // Reset function to clear all form data and file
   const resetForm = useCallback(() => {
     form.reset();
-    setSelectedFile(null);
+    setProcessedFileData(null);
     setExtractedData(null);
     setIsExtracting(false);
+    setSelectedManagers([]);
     setIsUploading(false);
     setUploadProgress(0);
   }, [form]);
 
-  // File drop handling
+  // File drop handling with synchronous processing
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
 
-        // Store the original file for upload
-        setSelectedFile(file);
-
-        // Auto-extract data from contract
-        setIsExtracting(true);
         try {
-          const extracted = await extractContractData(file);
-          setExtractedData(extracted);
+          // Process file synchronously and cache all data
+          const processedData = await processFileSynchronously(file);
+          setProcessedFileData(processedData);
 
-          // Pre-fill form with extracted data
-          if (extracted) {
-            form.reset({
-              ...form.getValues(),
-              contractName:
-                (extracted.contractName as string) ||
-                file.name.replace(/\.[^/.]+$/, ''),
-              expiryDate: extracted.expiryDate
-                ? new Date(extracted.expiryDate as string)
-                : undefined,
-              amount:
-                (extracted.amount as string) ||
-                (extracted.amount as number)?.toString() ||
-                '',
-              vendor: (extracted.vendor as string) || '',
-              contractNumber: (extracted.contractNumber as string) || '',
-              description: (extracted.description as string) || '',
-            });
+          // Auto-extract data from contract using cached data
+          setIsExtracting(true);
+          try {
+            const extracted = await extractContractData(processedData);
+            setExtractedData(extracted);
+
+            // Pre-fill form with extracted data
+            if (extracted) {
+              form.reset({
+                ...form.getValues(),
+                contractName:
+                  (extracted.contractName as string) ||
+                  file.name.replace(/\.[^/.]+$/, ''),
+                expiryDate: extracted.expiryDate
+                  ? new Date(extracted.expiryDate as string)
+                  : undefined,
+                amount:
+                  (extracted.amount as string) ||
+                  (extracted.amount as number)?.toString() ||
+                  '',
+                vendor: (extracted.vendor as string) || '',
+                contractNumber: (extracted.contractNumber as string) || '',
+                description: (extracted.description as string) || '',
+              });
+            }
+          } catch (error) {
+            console.error('Failed to extract contract data:', error);
+            // Continue with manual input if extraction fails
+          } finally {
+            setIsExtracting(false);
           }
         } catch (error) {
-          console.error('Failed to extract contract data:', error);
-          // Don't show error toast for extraction failures - just continue with manual input
-          // toast({
-          //   title: 'Extraction Failed',
-          //   description:
-          //     'Could not automatically extract contract data. Please fill manually.',
-          //   variant: 'destructive',
-          // });
-        } finally {
-          setIsExtracting(false);
+          console.error('File processing failed:', error);
+          toast({
+            title: 'File Processing Failed',
+            description:
+              'Failed to process the selected file. Please try again.',
+            variant: 'destructive',
+          });
         }
       }
     },
-    [toast, form]
+    [form, processFileSynchronously, toast]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -207,44 +340,66 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
     multiple: false,
   });
 
-  // Extract contract data using AI/OCR
+  // Extract contract data using base64 approach
   const extractContractData = async (
-    file: File
+    fileData: ProcessedFileData
   ): Promise<Record<string, unknown> | null> => {
     try {
-      console.log('Starting contract data extraction for file:', file.name);
+      console.log('=== EXTRACT CONTRACT DATA START ===');
+      console.log('Starting contract data extraction for file:', fileData.name);
+      console.log('File type:', fileData.type);
+      console.log('File size:', fileData.size);
+      console.log('Base64 content length:', fileData.base64Content.length);
 
-      // Clear the stream by reading it once and creating a new file
-      const fileBuffer = await file.arrayBuffer();
-      const freshFile = new File([fileBuffer], file.name, { type: file.type });
+      // Send file data as base64 in JSON payload instead of FormData
+      const requestBody = {
+        fileName: fileData.name,
+        fileType: fileData.type,
+        fileSize: fileData.size,
+        fileContent: fileData.base64Content,
+      };
 
-      const formData = new FormData();
-      formData.append('file', freshFile);
-
+      console.log('Request body prepared, making API call...');
       console.log('Making request to /api/contracts/extract-data');
+
       const response = await fetch('/api/contracts/extract-data', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       });
 
-      console.log('Response status:', response.status);
+      console.log('Response received, status:', response.status);
       console.log(
         'Response headers:',
         Object.fromEntries(response.headers.entries())
       );
 
       if (!response.ok) {
+        console.error('Response not OK, attempting to read error...');
+
+        // Clone the response to avoid stream consumption issues
+        const responseClone = response.clone();
+
         let errorData;
         try {
-          errorData = await response.json();
-        } catch (jsonError) {
-          // If JSON parsing fails, get the text content
-          const textContent = await response.text();
-          console.error('Response text content:', textContent);
-          console.error('JSON parsing error:', jsonError);
-          throw new Error(
-            `HTTP ${response.status}: ${textContent.substring(0, 200)}`
-          );
+          errorData = await responseClone.json();
+          console.error('Error data (JSON):', errorData);
+        } catch {
+          console.error('Failed to parse error as JSON, trying text...');
+          try {
+            const textContent = await response.text();
+            console.error('Response text content:', textContent);
+            throw new Error(
+              `HTTP ${response.status}: ${textContent.substring(0, 200)}`
+            );
+          } catch (textError) {
+            console.error('Failed to read response text:', textError);
+            throw new Error(
+              `HTTP ${response.status}: Unable to read error response`
+            );
+          }
         }
         console.error('Extraction failed:', errorData);
         throw new Error(
@@ -252,25 +407,34 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         );
       }
 
+      console.log('Response OK, parsing JSON...');
       const result = await response.json();
       console.log('Extraction result:', result);
 
-      // Check if the response has the expected structure
       if (result.success && result.data) {
+        console.log('=== EXTRACT CONTRACT DATA SUCCESS ===');
         return result.data;
       } else {
         console.error('Unexpected response structure:', result);
+        console.log(
+          '=== EXTRACT CONTRACT DATA FAILED - UNEXPECTED STRUCTURE ==='
+        );
         return null;
       }
     } catch (error) {
+      console.error('=== EXTRACT CONTRACT DATA ERROR ===');
       console.error('Contract data extraction error:', error);
+      console.error(
+        'Error stack:',
+        error instanceof Error ? error.stack : 'No stack trace'
+      );
       return null;
     }
   };
 
-  // Handle form submission
+  // Handle form submission using cached file data
   const handleSubmit = async (values: z.infer<typeof contractSchema>) => {
-    if (!selectedFile) {
+    if (!processedFileData) {
       toast({
         title: 'No File Selected',
         description: 'Please select a contract file to upload.',
@@ -297,15 +461,19 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       // Transform amount to number for server
       const amountAsNumber = parseFloat(values.amount.replace(/[$,]/g, ''));
 
-      // Clear the stream before upload by creating a fresh file
-      const fileBuffer = await selectedFile.arrayBuffer();
-      const freshFile = new File([fileBuffer], selectedFile.name, {
-        type: selectedFile.type,
-      });
+      // Create File object from cached data for upload
+      const fileForUpload = new File(
+        [processedFileData.arrayBuffer],
+        processedFileData.name,
+        {
+          type: processedFileData.type,
+          lastModified: processedFileData.lastModified,
+        }
+      );
 
       // Upload file with contract metadata
       await uploadFile({
-        file: freshFile,
+        file: fileForUpload,
         ownerId,
         accountId,
         path: path || '/',
@@ -313,6 +481,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
           ...values,
           amount: amountAsNumber,
           expiryDate: values.expiryDate?.toISOString(),
+          assignedManagers: selectedManagers,
           extractedData,
         },
       });
@@ -327,8 +496,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
       // Reset form
       form.reset();
-      setSelectedFile(null);
+      setProcessedFileData(null);
       setExtractedData(null);
+      setSelectedManagers([]);
       setIsOpen(false);
       onSuccess?.();
     } catch (error) {
@@ -361,7 +531,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
             className
           )}
         >
-          <FileText className="h-4 w-4 mr-2" />
+          <FileText className="h-4 w-4" />
           Upload Contract
         </Button>
       </DialogTrigger>
@@ -398,16 +568,16 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                   <input {...getInputProps()} />
                   <Upload className="mx-auto h-12 w-12 text-light-200 mb-4" />
 
-                  {selectedFile ? (
+                  {processedFileData ? (
                     <div className="space-y-2">
                       <div className="flex items-center justify-center space-x-2">
                         <FileText className="h-5 w-5 text-green" />
                         <span className="font-medium text-dark-200">
-                          {selectedFile.name}
+                          {processedFileData.name}
                         </span>
                       </div>
                       <p className="text-sm text-light-200">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        {(processedFileData.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
                   ) : (
@@ -597,6 +767,71 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                   <FormField
                     control={form.control}
+                    name="assignedManagers"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="shad-form-label">
+                          Assign To
+                        </FormLabel>
+                        <div className="space-y-2">
+                          <div className="max-h-40 overflow-y-auto border border-white/40 rounded-md bg-white/30 backdrop-blur p-2">
+                            {filteredManagers.length > 0 ? (
+                              filteredManagers.map((manager) => (
+                                <div
+                                  key={manager.$id}
+                                  className="flex items-center space-x-2 p-2 hover:bg-white/20 rounded cursor-pointer"
+                                  onClick={() => {
+                                    const newSelection =
+                                      selectedManagers.includes(manager.$id)
+                                        ? selectedManagers.filter(
+                                            (id) => id !== manager.$id
+                                          )
+                                        : [...selectedManagers, manager.$id];
+                                    setSelectedManagers(newSelection);
+                                    field.onChange(newSelection);
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedManagers.includes(
+                                      manager.$id
+                                    )}
+                                    onChange={() => {
+                                      const newSelection =
+                                        selectedManagers.includes(manager.$id)
+                                          ? selectedManagers.filter(
+                                              (id) => id !== manager.$id
+                                            )
+                                          : [...selectedManagers, manager.$id];
+                                      setSelectedManagers(newSelection);
+                                      field.onChange(newSelection);
+                                    }}
+                                    className="cursor-pointer"
+                                  />
+                                  <span className="text-sm text-slate-700">
+                                    {manager.fullName} ({manager.email})
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-slate-500 p-2">
+                                No managers available
+                              </p>
+                            )}
+                          </div>
+                          {selectedManagers.length > 0 && (
+                            <div className="text-xs text-slate-600">
+                              Selected: {selectedManagers.length} manager(s)
+                            </div>
+                          )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="expiryDate"
                     render={({ field }) => (
                       <FormItem>
@@ -767,7 +1002,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
               </Button>
               <Button
                 type="submit"
-                disabled={isUploading || !selectedFile}
+                disabled={isUploading || !processedFileData}
                 className="primary-btn min-w-[120px]"
               >
                 {isUploading ? (
