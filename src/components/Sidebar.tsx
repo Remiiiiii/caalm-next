@@ -89,9 +89,9 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
           roles: ['executive', 'admin'],
         },
         {
-          name: 'My Department Contracts',
+          name: 'My Contracts',
           icon: '/assets/icons/documents.svg',
-          url: '/contracts/department',
+          url: '/my-contracts',
           roles: ['executive', 'manager', 'admin'],
         },
         {
@@ -507,7 +507,7 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                                 />
                               </span>
                             )}
-                            {name === 'My Department Contracts' && (
+                            {name === 'My Contracts' && (
                               <span className="gap-1">
                                 <Image
                                   src="/assets/icons/department.svg"

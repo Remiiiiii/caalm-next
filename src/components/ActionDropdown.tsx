@@ -637,11 +637,33 @@ const ActionDropdown = ({
   // Only show Assign and Status if file name contains 'Contract'
   const fileName = file.name || file.contractName || '';
   const isContractFile = fileName.toLowerCase().includes('contract');
-  const filteredActions = isContractFile
-    ? actionsDropdownItems
-    : actionsDropdownItems.filter(
+
+  // Role-based action filtering
+  const getFilteredActions = () => {
+    if (!isContractFile) {
+      return actionsDropdownItems.filter(
         (action) => !['assign', 'status'].includes(action.value)
       );
+    }
+
+    // For managers, restrict actions to specific ones
+    const managerActions = ['details', 'download', 'review', 'share', 'status'];
+    const fullActions = [...managerActions, 'assign', 'rename', 'delete'];
+
+    // This would need to be passed as a prop or determined from context
+    // For now, we'll use a simple check based on the file properties
+    const isManagerView = false; // This should be determined from user context
+
+    if (isManagerView) {
+      return actionsDropdownItems.filter((action) =>
+        managerActions.includes(action.value)
+      );
+    }
+
+    return actionsDropdownItems;
+  };
+
+  const filteredActions = getFilteredActions();
 
   return (
     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
