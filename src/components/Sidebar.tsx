@@ -95,6 +95,12 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
           roles: ['executive', 'manager', 'admin'],
         },
         {
+          name: 'My Department Contracts',
+          icon: '/assets/icons/documents.svg',
+          url: '/contracts/department',
+          roles: ['executive', 'manager', 'admin'],
+        },
+        {
           name: 'Proposals & Approvals',
           icon: '/assets/icons/edit.svg',
           url: '/contracts/approvals',
@@ -249,7 +255,8 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                 roles: ['executive'],
               },
               {
-                name: 'Operations',
+                name: 'Management',
+                division: 'management',
                 roles: ['executive'],
                 subItems: [
                   {
@@ -507,7 +514,7 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                                 />
                               </span>
                             )}
-                            {name === 'My Contracts' && (
+                            {name === 'My Department Contracts' && (
                               <span className="gap-1">
                                 <Image
                                   src="/assets/icons/department.svg"
