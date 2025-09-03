@@ -432,7 +432,7 @@ const ActionDropdown = ({
           style={{ pointerEvents: 'none' }}
         >
           <Card
-            className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg"
+            className="w-[800px] max-w-6xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg"
             style={{ pointerEvents: 'none' }}
           >
             {dialogHeader}
