@@ -16,9 +16,16 @@ export interface UIFileDoc extends Models.Document {
   contractName?: string;
   contractExpiryDate?: string;
   status?: string;
+  contractType?: string;
+  amount?: number;
+  vendor?: string;
+  contractNumber?: string;
+  priority?: string;
+  compliance?: string;
+  department?: string;
+  assignedManagers?: string[];
 
   // Storage/other optional attributes referenced by UI
   bucketFileId?: string;
   description?: string;
 }
-

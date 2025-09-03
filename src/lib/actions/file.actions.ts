@@ -82,6 +82,8 @@ export const uploadFile = async ({
 
       // Use provided metadata or extract from file
       if (contractMetadata) {
+        console.log('📋 Contract metadata received:', contractMetadata);
+
         // Use provided contract metadata
         contractExpiryDate =
           typeof contractMetadata.expiryDate === 'string'
@@ -204,12 +206,36 @@ export const uploadFile = async ({
         contractDocument
       );
 
-      // Save contract.$id in the file document, or file.$id in the contract document
+      // Save all contract metadata in the file document for easy access
+      const fileUpdateData = {
+        contractId: contract.$id,
+        contractExpiryDate: contractExpiryDate,
+        status: status,
+        contractName: contractDocument.contractName,
+        contractType: contractDocument.contractType,
+        amount: contractDocument.amount,
+        vendor: contractDocument.vendor,
+        contractNumber: contractDocument.contractNumber,
+        priority: contractDocument.priority,
+        compliance: contractDocument.compliance,
+        department: contractDocument.department,
+        assignedManagers: contractDocument.assignedManagers,
+      };
+
+      console.log('📝 Updating file document with contract metadata:', {
+        fileId: newFile.$id,
+        updateData: fileUpdateData,
+      });
+
       await databases.updateDocument(
         appwriteConfig.databaseId,
         appwriteConfig.filesCollectionId,
         newFile.$id,
-        { contractId: contract.$id }
+        fileUpdateData
+      );
+
+      console.log(
+        '✅ File document updated successfully with contract metadata'
       );
 
       // Trigger contract expiry notification if expiry date is set

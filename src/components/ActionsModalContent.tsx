@@ -17,7 +17,6 @@ import { Button as ShadButton } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { databases } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
-import { Query } from 'appwrite';
 
 import type { UIFileDoc } from '@/types/files';
 
@@ -43,19 +42,119 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
     undefined
   );
+
   const ownerName =
     typeof file.owner === 'string' ? file.owner : file.owner.fullName;
-  const isContract = file.type === 'contract' || /contract/i.test(file.name);
-  const currentExpiry: string | undefined = (
-    file as unknown as { contractExpiryDate?: string }
-  ).contractExpiryDate;
+  const isContract =
+    file.type === 'contract' ||
+    /contract/i.test(file.name) ||
+    file.contractId ||
+    file.contractName ||
+    file.contractType ||
+    file.amount ||
+    file.vendor ||
+    file.department;
+
+  // Get contract metadata from file document
+  const contractName = file.contractName || file.name;
+  const contractType = file.contractType;
+  const contractNumber = file.contractNumber;
+  const amount = file.amount;
+  const vendor = file.vendor;
+  const department = file.department;
+  const priority = file.priority;
+  const compliance = file.compliance;
+  const assignedManagers = file.assignedManagers || [];
+  const description = file.description;
+  const currentExpiry: string | undefined = file.contractExpiryDate;
+  const status = file.status;
+
+  // Debug logging to see what data is available
+  console.log('🔍 FileDetails Debug:', {
+    fileId: file.$id,
+    fileName: file.name,
+    isContract,
+    contractId: file.contractId,
+    contractName,
+    contractType,
+    contractNumber,
+    amount,
+    vendor,
+    department,
+    priority,
+    compliance,
+    assignedManagers,
+    description,
+    currentExpiry,
+    status,
+    fullFile: file,
+  });
+
+  // Initialize selectedDate with current expiry date when editing starts
+  React.useEffect(() => {
+    if (editing && currentExpiry) {
+      setSelectedDate(new Date(currentExpiry));
+    }
+  }, [editing, currentExpiry]);
+
+  // Helper function to format priority and compliance values
+  const formatValue = (
+    value: string | undefined,
+    type: 'priority' | 'compliance' | 'contractType'
+  ) => {
+    if (!value) return '';
+
+    if (type === 'priority') {
+      const priorityMapping: Record<string, string> = {
+        Low: 'Low',
+        Medium: 'Medium',
+        High: 'High',
+        Urgent: 'Urgent',
+      };
+      return priorityMapping[value] || value;
+    }
+
+    if (type === 'compliance') {
+      const complianceMapping: Record<string, string> = {
+        'up-to-date': 'Low Risk',
+        'action-required': 'Medium Risk',
+        'non-compliant': 'High Risk',
+      };
+      return complianceMapping[value] || value;
+    }
+
+    if (type === 'contractType') {
+      const contractTypeMapping: Record<string, string> = {
+        Service_Agreement: 'Service Agreement',
+        Purchase_Order: 'Purchase Order',
+        License_Agreement: 'License Agreement',
+        NDA_: 'NDA',
+        Employment_Contract: 'Employment Contract',
+        Vendor_Contract: 'Vendor Contract',
+        Lease_Agreement: 'Lease Agreement',
+        Consulting_Agreement: 'Consulting Agreement',
+        Other: 'Other',
+      };
+      return contractTypeMapping[value] || value;
+    }
+
+    return value;
+  };
 
   const saveExpiry = async () => {
     if (!selectedDate) return;
     const now = new Date();
     if (selectedDate <= now) return;
     try {
-      // Prefer updating the contract via relationship if present
+      // Update both file document and contract document
+      await databases.updateDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.filesCollectionId,
+        file.$id,
+        { contractExpiryDate: selectedDate.toISOString() }
+      );
+
+      // Also update the contract document if linked
       if (file.contractId) {
         await databases.updateDocument(
           appwriteConfig.databaseId,
@@ -63,35 +162,9 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
           file.contractId,
           { contractExpiryDate: selectedDate.toISOString() }
         );
-      } else {
-        // Fallback 1: update the file document directly
-        try {
-          await databases.updateDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.filesCollectionId,
-            file.$id,
-            { contractExpiryDate: selectedDate.toISOString() }
-          );
-        } catch {
-          // Fallback 2: resolve contract by linked file id
-          const res = await databases.listDocuments(
-            appwriteConfig.databaseId,
-            appwriteConfig.contractsCollectionId,
-            [Query.equal('fileId', file.$id), Query.limit(1)]
-          );
-          const contractDoc = res.documents?.[0];
-          if (contractDoc) {
-            await databases.updateDocument(
-              appwriteConfig.databaseId,
-              appwriteConfig.contractsCollectionId,
-              contractDoc.$id,
-              { contractExpiryDate: selectedDate.toISOString() }
-            );
-          }
-        }
       }
-    } catch {
-      // ignore
+    } catch (error) {
+      console.error('Failed to update expiry date:', error);
     }
     setEditing(false);
   };
@@ -100,90 +173,159 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
     <>
       <ImageThumbnail file={file} />
       <div className="space-y-4 px-2 pt-2">
+        {/* Basic file information */}
         <DetailRow label="Format:" value={file.extension} />
         <DetailRow label="Size:" value={convertFileSize(file.size)} />
         <DetailRow label="Owner:" value={ownerName} />
+
+        {/* Contract information - only show if it's a contract */}
         {isContract && (
-          <div className="flex items-start justify-between gap-2">
-            <p className="file-details-label text-left">Expiry Date:</p>
-            <div
-              className="file-details-value text-left"
-              style={{ pointerEvents: 'auto' }}
-            >
-              {!editing ? (
-                <div
-                  className="flex items-center gap-2"
-                  style={{ pointerEvents: 'auto' }}
-                >
-                  <span>
-                    {currentExpiry
-                      ? new Date(currentExpiry).toLocaleDateString()
-                      : '—'}
-                  </span>
-                  <ShadButton
-                    size="sm"
-                    onClick={() => setEditing(true)}
-                    className="primary-btn"
+          <>
+            {/* Contract Name */}
+            <DetailRow label="Contract Name:" value={contractName} />
+
+            {/* Contract Type */}
+            {contractType && (
+              <DetailRow
+                label="Contract Type:"
+                value={formatValue(contractType, 'contractType')}
+              />
+            )}
+
+            {/* Contract Number */}
+            {contractNumber && (
+              <DetailRow label="Contract Number:" value={contractNumber} />
+            )}
+
+            {/* Amount */}
+            {amount && (
+              <DetailRow
+                label="Contract Amount:"
+                value={`$${amount.toLocaleString()}`}
+              />
+            )}
+
+            {/* Vendor */}
+            {vendor && <DetailRow label="Vendor/Supplier:" value={vendor} />}
+
+            {/* Department */}
+            {department && <DetailRow label="Department:" value={department} />}
+
+            {/* Priority */}
+            {priority && (
+              <DetailRow
+                label="Priority:"
+                value={formatValue(priority, 'priority')}
+              />
+            )}
+
+            {/* Compliance */}
+            {compliance && (
+              <DetailRow
+                label="Compliance Level:"
+                value={formatValue(compliance, 'compliance')}
+              />
+            )}
+
+            {/* Assigned Managers */}
+            {assignedManagers && assignedManagers.length > 0 && (
+              <DetailRow
+                label="Assigned To:"
+                value={assignedManagers.join(', ')}
+              />
+            )}
+
+            {/* Description */}
+            {description && (
+              <DetailRow label="Description:" value={description} />
+            )}
+
+            {/* Status */}
+            {status && <DetailRow label="Status:" value={status} />}
+
+            {/* Expiry Date - Editable */}
+            <div className="flex items-start justify-between gap-2">
+              <p className="file-details-label text-left">Expiry Date:</p>
+              <div
+                className="file-details-value text-left"
+                style={{ pointerEvents: 'auto' }}
+              >
+                {!editing ? (
+                  <div
+                    className="flex items-center gap-2"
+                    style={{ pointerEvents: 'auto' }}
                   >
-                    Edit
-                  </ShadButton>
-                </div>
-              ) : (
-                <div
-                  className="flex items-center gap-2"
-                  style={{ pointerEvents: 'auto' }}
-                >
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <ShadButton
-                        variant="outline"
-                        className={cn(
-                          'w-[200px] justify-start text-left font-normal'
-                        )}
-                      >
-                        {selectedDate
-                          ? selectedDate.toLocaleDateString()
-                          : 'Pick a date'}
-                      </ShadButton>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={(date) => {
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          return date < today; // disable past dates
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <ShadButton
-                    size="sm"
-                    onClick={saveExpiry}
-                    disabled={!selectedDate}
-                    className="primary-btn"
+                    <span>
+                      {currentExpiry
+                        ? new Date(currentExpiry).toLocaleDateString()
+                        : '—'}
+                    </span>
+                    <ShadButton
+                      size="sm"
+                      onClick={() => setEditing(true)}
+                      className="primary-btn"
+                    >
+                      Edit
+                    </ShadButton>
+                  </div>
+                ) : (
+                  <div
+                    className="flex items-center gap-2"
+                    style={{ pointerEvents: 'auto' }}
                   >
-                    Submit
-                  </ShadButton>
-                  <ShadButton
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setSelectedDate(undefined);
-                      setEditing(false);
-                    }}
-                    className="primary-btn"
-                  >
-                    Cancel
-                  </ShadButton>
-                </div>
-              )}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <ShadButton
+                          variant="outline"
+                          className={cn(
+                            'w-[200px] justify-start text-left font-normal'
+                          )}
+                        >
+                          {selectedDate
+                            ? selectedDate.toLocaleDateString()
+                            : 'Pick a date'}
+                        </ShadButton>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return date < today; // disable past dates
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <ShadButton
+                      size="sm"
+                      onClick={saveExpiry}
+                      disabled={!selectedDate}
+                      className="primary-btn"
+                    >
+                      Submit
+                    </ShadButton>
+                    <ShadButton
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedDate(undefined);
+                        setEditing(false);
+                      }}
+                      className="primary-btn"
+                    >
+                      Cancel
+                    </ShadButton>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </>
         )}
+
         <DetailRow label="Last edit:" value={formatDateTime(file.$updatedAt)} />
       </div>
     </>

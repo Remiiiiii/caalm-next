@@ -767,6 +767,47 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                   <FormField
                     control={form.control}
+                    name="expiryDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="shad-form-label">
+                          Expiry Date{' '}
+                          <span className="sidebar-gradient-text">*</span>
+                        </FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  'w-full justify-start text-left font-normal bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700',
+                                  !field.value && 'text-light-200'
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value
+                                  ? format(field.value, 'PPP')
+                                  : 'Pick a date'}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 bg-white border border-light-300 shadow-drop-1 rounded-xl">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="assignedManagers"
                     render={({ field }) => (
                       <FormItem>
@@ -825,47 +866,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             </div>
                           )}
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="expiryDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Expiry Date{' '}
-                          <span className="sidebar-gradient-text">*</span>
-                        </FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  'w-full justify-start text-left font-normal bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700',
-                                  !field.value && 'text-light-200'
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value
-                                  ? format(field.value, 'PPP')
-                                  : 'Pick a date'}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 bg-white border border-light-300 shadow-drop-1 rounded-xl">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < new Date()}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}

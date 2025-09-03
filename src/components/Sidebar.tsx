@@ -82,36 +82,57 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
     {
       header: 'Contracts',
       items: [
-        {
-          name: 'All Contracts',
-          icon: '/assets/icons/documents.svg',
-          url: '/contracts',
-          roles: ['executive', 'admin'],
-        },
+        // Only Executive and Admin can see All Contracts
+        ...(role === 'executive' || role === 'admin'
+          ? [
+              {
+                name: 'All Contracts',
+                icon: '/assets/icons/documents.svg',
+                url: '/contracts',
+                roles: ['executive', 'admin'],
+              },
+            ]
+          : []),
+        // All roles can see My Contracts
         {
           name: 'My Contracts',
           icon: '/assets/icons/documents.svg',
           url: '/my-contracts',
           roles: ['executive', 'manager', 'admin'],
         },
-        {
-          name: 'My Department Contracts',
-          icon: '/assets/icons/documents.svg',
-          url: '/contracts/department',
-          roles: ['executive', 'manager', 'admin'],
-        },
-        {
-          name: 'Proposals & Approvals',
-          icon: '/assets/icons/edit.svg',
-          url: '/contracts/approvals',
-          roles: ['executive', 'manager', 'admin'],
-        },
-        {
-          name: 'Advanced Resources',
-          icon: '/assets/icons/search.svg',
-          url: '/contracts/advanced-resources',
-          roles: ['executive', 'admin'],
-        },
+        // Only Executive and Admin can see My Department Contracts
+        ...(role === 'executive' || role === 'admin'
+          ? [
+              {
+                name: 'My Department Contracts',
+                icon: '/assets/icons/documents.svg',
+                url: '/contracts/department',
+                roles: ['executive', 'admin'],
+              },
+            ]
+          : []),
+        // Only Executive and Admin can see Proposals & Approvals
+        ...(role === 'executive' || role === 'admin'
+          ? [
+              {
+                name: 'Proposals & Approvals',
+                icon: '/assets/icons/edit.svg',
+                url: '/contracts/approvals',
+                roles: ['executive', 'admin'],
+              },
+            ]
+          : []),
+        // Only Executive and Admin can see Advanced Resources
+        ...(role === 'executive' || role === 'admin'
+          ? [
+              {
+                name: 'Advanced Resources',
+                icon: '/assets/icons/search.svg',
+                url: '/contracts/advanced-resources',
+                roles: ['executive', 'admin'],
+              },
+            ]
+          : []),
       ],
     },
     {
