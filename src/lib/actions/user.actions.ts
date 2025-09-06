@@ -33,6 +33,21 @@ export const getUserByEmail = async (email: string) => {
   return result.total > 0 ? result.documents[0] : null;
 };
 
+export const getUserById = async (userId: string) => {
+  const { databases } = await createAdminClient();
+  try {
+    const result = await databases.getDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      userId
+    );
+    return result;
+  } catch (error) {
+    console.error('Failed to get user by ID:', error);
+    return null;
+  }
+};
+
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
   throw error;

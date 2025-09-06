@@ -46,15 +46,29 @@ interface CardProps {
   file: UIFileDoc;
   status?: string;
   expirationDate?: string;
+  assignedTo?: string;
+  assignedToDepartment?: string;
 }
 
-const Card = ({ file, status, expirationDate }: CardProps) => {
+const Card = ({
+  file,
+  status,
+  expirationDate,
+  assignedTo: propAssignedTo,
+  assignedToDepartment: propAssignedToDepartment,
+}: CardProps) => {
   const [contractStatus, setContractStatus] = useState<string | undefined>(
     status || file.status
   );
   const [contractExpiryDate, setContractExpiryDate] = useState<
     string | undefined
   >(expirationDate || file.contractExpiryDate);
+  const [assignedTo, setAssignedTo] = useState<string | undefined>(
+    propAssignedTo || file.assignedTo
+  );
+  const [assignedToDepartment, setAssignedToDepartment] = useState<
+    string | undefined
+  >(propAssignedToDepartment || file.assignedToDepartment);
 
   useEffect(() => {
     // If status is not present but contractId exists, fetch the contract status
@@ -75,6 +89,14 @@ const Card = ({ file, status, expirationDate }: CardProps) => {
 
         if (contract && contract.contractExpiryDate) {
           setContractExpiryDate(contract.contractExpiryDate);
+        }
+
+        if (contract && contract.assignedTo) {
+          setAssignedTo(contract.assignedTo);
+        }
+
+        if (contract && contract.assignedToDepartment) {
+          setAssignedToDepartment(contract.assignedToDepartment);
         }
       })();
     }
@@ -120,6 +142,18 @@ const Card = ({ file, status, expirationDate }: CardProps) => {
                 date={contractExpiryDate}
                 className="body-2 text-slate-700"
               />
+            </div>
+          )}
+          {assignedTo && (
+            <div className="flex flex-row gap-2">
+              <p className="body-2 text-slate-700">Assigned To:</p>
+              <p className="body-2 text-slate-700">{assignedTo}</p>
+            </div>
+          )}
+          {assignedToDepartment && (
+            <div className="flex flex-row gap-2">
+              <p className="body-2 text-slate-700">Department:</p>
+              <p className="body-2 text-slate-700">{assignedToDepartment}</p>
             </div>
           )}
         </div>

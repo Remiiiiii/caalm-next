@@ -22,21 +22,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  CalendarIcon,
-  Upload,
-  FileText,
-  CheckCircle,
-  Loader2,
-} from 'lucide-react';
-import { format } from 'date-fns';
+import { Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from '@/hooks/use-toast';
 import { uploadFile } from '@/lib/actions/file.actions';
 import { usePathname } from 'next/navigation';
@@ -106,7 +95,7 @@ const contractSchema = z.object({
       const num = parseFloat(val.replace(/[$,]/g, ''));
       return !isNaN(num) && num >= 0;
     }, 'Please enter a valid amount'),
-  department: z.string().min(1, 'Department is required'),
+  assignToDepartment: z.string().min(1, 'Department is required'),
   description: z.string().optional(),
   priority: z.string().optional(),
   compliance: z.string().optional(),
@@ -148,7 +137,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       contractType: '',
       expiryDate: undefined,
       amount: '',
-      department: '',
+      assignToDepartment: '',
       description: '',
       priority: 'medium',
       compliance: '',
@@ -178,7 +167,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
             })
           );
           setAvailableManagers(typedManagers);
-          setFilteredManagers(typedManagers);
+          setFilteredManagers([]);
         }
       } catch (error) {
         console.error('Failed to fetch managers:', error);
@@ -187,15 +176,17 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
     fetchManagers();
   }, []);
 
-  // Filter managers when department changes
+  // Filter managers when assignToDepartment changes
+  const watchedAssignToDepartment = form.watch('assignToDepartment');
   useEffect(() => {
-    const department = form.watch('department');
-    if (department) {
+    if (watchedAssignToDepartment) {
       // Fetch managers for the selected department
       const fetchDepartmentManagers = async () => {
         try {
-          const departmentManagers = await getUsersByDepartment(department);
-          if (departmentManagers) {
+          const departmentManagers = await getUsersByDepartment(
+            watchedAssignToDepartment
+          );
+          if (departmentManagers && departmentManagers.length > 0) {
             const typedManagers = departmentManagers.map(
               (manager: {
                 $id: string;
@@ -210,18 +201,31 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
               })
             );
             setFilteredManagers(typedManagers);
+            // Clear selected managers when department changes
+            setSelectedManagers([]);
+            form.setValue('assignedManagers', []);
+          } else {
+            // No managers found in this department
+            setFilteredManagers([]);
+            // Clear selected managers when no managers found
+            setSelectedManagers([]);
+            form.setValue('assignedManagers', []);
           }
         } catch (error) {
           console.error('Failed to fetch department managers:', error);
-          // Fallback to all managers if department filtering fails
-          setFilteredManagers(availableManagers);
+          // Fallback to empty array if department filtering fails
+          setFilteredManagers([]);
         }
       };
       fetchDepartmentManagers();
     } else {
-      setFilteredManagers(availableManagers);
+      // If no department is selected, show no managers
+      setFilteredManagers([]);
+      // Clear selected managers when no department is selected
+      setSelectedManagers([]);
+      form.setValue('assignedManagers', []);
     }
-  }, [form.watch('department'), availableManagers]);
+  }, [watchedAssignToDepartment, availableManagers, form]);
 
   // Synchronous file processing function
   const processFileSynchronously = useCallback(
@@ -562,7 +566,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                     'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
                     isDragActive
                       ? 'border-brand bg-brand/5'
-                      : 'border-light-200 hover:border-brand/50 hover:bg-light-400'
+                      : 'border-light-200 hover:border-[#03B1C1] hover:bg-light-400'
                   )}
                 >
                   <input {...getInputProps()} />
@@ -736,12 +740,38 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                   <FormField
                     control={form.control}
-                    name="department"
+                    name="expiryDate"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="shad-form-label">
-                          Department{' '}
+                          Expiry Date{' '}
                           <span className="sidebar-gradient-text">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <DatePicker
+                            selected={field.value}
+                            onChange={(date) => field.onChange(date)}
+                            dateFormat="MM/dd/yyyy"
+                            showTimeSelect={false}
+                            timeInputLabel="Time:"
+                            wrapperClassName="date-picker"
+                            className="w-full px-3 py-2 bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 rounded-md"
+                            minDate={new Date()}
+                            placeholderText="Select expiry date"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="assignToDepartment"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="shad-form-label">
+                          Department
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
@@ -767,40 +797,28 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                   <FormField
                     control={form.control}
-                    name="expiryDate"
+                    name="priority"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="shad-form-label">
-                          Expiry Date{' '}
-                          <span className="sidebar-gradient-text">*</span>
+                          Priority
                         </FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  'w-full justify-start text-left font-normal bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700',
-                                  !field.value && 'text-light-200'
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value
-                                  ? format(field.value, 'PPP')
-                                  : 'Pick a date'}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 bg-white border border-light-300 shadow-drop-1 rounded-xl">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < new Date()}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="urgent">Urgent</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -812,7 +830,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="shad-form-label">
-                          Assign To
+                          Assign To Managers
                         </FormLabel>
                         <div className="space-y-2">
                           <div className="max-h-40 overflow-y-auto border border-white/40 rounded-md bg-white/30 backdrop-blur p-2">
@@ -854,9 +872,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   </span>
                                 </div>
                               ))
+                            ) : watchedAssignToDepartment ? (
+                              <p className="text-sm text-slate-500 p-2">
+                                No managers in this department
+                              </p>
                             ) : (
                               <p className="text-sm text-slate-500 p-2">
-                                No managers available
+                                Please select a department first
                               </p>
                             )}
                           </div>
@@ -866,35 +888,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             </div>
                           )}
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="priority"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Priority
-                        </FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="urgent">Urgent</SelectItem>
-                          </SelectContent>
-                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

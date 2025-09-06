@@ -6,7 +6,7 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Models, Query } from 'node-appwrite';
 import { constructFileUrl, getFileType, parseStringify } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser } from './user.actions';
+import { getCurrentUser, getUserById } from './user.actions';
 import {
   createFileActivity,
   createContractActivity,
@@ -157,8 +157,32 @@ export const uploadFile = async ({
           }
           return 'action-required';
         })(),
-        assignedManagers: contractMetadata?.assignedManagers || [],
-        department: contractMetadata?.department || undefined,
+        assignedManagers: await (async () => {
+          const managerIds =
+            (contractMetadata?.assignedManagers as string[]) || [];
+          if (managerIds.length === 0) return [];
+
+          // Fetch full names for each manager ID
+          const managerNames: string[] = [];
+          for (const managerId of managerIds) {
+            try {
+              const user = await getUserById(managerId);
+              if (user && user.fullName) {
+                managerNames.push(user.fullName);
+              } else {
+                // Fallback to ID if name not found
+                managerNames.push(managerId);
+              }
+            } catch (error) {
+              console.error(`Failed to fetch manager ${managerId}:`, error);
+              // Fallback to ID if fetch fails
+              managerNames.push(managerId);
+            }
+          }
+
+          return managerNames;
+        })(),
+        department: contractMetadata?.assignToDepartment || undefined,
         contractType: (() => {
           const contractType = contractMetadata?.contractType;
           if (typeof contractType === 'string') {
@@ -417,35 +441,46 @@ export const deleteFile = async ({
 
   try {
     console.log('Deleting fileId:', fileId);
-    // 1. Delete the contract document linked to this file
-    const contractDocs = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      [Query.equal('fileId', fileId)]
-    );
-    if (contractDocs.documents.length > 0) {
-      const contractId = contractDocs.documents[0].$id;
-      await databases.deleteDocument(
+
+    // Start all operations in parallel for better performance
+    const operations = [
+      // 1. Find and delete contract document (if exists)
+      databases
+        .listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.contractsCollectionId,
+          [Query.equal('fileId', fileId)]
+        )
+        .then(async (contractDocs) => {
+          if (contractDocs.documents.length > 0) {
+            const contractId = contractDocs.documents[0].$id;
+            return databases.deleteDocument(
+              appwriteConfig.databaseId,
+              appwriteConfig.contractsCollectionId,
+              contractId
+            );
+          }
+          return null;
+        }),
+
+      // 2. Delete the file document
+      databases.deleteDocument(
         appwriteConfig.databaseId,
-        appwriteConfig.contractsCollectionId,
-        contractId
-      );
-    }
+        appwriteConfig.filesCollectionId,
+        fileId
+      ),
 
-    // 2. Delete the file document
-    await databases.deleteDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
-      fileId
-    );
+      // 3. Delete the storage file
+      storage.deleteFile(appwriteConfig.bucketId, bucketFileId),
+    ];
 
-    // Always attempt to delete the storage file
-    await storage.deleteFile(appwriteConfig.bucketId, bucketFileId);
+    // Execute all operations in parallel
+    await Promise.all(operations);
 
     revalidatePath(path);
     return parseStringify({ status: 'success' });
   } catch (error) {
-    handleError(error, 'Failed to rename file');
+    handleError(error, 'Failed to delete file');
   }
 };
 
