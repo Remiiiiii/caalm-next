@@ -50,10 +50,12 @@ import DocumentViewer from './DocumentViewer';
 const ActionDropdown = ({
   file,
   onStatusChange,
+  onRefresh,
   userRole,
 }: {
   file: UIFileDoc;
   onStatusChange?: () => void;
+  onRefresh?: () => void;
   userRole?: 'executive' | 'admin' | 'manager';
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -124,7 +126,7 @@ const ActionDropdown = ({
         // Also assign department if selected
         if (selectedDepartment) {
           await assignContractToDepartment({
-            contractId: file.contractId,
+            contractId: assignResult.contractId, // Use the actual contract document ID
             department: selectedDepartment as ContractDepartment,
           });
         }
@@ -164,6 +166,10 @@ const ActionDropdown = ({
 
     if (success) {
       closeAllModals();
+      // Refresh the contracts list after successful actions
+      if (onRefresh) {
+        onRefresh();
+      }
     }
 
     setIsLoading(false);
@@ -330,6 +336,8 @@ const ActionDropdown = ({
                         >
                           {isLoading
                             ? 'Loading managers...'
+                            : !selectedDepartment
+                            ? 'Please select a department first'
                             : 'No managers available'}
                         </td>
                       </tr>

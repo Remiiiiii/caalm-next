@@ -64,7 +64,8 @@ export const useDepartmentAssignment = () => {
       // Clear selected managers when department changes
       setSelectedManagers([]);
     } else {
-      setFilteredManagers(managers);
+      // Don't show any managers until a department is selected
+      setFilteredManagers([]);
     }
   }, [selectedDepartment, managers]);
 

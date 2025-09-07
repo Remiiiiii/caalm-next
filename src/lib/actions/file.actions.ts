@@ -550,9 +550,33 @@ export const assignContract = async ({
       );
     } catch (error) {
       console.error('Contract document not found with ID:', fileId, error);
-      throw new Error(
-        `Contract document not found. Please ensure the file is properly uploaded as a contract.`
-      );
+      console.error('Available collections:', {
+        databaseId: appwriteConfig.databaseId,
+        contractsCollectionId: appwriteConfig.contractsCollectionId,
+        fileId: fileId,
+        fileDocumentId: fileDocumentId,
+      });
+
+      // Try to find the contract by fileId in the contracts collection
+      try {
+        const contracts = await databases.listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.contractsCollectionId,
+          [Query.equal('fileId', fileDocumentId)]
+        );
+
+        if (contracts.documents.length > 0) {
+          contractDoc = contracts.documents[0];
+          console.log('Found contract by fileId:', contractDoc);
+        } else {
+          throw new Error('No contract found with matching fileId');
+        }
+      } catch (searchError) {
+        console.error('Failed to search for contract by fileId:', searchError);
+        throw new Error(
+          `Contract document not found. Please ensure the file is properly uploaded as a contract.`
+        );
+      }
     }
 
     // Only allow assignment if contractName/title contains 'Contract'
@@ -564,7 +588,7 @@ export const assignContract = async ({
     const updatedContract = await databases.updateDocument(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId,
-      fileId,
+      contractDoc.$id, // Use the actual contract document ID
       {
         assignedManagers: managerAccountIds,
       }
@@ -582,7 +606,10 @@ export const assignContract = async ({
       );
     }
     revalidatePath(path);
-    return parseStringify(updatedContract);
+    return parseStringify({
+      contract: updatedContract,
+      contractId: contractDoc.$id,
+    });
   } catch (error) {
     handleError(error, 'Failed to assign contract');
   }
@@ -737,5 +764,54 @@ export const getExpiringContractsCount = async () => {
   } catch (error) {
     console.error('Failed to fetch expiring contracts count:', error);
     return 0;
+  }
+};
+
+// Get contracts filtered by user's division
+export const getContractsByUserDivision = async (userDivision: string) => {
+  const { databases } = await createAdminClient();
+  try {
+    // Get all contracts
+    const contracts = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.contractsCollectionId,
+      []
+    );
+
+    // Filter contracts where assigned managers belong to the user's division
+    const filteredContracts = [];
+
+    for (const contract of contracts.documents) {
+      if (
+        contract.assignedManagers &&
+        Array.isArray(contract.assignedManagers)
+      ) {
+        // Check if any assigned manager belongs to the user's division
+        for (const managerName of contract.assignedManagers) {
+          // Get manager by name to check their division
+          const managers = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.usersCollectionId,
+            [
+              Query.equal('fullName', managerName),
+              Query.equal('role', 'manager'),
+            ]
+          );
+
+          if (managers.documents.length > 0) {
+            const manager = managers.documents[0];
+            if (manager.division === userDivision) {
+              filteredContracts.push(contract);
+              break; // Found a manager from this division, no need to check others
+            }
+          }
+        }
+      }
+    }
+
+    return parseStringify(filteredContracts);
+  } catch (error) {
+    console.error('Failed to get contracts by user division:', error);
+    return [];
   }
 };

@@ -54,10 +54,23 @@ export const getUsersByDivision = async (division: string) => {
 export const getUsersByDepartment = async (department: string) => {
   const { databases } = await createAdminClient();
   try {
+    // Import the division mapping
+    const { DIVISION_TO_DEPARTMENT } = await import('../../../constants');
+
+    // Find all divisions that belong to this department
+    const divisions = Object.entries(DIVISION_TO_DEPARTMENT)
+      .filter(([, dept]) => dept === department)
+      .map(([division]) => division);
+
+    if (divisions.length === 0) {
+      return [];
+    }
+
+    // Query users by division(s) that belong to this department
     const users = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
-      [Query.equal('department', department), Query.equal('role', 'manager')]
+      [Query.equal('division', divisions), Query.equal('role', 'manager')]
     );
     return users.documents;
   } catch (error) {

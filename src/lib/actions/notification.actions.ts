@@ -228,12 +228,23 @@ export const assignContractToDepartment = async ({
 }) => {
   const { databases } = await createAdminClient();
   try {
+    // Update the contract document's department
     const updatedContract = await databases.updateDocument(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId,
       contractId,
       { department }
     );
+
+    // Also update the file document's department field
+    if (updatedContract.fileId) {
+      await databases.updateDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.filesCollectionId,
+        updatedContract.fileId,
+        { department }
+      );
+    }
 
     // Trigger expiration check after department assignment
     await checkContractExpirations();

@@ -19,7 +19,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { UIFileDoc } from '@/types/files';
-import { getFiles } from '@/lib/actions/file.actions';
+import {
+  getFiles,
+  getContractsByUserDivision,
+} from '@/lib/actions/file.actions';
 import {
   ContractDepartment,
   DIVISION_TO_DEPARTMENT,
@@ -58,51 +61,64 @@ const MyContractsPage = () => {
   const [contractsLoading, setContractsLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>('$createdAt-desc');
 
-  // Fetch contracts on component mount
-  useEffect(() => {
-    const fetchContracts = async () => {
-      try {
-        setContractsLoading(true);
-        console.log('Fetching contracts...');
+  // Function to refresh contracts data
+  const refreshContracts = async () => {
+    try {
+      setContractsLoading(true);
 
+      if (role === 'manager' && division) {
+        // For managers, get contracts filtered by their division
+        const divisionContracts = await getContractsByUserDivision(division);
+
+        // Get the corresponding file documents for these contracts
+        const contractFiles: UIFileDoc[] = [];
+        for (const contract of divisionContracts) {
+          if (contract.fileId) {
+            try {
+              const fileResponse = await getFiles({
+                types: ['document'],
+                searchText: '',
+                sort: sortBy,
+              });
+              const file = fileResponse.documents.find(
+                (f) => f.$id === contract.fileId
+              );
+              if (file) {
+                contractFiles.push(file as UIFileDoc);
+              }
+            } catch (error) {
+              console.error('Error fetching file for contract:', error);
+            }
+          }
+        }
+
+        setContracts(contractFiles);
+        setFilteredContracts(contractFiles);
+      } else {
+        // For executives/admins, get all contracts
         const filesResponse = await getFiles({
           types: ['document'],
           searchText: '',
           sort: sortBy,
         });
 
-        console.log('Files response:', {
-          total: filesResponse.total,
-          documents: filesResponse.documents.length,
-          firstFile: filesResponse.documents[0] || null,
-        });
-
-        // For now, show all document files to see what's available
-        // TODO: Filter to only show contracts (files with contractId) when contract metadata is available
         const contractFiles = filesResponse.documents as UIFileDoc[];
-
-        console.log('Contract files found:', {
-          total: contractFiles.length,
-          contracts: contractFiles.map((f) => ({
-            id: f.$id,
-            name: f.name,
-            contractId: f.contractId,
-          })),
-        });
-
         setContracts(contractFiles);
         setFilteredContracts(contractFiles);
-      } catch (err) {
-        console.error('Error fetching contracts:', err);
-      } finally {
-        setContractsLoading(false);
       }
-    };
-
-    if (role && !loading) {
-      fetchContracts();
+    } catch (err) {
+      console.error('Error refreshing contracts:', err);
+    } finally {
+      setContractsLoading(false);
     }
-  }, [role, loading, sortBy]);
+  };
+
+  // Fetch contracts on component mount
+  useEffect(() => {
+    if (role && !loading) {
+      refreshContracts();
+    }
+  }, [role, loading, sortBy, division]);
 
   // Filter contracts based on user role and selected department/division
   useEffect(() => {
@@ -111,14 +127,14 @@ const MyContractsPage = () => {
     let filtered = [...contracts];
 
     if (role === 'manager' && division) {
-      // Manager can only see contracts from their division
-      // For now, show all contracts since we don't have department/division on files
-      // In the future, this could be enhanced with contract metadata
+      // Manager contracts are already filtered by division in fetchContracts
+      // No additional filtering needed
       filtered = contracts;
     } else if (role === 'executive' || role === 'admin') {
-      // Executive/Admin can see all contracts
-      // For now, show all contracts since we don't have department/division on files
-      filtered = contracts;
+      // Executive/Admin can see contracts filtered by selected department
+      filtered = contracts.filter(
+        (contract) => contract.department === selectedDepartment
+      );
     }
 
     setFilteredContracts(filtered);
@@ -252,7 +268,7 @@ const MyContractsPage = () => {
                     <TabsTrigger
                       key={dept}
                       value={dept}
-                      className="flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-dark-200"
+                      className="flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-dark-200 tabs-underline"
                     >
                       {dept}
                     </TabsTrigger>
@@ -273,7 +289,7 @@ const MyContractsPage = () => {
                               }
                               size="sm"
                               onClick={() => setSelectedDivision('')}
-                              className="bg-white/60 backdrop-blur border border-white/40 hover:bg-white/30"
+                              className="bg-transparent backdrop-blur border border-white/40 tabs-underline hover:bg-transparent focus:bg-transparent text-slate-700 hover:text-slate-700 focus:text-slate-700 active:text-slate-700"
                             >
                               All {dept}
                             </Button>
@@ -287,7 +303,7 @@ const MyContractsPage = () => {
                                 }
                                 size="sm"
                                 onClick={() => setSelectedDivision(div)}
-                                className="bg-white/60 backdrop-blur border border-white/40 hover:bg-white/30"
+                                className="bg-transparent backdrop-blur border border-white/40 tabs-underline hover:bg-transparent focus:bg-transparent text-slate-700 hover:text-slate-700 focus:text-slate-700 active:text-slate-700"
                               >
                                 {div
                                   .split('-')
@@ -324,6 +340,7 @@ const MyContractsPage = () => {
                                 file={contract}
                                 status={contract.status}
                                 expirationDate={contract.contractExpiryDate}
+                                onRefresh={refreshContracts}
                               />
                             ))}
                           </div>
@@ -350,16 +367,19 @@ const MyContractsPage = () => {
             <CardHeader>
               <CardTitle className="h2 text-blue-700 flex items-center gap-2">
                 <Users className="h-6 w-6" />
-                My Department Contracts
+                My Division Contracts
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="body-1 text-blue-600 mb-4">
-                You can view contracts assigned to your department:{' '}
+                You can view contracts assigned to your division:{' '}
                 {division
-                  ? DIVISION_TO_DEPARTMENT[
-                      division as keyof typeof DIVISION_TO_DEPARTMENT
-                    ] || division
+                  ? division
+                      .split('-')
+                      .map(
+                        (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                      )
+                      .join(' ')
                   : 'N/A'}
               </p>
 
@@ -383,6 +403,7 @@ const MyContractsPage = () => {
                         file={contract}
                         status={contract.status}
                         expirationDate={contract.contractExpiryDate}
+                        onRefresh={refreshContracts}
                       />
                     ))}
                   </div>
@@ -390,7 +411,7 @@ const MyContractsPage = () => {
                   <div className="text-center py-12">
                     <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                     <p className="body-1 text-slate-600">
-                      No contracts found for your department
+                      No contracts found for your division
                     </p>
                   </div>
                 )}
@@ -409,32 +430,10 @@ const MyContractsPage = () => {
               <p className="body-1 text-slate-600">
                 You don't have permission to view contracts.
               </p>
-              <p className="body-1 text-slate-600 mt-2">
-                Current role: {role || 'undefined'} | Division:{' '}
-                {division || 'undefined'}
-              </p>
             </CardContent>
           </UICard>
         </div>
       )}
-
-      {/* Debug info (remove in production) */}
-      <UICard className="bg-yellow-50/60 backdrop-blur border border-yellow-200/40 shadow-lg">
-        <CardHeader>
-          <CardTitle className="h2 text-yellow-700">Debug Info</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="body-1 text-yellow-600">
-            Role: {role || 'undefined'} | Division: {division || 'undefined'} |
-            Loading: {loading.toString()} | Error: {error || 'none'}
-          </p>
-          <p className="body-1 text-yellow-600 mt-2">
-            Contracts: {contracts.length} | Filtered: {filteredContracts.length}{' '}
-            | Selected Dept: {selectedDepartment} | Selected Division:{' '}
-            {selectedDivision || 'All'}
-          </p>
-        </CardContent>
-      </UICard>
     </div>
   );
 };

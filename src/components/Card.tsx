@@ -48,6 +48,8 @@ interface CardProps {
   expirationDate?: string;
   assignedTo?: string;
   assignedToDepartment?: string;
+  assignedManagers?: string[];
+  onRefresh?: () => void;
 }
 
 const Card = ({
@@ -56,6 +58,7 @@ const Card = ({
   expirationDate,
   assignedTo: propAssignedTo,
   assignedToDepartment: propAssignedToDepartment,
+  onRefresh,
 }: CardProps) => {
   const [contractStatus, setContractStatus] = useState<string | undefined>(
     status || file.status
@@ -64,11 +67,14 @@ const Card = ({
     string | undefined
   >(expirationDate || file.contractExpiryDate);
   const [assignedTo, setAssignedTo] = useState<string | undefined>(
-    propAssignedTo || file.assignedTo
+    propAssignedTo ||
+      (Array.isArray(file.assignedManagers)
+        ? file.assignedManagers.join(', ')
+        : file.assignedManagers)
   );
   const [assignedToDepartment, setAssignedToDepartment] = useState<
     string | undefined
-  >(propAssignedToDepartment || file.assignedToDepartment);
+  >(propAssignedToDepartment || file.department);
 
   useEffect(() => {
     // If status is not present but contractId exists, fetch the contract status
@@ -120,7 +126,7 @@ const Card = ({
           imageClassName="!size-11"
         />
         <div className="flex flex-col items-end justify-between">
-          <ActionDropdown file={file} />
+          <ActionDropdown file={file} onRefresh={onRefresh} />
           <p className="body-1">{convertFileSize(file.size)}</p>
         </div>
       </div>
