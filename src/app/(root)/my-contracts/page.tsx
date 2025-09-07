@@ -10,13 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  ArrowLeft,
-  FileText,
-  Building2,
-  Users,
-  TrendingUp,
-} from 'lucide-react';
+import { ArrowLeft, FileText, Building2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { UIFileDoc } from '@/types/files';
 import {
@@ -26,30 +20,10 @@ import {
 import {
   ContractDepartment,
   DIVISION_TO_DEPARTMENT,
-  USER_DIVISIONS,
 } from '../../../../constants';
 import Sort from '@/components/Sort';
 import { convertFileSize } from '@/lib/utils';
 import FileCard from '@/components/Card';
-
-// Manager restricted actions
-const managerActions = ['Details', 'Download', 'Review', 'Share', 'Status'];
-
-// Executive/Admin full actions
-const fullActions = [
-  ...managerActions,
-  'Edit',
-  'Delete',
-  'Archive',
-  'Permissions',
-];
-
-interface MyContractsData {
-  departments: ContractDepartment[];
-  userRole: 'executive' | 'admin' | 'manager';
-  userDepartment?: string;
-  contracts: UIFileDoc[];
-}
 
 const MyContractsPage = () => {
   const { role, division, loading, error } = useUserRole();
@@ -58,14 +32,11 @@ const MyContractsPage = () => {
   const [selectedDepartment, setSelectedDepartment] =
     useState<ContractDepartment>('Operations');
   const [selectedDivision, setSelectedDivision] = useState<string>('');
-  const [contractsLoading, setContractsLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<string>('$createdAt-desc');
+  const [sortBy] = useState<string>('$createdAt-desc');
 
   // Function to refresh contracts data
   const refreshContracts = async () => {
     try {
-      setContractsLoading(true);
-
       if (role === 'manager' && division) {
         // For managers, get contracts filtered by their division
         const divisionContracts = await getContractsByUserDivision(division);
@@ -81,7 +52,7 @@ const MyContractsPage = () => {
                 sort: sortBy,
               });
               const file = fileResponse.documents.find(
-                (f) => f.$id === contract.fileId
+                (f: UIFileDoc) => f.$id === contract.fileId
               );
               if (file) {
                 contractFiles.push(file as UIFileDoc);
@@ -108,8 +79,6 @@ const MyContractsPage = () => {
       }
     } catch (err) {
       console.error('Error refreshing contracts:', err);
-    } finally {
-      setContractsLoading(false);
     }
   };
 
@@ -428,7 +397,7 @@ const MyContractsPage = () => {
             </CardHeader>
             <CardContent>
               <p className="body-1 text-slate-600">
-                You don't have permission to view contracts.
+                You don&apos;t have permission to view contracts.
               </p>
             </CardContent>
           </UICard>
