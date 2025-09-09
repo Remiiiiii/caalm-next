@@ -80,6 +80,17 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
       ],
     },
     {
+      header: 'Search',
+      items: [
+        {
+          name: 'Advanced Search',
+          icon: '/assets/icons/search.svg',
+          url: '/search',
+          roles: ['executive', 'admin', 'manager'],
+        },
+      ],
+    },
+    {
       header: 'Contracts',
       items: [
         // Only Executive and Admin can see All Contracts

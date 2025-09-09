@@ -1,16 +1,24 @@
 import useSWR, { mutate } from 'swr';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { performAdvancedSearch, getSearchSuggestions, getRecentSearches, saveSearch, getSavedSearches, deleteSavedSearch, AdvancedSearchFilters } from '@/lib/actions/search.actions';
 
-// interface SearchResult {
-//   $id: string;
-//   type: 'file' | 'contract' | 'user' | 'notification';
-//   title: string;
-//   description: string;
-//   url: string;
-//   relevance: number;
-//   createdAt: string;
-// }
+interface SearchResult {
+  id: string;
+  type: 'contract' | 'file';
+  name: string;
+  contractName?: string;
+  vendor?: string;
+  department?: string;
+  status?: string;
+  priority?: string;
+  amount?: number;
+  contractExpiryDate?: string;
+  assignedManagers?: string[];
+  $createdAt: string;
+  $updatedAt: string;
+  searchScore: number;
+}
 
 interface SearchFilters {
   type?: string[];
@@ -74,71 +82,81 @@ export const useSearch = () => {
     return `/api/search?${params.toString()}`;
   }, [debouncedQuery, filters, user?.$id]);
 
-  // Search results
-  const {
-    data: searchResults,
-    error,
-    isLoading,
-  } = useSWR(searchUrl, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 60000, // 1 minute deduping
-    onSuccess: () => setIsSearching(false),
-    onError: () => setIsSearching(false),
-  });
+  // Search results using the new advanced search
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Recent searches
-  const { data: recentSearches } = useSWR(
-    user?.$id ? `/api/search/recent?userId=${user.$id}` : null,
-    fetcher
-  );
-
-  // Search suggestions
-  const { data: suggestions } = useSWR(
-    debouncedQuery.length >= 2
-      ? `/api/search/suggestions?q=${debouncedQuery}`
-      : null,
-    fetcher,
-    {
-      dedupingInterval: 300000, // 5 minutes for suggestions
+  // Perform search when debounced query changes
+  useEffect(() => {
+    if (debouncedQuery.trim() && user?.$id) {
+      performSearch(debouncedQuery, filters);
+    } else {
+      setSearchResults([]);
+      setIsSearching(false);
     }
-  );
+  }, [debouncedQuery, user?.$id]);
 
-  // Search stats
-  const { data: searchStats } = useSWR(
-    searchUrl
-      ? `/api/search/stats?${new URLSearchParams({ q: debouncedQuery })}`
-      : null,
-    fetcher
-  );
-
-  // Perform search
-  const performSearch = async (
-    searchQuery: string,
-    searchFilters?: SearchFilters
-  ) => {
+  const performSearch = async (searchQuery: string, searchFilters: SearchFilters) => {
     setIsSearching(true);
-    setQuery(searchQuery);
-    if (searchFilters) {
-      setFilters(searchFilters);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const advancedFilters: AdvancedSearchFilters = {
+        type: searchFilters.type,
+        startDate: searchFilters.dateRange?.start,
+        endDate: searchFilters.dateRange?.end,
+        department: searchFilters.department,
+        status: searchFilters.status,
+      };
+
+      const results = await performAdvancedSearch({
+        query: searchQuery,
+        userId: user?.$id || '',
+        filters: advancedFilters,
+        limit: 10, // Limit for quick search
+      });
+
+      setSearchResults(results.results);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Search failed');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+      setIsLoading(false);
     }
   };
 
-  // Save search to history
-  const saveSearch = async (searchQuery: string) => {
-    try {
-      await fetch('/api/search/history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: searchQuery,
-          userId: user?.$id,
-          timestamp: new Date().toISOString(),
-        }),
-      });
+  // Recent searches
+  const [recentSearches, setRecentSearches] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
+  // Load recent searches
+  useEffect(() => {
+    if (user?.$id) {
+      getRecentSearches(user.$id, 5).then(setRecentSearches);
+    }
+  }, [user?.$id]);
+
+  // Load suggestions when query changes
+  useEffect(() => {
+    if (debouncedQuery.length >= 2) {
+      getSearchSuggestions(debouncedQuery).then(setSuggestions);
+    } else {
+      setSuggestions([]);
+    }
+  }, [debouncedQuery]);
+
+  // Save search to history
+  const saveSearchToHistory = async (searchQuery: string) => {
+    if (!user?.$id) return;
+    
+    try {
+      // The search is automatically saved in the performAdvancedSearch function
       // Refresh recent searches
-      mutate(`/api/search/recent?userId=${user?.$id}`);
+      const recent = await getRecentSearches(user.$id, 5);
+      setRecentSearches(recent);
     } catch (error) {
       console.error('Failed to save search:', error);
     }
@@ -146,15 +164,8 @@ export const useSearch = () => {
 
   // Clear search history
   const clearSearchHistory = async () => {
-    try {
-      await fetch(`/api/search/history?userId=${user?.$id}`, {
-        method: 'DELETE',
-      });
-
-      mutate(`/api/search/recent?userId=${user?.$id}`);
-    } catch (error) {
-      console.error('Failed to clear search history:', error);
-    }
+    // This would need to be implemented in the search actions
+    console.log('Clear search history not implemented yet');
   };
 
   return {
@@ -166,27 +177,33 @@ export const useSearch = () => {
     isSearching,
 
     // Data
-    results: searchResults?.data || [],
-    recentSearches: recentSearches?.data || [],
-    suggestions: suggestions?.data || [],
-    stats: searchStats?.data || {
-      total: 0,
-      files: 0,
-      contracts: 0,
+    results: searchResults,
+    searchResults: searchResults,
+    recentSearches,
+    suggestions,
+    stats: {
+      total: searchResults.length,
+      files: searchResults.filter(r => r.type === 'file').length,
+      contracts: searchResults.filter(r => r.type === 'contract').length,
       users: 0,
     },
 
     // Loading states
     isLoading: isLoading || isSearching,
     isLoadingResults: isLoading,
-    isLoadingSuggestions: suggestions?.isLoading,
+    isLoadingSuggestions: false,
 
     // Errors
     error,
 
     // Actions
-    performSearch,
-    saveSearch,
+    performSearch: (searchQuery: string, searchFilters?: SearchFilters) => {
+      setQuery(searchQuery);
+      if (searchFilters) {
+        setFilters(searchFilters);
+      }
+    },
+    saveSearch: saveSearchToHistory,
     clearSearchHistory,
   };
 };

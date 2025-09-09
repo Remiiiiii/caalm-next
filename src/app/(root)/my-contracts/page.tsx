@@ -22,6 +22,7 @@ import {
   DIVISION_TO_DEPARTMENT,
 } from '../../../../constants';
 import Sort from '@/components/Sort';
+import SearchInput from '@/components/SearchInput';
 import { convertFileSize } from '@/lib/utils';
 import FileCard from '@/components/Card';
 
@@ -298,7 +299,10 @@ const MyContractsPage = () => {
                               ({filteredContracts.length} contracts)
                             </span>
                           </p>
-                          <Sort />
+                          <div className="flex items-center gap-4 text-slate-700">
+                            <SearchInput />
+                            <Sort />
+                          </div>
                         </div>
 
                         {filteredContracts.length > 0 ? (
@@ -361,7 +365,10 @@ const MyContractsPage = () => {
                       ({filteredContracts.length} contracts)
                     </span>
                   </p>
-                  <Sort />
+                  <div className="flex items-center gap-4">
+                    <SearchInput />
+                    <Sort />
+                  </div>
                 </div>
 
                 {filteredContracts.length > 0 ? (
