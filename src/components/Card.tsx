@@ -50,6 +50,7 @@ interface CardProps {
   assignedToDepartment?: string;
   assignedManagers?: string[];
   onRefresh?: () => void;
+  userRole?: 'executive' | 'admin' | 'manager';
 }
 
 const Card = ({
@@ -59,6 +60,7 @@ const Card = ({
   assignedTo: propAssignedTo,
   assignedToDepartment: propAssignedToDepartment,
   onRefresh,
+  userRole,
 }: CardProps) => {
   const [contractStatus, setContractStatus] = useState<string | undefined>(
     status || file.status
@@ -126,7 +128,11 @@ const Card = ({
           imageClassName="!size-11"
         />
         <div className="flex flex-col items-end justify-between">
-          <ActionDropdown file={file} onRefresh={onRefresh} />
+          <ActionDropdown
+            file={file}
+            onRefresh={onRefresh}
+            userRole={userRole}
+          />
           <p className="body-1">{convertFileSize(file.size)}</p>
         </div>
       </div>

@@ -96,21 +96,33 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
   };
 
   // Handle quick search actions
-  const handleQuickSearch = (action: string) => {
-    switch (action) {
-      case 'all-contracts':
-        router.push('/my-contracts');
-        handleClose();
-        break;
-      case 'vendors':
-        setQuery('vendor:');
-        break;
-      case 'departments':
-        setQuery('department:');
-        break;
-      case 'active':
-        setQuery('status:active');
-        break;
+  const handleQuickSearch = async (action: string) => {
+    setIsSearching(true);
+    setShowResults(true);
+    setSearchResults([]);
+
+    try {
+      // Get user info for role-based filtering
+      const userRole = user?.role || 'user';
+      const userDepartment = user?.department;
+
+      const response = await fetch(
+        `/api/search/quick?type=${action}&userId=${
+          user?.$id || 'anonymous'
+        }&userRole=${userRole}&userDepartment=${userDepartment || ''}&limit=25`
+      );
+
+      if (!response.ok) {
+        throw new Error('Quick search failed');
+      }
+
+      const data = await response.json();
+      setSearchResults(data.results || []);
+    } catch (error) {
+      console.error('Quick search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -262,7 +274,14 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                     <thead className="bg-slate-50/80">
                       <tr>
                         <th className="text-center px-2 py-1 text-[14px] font-semibold text-slate-700">
-                          Name
+                          {searchResults[0]?.type === 'department'
+                            ? 'Department'
+                            : searchResults[0]?.type === 'vendor'
+                            ? 'Vendor'
+                            : 'Name'}
+                        </th>
+                        <th className="text-center px-2 py-1 text-[14px] font-semibold text-slate-700">
+                          Department
                         </th>
                         <th className="text-center px-2 py-1 text-[14px] font-semibold text-slate-700">
                           Type
@@ -278,20 +297,29 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                           key={result.id}
                           className="hover:bg-slate-50 cursor-pointer"
                           onClick={() => {
-                            router.push(`/contracts/${result.id}`);
-                            handleClose();
+                            if (
+                              result.type === 'contract' ||
+                              result.type === 'file'
+                            ) {
+                              router.push(`/contracts/${result.id}`);
+                              handleClose();
+                            }
+                            // For department and vendor types, we could show more details or navigate differently
                           }}
                         >
                           <td className="text-center px-2 py-1">
                             {result.name}
                           </td>
+                          <td className="text-center px-2 py-1">
+                            {result.department || '-'}
+                          </td>
                           <td className="text-center px-2 py-1 capitalize">
-                            {result.type}
+                            {result.contractType || result.type}
                           </td>
                           <td className="text-center px-2 py-1">
                             {result.searchScore
-                              ? Math.round(result.searchScore * 100)
-                              : 0}
+                              ? Math.round(result.searchScore)
+                              : 100}
                             %
                           </td>
                         </tr>

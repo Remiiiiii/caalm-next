@@ -644,9 +644,15 @@ const ActionDropdown = ({
     return null;
   }
 
-  // Only show Assign and Status if file name contains 'Contract'
+  // Determine if this is a contract file
+  // Since we're now fetching from contracts collection, all items should be treated as contracts
   const fileName = file.name || file.contractName || '';
-  const isContractFile = fileName.toLowerCase().includes('contract');
+  const isContractFile =
+    fileName.toLowerCase().includes('contract') ||
+    file.contractId ||
+    file.contractName ||
+    file.contractType ||
+    file.contractExpiryDate;
 
   // Role-based action filtering
   let filteredActions = actionsDropdownItems;
@@ -664,6 +670,7 @@ const ActionDropdown = ({
   }
 
   // Additional filtering for contract files
+  // Only show Assign and Status for actual contract files
   if (!isContractFile) {
     filteredActions = filteredActions.filter(
       (action) => !['assign', 'status'].includes(action.value)

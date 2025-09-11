@@ -28,7 +28,7 @@ export interface AdvancedSearchFilters {
 
 export interface SearchResult {
   id: string;
-  type: 'contract' | 'file';
+  type: 'contract' | 'file' | 'department' | 'vendor';
   name: string;
   contractName?: string;
   vendor?: string;
@@ -38,6 +38,7 @@ export interface SearchResult {
   amount?: number;
   contractExpiryDate?: string;
   assignedManagers?: string[];
+  contractType?: string;
   $createdAt: string;
   $updatedAt: string;
   searchScore: number;
@@ -54,6 +55,178 @@ export interface SearchResponse {
     hasMore: boolean;
   };
 }
+
+// Quick search functions for different search types
+export const performQuickSearch = async ({
+  searchType,
+  userId,
+  userRole,
+  userDepartment,
+  limit = 25,
+  offset = 0,
+}: {
+  searchType: 'all-contracts' | 'departments' | 'vendors' | 'active';
+  userId: string;
+  userRole?: string;
+  userDepartment?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<SearchResponse> => {
+  const { databases } = await createAdminClient();
+
+  try {
+    let queries = [];
+    let results: SearchResult[] = [];
+
+    switch (searchType) {
+      case 'all-contracts':
+        // List all contracts in user's department, or all departments for Admin/Executive
+        if (
+          userRole !== 'admin' &&
+          userRole !== 'executive' &&
+          userDepartment
+        ) {
+          // Only apply department filter for non-admin/executive users
+          queries.push(Query.equal('department', userDepartment));
+        }
+        // For admin/executive, no department filter - show all contracts
+        queries.push(Query.limit(200));
+
+        const contractsResult = await databases.listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.contractsCollectionId,
+          queries
+        );
+
+        results = contractsResult.documents.map((doc) => ({
+          id: doc.$id,
+          type: 'contract' as const,
+          name: doc.contractName || doc.name || 'Untitled Contract',
+          contractName: doc.contractName,
+          vendor: doc.vendor,
+          department: doc.department,
+          status: doc.status,
+          priority: doc.priority,
+          amount: doc.amount,
+          contractExpiryDate: doc.contractExpiryDate,
+          assignedManagers: doc.assignedManagers,
+          $createdAt: doc.$createdAt,
+          $updatedAt: doc.$updatedAt,
+          searchScore: 100, // High score for quick search results
+        }));
+        break;
+
+      case 'departments':
+        // List all departments that have contracts
+        const allContractsResult = await databases.listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.contractsCollectionId,
+          [Query.limit(200)]
+        );
+
+        // Group by department and create department entries
+        const departmentMap = new Map();
+        allContractsResult.documents.forEach((doc) => {
+          if (doc.department) {
+            if (!departmentMap.has(doc.department)) {
+              departmentMap.set(doc.department, {
+                id: `dept-${doc.department}`,
+                type: 'department' as const,
+                name: doc.department,
+                department: doc.department,
+                contractType: 'Department',
+                $createdAt: doc.$createdAt,
+                $updatedAt: doc.$updatedAt,
+                searchScore: 100,
+              });
+            }
+          }
+        });
+
+        results = Array.from(departmentMap.values());
+        break;
+
+      case 'vendors':
+        // List all vendors
+        const vendorContractsResult = await databases.listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.contractsCollectionId,
+          [Query.limit(200)]
+        );
+
+        // Group by vendor and create vendor entries
+        const vendorMap = new Map();
+        vendorContractsResult.documents.forEach((doc) => {
+          if (doc.vendor) {
+            if (!vendorMap.has(doc.vendor)) {
+              vendorMap.set(doc.vendor, {
+                id: `vendor-${doc.vendor}`,
+                type: 'vendor' as const,
+                name: doc.vendor,
+                vendor: doc.vendor,
+                department: doc.department,
+                contractType: 'Vendor',
+                $createdAt: doc.$createdAt,
+                $updatedAt: doc.$updatedAt,
+                searchScore: 100,
+              });
+            }
+          }
+        });
+
+        results = Array.from(vendorMap.values());
+        break;
+
+      case 'active':
+        // List all active contracts
+        queries.push(Query.equal('status', 'active'));
+        queries.push(Query.limit(200));
+
+        const activeContractsResult = await databases.listDocuments(
+          appwriteConfig.databaseId,
+          appwriteConfig.contractsCollectionId,
+          queries
+        );
+
+        results = activeContractsResult.documents.map((doc) => ({
+          id: doc.$id,
+          type: 'contract' as const,
+          name: doc.contractName || doc.name || 'Untitled Contract',
+          contractName: doc.contractName,
+          vendor: doc.vendor,
+          department: doc.department,
+          status: doc.status,
+          priority: doc.priority,
+          amount: doc.amount,
+          contractExpiryDate: doc.contractExpiryDate,
+          assignedManagers: doc.assignedManagers,
+          $createdAt: doc.$createdAt,
+          $updatedAt: doc.$updatedAt,
+          searchScore: 100,
+        }));
+        break;
+    }
+
+    // Apply pagination
+    const total = results.length;
+    const paginatedResults = results.slice(offset, offset + limit);
+
+    return {
+      results: paginatedResults,
+      total,
+      query: searchType,
+      filters: {},
+      pagination: {
+        limit,
+        offset,
+        hasMore: offset + limit < total,
+      },
+    };
+  } catch (error) {
+    handleError(error, 'Failed to perform quick search');
+    throw error;
+  }
+};
 
 export const performAdvancedSearch = async ({
   query,
@@ -232,11 +405,16 @@ export const performAdvancedSearch = async ({
 
         return searchableFields.some((field) => {
           if (Array.isArray(field)) {
-            return field.some((item) => 
-              typeof item === 'string' && item.toLowerCase().includes(queryLower)
+            return field.some(
+              (item) =>
+                typeof item === 'string' &&
+                item.toLowerCase().includes(queryLower)
             );
           }
-          return typeof field === 'string' && field.toLowerCase().includes(queryLower);
+          return (
+            typeof field === 'string' &&
+            field.toLowerCase().includes(queryLower)
+          );
         });
       });
     }

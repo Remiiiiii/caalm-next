@@ -140,8 +140,9 @@ export const formatDate = (isoString: string | null | undefined) => {
     'Dec',
   ];
   const month = monthNames[date.getMonth()];
+  const year = date.getFullYear();
 
-  return `${day} ${month}`; // ${time},
+  return `${day} ${month}, ${year}`; // ${time},
 };
 
 export const getFileIcon = (
