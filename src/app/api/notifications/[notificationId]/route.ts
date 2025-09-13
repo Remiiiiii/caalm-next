@@ -4,10 +4,11 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { notificationId: string } }
+  { params }: { params: Promise<{ notificationId: string }> }
 ) {
   try {
-    const { notificationId } = params;
+    const resolvedParams = await params;
+    const { notificationId } = resolvedParams;
 
     if (!notificationId) {
       return NextResponse.json(

@@ -3,10 +3,11 @@ import { revokeInvitation } from '@/lib/actions/user.actions';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const resolvedParams = await params;
+    const { token } = resolvedParams;
 
     if (!token) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });

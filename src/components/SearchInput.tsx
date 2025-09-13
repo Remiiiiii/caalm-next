@@ -30,7 +30,7 @@ const SearchInput: React.FC = () => {
           placeholder="Search contracts..."
           onClick={() => setIsModalOpen(true)}
           readOnly
-          className="pl-10 pr-4 py-2 w-64 text-sm border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+          className="pl-10 pr-4 py-2 w-48 text-sm border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
         />
         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
           <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
