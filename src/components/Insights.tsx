@@ -136,7 +136,7 @@ const Insights = () => {
                 Back
               </Button>
               <h3 className="absolute left-1/2 transform -translate-x-1/2 font-bold sm:text-3xl py-2 md:text-[2em] leading-tight sidebar-gradient-text">
-                Administration Analytics
+                Administrative Analytics
               </h3>
             </div>
             <p className="text-slate-700 text-center mb-6 ">

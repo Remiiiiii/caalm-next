@@ -41,12 +41,16 @@ export const useReports = (options: UseReportsOptions = {}) => {
       : null,
     fetcher,
     {
-      refreshInterval: 30000, // Refresh every 30 seconds
+      refreshInterval: 5000, // Refresh every 5 seconds (very frequent)
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 10000, // Dedupe requests within 10 seconds
+      dedupingInterval: 1000, // Dedupe requests within 1 second (very short)
       errorRetryCount: 3,
-      errorRetryInterval: 5000,
+      errorRetryInterval: 1000, // Faster retry every 1 second
+      // Force revalidation on mount
+      revalidateIfStale: true,
+      revalidateOnMount: true,
+      keepPreviousData: false, // Don't keep stale data
     }
   );
 

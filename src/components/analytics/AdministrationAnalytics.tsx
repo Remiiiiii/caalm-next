@@ -35,7 +35,7 @@ import {
   Download,
 } from 'lucide-react';
 
-// Mock data for Administration Analytics
+// Mock data for Administrative Analytics
 const mockData = {
   // Contract trends over time
   contractTrends: [
@@ -147,7 +147,7 @@ const AdministrationAnalytics = () => {
       <div className="flex justify-between items-end">
         <div>
           <h2 className="h3 font-bold sidebar-gradient-text">
-            Administration Analytics
+            Administrative Analytics
           </h2>
           <p className="body-1 text-slate-700">
             Comprehensive overview of administrative operations

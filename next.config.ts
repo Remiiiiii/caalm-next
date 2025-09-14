@@ -13,6 +13,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '100MB',
     },
   },
+  // Disable caching in development
+  ...(process.env.NODE_ENV === 'development' && {
+    onDemandEntries: {
+      maxInactiveAge: 25 * 1000,
+      pagesBufferLength: 2,
+    },
+  }),
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
@@ -42,6 +49,27 @@ const nextConfig: NextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/analytics/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate, max-age=0',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
+          },
+          {
+            key: 'Last-Modified',
+            value: new Date().toUTCString(),
           },
         ],
       },

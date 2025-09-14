@@ -4,15 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
 
 export default function NotificationDebug() {
   const { user } = useAuth();
   const { notifications, isLoading, error, mutate } = useNotifications();
-
-  const handleRefresh = () => {
-    mutate();
-  };
 
   return (
     <Card className="w-full max-w-md">
@@ -45,13 +40,6 @@ export default function NotificationDebug() {
           <strong>Match:</strong>{' '}
           {user?.$id === '68682eba0021a8048922' ? '✅ Yes' : '❌ No'}
         </div>
-
-        <Button onClick={handleRefresh} disabled={isLoading} className="w-full">
-          <RefreshCw
-            className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
-          />
-          Refresh Notifications
-        </Button>
 
         {notifications && notifications.length > 0 && (
           <div className="mt-4">

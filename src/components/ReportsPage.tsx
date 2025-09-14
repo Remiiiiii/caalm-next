@@ -50,7 +50,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
       if (user) {
         const departments = await getUserAccessibleDepartments(
           (user as ExtendedUser)?.role || 'user',
-          (user as ExtendedUser)?.division
+          (user as ExtendedUser)?.department
         );
         setAccessibleDepartments(departments);
       }
@@ -116,7 +116,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold sidebar-gradient-text mb-2">
           Reports & Analytics
         </h1>
         <p className="text-gray-600">
@@ -142,7 +142,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
       {/* Quick Generate Section */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-slate-700">
             <FileText className="h-5 w-5" />
             Quick Generate Report
           </CardTitle>
@@ -154,7 +154,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
                 key={dept}
                 variant="outline"
                 onClick={() => handleGenerateReport(dept)}
-                className="flex items-center gap-2"
+                className="primary-btn"
               >
                 <FileText className="h-4 w-4" />
                 {dept} Report
@@ -166,7 +166,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
 
       {/* Reports Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {reports.map((report) => (
+        {reports.map((report: ReportCard) => (
           <Card key={report.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -221,7 +221,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
 
       {/* Empty State */}
       {reports.length === 0 && (
-        <Card className="text-center py-12">
+        <Card className="flex justify-center text-center py-12">
           <CardContent>
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -231,9 +231,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
               Generate your first report to get started with analytics and
               insights.
             </p>
-            <Button onClick={() => handleGenerateReport('all')}>
-              Generate Report
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                className="primary-btn"
+                onClick={() => handleGenerateReport('all')}
+              >
+                Generate Report
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

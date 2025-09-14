@@ -241,25 +241,35 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
     {
       header: 'Reports & Analytics',
       items: [
-        // For executives, show main analytics page
+        // For admins, show administrative analytics
+        ...(role === 'admin'
+          ? [
+              {
+                name: 'Overview',
+                icon: '/assets/icons/analytics.svg',
+                url: '/analytics/administration',
+                roles: ['admin'],
+              },
+            ]
+          : []),
         ...(role === 'executive'
           ? [
               {
-                name: 'All Analytics',
-                icon: '/assets/icons/chart.svg',
-                url: '/analytics',
+                name: 'Overview',
+                icon: '/assets/icons/analytics.svg',
+                url: '/analytics/administration',
                 roles: ['executive'],
               },
             ]
           : []),
-        // For admins, show administration analytics
-        ...(role === 'admin'
+        // For executives, show main analytics page
+        ...(role === 'executive'
           ? [
               {
-                name: 'Administration',
-                icon: '/assets/icons/chart.svg',
-                url: '/analytics/administration',
-                roles: ['admin'],
+                name: 'Quick View',
+                icon: '/assets/icons/analytics.svg',
+                url: '/analytics',
+                roles: ['executive'],
               },
             ]
           : []),
@@ -278,53 +288,6 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
             ]
           : []),
         // For executives, show all department options
-        ...(role === 'executive'
-          ? [
-              {
-                name: 'Administration',
-                icon: '/assets/icons/chart.svg',
-                url: '/analytics/administration',
-                roles: ['executive'],
-              },
-              {
-                name: 'Management',
-                division: 'management',
-                roles: ['executive'],
-                subItems: [
-                  {
-                    name: 'CFS',
-                    division: 'cins-fins-snap',
-                    url: '/analytics/cfs',
-                    roles: ['executive'],
-                  },
-                  {
-                    name: 'Behavioral Health',
-                    division: 'behavioralhealth',
-                    url: '/analytics/behavioral-health',
-                    roles: ['executive'],
-                  },
-                  {
-                    name: 'Child Welfare',
-                    division: 'childwelfare',
-                    url: '/analytics/child-welfare',
-                    roles: ['executive'],
-                  },
-                  {
-                    name: 'Clinic',
-                    division: 'clinic',
-                    url: '/analytics/clinic',
-                    roles: ['executive'],
-                  },
-                  {
-                    name: 'Residential',
-                    division: 'residential',
-                    url: '/analytics/residential',
-                    roles: ['executive'],
-                  },
-                ],
-              },
-            ]
-          : []),
       ],
     },
   ];
@@ -374,14 +337,9 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                 section.header === 'Reports & Analytics'
               ) {
                 sectionItems = sectionItems.map((item) => {
-                  if (item.subItems && mappedDivision) {
-                    // Filter subitems to only show the manager's department
-                    const filteredSubItems = item.subItems.filter(
-                      (subItem) => subItem.division === mappedDivision
-                    );
+                  if (item && mappedDivision) {
                     return {
                       ...item,
-                      subItems: filteredSubItems,
                     };
                   }
                   return item;
@@ -475,7 +433,7 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                 </li>
                 <div className="relative ml-3">
                   <ul className="flex flex-col gap-1 relative z-10">
-                    {sectionItems.map(({ url, name, subItems }, index) => (
+                    {sectionItems.map(({ url, name }, index) => (
                       <Fragment key={name}>
                         <li className="relative flex items-center">
                           {/* Main vertical line for all sections */}
@@ -516,11 +474,11 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                                 />
                               </span>
                             )}
-                            {name === 'All Analytics' && (
+                            {name === 'Quick View' && (
                               <span className="gap-1">
                                 <Image
                                   src="/assets/icons/analytics.svg"
-                                  alt="all-analytics"
+                                  alt="analytics"
                                   width={20}
                                   height={20}
                                 />
@@ -657,10 +615,10 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                               </span>
                             )}
                             {/* Reports & Analytics */}
-                            {name === 'Administration' && (
+                            {name === 'Overview' && (
                               <span className="gap-1">
                                 <Image
-                                  src="/assets/icons/department.svg"
+                                  src="/assets/icons/analytics.svg"
                                   alt="reports-analytics"
                                   width={20}
                                   height={20}
@@ -759,7 +717,7 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                             )}
                             <p
                               className={`text-sm text-slate-900 px-2 tabs-underline font-medium ${
-                                name === 'Administration' ? '-ml-[1px]' : ''
+                                name === 'Admin' ? '-ml-[1px]' : ''
                               }`}
                               data-state={
                                 pathname &&
@@ -774,62 +732,6 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                             </p>
                           </Link>
                         </li>
-                        {subItems && (
-                          <div className="relative ml-12">
-                            <span
-                              className="absolute left-0 top-0 h-full w-4 border-l border-[#BFBFBF]"
-                              style={{ zIndex: 0 }}
-                            ></span>
-                            {subItems.map((subItem) => (
-                              <li
-                                key={subItem.name}
-                                className="relative flex items-center"
-                              >
-                                <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
-                                <Link
-                                  href={subItem.url}
-                                  className="ml-4 lg:w-full flex items-start gap-3 tabs-underline"
-                                  onMouseEnter={() => {
-                                    // Prefetch analytics data on hover for better performance
-                                    if (subItem.url?.includes('/analytics')) {
-                                      router.prefetch(subItem.url);
-                                      // Extract department from URL for analytics prefetching
-                                      const departmentMatch = subItem.url.match(
-                                        /\/analytics\/([^\/]+)/
-                                      );
-                                      if (departmentMatch) {
-                                        prefetchDepartmentAnalytics(
-                                          departmentMatch[1]
-                                        );
-                                      }
-                                    }
-                                  }}
-                                >
-                                  <span className="gap-1">
-                                    <Image
-                                      src="/assets/icons/department.svg"
-                                      alt="department"
-                                      width={20}
-                                      height={20}
-                                    />
-                                  </span>
-                                  <p
-                                    className="text-sm text-slate-900 font-medium"
-                                    data-state={
-                                      pathname &&
-                                      (pathname === subItem.url ||
-                                        pathname.startsWith(`${subItem.url}/`))
-                                        ? 'active'
-                                        : undefined
-                                    }
-                                  >
-                                    {subItem.name}
-                                  </p>
-                                </Link>
-                              </li>
-                            ))}
-                          </div>
-                        )}
                       </Fragment>
                     ))}
                   </ul>

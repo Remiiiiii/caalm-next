@@ -8,7 +8,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, AlertTriangle } from 'lucide-react';
 import OrganizationSelector from '@/components/OrganizationSelector';
 
 function TestSWRInner() {
@@ -32,12 +32,6 @@ function TestSWRInner() {
         <h1 className="text-2xl font-bold">SWR Implementation Test</h1>
         <div className="flex items-center gap-4">
           <OrganizationSelector />
-          <Button onClick={refreshAll} disabled={isLoading}>
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
-            />
-            Refresh All
-          </Button>
         </div>
       </div>
 

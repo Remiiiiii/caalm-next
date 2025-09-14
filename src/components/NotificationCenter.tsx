@@ -23,7 +23,6 @@ import {
   Bell,
   Check,
   Trash,
-  RefreshCw,
   Settings,
   AlertTriangle,
   Info,
@@ -80,7 +79,7 @@ const NOTIFICATION_TYPES = {
   },
   'contract-renewal': {
     label: 'Contract Renewal',
-    icon: <RefreshCw className="w-4 h-4" />,
+    icon: <Clock className="w-4 h-4" />,
     color: 'bg-orange-100 text-orange-800',
     bgColor: 'bg-orange-50/30 border-orange-400',
     priority: 'medium' as const,
@@ -187,15 +186,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     deleteNotification,
     mutate,
   } = useNotifications(userId);
-
-  // Force refresh notifications
-  const handleRefresh = () => {
-    mutate();
-    toast({
-      title: 'Refreshing notifications...',
-      description: 'Fetching latest notifications from server.',
-    });
-  };
 
   // Set error state from SWR error
   React.useEffect(() => {
@@ -440,18 +430,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleRefresh}
-                disabled={loading}
-                className="text-sm"
-              >
-                <RefreshCw
-                  className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`}
-                />
-                Refresh
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
                 onClick={() => setShowSettings(true)}
                 className="text-sm"
               >
@@ -604,7 +582,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               >
                 {loading ? (
                   <div className="text-center py-8 text-gray-400">
-                    <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                    <div className="w-8 h-8 mx-auto mb-2 animate-spin border-2 border-gray-300 border-t-blue-500 rounded-full"></div>
                     Loading notifications...
                   </div>
                 ) : error ? (

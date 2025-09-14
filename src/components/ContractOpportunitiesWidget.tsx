@@ -8,7 +8,6 @@ import {
   ExternalLink,
   Building2,
   Calendar,
-  RefreshCw,
   Search,
   TrendingUp,
 } from 'lucide-react';
@@ -62,10 +61,6 @@ export default function ContractOpportunitiesWidget({
     return () => clearInterval(interval);
   }, [autoRefresh, searchKeywords.length]);
 
-  const handleRefresh = () => {
-    mutate();
-  };
-
   const getStatusColor = (contract: SAMContract) => {
     if (!contract.responseDeadLine) return 'bg-gray-100 text-gray-800';
 
@@ -95,17 +90,6 @@ export default function ContractOpportunitiesWidget({
                 {currentKeyword}
               </Badge>
             )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={loading}
-              className="bg-white/30 backdrop-blur border border-white/40"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
-              />
-            </Button>
           </div>
         </div>
         {totalRecords > 0 && (
@@ -133,9 +117,6 @@ export default function ContractOpportunitiesWidget({
             <p className="text-red-600 text-sm mb-2">
               Failed to load opportunities
             </p>
-            <Button size="sm" variant="outline" onClick={handleRefresh}>
-              Try Again
-            </Button>
           </div>
         ) : contracts.length > 0 ? (
           <div className="space-y-3">

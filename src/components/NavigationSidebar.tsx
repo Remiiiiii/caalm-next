@@ -114,12 +114,12 @@ const groupedNav = [
     header: 'Reports & Analytics',
     items: [
       {
-        name: 'All Analytics',
+        name: 'Overview',
         icon: '/assets/icons/analytics.svg',
       },
       {
-        name: 'Administration',
-        icon: '/assets/icons/department.svg',
+        name: 'Quick View',
+        icon: '/assets/icons/analytics.svg',
       },
       {
         name: 'Management',

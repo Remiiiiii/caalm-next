@@ -169,6 +169,17 @@
       #162768
     );
   }
+  .analytics-icon {
+    @apply shadow-md;
+    background-image: linear-gradient(
+      to right,
+      #00c1cb,
+      #078fab,
+      #0e638f,
+      #11487d,
+      #162768
+    );
+  }
 
   .flex-center {
     @apply flex items-center justify-center;

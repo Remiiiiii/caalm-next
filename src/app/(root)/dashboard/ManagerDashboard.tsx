@@ -82,9 +82,6 @@ const ManagerDashboard = () => {
           <CardContent className="p-6">
             <div className="text-center text-red-600">
               <p>Failed to load contracts</p>
-              <Button onClick={refresh} variant="outline" className="mt-2">
-                Retry
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -177,9 +174,6 @@ const ManagerDashboard = () => {
                 <CardTitle className="text-lg font-bold text-center sidebar-gradient-text">
                   My Contracts
                 </CardTitle>
-                <Button onClick={refresh} variant="outline" size="sm">
-                  Refresh
-                </Button>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
