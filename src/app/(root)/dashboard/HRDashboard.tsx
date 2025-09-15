@@ -70,7 +70,7 @@ const HRDashboard = () => {
     {
       id: 4,
       employee: 'John Doe',
-      department: 'HR',
+      department: 'Administration',
       certification: 'HR Compliance',
       status: 'current',
       dueDate: '2025-09-15',

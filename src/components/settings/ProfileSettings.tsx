@@ -49,7 +49,7 @@ const ProfileSettings = () => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <User className="h-5 w-5 text-blue-500" />
-        <span className="text-sm font-medium text-dark-200">
+        <span className="text-sm font-medium text-navy">
           Personal Information
         </span>
       </div>

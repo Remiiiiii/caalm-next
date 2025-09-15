@@ -576,7 +576,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                     <div className="space-y-2">
                       <div className="flex items-center justify-center space-x-2">
                         <FileText className="h-5 w-5 text-green" />
-                        <span className="font-medium text-dark-200">
+                        <span className="font-medium text-navy">
                           {processedFileData.name}
                         </span>
                       </div>
@@ -961,9 +961,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                 <CardContent className="pt-6">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-dark-200">
-                        Uploading contract...
-                      </span>
+                      <span className="text-navy">Uploading contract...</span>
                       <span className="text-brand font-medium">
                         {uploadProgress}%
                       </span>

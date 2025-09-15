@@ -54,7 +54,7 @@ const SettingsPage = () => {
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="h1 text-dark-200">Settings</h1>
+              <h1 className="h1 text-navy">Settings</h1>
               <p className="body-1 text-light-200">
                 Manage your account and security preferences
               </p>
@@ -74,7 +74,7 @@ const SettingsPage = () => {
         {/* Profile Settings */}
         <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h3 text-dark-200 flex items-center gap-2">
+            <CardTitle className="h3 text-navy flex items-center gap-2">
               <User className="h-5 w-5" />
               Profile Settings
             </CardTitle>
@@ -87,7 +87,7 @@ const SettingsPage = () => {
         {/* Two-Factor Authentication */}
         <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h3 text-dark-200 flex items-center gap-2">
+            <CardTitle className="h3 text-navy flex items-center gap-2">
               <Shield className="h-5 w-5" />
               Two-Factor Authentication
             </CardTitle>
@@ -100,7 +100,7 @@ const SettingsPage = () => {
         {/* Notification Settings */}
         <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h3 text-dark-200 flex items-center gap-2">
+            <CardTitle className="h3 text-navy flex items-center gap-2">
               <Bell className="h-5 w-5" />
               Notification Settings
             </CardTitle>
@@ -113,7 +113,7 @@ const SettingsPage = () => {
         {/* Security Overview */}
         <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
           <CardHeader>
-            <CardTitle className="h3 text-dark-200 flex items-center gap-2">
+            <CardTitle className="h3 text-navy flex items-center gap-2">
               <Shield className="h-5 w-5" />
               Security Overview
             </CardTitle>

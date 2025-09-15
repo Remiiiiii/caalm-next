@@ -9,7 +9,7 @@ const BehavioralHealthAnalytics = () => {
     <div className="space-y-6">
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle className="h3 text-dark-200">
+          <CardTitle className="h3 text-navy">
             Behavioral Health Analytics
           </CardTitle>
         </CardHeader>

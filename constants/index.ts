@@ -165,22 +165,21 @@ export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 // Organizational Hierarchy Types
 export type UserDivision =
-  | 'administration' // Reports to HR Department
+  | 'HR' // Reports to Administration Department
   | 'c-suite' // Reports to Executive Department
   | 'childwelfare' // Reports to Operations Department
   | 'behavioralhealth' // Reports to Operations Department
   | 'clinic' // Reports to Operations Department
   | 'residential' // Reports to Operations Department
   | 'cins-fins-snap' // Reports to Operations Department
-  | 'sales' // Reports to Sales Department
-  | 'engineering' // Reports to Engineering Department
   | 'support' // Reports to IT Department
-  | 'help-desk'; // Reports to IT Department
+  | 'help-desk'
+  | 'accounting'; //  Reports to Finance Department
 
 export type ContractDepartment =
   | 'IT'
   | 'Finance'
-  | 'HR'
+  | 'Administration'
   | 'Legal'
   | 'Operations'
   | 'Sales'
@@ -190,24 +189,23 @@ export type ContractDepartment =
 
 // User Division to Parent Department Mapping
 export const DIVISION_TO_DEPARTMENT: Record<UserDivision, string> = {
-  administration: 'HR',
+  HR: 'Administration',
   'c-suite': 'Executive',
   childwelfare: 'Operations',
   behavioralhealth: 'Operations',
   clinic: 'Operations',
   residential: 'Operations',
   'cins-fins-snap': 'Operations',
-  sales: 'Sales',
-  engineering: 'Engineering',
   support: 'IT',
   'help-desk': 'IT',
+  accounting: 'Finance',
 };
 
 // Contract Departments for upload form
 export const CONTRACT_DEPARTMENTS: ContractDepartment[] = [
   'IT',
   'Finance',
-  'HR',
+  'Administration',
   'Legal',
   'Operations',
   'Sales',
@@ -218,17 +216,16 @@ export const CONTRACT_DEPARTMENTS: ContractDepartment[] = [
 
 // User Divisions for profile settings
 export const USER_DIVISIONS: UserDivision[] = [
-  'administration',
+  'HR',
   'c-suite',
   'childwelfare',
   'behavioralhealth',
   'clinic',
   'residential',
   'cins-fins-snap',
-  'sales',
-  'engineering',
   'support',
   'help-desk',
+  'accounting',
 ];
 
 // Format division name for display

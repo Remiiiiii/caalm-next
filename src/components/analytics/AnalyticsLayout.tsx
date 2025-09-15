@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
+import { mapDatabaseToRouteDivision } from '@/constants/navigation';
 
 interface AnalyticsLayoutProps {
   division: string;
@@ -31,11 +32,11 @@ interface AnalyticsLayoutProps {
 
 const divisionConfig = {
   administration: {
-    name: 'Administration',
-    description: 'Administrative operations and performance metrics',
+    name: 'Enhanced Analytics Dashboard',
+    description: 'Admin operations and performance metrics',
     icon: Building,
     color: 'bg-blue-500',
-    route: '/analytics/administration',
+    route: '/analytics/admin',
   },
   'child-welfare': {
     name: 'Child Welfare',
@@ -74,18 +75,17 @@ const divisionConfig = {
   },
 };
 
-// Map database division values to route division values
-const mapDatabaseToRouteDivision = (dbDivision: string): string => {
-  const mapping: Record<string, string> = {
-    childwelfare: 'child-welfare',
-    behavioralhealth: 'behavioral-health',
-    'cins-fins-snap': 'cfs',
-    administration: 'administration',
-    residential: 'residential',
-    clinic: 'clinic',
-  };
-  return mapping[dbDivision] || dbDivision;
+// Separate mapping for tab names to keep them independent from main titles
+const tabNames = {
+  administration: 'Administration',
+  'child-welfare': 'Child Welfare',
+  'behavioral-health': 'Behavioral Health',
+  cfs: 'CFS',
+  residential: 'Residential',
+  clinic: 'Clinic',
 };
+
+// Using mapDatabaseToRouteDivision from constants/navigation.ts
 
 const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
   division,
@@ -168,7 +168,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
     return (
       <div className="space-y-6">
         <div className="text-center py-12">
-          <h1 className="h2 text-dark-200 mb-4">Department Not Found</h1>
+          <h1 className="h2 text-navy mb-4">Department Not Found</h1>
           <p className="body-1 text-light-200 mb-6">
             The requested department analytics are not available.
           </p>
@@ -188,7 +188,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
     return (
       <div className="space-y-6">
         <div className="text-center py-12">
-          <h1 className="h2 text-dark-200 mb-4">Access Denied</h1>
+          <h1 className="h2 text-navy mb-4">Access Denied</h1>
           <p className="body-1 text-light-200 mb-6">
             You don&apos;t have permission to view analytics for this
             department.
@@ -311,10 +311,10 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
                   key={key}
                   value={key}
                   asChild
-                  className="tabs-underline flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-dark-200"
+                  className="tabs-underline flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-navy"
                 >
                   <Link href={division.route} className="w-full body-2">
-                    {division.name}
+                    {tabNames[key as keyof typeof tabNames] || division.name}
                   </Link>
                 </TabsTrigger>
               ))}

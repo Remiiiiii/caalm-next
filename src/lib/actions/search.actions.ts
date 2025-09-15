@@ -565,7 +565,7 @@ export const getSearchSuggestions = async (
 export const getRecentSearches = async (
   userId: string,
   limit: number = 10
-): Promise<string[]> => {
+): Promise<{ query: string; timestamp: string; resultCount: number }[]> => {
   const { databases } = await createAdminClient();
 
   try {

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import RecentActivity from '@/components/RecentActivity';
 import { useAdminStats } from '@/hooks/useAdminStats';
+import { StatCardSkeleton } from '@/components/ui/skeletons';
 
 const AdminDashboard = () => {
   // Use the real-time admin stats hook
@@ -67,69 +68,75 @@ const AdminDashboard = () => {
     <div className="space-y-6">
       {/* Header Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Total Users
-                </p>
-                <p className="text-2xl font-bold text-navy">
-                  {isLoading ? '...' : stats.totalUsers}
-                </p>
-              </div>
-              <Users className="h-8 w-8 text-[#524E4E]" />
-            </div>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
+        ) : (
+          <>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">
+                      Total Users
+                    </p>
+                    <p className="text-2xl font-bold text-navy">
+                      {stats.totalUsers}
+                    </p>
+                  </div>
+                  <Users className="h-8 w-8 text-[#524E4E]" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Active Users
-                </p>
-                <p className="text-2xl font-bold text-navy">
-                  {isLoading ? '...' : stats.activeUsers}
-                </p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">
+                      Active Users
+                    </p>
+                    <p className="text-2xl font-bold text-navy">
+                      {stats.activeUsers}
+                    </p>
+                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Pending Users
-                </p>
-                <p className="text-2xl font-bold text-navy">
-                  {isLoading ? '...' : stats.pendingUsers}
-                </p>
-              </div>
-              <Clock className="h-8 w-8 text-[#FF7474]" />
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">
+                      Pending Users
+                    </p>
+                    <p className="text-2xl font-bold text-navy">
+                      {stats.pendingUsers}
+                    </p>
+                  </div>
+                  <Clock className="h-8 w-8 text-[#FF7474]" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  System Health
-                </p>
-                <p className="text-2xl font-bold text-navy">
-                  {isLoading ? '...' : stats.systemHealth.toUpperCase()}
-                </p>
-              </div>
-              {getSystemHealthIcon(stats.systemHealth)}
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">
+                      System Health
+                    </p>
+                    <p className="text-2xl font-bold text-navy">
+                      {stats.systemHealth.toUpperCase()}
+                    </p>
+                  </div>
+                  {getSystemHealthIcon(stats.systemHealth)}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Main Content Grid */}
@@ -147,7 +154,7 @@ const AdminDashboard = () => {
             <CardContent className="pt-0">
               {isLoading ? (
                 <div className="space-y-4 py-4">
-                  {[...Array(4)].map((_, i) => (
+                  {[1, 2, 3, 4].map((i) => (
                     <div
                       key={i}
                       className="flex justify-between items-center p-4 border rounded-lg"

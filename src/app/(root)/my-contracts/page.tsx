@@ -116,7 +116,7 @@ const MyContractsPage = () => {
       return [
         'IT',
         'Finance',
-        'HR',
+        'Administration',
         'Legal',
         'Operations',
         'Sales',
@@ -238,7 +238,7 @@ const MyContractsPage = () => {
                     <TabsTrigger
                       key={dept}
                       value={dept}
-                      className="flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-dark-200 tabs-underline"
+                      className="flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-navy tabs-underline"
                     >
                       {dept}
                     </TabsTrigger>

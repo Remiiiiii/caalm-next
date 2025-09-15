@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useRecentActivities } from '@/hooks/useRecentActivities';
+import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { ActivityItemSkeleton } from '@/components/ui/skeletons';
 
 interface RecentActivity {
   $id: string;
@@ -24,11 +26,13 @@ interface RecentActivityProps {
 }
 
 const RecentActivity: React.FC<RecentActivityProps> = ({ limit = 15 }) => {
-  const { activities, isLoading } = useRecentActivities({
-    limit,
-    enableSSE: true,
-    pollingInterval: 10000,
-  });
+  const { orgId } = useOrganization();
+  const { recentActivities, isLoading } = useUnifiedDashboardData(
+    orgId || 'default_organization'
+  );
+
+  // Limit the activities to the specified limit
+  const activities = recentActivities.slice(0, limit);
 
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date();
@@ -82,17 +86,8 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ limit = 15 }) => {
         <CardContent className="pt-0">
           <div className="h-[400px] overflow-y-auto">
             <div className="space-y-3 py-4">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex justify-between mr-4 items-start border-b border-border pb-2 last:border-b-0"
-                >
-                  <div className="flex-1">
-                    <div className="animate-pulse bg-gray-200 h-4 w-32 rounded mb-2"></div>
-                    <div className="animate-pulse bg-gray-200 h-3 w-24 rounded"></div>
-                  </div>
-                  <div className="animate-pulse bg-gray-200 h-3 w-16 rounded ml-4"></div>
-                </div>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <ActivityItemSkeleton key={i} />
               ))}
             </div>
           </div>

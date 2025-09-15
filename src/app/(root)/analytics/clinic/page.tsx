@@ -9,7 +9,7 @@ const ClinicAnalytics = () => {
     <div className="space-y-6">
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle className="h3 text-dark-200">Clinic Analytics</CardTitle>
+          <CardTitle className="h3 text-navy">Clinic Analytics</CardTitle>
         </CardHeader>
         <CardContent className="text-light-200">
           <p className="body-1">

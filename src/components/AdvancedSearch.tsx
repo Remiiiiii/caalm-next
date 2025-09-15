@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, X, Save, Clock, Star, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, X, Save, Clock, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,24 +23,30 @@ import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { performAdvancedSearch, getSearchSuggestions, getRecentSearches, saveSearch, getSavedSearches, deleteSavedSearch, AdvancedSearchFilters } from '@/lib/actions/search.actions';
+import {
+  performAdvancedSearch,
+  getSearchSuggestions,
+  getRecentSearches,
+  saveSearch,
+  getSavedSearches,
+  deleteSavedSearch,
+  AdvancedSearchFilters,
+  SearchResult,
+} from '@/lib/actions/search.actions';
 import { format } from 'date-fns';
 
-interface SearchResult {
-  id: string;
-  type: 'contract' | 'file';
+interface RecentSearch {
+  query: string;
+  timestamp: string;
+  resultCount: number;
+}
+
+interface SavedSearch {
+  $id: string;
   name: string;
-  contractName?: string;
-  vendor?: string;
-  department?: string;
-  status?: string;
-  priority?: string;
-  amount?: number;
-  contractExpiryDate?: string;
-  assignedManagers?: string[];
-  $createdAt: string;
-  $updatedAt: string;
-  searchScore: number;
+  query: string;
+  filters: AdvancedSearchFilters;
+  createdAt: string;
 }
 
 interface AdvancedSearchProps {
@@ -58,7 +64,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   // Search state
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<AdvancedSearchFilters>(initialFilters);
@@ -67,8 +73,8 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<any[]>([]);
-  const [savedSearches, setSavedSearches] = useState<any[]>([]);
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [showSavedSearches, setShowSavedSearches] = useState(false);
 
   // Date picker states
@@ -141,7 +147,9 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
         ...filters,
         startDate: startDate ? startDate.toISOString() : undefined,
         endDate: endDate ? endDate.toISOString() : undefined,
-        expiryDateStart: expiryStartDate ? expiryStartDate.toISOString() : undefined,
+        expiryDateStart: expiryStartDate
+          ? expiryStartDate.toISOString()
+          : undefined,
         expiryDateEnd: expiryEndDate ? expiryEndDate.toISOString() : undefined,
       };
 
@@ -201,13 +209,14 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
       console.error('Failed to save search:', error);
       toast({
         title: 'Save Failed',
-        description: error instanceof Error ? error.message : 'Failed to save search',
+        description:
+          error instanceof Error ? error.message : 'Failed to save search',
         variant: 'destructive',
       });
     }
   };
 
-  const handleLoadSavedSearch = (savedSearch: any) => {
+  const handleLoadSavedSearch = (savedSearch: SavedSearch) => {
     setQuery(savedSearch.query);
     setFilters(savedSearch.filters || {});
     setShowSavedSearches(false);
@@ -270,7 +279,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
             onFocus={() => setShowSuggestions(suggestions.length > 0)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
           />
-          
+
           {/* Suggestions Dropdown */}
           {showSuggestions && suggestions.length > 0 && (
             <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
@@ -289,18 +298,21 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
             </div>
           )}
         </div>
-        
+
         <Button onClick={handleSearch} disabled={isSearching}>
           {isSearching ? 'Searching...' : 'Search'}
         </Button>
-        
+
         <Popover open={showFilters} onOpenChange={setShowFilters}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="relative">
               <Filter className="h-4 w-4 mr-2" />
               Filters
               {getActiveFiltersCount() > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+                <Badge
+                  variant="secondary"
+                  className="ml-2 h-5 w-5 rounded-full p-0 text-xs"
+                >
                   {getActiveFiltersCount()}
                 </Badge>
               )}
@@ -314,16 +326,19 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                   Clear All
                 </Button>
               </div>
-              
+
               <Separator />
-              
+
               {/* Type Filter */}
               <div className="space-y-2">
                 <Label>Type</Label>
                 <Select
                   value={filters.type?.[0] || ''}
-                  onValueChange={(value) => 
-                    setFilters(prev => ({ ...prev, type: value ? [value] : undefined }))
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      type: value ? [value] : undefined,
+                    }))
                   }
                 >
                   <SelectTrigger>
@@ -341,8 +356,11 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 <Label>Department</Label>
                 <Select
                   value={filters.department || ''}
-                  onValueChange={(value) => 
-                    setFilters(prev => ({ ...prev, department: value || undefined }))
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      department: value || undefined,
+                    }))
                   }
                 >
                   <SelectTrigger>
@@ -350,7 +368,9 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="IT">IT</SelectItem>
-                    <SelectItem value="HR">HR</SelectItem>
+                    <SelectItem value="Administration">
+                      Administration
+                    </SelectItem>
                     <SelectItem value="Finance">Finance</SelectItem>
                     <SelectItem value="Legal">Legal</SelectItem>
                     <SelectItem value="Operations">Operations</SelectItem>
@@ -363,8 +383,11 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 <Label>Status</Label>
                 <Select
                   value={filters.status || ''}
-                  onValueChange={(value) => 
-                    setFilters(prev => ({ ...prev, status: value || undefined }))
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      status: value || undefined,
+                    }))
                   }
                 >
                   <SelectTrigger>
@@ -384,8 +407,11 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 <Label>Priority</Label>
                 <Select
                   value={filters.priority || ''}
-                  onValueChange={(value) => 
-                    setFilters(prev => ({ ...prev, priority: value || undefined }))
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      priority: value || undefined,
+                    }))
                   }
                 >
                   <SelectTrigger>
@@ -405,8 +431,11 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 <Label>Vendor</Label>
                 <Input
                   value={filters.vendor || ''}
-                  onChange={(e) => 
-                    setFilters(prev => ({ ...prev, vendor: e.target.value || undefined }))
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      vendor: e.target.value || undefined,
+                    }))
                   }
                   placeholder="Search by vendor name"
                 />
@@ -420,10 +449,12 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                     type="number"
                     placeholder="Min amount"
                     value={filters.amountMin || ''}
-                    onChange={(e) => 
-                      setFilters(prev => ({ 
-                        ...prev, 
-                        amountMin: e.target.value ? parseFloat(e.target.value) : undefined 
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        amountMin: e.target.value
+                          ? parseFloat(e.target.value)
+                          : undefined,
                       }))
                     }
                   />
@@ -431,10 +462,12 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                     type="number"
                     placeholder="Max amount"
                     value={filters.amountMax || ''}
-                    onChange={(e) => 
-                      setFilters(prev => ({ 
-                        ...prev, 
-                        amountMax: e.target.value ? parseFloat(e.target.value) : undefined 
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        amountMax: e.target.value
+                          ? parseFloat(e.target.value)
+                          : undefined,
                       }))
                     }
                   />
@@ -447,8 +480,13 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-left font-normal">
-                        {startDate ? format(startDate, 'MMM dd, yyyy') : 'Start date'}
+                      <Button
+                        variant="outline"
+                        className="justify-start text-left font-normal"
+                      >
+                        {startDate
+                          ? format(startDate, 'MMM dd, yyyy')
+                          : 'Start date'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -462,7 +500,10 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                   </Popover>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-left font-normal">
+                      <Button
+                        variant="outline"
+                        className="justify-start text-left font-normal"
+                      >
                         {endDate ? format(endDate, 'MMM dd, yyyy') : 'End date'}
                       </Button>
                     </PopoverTrigger>
@@ -484,8 +525,13 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-left font-normal">
-                        {expiryStartDate ? format(expiryStartDate, 'MMM dd, yyyy') : 'Start date'}
+                      <Button
+                        variant="outline"
+                        className="justify-start text-left font-normal"
+                      >
+                        {expiryStartDate
+                          ? format(expiryStartDate, 'MMM dd, yyyy')
+                          : 'Start date'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -499,8 +545,13 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                   </Popover>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-left font-normal">
-                        {expiryEndDate ? format(expiryEndDate, 'MMM dd, yyyy') : 'End date'}
+                      <Button
+                        variant="outline"
+                        className="justify-start text-left font-normal"
+                      >
+                        {expiryEndDate
+                          ? format(expiryEndDate, 'MMM dd, yyyy')
+                          : 'End date'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -554,7 +605,8 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                   >
                     <div className="font-medium">{search.query}</div>
                     <div className="text-sm text-gray-500">
-                      {search.resultCount} results • {new Date(search.timestamp).toLocaleDateString()}
+                      {search.resultCount} results •{' '}
+                      {new Date(search.timestamp).toLocaleDateString()}
                     </div>
                   </div>
                 ))}
@@ -575,14 +627,19 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               <div className="space-y-2">
                 <h4 className="font-medium">Saved Searches</h4>
                 {savedSearches.map((search) => (
-                  <div key={search.$id} className="p-2 hover:bg-gray-50 rounded">
+                  <div
+                    key={search.$id}
+                    className="p-2 hover:bg-gray-50 rounded"
+                  >
                     <div className="flex items-center justify-between">
                       <div
                         className="cursor-pointer flex-1"
                         onClick={() => handleLoadSavedSearch(search)}
                       >
                         <div className="font-medium">{search.name}</div>
-                        <div className="text-sm text-gray-500">{search.query}</div>
+                        <div className="text-sm text-gray-500">
+                          {search.query}
+                        </div>
                       </div>
                       <Button
                         variant="ghost"
@@ -609,52 +666,70 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
           <CardContent>
             <div className="space-y-4">
               {results.map((result) => (
-                <div key={result.id} className="p-4 border rounded-lg hover:bg-gray-50">
+                <div
+                  key={result.id}
+                  className="p-4 border rounded-lg hover:bg-gray-50"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant={result.type === 'contract' ? 'default' : 'secondary'}>
+                        <Badge
+                          variant={
+                            result.type === 'contract' ? 'default' : 'secondary'
+                          }
+                        >
                           {result.type}
                         </Badge>
                         <h3 className="font-medium">{result.name}</h3>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
                         {result.vendor && (
                           <div>
-                            <span className="font-medium">Vendor:</span> {result.vendor}
+                            <span className="font-medium">Vendor:</span>{' '}
+                            {result.vendor}
                           </div>
                         )}
                         {result.department && (
                           <div>
-                            <span className="font-medium">Department:</span> {result.department}
+                            <span className="font-medium">Department:</span>{' '}
+                            {result.department}
                           </div>
                         )}
                         {result.status && (
                           <div>
-                            <span className="font-medium">Status:</span> {result.status}
+                            <span className="font-medium">Status:</span>{' '}
+                            {result.status}
                           </div>
                         )}
                         {result.priority && (
                           <div>
-                            <span className="font-medium">Priority:</span> {result.priority}
+                            <span className="font-medium">Priority:</span>{' '}
+                            {result.priority}
                           </div>
                         )}
                         {result.amount && (
                           <div>
-                            <span className="font-medium">Amount:</span> ${result.amount.toLocaleString()}
+                            <span className="font-medium">Amount:</span> $
+                            {result.amount.toLocaleString()}
                           </div>
                         )}
                         {result.contractExpiryDate && (
                           <div>
-                            <span className="font-medium">Expires:</span> {new Date(result.contractExpiryDate).toLocaleDateString()}
+                            <span className="font-medium">Expires:</span>{' '}
+                            {new Date(
+                              result.contractExpiryDate
+                            ).toLocaleDateString()}
                           </div>
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="text-right text-sm text-gray-500">
-                      <div>Created: {new Date(result.$createdAt).toLocaleDateString()}</div>
+                      <div>
+                        Created:{' '}
+                        {new Date(result.$createdAt).toLocaleDateString()}
+                      </div>
                       <div>Score: {result.searchScore}</div>
                     </div>
                   </div>

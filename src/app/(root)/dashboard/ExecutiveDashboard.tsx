@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import Avatar from '@/components/ui/avatar';
 import ClientTimestamp from '@/components/ClientTimestamp';
@@ -45,6 +45,11 @@ import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
 import { databases } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'appwrite';
+import {
+  StatCardSkeleton,
+  FileItemSkeleton,
+  TableRowSkeleton,
+} from '@/components/ui/skeletons';
 
 type NotifierContract = { id: string; name: string; expiryDate: string };
 
@@ -105,18 +110,58 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const { orgId } = useOrganization();
   const adminName = 'Executive'; // Replace with actual admin name
 
-  // Use SWR hook for dashboard data
+  // Use unified dashboard data hook
   const {
     stats: dashboardStats,
     files,
     invitations,
     authUsers,
-    statsLoading,
-    filesLoading,
-    invitationsLoading,
-    createInvitation,
-    revokeInvitation,
-  } = useDashboardData(orgId || 'default_organization');
+    isLoading: unifiedLoading,
+    refresh: refreshUnified,
+  } = useUnifiedDashboardData(orgId || 'default_organization');
+
+  // Invitation management functions
+  const createInvitation = async (invitationData: Record<string, unknown>) => {
+    try {
+      const response = await fetch('/api/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invitationData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create invitation');
+      }
+
+      const responseData = await response.json();
+
+      // Refresh unified data
+      refreshUnified();
+
+      return responseData.data;
+    } catch (error) {
+      console.error('Failed to create invitation:', error);
+      throw error;
+    }
+  };
+
+  const revokeInvitation = async (token: string) => {
+    try {
+      const response = await fetch(`/api/invitations/${token}/revoke`, {
+        method: 'PUT',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to revoke invitation');
+      }
+
+      // Refresh unified data
+      refreshUnified();
+    } catch (error) {
+      console.error('Failed to revoke invitation:', error);
+      throw error;
+    }
+  };
 
   // Transform dashboard stats to match component format
   const stats = [
@@ -442,37 +487,35 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Card
-            key={index}
-            className="bg-white/30 backdrop-blur border border-white/40 shadow-lg"
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm  font-medium sidebar-gradient-text">
-                    {stat.title}
-                  </p>
-                  <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-                    {statsLoading ? (
-                      <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
-                    ) : (
-                      <span>{stat.value}</span>
-                    )}
-                    <span className="inline-block ml-2 pb-1">
-                      <stat.icon
-                        className={`h-8 w-8 ${stat.color.replace(
-                          'text-',
-                          'text-'
-                        )}`}
-                      />
-                    </span>
+        {unifiedLoading
+          ? [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
+          : stats.map((stat, index) => (
+              <Card
+                key={index}
+                className="bg-white/30 backdrop-blur border border-white/40 shadow-lg"
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm  font-medium sidebar-gradient-text">
+                        {stat.title}
+                      </p>
+                      <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                        <span>{stat.value}</span>
+                        <span className="inline-block ml-2 pb-1">
+                          <stat.icon
+                            className={`h-8 w-8 ${stat.color.replace(
+                              'text-',
+                              'text-'
+                            )}`}
+                          />
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                </CardContent>
+              </Card>
+            ))}
       </div>
 
       {/* Dashboard Content */}
@@ -520,21 +563,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {filesLoading ? (
+                {unifiedLoading ? (
                   <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="border border-border rounded-lg p-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="animate-pulse bg-gray-200 h-10 w-10 rounded"></div>
-                          <div className="flex-1">
-                            <div className="animate-pulse bg-gray-200 h-4 w-32 rounded mb-2"></div>
-                            <div className="animate-pulse bg-gray-200 h-3 w-24 rounded"></div>
-                          </div>
-                        </div>
-                      </div>
+                    {[1, 2, 3].map((i) => (
+                      <FileItemSkeleton key={i} />
                     ))}
                   </div>
                 ) : files && files.length > 0 ? (
@@ -764,19 +796,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {invitationsLoading ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-8">
-                          <div className="flex justify-center space-x-2">
-                            {[...Array(5)].map((_, i) => (
-                              <div
-                                key={i}
-                                className="animate-pulse bg-gray-200 h-4 w-16 rounded"
-                              ></div>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
+                    {unifiedLoading ? (
+                      [1, 2, 3].map((i) => (
+                        <TableRowSkeleton key={i} columns={7} />
+                      ))
                     ) : invitations.length === 0 ? (
                       <tr>
                         <td

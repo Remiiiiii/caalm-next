@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Download, Upload, Share2 } from 'lucide-react';
+import { Loader2, Download, Upload, Share2, Plus, Trash2 } from 'lucide-react';
 import { Models } from 'appwrite';
 import {
   generateReport,
@@ -113,6 +113,42 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     }
   };
 
+  const handleGenerateAnother = () => {
+    setReport(null);
+    setError(null);
+    setIsGenerating(false);
+  };
+
+  const handleDeleteReport = async () => {
+    if (!report) return;
+
+    if (
+      !confirm(
+        `Are you sure you want to delete "${report.title}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/reports/${report.$id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete report');
+      }
+
+      // Reset the report state
+      setReport(null);
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete report. Please try again.');
+      console.error('Delete error:', err);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="rounded-[26px] max-w-5xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur border border-white/40 shadow-drop-1 px-6 py-8">
@@ -133,7 +169,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="subtitle-2 text-light-100">
+                  <div className="subtitle-2 text-light-100">
                     Department
                     <span>
                       {' '}
@@ -144,7 +180,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                         {user?.role === 'executive' ? 'Executive' : 'User'}
                       </Badge>
                     </span>
-                  </p>
+                  </div>
                   {user?.role === 'executive' ? (
                     <div className="mt-3 space-y-3">
                       {CONTRACT_DEPARTMENTS.map((dept) => (
@@ -295,6 +331,26 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                     className="h-[52px] w-[52px] flex-shrink-0 border-light-300 text-light-100 hover:bg-light-300/50 shadow-drop-1"
                   >
                     <Share2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleDeleteReport}
+                    variant="outline"
+                    size="icon"
+                    className="h-[52px] w-[52px] flex-shrink-0 border-red-300 text-red-600 hover:bg-red-50 shadow-drop-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Generate Another Report Button */}
+                <div className="pt-4 border-t border-light-300">
+                  <Button
+                    onClick={handleGenerateAnother}
+                    variant="outline"
+                    className="w-full h-[52px] border-blue-300 text-blue-600 hover:bg-blue-50 shadow-drop-1"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Generate Another Report
                   </Button>
                 </div>
               </CardContent>

@@ -13,11 +13,11 @@ interface DivisionData {
   totalBudget: string;
   staffCount: number;
   complianceRate: string;
-  trend: 'up' | 'down' | 'stable';
+  trend: 'up' | 'down';
   change: string;
 }
 
-const AdministrationAnalyticsPage = () => {
+const AdminAnalyticsPage = () => {
   const [divisionData, setDivisionData] = useState<DivisionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,7 @@ const AdministrationAnalyticsPage = () => {
 
         // Fetch contracts data from the API
         const contractsResponse = await fetch(
-          '/api/analytics/administration/contracts'
+          '/api/analytics/departments/contracts'
         );
 
         if (!contractsResponse.ok) {
@@ -72,7 +72,7 @@ const AdministrationAnalyticsPage = () => {
         const staffCount = Math.round(totalContracts * 0.6); // Rough estimate based on contracts
 
         // Mock trend and change (requires historical data)
-        const trend: 'up' | 'down' | 'stable' = 'up';
+        const trend: 'up' | 'down' = 'up';
         const change = '+12%';
 
         const formattedData: DivisionData = {
@@ -143,7 +143,7 @@ const AdministrationAnalyticsPage = () => {
     totalBudget: '$0M',
     staffCount: 0,
     complianceRate: '0%',
-    trend: 'stable',
+    trend: 'up',
     change: '0%',
   };
 
@@ -165,4 +165,4 @@ const AdministrationAnalyticsPage = () => {
   );
 };
 
-export default AdministrationAnalyticsPage;
+export default AdminAnalyticsPage;

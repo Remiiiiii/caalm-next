@@ -7,6 +7,10 @@ import { cn } from '@/lib/utils';
 import Avatar from '@/components/ui/avatar';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAnalyticsPrefetch } from '@/hooks/useAnalyticsPrefetch';
+import {
+  NAVIGATION_CONFIG,
+  mapDatabaseToRouteDivision,
+} from '@/constants/navigation';
 
 interface Props {
   fullName: string;
@@ -42,18 +46,7 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
 
   const mappedDivision = mapDivisionToSidebar(division);
 
-  // Map database division to route division for direct linking
-  const mapDatabaseToRouteDivision = (dbDivision: string): string => {
-    const mapping: Record<string, string> = {
-      childwelfare: 'child-welfare',
-      behavioralhealth: 'behavioral-health',
-      'cins-fins-snap': 'cfs',
-      administration: 'administration',
-      residential: 'residential',
-      clinic: 'clinic',
-    };
-    return mapping[dbDivision] || dbDivision;
-  };
+  // Use static navigation configuration to prevent hydration mismatches
 
   const groupedNav = [
     {
@@ -241,13 +234,13 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
     {
       header: 'Reports & Analytics',
       items: [
-        // For admins, show administrative analytics
+        // Use static configuration to prevent hydration mismatches
         ...(role === 'admin'
           ? [
               {
-                name: 'Overview',
-                icon: '/assets/icons/analytics.svg',
-                url: '/analytics/administration',
+                name: NAVIGATION_CONFIG.admin.analytics.name,
+                icon: NAVIGATION_CONFIG.admin.analytics.icon,
+                url: NAVIGATION_CONFIG.admin.analytics.url,
                 roles: ['admin'],
               },
             ]
@@ -255,34 +248,31 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
         ...(role === 'executive'
           ? [
               {
-                name: 'Overview',
-                icon: '/assets/icons/analytics.svg',
-                url: '/analytics/administration',
+                name: NAVIGATION_CONFIG.executive.analytics.name,
+                icon: NAVIGATION_CONFIG.executive.analytics.icon,
+                url: NAVIGATION_CONFIG.executive.analytics.url,
                 roles: ['executive'],
               },
-            ]
-          : []),
-        // For executives, show main analytics page
-        ...(role === 'executive'
-          ? [
               {
-                name: 'Quick View',
-                icon: '/assets/icons/analytics.svg',
-                url: '/analytics',
+                name: NAVIGATION_CONFIG.executive.quickView.name,
+                icon: NAVIGATION_CONFIG.executive.quickView.icon,
+                url: NAVIGATION_CONFIG.executive.quickView.url,
                 roles: ['executive'],
               },
             ]
           : []),
-        // For managers, show their department analytics
         ...(role === 'manager' && division
           ? [
               {
-                name: mapDatabaseToRouteDivision(division)
-                  .split('-')
-                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(' '),
-                icon: '/assets/icons/chart.svg',
-                url: `/analytics/${mapDatabaseToRouteDivision(division)}`,
+                name: NAVIGATION_CONFIG.manager.analytics(
+                  mapDatabaseToRouteDivision(division)
+                ).name,
+                icon: NAVIGATION_CONFIG.manager.analytics(
+                  mapDatabaseToRouteDivision(division)
+                ).icon,
+                url: NAVIGATION_CONFIG.manager.analytics(
+                  mapDatabaseToRouteDivision(division)
+                ).url,
                 roles: ['manager'],
               },
             ]

@@ -213,9 +213,6 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="h1 sidebar-gradient-text">
-              Enhanced Analytics Dashboard
-            </h2>
             <p className="body-1 text-light-200 mt-1">
               {department
                 ? `${

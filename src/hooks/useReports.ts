@@ -41,16 +41,15 @@ export const useReports = (options: UseReportsOptions = {}) => {
       : null,
     fetcher,
     {
-      refreshInterval: 5000, // Refresh every 5 seconds (very frequent)
-      revalidateOnFocus: true,
+      refreshInterval: 30000, // Refresh every 30 seconds (more reasonable)
+      revalidateOnFocus: false, // Disable focus revalidation to prevent flickering
       revalidateOnReconnect: true,
-      dedupingInterval: 1000, // Dedupe requests within 1 second (very short)
+      dedupingInterval: 10000, // Dedupe requests within 10 seconds
       errorRetryCount: 3,
-      errorRetryInterval: 1000, // Faster retry every 1 second
-      // Force revalidation on mount
+      errorRetryInterval: 5000, // Retry every 5 seconds
       revalidateIfStale: true,
       revalidateOnMount: true,
-      keepPreviousData: false, // Don't keep stale data
+      keepPreviousData: true, // Keep previous data to prevent flickering
     }
   );
 
@@ -60,9 +59,10 @@ export const useReports = (options: UseReportsOptions = {}) => {
     error: departmentsError,
     isLoading: departmentsLoading,
   } = useSWR(`/api/reports/departments`, fetcher, {
-    refreshInterval: 300000, // Refresh every 5 minutes
+    refreshInterval: 0, // Disable auto-refresh for static data
     revalidateOnFocus: false,
-    dedupingInterval: 60000, // Dedupe requests within 1 minute
+    dedupingInterval: 300000, // Dedupe requests within 5 minutes
+    keepPreviousData: true,
   });
 
   // Report templates
@@ -71,9 +71,10 @@ export const useReports = (options: UseReportsOptions = {}) => {
     error: templatesError,
     isLoading: templatesLoading,
   } = useSWR(`/api/reports/templates`, fetcher, {
-    refreshInterval: 600000, // Refresh every 10 minutes
+    refreshInterval: 0, // Disable auto-refresh for static data
     revalidateOnFocus: false,
-    dedupingInterval: 300000, // Dedupe requests within 5 minutes
+    dedupingInterval: 600000, // Dedupe requests within 10 minutes
+    keepPreviousData: true,
   });
 
   // Generate report

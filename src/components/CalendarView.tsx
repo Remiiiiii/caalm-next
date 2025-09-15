@@ -51,8 +51,10 @@ import {
 import { cn } from '@/lib/utils';
 import { createCalendarEvent } from '@/lib/actions/calendar.client';
 import { useToast } from '@/hooks/use-toast';
-import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import ExpandedCalendarView from '@/components/ExpandedCalendarView';
+import { CalendarEventSkeleton } from '@/components/ui/skeletons';
 
 // Local event interface for component use
 interface LocalCalendarEvent {
@@ -119,19 +121,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     contractName: '',
   });
 
-  // Use SWR hook for calendar events
-  const {
-    events: fetchedEvents,
-    isLoading,
-    refresh,
-  } = useCalendarEvents({
-    month: currentMonth,
-    enableRealTime: true,
-    pollingInterval: 10000,
-  });
+  // Use unified dashboard data for calendar events
+  const { orgId } = useOrganization();
+  const { calendarEvents, isLoading, refresh } = useUnifiedDashboardData(
+    orgId || 'default_organization'
+  );
 
   // Combine database events with prop events
-  const allEvents = [...fetchedEvents, ...events];
+  const allEvents = [...calendarEvents, ...events];
 
   const handleDateSelect = (date: Date | undefined) => {
     // Don't allow selecting past dates
@@ -420,6 +417,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                           </div>
                         );
                       })}
+                    </div>
+                  ) : isLoading ? (
+                    <div className="p-3 space-y-2">
+                      {[1, 2].map((i) => (
+                        <CalendarEventSkeleton key={i} />
+                      ))}
                     </div>
                   ) : (
                     <div className="text-center py-6 text-slate-500">
