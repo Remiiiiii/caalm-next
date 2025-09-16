@@ -6,10 +6,10 @@ import path from 'path';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { reportId: string } }
+  { params }: { params: Promise<{ reportId: string }> }
 ) {
   try {
-    const { reportId } = params;
+    const { reportId } = await params;
 
     if (!reportId) {
       return NextResponse.json(
@@ -39,27 +39,35 @@ export async function GET(
       );
     }
 
-    // Read the PDF file from the public directory
-    const pdfPath = path.join(process.cwd(), 'public', report.pdfFilePath);
+    // Read the file from the public directory
+    const filePath = path.join(process.cwd(), 'public', report.pdfFilePath);
 
-    if (!fs.existsSync(pdfPath)) {
+    if (!fs.existsSync(filePath)) {
       return NextResponse.json(
-        { error: 'PDF file not found on server' },
+        { error: 'Report file not found on server' },
         { status: 404 }
       );
     }
 
-    const pdfBuffer = fs.readFileSync(pdfPath);
+    const fileBuffer = fs.readFileSync(filePath);
+    const fileExtension = path.extname(report.pdfFilePath).toLowerCase();
 
-    // Return the PDF as a response
-    return new NextResponse(pdfBuffer, {
+    // Determine content type based on file extension
+    let contentType = 'application/pdf';
+    let filename = `${report.title || 'report'}.pdf`;
+
+    if (fileExtension === '.html') {
+      contentType = 'text/html';
+      filename = `${report.title || 'report'}.html`;
+    }
+
+    // Return the file as a response
+    return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="${
-          report.title || 'report'
-        }.pdf"`,
-        'Content-Length': pdfBuffer.length.toString(),
+        'Content-Type': contentType,
+        'Content-Disposition': `inline; filename="${filename}"`,
+        'Content-Length': fileBuffer.length.toString(),
         'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
       },
     });

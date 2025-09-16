@@ -10,7 +10,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Download, Upload, Share2, Plus, Trash2 } from 'lucide-react';
+import {
+  RefreshCw,
+  Download,
+  Upload,
+  Share2,
+  Plus,
+  Trash2,
+} from 'lucide-react';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { Models } from 'appwrite';
 import {
   generateReport,
@@ -30,6 +38,8 @@ interface ReportGeneratorProps {
   onClose: () => void;
   department?: string;
   user?: ExtendedUser | null;
+  autoCloseOnSuccess?: boolean;
+  onReportGenerated?: () => void;
 }
 
 import { CONTRACT_DEPARTMENTS } from '../../constants';
@@ -39,6 +49,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   onClose,
   department,
   user,
+  autoCloseOnSuccess = false,
+  onReportGenerated,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState<ReportData | null>(null);
@@ -46,6 +58,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   const [selectedDepartment, setSelectedDepartment] = useState(
     department || ''
   );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Update selected department when prop changes
   useEffect(() => {
@@ -67,6 +81,18 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       });
 
       setReport(reportData);
+
+      // Notify parent component that report was generated
+      if (onReportGenerated) {
+        onReportGenerated();
+      }
+
+      // Auto-close modal if enabled and report generation was successful
+      if (autoCloseOnSuccess) {
+        setTimeout(() => {
+          onClose();
+        }, 1500); // Small delay to show the success state
+      }
     } catch (err) {
       setError('Failed to generate report. Please try again.');
       console.error('Report generation error:', err);
@@ -119,17 +145,14 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     setIsGenerating(false);
   };
 
-  const handleDeleteReport = async () => {
+  const handleDeleteReport = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteReport = async () => {
     if (!report) return;
 
-    if (
-      !confirm(
-        `Are you sure you want to delete "${report.title}"? This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
-
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/reports/${report.$id}`, {
         method: 'DELETE',
@@ -146,6 +169,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     } catch (err) {
       setError('Failed to delete report. Please try again.');
       console.error('Delete error:', err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -225,7 +250,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     Generating Report...
                   </>
                 ) : (
@@ -358,6 +383,17 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
           )}
         </div>
       </DialogContent>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Report"
+        description="This action cannot be undone. The report will be permanently removed from the system."
+        itemName={report?.title || ''}
+        onConfirm={confirmDeleteReport}
+        isLoading={isDeleting}
+      />
     </Dialog>
   );
 };

@@ -84,7 +84,7 @@ export async function generateReport(
       const pdfResponse = await fetch(
         `${
           process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/api/reports/generate-pdf`,
+        }/api/reports/generate-react-pdf`,
         {
           method: 'POST',
           headers: {

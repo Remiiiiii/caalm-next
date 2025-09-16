@@ -4,11 +4,19 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Eye, Calendar, Trash2 } from 'lucide-react';
+import {
+  FileText,
+  Download,
+  Eye,
+  Calendar,
+  Trash2,
+  RefreshCw,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserAccessibleDepartments } from '@/lib/actions/report.actions';
 import { useUnifiedAnalyticsData } from '@/hooks/useUnifiedAnalyticsData';
 import ReportGenerator from './ReportGenerator';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { Models } from 'appwrite';
 import { ContractCardSkeleton } from '@/components/ui/skeletons';
 
@@ -44,36 +52,18 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
   const [accessibleDepartments, setAccessibleDepartments] = useState<string[]>(
     []
   );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [generatingDepartment, setGeneratingDepartment] = useState<
+    string | null
+  >(null);
 
-  // Generate report function
-  const generateReport = async (department: string) => {
-    try {
-      const response = await fetch('/api/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.$id,
-          userRole: (user as ExtendedUser)?.role || 'user',
-          department: department,
-          userName:
-            (user as ExtendedUser)?.name || user?.email || 'Unknown User',
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate report');
-      }
-      const newReport = await response.json();
-
-      // Refresh data
-      refresh();
-      return newReport.report;
-    } catch (error) {
-      console.error('Failed to generate report:', error);
-      throw error;
-    }
-  };
+  // Report generation is handled by the ReportGenerator component
+  // This function was removed to prevent duplicate report generation
 
   // Fetch accessible departments when user changes
   useEffect(() => {
@@ -90,13 +80,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
   }, [user]);
 
   const handleGenerateReport = async (department: string) => {
+    setGeneratingDepartment(department);
     setSelectedDepartment(department);
     setReportGeneratorOpen(true);
-
-    // Generate the report using the hook
-    if (generateReport) {
-      await generateReport(department);
-    }
+    // Note: Report generation is handled in ReportGenerator component
+    // This function only opens the modal and sets the department
   };
 
   const handleViewReport = (report: ReportCard) => {
@@ -144,17 +132,17 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
     }
   };
 
-  const handleDeleteReport = async (reportId: string, reportTitle: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${reportTitle}"? This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
+  const handleDeleteReport = (reportId: string, reportTitle: string) => {
+    setReportToDelete({ id: reportId, title: reportTitle });
+    setDeleteDialogOpen(true);
+  };
 
+  const confirmDeleteReport = async () => {
+    if (!reportToDelete) return;
+
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/reports/${reportId}`, {
+      const response = await fetch(`/api/reports/${reportToDelete.id}`, {
         method: 'DELETE',
       });
 
@@ -168,6 +156,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
     } catch (error) {
       console.error('Error deleting report:', error);
       alert('Failed to delete report. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setReportToDelete(null);
     }
   };
 
@@ -243,10 +234,20 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
           {reports.length > 0 && (
             <Button
               onClick={() => setReportGeneratorOpen(true)}
+              disabled={generatingDepartment !== null}
               className="primary-btn"
             >
-              <FileText className="h-4 w-4 mr-2" />
-              Generate New Report
+              {generatingDepartment ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate New Report
+                </>
+              )}
             </Button>
           )}
         </div>
@@ -281,10 +282,20 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
                 key={dept}
                 variant="outline"
                 onClick={() => handleGenerateReport(dept)}
+                disabled={generatingDepartment === dept}
                 className="primary-btn"
               >
-                <FileText className="h-4 w-4" />
-                {dept} Report
+                {generatingDepartment === dept ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    {dept} Report
+                  </>
+                )}
               </Button>
             ))}
           </div>
@@ -423,8 +434,16 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
               <Button
                 className="primary-btn"
                 onClick={() => handleGenerateReport('all')}
+                disabled={generatingDepartment !== null}
               >
-                Generate Report
+                {generatingDepartment ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate Report'
+                )}
               </Button>
             </div>
           </CardContent>
@@ -436,6 +455,20 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
         open={reportGeneratorOpen}
         onClose={() => setReportGeneratorOpen(false)}
         department={selectedDepartment || undefined}
+        user={user as ExtendedUser}
+        autoCloseOnSuccess={true}
+        onReportGenerated={refresh}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Report"
+        description="This action cannot be undone. The report will be permanently removed from the system."
+        itemName={reportToDelete?.title || ''}
+        onConfirm={confirmDeleteReport}
+        isLoading={isDeleting}
       />
     </div>
   );

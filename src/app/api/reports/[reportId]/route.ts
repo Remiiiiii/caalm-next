@@ -3,10 +3,10 @@ import { deleteReport } from '@/lib/actions/report.actions';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { reportId: string } }
+  { params }: { params: Promise<{ reportId: string }> }
 ) {
   try {
-    const { reportId } = params;
+    const { reportId } = await params;
 
     if (!reportId) {
       return NextResponse.json(
