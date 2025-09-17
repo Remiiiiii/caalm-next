@@ -24,6 +24,9 @@ export const appwriteConfig = {
     process.env.NEXT_PUBLIC_APPWRITE_RECENT_ACTIVITIES_COLLECTION ||
     '6883bd610000fa195147',
 
+  invitationsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_INVITATIONS_COLLECTION || 'invitations',
+
   reportsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_REPORTS_COLLECTION ||
     '6885147d003d9de593d3',

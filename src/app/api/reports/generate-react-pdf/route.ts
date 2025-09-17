@@ -5,7 +5,7 @@ import path from 'path';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import React from 'react';
-import { ReportDocument } from '@/components/pdf/ReportDocument';
+import { EnhancedReportDocument } from '@/components/pdf/EnhancedReportDocument';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,10 +41,11 @@ export async function POST(request: NextRequest) {
       } Analytics Report`,
     };
 
-    // Generate PDF stream using react-pdf
-    const pdfStream = await renderToStream(
-      React.createElement(ReportDocument, { data: reportData })
-    );
+    // Generate PDF stream using react-pdf with enhanced document
+    const documentElement = React.createElement(EnhancedReportDocument, {
+      data: reportData,
+    });
+    const pdfStream = await renderToStream(documentElement as any);
 
     // Convert stream to buffer
     const chunks: Buffer[] = [];

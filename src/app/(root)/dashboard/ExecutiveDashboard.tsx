@@ -2,7 +2,7 @@
 
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -119,6 +119,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     isLoading: unifiedLoading,
     refresh: refreshUnified,
   } = useUnifiedDashboardData(orgId || 'default_organization');
+
+  // Debug logging
+  console.log('ExecutiveDashboard Debug:', {
+    orgId,
+    unifiedLoading,
+    filesLength: files?.length || 0,
+    files: files?.slice(0, 3) || [],
+  });
 
   // Invitation management functions
   const createInvitation = async (invitationData: Record<string, unknown>) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -79,10 +79,18 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
     fetchDepartments();
   }, [user]);
 
+  // Reset generating state when modal closes
+  useEffect(() => {
+    if (!reportGeneratorOpen) {
+      setGeneratingDepartment(null);
+    }
+  }, [reportGeneratorOpen]);
+
   const handleGenerateReport = async (department: string) => {
-    setGeneratingDepartment(department);
     setSelectedDepartment(department);
     setReportGeneratorOpen(true);
+    // Reset generating state when opening modal
+    setGeneratingDepartment(null);
     // Note: Report generation is handled in ReportGenerator component
     // This function only opens the modal and sets the department
   };
@@ -177,13 +185,62 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green text-white shadow-sm';
       case 'generating':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-orange text-white shadow-sm';
       case 'failed':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red text-white shadow-sm';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-light-300 text-light-100 shadow-sm';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return (
+          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clipRule="evenodd"
+            />
+          </svg>
+        );
+      case 'generating':
+        return (
+          <svg
+            className="w-3 h-3 mr-1 animate-spin"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+              clipRule="evenodd"
+            />
+          </svg>
+        );
+      case 'failed':
+        return (
+          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clipRule="evenodd"
+            />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clipRule="evenodd"
+            />
+          </svg>
+        );
     }
   };
 
@@ -317,37 +374,92 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
           const reportId =
             reportData.$id || reportData.id || `report-${Math.random()}`;
           return (
-            <Card key={reportId} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
+            <Card
+              key={reportId}
+              className="file-card hover:shadow-drop-3 transition-all duration-200 border border-light-300 bg-white/90 backdrop-blur"
+            >
+              <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold text-gray-900">
-                      {reportData.title}
-                    </CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {reportData.division || 'Unknown Division'}
-                    </p>
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                      <FileText className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="h4 text-light-100 line-clamp-2 mb-1">
+                        {reportData.title?.replace(
+                          / - \d{1,2}\/\d{1,2}\/\d{4}$/,
+                          ''
+                        ) || 'Untitled Report'}
+                      </CardTitle>
+                      <p className="body-2 text-light-200 capitalize">
+                        {reportData.division || 'all'}
+                      </p>
+                    </div>
                   </div>
                   <Badge
                     className={getStatusColor(reportData.status || 'completed')}
                   >
+                    {getStatusIcon(reportData.status || 'completed')}
                     {reportData.status || 'completed'}
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="h-4 w-4" />
+              <CardContent className="pt-0 space-y-4">
+                <div className="bg-light-400/30 rounded-lg p-3 border border-light-300">
+                  <div className="flex items-center gap-2 body-2 text-light-100 mb-2">
+                    <svg
+                      className="h-4 w-4 text-blue-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="font-medium">Department:</span>
+                  </div>
+                  <p className="caption text-light-200 ml-6 capitalize">
+                    {reportData.division === 'all'
+                      ? 'All Departments'
+                      : reportData.division || 'All Departments'}
+                  </p>
+                </div>
+                <div className="bg-light-400/30 rounded-lg p-3 border border-light-300">
+                  <div className="flex items-center gap-2 body-2 text-light-100 mb-2">
+                    <Calendar className="h-4 w-4 text-blue-500" />
+                    <span className="font-medium">Generated:</span>
+                  </div>
+                  <p className="caption text-light-200 ml-6">
                     {formatDate(
                       reportData.generatedAt || new Date().toISOString()
                     )}
+                  </p>
+                </div>
+                <div className="bg-light-400/30 rounded-lg p-3 border border-light-300">
+                  <div className="flex items-center gap-2 body-2 text-light-100 mb-2">
+                    <svg
+                      className="h-4 w-4 text-blue-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="font-medium">Author:</span>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    Generated by: {reportData.userName || 'Unknown User'}
-                  </div>
+                  <p className="caption text-light-200 ml-6">
+                    {reportData.userName || 'Unknown User'}
+                  </p>
+                </div>
 
-                  <div className="flex gap-2 pt-2">
+                {/* Professional Action Buttons */}
+                <div className="space-y-2 pt-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -367,10 +479,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
                           type: 'department' as const,
                         })
                       }
-                      className="flex-1"
+                      className="primary-btn"
                     >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
+                      <Eye className="h-4 w-4" />
+                      View Report
                     </Button>
                     <Button
                       variant="outline"
@@ -391,9 +503,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
                           type: 'department' as const,
                         })
                       }
-                      className="flex-1"
+                      className="primary-btn"
                     >
-                      <Download className="h-4 w-4 mr-1" />
+                      <Download className="h-4 w-4" />
                       Download
                     </Button>
                     <Button
@@ -405,10 +517,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
                           reportData.title || 'Untitled Report'
                         )
                       }
-                      className="text-red-600 border-red-300 hover:bg-red-50"
+                      className="primary-btn  col-span-2"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Report
                     </Button>
                   </div>
                 </div>
@@ -418,32 +530,36 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
         })}
       </div>
 
-      {/* Empty State */}
+      {/* Enhanced Empty State */}
       {reports.length === 0 && (
-        <Card className="flex justify-center text-center py-12">
+        <Card className="file-card text-center py-12 bg-white/90 backdrop-blur border border-light-300 shadow-drop-1">
           <CardContent>
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No Reports Available
-            </h3>
-            <p className="text-gray-600 mb-4">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <FileText className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="h4 text-light-100 mb-2">No Reports Available</h3>
+            <p className="body-1 text-light-200 mb-6 max-w-md mx-auto">
               Generate your first report to get started with analytics and
               insights.
             </p>
             <div className="flex justify-center">
               <Button
-                className="primary-btn"
+                className="primary-btn h-[52px] px-6 shadow-drop-1"
                 onClick={() => handleGenerateReport('all')}
-                disabled={generatingDepartment !== null}
+                disabled={false}
               >
-                {generatingDepartment ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate Report'
-                )}
+                <svg
+                  className="mr-3 h-5 w-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Generate Report
               </Button>
             </div>
           </CardContent>

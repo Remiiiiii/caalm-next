@@ -54,6 +54,15 @@ export const useUnifiedDashboardData = (orgId: string) => {
     }
   );
 
+  // Debug logging
+  console.log('useUnifiedDashboardData Debug:', {
+    hasData: !!data,
+    hasDataData: !!data?.data,
+    filesLength: data?.data?.files?.length || 0,
+    recentActivitiesLength: data?.data?.recentActivities?.length || 0,
+    rawData: data ? 'present' : 'missing',
+  });
+
   return {
     // Data
     stats: data?.data?.stats || {

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import { FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -25,11 +25,19 @@ interface RecentActivityProps {
   limit?: number;
 }
 
-const RecentActivity: React.FC<RecentActivityProps> = ({ limit = 15 }) => {
+const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
   const { orgId } = useOrganization();
   const { recentActivities, isLoading } = useUnifiedDashboardData(
     orgId || 'default_organization'
   );
+
+  // Debug logging
+  console.log('RecentActivity Debug:', {
+    orgId,
+    isLoading,
+    recentActivitiesLength: recentActivities?.length || 0,
+    recentActivities: recentActivities?.slice(0, 3) || [],
+  });
 
   // Limit the activities to the specified limit
   const activities = recentActivities.slice(0, limit);

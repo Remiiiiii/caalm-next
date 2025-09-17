@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ReportsPage from '@/components/ReportsPage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

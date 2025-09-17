@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     const { databases } = await createAdminClient();
 
-    // Fetch all data simultaneously using Promise.all
+    // Fetch all data simultaneously using Promise.allSettled for error handling
     const [
       contractsResult,
       usersResult,
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       notificationsStatsResult,
       recentActivitiesResult,
       calendarEventsResult,
-    ] = await Promise.all([
+    ] = await Promise.allSettled([
       // Contracts data
       databases.listDocuments(
         appwriteConfig.databaseId,
@@ -98,33 +98,52 @@ export async function GET(request: NextRequest) {
       // Recent activities
       databases.listDocuments(
         appwriteConfig.databaseId,
-        appwriteConfig.activitiesCollectionId,
+        appwriteConfig.recentActivityCollectionId,
         [Query.orderDesc('$createdAt'), Query.limit(15)]
       ),
 
       // Calendar events
-      databases.listDocuments(appwriteConfig.databaseId, 'calendar_events', [
-        Query.orderDesc('$createdAt'),
-        Query.limit(50),
-      ]),
+      databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.calendarEventsCollectionId,
+        [Query.orderDesc('$createdAt'), Query.limit(50)]
+      ),
     ]);
 
-    // Calculate dashboard stats
-    const totalContracts = contractsResult.total;
-    const expiringContracts = contractsResult.documents.filter(
-      (contract: any) => {
-        const expiryDate = new Date(contract.expiryDate);
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-        return expiryDate <= thirtyDaysFromNow && expiryDate >= new Date();
+    // Helper function to safely get results
+    const getResult = (result: any) => {
+      if (result.status === 'fulfilled') {
+        return result.value;
       }
-    ).length;
+      console.error('Database query failed:', result.reason);
+      return { documents: [], total: 0 };
+    };
 
-    const activeUsers = usersResult.documents.filter(
+    // Extract results safely
+    const contracts = getResult(contractsResult);
+    const users = getResult(usersResult);
+    const invitations = getResult(invitationsResult);
+    const files = getResult(filesResult);
+    const reports = getResult(reportsResult);
+    const notifications = getResult(notificationsResult);
+    const notificationsStats = getResult(notificationsStatsResult);
+    const recentActivities = getResult(recentActivitiesResult);
+    const calendarEvents = getResult(calendarEventsResult);
+
+    // Calculate dashboard stats
+    const totalContracts = contracts.total;
+    const expiringContracts = contracts.documents.filter((contract: any) => {
+      const expiryDate = new Date(contract.expiryDate);
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      return expiryDate <= thirtyDaysFromNow && expiryDate >= new Date();
+    }).length;
+
+    const activeUsers = users.documents.filter(
       (user: any) => user.status === 'active'
     ).length;
 
-    const compliantContracts = contractsResult.documents.filter(
+    const compliantContracts = contracts.documents.filter(
       (contract: any) =>
         contract.compliance === 'up-to-date' ||
         contract.compliance === 'compliant'
@@ -135,10 +154,10 @@ export async function GET(request: NextRequest) {
         : 0;
 
     // Calculate notifications stats
-    const unreadNotifications = notificationsStatsResult.documents.filter(
+    const unreadNotifications = notificationsStats.documents.filter(
       (notification: any) => !notification.read
     ).length;
-    const totalNotifications = notificationsStatsResult.total;
+    const totalNotifications = notificationsStats.total;
 
     const unifiedData = {
       stats: {
@@ -147,19 +166,19 @@ export async function GET(request: NextRequest) {
         activeUsers,
         complianceRate: `${complianceRate}%`,
       },
-      files: filesResult.documents,
-      invitations: invitationsResult.documents,
-      authUsers: usersResult.documents,
-      reports: reportsResult.documents,
-      departments: departmentsResult.documents,
-      reportTemplates: reportTemplatesResult.documents,
-      notifications: notificationsResult.documents,
+      files: files.documents,
+      invitations: invitations.documents,
+      authUsers: users.documents,
+      reports: reports.documents,
+      departments: getResult(departmentsResult).documents,
+      reportTemplates: getResult(reportTemplatesResult).documents,
+      notifications: notifications.documents,
       notificationsStats: {
         unread: unreadNotifications,
         total: totalNotifications,
       },
-      recentActivities: recentActivitiesResult.documents,
-      calendarEvents: calendarEventsResult.documents,
+      recentActivities: recentActivities.documents,
+      calendarEvents: calendarEvents.documents,
     };
 
     return new Response(

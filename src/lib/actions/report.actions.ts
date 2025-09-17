@@ -114,7 +114,7 @@ export async function generateReport(
     }
     const reportTitle = `${
       data.department === 'all' ? 'All Departments' : data.department
-    } Report - ${new Date().toLocaleDateString()}`;
+    } Report`;
 
     const reportData = {
       title: reportTitle,

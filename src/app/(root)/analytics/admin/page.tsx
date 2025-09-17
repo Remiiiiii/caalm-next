@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import AdministrationAnalytics from '@/components/analytics/AdministrationAnalytics';
 import EnhancedAnalyticsDashboard from '@/components/analytics/EnhancedAnalyticsDashboard';
 import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
