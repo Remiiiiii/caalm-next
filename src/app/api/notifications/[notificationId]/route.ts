@@ -4,10 +4,11 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { notificationId: string } }
+  { params }: { params: Promise<{ notificationId: string }> }
 ) {
   try {
-    const { notificationId } = params;
+    const resolvedParams = await params;
+    const { notificationId } = resolvedParams;
 
     if (!notificationId) {
       return NextResponse.json(
@@ -16,14 +17,14 @@ export async function DELETE(
       );
     }
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Delete the notification
-    await databases.deleteDocument(
-      appwriteConfig.databaseId,
-      'notifications',
-      notificationId
-    );
+    await tablesDB.deleteRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'notifications',
+      rowId: notificationId,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

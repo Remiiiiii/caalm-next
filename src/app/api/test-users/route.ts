@@ -7,14 +7,14 @@ export async function GET() {
     const client = await createAdminClient();
 
     // Get a list of users for testing
-    const usersResponse = await client.databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      []
-    );
+    const usersResponse = await client.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [],
+    });
 
     // Return only essential user info for testing
-    const users = usersResponse.documents.map((user) => ({
+    const users = usersResponse.rows.map((user) => ({
       id: user.$id,
       email: user.email || 'No email',
       name: user.fullName || user.name || 'Unknown',

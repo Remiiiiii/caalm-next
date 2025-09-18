@@ -11,19 +11,19 @@ export async function GET(request: NextRequest) {
       ? parseInt(searchParams.get('limit')!)
       : 10;
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Fetch all recent files (not filtered by owner for dashboard)
-    const files = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
-      [
+    const files = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.filesCollectionId,
+      queries: [
         Query.limit(limit),
         Query.orderDesc('$createdAt'), // Most recent first
-      ]
-    );
+      ],
+    });
 
-    return NextResponse.json({ data: parseStringify(files).documents || [] });
+    return NextResponse.json({ data: parseStringify(files).rows || [] });
   } catch (error) {
     console.error('Failed to fetch dashboard files:', error);
     return NextResponse.json(

@@ -17,19 +17,37 @@ function mapRouteToDbDepartment(routeDept: string): string {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { department: string } }
+  { params }: { params: Promise<{ department: string }> }
 ) {
   try {
-    const dbDept = mapRouteToDbDepartment(params.department);
-    const { databases } = await createAdminClient();
+    const resolvedParams = await params;
+    const dbDept = mapRouteToDbDepartment(resolvedParams.department);
+    const { tablesDB } = await createAdminClient();
 
-    const documents = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      [Query.equal('department', dbDept), Query.limit(200)]
+    // First, let's check what contracts exist in the database
+    const allDocuments = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      queries: [Query.limit(200)],
+    });
+
+    console.log(`Total contracts in database: ${allDocuments.total}`);
+    console.log(
+      'Sample contract departments:',
+      allDocuments.rows.slice(0, 5).map((d: any) => ({
+        id: d.$id,
+        name: d.contractName,
+        department: d.department,
+      }))
     );
 
-    const data = documents.documents.map((d: any) => ({
+    const documents = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      queries: [Query.equal('department', dbDept), Query.limit(200)],
+    });
+
+    const data = documents.rows.map((d: any) => ({
       id: d.$id,
       name: d.contractName,
       amount: d.amount ?? 0,

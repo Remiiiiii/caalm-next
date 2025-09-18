@@ -2,7 +2,7 @@
 
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import Avatar from '@/components/ui/avatar';
 import ClientTimestamp from '@/components/ClientTimestamp';
@@ -45,6 +45,11 @@ import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
 import { databases } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'appwrite';
+import {
+  StatCardSkeleton,
+  FileItemSkeleton,
+  TableRowSkeleton,
+} from '@/components/ui/skeletons';
 
 type NotifierContract = { id: string; name: string; expiryDate: string };
 
@@ -95,7 +100,7 @@ interface ExecutiveDashboardProps {
         accountId?: string;
         fullName?: string;
         role?: string;
-        department?: string;
+        division?: string;
       })
     | null;
 }
@@ -105,18 +110,66 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const { orgId } = useOrganization();
   const adminName = 'Executive'; // Replace with actual admin name
 
-  // Use SWR hook for dashboard data
+  // Use unified dashboard data hook
   const {
     stats: dashboardStats,
     files,
     invitations,
     authUsers,
-    statsLoading,
-    filesLoading,
-    invitationsLoading,
-    createInvitation,
-    revokeInvitation,
-  } = useDashboardData(orgId || 'default_organization');
+    isLoading: unifiedLoading,
+    refresh: refreshUnified,
+  } = useUnifiedDashboardData(orgId || 'default_organization');
+
+  // Debug logging
+  console.log('ExecutiveDashboard Debug:', {
+    orgId,
+    unifiedLoading,
+    filesLength: files?.length || 0,
+    files: files?.slice(0, 3) || [],
+  });
+
+  // Invitation management functions
+  const createInvitation = async (invitationData: Record<string, unknown>) => {
+    try {
+      const response = await fetch('/api/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invitationData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create invitation');
+      }
+
+      const responseData = await response.json();
+
+      // Refresh unified data
+      refreshUnified();
+
+      return responseData.data;
+    } catch (error) {
+      console.error('Failed to create invitation:', error);
+      throw error;
+    }
+  };
+
+  const revokeInvitation = async (token: string) => {
+    try {
+      const response = await fetch(`/api/invitations/${token}/revoke`, {
+        method: 'PUT',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to revoke invitation');
+      }
+
+      // Refresh unified data
+      refreshUnified();
+    } catch (error) {
+      console.error('Failed to revoke invitation:', error);
+      throw error;
+    }
+  };
 
   // Transform dashboard stats to match component format
   const stats = [
@@ -151,7 +204,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       id: 1,
       type: 'User Registration',
       requester: 'David Wilson - Admin',
-      department: 'Admin',
+      division: 'Admin',
     },
     {
       id: 2,
@@ -171,7 +224,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const [inviteForm, setInviteForm] = useState({
     selectedUserId: '',
     role: '',
-    department: '',
+    division: '',
   });
   const [loading, setLoading] = useState(false);
   const [resendingToken, setResendingToken] = useState<string | null>(null);
@@ -198,7 +251,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await databases.listDocuments(
+        const res = await tablesDB.listRows(
           appwriteConfig.databaseId,
           appwriteConfig.contractsCollectionId,
           [
@@ -208,18 +261,23 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
           ]
         );
         if (!cancelled) {
-          type RawDoc = { $id: unknown; contractName?: unknown; name?: unknown; contractExpiryDate: unknown };
-          const items: NotifierContract[] = (res.documents || []).map((raw: RawDoc) => {
-            const id = typeof raw.$id === 'string' ? raw.$id : String(raw.$id ?? '');
-            const nm =
-              typeof raw.contractName === 'string'
-                ? raw.contractName
-                : typeof raw.name === 'string'
-                ? raw.name
-                : 'Contract';
-            const exp = typeof raw.contractExpiryDate === 'string' ? raw.contractExpiryDate : String(raw.contractExpiryDate ?? '');
-            return { id, name: nm, expiryDate: exp };
-          });
+          const items: NotifierContract[] = (res.rows || []).map(
+            (raw: Record<string, unknown>) => {
+              const id =
+                typeof raw.$id === 'string' ? raw.$id : String(raw.$id ?? '');
+              const nm =
+                typeof raw.contractName === 'string'
+                  ? raw.contractName
+                  : typeof raw.name === 'string'
+                  ? raw.name
+                  : 'Contract';
+              const exp =
+                typeof raw.contractExpiryDate === 'string'
+                  ? raw.contractExpiryDate
+                  : String(raw.contractExpiryDate ?? '');
+              return { id, name: nm, expiryDate: exp };
+            }
+          );
           setExpiryContracts(items);
         }
       } catch {
@@ -271,7 +329,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         email: selectedUser.email,
         name: selectedUser.fullName,
         role: inviteForm.role,
-        department: inviteForm.department,
+        division: inviteForm.division,
         orgId,
         invitedBy: adminName,
       });
@@ -283,7 +341,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       });
 
       // Reset form
-      setInviteForm({ selectedUserId: '', role: '', department: '' });
+      setInviteForm({ selectedUserId: '', role: '', division: '' });
 
       // Clear the adding state after animation
       setTimeout(() => {
@@ -428,7 +486,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             <h1 className="text-lg font-bold text-slate-700">
               {user?.fullName || ''}{' '}
               <span className="text-lg text-slate-light">
-                {`| ${user?.department || 'Unknown Department'}`}
+                {`| ${user?.division || 'Unknown Division'}`}
               </span>
             </h1>
           </div>
@@ -437,37 +495,35 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Card
-            key={index}
-            className="bg-white/30 backdrop-blur border border-white/40 shadow-lg"
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm  font-medium sidebar-gradient-text">
-                    {stat.title}
-                  </p>
-                  <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-                    {statsLoading ? (
-                      <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
-                    ) : (
-                      <span>{stat.value}</span>
-                    )}
-                    <span className="inline-block ml-2 pb-1">
-                      <stat.icon
-                        className={`h-8 w-8 ${stat.color.replace(
-                          'text-',
-                          'text-'
-                        )}`}
-                      />
-                    </span>
+        {unifiedLoading
+          ? [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
+          : stats.map((stat, index) => (
+              <Card
+                key={index}
+                className="bg-white/30 backdrop-blur border border-white/40 shadow-lg"
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm  font-medium sidebar-gradient-text">
+                        {stat.title}
+                      </p>
+                      <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                        <span>{stat.value}</span>
+                        <span className="inline-block ml-2 pb-1">
+                          <stat.icon
+                            className={`h-8 w-8 ${stat.color.replace(
+                              'text-',
+                              'text-'
+                            )}`}
+                          />
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                </CardContent>
+              </Card>
+            ))}
       </div>
 
       {/* Dashboard Content */}
@@ -515,21 +571,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {filesLoading ? (
+                {unifiedLoading ? (
                   <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="border border-border rounded-lg p-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="animate-pulse bg-gray-200 h-10 w-10 rounded"></div>
-                          <div className="flex-1">
-                            <div className="animate-pulse bg-gray-200 h-4 w-32 rounded mb-2"></div>
-                            <div className="animate-pulse bg-gray-200 h-3 w-24 rounded"></div>
-                          </div>
-                        </div>
-                      </div>
+                    {[1, 2, 3].map((i) => (
+                      <FileItemSkeleton key={i} />
                     ))}
                   </div>
                 ) : files && files.length > 0 ? (
@@ -623,9 +668,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                       <p className="text-sm text-slate-dark">
                         {approval.requester || approval.title}
                       </p>
-                      {approval.department && (
+                      {approval.division && (
                         <p className="text-xs text-slate-light">
-                          Department: {approval.department}
+                          Division: {approval.division}
                         </p>
                       )}
                       {approval.amount && (
@@ -690,11 +735,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 </SelectScrollable>
 
                 <SelectScrollable
-                  value={inviteForm.department}
+                  value={inviteForm.division}
                   onValueChange={(value) =>
-                    setInviteForm({ ...inviteForm, department: value })
+                    setInviteForm({ ...inviteForm, division: value })
                   }
-                  placeholder="Select department"
+                  placeholder="Select division"
                   className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                 >
                   <SelectItem value="admin">Administration</SelectItem>
@@ -759,19 +804,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {invitationsLoading ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-8">
-                          <div className="flex justify-center space-x-2">
-                            {[...Array(5)].map((_, i) => (
-                              <div
-                                key={i}
-                                className="animate-pulse bg-gray-200 h-4 w-16 rounded"
-                              ></div>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
+                    {unifiedLoading ? (
+                      [1, 2, 3].map((i) => (
+                        <TableRowSkeleton key={i} columns={7} />
+                      ))
                     ) : invitations.length === 0 ? (
                       <tr>
                         <td
@@ -857,17 +893,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium">
-                    Department
-                  </label>
+                  <label className="block text-sm font-medium">Division</label>
                   <select
-                    name="department"
+                    name="division"
                     value=""
                     onChange={() => {}}
                     className="w-full border rounded px-2 py-1"
                     required
                   >
-                    <option value="">Select department</option>
+                    <option value="">Select division</option>
                     <option value="childwelfare">Child Welfare</option>
                     <option value="behavioralhealth">Behavioral Health</option>
                     <option value="finance">Finance</option>

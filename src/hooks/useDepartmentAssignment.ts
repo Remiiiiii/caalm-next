@@ -5,6 +5,7 @@ import {
 } from '@/lib/actions/database.actions';
 import { AppUser } from '@/lib/actions/user.actions';
 import { Models } from 'node-appwrite';
+import { DIVISION_TO_DEPARTMENT } from '../../constants';
 
 export const useDepartmentAssignment = () => {
   const [departmentEnums, setDepartmentEnums] = useState<string[]>([]);
@@ -36,7 +37,7 @@ export const useDepartmentAssignment = () => {
             avatar: u.avatar,
             accountId: u.$id || u.accountId, // Try $id first, fallback to accountId
             role: u.role,
-            department: u.department,
+            division: u.division,
             status: u.status,
           };
         });
@@ -53,14 +54,18 @@ export const useDepartmentAssignment = () => {
   // Filter managers when department selection changes
   useEffect(() => {
     if (selectedDepartment && managers.length > 0) {
-      const filtered = managers.filter(
-        (m) => m.department === selectedDepartment
-      );
+      // Filter managers whose division maps to the selected department
+      const filtered = managers.filter((manager) => {
+        if (!manager.division) return false;
+        const managerDepartment = DIVISION_TO_DEPARTMENT[manager.division];
+        return managerDepartment === selectedDepartment;
+      });
       setFilteredManagers(filtered);
       // Clear selected managers when department changes
       setSelectedManagers([]);
     } else {
-      setFilteredManagers(managers);
+      // Don't show any managers until a department is selected
+      setFilteredManagers([]);
     }
   }, [selectedDepartment, managers]);
 

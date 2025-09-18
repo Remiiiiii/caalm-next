@@ -18,7 +18,7 @@ type ExtendedUser = Models.User<Models.Preferences> & {
   role?: 'executive' | 'admin' | 'manager';
   accountId?: string;
   fullName?: string;
-  department?: string;
+  division?: string;
   prefs?: {
     avatar?: string;
   };
@@ -49,7 +49,7 @@ const AuthenticatedLayout = ({
           avatar={user.prefs?.avatar || avatarPlaceholderUrl}
           email={currentUser.email}
           role={user.role || 'manager'}
-          department={user.department}
+          division={user.division}
         />
         <section className="flex h-full w-full flex-1 flex-col">
           <MobileNavigation

@@ -84,22 +84,22 @@ export const useActionDropdown = (fileId?: string) => {
       // Optimistic update
       mutate(
         `/api/files/${fileId}/actions`,
-        (current: FileAction[]) => [
+        (current: FileAction[] | undefined) => [
           ...(current || []),
           {
             $id: `action_${Date.now()}`,
-            action: 'assign',
+            action: 'assign' as const,
             fileId,
             userId: user?.$id || '',
             targetUserId,
             timestamp: new Date().toISOString(),
-            status: 'completed',
+            status: 'completed' as const,
           },
         ],
         false
       );
 
-      return response.data;
+      return response.json();
     } catch (error) {
       console.error('Failed to assign file:', error);
       throw error;
@@ -126,22 +126,22 @@ export const useActionDropdown = (fileId?: string) => {
       // Optimistic update
       mutate(
         `/api/files/${fileId}/actions`,
-        (current: FileAction[]) => [
+        (current: FileAction[] | undefined) => [
           ...(current || []),
           {
             $id: `action_${Date.now()}`,
-            action: 'share',
+            action: 'share' as const,
             fileId,
             userId: user?.$id || '',
             targetUserId,
             timestamp: new Date().toISOString(),
-            status: 'completed',
+            status: 'completed' as const,
           },
         ],
         false
       );
 
-      return response.data;
+      return response.json();
     } catch (error) {
       console.error('Failed to share file:', error);
       throw error;
@@ -166,21 +166,21 @@ export const useActionDropdown = (fileId?: string) => {
       // Optimistic update
       mutate(
         `/api/files/${fileId}/actions`,
-        (current: FileAction[]) => [
+        (current: FileAction[] | undefined) => [
           ...(current || []),
           {
             $id: `action_${Date.now()}`,
-            action: 'archive',
+            action: 'archive' as const,
             fileId,
             userId: user?.$id || '',
             timestamp: new Date().toISOString(),
-            status: 'completed',
+            status: 'completed' as const,
           },
         ],
         false
       );
 
-      return response.data;
+      return response.json();
     } catch (error) {
       console.error('Failed to archive file:', error);
       throw error;
@@ -205,21 +205,21 @@ export const useActionDropdown = (fileId?: string) => {
       // Optimistic update
       mutate(
         `/api/files/${fileId}/actions`,
-        (current: FileAction[]) => [
+        (current: FileAction[] | undefined) => [
           ...(current || []),
           {
             $id: `action_${Date.now()}`,
-            action: 'delete',
+            action: 'delete' as const,
             fileId,
             userId: user?.$id || '',
             timestamp: new Date().toISOString(),
-            status: 'completed',
+            status: 'completed' as const,
           },
         ],
         false
       );
 
-      return response.data;
+      return response.json();
     } catch (error) {
       console.error('Failed to delete file:', error);
       throw error;
@@ -240,15 +240,15 @@ export const useActionDropdown = (fileId?: string) => {
       // Track download action
       mutate(
         `/api/files/${fileId}/actions`,
-        (current: FileAction[]) => [
+        (current: FileAction[] | undefined) => [
           ...(current || []),
           {
             $id: `action_${Date.now()}`,
-            action: 'download',
+            action: 'download' as const,
             fileId,
             userId: user?.$id || '',
             timestamp: new Date().toISOString(),
-            status: 'completed',
+            status: 'completed' as const,
           },
         ],
         false

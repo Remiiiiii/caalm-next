@@ -15,11 +15,12 @@ import {
 import Link from 'next/link';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
+import { mapDatabaseToRouteDivision } from '@/constants/navigation';
 
 interface AnalyticsLayoutProps {
-  department: string;
+  division: string;
   children: React.ReactNode;
-  departmentData?: {
+  divisionData?: {
     totalContracts?: number;
     totalBudget?: string;
     staffCount?: number;
@@ -29,13 +30,13 @@ interface AnalyticsLayoutProps {
   };
 }
 
-const departmentConfig = {
+const divisionConfig = {
   administration: {
-    name: 'Administration',
-    description: 'Administrative operations and performance metrics',
+    name: 'Enhanced Analytics Dashboard',
+    description: 'Admin operations and performance metrics',
     icon: Building,
     color: 'bg-blue-500',
-    route: '/analytics/administration',
+    route: '/analytics/admin',
   },
   'child-welfare': {
     name: 'Child Welfare',
@@ -74,31 +75,30 @@ const departmentConfig = {
   },
 };
 
-// Map database department values to route department values
-const mapDatabaseToRouteDepartment = (dbDepartment: string): string => {
-  const mapping: Record<string, string> = {
-    childwelfare: 'child-welfare',
-    behavioralhealth: 'behavioral-health',
-    'cins-fins-snap': 'cfs',
-    administration: 'administration',
-    residential: 'residential',
-    clinic: 'clinic',
-  };
-  return mapping[dbDepartment] || dbDepartment;
+// Separate mapping for tab names to keep them independent from main titles
+const tabNames = {
+  administration: 'Administration',
+  'child-welfare': 'Child Welfare',
+  'behavioral-health': 'Behavioral Health',
+  cfs: 'CFS',
+  residential: 'Residential',
+  clinic: 'Clinic',
 };
 
-const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
-  department,
-  children,
-  departmentData,
-}) => {
-  const { role, department: userDepartment, loading } = useUserRole();
-  const { stats: analyticsStats, isLoading: analyticsLoading } =
-    useAnalyticsData(department);
-  const config = departmentConfig[department as keyof typeof departmentConfig];
+// Using mapDatabaseToRouteDivision from constants/navigation.ts
 
-  // Check if user has access to this specific department
-  const hasAccessToDepartment = () => {
+const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
+  division,
+  children,
+  divisionData,
+}) => {
+  const { role, division: userDivision, loading } = useUserRole();
+  const { stats: analyticsStats, isLoading: analyticsLoading } =
+    useAnalyticsData(division);
+  const config = divisionConfig[division as keyof typeof divisionConfig];
+
+  // Check if user has access to this specific division
+  const hasAccessToDivision = () => {
     if (loading) return false;
 
     const hasAccess = (() => {
@@ -107,13 +107,12 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
           return true; // Executive can access all departments
         case 'admin':
           // Admin can access administration department
-          return department === 'administration';
+          return division === 'administration';
         case 'manager':
           // Manager can only access their specific department
-          if (!userDepartment) return false;
-          const userRouteDepartment =
-            mapDatabaseToRouteDepartment(userDepartment);
-          return department === userRouteDepartment;
+          if (!userDivision) return false;
+          const userRouteDivision = mapDatabaseToRouteDivision(userDivision);
+          return division === userRouteDivision;
         default:
           return false;
       }
@@ -122,30 +121,29 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
     return hasAccess;
   };
 
-  // Get accessible departments for navigation tabs based on user role
-  const getAccessibleDepartments = () => {
+  // Get accessible divisions for navigation tabs based on user role
+  const getAccessibleDivisions = () => {
     if (loading) return [];
 
     switch (role) {
       case 'executive':
-        return Object.entries(departmentConfig);
+        return Object.entries(divisionConfig);
       case 'admin':
-        // Admin can see all departments but only access administration
-        return Object.entries(departmentConfig);
+        // Admin can see all divisions but only access administration
+        return Object.entries(divisionConfig);
       case 'manager':
         // Manager can only see their specific department
-        if (!userDepartment) return [];
-        const userRouteDepartment =
-          mapDatabaseToRouteDepartment(userDepartment);
-        return Object.entries(departmentConfig).filter(
-          ([key]) => key === userRouteDepartment
+        if (!userDivision) return [];
+        const userRouteDivision = mapDatabaseToRouteDivision(userDivision);
+        return Object.entries(divisionConfig).filter(
+          ([key]) => key === userRouteDivision
         );
       default:
         return [];
     }
   };
 
-  const accessibleDepartments = getAccessibleDepartments();
+  const accessibleDivisions = getAccessibleDivisions();
 
   if (loading || analyticsLoading) {
     return (
@@ -170,7 +168,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
     return (
       <div className="space-y-6">
         <div className="text-center py-12">
-          <h1 className="h2 text-dark-200 mb-4">Department Not Found</h1>
+          <h1 className="h2 text-navy mb-4">Department Not Found</h1>
           <p className="body-1 text-light-200 mb-6">
             The requested department analytics are not available.
           </p>
@@ -186,11 +184,11 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
   }
 
   // Check if user has access to this department
-  if (!hasAccessToDepartment()) {
+  if (!hasAccessToDivision()) {
     return (
       <div className="space-y-6">
         <div className="text-center py-12">
-          <h1 className="h2 text-dark-200 mb-4">Access Denied</h1>
+          <h1 className="h2 text-navy mb-4">Access Denied</h1>
           <p className="body-1 text-light-200 mb-6">
             You don&apos;t have permission to view analytics for this
             department.
@@ -230,7 +228,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
       </div>
 
       {/* Quick Stats */}
-      {(departmentData || analyticsStats) && (
+      {(divisionData || analyticsStats) && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -242,7 +240,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             <CardContent>
               <div className="h2 text-navy font-bold">
                 {analyticsStats?.totalContracts ||
-                  departmentData?.totalContracts ||
+                  divisionData?.totalContracts ||
                   'N/A'}
               </div>
             </CardContent>
@@ -258,7 +256,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             <CardContent>
               <div className="h2 text-navy font-bold">
                 {analyticsStats?.totalBudget ||
-                  departmentData?.totalBudget ||
+                  divisionData?.totalBudget ||
                   'N/A'}
               </div>
             </CardContent>
@@ -274,7 +272,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             <CardContent>
               <div className="h2 text-navy font-bold">
                 {analyticsStats?.staffCount ||
-                  departmentData?.staffCount ||
+                  divisionData?.staffCount ||
                   'N/A'}
               </div>
             </CardContent>
@@ -290,7 +288,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             <CardContent>
               <div className="h2 text-navy font-bold">
                 {analyticsStats?.complianceRate ||
-                  departmentData?.complianceRate ||
+                  divisionData?.complianceRate ||
                   'N/A'}
               </div>
             </CardContent>
@@ -298,30 +296,30 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
         </div>
       )}
 
-      {/* Department Navigation */}
+      {/* Division Navigation */}
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
           <CardTitle className="h2 sidebar-gradient-text">
-            Department Analytics
+            Division Analytics
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue={department} className="w-full">
+          <Tabs defaultValue={division} className="w-full">
             <TabsList className="flex w-full bg-white/20 backdrop-blur border border-white/40">
-              {accessibleDepartments.map(([key, dept]) => (
+              {accessibleDivisions.map(([key, division]) => (
                 <TabsTrigger
                   key={key}
                   value={key}
                   asChild
-                  className="tabs-underline flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-dark-200"
+                  className="tabs-underline flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-navy"
                 >
-                  <Link href={dept.route} className="w-full body-2">
-                    {dept.name}
+                  <Link href={division.route} className="w-full body-2">
+                    {tabNames[key as keyof typeof tabNames] || division.name}
                   </Link>
                 </TabsTrigger>
               ))}
             </TabsList>
-            <TabsContent value={department} className="mt-6">
+            <TabsContent value={division} className="mt-6">
               {children}
             </TabsContent>
           </Tabs>

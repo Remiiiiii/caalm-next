@@ -17,21 +17,32 @@ function mapRouteToDbDepartment(routeDept: string): string {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { department: string } }
+  { params }: { params: Promise<{ department: string }> }
 ) {
   try {
-    const dbDept = mapRouteToDbDepartment(params.department);
-    const { databases } = await createAdminClient();
+    const resolvedParams = await params;
+    const dbDept = mapRouteToDbDepartment(resolvedParams.department);
+    const { tablesDB } = await createAdminClient();
 
-    // Use Recent Activities as a simple "performance" proxy: count actions per week
-    const activities = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.recentActivityCollectionId,
-      [Query.equal('department', dbDept), Query.limit(200)]
+    // Get all recent activities and filter by department on the client side
+    // This avoids the schema error since not all activities may have a department field
+    const activities = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.recentActivityCollectionId,
+      queries: [Query.limit(200)],
+    });
+
+    // Filter activities by department on the client side
+    const departmentActivities = activities.rows.filter(
+      (activity: any) =>
+        activity.department === dbDept ||
+        activity.department === resolvedParams.department ||
+        // Also include activities that might be related to contracts in this department
+        (activity.type === 'contract' && activity.contractName)
     );
 
     const byWeek: Record<string, number> = {};
-    for (const a of activities.documents as any[]) {
+    for (const a of departmentActivities) {
       const ts = a.timestamp || a.$createdAt;
       const date = new Date(ts);
       const year = date.getUTCFullYear();

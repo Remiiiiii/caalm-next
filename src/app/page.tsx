@@ -7,8 +7,8 @@ import Pricing from '../components/Pricing';
 import QA from '../components/QA';
 import Feedback from '../components/Feedback';
 import { loadPricingFromMarkdown } from '../lib/pricing';
+import TextMarquee from '@/components/TextMarquee';
 
-const TextMarquee = dynamic(() => import('../components/TextMarquee'));
 const HeroIntro = dynamic(() => import('../components/HeroIntro'));
 const FeaturesDynamic = dynamic(() => import('../components/Features'));
 // const ProblemSolutionDynamic = dynamic(
@@ -34,8 +34,8 @@ export default async function HomePage() {
         <div className="relative z-10">
           <HeroIntro />
           <Hero />
-          <TextMarquee />
           <FeaturesDynamic />
+          <TextMarquee />
           <Insights />
           <Pricing plans={pricing.plans} />
           <QA />

@@ -3,6 +3,7 @@
 import {
   Client,
   Databases,
+  TablesDB,
   Account,
   Storage,
   Avatars,
@@ -40,6 +41,9 @@ export const createSessionClient = async () => {
     get databases() {
       return new Databases(client);
     },
+    get tablesDB() {
+      return new TablesDB(client);
+    },
   };
 };
 
@@ -61,8 +65,8 @@ export const createAdminClient = async () => {
     get account() {
       return new Account(client);
     },
-    get databases() {
-      return new Databases(client);
+    get tablesDB() {
+      return new TablesDB(client);
     },
     get storage() {
       return new Storage(client);

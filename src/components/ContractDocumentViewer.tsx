@@ -57,6 +57,7 @@ import {
 } from 'lucide-react';
 import { SAMContract } from '@/lib/sam-config';
 import { ContractAnalysis } from '@/lib/ai-contract-analyzer';
+import Image from 'next/image';
 
 interface ContractDocumentViewerProps {
   isOpen: boolean;
@@ -903,7 +904,12 @@ ${contractDetails.attachments
               <div className="flex justify-center flex-col p-4 border-b border-light-300 bg-white/80 backdrop-blur">
                 <div className="flex items-center justify-center mb-4">
                   <h3 className="font-bold sidebar-gradient-text flex items-center gap-2">
-                    <Bot className="h-5 w-5 text-cyan-600" />
+                    <Image
+                      src="/assets/images/assistant.svg"
+                      alt="AI Analysis"
+                      width={30}
+                      height={30}
+                    />
                     AI Analysis
                   </h3>
                   <Button
@@ -1163,7 +1169,7 @@ ${contractDetails.attachments
                       <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-                            <AlertTriangle className="h-4 w-4 text-red-500" />
+                            <AlertTriangle className="h-4 w-4 text-cyan-600" />
                             Risks
                           </CardTitle>
                         </CardHeader>
@@ -1204,7 +1210,7 @@ ${contractDetails.attachments
                       <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <CheckCircle className="h-4 w-4 text-cyan-600" />
                             Opportunities
                           </CardTitle>
                         </CardHeader>
@@ -1250,7 +1256,7 @@ ${contractDetails.attachments
                       <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-                            <Lightbulb className="h-4 w-4 text-blue-500" />
+                            <Lightbulb className="h-4 w-4 text-cyan-600" />
                             Recommendations
                           </CardTitle>
                         </CardHeader>
@@ -1317,7 +1323,7 @@ ${contractDetails.attachments
                         <div className="mt-4">
                           <div className="mb-3">
                             <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
+                              <FileText className="h-4 w-4 text-cyan-600" />
                               Quick Questions
                             </h4>
                           </div>
@@ -1357,7 +1363,7 @@ ${contractDetails.attachments
                     <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-                          <FileText className="h-4 w-4 text-green-600" />
+                          <FileText className="h-4 w-4 text-cyan-600" />
                           Proposal Generation
                         </CardTitle>
                       </CardHeader>

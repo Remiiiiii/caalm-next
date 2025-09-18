@@ -9,7 +9,7 @@ const ChildWelfareAnalytics = () => {
     <div className="space-y-6">
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle className="h3 text-dark-200">
+          <CardTitle className="h3 text-navy">
             Child Welfare Analytics
           </CardTitle>
         </CardHeader>
@@ -24,7 +24,7 @@ const ChildWelfareAnalytics = () => {
 };
 
 const ChildWelfareAnalyticsPage = () => {
-  const departmentData = {
+  const divisionData = {
     totalContracts: 234,
     totalBudget: '$2.8M',
     staffCount: 156,
@@ -34,7 +34,7 @@ const ChildWelfareAnalyticsPage = () => {
   };
 
   return (
-    <AnalyticsLayout department="child-welfare" departmentData={departmentData}>
+    <AnalyticsLayout division="child-welfare" divisionData={divisionData}>
       <ChildWelfareAnalytics />
     </AnalyticsLayout>
   );

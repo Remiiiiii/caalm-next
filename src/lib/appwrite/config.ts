@@ -24,6 +24,9 @@ export const appwriteConfig = {
     process.env.NEXT_PUBLIC_APPWRITE_RECENT_ACTIVITIES_COLLECTION ||
     '6883bd610000fa195147',
 
+  invitationsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_INVITATIONS_COLLECTION || 'invitations',
+
   reportsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_REPORTS_COLLECTION ||
     '6885147d003d9de593d3',
@@ -50,7 +53,8 @@ export const appwriteConfig = {
 
   govApiKey: process.env.GOV_API_KEY || '',
 
-  // Firebase (for native mobile push) – optional client hints
-  firebaseApiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+  // Twilio SMS configuration
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || '',
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || '',
+  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
 };

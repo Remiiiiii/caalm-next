@@ -12,7 +12,7 @@ const ProfileSettings = () => {
   const [formData, setFormData] = useState({
     fullName: 'John Doe',
     email: 'john.doe@example.com',
-    department: 'Administration',
+    division: 'Administration',
     role: 'Manager',
   });
   const { toast } = useToast();
@@ -49,7 +49,7 @@ const ProfileSettings = () => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <User className="h-5 w-5 text-blue-500" />
-        <span className="text-sm font-medium text-dark-200">
+        <span className="text-sm font-medium text-navy">
           Personal Information
         </span>
       </div>
@@ -81,13 +81,13 @@ const ProfileSettings = () => {
         </div>
 
         <div>
-          <Label htmlFor="department" className="text-sm text-light-200">
-            Department
+          <Label htmlFor="division" className="text-sm text-light-200">
+            Division
           </Label>
           <Input
-            id="department"
-            value={formData.department}
-            onChange={(e) => handleInputChange('department', e.target.value)}
+            id="division"
+            value={formData.division}
+            onChange={(e) => handleInputChange('division', e.target.value)}
             className="mt-1"
             disabled
           />

@@ -9,7 +9,7 @@ const CFSAnalytics = () => {
     <div className="space-y-6">
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle className="h3 text-dark-200">CFS Analytics</CardTitle>
+          <CardTitle className="h3 text-navy">CFS Analytics</CardTitle>
         </CardHeader>
         <CardContent className="text-light-200">
           <p className="body-1">
@@ -22,7 +22,7 @@ const CFSAnalytics = () => {
 };
 
 const CFSAnalyticsPage = () => {
-  const departmentData = {
+  const divisionData = {
     totalContracts: 145,
     totalBudget: '$1.6M',
     staffCount: 98,
@@ -32,7 +32,7 @@ const CFSAnalyticsPage = () => {
   };
 
   return (
-    <AnalyticsLayout department="cfs" departmentData={departmentData}>
+    <AnalyticsLayout division="cfs" divisionData={divisionData}>
       <CFSAnalytics />
     </AnalyticsLayout>
   );

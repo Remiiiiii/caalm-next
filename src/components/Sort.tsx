@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import {
   Select,
   SelectContent,
@@ -28,7 +27,7 @@ const Sort = () => {
         {sortTypes.map((sort) => (
           <SelectItem
             key={sort.label}
-            className="shad-select-item"
+            className="shad-select-item text-slate-700"
             value={sort.value}
           >
             {sort.label}

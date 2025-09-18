@@ -1,32 +1,34 @@
 'use client';
 
 import Link from 'next/link';
-import React, { Fragment } from 'react';
+import { Fragment } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import Avatar from '@/components/ui/avatar';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAnalyticsPrefetch } from '@/hooks/useAnalyticsPrefetch';
+import {
+  NAVIGATION_CONFIG,
+  mapDatabaseToRouteDivision,
+} from '@/constants/navigation';
 
 interface Props {
   fullName: string;
   avatar: string;
   email: string;
   role: 'executive' | 'admin' | 'manager';
-  department?: string;
+  division?: string;
 }
 
-const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
+const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
   const router = useRouter();
   const pathname = usePathname();
   const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
-  // Map database department values to sidebar department values
-  const mapDepartmentToSidebar = (
-    dbDepartment?: string
-  ): string | undefined => {
-    if (!dbDepartment) return undefined;
+  // Map database division values to sidebar division values
+  const mapDivisionToSidebar = (dbDivision?: string): string | undefined => {
+    if (!dbDivision) return undefined;
 
-    const departmentMap: Record<string, string> = {
+    const divisionMap: Record<string, string> = {
       childwelfare: 'child-welfare',
       behavioralhealth: 'behavioral-health',
       clinic: 'clinic',
@@ -39,23 +41,12 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
       operations: 'operations',
     };
 
-    return departmentMap[dbDepartment] || dbDepartment;
+    return divisionMap[dbDivision] || dbDivision;
   };
 
-  const mappedDepartment = mapDepartmentToSidebar(department);
+  const mappedDivision = mapDivisionToSidebar(division);
 
-  // Map database department to route department for direct linking
-  const mapDatabaseToRouteDepartment = (dbDepartment: string): string => {
-    const mapping: Record<string, string> = {
-      childwelfare: 'child-welfare',
-      behavioralhealth: 'behavioral-health',
-      'cins-fins-snap': 'cfs',
-      administration: 'administration',
-      residential: 'residential',
-      clinic: 'clinic',
-    };
-    return mapping[dbDepartment] || dbDepartment;
-  };
+  // Use static navigation configuration to prevent hydration mismatches
 
   const groupedNav = [
     {
@@ -84,30 +75,46 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
     {
       header: 'Contracts',
       items: [
+        // Only Executive and Admin can see All Contracts
+        ...(role === 'executive' || role === 'admin'
+          ? [
+              {
+                name: 'All Contracts',
+                icon: '/assets/icons/documents.svg',
+                url: '/contracts',
+                roles: ['executive', 'admin'],
+              },
+            ]
+          : []),
+        // All roles can see My Contracts
         {
-          name: 'All Contracts',
-          icon: '/assets/icons/documents.svg',
-          url: '/contracts',
-          roles: ['executive', 'admin'],
-        },
-        {
-          name: 'My Department Contracts',
-          icon: '/assets/icons/documents.svg',
-          url: '/contracts/department',
+          name: 'My Contracts',
+          icon: '/assets/icons/my-contracts.svg',
+          url: '/my-contracts',
           roles: ['executive', 'manager', 'admin'],
         },
-        {
-          name: 'Proposals & Approvals',
-          icon: '/assets/icons/edit.svg',
-          url: '/contracts/approvals',
-          roles: ['executive', 'manager', 'admin'],
-        },
-        {
-          name: 'Advanced Resources',
-          icon: '/assets/icons/search.svg',
-          url: '/contracts/advanced-resources',
-          roles: ['executive', 'admin'],
-        },
+        // Only Executive and Admin can see Proposals & Approvals
+        ...(role === 'executive' || role === 'admin'
+          ? [
+              {
+                name: 'Proposals & Approvals',
+                icon: '/assets/icons/edit.svg',
+                url: '/contracts/approvals',
+                roles: ['executive', 'admin'],
+              },
+            ]
+          : []),
+        // Only Executive and Admin can see Advanced Resources
+        ...(role === 'executive' || role === 'admin'
+          ? [
+              {
+                name: 'Advanced Resources',
+                icon: '/assets/icons/search.svg',
+                url: '/contracts/advanced-resources',
+                roles: ['executive', 'admin'],
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -205,112 +212,99 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
     {
       header: 'Reports & Analytics',
       items: [
-        // For executives, show main analytics page
-        ...(role === 'executive'
-          ? [
-              {
-                name: 'All Analytics',
-                icon: '/assets/icons/chart.svg',
-                url: '/analytics',
-                roles: ['executive'],
-              },
-            ]
-          : []),
-        // For admins, show administration analytics
+        // Use static configuration to prevent hydration mismatches
         ...(role === 'admin'
           ? [
               {
-                name: 'Administration',
-                icon: '/assets/icons/chart.svg',
-                url: '/analytics/administration',
+                name: NAVIGATION_CONFIG.admin.analytics.name,
+                icon: NAVIGATION_CONFIG.admin.analytics.icon,
+                url: NAVIGATION_CONFIG.admin.analytics.url,
                 roles: ['admin'],
               },
             ]
           : []),
-        // For managers, show their department analytics
-        ...(role === 'manager' && department
+        ...(role === 'executive'
           ? [
               {
-                name: mapDatabaseToRouteDepartment(department)
-                  .split('-')
-                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(' '),
-                icon: '/assets/icons/chart.svg',
-                url: `/analytics/${mapDatabaseToRouteDepartment(department)}`,
+                name: NAVIGATION_CONFIG.executive.analytics.name,
+                icon: NAVIGATION_CONFIG.executive.analytics.icon,
+                url: NAVIGATION_CONFIG.executive.analytics.url,
+                roles: ['executive'],
+              },
+              {
+                name: NAVIGATION_CONFIG.executive.quickView.name,
+                icon: NAVIGATION_CONFIG.executive.quickView.icon,
+                url: NAVIGATION_CONFIG.executive.quickView.url,
+                roles: ['executive'],
+              },
+            ]
+          : []),
+        ...(role === 'manager' && division
+          ? [
+              {
+                name: NAVIGATION_CONFIG.manager.analytics(
+                  mapDatabaseToRouteDivision(division)
+                ).name,
+                icon: NAVIGATION_CONFIG.manager.analytics(
+                  mapDatabaseToRouteDivision(division)
+                ).icon,
+                url: NAVIGATION_CONFIG.manager.analytics(
+                  mapDatabaseToRouteDivision(division)
+                ).url,
                 roles: ['manager'],
               },
             ]
           : []),
         // For executives, show all department options
-        ...(role === 'executive'
-          ? [
-              {
-                name: 'Administration',
-                icon: '/assets/icons/chart.svg',
-                url: '/analytics/administration',
-                roles: ['executive'],
-              },
-              {
-                name: 'Management',
-                department: 'management',
-                roles: ['executive'],
-                subItems: [
-                  {
-                    name: 'CFS',
-                    department: 'cins-fins-snap',
-                    url: '/analytics/cfs',
-                    roles: ['executive'],
-                  },
-                  {
-                    name: 'Behavioral Health',
-                    department: 'behavioralhealth',
-                    url: '/analytics/behavioral-health',
-                    roles: ['executive'],
-                  },
-                  {
-                    name: 'Child Welfare',
-                    department: 'childwelfare',
-                    url: '/analytics/child-welfare',
-                    roles: ['executive'],
-                  },
-                  {
-                    name: 'Clinic',
-                    department: 'clinic',
-                    url: '/analytics/clinic',
-                    roles: ['executive'],
-                  },
-                  {
-                    name: 'Residential',
-                    department: 'residential',
-                    url: '/analytics/residential',
-                    roles: ['executive'],
-                  },
-                ],
-              },
-            ]
-          : []),
       ],
     },
   ];
 
   return (
     <aside className="sidebar">
-      <Link href="/">
-        <Image
-          src="/assets/images/logo.svg"
-          alt="logo"
-          width={50}
-          height={50}
-          className="hidden h-auto lg:block"
-        />
-        <Image
-          src="/assets/images/logo.svg"
-          alt="logo"
-          width={50}
-          height={50}
-          className="lg:hidden"
-        />
-      </Link>
+      <div className="flex items-center justify-between mb-4">
+        <Link href="/">
+          <Image
+            src="/assets/images/logo.svg"
+            alt="logo"
+            width={50}
+            height={50}
+            className="hidden h-auto lg:block"
+          />
+          <Image
+            src="/assets/images/logo.svg"
+            alt="logo"
+            width={50}
+            height={50}
+            className="lg:hidden"
+          />
+        </Link>
+
+        {/* Hard Refresh Button */}
+        <button
+          onClick={() => (window.location.href = window.location.href)}
+          className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-200 shadow-md hover:shadow-lg"
+          title="Hard Refresh (Ctrl+F5)"
+          type="button"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+            <path d="M3 21v-5h5" />
+          </svg>
+        </button>
+      </div>
       <nav className="sidebar-nav">
         <ul className="flex flex-1 flex-col">
           {groupedNav.map((section) => {
@@ -338,14 +332,9 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                 section.header === 'Reports & Analytics'
               ) {
                 sectionItems = sectionItems.map((item) => {
-                  if (item.subItems && mappedDepartment) {
-                    // Filter subitems to only show the manager's department
-                    const filteredSubItems = item.subItems.filter(
-                      (subItem) => subItem.department === mappedDepartment
-                    );
+                  if (item && mappedDivision) {
                     return {
                       ...item,
-                      subItems: filteredSubItems,
                     };
                   }
                   return item;
@@ -439,7 +428,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                 </li>
                 <div className="relative ml-3">
                   <ul className="flex flex-col gap-1 relative z-10">
-                    {sectionItems.map(({ url, name, subItems }, index) => (
+                    {sectionItems.map(({ url, name }, index) => (
                       <Fragment key={name}>
                         <li className="relative flex items-center">
                           {/* Main vertical line for all sections */}
@@ -480,11 +469,11 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                 />
                               </span>
                             )}
-                            {name === 'All Analytics' && (
+                            {name === 'Quick View' && (
                               <span className="gap-1">
                                 <Image
                                   src="/assets/icons/analytics.svg"
-                                  alt="all-analytics"
+                                  alt="analytics"
                                   width={20}
                                   height={20}
                                 />
@@ -500,21 +489,21 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                                 />
                               </span>
                             )}
+                            {name === 'My Contracts' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/my-contracts.svg"
+                                  alt="all-contracts"
+                                  width={20}
+                                  height={18}
+                                />
+                              </span>
+                            )}
                             {name === 'Advanced Resources' && (
                               <span className="gap-1">
                                 <Image
                                   src="/assets/icons/resources.svg"
                                   alt="resources"
-                                  width={20}
-                                  height={20}
-                                />
-                              </span>
-                            )}
-                            {name === 'My Department Contracts' && (
-                              <span className="gap-1">
-                                <Image
-                                  src="/assets/icons/department.svg"
-                                  alt="department"
                                   width={20}
                                   height={20}
                                 />
@@ -621,10 +610,10 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                               </span>
                             )}
                             {/* Reports & Analytics */}
-                            {name === 'Administration' && (
+                            {name === 'Overview' && (
                               <span className="gap-1">
                                 <Image
-                                  src="/assets/icons/department.svg"
+                                  src="/assets/icons/analytics.svg"
                                   alt="reports-analytics"
                                   width={20}
                                   height={20}
@@ -723,7 +712,7 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                             )}
                             <p
                               className={`text-sm text-slate-900 px-2 tabs-underline font-medium ${
-                                name === 'Administration' ? '-ml-[1px]' : ''
+                                name === 'Admin' ? '-ml-[1px]' : ''
                               }`}
                               data-state={
                                 pathname &&
@@ -738,62 +727,6 @@ const Sidebar = ({ fullName, avatar, email, role, department }: Props) => {
                             </p>
                           </Link>
                         </li>
-                        {subItems && (
-                          <div className="relative ml-12">
-                            <span
-                              className="absolute left-0 top-0 h-full w-4 border-l border-[#BFBFBF]"
-                              style={{ zIndex: 0 }}
-                            ></span>
-                            {subItems.map((subItem) => (
-                              <li
-                                key={subItem.name}
-                                className="relative flex items-center"
-                              >
-                                <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
-                                <Link
-                                  href={subItem.url}
-                                  className="ml-4 lg:w-full flex items-start gap-3 tabs-underline"
-                                  onMouseEnter={() => {
-                                    // Prefetch analytics data on hover for better performance
-                                    if (subItem.url?.includes('/analytics')) {
-                                      router.prefetch(subItem.url);
-                                      // Extract department from URL for analytics prefetching
-                                      const departmentMatch = subItem.url.match(
-                                        /\/analytics\/([^\/]+)/
-                                      );
-                                      if (departmentMatch) {
-                                        prefetchDepartmentAnalytics(
-                                          departmentMatch[1]
-                                        );
-                                      }
-                                    }
-                                  }}
-                                >
-                                  <span className="gap-1">
-                                    <Image
-                                      src="/assets/icons/department.svg"
-                                      alt="department"
-                                      width={20}
-                                      height={20}
-                                    />
-                                  </span>
-                                  <p
-                                    className="text-sm text-slate-900 font-medium"
-                                    data-state={
-                                      pathname &&
-                                      (pathname === subItem.url ||
-                                        pathname.startsWith(`${subItem.url}/`))
-                                        ? 'active'
-                                        : undefined
-                                    }
-                                  >
-                                    {subItem.name}
-                                  </p>
-                                </Link>
-                              </li>
-                            ))}
-                          </div>
-                        )}
                       </Fragment>
                     ))}
                   </ul>

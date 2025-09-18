@@ -3,14 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar, TrendingUp } from 'lucide-react';
-import FileUploader from '@/components/FileUploader';
+import ContractUploadForm from '@/components/ContractUploadForm';
 import ReportGenerator from '@/components/ReportGenerator';
 import { Models } from 'appwrite';
 
 interface QuickActionsProps {
   user?:
     | (Models.User<Models.Preferences> & {
-        department?: string;
+        division?: string;
       })
     | null;
 }
@@ -31,11 +31,17 @@ const QuickActions = ({ user }: QuickActionsProps) => {
   return (
     <div className="flex items-center space-x-2">
       {user && (
-        <FileUploader
-          ownerId={user.$id}
-          accountId={user.$id}
-          className="primary-btn h-10 px-4 shadow-drop-1 text-sm"
-        />
+        <>
+          <ContractUploadForm
+            ownerId={user.$id}
+            accountId={user.$id}
+            className="primary-btn h-10 px-4 shadow-drop-1 text-sm"
+            onSuccess={() => {
+              // Refresh data or show success message
+              console.log('Contract uploaded successfully');
+            }}
+          />
+        </>
       )}
       <Button className="primary-btn h-10 px-4 shadow-drop-1 text-sm">
         <Calendar className="h-4 w-4" />
@@ -51,7 +57,7 @@ const QuickActions = ({ user }: QuickActionsProps) => {
       <ReportGenerator
         open={reportOpen}
         onClose={() => setReportOpen(false)}
-        department={user?.department}
+        department={user?.division}
         user={user}
       />
     </div>

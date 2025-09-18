@@ -186,7 +186,7 @@ const TwoFactorSetup = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-blue-500" />
-            <span className="text-sm font-medium text-dark-200">
+            <span className="text-sm font-medium text-navy">
               Security Enhancement
             </span>
           </div>
@@ -208,9 +208,7 @@ const TwoFactorSetup = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <QrCode className="h-5 w-5 text-blue-500" />
-            <span className="text-sm font-medium text-dark-200">
-              Scan QR Code
-            </span>
+            <span className="text-sm font-medium text-navy">Scan QR Code</span>
           </div>
 
           <Card className="bg-white/20 backdrop-blur border border-white/40">

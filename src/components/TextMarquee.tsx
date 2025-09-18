@@ -14,7 +14,7 @@ const line2 = [
 
 export default function TextMarquee() {
   return (
-    <div className="relative w-full max-w-7xl mx-auto mb-12 py-10 sm:py-12 md:py-16 select-none mt-12 px-6">
+    <div className="relative w-full max-w-7xl mx-auto mb-12 py-10 sm:py-12 md:py-16 select-none mt-2 px-6">
       {/* Grid moved to page-level overlay */}
 
       {/* Row 1: left to right */}

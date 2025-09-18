@@ -17,17 +17,18 @@ function mapRouteToDbDepartment(routeDept: string): string {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { department: string } }
+  { params }: { params: Promise<{ department: string }> }
 ) {
   try {
-    const dbDept = mapRouteToDbDepartment(params.department);
-    const { databases } = await createAdminClient();
+    const resolvedParams = await params;
+    const dbDept = mapRouteToDbDepartment(resolvedParams.department);
+    const { tablesDB } = await createAdminClient();
 
-    const docs = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      [Query.equal('department', dbDept), Query.limit(200)]
-    );
+    const docs = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      queries: [Query.equal('department', dbDept), Query.limit(200)],
+    });
 
     const buckets: Record<string, number> = {
       'up-to-date': 0,
@@ -36,7 +37,7 @@ export async function GET(
       unknown: 0,
     };
 
-    for (const d of docs.documents as any[]) {
+    for (const d of docs.rows as any[]) {
       const key = d.compliance ?? 'unknown';
       if (buckets[key] === undefined) buckets.unknown += 1;
       else buckets[key] += 1;

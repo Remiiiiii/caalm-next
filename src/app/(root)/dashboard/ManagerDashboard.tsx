@@ -12,6 +12,10 @@ import {
 } from 'lucide-react';
 import RecentActivity from '@/components/RecentActivity';
 import { useManagerContracts } from '@/hooks/useManagerContracts';
+import {
+  StatCardSkeleton,
+  ContractCardSkeleton,
+} from '@/components/ui/skeletons';
 
 const ManagerDashboard = () => {
   // Use the real-time manager contracts hook
@@ -82,9 +86,6 @@ const ManagerDashboard = () => {
           <CardContent className="p-6">
             <div className="text-center text-red-600">
               <p>Failed to load contracts</p>
-              <Button onClick={refresh} variant="outline" className="mt-2">
-                Retry
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -96,75 +97,75 @@ const ManagerDashboard = () => {
     <div className="space-y-6">
       {/* Header Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Total Contracts
-                </p>
-                <p className="text-2xl font-bold text-navy">
-                  {isLoading ? '...' : contracts.length}
-                </p>
-              </div>
-              <FileText className="h-8 w-8 text-[#524E4E]" />
-            </div>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
+        ) : (
+          <>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">
+                      Total Contracts
+                    </p>
+                    <p className="text-2xl font-bold text-navy">
+                      {contracts.length}
+                    </p>
+                  </div>
+                  <FileText className="h-8 w-8 text-[#524E4E]" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Expiring Soon
-                </p>
-                <p className="text-2xl font-bold text-navy">
-                  {isLoading
-                    ? '...'
-                    : contracts.filter((c) => c.status === 'expired').length}
-                </p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-[#FF7474]" />
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">
+                      Expiring Soon
+                    </p>
+                    <p className="text-2xl font-bold text-navy">
+                      {contracts.filter((c) => c.status === 'expired').length}
+                    </p>
+                  </div>
+                  <AlertCircle className="h-8 w-8 text-[#FF7474]" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Pending Reviews
-                </p>
-                <p className="text-2xl font-bold text-navy">
-                  {isLoading
-                    ? '...'
-                    : contracts.filter((c) => c.status === 'pending').length}
-                </p>
-              </div>
-              <Clock className="h-8 w-8 text-[#56B8FF]" />
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">
+                      Pending Reviews
+                    </p>
+                    <p className="text-2xl font-bold text-navy">
+                      {contracts.filter((c) => c.status === 'pending').length}
+                    </p>
+                  </div>
+                  <Clock className="h-8 w-8 text-[#56B8FF]" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Active Contracts
-                </p>
-                <p className="text-2xl font-bold text-navy">
-                  {isLoading
-                    ? '...'
-                    : contracts.filter((c) => c.status === 'active').length}
-                </p>
-              </div>
-              <Upload className="h-8 w-8 text-[#DB83ED]" />
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">
+                      Active Contracts
+                    </p>
+                    <p className="text-2xl font-bold text-navy">
+                      {contracts.filter((c) => c.status === 'active').length}
+                    </p>
+                  </div>
+                  <Upload className="h-8 w-8 text-[#DB83ED]" />
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Main Content Grid */}
@@ -177,25 +178,13 @@ const ManagerDashboard = () => {
                 <CardTitle className="text-lg font-bold text-center sidebar-gradient-text">
                   My Contracts
                 </CardTitle>
-                <Button onClick={refresh} variant="outline" size="sm">
-                  Refresh
-                </Button>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
               {isLoading ? (
                 <div className="space-y-3 py-4">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between items-center p-4 border rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <div className="animate-pulse bg-gray-200 h-4 w-32 rounded mb-2"></div>
-                        <div className="animate-pulse bg-gray-200 h-3 w-24 rounded"></div>
-                      </div>
-                      <div className="animate-pulse bg-gray-200 h-6 w-16 rounded ml-4"></div>
-                    </div>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <ContractCardSkeleton key={i} />
                   ))}
                 </div>
               ) : contracts.length === 0 ? (

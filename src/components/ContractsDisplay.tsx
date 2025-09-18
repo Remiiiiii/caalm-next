@@ -41,6 +41,10 @@ import {
   RESPONSE_DEADLINE_OPTIONS,
 } from '@/lib/sam-config';
 import ContractDocumentViewer from '@/components/ContractDocumentViewer';
+import {
+  ContractCardSkeleton,
+  PaginationSkeleton,
+} from '@/components/ui/skeletons';
 
 interface ContractCardProps {
   contract: SAMContract;
@@ -636,17 +640,8 @@ export default function ContractsDisplay() {
           <div className="transition-opacity duration-300 ease-in-out">
             {loading && isNewSearch && contracts.length === 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {[...Array(4)].map((_, index) => (
-                  <Card
-                    key={`loading-${index}`}
-                    className="bg-white/30 backdrop-blur border border-white/40 shadow-lg animate-pulse"
-                  >
-                    <CardContent className="p-4 space-y-4">
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-6 bg-gray-200 rounded w-full"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    </CardContent>
-                  </Card>
+                {[1, 2, 3, 4].map((index) => (
+                  <ContractCardSkeleton key={`loading-${index}`} />
                 ))}
               </div>
             ) : contracts.length > 0 ? (

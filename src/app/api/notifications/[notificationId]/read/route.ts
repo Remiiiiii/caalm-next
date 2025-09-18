@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { notificationService } from '@/lib/services/notificationService';
+import { createAdminClient } from '@/lib/appwrite/admin';
+import { appwriteConfig } from '@/lib/appwrite/config';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { notificationId: string } }
+  { params }: { params: Promise<{ notificationId: string }> }
 ) {
   try {
-    const { notificationId } = params;
+    const resolvedParams = await params;
+    const { notificationId } = resolvedParams;
 
     if (!notificationId) {
       return NextResponse.json(
@@ -15,18 +17,24 @@ export async function PUT(
       );
     }
 
-    const notification = await notificationService.markAsRead(notificationId);
+    const { tablesDB } = await createAdminClient();
 
-    return NextResponse.json({ data: notification });
+    // Mark notification as read
+    await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      collectionId: 'notifications',
+      documentId: notificationId,
+      data: {
+        isRead: true,
+        readAt: new Date().toISOString(),
+      },
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to mark notification as read:', error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to mark notification as read',
-      },
+      { error: 'Failed to mark notification as read' },
       { status: 500 }
     );
   }

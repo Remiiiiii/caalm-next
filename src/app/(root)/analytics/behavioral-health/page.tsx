@@ -9,7 +9,7 @@ const BehavioralHealthAnalytics = () => {
     <div className="space-y-6">
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle className="h3 text-dark-200">
+          <CardTitle className="h3 text-navy">
             Behavioral Health Analytics
           </CardTitle>
         </CardHeader>
@@ -24,7 +24,7 @@ const BehavioralHealthAnalytics = () => {
 };
 
 const BehavioralHealthAnalyticsPage = () => {
-  const departmentData = {
+  const divisionData = {
     totalContracts: 189,
     totalBudget: '$2.1M',
     staffCount: 134,
@@ -34,10 +34,7 @@ const BehavioralHealthAnalyticsPage = () => {
   };
 
   return (
-    <AnalyticsLayout
-      department="behavioral-health"
-      departmentData={departmentData}
-    >
+    <AnalyticsLayout division="behavioral-health" divisionData={divisionData}>
       <BehavioralHealthAnalytics />
     </AnalyticsLayout>
   );

@@ -14,7 +14,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 //
 import type { UIFileDoc } from '@/types/files';
-import { actionsDropdownItems, formatDepartmentName } from '../../constants';
+import {
+  actionsDropdownItems,
+  formatDepartmentName,
+  ContractDepartment,
+  DIVISION_TO_DEPARTMENT,
+} from '../../constants';
 import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Input } from './ui/input';
@@ -45,9 +50,13 @@ import DocumentViewer from './DocumentViewer';
 const ActionDropdown = ({
   file,
   onStatusChange,
+  onRefresh,
+  userRole,
 }: {
   file: UIFileDoc;
   onStatusChange?: () => void;
+  onRefresh?: () => void;
+  userRole?: 'executive' | 'admin' | 'manager';
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -117,8 +126,8 @@ const ActionDropdown = ({
         // Also assign department if selected
         if (selectedDepartment) {
           await assignContractToDepartment({
-            contractId: file.contractId,
-            department: selectedDepartment,
+            contractId: assignResult.contractId, // Use the actual contract document ID
+            department: selectedDepartment as ContractDepartment,
           });
         }
 
@@ -157,6 +166,10 @@ const ActionDropdown = ({
 
     if (success) {
       closeAllModals();
+      // Refresh the contracts list after successful actions
+      if (onRefresh) {
+        onRefresh();
+      }
     }
 
     setIsLoading(false);
@@ -211,7 +224,7 @@ const ActionDropdown = ({
                 <div className="mb-2 text-sm text-slate-700">
                   Select department for this contract:
                 </div>
-                <div className="flex flex-col gap-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-4">
                   {departmentEnums.length > 0 ? (
                     departmentEnums.map((dept) => (
                       <label
@@ -228,7 +241,7 @@ const ActionDropdown = ({
                           className="cursor-pointer"
                         />
                         <span className="text-sm cursor-pointer">
-                          {formatDepartmentName(dept)}
+                          {formatDepartmentName(dept as ContractDepartment)}
                         </span>
                       </label>
                     ))
@@ -249,16 +262,16 @@ const ActionDropdown = ({
                   <thead className="bg-slate-50/80">
                     <tr>
                       <th></th>
-                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                      <th className="text-center px-2 py-1 text-[14px] font-semibold text-slate-700">
                         Name
                       </th>
-                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                      <th className="text-center px-2 py-1 text-[14px] font-semibold text-slate-700">
                         Department
                       </th>
-                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                      <th className="text-center px-2 py-1 text-[14px] font-semibold text-slate-700">
                         Role
                       </th>
-                      <th className="px-2 py-1 text-left text-[14px] font-semibold text-slate-700">
+                      <th className="text-center px-2 py-1 text-[14px] font-semibold text-slate-700">
                         Status
                       </th>
                     </tr>
@@ -295,24 +308,36 @@ const ActionDropdown = ({
                               className="cursor-pointer"
                             />
                           </td>
-                          <td className="px-2 py-1">{manager.fullName}</td>
-                          <td className="px-2 py-1">
-                            {manager.department
-                              ? formatDepartmentName(manager.department)
+                          <td className="text-center px-2 py-1">
+                            {manager.fullName}
+                          </td>
+                          <td className="text-center px-2 py-1">
+                            {manager.division
+                              ? formatDepartmentName(
+                                  DIVISION_TO_DEPARTMENT[
+                                    manager.division
+                                  ] as ContractDepartment
+                                )
                               : 'N/A'}
                           </td>
-                          <td className="px-2 py-1">{manager.role}</td>
-                          <td className="px-2 py-1">{manager.status}</td>
+                          <td className="text-center px-2 py-1">
+                            {manager.role}
+                          </td>
+                          <td className="text-center px-2 py-1">
+                            {manager.status}
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
                         <td
                           colSpan={5}
-                          className="text-center py-4 text-slate-500"
+                          className="text-center py-4 text-sm text-slate-500"
                         >
                           {isLoading
                             ? 'Loading managers...'
+                            : !selectedDepartment
+                            ? 'Please select a department first'
                             : 'No managers available'}
                         </td>
                       </tr>
@@ -415,7 +440,7 @@ const ActionDropdown = ({
           style={{ pointerEvents: 'none' }}
         >
           <Card
-            className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg"
+            className="w-[800px] max-w-6xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg"
             style={{ pointerEvents: 'none' }}
           >
             {dialogHeader}
@@ -619,14 +644,38 @@ const ActionDropdown = ({
     return null;
   }
 
-  // Only show Assign and Status if file name contains 'Contract'
+  // Determine if this is a contract file
+  // Since we're now fetching from contracts collection, all items should be treated as contracts
   const fileName = file.name || file.contractName || '';
-  const isContractFile = fileName.toLowerCase().includes('contract');
-  const filteredActions = isContractFile
-    ? actionsDropdownItems
-    : actionsDropdownItems.filter(
-        (action) => !['assign', 'status'].includes(action.value)
-      );
+  const isContractFile =
+    fileName.toLowerCase().includes('contract') ||
+    file.contractId ||
+    file.contractName ||
+    file.contractType ||
+    file.contractExpiryDate;
+
+  // Role-based action filtering
+  let filteredActions = actionsDropdownItems;
+
+  if (userRole === 'manager') {
+    // Managers can only see: Details, Download, Review, Rename, Share, Status
+    filteredActions = actionsDropdownItems.filter((action) =>
+      ['details', 'download', 'review', 'rename', 'share', 'status'].includes(
+        action.value
+      )
+    );
+  } else if (userRole === 'executive' || userRole === 'admin') {
+    // Executive and Admin can see all actions
+    filteredActions = actionsDropdownItems;
+  }
+
+  // Additional filtering for contract files
+  // Only show Assign and Status for actual contract files
+  if (!isContractFile) {
+    filteredActions = filteredActions.filter(
+      (action) => !['assign', 'status'].includes(action.value)
+    );
+  }
 
   return (
     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

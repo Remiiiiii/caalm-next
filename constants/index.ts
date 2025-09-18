@@ -39,7 +39,7 @@ export const navItems = [
 
 export const actionsDropdownItems = [
   {
-    label: 'Assign',
+    label: 'Re-assign',
     icon: '/assets/icons/assign.svg',
     value: 'assign',
   },
@@ -163,13 +163,98 @@ export const avatarPlaceholderUrl =
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-// Department type - will be populated from database
-export type Department = string;
+// Organizational Hierarchy Types
+export type UserDivision =
+  | 'HR' // Reports to Administration Department
+  | 'c-suite' // Reports to Executive Department
+  | 'childwelfare' // Reports to Operations Department
+  | 'behavioralhealth' // Reports to Operations Department
+  | 'clinic' // Reports to Operations Department
+  | 'residential' // Reports to Operations Department
+  | 'cins-fins-snap' // Reports to Operations Department
+  | 'support' // Reports to IT Department
+  | 'help-desk'
+  | 'accounting'; //  Reports to Finance Department
 
-// Helper function to format department names for display
-export const formatDepartmentName = (department: string): string => {
-  return department
+export type ContractDepartment =
+  | 'IT'
+  | 'Finance'
+  | 'Administration'
+  | 'Legal'
+  | 'Operations'
+  | 'Sales'
+  | 'Marketing'
+  | 'Executive'
+  | 'Engineering';
+
+// User Division to Parent Department Mapping
+export const DIVISION_TO_DEPARTMENT: Record<UserDivision, string> = {
+  HR: 'Administration',
+  'c-suite': 'Executive',
+  childwelfare: 'Operations',
+  behavioralhealth: 'Operations',
+  clinic: 'Operations',
+  residential: 'Operations',
+  'cins-fins-snap': 'Operations',
+  support: 'IT',
+  'help-desk': 'IT',
+  accounting: 'Finance',
+};
+
+// Contract Departments for upload form
+export const CONTRACT_DEPARTMENTS: ContractDepartment[] = [
+  'IT',
+  'Finance',
+  'Administration',
+  'Legal',
+  'Operations',
+  'Sales',
+  'Marketing',
+  'Executive',
+  'Engineering',
+];
+
+// User Divisions for profile settings
+export const USER_DIVISIONS: UserDivision[] = [
+  'HR',
+  'c-suite',
+  'childwelfare',
+  'behavioralhealth',
+  'clinic',
+  'residential',
+  'cins-fins-snap',
+  'support',
+  'help-desk',
+  'accounting',
+];
+
+// Format division name for display
+export const formatDivisionName = (division: UserDivision): string => {
+  return division
     .split('-')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+};
+
+// Format department name for display
+export const formatDepartmentName = (
+  department: ContractDepartment
+): string => {
+  return department;
+};
+
+// Get parent department for a division
+export const getParentDepartment = (division: UserDivision): string => {
+  return DIVISION_TO_DEPARTMENT[division];
+};
+
+// Check if division is an operations subdivision
+export const isOperationsSubdivision = (division: UserDivision): boolean => {
+  return [
+    'childwelfare',
+    'behavioralhealth',
+    'clinic',
+    'residential',
+    'cins-fins-snap',
+  ].includes(division);
 };

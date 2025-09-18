@@ -28,13 +28,13 @@ export async function POST(request: NextRequest) {
       const client = await createAdminClient();
 
       // Get the user's stored 2FA secret from their profile
-      const userResponse = await client.databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.usersCollectionId,
-        [Query.equal('$id', userId)]
-      );
+      const userResponse = await client.tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.usersCollectionId,
+        queries: [Query.equal('$id', userId)],
+      });
 
-      if (userResponse.documents.length === 0) {
+      if (userResponse.rows.length === 0) {
         // For testing purposes, if user doesn't exist, create a mock response
         // In production, you would return an error
         console.warn(
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const user = userResponse.documents[0];
+      const user = userResponse.rows[0];
 
       // Check if user has 2FA enabled
       if (!user.twoFactorEnabled || !user.twoFactorSecret) {

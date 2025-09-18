@@ -153,7 +153,10 @@ export const Header = () => {
 
         <div className="hidden md:flex items-center space-x-2 sm:space-x-4">
           <Link href="/sign-in">
-            <Button variant="ghost" className="text-slate-700 text-sm">
+            <Button
+              variant="ghost"
+              className="text-slate-700 hover:bg-white/60 hover:backdrop-blur-lg text-sm transition-all duration-300 ease-in-out hover:scale-105 active:scale-95  hover:shadow-md rounded-full"
+            >
               Sign In
             </Button>
           </Link>

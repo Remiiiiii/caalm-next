@@ -2,7 +2,7 @@
 
 // import Link from 'next/link'; // Removed since we no longer use Link component
 import { Models } from 'node-appwrite';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Thumbnail from './Thumbnail';
 import { convertFileSize } from '@/lib/utils';
 import FormattedDateTime from './FormattedDateTime';
@@ -46,15 +46,37 @@ interface CardProps {
   file: UIFileDoc;
   status?: string;
   expirationDate?: string;
+  assignedTo?: string;
+  assignedToDepartment?: string;
+  assignedManagers?: string[];
+  onRefresh?: () => void;
+  userRole?: 'executive' | 'admin' | 'manager';
 }
 
-const Card = ({ file, status, expirationDate }: CardProps) => {
+const Card = ({
+  file,
+  status,
+  expirationDate,
+  assignedTo: propAssignedTo,
+  assignedToDepartment: propAssignedToDepartment,
+  onRefresh,
+  userRole,
+}: CardProps) => {
   const [contractStatus, setContractStatus] = useState<string | undefined>(
     status || file.status
   );
   const [contractExpiryDate, setContractExpiryDate] = useState<
     string | undefined
   >(expirationDate || file.contractExpiryDate);
+  const [assignedTo, setAssignedTo] = useState<string | undefined>(
+    propAssignedTo ||
+      (Array.isArray(file.assignedManagers)
+        ? file.assignedManagers.join(', ')
+        : file.assignedManagers)
+  );
+  const [assignedToDepartment, setAssignedToDepartment] = useState<
+    string | undefined
+  >(propAssignedToDepartment || file.department);
 
   useEffect(() => {
     // If status is not present but contractId exists, fetch the contract status
@@ -75,6 +97,14 @@ const Card = ({ file, status, expirationDate }: CardProps) => {
 
         if (contract && contract.contractExpiryDate) {
           setContractExpiryDate(contract.contractExpiryDate);
+        }
+
+        if (contract && contract.assignedTo) {
+          setAssignedTo(contract.assignedTo);
+        }
+
+        if (contract && contract.assignedToDepartment) {
+          setAssignedToDepartment(contract.assignedToDepartment);
         }
       })();
     }
@@ -98,7 +128,11 @@ const Card = ({ file, status, expirationDate }: CardProps) => {
           imageClassName="!size-11"
         />
         <div className="flex flex-col items-end justify-between">
-          <ActionDropdown file={file} />
+          <ActionDropdown
+            file={file}
+            onRefresh={onRefresh}
+            userRole={userRole}
+          />
           <p className="body-1">{convertFileSize(file.size)}</p>
         </div>
       </div>
@@ -120,6 +154,18 @@ const Card = ({ file, status, expirationDate }: CardProps) => {
                 date={contractExpiryDate}
                 className="body-2 text-slate-700"
               />
+            </div>
+          )}
+          {assignedTo && (
+            <div className="flex flex-row gap-2">
+              <p className="body-2 text-slate-700">Assigned To:</p>
+              <p className="body-2 text-slate-700">{assignedTo}</p>
+            </div>
+          )}
+          {assignedToDepartment && (
+            <div className="flex flex-row gap-2">
+              <p className="body-2 text-slate-700">Department:</p>
+              <p className="body-2 text-slate-700">{assignedToDepartment}</p>
             </div>
           )}
         </div>

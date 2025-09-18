@@ -11,6 +11,7 @@ type Props = {
 
 export default function Pricing({ plans }: Props) {
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setPeriod('monthly');
@@ -82,7 +83,7 @@ export default function Pricing({ plans }: Props) {
                 'px-4 py-1.5 rounded-full text-sm font-semibold transition-colors',
                 period === 'monthly'
                   ? 'bg-gradient-to-r from-[#00C1CB] via-[#078FAB] to-[#162768] text-white'
-                  : 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-600'
               )}
             >
               Monthly
@@ -95,14 +96,20 @@ export default function Pricing({ plans }: Props) {
                 'px-4 py-1.5 rounded-full text-sm font-semibold transition-colors',
                 period === 'yearly'
                   ? 'bg-gradient-to-r from-[#00C1CB] via-[#078FAB] to-[#162768] text-white'
-                  : 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-600'
               )}
             >
               Yearly
             </button>
-            <span className="ml-2 mr-2 text-xs font-medium text-slate-500">
-              Save 20%
-            </span>
+            {period === 'monthly' ? (
+              <span className="ml-2 mr-2 line-through text-xs font-medium text-slate-500 strike-th">
+                Save 20%
+              </span>
+            ) : (
+              <span className="ml-2 mr-2 text-xs font-medium text-slate-500">
+                Save 20%
+              </span>
+            )}
           </div>
         </div>
 

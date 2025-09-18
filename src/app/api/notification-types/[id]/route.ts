@@ -4,11 +4,12 @@ import { NotificationType } from '@/types/notifications';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params;
     const notificationType = await notificationService.getNotificationType(
-      params.id
+      resolvedParams.id
     );
 
     if (!notificationType) {
@@ -30,13 +31,14 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params;
     const body: Partial<NotificationType> = await request.json();
 
     const notificationType = await notificationService.updateNotificationType(
-      params.id,
+      resolvedParams.id,
       body
     );
 
@@ -57,10 +59,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await notificationService.deleteNotificationType(params.id);
+    const resolvedParams = await params;
+    await notificationService.deleteNotificationType(resolvedParams.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

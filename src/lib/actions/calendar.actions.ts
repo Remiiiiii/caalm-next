@@ -36,12 +36,12 @@ export interface CreateCalendarEventData {
 export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
   try {
     const adminClient = await createAdminClient();
-    const response = await adminClient.databases.listDocuments(
+    const response = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [Query.orderDesc('$createdAt')]
     );
-    return response.documents as unknown as CalendarEvent[];
+    return response.rows as unknown as CalendarEvent[];
   } catch (error) {
     console.error('Error fetching calendar events:', error);
     throw error;
@@ -64,7 +64,7 @@ export const getCalendarEventsByMonth = async (
 
     console.log('Date range:', startDate, 'to', endDate);
 
-    const response = await adminClient.databases.listDocuments(
+    const response = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [
@@ -74,7 +74,7 @@ export const getCalendarEventsByMonth = async (
       ]
     );
     console.log('Database response:', response);
-    return response.documents as unknown as CalendarEvent[];
+    return response.rows as unknown as CalendarEvent[];
   } catch (error) {
     console.error('Error fetching calendar events by month:', error);
     throw error;
@@ -93,7 +93,7 @@ export const getCalendarEventsByDate = async (
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const response = await adminClient.databases.listDocuments(
+    const response = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [
@@ -102,7 +102,7 @@ export const getCalendarEventsByDate = async (
         Query.orderAsc('startTime'),
       ]
     );
-    return response.documents as unknown as CalendarEvent[];
+    return response.rows as unknown as CalendarEvent[];
   } catch (error) {
     console.error('Error fetching calendar events by date:', error);
     throw error;
@@ -115,7 +115,7 @@ export const createCalendarEvent = async (
 ): Promise<CalendarEvent> => {
   try {
     const adminClient = await createAdminClient();
-    const response = await adminClient.databases.createDocument(
+    const response = await adminClient.tablesDB.createRow(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       ID.unique(),
@@ -145,12 +145,12 @@ export const updateCalendarEvent = async (
 ): Promise<CalendarEvent> => {
   try {
     const adminClient = await createAdminClient();
-    const response = await adminClient.databases.updateDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      eventId,
-      eventData
-    );
+    const response = await adminClient.tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      rowId: eventId,
+      data: eventData,
+    });
     return response as unknown as CalendarEvent;
   } catch (error) {
     console.error('Error updating calendar event:', error);
@@ -162,7 +162,7 @@ export const updateCalendarEvent = async (
 export const deleteCalendarEvent = async (eventId: string): Promise<void> => {
   try {
     const adminClient = await createAdminClient();
-    await adminClient.databases.deleteDocument(
+    await adminClient.tablesDB.deleteRow(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       eventId
@@ -180,7 +180,7 @@ export const getCalendarEventsByWeek = async (
 ): Promise<CalendarEvent[]> => {
   try {
     const adminClient = await createAdminClient();
-    const response = await adminClient.databases.listDocuments(
+    const response = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [
@@ -189,7 +189,7 @@ export const getCalendarEventsByWeek = async (
         Query.orderAsc('date'),
       ]
     );
-    return response.documents as unknown as CalendarEvent[];
+    return response.rows as unknown as CalendarEvent[];
   } catch (error) {
     console.error('Error fetching calendar events by week:', error);
     throw error;

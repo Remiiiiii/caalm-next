@@ -11,23 +11,27 @@ export const swrConfig: SWRConfiguration = {
     return response.json();
   },
 
-  // Revalidation settings
+  // Revalidation settings - More aggressive for fresh data
   revalidateOnFocus: true,
   revalidateOnReconnect: true,
   revalidateIfStale: true,
+  revalidateOnMount: true, // Always revalidate on mount
 
-  // Deduplication
-  dedupingInterval: 2000, // Prevent duplicate requests within 2 seconds
+  // Deduplication - Very short interval for immediate updates
+  dedupingInterval: 500, // Prevent duplicate requests within 500ms
 
   // Error retry
   errorRetryCount: 3,
-  errorRetryInterval: 5000, // Retry every 5 seconds
+  errorRetryInterval: 1000, // Faster retry every 1 second
 
   // Cache settings
-  keepPreviousData: true, // Keep previous data while fetching new data
+  keepPreviousData: false, // Don't keep stale data, always show fresh data
 
-  // Focus revalidation
-  focusThrottleInterval: 5000, // Throttle focus revalidation to 5 seconds
+  // Focus revalidation - Very frequent
+  focusThrottleInterval: 1000, // Throttle focus revalidation to 1 second
+
+  // Refresh interval for automatic updates
+  refreshInterval: 10000, // Refresh every 10 seconds by default
 };
 
 // SWR keys for consistent caching

@@ -17,34 +17,35 @@ function mapRouteToDbDepartment(routeDept: string): string {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { department: string } }
+  { params }: { params: Promise<{ department: string }> }
 ) {
   try {
-    const dbDept = mapRouteToDbDepartment(params.department);
-    const { databases } = await createAdminClient();
+    const resolvedParams = await params;
+    const dbDept = mapRouteToDbDepartment(resolvedParams.department);
+    const { tablesDB } = await createAdminClient();
 
     // Contracts by department
-    const contracts = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      [Query.equal('department', dbDept), Query.limit(200)]
-    );
+    const contracts = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      queries: [Query.equal('department', dbDept), Query.limit(200)],
+    });
 
     const totalContracts = contracts.total;
-    const compliantCount = contracts.documents.filter(
+    const compliantCount = contracts.rows.filter(
       (d: any) => d.compliance === 'up-to-date'
     ).length;
-    const budgetSum = contracts.documents.reduce((sum: number, d: any) => {
+    const budgetSum = contracts.rows.reduce((sum: number, d: any) => {
       const amount = typeof d.amount === 'number' ? d.amount : 0;
       return sum + amount;
     }, 0);
 
     // Staff count from users collection
-    const users = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('department', dbDept), Query.limit(200)]
-    );
+    const users = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.equal('department', dbDept), Query.limit(200)],
+    });
 
     const data = {
       totalContracts,

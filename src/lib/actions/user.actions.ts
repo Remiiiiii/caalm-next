@@ -10,6 +10,8 @@ import { redirect } from 'next/navigation';
 import crypto from 'crypto';
 import * as sdk from 'node-appwrite';
 import { triggerUserInvitationNotification } from '../utils/notificationTriggers';
+import { type UserDivision } from '../../../constants';
+import { tablesDB } from '../appwrite/client';
 
 export type AppUser = {
   fullName: string;
@@ -17,27 +19,48 @@ export type AppUser = {
   avatar: string;
   accountId: string;
   role: string;
-  department?:
-    | 'childwelfare'
-    | 'behavioralhealth'
-    | 'clinic'
-    | 'residential'
-    | 'cins-fins-snap'
-    | 'administration'
-    | 'c-suite'
-    | 'management';
+  division?: UserDivision;
   status?: 'active' | 'inactive';
 };
 
 export const getUserByEmail = async (email: string) => {
-  const { databases } = await createAdminClient();
-  const result = await databases.listDocuments(
-    appwriteConfig.databaseId,
-    appwriteConfig.usersCollectionId,
-    [Query.equal('email', email)]
-  );
+  try {
+    console.log('getUserByEmail: Looking for user with email:', email);
+    const { tablesDB } = await createAdminClient();
+    console.log('getUserByEmail: Admin client created successfully');
 
-  return result.total > 0 ? result.documents[0] : null;
+    const result = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.equal('email', email)],
+    });
+
+    console.log('getUserByEmail: Query result:', {
+      total: result.total,
+      rowsLength: result.rows?.length || 0,
+      firstRow: result.rows?.[0] ? 'Found' : 'Not found',
+    });
+
+    return result.total > 0 ? result.rows[0] : null;
+  } catch (error) {
+    console.error('getUserByEmail: Error occurred:', error);
+    throw error;
+  }
+};
+
+export const getUserById = async (userId: string) => {
+  const { tablesDB } = await createAdminClient();
+  try {
+    const result = await tablesDB.getRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      rowId: userId,
+    });
+    return result;
+  } catch (error) {
+    console.error('Failed to get user by ID:', error);
+    return null;
+  }
 };
 
 const handleError = (error: unknown, message: string) => {
@@ -148,19 +171,28 @@ export const verifySecret = async ({
 
 export const getCurrentUser = async () => {
   try {
-    const { databases, account } = await createSessionClient();
+    const { tablesDB, account } = await createSessionClient();
     const result = await account.get();
-    const user = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('accountId', result.$id)]
-    );
+
+    console.log('getCurrentUser - Account ID:', result.$id);
+
+    const user = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.equal('accountId', result.$id)],
+    });
+
+    console.log('getCurrentUser - Database query result:', {
+      total: user.total,
+      rows: user.rows,
+      firstRow: user.rows[0] || null,
+    });
 
     if (user.total === 0) return null;
 
-    return parseStringify(user.documents[0]);
+    return parseStringify(user.rows[0]);
   } catch (error) {
-    console.log(error);
+    console.log('getCurrentUser - Error:', error);
   }
 };
 
@@ -180,11 +212,26 @@ export const signOutUser = async () => {
 
 export const signInUser = async ({ email }: { email: string }) => {
   try {
+    console.log('signInUser: Starting sign-in process for:', email);
+
+    // Check if user exists in our custom users collection
+    console.log('signInUser: Calling getUserByEmail...');
     const existingUser = (await getUserByEmail(email)) as AppUser | null;
+    console.log('signInUser: existingUser result:', existingUser);
+
     if (existingUser) {
+      console.log('signInUser: User found, sending OTP...');
       await sendEmailOTP({ email });
+      console.log(
+        'signInUser: OTP sent successfully, returning accountId:',
+        existingUser.accountId
+      );
       return { accountId: existingUser.accountId };
     }
+
+    console.log(
+      'signInUser: User not found in custom collection, checking Appwrite Auth...'
+    );
 
     // Try to find the user in Appwrite Auth (pseudo-code, depends on your SDK)
     const client = new sdk.Client()
@@ -198,25 +245,30 @@ export const signInUser = async ({ email }: { email: string }) => {
 
     if (authUser) {
       // Create the missing users collection document
-      const { databases } = await createAdminClient();
-      await databases.createDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.usersCollectionId,
-        ID.unique(),
-        {
+      const { tablesDB } = await createAdminClient();
+      await tablesDB.createRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.usersCollectionId,
+        rowId: ID.unique(),
+        data: {
           fullName: authUser.name || '',
           email: authUser.email,
           avatar: avatarPlaceholderUrl,
           accountId: authUser.$id,
           role: '',
-        }
-      );
+        },
+      });
       await sendEmailOTP({ email });
       return { accountId: authUser.$id };
     }
 
     return { accountId: null, error: 'User not found' };
-  } catch {
+  } catch (error) {
+    console.error('signInUser: Error occurred:', error);
+    console.error('signInUser: Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+    });
     return { accountId: null, error: 'Failed to sign in user' };
   }
 };
@@ -259,7 +311,7 @@ export const createInvitation = async ({
   expiresInDays = 7,
   invitedBy,
 }: CreateInvitationParams) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(
     Date.now() + expiresInDays * 24 * 60 * 60 * 1000
@@ -275,11 +327,11 @@ export const createInvitation = async ({
   }
 
   // 1. Create invitation document
-  await databases.createDocument(
-    appwriteConfig.databaseId,
-    INVITATIONS_COLLECTION,
-    ID.unique(),
-    {
+  await tablesDB.createRow({
+    databaseId: appwriteConfig.databaseId,
+    tableId: INVITATIONS_COLLECTION,
+    rowId: ID.unique(),
+    data: {
       email,
       orgId,
       role: normalizedRole,
@@ -290,8 +342,8 @@ export const createInvitation = async ({
       status,
       revoked,
       invitedBy,
-    }
-  );
+    },
+  });
 
   // 2. Send invite link email (using Appwrite Messaging API)
   const { messaging } = await createAdminClient();
@@ -335,14 +387,14 @@ export const createInvitation = async ({
 };
 
 export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
-  const { databases } = await createAdminClient();
-  const result = await databases.listDocuments(
-    appwriteConfig.databaseId,
-    INVITATIONS_COLLECTION,
-    [Query.equal('token', token)]
-  );
+  const { tablesDB } = await createAdminClient();
+  const result = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId,
+    tableId: INVITATIONS_COLLECTION,
+    queries: [Query.equal('token', token)],
+  });
   if (result.total === 0) throw new Error('Invalid invitation token');
-  const invite = result.documents[0];
+  const invite = result.rows[0];
   if (invite.status !== 'pending' || invite.revoked)
     throw new Error('Invitation is not valid');
   if (new Date(invite.expiresAt) < new Date())
@@ -363,25 +415,25 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   let user = await getUserByEmail(invite.email);
   if (!user) {
     const normalizedRole = invite.role.toLowerCase();
-    await databases.createDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      sdk.ID.unique(),
-      {
+    await tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      rowId: sdk.ID.unique(),
+      data: {
         fullName: invite.name,
         email: invite.email,
         avatar: avatarPlaceholderUrl,
         accountId,
         role: normalizedRole,
         department: invite.department,
-      }
-    );
+      },
+    });
     user = await getUserByEmail(invite.email);
   }
   if (!user) throw new Error('User creation failed');
 
   // 3. Mark invitation as accepted
-  await databases.updateDocument(
+  await tablesDB.updateRow(
     appwriteConfig.databaseId,
     INVITATIONS_COLLECTION,
     invite.$id,
@@ -399,28 +451,28 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 };
 
 export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
-  const { databases } = await createAdminClient();
-  const result = await databases.listDocuments(
+  const { tablesDB } = await createAdminClient();
+  const result = await tablesDB.listRows(
     appwriteConfig.databaseId,
     INVITATIONS_COLLECTION,
     [Query.equal('token', token)]
   );
   if (result.total === 0) throw new Error('Invalid invitation token');
-  const invite = result.documents[0];
-  await databases.updateDocument(
-    appwriteConfig.databaseId,
-    INVITATIONS_COLLECTION,
-    invite.$id,
-    { revoked: true, status: 'revoked' }
-  );
+  const invite = result.rows[0];
+  await tablesDB.updateRow({
+    databaseId: appwriteConfig.databaseId,
+    tableId: INVITATIONS_COLLECTION,
+    rowId: invite.$id,
+    data: { revoked: true, status: 'revoked' },
+  });
   return { success: true };
 };
 
 export const listPendingInvitations = async ({
   orgId,
 }: ListPendingInvitationsParams) => {
-  const { databases } = await createAdminClient();
-  const result = await databases.listDocuments(
+  const { tablesDB } = await createAdminClient();
+  const result = await tablesDB.listRows(
     appwriteConfig.databaseId,
     INVITATIONS_COLLECTION,
     [
@@ -429,7 +481,7 @@ export const listPendingInvitations = async ({
       Query.equal('revoked', false),
     ]
   );
-  return result.documents;
+  return result.rows;
 };
 
 export const addUserEmailTarget = async (userId: string, email: string) => {
@@ -538,13 +590,13 @@ export const addUserSmsTarget = async (userId: string, e164Phone: string) => {
 };
 
 export const getInvitationByToken = async (token: string) => {
-  const { databases } = await createAdminClient();
-  const result = await databases.listDocuments(
+  const { tablesDB } = await createAdminClient();
+  const result = await tablesDB.listRows(
     appwriteConfig.databaseId,
     'invitations',
     [Query.equal('token', token)]
   );
-  return result.total > 0 ? result.documents[0] : null;
+  return result.total > 0 ? result.rows[0] : null;
 };
 
 /**
@@ -558,44 +610,36 @@ export const getInvitationByToken = async (token: string) => {
 export const updateUserProfile = async ({
   accountId,
   fullName,
-  department,
+  division,
   role,
 }: {
   accountId: string;
   fullName?: string;
-  department?:
-    | 'childwelfare'
-    | 'behavioralhealth'
-    | 'clinic'
-    | 'residential'
-    | 'cins-fins-snap'
-    | 'administration'
-    | 'c-suite'
-    | 'management';
+  division?: UserDivision;
   role?: string;
 }) => {
   try {
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
     // Find the user document by accountId
-    const userList = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('accountId', accountId)]
-    );
+    const userList = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.equal('accountId', accountId)],
+    });
     if (userList.total === 0) throw new Error('User not found');
-    const userDoc = userList.documents[0];
+    const userDoc = userList.rows[0];
     // Prepare update payload
     const updatePayload: Record<string, unknown> = {};
     if (fullName !== undefined) updatePayload.fullName = fullName;
     if (role !== undefined) updatePayload.role = role;
-    if (department !== undefined) updatePayload.department = department;
+    if (division !== undefined) updatePayload.division = division;
     // Update the user document
-    const updatedUser = await databases.updateDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      userDoc.$id,
-      updatePayload
-    );
+    const updatedUser = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      rowId: userDoc.$id,
+      data: updatePayload,
+    });
     return updatedUser;
   } catch (error) {
     handleError(error, 'Failed to update user profile');
@@ -608,12 +652,12 @@ export const updateUserProfile = async ({
  */
 export const listAllUsers = async () => {
   try {
-    const { databases } = await createAdminClient();
-    const result = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId
-    );
-    return result.documents;
+    const { tablesDB } = await createAdminClient();
+    const result = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+    });
+    return result.rows;
   } catch (error) {
     handleError(error, 'Failed to list all users');
   }
@@ -621,8 +665,8 @@ export const listAllUsers = async () => {
 
 export const getActiveUsersCount = async () => {
   try {
-    const { databases } = await createAdminClient();
-    const result = await databases.listDocuments(
+    const { tablesDB } = await createAdminClient();
+    const result = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
       [Query.equal('status', 'active')]
@@ -640,8 +684,8 @@ export const getActiveUsersCount = async () => {
  */
 export const deleteUser = async (userId: string) => {
   try {
-    const { databases } = await createAdminClient();
-    await databases.deleteDocument(
+    const { tablesDB } = await createAdminClient();
+    await tablesDB.deleteRow(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
       userId
@@ -653,13 +697,13 @@ export const deleteUser = async (userId: string) => {
 };
 
 export const getContracts = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const res = await databases.listDocuments(
+    const res = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId
     );
-    return parseStringify(res.documents);
+    return parseStringify(res.rows);
   } catch (error) {
     console.error('Failed to fetch contracts:', error);
     return [];
@@ -667,9 +711,9 @@ export const getContracts = async () => {
 };
 
 export const getUnreadNotificationsCount = async (userId: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const res = await databases.listDocuments(
+    const res = await tablesDB.listRows(
       appwriteConfig.databaseId,
       'notifications',
       [Query.equal('userId', userId), Query.equal('read', false)]
@@ -706,7 +750,7 @@ export const getAllAuthUsers = async () => {
 
 // Get users who have signed up but haven't been invited yet
 export const getUninvitedUsers = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     // Get all Auth users
     const client = new sdk.Client()
@@ -717,13 +761,13 @@ export const getUninvitedUsers = async () => {
     const authUsers = await users.list();
 
     // Get all users in the users collection (invited users)
-    const invitedUsers = await databases.listDocuments(
+    const invitedUsers = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId
     );
 
     // Get all pending invitations
-    const pendingInvitations = await databases.listDocuments(
+    const pendingInvitations = await tablesDB.listRows(
       appwriteConfig.databaseId,
       'invitations',
       [Query.equal('status', 'pending')]
@@ -731,10 +775,10 @@ export const getUninvitedUsers = async () => {
 
     // Filter out users who are already in the users collection or have pending invitations
     const invitedEmails = new Set([
-      ...invitedUsers.documents.map(
+      ...invitedUsers.rows.map(
         (u: Record<string, unknown>) => u.email as string
       ),
-      ...pendingInvitations.documents.map(
+      ...pendingInvitations.rows.map(
         (inv: Record<string, unknown>) => inv.email as string
       ),
     ]);

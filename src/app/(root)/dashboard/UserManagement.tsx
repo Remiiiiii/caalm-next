@@ -163,9 +163,6 @@ const UserManagement = () => {
         <CardContent className="p-6">
           <div className="text-center text-red-600">
             <p>Failed to load users</p>
-            <Button onClick={refresh} variant="outline" className="mt-2">
-              Retry
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -182,9 +179,6 @@ const UserManagement = () => {
               <Button variant="outline" size="sm">
                 <ListFilter className="h-4 w-4 mr-2" />
                 Filter
-              </Button>
-              <Button variant="outline" size="sm" onClick={refresh}>
-                Refresh
               </Button>
             </div>
           </CardTitle>

@@ -21,10 +21,20 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
   const { user } = useAuth();
   const currentUserId = userId || user?.$id;
 
+  // Debug logging
+  console.log('useNotifications Debug:', {
+    providedUserId: userId,
+    authUserId: user?.$id,
+    currentUserId,
+    userEmail: user?.email,
+    userName: user?.name,
+  });
+
   const {
     data: notifications,
     error,
     isLoading,
+    mutate,
   } = useSWR(
     currentUserId ? `/api/notifications?userId=${currentUserId}` : null,
     fetcher,
@@ -32,6 +42,8 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
       refreshInterval: 30000, // Refresh every 30 seconds
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
+      revalidateOnMount: true, // Force revalidation on mount
+      dedupingInterval: 0, // Disable deduping to ensure fresh data
     }
   );
 

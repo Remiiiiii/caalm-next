@@ -51,8 +51,10 @@ import {
 import { cn } from '@/lib/utils';
 import { createCalendarEvent } from '@/lib/actions/calendar.client';
 import { useToast } from '@/hooks/use-toast';
-import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import ExpandedCalendarView from '@/components/ExpandedCalendarView';
+import { CalendarEventSkeleton } from '@/components/ui/skeletons';
 
 // Local event interface for component use
 interface LocalCalendarEvent {
@@ -119,19 +121,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     contractName: '',
   });
 
-  // Use SWR hook for calendar events
-  const {
-    events: fetchedEvents,
-    isLoading,
-    refresh,
-  } = useCalendarEvents({
-    month: currentMonth,
-    enableRealTime: true,
-    pollingInterval: 10000,
-  });
+  // Use unified dashboard data for calendar events
+  const { orgId } = useOrganization();
+  const { calendarEvents, isLoading, refresh } = useUnifiedDashboardData(
+    orgId || 'default_organization'
+  );
 
   // Combine database events with prop events
-  const allEvents = [...fetchedEvents, ...events];
+  const allEvents = [...calendarEvents, ...events];
 
   const handleDateSelect = (date: Date | undefined) => {
     // Don't allow selecting past dates
@@ -421,6 +418,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                         );
                       })}
                     </div>
+                  ) : isLoading ? (
+                    <div className="p-3 space-y-2">
+                      {[1, 2].map((i) => (
+                        <CalendarEventSkeleton key={i} />
+                      ))}
+                    </div>
                   ) : (
                     <div className="text-center py-6 text-slate-500">
                       <CalendarIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -477,7 +480,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             value={viewMode}
             onValueChange={(value) => setViewMode(value as 'month' | 'week')}
           >
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 gap-4">
               <TabsTrigger
                 value="month"
                 className="flex items-center space-x-2"

@@ -19,14 +19,14 @@ export async function POST(request: NextRequest) {
     try {
       // Check if user has 2FA enabled by looking for stored 2FA data
       // In production, you would store this in a separate collection or user profile
-      const userResponse = await client.databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.usersCollectionId,
-        [Query.equal('$id', userId)]
-      );
+      const userResponse = await client.tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.usersCollectionId,
+        queries: [Query.equal('$id', userId)],
+      });
 
-      if (userResponse.documents.length > 0) {
-        const user = userResponse.documents[0];
+      if (userResponse.rows.length > 0) {
+        const user = userResponse.rows[0];
 
         // Check if user has 2FA enabled according to the schema
         // All 4 fields must be populated for 2FA to be considered "enabled"

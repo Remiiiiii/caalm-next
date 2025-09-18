@@ -1,5 +1,5 @@
 import AuthForm from '@/components/AuthForm';
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
 
 const SignUp = () => {
   return (

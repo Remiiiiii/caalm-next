@@ -142,6 +142,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   const [globalSettings, setGlobalSettings] = useState({
     emailNotifications: false,
     pushNotifications: false,
+    phoneNumber: '',
     inAppNotifications: true,
     smsNotifications: false,
     quietHours: false,
@@ -194,6 +195,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             emailNotifications: !!data.email_enabled,
             pushNotifications: !!data.push_enabled,
             smsNotifications: !!data.phone_number,
+            phoneNumber: data.phone_number || '',
             digestFrequency: (data.frequency as string) || 'daily',
           }));
           setPhoneNumber((data.phone_number as string) || '');
@@ -231,6 +233,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             ...prev,
             emailNotifications: !!payload.email_enabled,
             pushNotifications: !!payload.push_enabled,
+            phoneNumber: (payload.phone_number as string) || prev.phoneNumber,
             digestFrequency:
               (payload.frequency as string) || prev.digestFrequency,
           }));
@@ -320,6 +323,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     setGlobalSettings({
       emailNotifications: true,
       pushNotifications: true,
+      phoneNumber: '',
       inAppNotifications: true,
       smsNotifications: false,
       quietHours: false,
@@ -377,7 +381,37 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                   />
                 </div>
 
-                {/* Push Notifications removed */}
+                <div className="flex items-center gap-5">
+                  <Label className="flex items-center gap-2">
+                    <Bell className="w-4 h-4" />
+                    SMS Notifications
+                  </Label>
+                  <Switch
+                    checked={globalSettings.pushNotifications}
+                    onCheckedChange={(checked) =>
+                      handleGlobalSettingChange('pushNotifications', checked)
+                    }
+                  />
+                </div>
+
+                {globalSettings.pushNotifications && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Phone Number</Label>
+                    <Input
+                      type="tel"
+                      placeholder="+1234567890"
+                      value={globalSettings.phoneNumber}
+                      onChange={(e) =>
+                        handleGlobalSettingChange('phoneNumber', e.target.value)
+                      }
+                      className="text-xs"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Enter your phone number in international format (e.g.,
+                      +1234567890)
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2">
                   <Label className="flex items-center gap-2">

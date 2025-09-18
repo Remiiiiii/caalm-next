@@ -19,17 +19,17 @@ export async function POST(request: NextRequest) {
     const expirationTime = new Date();
     expirationTime.setMinutes(expirationTime.getMinutes() + 5);
 
-    await client.databases.createDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.otpTokensCollectionId,
-      'unique()',
-      {
+    await client.tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.otpTokensCollectionId,
+      rowId: 'unique()',
+      data: {
         email,
         otp,
         expiresAt: expirationTime.toISOString(),
         used: false,
-      }
-    );
+      },
+    });
 
     // In a real application, you would send the OTP via email
     // For now, we'll just return success
