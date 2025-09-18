@@ -18,19 +18,15 @@ export async function GET(request: NextRequest) {
     const { databases } = await createAdminClient();
 
     // Get saved searches for the user
-    const savedSearches = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      'saved_searches',
-      [
-        Query.equal('userId', userId),
-        Query.orderDesc('$createdAt')
-      ]
-    );
-
-    return NextResponse.json({
-      savedSearches: savedSearches.documents
+    const savedSearches = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'saved_searches',
+      queries: [Query.equal('userId', userId), Query.orderDesc('$createdAt')],
     });
 
+    return NextResponse.json({
+      savedSearches: savedSearches.rows,
+    });
   } catch (error) {
     console.error('Saved searches error:', error);
     return NextResponse.json(
@@ -55,16 +51,13 @@ export async function POST(request: NextRequest) {
     const { databases } = await createAdminClient();
 
     // Check if a saved search with the same name already exists
-    const existingSearches = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      'saved_searches',
-      [
-        Query.equal('userId', userId),
-        Query.equal('name', name)
-      ]
-    );
+    const existingSearches = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'saved_searches',
+      queries: [Query.equal('userId', userId), Query.equal('name', name)],
+    });
 
-    if (existingSearches.documents.length > 0) {
+    if (existingSearches.rows.length > 0) {
       return NextResponse.json(
         { error: 'A saved search with this name already exists' },
         { status: 409 }
@@ -72,21 +65,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new saved search
-    const savedSearch = await databases.createDocument(
-      appwriteConfig.databaseId,
-      'saved_searches',
-      ID.unique(),
-      {
+    const savedSearch = await tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'saved_searches',
+      rowId: ID.unique(),
+      data: {
         userId,
         name,
         query,
         filters: filters || {},
-        createdAt: new Date().toISOString()
-      }
-    );
+        createdAt: new Date().toISOString(),
+      },
+    });
 
     return NextResponse.json({ savedSearch });
-
   } catch (error) {
     console.error('Save search error:', error);
     return NextResponse.json(
@@ -119,10 +111,7 @@ export async function DELETE(request: NextRequest) {
     );
 
     if (search.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Delete the saved search
@@ -133,7 +122,6 @@ export async function DELETE(request: NextRequest) {
     );
 
     return NextResponse.json({ success: true });
-
   } catch (error) {
     console.error('Delete saved search error:', error);
     return NextResponse.json(

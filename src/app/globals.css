@@ -169,6 +169,10 @@
       #162768
     );
   }
+
+  .primary-btn:hover {
+    @apply text-white !important;
+  }
   .analytics-icon {
     @apply shadow-md;
     background-image: linear-gradient(

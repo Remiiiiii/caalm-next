@@ -24,29 +24,29 @@ interface DepartmentData {
 
 export async function GET() {
   try {
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Get all contracts from the database
-    const allContracts = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      [Query.limit(1000)] // Get up to 1000 contracts
-    );
+    const allContracts = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      queries: [Query.limit(1000)], // Get up to 1000 contracts
+    });
 
     console.log(`Total contracts in database: ${allContracts.total}`);
 
     // Get all users to calculate staff counts
-    const allUsers = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.limit(1000)]
-    );
+    const allUsers = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.limit(1000)],
+    });
 
     // Group contracts by department
     const contractsByDepartment: Record<string, unknown[]> = {};
     const contractsByDivision: Record<string, unknown[]> = {};
 
-    allContracts.documents.forEach((contract: unknown) => {
+    allContracts.rows.forEach((contract: unknown) => {
       const contractData = contract as Record<string, unknown>;
       const department = contractData.department as string;
       const division = contractData.division as string;
@@ -68,7 +68,7 @@ export async function GET() {
 
     // Group users by division
     const usersByDivision: Record<string, unknown[]> = {};
-    allUsers.documents.forEach((user: unknown) => {
+    allUsers.rows.forEach((user: unknown) => {
       const userData = user as Record<string, unknown>;
       const division = userData.division as string;
       if (division) {
@@ -245,14 +245,14 @@ export async function GET() {
 
     // Calculate overall totals
     const totalContracts = allContracts.total;
-    const totalBudget = allContracts.documents.reduce((sum: number, c) => {
+    const totalBudget = allContracts.rows.reduce((sum: number, c) => {
       const contractData = c as Record<string, unknown>;
       const amount =
         typeof contractData.amount === 'number' ? contractData.amount : 0;
       return sum + amount;
     }, 0);
     const totalStaff = allUsers.total;
-    const totalCompliant = allContracts.documents.filter((c) => {
+    const totalCompliant = allContracts.rows.filter((c) => {
       const contractData = c as Record<string, unknown>;
       return (
         contractData.compliance === 'up-to-date' ||

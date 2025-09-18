@@ -85,16 +85,16 @@ class ContractExpiryService {
   private async getActiveContracts(): Promise<Contract[]> {
     try {
       const client = await this.getClient();
-      const response = await client.databases.listDocuments(
-        '685ed87c0009d8189fc7',
-        'contracts',
-        [
+      const response = await client.tablesDB.listRows({
+        databaseId: '685ed87c0009d8189fc7',
+        tableId: 'contracts',
+        queries: [
           // Only get active contracts
           // Note: You might want to adjust this filter based on your status values
-        ]
-      );
+        ],
+      });
 
-      return response.documents as Contract[];
+      return response.rows as Contract[];
     } catch (error) {
       console.error('Error fetching contracts:', error);
       return [];
@@ -107,15 +107,15 @@ class ContractExpiryService {
   private async getUsersWithNotifications(): Promise<NotificationSettings[]> {
     try {
       const client = await this.getClient();
-      const response = await client.databases.listDocuments(
-        '685ed87c0009d8189fc7',
-        'notification_settings',
-        [
+      const response = await client.tablesDB.listRows({
+        databaseId: '685ed87c0009d8189fc7',
+        tableId: 'notification_settings',
+        queries: [
           // Only get users with push notifications enabled
-        ]
-      );
+        ],
+      });
 
-      return response.documents as NotificationSettings[];
+      return response.rows as NotificationSettings[];
     } catch (error) {
       console.error('Error fetching notification settings:', error);
       return [];

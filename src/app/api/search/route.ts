@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Build search queries
     const queries = [];
@@ -92,14 +92,14 @@ export async function GET(request: NextRequest) {
     searchQueries.push(Query.limit(200)); // Get more documents for client-side filtering
 
     // Search in contracts collection
-    const contractsResult = await databases.listDocuments(
+    const contractsResult = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId,
       searchQueries
     );
 
     // Search in files collection
-    const filesResult = await databases.listDocuments(
+    const filesResult = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.filesCollectionId,
       searchQueries
@@ -107,12 +107,12 @@ export async function GET(request: NextRequest) {
 
     // Combine and format results with client-side text filtering
     let results = [
-      ...contractsResult.documents.map((doc) => ({
+      ...contractsResult.rows.map((doc) => ({
         ...doc,
         type: 'contract',
         searchScore: calculateSearchScore(doc, query),
       })),
-      ...filesResult.documents.map((doc) => ({
+      ...filesResult.rows.map((doc) => ({
         ...doc,
         type: 'file',
         searchScore: calculateSearchScore(doc, query),
@@ -179,11 +179,11 @@ export async function GET(request: NextRequest) {
     // Save search to history - only if user is provided
     if (userId) {
       try {
-        await databases.createDocument(
-          appwriteConfig.databaseId,
-          'search_history',
-          'unique()',
-          {
+        await tablesDB.createRow({
+          databaseId: appwriteConfig.databaseId,
+          tableId: 'search_history',
+          rowId: 'unique()',
+          data: {
             userId,
             query,
             filters: {
@@ -200,8 +200,8 @@ export async function GET(request: NextRequest) {
             },
             resultCount: totalResults,
             timestamp: new Date().toISOString(),
-          }
-        );
+          },
+        });
       } catch (error) {
         console.error('Failed to save search history:', error);
         // Don't fail the search if history saving fails

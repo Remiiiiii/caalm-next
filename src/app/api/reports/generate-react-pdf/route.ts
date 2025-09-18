@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import React from 'react';
 import { EnhancedReportDocument } from '@/components/pdf/EnhancedReportDocument';
+import { tablesDB } from '@/lib/appwrite/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,16 +68,15 @@ export async function POST(request: NextRequest) {
 
     // Try to update the report document with PDF file path if it exists
     try {
-      const adminClient = await createAdminClient();
-      await adminClient.databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.reportsCollectionId,
-        reportId,
-        {
+      await tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        collectionId: appwriteConfig.reportsCollectionId,
+        documentId: reportId,
+        data: {
           pdfFilePath: `/reports/${pdfFileName}`,
           pdfGenerated: true,
-        }
-      );
+        },
+      });
     } catch (updateError) {
       console.log(
         'Report document not found, will be updated when report is created:',

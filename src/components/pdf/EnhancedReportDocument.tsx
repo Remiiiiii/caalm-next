@@ -468,7 +468,7 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 
           <View style={{ marginTop: 80, alignItems: 'center' }}>
             <Text style={{ fontSize: 14, color: '#475569', marginBottom: 10 }}>
-              Prepared by: {userName}
+              by: {userName}
             </Text>
             <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 5 }}>
               Role: {userRole}

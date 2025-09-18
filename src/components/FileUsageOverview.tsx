@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Chart } from '@/components/Chart';
 import { getUsageSummary } from '@/lib/utils';
 import { convertFileSize } from '@/lib/utils';

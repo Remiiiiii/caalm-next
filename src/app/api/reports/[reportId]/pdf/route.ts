@@ -21,11 +21,11 @@ export async function GET(
     const adminClient = await createAdminClient();
 
     // Get the report document
-    const report = await adminClient.databases.getDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.reportsCollectionId,
-      reportId
-    );
+    const report = await adminClient.tablesDB.getRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.reportsCollectionId,
+      rowId: reportId,
+    });
 
     if (!report) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });

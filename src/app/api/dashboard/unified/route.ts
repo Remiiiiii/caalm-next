@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Fetch all data simultaneously using Promise.allSettled for error handling
     const [
@@ -33,35 +33,35 @@ export async function GET(request: NextRequest) {
       calendarEventsResult,
     ] = await Promise.allSettled([
       // Contracts data
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.contractsCollectionId,
         [Query.limit(1000)]
       ),
 
       // Users data
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.usersCollectionId,
         [Query.limit(1000)]
       ),
 
       // Invitations data
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.invitationsCollectionId,
         [Query.equal('orgId', orgId), Query.limit(100)]
       ),
 
       // Files data
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.filesCollectionId,
         [Query.orderDesc('$createdAt'), Query.limit(10)]
       ),
 
       // Reports data
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.reportsCollectionId,
         [
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       Promise.resolve({ documents: [] }), // Placeholder for report templates
 
       // Notifications data
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.notificationsCollectionId,
         [
@@ -89,21 +89,21 @@ export async function GET(request: NextRequest) {
       ),
 
       // Notifications stats
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.notificationsCollectionId,
         [Query.equal('userId', userId)]
       ),
 
       // Recent activities
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.recentActivityCollectionId,
         [Query.orderDesc('$createdAt'), Query.limit(15)]
       ),
 
       // Calendar events
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.calendarEventsCollectionId,
         [Query.orderDesc('$createdAt'), Query.limit(50)]
@@ -113,7 +113,10 @@ export async function GET(request: NextRequest) {
     // Helper function to safely get results
     const getResult = (result: any) => {
       if (result.status === 'fulfilled') {
-        return result.value;
+        return {
+          ...result.value,
+          documents: result.value.rows || result.value.documents,
+        };
       }
       console.error('Database query failed:', result.reason);
       return { documents: [], total: 0 };

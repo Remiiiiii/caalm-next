@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Fetch all analytics data simultaneously using Promise.all
     const [
@@ -30,21 +30,21 @@ export async function GET(request: NextRequest) {
       reportTemplatesResult,
     ] = await Promise.all([
       // Contracts data
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.contractsCollectionId,
         [Query.limit(1000)]
       ),
 
       // Users data
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.usersCollectionId,
         [Query.limit(1000)]
       ),
 
       // Reports data
-      databases.listDocuments(
+      tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.reportsCollectionId,
         [
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     const contractsByDepartment: Record<string, unknown[]> = {};
     const contractsByDivision: Record<string, unknown[]> = {};
 
-    contractsResult.documents.forEach((contract: unknown) => {
+    contractsResult.rows.forEach((contract: unknown) => {
       const contractData = contract as Record<string, unknown>;
       const department = contractData.department as string;
       const division = contractData.division as string;
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 
     // Group users by division
     const usersByDivision: Record<string, unknown[]> = {};
-    usersResult.documents.forEach((user: unknown) => {
+    usersResult.rows.forEach((user: unknown) => {
       const userData = user as Record<string, unknown>;
       const division = userData.division as string;
       if (division) {
@@ -192,14 +192,14 @@ export async function GET(request: NextRequest) {
 
     // Calculate overall totals
     const totalContracts = contractsResult.total;
-    const totalBudget = contractsResult.documents.reduce((sum: number, c) => {
+    const totalBudget = contractsResult.rows.reduce((sum: number, c) => {
       const contractData = c as Record<string, unknown>;
       const amount =
         typeof contractData.amount === 'number' ? contractData.amount : 0;
       return sum + amount;
     }, 0);
     const totalStaff = usersResult.total;
-    const totalCompliant = contractsResult.documents.filter((c) => {
+    const totalCompliant = contractsResult.rows.filter((c) => {
       const contractData = c as Record<string, unknown>;
       return (
         contractData.compliance === 'up-to-date' ||
@@ -221,9 +221,9 @@ export async function GET(request: NextRequest) {
         overallComplianceRate,
       },
       hasContracts,
-      reports: reportsResult.documents,
-      departmentsList: departmentsResult.documents,
-      reportTemplates: reportTemplatesResult.documents,
+      reports: reportsResult.rows,
+      departmentsList: departmentsResult.rows,
+      reportTemplates: reportTemplatesResult.rows,
     };
 
     return new Response(

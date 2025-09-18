@@ -28,20 +28,20 @@ export const createNotification = async ({
   type,
   read = false,
 }: CreateNotificationProps) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const notification = await databases.createDocument(
-      appwriteConfig.databaseId,
-      'notifications',
-      ID.unique(),
-      {
+    const notification = await tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'notifications',
+      rowId: ID.unique(),
+      data: {
         userId,
         title,
         message,
         type,
         read,
-      }
-    );
+      },
+    });
     // SMS notification is now handled automatically by the notification service
     // when creating notifications, so no additional action needed here
     return notification;
@@ -51,13 +51,13 @@ export const createNotification = async ({
 };
 
 export const getNotifications = async (userId: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const notifications = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      'notifications',
-      [Query.equal('userId', userId), Query.orderDesc('$createdAt')]
-    );
+    const notifications = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'notifications',
+      queries: [Query.equal('userId', userId), Query.orderDesc('$createdAt')],
+    });
     return notifications;
   } catch (error) {
     handleError(error, 'Failed to get notifications');
@@ -65,14 +65,14 @@ export const getNotifications = async (userId: string) => {
 };
 
 export const markNotificationAsRead = async (notificationId: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const notification = await databases.updateDocument(
-      appwriteConfig.databaseId,
-      'notifications',
-      notificationId,
-      { read: true }
-    );
+    const notification = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'notifications',
+      rowId: notificationId,
+      data: { read: true },
+    });
     return notification;
   } catch (error) {
     handleError(error, 'Failed to mark notification as read');
@@ -80,14 +80,14 @@ export const markNotificationAsRead = async (notificationId: string) => {
 };
 
 export const markNotificationAsUnread = async (notificationId: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const notification = await databases.updateDocument(
-      appwriteConfig.databaseId,
-      'notifications',
-      notificationId,
-      { read: false }
-    );
+    const notification = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'notifications',
+      rowId: notificationId,
+      data: { read: false },
+    });
     return notification;
   } catch (error) {
     handleError(error, 'Failed to mark notification as unread');
@@ -95,9 +95,9 @@ export const markNotificationAsUnread = async (notificationId: string) => {
 };
 
 export const deleteNotification = async (notificationId: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    await databases.deleteDocument(
+    await tablesDB.deleteRow(
       appwriteConfig.databaseId,
       'notifications',
       notificationId
@@ -109,13 +109,13 @@ export const deleteNotification = async (notificationId: string) => {
 };
 
 export const getUnreadNotificationsCount = async (userId: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const notifications = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      'notifications',
-      [Query.equal('userId', userId), Query.equal('read', false)]
-    );
+    const notifications = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'notifications',
+      queries: [Query.equal('userId', userId), Query.equal('read', false)],
+    });
     return notifications.total;
   } catch (error) {
     console.error('Failed to fetch unread notifications count:', error);
@@ -137,26 +137,26 @@ const shouldSendNotification = (daysUntil: number): boolean => {
 };
 
 export const checkContractExpirations = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     // Get all contracts with expiry dates
-    const contracts = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      [Query.isNotNull('contractExpiryDate')]
-    );
+    const contracts = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      queries: [Query.isNotNull('contractExpiryDate')],
+    });
 
     // Get all users with allowed roles
     const allowedRoles = ['executive', 'manager', 'admin'];
-    const users = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('role', allowedRoles)]
-    );
+    const users = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.equal('role', allowedRoles)],
+    });
 
     const notificationsCreated: string[] = [];
 
-    for (const contract of contracts.documents) {
+    for (const contract of contracts.rows) {
       if (!contract.contractExpiryDate) continue;
 
       const daysUntil = getDaysUntilExpiry(contract.contractExpiryDate);
@@ -164,7 +164,7 @@ export const checkContractExpirations = async () => {
       if (!shouldSendNotification(daysUntil)) continue;
 
       // Check if notification already exists for this contract and threshold
-      const existingNotifications = await databases.listDocuments(
+      const existingNotifications = await tablesDB.listRows(
         appwriteConfig.databaseId,
         'notifications',
         [
@@ -176,7 +176,7 @@ export const checkContractExpirations = async () => {
 
       if (existingNotifications.total > 0) continue;
 
-      for (const user of users.documents) {
+      for (const user of users.rows) {
         let shouldNotify = false;
 
         // Executive and Admin get notifications for all contracts
@@ -226,24 +226,24 @@ export const assignContractToDepartment = async ({
   contractId: string;
   department: ContractDepartment;
 }) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     // Update the contract document's department
-    const updatedContract = await databases.updateDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      contractId,
-      { department }
-    );
+    const updatedContract = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      rowId: contractId,
+      data: { department },
+    });
 
     // Also update the file document's department field
     if (updatedContract.fileId) {
-      await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.filesCollectionId,
-        updatedContract.fileId,
-        { department }
-      );
+      await tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.filesCollectionId,
+        rowId: updatedContract.fileId,
+        data: { department },
+      });
     }
 
     // Trigger expiration check after department assignment

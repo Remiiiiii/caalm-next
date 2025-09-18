@@ -29,7 +29,7 @@ export const uploadFile = async ({
   path: revalidatePathArg,
   contractMetadata,
 }: UploadFileProps & { contractMetadata?: Record<string, unknown> }) => {
-  const { storage, databases } = await createAdminClient();
+  const { storage, tablesDB } = await createAdminClient();
 
   try {
     // Convert File to ArrayBuffer for InputFile.fromBuffer
@@ -55,8 +55,8 @@ export const uploadFile = async ({
       bucketFileId: bucketFile.$id,
     };
 
-    const newFile = await databases
-      .createDocument(
+    const newFile = await tablesDB
+      .createRow(
         appwriteConfig.databaseId,
         appwriteConfig.filesCollectionId,
         ID.unique(),
@@ -223,7 +223,7 @@ export const uploadFile = async ({
         fileRef: newFile.$id,
       };
 
-      const contract = await databases.createDocument(
+      const contract = await tablesDB.createRow(
         appwriteConfig.databaseId,
         appwriteConfig.contractsCollectionId,
         ID.unique(),
@@ -251,12 +251,12 @@ export const uploadFile = async ({
         updateData: fileUpdateData,
       });
 
-      await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.filesCollectionId,
-        newFile.$id,
-        fileUpdateData
-      );
+      await tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.filesCollectionId,
+        rowId: newFile.$id,
+        data: fileUpdateData,
+      });
 
       console.log(
         '✅ File document updated successfully with contract metadata'
@@ -354,16 +354,19 @@ export const getFiles = async ({
   sort = '$createdAt-desc',
   limit,
 }: GetFilesProps) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
     const currentUser = await getCurrentUser();
 
-    if (!currentUser) throw new Error('User not found');
+    if (!currentUser) {
+      console.error('getCurrentUser returned null/undefined in getFiles');
+      return { documents: [] };
+    }
 
     const queries = createQueries(currentUser, types, searchText, sort, limit);
 
-    const files = await databases.listDocuments(
+    const files = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.filesCollectionId,
       queries
@@ -371,11 +374,7 @@ export const getFiles = async ({
 
     // Defensive: always return a plain object with a documents array
     const plain = parseStringify(files);
-    if (
-      !plain ||
-      typeof plain !== 'object' ||
-      !Array.isArray(plain.documents)
-    ) {
+    if (!plain || typeof plain !== 'object' || !Array.isArray(plain.rows)) {
       return { documents: [] };
     }
     return plain;
@@ -392,16 +391,16 @@ export const renameFile = async ({
   extension,
   path,
 }: RenameFileProps) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
     const newName = `${name}.${extension}`;
-    const updatedFile = await databases.updateDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
-      fileId,
-      { name: newName }
-    );
+    const updatedFile = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.filesCollectionId,
+      rowId: fileId,
+      data: { name: newName },
+    });
 
     revalidatePath(path);
     return parseStringify(updatedFile);
@@ -415,15 +414,15 @@ export const updateFileUsers = async ({
   emails,
   path,
 }: UpdateFileUsersProps) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
-    const updatedFile = await databases.updateDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
-      fileId,
-      { users: emails }
-    );
+    const updatedFile = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.filesCollectionId,
+      rowId: fileId,
+      data: { users: emails },
+    });
 
     revalidatePath(path);
     return parseStringify(updatedFile);
@@ -437,7 +436,7 @@ export const deleteFile = async ({
   bucketFileId,
   path,
 }: DeleteFileProps) => {
-  const { databases, storage } = await createAdminClient();
+  const { tablesDB, storage } = await createAdminClient();
 
   try {
     console.log('Deleting fileId:', fileId);
@@ -445,30 +444,30 @@ export const deleteFile = async ({
     // Start all operations in parallel for better performance
     const operations = [
       // 1. Find and delete contract document (if exists)
-      databases
-        .listDocuments(
-          appwriteConfig.databaseId,
-          appwriteConfig.contractsCollectionId,
-          [Query.equal('fileId', fileId)]
-        )
+      tablesDB
+        .listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.contractsCollectionId,
+          queries: [Query.equal('fileId', fileId)],
+        })
         .then(async (contractDocs) => {
-          if (contractDocs.documents.length > 0) {
-            const contractId = contractDocs.documents[0].$id;
-            return databases.deleteDocument(
-              appwriteConfig.databaseId,
-              appwriteConfig.contractsCollectionId,
-              contractId
-            );
+          if (contractDocs.rows.length > 0) {
+            const contractId = contractDocs.rows[0].$id;
+            return tablesDB.deleteRow({
+              databaseId: appwriteConfig.databaseId,
+              tableId: appwriteConfig.contractsCollectionId,
+              rowId: contractId,
+            });
           }
           return null;
         }),
 
       // 2. Delete the file document
-      databases.deleteDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.filesCollectionId,
-        fileId
-      ),
+      tablesDB.deleteRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.filesCollectionId,
+        rowId: fileId,
+      }),
 
       // 3. Delete the storage file
       storage.deleteFile(appwriteConfig.bucketId, bucketFileId),
@@ -486,15 +485,28 @@ export const deleteFile = async ({
 
 export async function getTotalSpaceUsed() {
   try {
-    const { databases } = await createSessionClient();
+    const { tablesDB } = await createAdminClient();
     const currentUser = await getCurrentUser();
-    if (!currentUser) throw new Error('User is not authenticated.');
+    if (!currentUser) {
+      console.error(
+        'getCurrentUser returned null/undefined in getTotalSpaceUsed'
+      );
+      return parseStringify({
+        image: { size: 0, latestDate: '' },
+        document: { size: 0, latestDate: '' },
+        video: { size: 0, latestDate: '' },
+        audio: { size: 0, latestDate: '' },
+        other: { size: 0, latestDate: '' },
+        used: 0,
+        all: 2 * 1024 * 1024 * 1024,
+      });
+    }
 
-    const files = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
-      [Query.equal('owner', [currentUser.$id])]
-    );
+    const files = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.filesCollectionId,
+      queries: [Query.equal('owner', [currentUser.$id])],
+    });
 
     const totalSpace = {
       image: { size: 0, latestDate: '' },
@@ -506,7 +518,7 @@ export async function getTotalSpaceUsed() {
       all: 2 * 1024 * 1024 * 1024 /* 2GB available bucket storage */,
     };
 
-    files.documents.forEach((file) => {
+    files.rows.forEach((file) => {
       const fileType = file.type as FileType;
       totalSpace[fileType].size += file.size;
       totalSpace.used += file.size;
@@ -538,12 +550,12 @@ export const assignContract = async ({
   path,
   fileDocumentId,
 }: AssignContractProps) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     // Fetch the contract document from the contracts collection
     let contractDoc;
     try {
-      contractDoc = await databases.getDocument(
+      contractDoc = await tablesDB.getRow(
         appwriteConfig.databaseId,
         appwriteConfig.contractsCollectionId,
         fileId
@@ -559,14 +571,14 @@ export const assignContract = async ({
 
       // Try to find the contract by fileId in the contracts collection
       try {
-        const contracts = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          appwriteConfig.contractsCollectionId,
-          [Query.equal('fileId', fileDocumentId)]
-        );
+        const contracts = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.contractsCollectionId,
+          queries: [Query.equal('fileId', fileDocumentId || '')],
+        });
 
-        if (contracts.documents.length > 0) {
-          contractDoc = contracts.documents[0];
+        if (contracts.rows.length > 0) {
+          contractDoc = contracts.rows[0];
           console.log('Found contract by fileId:', contractDoc);
         } else {
           throw new Error('No contract found with matching fileId');
@@ -585,25 +597,25 @@ export const assignContract = async ({
     }
 
     // Update the contract document: assign manager(s)
-    const updatedContract = await databases.updateDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      contractDoc.$id, // Use the actual contract document ID
-      {
+    const updatedContract = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      rowId: contractDoc.$id, // Use the actual contract document ID
+      data: {
         assignedManagers: managerAccountIds,
-      }
-    );
+      },
+    });
 
     // Update the file document: set isContract true (if fileDocumentId is provided)
     if (fileDocumentId) {
-      await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.filesCollectionId,
-        fileDocumentId,
-        {
+      await tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.filesCollectionId,
+        rowId: fileDocumentId,
+        data: {
           isContract: true,
-        }
-      );
+        },
+      });
     }
     revalidatePath(path);
     return parseStringify({
@@ -617,17 +629,18 @@ export const assignContract = async ({
 
 // Fetch allowed contract status enums from the database
 export const getContractStatusEnums = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   const databaseId = appwriteConfig.databaseId;
-  const collectionId = appwriteConfig.contractsCollectionId;
+  const tableId = appwriteConfig.contractsCollectionId;
   const attrKey = 'status';
   try {
     // Type assertion to fix linter error
-    const attr = (await databases.getAttribute(
+    const attr = (await tablesDB.getColumn({
       databaseId,
-      collectionId,
-      attrKey
-    )) as { elements?: string[] };
+      tableId,
+      key: attrKey,
+    })) as { elements?: string[] };
+
     return attr.elements || [];
   } catch (error) {
     handleError(error, 'Failed to fetch contract status enums');
@@ -644,15 +657,15 @@ export const contractStatus = async ({
   status: string;
   path: string;
 }) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     // Update the contract document's status
-    const updated = await databases.updateDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      fileId,
-      { status }
-    );
+    const updated = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      rowId: fileId,
+      data: { status },
+    });
 
     // Create a recent activity for the contract status change
     try {
@@ -693,13 +706,16 @@ export const contractStatus = async ({
 };
 
 export const getContracts = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     const currentUser = await getCurrentUser();
-    if (!currentUser) throw new Error('User not found');
+    if (!currentUser) {
+      console.error('getCurrentUser returned null/undefined in getContracts');
+      return parseStringify({ documents: [], total: 0 });
+    }
     // Fetch contracts where file owner matches current user
     // (Assumes you want contracts for the user's files)
-    const contracts = await databases.listDocuments(
+    const contracts = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId
     );
@@ -711,24 +727,24 @@ export const getContracts = async () => {
 
 // Get contracts assigned to a specific manager
 export const getContractsForManager = async (managerAccountId: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     // Fetch contracts where the manager's accountId is in the assignedManagers array
-    const contracts = await databases.listDocuments(
+    const contracts = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId,
       [Query.search('assignedManagers', managerAccountId)]
     );
-    return parseStringify(contracts.documents);
+    return parseStringify(contracts.rows);
   } catch (error) {
     handleError(error, 'Failed to get contracts for manager');
   }
 };
 
 export const getTotalContractsCount = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const contracts = await databases.listDocuments(
+    const contracts = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId,
       []
@@ -741,12 +757,12 @@ export const getTotalContractsCount = async () => {
 };
 
 export const getExpiringContractsCount = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-    const contracts = await databases.listDocuments(
+    const contracts = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId,
       [
@@ -769,10 +785,10 @@ export const getExpiringContractsCount = async () => {
 
 // Get contracts filtered by user's division
 export const getContractsByUserDivision = async (userDivision: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     // Get all contracts
-    const contracts = await databases.listDocuments(
+    const contracts = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId,
       []
@@ -781,7 +797,7 @@ export const getContractsByUserDivision = async (userDivision: string) => {
     // Filter contracts where assigned managers belong to the user's division
     const filteredContracts = [];
 
-    for (const contract of contracts.documents) {
+    for (const contract of contracts.rows) {
       if (
         contract.assignedManagers &&
         Array.isArray(contract.assignedManagers)
@@ -789,7 +805,7 @@ export const getContractsByUserDivision = async (userDivision: string) => {
         // Check if any assigned manager belongs to the user's division
         for (const managerName of contract.assignedManagers) {
           // Get manager by name to check their division
-          const managers = await databases.listDocuments(
+          const managers = await tablesDB.listRows(
             appwriteConfig.databaseId,
             appwriteConfig.usersCollectionId,
             [
@@ -798,8 +814,8 @@ export const getContractsByUserDivision = async (userDivision: string) => {
             ]
           );
 
-          if (managers.documents.length > 0) {
-            const manager = managers.documents[0];
+          if (managers.rows.length > 0) {
+            const manager = managers.rows[0];
             if (manager.division === userDivision) {
               filteredContracts.push(contract);
               break; // Found a manager from this division, no need to check others

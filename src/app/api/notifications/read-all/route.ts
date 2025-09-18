@@ -14,10 +14,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Get all unread notifications for the user
-    const notifications = await databases.listDocuments(
+    const notifications = await tablesDB.listRows(
       appwriteConfig.databaseId,
       'notifications',
       [
@@ -27,13 +27,13 @@ export async function PUT(request: NextRequest) {
     );
 
     // Mark all as read
-    const updatePromises = notifications.documents.map((notification) =>
-      databases.updateDocument(
-        appwriteConfig.databaseId,
-        'notifications',
-        notification.$id,
-        { read: true, readAt: new Date().toISOString() }
-      )
+    const updatePromises = notifications.rows.map((notification) =>
+      databases.updateDocument({
+        databaseId: appwriteConfig.databaseId,
+        collectionId: 'notifications',
+        documentId: notification.$id,
+        data: { read: true, readAt: new Date().toISOString() },
+      })
     );
 
     await Promise.all(updatePromises);

@@ -152,7 +152,7 @@ export async function generateReport(
     });
 
     console.log('Attempting to create document in Appwrite...');
-    const createdDocument = await adminClient.databases.createDocument(
+    const createdDocument = await adminClient.tablesDB.createRow(
       appwriteConfig.databaseId,
       appwriteConfig.reportsCollectionId,
       reportId,
@@ -215,7 +215,7 @@ async function getMetricsForDepartment() {
     // Fetch contracts count
     const contractsQuery = [Query.limit(1)];
     // Note: Contracts may not have department field, so we'll get all contracts
-    const contractsResponse = await adminClient.databases.listDocuments(
+    const contractsResponse = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId || 'contracts',
       contractsQuery
@@ -225,7 +225,7 @@ async function getMetricsForDepartment() {
     // Fetch users count
     const usersQuery = [Query.limit(1)];
     // Note: Users may not have department field, so we'll get all users
-    const usersResponse = await adminClient.databases.listDocuments(
+    const usersResponse = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId || 'users',
       usersQuery
@@ -234,7 +234,7 @@ async function getMetricsForDepartment() {
     // Fetch events count
     const eventsQuery = [Query.limit(1)];
     // Note: Calendar events may not have department field, so we'll get all events
-    const eventsResponse = await adminClient.databases.listDocuments(
+    const eventsResponse = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId || 'calendar',
       eventsQuery
@@ -243,7 +243,7 @@ async function getMetricsForDepartment() {
     // Fetch files count
     const filesQuery = [Query.limit(1)];
     // Note: Files may not have department field, so we'll get all files
-    const filesResponse = await adminClient.databases.listDocuments(
+    const filesResponse = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.filesCollectionId || 'files',
       filesQuery
@@ -327,7 +327,7 @@ export async function uploadReport(
     };
 
     // Store in files collection
-    await adminClient.databases.createDocument(
+    await adminClient.tablesDB.createRow(
       appwriteConfig.databaseId,
       appwriteConfig.filesCollectionId || 'files',
       ID.unique(),
@@ -556,7 +556,7 @@ export async function deleteReport(reportId: string): Promise<void> {
     // First get the report data to check for PDF file
     let pdfFilePath: string | undefined;
     try {
-      const report = await adminClient.databases.getDocument(
+      const report = await adminClient.tablesDB.getRow(
         appwriteConfig.databaseId,
         appwriteConfig.reportsCollectionId,
         reportId
@@ -567,7 +567,7 @@ export async function deleteReport(reportId: string): Promise<void> {
     }
 
     // Delete the report document from Appwrite
-    await adminClient.databases.deleteDocument(
+    await adminClient.tablesDB.deleteRow(
       appwriteConfig.databaseId,
       appwriteConfig.reportsCollectionId,
       reportId

@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ suggestions: [] });
     }
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Get all contracts and filter client-side to avoid fulltext index requirement
-    const allContracts = await databases.listDocuments(
+    const allContracts = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId,
       [
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Combine and deduplicate suggestions
     const suggestions = new Set<string>();
 
-    allContracts.documents.forEach((doc) => {
+    allContracts.rows.forEach((doc) => {
       if (
         doc.contractName &&
         doc.contractName.toLowerCase().includes(query.toLowerCase())

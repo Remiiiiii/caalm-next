@@ -14,10 +14,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Find user by email
-    const users = await databases.listDocuments(
+    const users = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
       [Query.equal('email', email)]
@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const user = users.documents[0];
+    const user = users.rows[0];
 
     // Update user role
-    await databases.updateDocument(
+    await tablesDB.updateRow(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
       user.$id,

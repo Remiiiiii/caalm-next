@@ -17,24 +17,24 @@ export async function POST(request: NextRequest) {
     const client = await createAdminClient();
 
     // Find the OTP token
-    const otpResponse = await client.databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.otpTokensCollectionId,
-      [
+    const otpResponse = await client.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.otpTokensCollectionId,
+      queries: [
         Query.equal('email', email),
         Query.equal('otp', otp),
         Query.equal('used', false),
-      ]
-    );
+      ],
+    });
 
-    if (otpResponse.documents.length === 0) {
+    if (otpResponse.rows.length === 0) {
       return NextResponse.json(
         { error: 'Invalid or expired OTP' },
         { status: 400 }
       );
     }
 
-    const otpToken = otpResponse.documents[0];
+    const otpToken = otpResponse.rows[0];
 
     // Check if OTP is expired
     const expirationTime = new Date(otpToken.expiresAt);
@@ -45,14 +45,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark OTP as used
-    await client.databases.updateDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.otpTokensCollectionId,
-      otpToken.$id,
-      {
+    await client.tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.otpTokensCollectionId,
+      rowId: otpToken.$id,
+      data: {
         used: true,
-      }
-    );
+      },
+    });
 
     return NextResponse.json({
       success: true,

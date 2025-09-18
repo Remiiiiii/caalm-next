@@ -13,6 +13,7 @@ import {
   UpsertNotificationSettingsRequest,
 } from '@/types/notifications';
 import { Query } from 'appwrite';
+import { tablesDB } from '../appwrite/client';
 
 // Lazy import to avoid initialization errors when messaging service is not configured
 let appwriteMessagingService: any = null;
@@ -35,13 +36,13 @@ class NotificationService {
   // Notification Types Management
   async getNotificationTypes(): Promise<NotificationType[]> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationTypesCollectionId,
-        [Query.equal('enabled', true), Query.orderDesc('$createdAt')]
-      );
-      return response.documents as unknown as NotificationType[];
+      const { tablesDB } = await this.getClient();
+      const response = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.notificationTypesCollectionId,
+        queries: [Query.equal('enabled', true), Query.orderDesc('$createdAt')],
+      });
+      return response.rows as unknown as NotificationType[];
     } catch (error) {
       console.error('Failed to fetch notification types:', error);
       throw new Error('Failed to fetch notification types');
@@ -50,13 +51,16 @@ class NotificationService {
 
   async getNotificationType(typeKey: string): Promise<NotificationType | null> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationTypesCollectionId,
-        [Query.equal('type_key', typeKey), Query.equal('enabled', true)]
-      );
-      return (response.documents[0] as unknown as NotificationType) || null;
+      const { tablesDB } = await this.getClient();
+      const response = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.notificationTypesCollectionId,
+        queries: [
+          Query.equal('type_key', typeKey),
+          Query.equal('enabled', true),
+        ],
+      });
+      return (response.rows[0] as unknown as NotificationType) || null;
     } catch (error) {
       console.error('Failed to fetch notification type:', error);
       throw new Error('Failed to fetch notification type');
@@ -67,8 +71,7 @@ class NotificationService {
     type: Omit<NotificationType, '$id' | '$createdAt' | '$updatedAt'>
   ): Promise<NotificationType> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.createDocument(
+      const response = await tablesDB.createRow(
         appwriteConfig.databaseId,
         appwriteConfig.notificationTypesCollectionId,
         'unique()',
@@ -88,13 +91,12 @@ class NotificationService {
     >
   ): Promise<NotificationType> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationTypesCollectionId,
-        id,
-        updates
-      );
+      const response = await tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        collectionId: appwriteConfig.notificationTypesCollectionId,
+        documentId: id,
+        data: updates,
+      });
       return response as unknown as NotificationType;
     } catch (error) {
       console.error('Failed to update notification type:', error);
@@ -104,8 +106,7 @@ class NotificationService {
 
   async deleteNotificationType(id: string): Promise<void> {
     try {
-      const { databases } = await this.getClient();
-      await databases.deleteDocument(
+      await tablesDB.deleteRow(
         appwriteConfig.databaseId,
         appwriteConfig.notificationTypesCollectionId,
         id
@@ -125,7 +126,6 @@ class NotificationService {
     limit: number = 20
   ): Promise<NotificationsResponse> {
     try {
-      const { databases } = await this.getClient();
       const queries = [Query.equal('userId', userId)];
 
       // Apply filters
@@ -193,7 +193,7 @@ class NotificationService {
       queries.push(Query.limit(limit));
       queries.push(Query.offset(offset));
 
-      const response = await databases.listDocuments(
+      const response = await tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.notificationsCollectionId,
         queries
@@ -213,8 +213,7 @@ class NotificationService {
 
   async getNotification(id: string): Promise<Notification> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.getDocument(
+      const response = await tablesDB.getRow(
         appwriteConfig.databaseId,
         appwriteConfig.notificationsCollectionId,
         id
@@ -230,8 +229,6 @@ class NotificationService {
     notification: CreateNotificationRequest
   ): Promise<Notification> {
     try {
-      const { databases } = await this.getClient();
-
       // Validate notification type exists and is enabled
       const notificationType = await this.getNotificationType(
         notification.type
@@ -256,7 +253,7 @@ class NotificationService {
           : undefined,
       };
 
-      const response = await databases.createDocument(
+      const response = await tablesDB.createRow(
         appwriteConfig.databaseId,
         appwriteConfig.notificationsCollectionId,
         'unique()',
@@ -278,13 +275,12 @@ class NotificationService {
     updates: UpdateNotificationRequest
   ): Promise<Notification> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        id,
-        updates
-      );
+      const response = await tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        collectionId: appwriteConfig.notificationsCollectionId,
+        documentId: id,
+        data: updates,
+      });
       return response as unknown as Notification;
     } catch (error) {
       console.error('Failed to update notification:', error);
@@ -294,13 +290,12 @@ class NotificationService {
 
   async markAsRead(id: string): Promise<Notification> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        id,
-        { read: true }
-      );
+      const response = await tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        collectionId: appwriteConfig.notificationsCollectionId,
+        documentId: id,
+        data: { read: true },
+      });
       return response as unknown as Notification;
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
@@ -310,13 +305,12 @@ class NotificationService {
 
   async markAsUnread(id: string): Promise<Notification> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        id,
-        { read: false }
-      );
+      const response = await tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        collectionId: appwriteConfig.notificationsCollectionId,
+        documentId: id,
+        data: { read: false },
+      });
       return response as unknown as Notification;
     } catch (error) {
       console.error('Failed to mark notification as unread:', error);
@@ -326,23 +320,22 @@ class NotificationService {
 
   async markAllAsRead(userId: string): Promise<void> {
     try {
-      const { databases } = await this.getClient();
-
       // Get all unread notifications for the user
-      const unreadNotifications = await databases.listDocuments(
+      const unreadNotifications = await tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.notificationsCollectionId,
         [Query.equal('userId', userId), Query.equal('read', false)]
       );
 
       // Update each notification
-      const updatePromises = unreadNotifications.documents.map((notification) =>
-        databases.updateDocument(
-          appwriteConfig.databaseId,
-          appwriteConfig.notificationsCollectionId,
-          notification.$id,
-          { read: true }
-        )
+      const updatePromises = unreadNotifications.documents.map(
+        (notification: any) =>
+          tablesDB.updateRow({
+            databaseId: appwriteConfig.databaseId,
+            collectionId: appwriteConfig.notificationsCollectionId,
+            documentId: notification.$id,
+            data: { read: true },
+          })
       );
 
       await Promise.all(updatePromises);
@@ -354,8 +347,7 @@ class NotificationService {
 
   async deleteNotification(id: string): Promise<void> {
     try {
-      const { databases } = await this.getClient();
-      await databases.deleteDocument(
+      await tablesDB.deleteRow(
         appwriteConfig.databaseId,
         appwriteConfig.notificationsCollectionId,
         id
@@ -368,10 +360,8 @@ class NotificationService {
 
   async deleteMultipleNotifications(ids: string[]): Promise<void> {
     try {
-      const { databases } = await this.getClient();
-
       const deletePromises = ids.map((id) =>
-        databases.deleteDocument(
+        tablesDB.deleteRow(
           appwriteConfig.databaseId,
           appwriteConfig.notificationsCollectionId,
           id
@@ -388,17 +378,14 @@ class NotificationService {
   // Statistics
   async getNotificationStats(userId: string): Promise<NotificationStats> {
     try {
-      const { databases } = await this.getClient();
-
       // Get all notifications for the user
-      const allNotifications = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        [Query.equal('userId', userId)]
-      );
+      const allNotifications = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.notificationsCollectionId,
+        queries: [Query.equal('userId', userId)],
+      });
 
-      const notifications =
-        allNotifications.documents as unknown as Notification[];
+      const notifications = allNotifications.rows as unknown as Notification[];
 
       // Calculate stats
       const total = notifications.length;
@@ -478,8 +465,7 @@ class NotificationService {
   // Utility Methods
   async getUnreadCount(userId: string): Promise<number> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.listDocuments(
+      const response = await tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.notificationsCollectionId,
         [Query.equal('userId', userId), Query.equal('read', false)]
@@ -496,8 +482,7 @@ class NotificationService {
     limit: number = 5
   ): Promise<Notification[]> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.listDocuments(
+      const response = await tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.notificationsCollectionId,
         [
@@ -518,15 +503,12 @@ class NotificationService {
     userId: string
   ): Promise<NotificationSettingsDoc | null> {
     try {
-      const { databases } = await this.getClient();
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationSettingsCollectionId,
-        [Query.equal('user_id', userId), Query.limit(1)]
-      );
-      return (
-        (response.documents[0] as unknown as NotificationSettingsDoc) || null
-      );
+      const response = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.notificationSettingsCollectionId,
+        queries: [Query.equal('user_id', userId), Query.limit(1)],
+      });
+      return (response.rows[0] as unknown as NotificationSettingsDoc) || null;
     } catch (error) {
       console.error('Failed to get notification settings:', error);
       throw new Error('Failed to get notification settings');
@@ -537,7 +519,6 @@ class NotificationService {
     payload: UpsertNotificationSettingsRequest
   ): Promise<NotificationSettingsDoc> {
     try {
-      const { databases } = await this.getClient();
       const existing = await this.getNotificationSettings(payload.userId);
 
       const doc = {
@@ -551,13 +532,13 @@ class NotificationService {
       };
 
       const response = existing
-        ? await databases.updateDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.notificationSettingsCollectionId,
-            existing.$id,
-            doc
-          )
-        : await databases.createDocument(
+        ? await tablesDB.updateRow({
+            databaseId: appwriteConfig.databaseId,
+            collectionId: appwriteConfig.notificationSettingsCollectionId,
+            documentId: existing.$id,
+            data: doc,
+          })
+        : await tablesDB.createRow(
             appwriteConfig.databaseId,
             appwriteConfig.notificationSettingsCollectionId,
             'unique()',

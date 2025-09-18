@@ -72,7 +72,7 @@ export const performQuickSearch = async ({
   limit?: number;
   offset?: number;
 }): Promise<SearchResponse> => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
     let queries = [];
@@ -92,13 +92,13 @@ export const performQuickSearch = async ({
         // For admin/executive, no department filter - show all contracts
         queries.push(Query.limit(200));
 
-        const contractsResult = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          appwriteConfig.contractsCollectionId,
-          queries
-        );
+        const contractsResult = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.contractsCollectionId,
+          queries: queries,
+        });
 
-        results = contractsResult.documents.map((doc) => ({
+        results = contractsResult.rows.map((doc) => ({
           id: doc.$id,
           type: 'contract' as const,
           name: doc.contractName || doc.name || 'Untitled Contract',
@@ -118,7 +118,7 @@ export const performQuickSearch = async ({
 
       case 'departments':
         // List all departments that have contracts
-        const allContractsResult = await databases.listDocuments(
+        const allContractsResult = await tablesDB.listRows(
           appwriteConfig.databaseId,
           appwriteConfig.contractsCollectionId,
           [Query.limit(200)]
@@ -126,7 +126,7 @@ export const performQuickSearch = async ({
 
         // Group by department and create department entries
         const departmentMap = new Map();
-        allContractsResult.documents.forEach((doc) => {
+        allContractsResult.rows.forEach((doc) => {
           if (doc.department) {
             if (!departmentMap.has(doc.department)) {
               departmentMap.set(doc.department, {
@@ -148,7 +148,7 @@ export const performQuickSearch = async ({
 
       case 'vendors':
         // List all vendors
-        const vendorContractsResult = await databases.listDocuments(
+        const vendorContractsResult = await tablesDB.listRows(
           appwriteConfig.databaseId,
           appwriteConfig.contractsCollectionId,
           [Query.limit(200)]
@@ -156,7 +156,7 @@ export const performQuickSearch = async ({
 
         // Group by vendor and create vendor entries
         const vendorMap = new Map();
-        vendorContractsResult.documents.forEach((doc) => {
+        vendorContractsResult.rows.forEach((doc) => {
           if (doc.vendor) {
             if (!vendorMap.has(doc.vendor)) {
               vendorMap.set(doc.vendor, {
@@ -182,13 +182,13 @@ export const performQuickSearch = async ({
         queries.push(Query.equal('status', 'active'));
         queries.push(Query.limit(200));
 
-        const activeContractsResult = await databases.listDocuments(
+        const activeContractsResult = await tablesDB.listRows(
           appwriteConfig.databaseId,
           appwriteConfig.contractsCollectionId,
           queries
         );
 
-        results = activeContractsResult.documents.map((doc) => ({
+        results = activeContractsResult.rows.map((doc) => ({
           id: doc.$id,
           type: 'contract' as const,
           name: doc.contractName || doc.name || 'Untitled Contract',
@@ -253,7 +253,7 @@ export const performAdvancedSearch = async ({
     offset,
   });
 
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
     // Build search queries
@@ -335,14 +335,14 @@ export const performAdvancedSearch = async ({
     searchQueries.push(Query.limit(200)); // Get more documents for client-side filtering
 
     // Search in contracts collection
-    const contractsResult = await databases.listDocuments(
+    const contractsResult = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.contractsCollectionId,
       searchQueries
     );
 
     // Search in files collection
-    const filesResult = await databases.listDocuments(
+    const filesResult = await tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.filesCollectionId,
       searchQueries
@@ -350,7 +350,7 @@ export const performAdvancedSearch = async ({
 
     // Combine and format results with client-side text filtering
     let results: SearchResult[] = [
-      ...contractsResult.documents.map((doc) => ({
+      ...contractsResult.rows.map((doc) => ({
         id: doc.$id,
         type: 'contract' as const,
         name: doc.contractName || doc.name || 'Untitled Contract',
@@ -366,7 +366,7 @@ export const performAdvancedSearch = async ({
         $updatedAt: doc.$updatedAt,
         searchScore: calculateSearchScore(doc, query),
       })),
-      ...filesResult.documents.map((doc) => ({
+      ...filesResult.rows.map((doc) => ({
         id: doc.$id,
         type: 'file' as const,
         name: doc.name || 'Untitled File',
@@ -435,20 +435,25 @@ export const performAdvancedSearch = async ({
 
     // Save search to history
     try {
-      await databases.createDocument(
-        appwriteConfig.databaseId,
-        'search_history',
-        ID.unique(),
-        {
+      await tablesDB.createRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: 'search_history',
+        rowId: ID.unique(),
+        data: {
           userId,
           query,
           filters,
           resultCount: totalResults,
           timestamp: new Date().toISOString(),
-        }
-      );
-    } catch (error) {
-      console.error('Failed to save search history:', error);
+        },
+      });
+    } catch (error: any) {
+      // Handle missing table gracefully
+      if (error?.type === 'table_not_found') {
+        console.warn('Search history table not found - skipping history save');
+      } else {
+        console.error('Failed to save search history:', error);
+      }
       // Don't fail the search if history saving fails
     }
 
@@ -480,7 +485,7 @@ export const performAdvancedSearch = async ({
 export const getSearchSuggestions = async (
   query: string
 ): Promise<string[]> => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
     if (!query || query.length < 2) {
@@ -491,13 +496,13 @@ export const getSearchSuggestions = async (
 
     // Get contract name suggestions using contains instead of search
     try {
-      const contractsResult = await databases.listDocuments(
+      const contractsResult = await tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.contractsCollectionId,
         [Query.limit(50)] // Get more documents to filter client-side
       );
 
-      contractsResult.documents.forEach((contract) => {
+      contractsResult.rows.forEach((contract) => {
         if (
           contract.contractName &&
           contract.contractName.toLowerCase().includes(query.toLowerCase())
@@ -523,13 +528,13 @@ export const getSearchSuggestions = async (
 
     // Get file name suggestions using contains instead of search
     try {
-      const filesResult = await databases.listDocuments(
+      const filesResult = await tablesDB.listRows(
         appwriteConfig.databaseId,
         appwriteConfig.filesCollectionId,
         [Query.limit(50)] // Get more documents to filter client-side
       );
 
-      filesResult.documents.forEach((file) => {
+      filesResult.rows.forEach((file) => {
         if (
           file.name &&
           file.name.toLowerCase().includes(query.toLowerCase())
@@ -566,22 +571,22 @@ export const getRecentSearches = async (
   userId: string,
   limit: number = 10
 ): Promise<{ query: string; timestamp: string; resultCount: number }[]> => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
-    const recentSearches = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      'search_history',
-      [
+    const recentSearches = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'search_history',
+      queries: [
         Query.equal('userId', userId),
         Query.orderDesc('timestamp'),
         Query.limit(limit),
-      ]
-    );
+      ],
+    });
 
     // Extract unique queries from recent searches
     const uniqueQueries = new Map();
-    recentSearches.documents.forEach((search) => {
+    recentSearches.rows.forEach((search) => {
       if (!uniqueQueries.has(search.query)) {
         uniqueQueries.set(search.query, {
           query: search.query,
@@ -592,7 +597,12 @@ export const getRecentSearches = async (
     });
 
     return Array.from(uniqueQueries.values());
-  } catch (error) {
+  } catch (error: any) {
+    // Handle missing table gracefully
+    if (error?.type === 'table_not_found') {
+      console.warn('Search history table not found - returning empty results');
+      return [];
+    }
     handleError(error, 'Failed to fetch recent searches');
     return [];
   }
@@ -615,33 +625,33 @@ export const saveSearch = async ({
   filters: AdvancedSearchFilters;
   createdAt: string;
 }> => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
     // Check if a saved search with the same name already exists
-    const existingSearches = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      'saved_searches',
-      [Query.equal('userId', userId), Query.equal('name', name)]
-    );
+    const existingSearches = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'saved_searches',
+      queries: [Query.equal('userId', userId), Query.equal('name', name)],
+    });
 
-    if (existingSearches.documents.length > 0) {
+    if (existingSearches.rows.length > 0) {
       throw new Error('A saved search with this name already exists');
     }
 
     // Create new saved search
-    const savedSearch = await databases.createDocument(
-      appwriteConfig.databaseId,
-      'saved_searches',
-      ID.unique(),
-      {
+    const savedSearch = await tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'saved_searches',
+      rowId: ID.unique(),
+      data: {
         userId,
         name,
         query,
         filters: filters || {},
         createdAt: new Date().toISOString(),
-      }
-    );
+      },
+    });
 
     return savedSearch as unknown as {
       $id: string;
@@ -650,7 +660,13 @@ export const saveSearch = async ({
       filters: AdvancedSearchFilters;
       createdAt: string;
     };
-  } catch (error) {
+  } catch (error: any) {
+    // Handle missing table gracefully
+    if (error?.type === 'table_not_found') {
+      throw new Error(
+        'Saved searches feature is not available - table not found'
+      );
+    }
     handleError(error, 'Failed to save search');
     throw error;
   }
@@ -667,23 +683,28 @@ export const getSavedSearches = async (
     createdAt: string;
   }[]
 > => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
-    const savedSearches = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      'saved_searches',
-      [Query.equal('userId', userId), Query.orderDesc('$createdAt')]
-    );
+    const savedSearches = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'saved_searches',
+      queries: [Query.equal('userId', userId), Query.orderDesc('$createdAt')],
+    });
 
-    return savedSearches.documents as unknown as {
+    return savedSearches.rows as unknown as {
       $id: string;
       name: string;
       query: string;
       filters: AdvancedSearchFilters;
       createdAt: string;
     }[];
-  } catch (error) {
+  } catch (error: any) {
+    // Handle missing table gracefully
+    if (error?.type === 'table_not_found') {
+      console.warn('Saved searches table not found - returning empty results');
+      return [];
+    }
     handleError(error, 'Failed to fetch saved searches');
     return [];
   }
@@ -693,27 +714,33 @@ export const deleteSavedSearch = async (
   searchId: string,
   userId: string
 ): Promise<void> => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
 
   try {
     // Verify the search belongs to the user
-    const search = await databases.getDocument(
-      appwriteConfig.databaseId,
-      'saved_searches',
-      searchId
-    );
+    const search = await tablesDB.getRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'saved_searches',
+      rowId: searchId,
+    });
 
     if (search.userId !== userId) {
       throw new Error('Unauthorized');
     }
 
     // Delete the saved search
-    await databases.deleteDocument(
-      appwriteConfig.databaseId,
-      'saved_searches',
-      searchId
-    );
-  } catch (error) {
+    await tablesDB.deleteRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'saved_searches',
+      rowId: searchId,
+    });
+  } catch (error: any) {
+    // Handle missing table gracefully
+    if (error?.type === 'table_not_found') {
+      throw new Error(
+        'Saved searches feature is not available - table not found'
+      );
+    }
     handleError(error, 'Failed to delete saved search');
     throw error;
   }

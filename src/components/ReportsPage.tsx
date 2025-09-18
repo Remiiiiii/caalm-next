@@ -19,6 +19,7 @@ import ReportGenerator from './ReportGenerator';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { Models } from 'appwrite';
 import { ContractCardSkeleton } from '@/components/ui/skeletons';
+import Image from 'next/image';
 
 type ExtendedUser = Models.User<Models.Preferences> & {
   role?: string;
@@ -379,21 +380,15 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
               className="file-card hover:shadow-drop-3 transition-all duration-200 border border-light-300 bg-white/90 backdrop-blur"
             >
               <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
+                <div className="flex justify-between items-center">
                   <div className="flex items-start gap-3 flex-1">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-                      <FileText className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="h4 text-light-100 line-clamp-2 mb-1">
-                        {reportData.title?.replace(
-                          / - \d{1,2}\/\d{1,2}\/\d{4}$/,
-                          ''
-                        ) || 'Untitled Report'}
-                      </CardTitle>
-                      <p className="body-2 text-light-200 capitalize">
-                        {reportData.division || 'all'}
-                      </p>
+                      <Image
+                        src="/assets/icons/all-departments.svg"
+                        alt="Report"
+                        width={32}
+                        height={32}
+                      />
                     </div>
                   </div>
                   <Badge
@@ -405,6 +400,17 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
                 </div>
               </CardHeader>
               <CardContent className="pt-0 space-y-4">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="h4 text-light-100 line-clamp-2 mb-1">
+                    {reportData.title?.replace(
+                      / - \d{1,2}\/\d{1,2}\/\d{4}$/,
+                      ''
+                    ) || 'Untitled Report'}
+                  </CardTitle>
+                  <p className="body-2 text-light-200 capitalize">
+                    Division: {reportData.division || 'all'}
+                  </p>
+                </div>
                 <div className="bg-light-400/30 rounded-lg p-3 border border-light-300">
                   <div className="flex items-center gap-2 body-2 text-light-100 mb-2">
                     <svg
@@ -453,13 +459,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
                     <span className="font-medium">Author:</span>
                   </div>
                   <p className="caption text-light-200 ml-6">
-                    {reportData.userName || 'Unknown User'}
+                    {user?.name || 'Unknown User'}
                   </p>
                 </div>
 
                 {/* Professional Action Buttons */}
                 <div className="space-y-2 pt-2">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1">
                     <Button
                       variant="outline"
                       size="sm"

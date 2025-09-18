@@ -17,18 +17,18 @@ export async function PUT(
       );
     }
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Mark notification as read
-    await databases.updateDocument(
-      appwriteConfig.databaseId,
-      'notifications',
-      notificationId,
-      {
+    await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      collectionId: 'notifications',
+      documentId: notificationId,
+      data: {
         isRead: true,
         readAt: new Date().toISOString(),
-      }
-    );
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

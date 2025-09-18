@@ -73,17 +73,6 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
       ],
     },
     {
-      header: 'Search',
-      items: [
-        {
-          name: 'Advanced Search',
-          icon: '/assets/icons/search.svg',
-          url: '/search',
-          roles: ['executive', 'admin', 'manager'],
-        },
-      ],
-    },
-    {
       header: 'Contracts',
       items: [
         // Only Executive and Admin can see All Contracts
@@ -100,21 +89,10 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
         // All roles can see My Contracts
         {
           name: 'My Contracts',
-          icon: '/assets/icons/documents.svg',
+          icon: '/assets/icons/my-contracts.svg',
           url: '/my-contracts',
           roles: ['executive', 'manager', 'admin'],
         },
-        // Only Executive and Admin can see My Department Contracts
-        ...(role === 'executive' || role === 'admin'
-          ? [
-              {
-                name: 'My Department Contracts',
-                icon: '/assets/icons/documents.svg',
-                url: '/contracts/department',
-                roles: ['executive', 'admin'],
-              },
-            ]
-          : []),
         // Only Executive and Admin can see Proposals & Approvals
         ...(role === 'executive' || role === 'admin'
           ? [
@@ -304,7 +282,7 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
 
         {/* Hard Refresh Button */}
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => (window.location.href = window.location.href)}
           className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-200 shadow-md hover:shadow-lg"
           title="Hard Refresh (Ctrl+F5)"
           type="button"
@@ -511,21 +489,21 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                                 />
                               </span>
                             )}
+                            {name === 'My Contracts' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/my-contracts.svg"
+                                  alt="all-contracts"
+                                  width={20}
+                                  height={18}
+                                />
+                              </span>
+                            )}
                             {name === 'Advanced Resources' && (
                               <span className="gap-1">
                                 <Image
                                   src="/assets/icons/resources.svg"
                                   alt="resources"
-                                  width={20}
-                                  height={20}
-                                />
-                              </span>
-                            )}
-                            {name === 'My Department Contracts' && (
-                              <span className="gap-1">
-                                <Image
-                                  src="/assets/icons/department.svg"
-                                  alt="department"
                                   width={20}
                                   height={20}
                                 />

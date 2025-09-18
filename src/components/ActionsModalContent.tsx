@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/popover';
 import { Button as ShadButton } from '@/components/ui/button';
 
-import { databases } from '@/lib/appwrite/client';
+import { tablesDB } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
 
 import type { UIFileDoc } from '@/types/files';
@@ -141,12 +141,12 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
     if (selectedDate <= now) return;
     try {
       // Update both file document and contract document
-      await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.filesCollectionId,
-        file.$id,
-        { contractExpiryDate: selectedDate.toISOString() }
-      );
+      await tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.filesCollectionId,
+        rowId: file.$id,
+        data: { contractExpiryDate: selectedDate.toISOString() },
+      });
 
       // Also update the contract document if linked
       if (
@@ -155,12 +155,12 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
         file.contractId.length <= 36
       ) {
         try {
-          await databases.updateDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.contractsCollectionId,
-            file.contractId,
-            { contractExpiryDate: selectedDate.toISOString() }
-          );
+          await tablesDB.updateRow({
+            databaseId: appwriteConfig.databaseId,
+            tableId: appwriteConfig.contractsCollectionId,
+            rowId: file.contractId,
+            data: { contractExpiryDate: selectedDate.toISOString() },
+          });
           console.log('✅ Contract document updated successfully');
         } catch (contractError) {
           console.error(

@@ -10,11 +10,11 @@ export async function GET(
     const { userId } = await params;
     const client = await createAdminClient();
 
-    const res = await client.databases.listDocuments(
-      '685ed87c0009d8189fc7',
-      'notifications',
-      [Query.equal('userId', userId)]
-    );
+    const res = await client.tablesDB.listRows({
+      databaseId: '685ed87c0009d8189fc7',
+      tableId: 'notifications',
+      queries: [Query.equal('userId', userId)],
+    });
 
     return NextResponse.json(res);
   } catch (error) {

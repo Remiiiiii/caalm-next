@@ -255,15 +255,15 @@ export async function POST(request: NextRequest) {
     // Try to update the report document with HTML file path if it exists
     try {
       const adminClient = await createAdminClient();
-      await adminClient.databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.reportsCollectionId,
-        reportId,
-        {
+      await adminClient.tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        collectionId: appwriteConfig.reportsCollectionId,
+        documentId: reportId,
+        data: {
           pdfFilePath: `/reports/${htmlFileName}`,
           pdfGenerated: true,
-        }
-      );
+        },
+      });
     } catch (updateError) {
       console.log(
         'Report document not found, will be updated when report is created:',

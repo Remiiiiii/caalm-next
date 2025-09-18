@@ -31,18 +31,18 @@ export async function GET() {
     }
 
     // Try to list documents to verify access
-    const documents = await client.databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.otpTokensCollectionId,
-      []
-    );
+    const documents = await client.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.otpTokensCollectionId,
+      queries: [],
+    });
 
     return NextResponse.json({
       success: true,
       collection: {
         id: otpCollection.$id,
         name: otpCollection.name,
-        documentCount: documents.documents.length,
+        documentCount: documents.rows.length,
       },
       message: 'OTP tokens collection is accessible',
     });

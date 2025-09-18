@@ -29,20 +29,20 @@ export async function GET() {
 
     // Check if user has 2FA enabled in the database
     const adminClient = await createAdminClient();
-    const userResponse = await adminClient.databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('accountId', user.$id)]
-    );
+    const userResponse = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.equal('accountId', user.$id)],
+    });
 
-    if (userResponse.documents.length === 0) {
+    if (userResponse.rows.length === 0) {
       return NextResponse.json(
         { has2FA: false, needsSetup: true },
         { status: 200 }
       );
     }
 
-    const userData = userResponse.documents[0];
+    const userData = userResponse.rows[0];
     const has2FA = !!(userData.twoFactorEnabled && userData.twoFactorSecret);
 
     const response = NextResponse.json({

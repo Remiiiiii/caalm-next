@@ -180,8 +180,8 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       node-appwrite:
-        specifier: ^19.0.0
-        version: 19.0.0
+        specifier: 19.1.0-rc.1
+        version: 19.1.0-rc.1
       node-fetch:
         specifier: ^3.3.2
         version: 3.3.2
@@ -3526,8 +3526,8 @@ packages:
       sass:
         optional: true
 
-  node-appwrite@19.0.0:
-    resolution: {integrity: sha512-Uk55z9OBRiI04GTo+WA5UsHzohtTmWUgzut5Q5lK4n5gWDC1H5HhSJdGJ0qk5RpW1OVvzU6RU9LNnZ4UWpiY+Q==}
+  node-appwrite@19.1.0-rc.1:
+    resolution: {integrity: sha512-zYHetzE1v+PkC7wiWJXU85Uz+Haca/rW6Mi7wCDO6b2XO30U/quP627MOG9MCS7SfPICLaHPsy1LtloJWt9v9w==}
 
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
@@ -8323,7 +8323,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  node-appwrite@19.0.0:
+  node-appwrite@19.1.0-rc.1:
     dependencies:
       node-fetch-native-with-agent: 1.7.2
 

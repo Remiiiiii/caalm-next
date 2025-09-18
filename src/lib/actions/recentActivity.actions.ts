@@ -47,13 +47,13 @@ export async function getRecentActivities(
     }
 
     const adminClient = await createAdminClient();
-    const response = await adminClient.databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.recentActivityCollectionId,
-      [Query.orderDesc('$createdAt'), Query.limit(limit)]
-    );
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.recentActivityCollectionId,
+      queries: [Query.orderDesc('$createdAt'), Query.limit(limit)],
+    });
 
-    return response.documents as unknown as RecentActivity[];
+    return response.rows as unknown as RecentActivity[];
   } catch (error) {
     console.error('Error fetching recent activities:', error);
     return [];
@@ -78,12 +78,12 @@ export async function createRecentActivity(
     };
 
     const adminClient = await createAdminClient();
-    const response = await adminClient.databases.createDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.recentActivityCollectionId,
-      ID.unique(),
-      activityData
-    );
+    const response = await adminClient.tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.recentActivityCollectionId,
+      rowId: ID.unique(),
+      data: activityData,
+    });
 
     return response as unknown as RecentActivity;
   } catch (error) {
@@ -204,16 +204,16 @@ export async function cleanupOldActivities(): Promise<void> {
 
     // Get all activities ordered by creation date
     const adminClient = await createAdminClient();
-    const response = await adminClient.databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.recentActivityCollectionId,
-      [
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.recentActivityCollectionId,
+      queries: [
         Query.orderDesc('$createdAt'),
         Query.limit(1000), // Get a large number to find old ones
-      ]
-    );
+      ],
+    });
 
-    const activities = response.documents as unknown as RecentActivity[];
+    const activities = response.rows as unknown as RecentActivity[];
 
     // Keep only the first 100 (most recent)
     if (activities.length > 100) {
@@ -223,11 +223,11 @@ export async function cleanupOldActivities(): Promise<void> {
       for (const activity of activitiesToDelete) {
         try {
           const adminClient = await createAdminClient();
-          await adminClient.databases.deleteDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.recentActivityCollectionId,
-            activity.$id
-          );
+          await adminClient.tablesDB.deleteRow({
+            databaseId: appwriteConfig.databaseId,
+            tableId: appwriteConfig.recentActivityCollectionId,
+            rowId: activity.$id,
+          });
         } catch (error) {
           console.error(`Error deleting activity ${activity.$id}:`, error);
         }

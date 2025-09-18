@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Bell, Mail, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NotificationCenter from '@/components/NotificationCenter';
-import { Client, Databases, Query } from 'appwrite';
+import { Client, TablesDB, Query } from 'appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Models } from 'appwrite';
 import { signOutUser } from '@/lib/actions/user.actions';
@@ -28,12 +28,15 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
         client
           .setEndpoint(appwriteConfig.endpointUrl)
           .setProject(appwriteConfig.projectId);
-        const databases = new Databases(client);
-        const res = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          'notifications',
-          [Query.equal('userId', user.$id), Query.equal('read', false)]
-        );
+        const tablesDB = new TablesDB(client);
+        const res = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: 'notifications',
+          queries: [
+            Query.equal('userId', user.$id),
+            Query.equal('read', false),
+          ],
+        });
         setUnreadCount(res.total);
       } catch {}
     }

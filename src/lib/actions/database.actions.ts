@@ -10,13 +10,13 @@ const handleError = (error: unknown, message: string) => {
 };
 
 export const getContractDepartmentEnums = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const attr = (await databases.getAttribute(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      'department'
-    )) as { elements?: string[] };
+    const attr = (await tablesDB.getColumn({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      key: 'department',
+    })) as { elements?: string[] };
     return attr.elements || [];
   } catch (error) {
     handleError(error, 'Failed to fetch contract department enums');
@@ -24,13 +24,13 @@ export const getContractDepartmentEnums = async () => {
 };
 
 export const getUserDivisionEnums = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const attr = (await databases.getAttribute(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      'division'
-    )) as { elements?: string[] };
+    const attr = (await tablesDB.getColumn({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      key: 'division',
+    })) as { elements?: string[] };
     return attr.elements || [];
   } catch (error) {
     handleError(error, 'Failed to fetch user division enums');
@@ -38,21 +38,24 @@ export const getUserDivisionEnums = async () => {
 };
 
 export const getUsersByDivision = async (division: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const users = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('division', division), Query.equal('role', 'manager')]
-    );
-    return users.documents;
+    const users = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [
+        Query.equal('division', division),
+        Query.equal('role', 'manager'),
+      ],
+    });
+    return users.rows;
   } catch (error) {
     handleError(error, 'Failed to fetch users by division');
   }
 };
 
 export const getUsersByDepartment = async (department: string) => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
     // Import the division mapping
     const { DIVISION_TO_DEPARTMENT } = await import('../../../constants');
@@ -67,26 +70,29 @@ export const getUsersByDepartment = async (department: string) => {
     }
 
     // Query users by division(s) that belong to this department
-    const users = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('division', divisions), Query.equal('role', 'manager')]
-    );
-    return users.documents;
+    const users = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [
+        Query.equal('division', divisions),
+        Query.equal('role', 'manager'),
+      ],
+    });
+    return users.rows;
   } catch (error) {
     handleError(error, 'Failed to fetch users by department');
   }
 };
 
 export const getAllManagers = async () => {
-  const { databases } = await createAdminClient();
+  const { tablesDB } = await createAdminClient();
   try {
-    const users = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('role', 'manager')]
-    );
-    return users.documents;
+    const users = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.equal('role', 'manager')],
+    });
+    return users.rows;
   } catch (error) {
     handleError(error, 'Failed to fetch all managers');
   }

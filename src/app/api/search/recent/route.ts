@@ -16,35 +16,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Get recent searches for the user
-    const recentSearches = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      'search_history',
-      [
+    const recentSearches = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'search_history',
+      queries: [
         Query.equal('userId', userId),
         Query.orderDesc('timestamp'),
-        Query.limit(limit)
-      ]
-    );
+        Query.limit(limit),
+      ],
+    });
 
     // Extract unique queries from recent searches
     const uniqueQueries = new Map();
-    recentSearches.documents.forEach(search => {
+    recentSearches.rows.forEach((search) => {
       if (!uniqueQueries.has(search.query)) {
         uniqueQueries.set(search.query, {
           query: search.query,
           timestamp: search.timestamp,
-          resultCount: search.resultCount
+          resultCount: search.resultCount,
         });
       }
     });
 
     return NextResponse.json({
-      recentSearches: Array.from(uniqueQueries.values())
+      recentSearches: Array.from(uniqueQueries.values()),
     });
-
   } catch (error) {
     console.error('Recent searches error:', error);
     return NextResponse.json(

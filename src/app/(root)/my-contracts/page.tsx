@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import {
   Card as UICard,
@@ -153,7 +153,7 @@ const MyContractsPage = () => {
   };
 
   // Calculate total file size
-  const totalSizeBytes = filteredContracts.reduce(
+  const totalSizeBytes = (filteredContracts || []).reduce(
     (sum, file) => sum + (file.size || 0),
     0
   );

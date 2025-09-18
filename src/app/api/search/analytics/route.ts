@@ -68,17 +68,17 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000);
 
     // Get search analytics for the user
-    const analytics = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      'search_analytics',
-      [
+    const analytics = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'search_analytics',
+      queries: [
         Query.equal('userId', userId),
         Query.greaterThanEqual('timestamp', startDate.toISOString()),
         Query.lessThanEqual('timestamp', endDate.toISOString()),
         Query.orderDesc('timestamp'),
         Query.limit(limit),
-      ]
-    );
+      ],
+    });
 
     // Calculate popular searches
     const searchCounts = new Map<string, number>();
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     let totalSearches = 0;
     let totalSearchTime = 0;
 
-    analytics.documents.forEach((log) => {
+    analytics.rows.forEach((log) => {
       totalSearches++;
       totalSearchTime += log.searchTime || 0;
 
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
           totalSearches > 0 ? totalSearchTime / totalSearches : 0,
         topSearches,
         topFilters,
-        recentSearches: analytics.documents.slice(0, 20).map((log) => ({
+        recentSearches: analytics.rows.slice(0, 20).map((log) => ({
           query: log.query,
           filters: log.filters,
           resultCount: log.resultCount,

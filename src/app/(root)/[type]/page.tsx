@@ -51,16 +51,19 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       queries.push(Query.orderDesc('$createdAt'));
     }
 
+    // Get admin client for database operations
+    const { tablesDB } = await createAdminClient();
+
     // Get all contracts from the contracts collection (not filtered by owner)
-    const contractsResult = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      queries
-    );
+    const contractsResult = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      queries: queries,
+    });
 
     // Convert contract documents to UIFileDoc format for compatibility with existing components
     const contractDocuments = await Promise.all(
-      contractsResult.documents.map(async (contract: any) => {
+      contractsResult.rows.map(async (contract: any) => {
         // Try to get the associated file document for file-specific data
         let fileData = null;
         if (contract.fileId) {
@@ -128,9 +131,9 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
     files = await getFiles({ types, searchText, sort });
 
     // If type is 'images', filter to only png, jpg, jpeg
-    filteredDocuments = files.documents as UIFileDoc[];
+    filteredDocuments = files.rows as UIFileDoc[];
     if (type.toLowerCase() === 'images') {
-      filteredDocuments = files.documents.filter((file: UIFileDoc) => {
+      filteredDocuments = files.rows.filter((file: UIFileDoc) => {
         const ext = (file.extension || '').toLowerCase();
         return ext === 'png' || ext === 'jpg' || ext === 'jpeg';
       });

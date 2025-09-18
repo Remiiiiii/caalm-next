@@ -122,13 +122,13 @@ export async function PUT(request: NextRequest) {
         const client = await createAdminClient();
 
         // First, check if the user exists
-        const userResponse = await client.databases.listDocuments(
-          appwriteConfig.databaseId,
-          appwriteConfig.usersCollectionId,
-          [Query.equal('$id', storedData.userId)]
-        );
+        const userResponse = await client.tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.usersCollectionId,
+          queries: [Query.equal('$id', storedData.userId)],
+        });
 
-        if (userResponse.documents.length === 0) {
+        if (userResponse.rows.length === 0) {
           return NextResponse.json(
             { error: 'User not found' },
             { status: 404 }
@@ -150,7 +150,7 @@ export async function PUT(request: NextRequest) {
           console.warn('twoFactorSetupAt field not available in schema');
         }
 
-        await client.databases.updateDocument(
+        await client.tablesDB.updateRow(
           appwriteConfig.databaseId,
           appwriteConfig.usersCollectionId,
           storedData.userId,

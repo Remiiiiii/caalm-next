@@ -2,7 +2,7 @@
 
 // import Link from 'next/link'; // Removed since we no longer use Link component
 import { Models } from 'node-appwrite';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Thumbnail from './Thumbnail';
 import { convertFileSize } from '@/lib/utils';
 import FormattedDateTime from './FormattedDateTime';

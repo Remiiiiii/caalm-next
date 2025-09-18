@@ -22,18 +22,18 @@ export async function GET(
   try {
     const resolvedParams = await params;
     const dbDept = mapRouteToDbDepartment(resolvedParams.department);
-    const { databases } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Get all recent activities and filter by department on the client side
     // This avoids the schema error since not all activities may have a department field
-    const activities = await databases.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.recentActivityCollectionId,
-      [Query.limit(200)]
-    );
+    const activities = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.recentActivityCollectionId,
+      queries: [Query.limit(200)],
+    });
 
     // Filter activities by department on the client side
-    const departmentActivities = activities.documents.filter(
+    const departmentActivities = activities.rows.filter(
       (activity: any) =>
         activity.department === dbDept ||
         activity.department === resolvedParams.department ||

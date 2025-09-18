@@ -251,7 +251,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await databases.listDocuments(
+        const res = await tablesDB.listRows(
           appwriteConfig.databaseId,
           appwriteConfig.contractsCollectionId,
           [
@@ -261,7 +261,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
           ]
         );
         if (!cancelled) {
-          const items: NotifierContract[] = (res.documents || []).map(
+          const items: NotifierContract[] = (res.rows || []).map(
             (raw: Record<string, unknown>) => {
               const id =
                 typeof raw.$id === 'string' ? raw.$id : String(raw.$id ?? '');
