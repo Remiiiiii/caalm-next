@@ -220,7 +220,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
           </Button>
         </Link>
         <h1 className="absolute left-1/2 -translate-x-1/2 h1 sidebar-gradient-text text-center w-full pointer-events-none">
-          {config.name} Analytics
+          {config.name}
         </h1>
       </div>
       <div className="flex items-center justify-center">
@@ -300,7 +300,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
           <CardTitle className="h2 sidebar-gradient-text">
-            Division Analytics
+            Department Analytics
           </CardTitle>
         </CardHeader>
         <CardContent>

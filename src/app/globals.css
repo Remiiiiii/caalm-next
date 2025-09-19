@@ -156,6 +156,29 @@
   .tabs-underline:focus-visible::after {
     width: 80%;
   }
+
+  /* Ensure only direct hover target shows underline */
+  .tabs-underline::after {
+    pointer-events: none;
+  }
+
+  /* Navigation specific hover isolation and persistent active state */
+  nav .tabs-underline:not(:hover):not([data-state='active'])::after {
+    width: 0 !important;
+    transition: width 150ms ease-out;
+  }
+
+  nav .tabs-underline:hover::after,
+  nav .tabs-underline[data-state='active']::after {
+    width: 80% !important;
+    transition: width 150ms ease-in;
+  }
+
+  /* Ensure active state takes precedence over hover */
+  nav .tabs-underline[data-state='active']:not(:hover)::after {
+    width: 80% !important;
+    transition: width 150ms ease-in;
+  }
   .primary-btn,
   .shad-active,
   .shad-submit-btn {

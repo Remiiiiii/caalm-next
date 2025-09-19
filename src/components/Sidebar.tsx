@@ -718,7 +718,8 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
                                 pathname &&
                                 url &&
                                 (pathname === url ||
-                                  pathname.startsWith(`${url}/`))
+                                  (pathname.startsWith(`${url}/`) &&
+                                    url !== '/analytics'))
                                   ? 'active'
                                   : undefined
                               }
