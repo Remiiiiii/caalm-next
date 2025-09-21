@@ -29,9 +29,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: invitation });
   } catch (error) {
-    console.error('Failed to create invitation:', error);
+    console.error('Failed to create invitation:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      body: body,
+      timestamp: new Date().toISOString(),
+    });
+
     return NextResponse.json(
-      { error: 'Failed to create invitation' },
+      {
+        error: 'Failed to create invitation',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      },
       { status: 500 }
     );
   }

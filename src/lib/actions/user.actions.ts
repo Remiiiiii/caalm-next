@@ -349,7 +349,9 @@ export const createInvitation = async ({
   const { messaging } = await createAdminClient();
 
   // Compose invite link
-  const inviteLink = `http://localhost:3000/invite/accept?token=${token}`;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL || 'https://www.caalmsolutions.com';
+  const inviteLink = `${baseUrl}/invite/accept?token=${token}`;
 
   // Send the invite email
   try {

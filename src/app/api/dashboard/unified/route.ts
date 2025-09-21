@@ -9,7 +9,10 @@ export async function GET(request: NextRequest) {
     const orgId = searchParams.get('orgId') || 'default_organization';
     const userId = searchParams.get('userId');
 
+    console.log('Unified dashboard API called with:', { orgId, userId });
+
     if (!userId) {
+      console.error('Unified dashboard API: Missing userId parameter');
       return new Response(JSON.stringify({ error: 'User ID is required' }), {
         status: 400,
         headers: { 'content-type': 'application/json' },
@@ -192,10 +195,22 @@ export async function GET(request: NextRequest) {
       { status: 200, headers: { 'content-type': 'application/json' } }
     );
   } catch (error: unknown) {
-    console.error('Error fetching unified dashboard data:', error);
+    console.error('Error fetching unified dashboard data:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
+
     return new Response(
       JSON.stringify({
         error: (error as Error)?.message || 'Failed to load dashboard data',
+        timestamp: new Date().toISOString(),
+        debug:
+          process.env.NODE_ENV === 'development'
+            ? {
+                stack: error instanceof Error ? error.stack : undefined,
+              }
+            : undefined,
       }),
       { status: 500, headers: { 'content-type': 'application/json' } }
     );
