@@ -75,7 +75,10 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     {
       /*TODO: change ID.unique() to a UUID*/
     }
-    const session = await account.createEmailToken(ID.unique(), email);
+    const session = await account.createEmailToken({
+      userId: ID.unique(),
+      email: email,
+    });
     return session.userId;
   } catch (error) {
     // Handle specific Appwrite errors with user-friendly messages
