@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Appwrite Function for sending email invitations",
   "main": "src/main.js",
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "start": "node src/main.js"
+  },
   "dependencies": {
     "node-appwrite": "13.0.0"
   }
