@@ -18,7 +18,7 @@ module.exports = async ({ req, res, log, error }) => {
     // Parse the request body
     log('Request body type: ' + typeof req.body);
     log('Request body: ' + JSON.stringify(req.body));
-    
+
     let requestData;
     if (typeof req.body === 'string') {
       requestData = JSON.parse(req.body || '{}');
@@ -27,7 +27,7 @@ module.exports = async ({ req, res, log, error }) => {
     } else {
       requestData = {};
     }
-    
+
     const {
       email,
       name,
