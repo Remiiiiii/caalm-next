@@ -112,9 +112,21 @@ const OTPModal = ({
   const handleResendOtp = async () => {
     try {
       setError(''); // Clear previous errors
+      setLastError(''); // Clear last error too
+      console.log('Resending OTP to:', email);
+
       await sendEmailOTP({ email });
-      // Show success message or toast notification
-      setError(''); // Clear any errors
+      console.log('OTP resent successfully');
+
+      // Show success feedback
+      setError('Verification code sent! Please check your email.');
+      setLastError('Verification code sent! Please check your email.');
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setError('');
+        setLastError('');
+      }, 3000);
     } catch (error) {
       console.error('Failed to resend OTP', error);
       console.log('Resend error type:', typeof error);
@@ -139,24 +151,24 @@ const OTPModal = ({
   };
 
   const handleModalClose = (open: boolean) => {
-    // Don't allow closing the modal if there's an error
-    if (!open && (error || lastError)) {
-      return;
-    }
+    if (!open) {
+      // Clear errors when closing
+      setError('');
+      setLastError('');
+      setOtp('');
+      setAttempts(0);
 
-    // If parent is controlling the modal, don't change internal state
-    if (isOpen !== undefined) {
-      if (!open && onClose) {
+      // Call parent's onClose if provided
+      if (onClose) {
         onClose();
+      } else {
+        setInternalIsOpen(false);
       }
-    } else {
-      setInternalIsOpen(open);
     }
   };
 
-  // Use parent-controlled isOpen prop, but keep modal open if there are errors
-  const modalIsOpen =
-    error || lastError ? true : isOpen !== undefined ? isOpen : internalIsOpen;
+  // Use parent-controlled isOpen prop
+  const modalIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
 
   return (
     <AlertDialog open={modalIsOpen} onOpenChange={handleModalClose}>
@@ -207,20 +219,34 @@ const OTPModal = ({
         </InputOTP>
 
         {(error || lastError) && (
-          <div className="text-red-500 text-center p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-            <p className="text-sm font-medium text-red-800">
+          <div
+            className={`text-center p-3 rounded-lg mb-4 ${
+              (error || lastError).includes('sent!')
+                ? 'text-green-500 bg-green-50 border border-green-200'
+                : 'text-red-500 bg-red-50 border border-red-200'
+            }`}
+          >
+            <p
+              className={`text-sm font-medium ${
+                (error || lastError).includes('sent!')
+                  ? 'text-green-800'
+                  : 'text-red-800'
+              }`}
+            >
               {error || lastError}
             </p>
-            <button
-              onClick={() => {
-                setError('');
-                setLastError('');
-                setOtp(''); // Clear the OTP input
-              }}
-              className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
-            >
-              Clear error and try again
-            </button>
+            {!(error || lastError).includes('sent!') && (
+              <button
+                onClick={() => {
+                  setError('');
+                  setLastError('');
+                  setOtp(''); // Clear the OTP input
+                }}
+                className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
+              >
+                Clear error and try again
+              </button>
+            )}
           </div>
         )}
 

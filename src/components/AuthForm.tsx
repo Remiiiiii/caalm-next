@@ -358,6 +358,10 @@ const AuthForm = ({ type }: { type: FormType }) => {
         {type === 'sign-up' && pendingSignup && (
           <OTPModal
             email={pendingSignup.email}
+            isOpen={!!pendingSignup}
+            onClose={() => {
+              setPendingSignup(null);
+            }}
             onSuccess={async () => {
               await finalizeAccountAfterEmailVerification({
                 fullName: pendingSignup.fullName,

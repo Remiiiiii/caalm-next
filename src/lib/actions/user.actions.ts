@@ -69,13 +69,26 @@ const handleError = (error: unknown, message: string) => {
 };
 
 export const sendEmailOTP = async ({ email }: { email: string }) => {
-  const { account } = await createAdminClient();
-
   try {
-    {
-      /*TODO: change ID.unique() to a UUID*/
-    }
+    console.log('sendEmailOTP: Starting OTP send for email:', email);
+
+    const { account } = await createAdminClient();
+    console.log('sendEmailOTP: Admin client created successfully');
+
+    console.log(
+      'sendEmailOTP: Calling account.createEmailToken with positional parameters...'
+    );
     const session = await account.createEmailToken(ID.unique(), email);
+    console.log(
+      'sendEmailOTP: createEmailToken completed successfully, userId:',
+      session.userId
+    );
+    console.log('sendEmailOTP: Session details:', {
+      userId: session.userId,
+      secret: session.secret ? 'SET' : 'NOT SET',
+      expire: session.expire,
+    });
+
     return session.userId;
   } catch (error) {
     // Handle specific Appwrite errors with user-friendly messages
