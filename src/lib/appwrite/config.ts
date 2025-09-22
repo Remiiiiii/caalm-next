@@ -49,7 +49,7 @@ export const appwriteConfig = {
 
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET || '685edb60000bb7a088a2',
 
-  secretKey: process.env.NEXT_APPWRITE_KEY || '',
+  secretKey: process.env.NEXT_APPWRITE_API_KEY || '',
 
   govApiKey: process.env.GOV_API_KEY || '',
 

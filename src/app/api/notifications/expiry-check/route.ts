@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client, Databases, Users, ID, Query } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite';
+import { tablesDB } from '@/lib/appwrite/client';
 
 const THRESHOLDS = [30, 15, 10, 5, 1];
 const DB_ID = '685ed87c0009d8189fc7';
@@ -20,11 +21,20 @@ const getDaysUntil = (dateStr: string) => {
 
 const getDocInfo = (doc: Record<string, unknown>, type: string) => {
   if (type === 'contracts') {
-    return { name: doc.contractName, expiry: doc.contractExpiryDate };
+    return {
+      name: (doc.contractName as string) || '',
+      expiry: (doc.contractExpiryDate as string) || '',
+    };
   } else if (type === 'audits') {
-    return { name: doc.auditName, expiry: doc.auditExpiryDate };
+    return {
+      name: (doc.auditName as string) || '',
+      expiry: (doc.auditExpiryDate as string) || '',
+    };
   } else if (type === 'licenses') {
-    return { name: doc.licenseName, expiry: doc.licenseExpiryDate };
+    return {
+      name: (doc.licenseName as string) || '',
+      expiry: (doc.licenseExpiryDate as string) || '',
+    };
   }
   return { name: '', expiry: '' };
 };
@@ -44,19 +54,20 @@ async function sendExpiryEmail({
   const topicId = '6874366b003d9fefafd2';
 
   try {
-    await messaging.createEmail(
-      ID.unique(),
-      subject,
-      message,
-      [topicId], // topics
-      [], // targets (can be used for direct emails if needed)
-      [],
-      [],
-      [],
-      [],
-      false,
-      true
-    );
+    await messaging.createEmail({
+      messageId: ID.unique(),
+      subject: subject,
+      content: message,
+      topics: [topicId], // topics
+      users: [], // users (optional)
+      targets: [], // targets (can be used for direct emails if needed)
+      cc: [], // cc (optional)
+      bcc: [], // bcc (optional)
+      attachments: [], // attachments (optional)
+      draft: false, // draft (optional)
+      html: true, // html (optional)
+      scheduledAt: '', // scheduledAt (optional)
+    });
   } catch (error) {
     console.error('Failed to send expiry notification email:', error);
     throw error;
@@ -69,33 +80,36 @@ export async function POST(_req: NextRequest) {
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_ENDPOINT!)
     .setProject(process.env.APPWRITE_PROJECT_ID!)
-    .setKey(process.env.APPWRITE_API_KEY!);
+    .setKey(process.env.APPWRITE_NOTIFICATION_API_KEY!);
   const db = new Databases(client);
   const users = new Users(client);
 
   // 1. Fetch all users with allowed roles
   const allowedRoles = ['executive', 'manager', 'admin'];
-  const userList = await users.list([
-    Query.or(allowedRoles.map((role) => Query.equal('role', role))),
-  ]);
+  const userList = await tablesDB.listRows({
+    queries: [Query.or(allowedRoles.map((role) => Query.equal('role', role)))],
+  });
   const recipients = userList.users;
 
   // 2. For each collection, check for expiring docs
   for (const [type, collection] of Object.entries(COLLECTIONS)) {
     if (type === 'notifications') continue;
-    const docs = await db.listDocuments(DB_ID, collection);
-    for (const doc of docs.documents) {
+    const docs = await tablesDB.listRows({
+      databaseId: DB_ID,
+      tableId: collection,
+    });
+    for (const doc of docs.rows) {
       const { name, expiry } = getDocInfo(doc, type);
       if (!expiry) continue;
       const daysUntil = getDaysUntil(expiry);
       if (THRESHOLDS.includes(daysUntil)) {
         for (const user of recipients) {
           // Create in-app notification
-          await db.createDocument(
-            DB_ID,
-            COLLECTIONS.notifications,
-            ID.unique(),
-            {
+          await tablesDB.createRow({
+            databaseId: DB_ID,
+            tableId: COLLECTIONS.notifications,
+            rowId: ID.unique(),
+            data: {
               userId: user.$id,
               title: `${type.slice(0, -1).toUpperCase()} Expiry Reminder`,
               message: `The ${type.slice(
@@ -107,8 +121,8 @@ export async function POST(_req: NextRequest) {
               )}).`,
               type: 'expiry',
               read: false,
-            }
-          );
+            },
+          });
           // Send email (placeholder)
           await sendExpiryEmail({
             to: user.email,

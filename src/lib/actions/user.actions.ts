@@ -75,7 +75,10 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     {
       /*TODO: change ID.unique() to a UUID*/
     }
-    const session = await account.createEmailToken(ID.unique(), email);
+    const session = await account.createEmailToken({
+      userId: ID.unique(),
+      email: email,
+    });
     return session.userId;
   } catch (error) {
     // Handle specific Appwrite errors with user-friendly messages
@@ -135,31 +138,38 @@ export const finalizeAccountAfterEmailVerification = async ({
   const client = new sdk.Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-    .setKey(process.env.NEXT_APPWRITE_KEY!);
+    .setKey(process.env.NEXT_APPWRITE_API_KEY!);
   const users = new sdk.Users(client);
   // Check if user already exists in Auth
-  const userList = await users.list([sdk.Query.equal('email', email)]);
+  const userList = await users.list({
+    queries: [sdk.Query.equal('email', email)],
+  });
   let authUser;
   if (userList.total > 0) {
     authUser = userList.users[0];
     // Update name if missing
     if ((!authUser.name || authUser.name === '') && fullName) {
-      await users.updateName(authUser.$id, fullName);
+      await users.updateName({
+        userId: authUser.$id,
+        name: fullName,
+      });
     }
   } else {
     const randomPassword = crypto.randomBytes(16).toString('hex');
-    authUser = await users.create(
-      sdk.ID.unique(),
-      email,
-      undefined,
-      randomPassword,
-      fullName
-    );
+    authUser = await users.create({
+      userId: sdk.ID.unique(),
+      email: email,
+      password: randomPassword,
+      name: fullName,
+    });
   }
   const accountId = authUser.$id;
 
   // 2. After OTP verification, update email verification status
-  await users.updateEmailVerification(accountId, true);
+  await users.updateEmailVerification({
+    userId: accountId,
+    emailVerification: true,
+  });
 
   // 3. Add messaging target so user can be added as a subscriber manually
   try {
@@ -185,7 +195,10 @@ export const verifySecret = async ({
 }) => {
   try {
     const { account } = await createAdminClient();
-    const session = await account.createSession(accountId, password);
+    const session = await account.createSession({
+      userId: accountId,
+      secret: password,
+    });
 
     const cookieStore = await cookies();
     cookieStore.set('appwrite-session', session.secret, {
@@ -323,10 +336,12 @@ export const signInUser = async ({ email }: { email: string }) => {
     const client = new sdk.Client()
       .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
       .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-      .setKey(process.env.NEXT_APPWRITE_KEY!);
+      .setKey(process.env.NEXT_APPWRITE_API_KEY!);
 
     const users = new sdk.Users(client);
-    const userList = await users.list([sdk.Query.equal('email', email)]);
+    const userList = await users.list({
+      queries: [sdk.Query.equal('email', email)],
+    });
     const authUser = userList.total > 0 ? userList.users[0] : null;
 
     if (authUser) {
@@ -489,19 +504,20 @@ export const createInvitation = async ({
 
   // Send the invite email
   try {
-    await messaging.createEmail(
-      ID.unique(),
-      "You're invited to join CAALM Solutions",
-      `You have been invited to! Click the link to join Caalm: <a href="${inviteLink}">${inviteLink}</a>`,
-      ['68659c97003b73e38fcb'], // topics
-      [], // targets
-      [],
-      [],
-      [],
-      [],
-      false,
-      true
-    );
+    await messaging.createEmail({
+      messageId: ID.unique(),
+      subject: "You're invited to join CAALM Solutions",
+      content: `You have been invited to! Click the link to join Caalm: <a href="${inviteLink}">${inviteLink}</a>`,
+      topics: ['68659c97003b73e38fcb'], // topics
+      users: [], // users (optional)
+      targets: [], // targets (optional)
+      cc: [], // cc (optional)
+      bcc: [], // bcc (optional)
+      attachments: [], // attachments (optional)
+      draft: false, // draft (optional)
+      html: true, // html (optional)
+      scheduledAt: '', // scheduledAt (optional)
+    });
   } catch (error) {
     console.error('Failed to send invite email:', error);
     throw error;
@@ -540,9 +556,11 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   const client = new sdk.Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-    .setKey(process.env.NEXT_APPWRITE_KEY!);
+    .setKey(process.env.NEXT_APPWRITE_API_KEY!);
   const users = new sdk.Users(client);
-  const userList = await users.list([sdk.Query.equal('email', invite.email)]);
+  const userList = await users.list({
+    queries: [sdk.Query.equal('email', invite.email)],
+  });
   const authUser = userList.total > 0 ? userList.users[0] : null;
   if (!authUser) throw new Error('User not found in Auth');
   const accountId = authUser.$id;
@@ -569,12 +587,12 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   if (!user) throw new Error('User creation failed');
 
   // 3. Mark invitation as accepted
-  await tablesDB.updateRow(
-    appwriteConfig.databaseId,
-    INVITATIONS_COLLECTION,
-    invite.$id,
-    { status: 'accepted' }
-  );
+  await tablesDB.updateRow({
+    databaseId: appwriteConfig.databaseId,
+    tableId: INVITATIONS_COLLECTION,
+    rowId: invite.$id,
+    data: { status: 'accepted' },
+  });
 
   // 4. Return info for frontend to redirect to dashboard
   return {
@@ -588,11 +606,11 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 
 export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
   const { tablesDB } = await createAdminClient();
-  const result = await tablesDB.listRows(
-    appwriteConfig.databaseId,
-    INVITATIONS_COLLECTION,
-    [Query.equal('token', token)]
-  );
+  const result = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId,
+    tableId: INVITATIONS_COLLECTION,
+    queries: [Query.equal('token', token)],
+  });
   if (result.total === 0) throw new Error('Invalid invitation token');
   const invite = result.rows[0];
   await tablesDB.updateRow({
@@ -608,15 +626,15 @@ export const listPendingInvitations = async ({
   orgId,
 }: ListPendingInvitationsParams) => {
   const { tablesDB } = await createAdminClient();
-  const result = await tablesDB.listRows(
-    appwriteConfig.databaseId,
-    INVITATIONS_COLLECTION,
-    [
+  const result = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId,
+    tableId: INVITATIONS_COLLECTION,
+    queries: [
       Query.equal('orgId', orgId),
       Query.equal('status', 'pending'),
       Query.equal('revoked', false),
-    ]
-  );
+    ],
+  });
   return result.rows;
 };
 
@@ -624,14 +642,14 @@ export const addUserEmailTarget = async (userId: string, email: string) => {
   const client = new sdk.Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-    .setKey(process.env.NEXT_APPWRITE_KEY!);
+    .setKey(process.env.NEXT_APPWRITE_API_KEY!);
 
   const users = new sdk.Users(client);
   const targetType = sdk.MessagingProviderType.Email;
 
   try {
     // First, check if a target already exists for this user and email
-    const existingTargets = await users.listTargets(userId);
+    const existingTargets = await users.listTargets({ userId });
     const existingEmailTarget = existingTargets.targets.find(
       (target) => target.providerType === 'email' && target.identifier === email
     );
@@ -643,24 +661,24 @@ export const addUserEmailTarget = async (userId: string, email: string) => {
 
     // If no existing target, create a new one with a more specific ID
     const targetId = `email_${userId}_${Date.now()}`;
-    const response = await users.createTarget(
-      userId,
-      targetId,
-      targetType,
-      email
-    );
+    const response = await users.createTarget({
+      userId: userId,
+      targetId: targetId,
+      providerType: targetType,
+      identifier: email,
+    });
     return response;
   } catch (error) {
     // If the error is about duplicate ID, try with a different approach
     if (error instanceof Error && error.message.includes('already exists')) {
       console.log('Target ID conflict, trying with unique ID...');
       try {
-        const response = await users.createTarget(
+        const response = await users.createTarget({
           userId,
-          ID.unique(),
-          targetType,
-          email
-        );
+          targetId: ID.unique(),
+          providerType: targetType,
+          identifier: email,
+        });
         return response;
       } catch (retryError) {
         console.error('Error creating email target on retry:', retryError);
@@ -676,7 +694,7 @@ export const addUserSmsTarget = async (userId: string, e164Phone: string) => {
   const client = new sdk.Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-    .setKey(process.env.NEXT_APPWRITE_KEY!);
+    .setKey(process.env.NEXT_APPWRITE_API_KEY!);
 
   const users = new sdk.Users(client);
   const targetType = sdk.MessagingProviderType.Sms;
@@ -688,7 +706,7 @@ export const addUserSmsTarget = async (userId: string, e164Phone: string) => {
     }
 
     // Check if an SMS target already exists for this user and phone
-    const existingTargets = await users.listTargets(userId);
+    const existingTargets = await users.listTargets({ userId });
     const existingSmsTarget = existingTargets.targets.find(
       (target) =>
         target.providerType === 'sms' && target.identifier === e164Phone
@@ -701,21 +719,21 @@ export const addUserSmsTarget = async (userId: string, e164Phone: string) => {
     // Create with deterministic ID, fallback to unique on conflict
     const targetId = `sms_${userId}_${Date.now()}`;
     try {
-      const response = await users.createTarget(
-        userId,
-        targetId,
-        targetType,
-        e164Phone
-      );
+      const response = await users.createTarget({
+        userId: userId,
+        targetId: targetId,
+        providerType: targetType,
+        identifier: e164Phone,
+      });
       return response;
     } catch (err) {
       if (err instanceof Error && err.message.includes('already exists')) {
-        return await users.createTarget(
-          userId,
-          sdk.ID.unique(),
-          targetType,
-          e164Phone
-        );
+        return await users.createTarget({
+          userId: userId,
+          targetId: sdk.ID.unique(),
+          providerType: targetType,
+          identifier: e164Phone,
+        });
       }
       throw err;
     }
@@ -727,11 +745,11 @@ export const addUserSmsTarget = async (userId: string, e164Phone: string) => {
 
 export const getInvitationByToken = async (token: string) => {
   const { tablesDB } = await createAdminClient();
-  const result = await tablesDB.listRows(
-    appwriteConfig.databaseId,
-    'invitations',
-    [Query.equal('token', token)]
-  );
+  const result = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId,
+    tableId: 'invitations',
+    queries: [Query.equal('token', token)],
+  });
   return result.total > 0 ? result.rows[0] : null;
 };
 
@@ -802,11 +820,11 @@ export const listAllUsers = async () => {
 export const getActiveUsersCount = async () => {
   try {
     const { tablesDB } = await createAdminClient();
-    const result = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      [Query.equal('status', 'active')]
-    );
+    const result = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.equal('status', 'active')],
+    });
     return result.total;
   } catch (error) {
     console.error('Failed to fetch active users count:', error);
@@ -821,11 +839,11 @@ export const getActiveUsersCount = async () => {
 export const deleteUser = async (userId: string) => {
   try {
     const { tablesDB } = await createAdminClient();
-    await tablesDB.deleteRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId,
-      userId
-    );
+    await tablesDB.deleteRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      rowId: userId,
+    });
     return { success: true };
   } catch (error) {
     handleError(error, 'Failed to delete user');
@@ -835,10 +853,10 @@ export const deleteUser = async (userId: string) => {
 export const getContracts = async () => {
   const { tablesDB } = await createAdminClient();
   try {
-    const res = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId
-    );
+    const res = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+    });
     return parseStringify(res.rows);
   } catch (error) {
     console.error('Failed to fetch contracts:', error);
@@ -849,11 +867,11 @@ export const getContracts = async () => {
 export const getUnreadNotificationsCount = async (userId: string) => {
   const { tablesDB } = await createAdminClient();
   try {
-    const res = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      'notifications',
-      [Query.equal('userId', userId), Query.equal('read', false)]
-    );
+    const res = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'notifications',
+      queries: [Query.equal('userId', userId), Query.equal('read', false)],
+    });
     return res.total;
   } catch (error) {
     console.error('Failed to fetch unread notifications:', error);
@@ -868,9 +886,9 @@ export const getAllAuthUsers = async () => {
     const client = new sdk.Client()
       .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
       .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-      .setKey(process.env.NEXT_APPWRITE_KEY!);
+      .setKey(process.env.NEXT_APPWRITE_API_KEY!);
     const users = new sdk.Users(client);
-    const authUsers = await users.list();
+    const authUsers = await users.list({});
 
     return authUsers.users.map((user) => ({
       $id: user.$id,
@@ -892,22 +910,22 @@ export const getUninvitedUsers = async () => {
     const client = new sdk.Client()
       .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
       .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-      .setKey(process.env.NEXT_APPWRITE_KEY!);
+      .setKey(process.env.NEXT_APPWRITE_API_KEY!);
     const users = new sdk.Users(client);
-    const authUsers = await users.list();
+    const authUsers = await users.list({});
 
     // Get all users in the users collection (invited users)
-    const invitedUsers = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId
-    );
+    const invitedUsers = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+    });
 
     // Get all pending invitations
-    const pendingInvitations = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      'invitations',
-      [Query.equal('status', 'pending')]
-    );
+    const pendingInvitations = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: 'invitations',
+      queries: [Query.equal('status', 'pending')],
+    });
 
     // Filter out users who are already in the users collection or have pending invitations
     const invitedEmails = new Set([
