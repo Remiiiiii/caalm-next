@@ -71,9 +71,15 @@ module.exports = async ({ req, res, log, error }) => {
     ).toISOString();
 
     // Create invitation document in database
+    const databaseId = process.env.DATABASE_ID || '685ed87c0009d8189fc7';
+    const collectionId = process.env.INVITATIONS_COLLECTION_ID || 'invitations';
+    
+    log('Database ID: ' + databaseId);
+    log('Collection ID: ' + collectionId);
+    
     const invitation = await databases.createDocument(
-      process.env.DATABASE_ID,
-      process.env.INVITATIONS_COLLECTION_ID,
+      databaseId,
+      collectionId,
       sdk.ID.unique(),
       {
         email,
