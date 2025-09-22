@@ -4,12 +4,21 @@ module.exports = async ({ req, res, log, error }) => {
   // Your function code here
   log('Request body: ' + (req.body || '{}'));
 
-  // Initialize the Appwrite client
+  // Initialize the Appwrite client with admin privileges
   const client = new sdk.Client();
   client
     .setEndpoint(process.env.APPWRITE_FUNCTION_ENDPOINT)
     .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
     .setKey(process.env.APPWRITE_API_KEY);
+
+  log(
+    'Client initialized with endpoint: ' +
+      process.env.APPWRITE_FUNCTION_ENDPOINT
+  );
+  log(
+    'Client initialized with project: ' +
+      process.env.APPWRITE_FUNCTION_PROJECT_ID
+  );
 
   const databases = new sdk.Databases(client);
   const messaging = new sdk.Messaging(client);
