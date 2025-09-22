@@ -292,11 +292,16 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Admin analytics error:', error);
+    console.error('Admin analytics error:', {
+      error: error?.message || 'Unknown error',
+      stack: error?.stack,
+      timestamp: new Date().toISOString(),
+    });
     return Response.json(
       {
         success: false,
         error: error?.message || 'Failed to fetch admin analytics',
+        timestamp: new Date().toISOString(),
       },
       { status: 500 }
     );

@@ -28,13 +28,35 @@ export async function GET(
     });
 
     if (!report) {
-      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+      console.error('Report not found:', {
+        reportId,
+        timestamp: new Date().toISOString(),
+      });
+      return NextResponse.json(
+        {
+          error: 'Report not found',
+          reportId,
+          timestamp: new Date().toISOString(),
+        },
+        { status: 404 }
+      );
     }
 
     // Check if PDF was generated and file path exists
     if (!report.pdfGenerated || !report.pdfFilePath) {
+      console.error('PDF not available for report:', {
+        reportId,
+        pdfGenerated: report.pdfGenerated,
+        pdfFilePath: report.pdfFilePath,
+        timestamp: new Date().toISOString(),
+      });
       return NextResponse.json(
-        { error: 'PDF not available for this report' },
+        {
+          error: 'PDF not available for this report',
+          reportId,
+          pdfGenerated: report.pdfGenerated,
+          timestamp: new Date().toISOString(),
+        },
         { status: 404 }
       );
     }
@@ -43,8 +65,17 @@ export async function GET(
     const filePath = path.join(process.cwd(), 'public', report.pdfFilePath);
 
     if (!fs.existsSync(filePath)) {
+      console.error('Report file not found on server:', {
+        reportId,
+        filePath,
+        timestamp: new Date().toISOString(),
+      });
       return NextResponse.json(
-        { error: 'Report file not found on server' },
+        {
+          error: 'Report file not found on server',
+          reportId,
+          timestamp: new Date().toISOString(),
+        },
         { status: 404 }
       );
     }
