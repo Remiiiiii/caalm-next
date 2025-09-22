@@ -1,0 +1,15 @@
+{
+  "name": "email-invite-function",
+  "version": "1.0.0",
+  "description": "Appwrite Function for sending email invitations",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "keywords": ["appwrite", "function", "email", "invitation"],
+  "author": "CAALM Solutions",
+  "license": "MIT"
+}

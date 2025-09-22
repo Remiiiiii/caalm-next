@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createAdminClient } from '@/lib/appwrite';
+import { createApiAdminClient } from '@/lib/appwrite/api-client';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { tablesDB } = await createAdminClient();
+    const { tablesDB } = await createApiAdminClient();
 
     // Fetch all data simultaneously using Promise.allSettled for error handling
     const [

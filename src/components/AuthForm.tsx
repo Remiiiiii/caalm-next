@@ -48,6 +48,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [logoutMessage, setLogoutMessage] = useState('');
   const [accountId, setAccountId] = useState<string | null>(null); // Only used for sign-in OTP
+  const [showOTPModal, setShowOTPModal] = useState(false); // Control OTP modal visibility
   const [userId, setUserId] = useState<string | null>(null); // For 2FA verification
   const [success, setSuccess] = useState(false);
   const [pendingSignup, setPendingSignup] = useState<{
@@ -92,10 +93,17 @@ const AuthForm = ({ type }: { type: FormType }) => {
         if (res?.accountId) {
           setSuccess(true);
           setAccountId(res.accountId);
+          console.log(
+            'Setting showOTPModal to true, accountId:',
+            res.accountId
+          );
+          setShowOTPModal(true); // Show OTP modal
         } else {
+          console.log('Sign-in failed, setting error message:', res?.error);
           setErrorMessage(res?.error || 'Failed to sign in. Please try again.');
         }
-      } catch {
+      } catch (error) {
+        console.error('Sign-in catch block error:', error);
         setErrorMessage('Failed to sign in. Please try again.');
       } finally {
         setIsLoading(false);
@@ -219,7 +227,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
           {logoutMessage && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-              <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="h-6 w-6 text-yellow-500 fill-yellow-500 stroke-black stroke-1 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-sm font-medium text-red-800">
                   Session Expired
@@ -228,12 +236,20 @@ const AuthForm = ({ type }: { type: FormType }) => {
               </div>
             </div>
           )}
-          {errorMessage && <p className="error-message">*{errorMessage}</p>}
+          {errorMessage && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+              <AlertTriangle className="h-6 w-6 text-yellow-500 fill-yellow-500 stroke-black stroke-1 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm sidebar-gradient-text">{errorMessage}</p>
+              </div>
+            </div>
+          )}
           {success && (
-            <p className="text-green-500 text-center">
+            <p className="text-navy text-center">
               Check your email for a login link or OTP.
             </p>
           )}
+
           <div className="body-2 flex justify-center">
             <p className="text-light-100">
               {type === 'sign-in'
@@ -248,11 +264,21 @@ const AuthForm = ({ type }: { type: FormType }) => {
             </Link>
           </div>
         </form>
-        {type === 'sign-in' && accountId && (
+        {type === 'sign-in' && showOTPModal && accountId && (
           <OTPModal
             email={form.getValues('email')}
             accountId={accountId}
+            isOpen={showOTPModal}
+            onClose={() => {
+              setShowOTPModal(false);
+            }}
+            onError={(error) => {
+              setErrorMessage(error);
+            }}
             onSuccess={async () => {
+              // Close the OTP modal first
+              setShowOTPModal(false);
+
               // After successful OTP verification, check 2FA status via API
               try {
                 const response = await fetch('/api/auth/check-2fa-status');

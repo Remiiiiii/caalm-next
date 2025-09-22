@@ -78,7 +78,42 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     const session = await account.createEmailToken(ID.unique(), email);
     return session.userId;
   } catch (error) {
-    handleError(error, 'Failed to send email OTP');
+    // Handle specific Appwrite errors with user-friendly messages
+    if (error instanceof Error) {
+      if (
+        error.message.includes('Invalid email') ||
+        error.message.includes('invalid email')
+      ) {
+        throw new Error('Please enter a valid email address.');
+      } else if (
+        error.message.includes('rate limit') ||
+        error.message.includes('too many')
+      ) {
+        throw new Error(
+          'Too many requests. Please wait a moment before requesting another code.'
+        );
+      } else if (
+        error.message.includes('user not found') ||
+        error.message.includes('User not found')
+      ) {
+        throw new Error('No account found with this email address.');
+      } else if (
+        error.message.includes('network') ||
+        error.message.includes('connection')
+      ) {
+        throw new Error(
+          'Network error. Please check your connection and try again.'
+        );
+      } else {
+        // Log the original error for debugging but return a user-friendly message
+        console.error('Email OTP error:', error);
+        throw new Error('Failed to send verification code. Please try again.');
+      }
+    }
+
+    // Fallback for unknown error types
+    console.error('Unknown email OTP error:', error);
+    throw new Error('An unexpected error occurred. Please try again.');
   }
 };
 
@@ -165,7 +200,58 @@ export const verifySecret = async ({
 
     return parseStringify({ sessionId: session.$id });
   } catch (error) {
-    handleError(error, 'Failed to verify OTP');
+    // Handle specific Appwrite errors with user-friendly messages
+    if (error instanceof Error) {
+      if (
+        error.message.includes('Invalid token') ||
+        error.message.includes('invalid token')
+      ) {
+        throw new Error(
+          'The verification code you entered is invalid. Please check and try again.'
+        );
+      } else if (
+        error.message.includes('expired') ||
+        error.message.includes('Expired')
+      ) {
+        throw new Error(
+          'The verification code has expired. Please request a new one.'
+        );
+      } else if (
+        error.message.includes('rate limit') ||
+        error.message.includes('too many')
+      ) {
+        throw new Error(
+          'Too many attempts. Please wait a moment before trying again.'
+        );
+      } else if (
+        error.message.includes('user not found') ||
+        error.message.includes('User not found')
+      ) {
+        throw new Error(
+          'Account not found. Please check your email and try again.'
+        );
+      } else if (
+        error.message.includes('permission') ||
+        error.message.includes('unauthorized')
+      ) {
+        throw new Error('You do not have permission to perform this action.');
+      } else if (
+        error.message.includes('network') ||
+        error.message.includes('connection')
+      ) {
+        throw new Error(
+          'Network error. Please check your connection and try again.'
+        );
+      } else {
+        // Log the original error for debugging but return a user-friendly message
+        console.error('OTP verification error:', error);
+        throw new Error('Verification failed. Please try again.');
+      }
+    }
+
+    // Fallback for unknown error types
+    console.error('Unknown OTP verification error:', error);
+    throw new Error('An unexpected error occurred. Please try again.');
   }
 };
 
@@ -262,14 +348,62 @@ export const signInUser = async ({ email }: { email: string }) => {
       return { accountId: authUser.$id };
     }
 
-    return { accountId: null, error: 'User not found' };
+    return {
+      accountId: null,
+      error:
+        'No account found with this email address. Please check your email or sign up for a new account.',
+    };
   } catch (error) {
     console.error('signInUser: Error occurred:', error);
     console.error('signInUser: Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : 'No stack trace',
     });
-    return { accountId: null, error: 'Failed to sign in user' };
+
+    // Handle specific errors with user-friendly messages
+    if (error instanceof Error) {
+      if (
+        error.message.includes('Invalid email') ||
+        error.message.includes('invalid email')
+      ) {
+        return {
+          accountId: null,
+          error: 'Please enter a valid email address.',
+        };
+      } else if (
+        error.message.includes('rate limit') ||
+        error.message.includes('too many')
+      ) {
+        return {
+          accountId: null,
+          error: 'Too many requests. Please wait a moment before trying again.',
+        };
+      } else if (
+        error.message.includes('network') ||
+        error.message.includes('connection')
+      ) {
+        return {
+          accountId: null,
+          error: 'Network error. Please check your connection and try again.',
+        };
+      } else if (
+        error.message.includes('permission') ||
+        error.message.includes('unauthorized')
+      ) {
+        return {
+          accountId: null,
+          error:
+            'You do not have permission to sign in. Please contact support.',
+        };
+      } else {
+        return { accountId: null, error: 'Sign in failed. Please try again.' };
+      }
+    }
+
+    return {
+      accountId: null,
+      error: 'An unexpected error occurred. Please try again.',
+    };
   }
 };
 

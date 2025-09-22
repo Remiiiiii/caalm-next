@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadFile } from '@/lib/actions/file.actions';
-import { createSessionClient } from '@/lib/appwrite';
+import {
+  createApiAdminClient,
+  createApiSessionClient,
+} from '@/lib/appwrite/api-client';
+import { appwriteConfig } from '@/lib/appwrite/config';
+import { ID } from 'node-appwrite';
+import { InputFile } from 'node-appwrite/file';
+import { constructFileUrl, getFileType } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user session for authentication
-    const { account } = await createSessionClient();
+    const { account } = await createApiSessionClient();
     let accountId: string;
 
     try {
@@ -45,25 +51,64 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload file using the existing action
-    const uploadedFile = await uploadFile({
-      file,
-      ownerId: userId,
-      accountId,
-      path: '/',
-    });
+    // Upload file directly using Appwrite (not the server action)
+    const { storage, tablesDB } = await createApiAdminClient();
 
-    if (!uploadedFile) {
-      throw new Error('File upload failed');
+    try {
+      // Convert File to ArrayBuffer for InputFile.fromBuffer
+      const arrayBuffer = await file.arrayBuffer();
+      const inputFile = InputFile.fromBuffer(
+        Buffer.from(arrayBuffer),
+        file.name
+      );
+
+      // Upload to Appwrite storage
+      const bucketFile = await storage.createFile(
+        appwriteConfig.bucketId,
+        ID.unique(),
+        inputFile
+      );
+
+      const fileDocument = {
+        type: getFileType(bucketFile.name).type,
+        name: bucketFile.name,
+        url: constructFileUrl(bucketFile.$id),
+        extension: getFileType(bucketFile.name).extension,
+        size: bucketFile.sizeOriginal,
+        owner: userId,
+        accountId,
+        users: [],
+        bucketFileId: bucketFile.$id,
+      };
+
+      const newFile = await tablesDB.createRow(
+        appwriteConfig.databaseId,
+        appwriteConfig.filesCollectionId,
+        ID.unique(),
+        fileDocument
+      );
+
+      if (!newFile) {
+        // Clean up uploaded file if database creation fails
+        await storage.deleteFile(appwriteConfig.bucketId, bucketFile.$id);
+        throw new Error('File document creation failed');
+      }
+
+      return NextResponse.json({
+        data: newFile,
+        uploadId,
+        message: 'File uploaded successfully',
+      });
+    } catch (uploadError) {
+      console.error('Appwrite upload error:', uploadError);
+      throw uploadError;
     }
-
-    return NextResponse.json({
-      data: uploadedFile,
-      uploadId,
-      message: 'File uploaded successfully',
-    });
   } catch (error) {
-    console.error('File upload error:', error);
+    console.error('File upload error:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
 
     const errorMessage =
       error instanceof Error
