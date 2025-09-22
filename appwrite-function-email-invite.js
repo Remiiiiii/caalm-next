@@ -1,7 +1,8 @@
-const sdk = require('node-appwrite');
+import sdk from 'node-appwrite';
+import crypto from 'crypto';
 
 // This is your Appwrite Function for sending email invitations
-module.exports = async ({ req, res, log, error }) => {
+export default async ({ req, res, log, error }) => {
   // Initialize the Appwrite client
   const client = new sdk.Client();
   client
@@ -54,7 +55,6 @@ module.exports = async ({ req, res, log, error }) => {
     }
 
     // Generate invitation token
-    const crypto = require('crypto');
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(
       Date.now() + expiresInDays * 24 * 60 * 60 * 1000
