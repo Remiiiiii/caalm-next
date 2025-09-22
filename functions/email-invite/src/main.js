@@ -16,6 +16,18 @@ module.exports = async ({ req, res, log, error }) => {
 
   try {
     // Parse the request body
+    log('Request body type: ' + typeof req.body);
+    log('Request body: ' + JSON.stringify(req.body));
+    
+    let requestData;
+    if (typeof req.body === 'string') {
+      requestData = JSON.parse(req.body || '{}');
+    } else if (typeof req.body === 'object' && req.body !== null) {
+      requestData = req.body;
+    } else {
+      requestData = {};
+    }
+    
     const {
       email,
       name,
@@ -24,7 +36,7 @@ module.exports = async ({ req, res, log, error }) => {
       orgId,
       invitedBy,
       expiresInDays = 7,
-    } = JSON.parse(req.body || '{}');
+    } = requestData;
 
     // Validate required fields
     if (!email || !name || !role || !department || !orgId || !invitedBy) {
