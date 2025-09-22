@@ -1,0 +1,9 @@
+{
+  "name": "email-invite-function",
+  "version": "1.0.0",
+  "description": "Appwrite Function for sending email invitations",
+  "main": "src/main.js",
+  "dependencies": {
+    "node-appwrite": "13.0.0"
+  }
+}
