@@ -72,26 +72,40 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
   try {
     console.log('sendEmailOTP: Starting OTP send for email:', email);
 
-    const { account } = await createAdminClient();
+    // Generate a 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log('sendEmailOTP: Generated OTP:', otp);
+
+    // Store OTP in database with expiration (5 minutes)
+    const expirationTime = new Date();
+    expirationTime.setMinutes(expirationTime.getMinutes() + 5);
+
+    const { tablesDB } = await createAdminClient();
     console.log('sendEmailOTP: Admin client created successfully');
 
-    console.log(
-      'sendEmailOTP: Calling account.createEmailToken with positional parameters...'
-    );
-    const session = await account.createEmailToken(ID.unique(), email);
-    console.log(
-      'sendEmailOTP: createEmailToken completed successfully, userId:',
-      session.userId
-    );
-    console.log('sendEmailOTP: Session details:', {
-      userId: session.userId,
-      secret: session.secret ? 'SET' : 'NOT SET',
-      expire: session.expire,
+    // Store OTP in the database
+    await tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.otpTokensCollectionId,
+      rowId: ID.unique(),
+      data: {
+        email,
+        otp,
+        expiresAt: expirationTime.toISOString(),
+        used: false,
+      },
     });
+    console.log('sendEmailOTP: OTP stored in database');
 
-    return session.userId;
+    // Send OTP via Mailgun
+    const { mailgunService } = await import('../services/mailgun');
+    await mailgunService.sendOTPEmail(email, otp);
+    console.log('sendEmailOTP: OTP sent via Mailgun successfully');
+
+    // Return a dummy userId for compatibility with existing code
+    return ID.unique();
   } catch (error) {
-    // Handle specific Appwrite errors with user-friendly messages
+    // Handle specific errors with user-friendly messages
     if (error instanceof Error) {
       if (
         error.message.includes('Invalid email') ||
@@ -106,17 +120,14 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
           'Too many requests. Please wait a moment before requesting another code.'
         );
       } else if (
-        error.message.includes('user not found') ||
-        error.message.includes('User not found')
-      ) {
-        throw new Error('No account found with this email address.');
-      } else if (
         error.message.includes('network') ||
         error.message.includes('connection')
       ) {
         throw new Error(
           'Network error. Please check your connection and try again.'
         );
+      } else if (error.message.includes('Failed to send email')) {
+        throw new Error('Failed to send verification code. Please try again.');
       } else {
         // Log the original error for debugging but return a user-friendly message
         console.error('Email OTP error:', error);
@@ -181,7 +192,57 @@ export const finalizeAccountAfterEmailVerification = async ({
     emailVerification: true,
   });
 
-  // 3. Add messaging target so user can be added as a subscriber manually
+  // 3. Create users collection document with the fullName (if not already exists)
+  const { tablesDB } = await createAdminClient();
+  try {
+    // Check if user already exists in users collection
+    const existingUser = await getUserByEmail(email);
+    if (!existingUser) {
+      await tablesDB.createRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.usersCollectionId,
+        rowId: ID.unique(),
+        data: {
+          fullName: fullName,
+          email: email,
+          avatar: avatarPlaceholderUrl,
+          accountId: accountId,
+          role: '', // Empty role initially - will be set when user is invited
+        },
+      });
+      console.log(
+        'User document created in users collection with fullName:',
+        fullName
+      );
+    } else {
+      // Update existing user's fullName if it's empty
+      if (!existingUser.fullName || existingUser.fullName === '') {
+        await tablesDB.updateRow({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.usersCollectionId,
+          rowId: existingUser.$id,
+          data: {
+            fullName: fullName,
+          },
+        });
+        console.log('Updated existing user document with fullName:', fullName);
+      } else {
+        console.log(
+          'User document already exists with fullName:',
+          existingUser.fullName
+        );
+      }
+    }
+  } catch (error) {
+    console.error(
+      'Failed to create/update user document in users collection:',
+      error
+    );
+    // Don't throw error here as the Auth user was created successfully
+    // The user can still sign in, but their name won't be in the custom collection
+  }
+
+  // 4. Add messaging target so user can be added as a subscriber manually
   try {
     await addUserEmailTarget(accountId, email);
   } catch (error) {
@@ -192,8 +253,100 @@ export const finalizeAccountAfterEmailVerification = async ({
     // Don't throw error here as the main account creation should still succeed
   }
 
-  // Do NOT create users collection document here
+  // 5. Send confirmation email to user about their request
+  try {
+    const { mailgunService } = await import('../services/mailgun');
+    await mailgunService.sendAccountRequestConfirmation(email, fullName);
+    console.log('Account request confirmation email sent to:', email);
+  } catch (error) {
+    console.error('Failed to send account request confirmation email:', error);
+    // Don't throw error here as the main account creation should still succeed
+  }
+
+  // 6. Notify executives about the new user request
+  try {
+    const { triggerNewUserRequestNotification } = await import(
+      '../utils/notificationTriggers'
+    );
+    await triggerNewUserRequestNotification(email, fullName);
+    console.log(
+      'Executive notification sent for new user request from:',
+      email
+    );
+  } catch (error) {
+    console.error('Failed to notify executives about new user request:', error);
+    // Don't throw error here as the main account creation should still succeed
+  }
+
   return { accountId };
+};
+
+export const verifyOTP = async ({
+  email,
+  otp,
+}: {
+  email: string;
+  otp: string;
+}) => {
+  try {
+    console.log('verifyOTP: Starting OTP verification for email:', email);
+
+    const { tablesDB } = await createAdminClient();
+
+    // Find the OTP in the database
+    const result = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.otpTokensCollectionId,
+      queries: [
+        Query.equal('email', email),
+        Query.equal('otp', otp),
+        Query.equal('used', false),
+      ],
+    });
+
+    if (result.total === 0) {
+      throw new Error('Invalid verification code. Please check and try again.');
+    }
+
+    const otpRecord = result.rows[0];
+    const now = new Date();
+    const expiresAt = new Date(otpRecord.expiresAt);
+
+    // Check if OTP has expired
+    if (now > expiresAt) {
+      throw new Error(
+        'The verification code has expired. Please request a new one.'
+      );
+    }
+
+    // Mark OTP as used
+    await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.otpTokensCollectionId,
+      rowId: otpRecord.$id,
+      data: {
+        used: true,
+      },
+    });
+
+    console.log('verifyOTP: OTP verified successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('verifyOTP: Error occurred:', error);
+
+    if (error instanceof Error) {
+      if (
+        error.message.includes('Invalid verification code') ||
+        error.message.includes('expired')
+      ) {
+        throw error; // Re-throw user-friendly messages
+      } else {
+        throw new Error('Verification failed. Please try again.');
+      }
+    }
+
+    throw new Error('An unexpected error occurred. Please try again.');
+  }
 };
 
 export const verifySecret = async ({
@@ -504,32 +657,24 @@ export const createInvitation = async ({
     },
   });
 
-  // 2. Send invite link email (using Appwrite Messaging API)
-  const { messaging } = await createAdminClient();
-
-  // Compose invite link
+  // 2. Send invite link email (using Mailgun)
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || 'https://www.caalmsolutions.com';
   const inviteLink = `${baseUrl}/invite/accept?token=${token}`;
 
-  // Send the invite email
+  // Send the invite email via Mailgun
   try {
-    await messaging.createEmail({
-      messageId: ID.unique(),
-      subject: "You're invited to join CAALM Solutions",
-      content: `You have been invited to! Click the link to join Caalm: <a href="${inviteLink}">${inviteLink}</a>`,
-      topics: ['68659c97003b73e38fcb'], // topics
-      users: [], // users (optional)
-      targets: [], // targets (optional)
-      cc: [], // cc (optional)
-      bcc: [], // bcc (optional)
-      attachments: [], // attachments (optional)
-      draft: false, // draft (optional)
-      html: true, // html (optional)
-      scheduledAt: '', // scheduledAt (optional)
-    });
+    const { mailgunService } = await import('../services/mailgun');
+    await mailgunService.sendInvitationEmail(
+      email,
+      name,
+      inviteLink,
+      normalizedRole,
+      department
+    );
+    console.log('Invitation email sent via Mailgun to:', email);
   } catch (error) {
-    console.error('Failed to send invite email:', error);
+    console.error('Failed to send invite email via Mailgun:', error);
     throw error;
   }
 

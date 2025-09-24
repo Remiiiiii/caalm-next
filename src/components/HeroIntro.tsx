@@ -15,6 +15,7 @@ import { useRef, useState, useEffect } from 'react';
 import Logo from './Logo';
 import SectionDivider from './SectionDivider';
 import TrustedBrands from './TrustedBrands';
+import SignupSuccessBanner from './SignupSuccessBanner';
 import { ArrowRight } from 'lucide-react';
 
 // const features = [
@@ -149,6 +150,10 @@ const HeroIntro = () => {
       <div className="relative z-20 w-full mt-5">
         <SectionDivider />
       </div>
+
+      {/* Signup Success Banner */}
+      <SignupSuccessBanner />
+
       <div className="relative z-20 w-full mt-6">
         <TrustedBrands />
       </div>

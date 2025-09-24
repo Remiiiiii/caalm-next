@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 
 const SignIn = () => {
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-[580px]">
       {/* Spline Component for 3D Robot Illustration */}
       <div className="mb-8 lg:hidden">
         <div className="rounded-2xl bg-white shadow-lg p-6 border border-gray-100">

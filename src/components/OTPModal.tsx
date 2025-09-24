@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/input-otp';
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { verifySecret, sendEmailOTP } from '@/lib/actions/user.actions';
+import { verifyOTP, sendEmailOTP } from '@/lib/actions/user.actions';
 
 const OTPModal = ({
   accountId,
@@ -47,30 +47,24 @@ const OTPModal = ({
     setLastError(''); // Clear last error too
 
     try {
-      if (accountId) {
-        const res = await verifySecret({ accountId, password: otp });
-        if (res?.sessionId) {
-          // Only call onSuccess if verification was successful
-          console.log('OTP verification successful, calling onSuccess');
-          onSuccess();
-          return; // Exit early on success
-        } else {
-          setAttempts((prev) => prev + 1);
-          if (attempts >= 2) {
-            // 3 attempts total
-            setError('Too many failed attempts. Please try again later.');
-            setLastError('Too many failed attempts. Please try again later.');
-            setIsLoading(false);
-            return;
-          }
-          setError('Invalid OTP. Try again.');
-          setLastError('Invalid OTP. Try again.');
-        }
-      } else {
-        // For sign-up, just call onSuccess (actual verification handled in finalizeAccountAfterEmailVerification)
-        console.log('Sign-up flow, calling onSuccess');
+      // Use the new verifyOTP function for both sign-in and sign-up
+      const res = await verifyOTP({ email, otp });
+      if (res?.success) {
+        // Only call onSuccess if verification was successful
+        console.log('OTP verification successful, calling onSuccess');
         onSuccess();
         return; // Exit early on success
+      } else {
+        setAttempts((prev) => prev + 1);
+        if (attempts >= 2) {
+          // 3 attempts total
+          setError('Too many failed attempts. Please try again later.');
+          setLastError('Too many failed attempts. Please try again later.');
+          setIsLoading(false);
+          return;
+        }
+        setError('Invalid OTP. Try again.');
+        setLastError('Invalid OTP. Try again.');
       }
     } catch (error) {
       console.error('Failed to verify OTP', error);

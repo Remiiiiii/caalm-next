@@ -290,6 +290,140 @@ export async function triggerUserInvitationNotification(
 }
 
 /**
+ * New User Request Notification Trigger
+ * Notifies executives when a new user signs up and requests access
+ */
+export async function triggerNewUserRequestNotification(
+  userEmail: string,
+  userFullName: string
+): Promise<void> {
+  // Get all executives to notify them
+  const { createAdminClient } = await import('../appwrite');
+  const { Query } = await import('node-appwrite');
+  const { appwriteConfig } = await import('../appwrite/config');
+
+  try {
+    const { tablesDB } = await createAdminClient();
+
+    // Get all executives and admins
+    const executives = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [
+        Query.or([
+          Query.equal('role', 'executive'),
+          Query.equal('role', 'admin'),
+        ]),
+      ],
+    });
+
+    // Send notification to each executive
+    for (const executive of executives.rows) {
+      await triggerNotification('new-user-request', {
+        userId: executive.accountId,
+        title: 'New User Request',
+        message: `${userFullName} (${userEmail}) has requested access to CAALM Solutions.`,
+        metadata: {
+          userEmail,
+          userFullName,
+          actionUrl: '/dashboard',
+          actionText: 'Review Request',
+        },
+      });
+    }
+
+    console.log(
+      `Notified ${executives.rows.length} executives about new user request from ${userEmail}`
+    );
+
+    // Also send SMS notifications to executives who have SMS enabled
+    await sendSMSNotificationsToExecutives(
+      userEmail,
+      userFullName,
+      executives.rows
+    );
+  } catch (error) {
+    console.error('Failed to trigger new user request notification:', error);
+    // Don't throw error to avoid breaking the signup process
+  }
+}
+
+/**
+ * Send SMS notifications to executives about new user requests
+ */
+async function sendSMSNotificationsToExecutives(
+  userEmail: string,
+  userFullName: string,
+  executives: any[]
+): Promise<void> {
+  try {
+    const { createAdminClient } = await import('../appwrite');
+    const { appwriteConfig } = await import('../appwrite/config');
+
+    const { tablesDB } = await createAdminClient();
+
+    // Get SMS targets for executives
+    for (const executive of executives) {
+      try {
+        // Check if executive has SMS targets
+        const client = new (await import('node-appwrite')).Client()
+          .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+          .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+          .setKey(process.env.NEXT_APPWRITE_API_KEY!);
+
+        const users = new (await import('node-appwrite')).Users(client);
+        const targets = await users.listTargets({
+          userId: executive.accountId,
+        });
+
+        // Find SMS targets
+        const smsTargets = targets.targets.filter(
+          (target: any) => target.providerType === 'sms'
+        );
+
+        if (smsTargets.length > 0) {
+          // Send SMS to each phone number
+          for (const smsTarget of smsTargets) {
+            try {
+              const { getAppwriteMessagingService } = await import(
+                '../services/appwriteMessagingService'
+              );
+              const messaging = await getAppwriteMessagingService();
+
+              if (messaging.isConfigured()) {
+                const smsMessage = `CAALM Alert: New user request from ${userFullName} (${userEmail}). Please review in the dashboard.`;
+
+                await messaging.sendSmsNotification(
+                  executive.accountId,
+                  smsMessage
+                );
+
+                console.log(
+                  `SMS sent to executive ${executive.fullName} at ${smsTarget.identifier}`
+                );
+              }
+            } catch (smsError) {
+              console.error(
+                `Failed to send SMS to executive ${executive.fullName}:`,
+                smsError
+              );
+            }
+          }
+        }
+      } catch (targetError) {
+        console.error(
+          `Failed to get SMS targets for executive ${executive.fullName}:`,
+          targetError
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Failed to send SMS notifications to executives:', error);
+    // Don't throw error to avoid breaking the main flow
+  }
+}
+
+/**
  * Audit Due Notification Trigger
  */
 export async function triggerAuditDueNotification(

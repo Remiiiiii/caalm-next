@@ -214,17 +214,22 @@
 
   /* =====  SHADCN OVERRIDES */
   .shad-no-focus {
-    @apply outline-none ring-offset-transparent focus:ring-transparent focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0;
+    @apply !outline-none !ring-offset-transparent focus:!ring-transparent focus:!ring-offset-0 focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!ring-transparent focus-visible:!ring-offset-0;
   }
   .shad-input {
-    @apply border-none w-full shadow-none p-0 shad-no-focus placeholder:text-light-200 body-2;
+    @apply !border-none !w-full !shadow-none !p-0 !px-0 !py-0 !h-12 !rounded-md placeholder:text-light-200 body-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0;
+  }
+
+  /* More specific override for input elements with shad-input class */
+  input.shad-input {
+    @apply !border-none !w-full !shadow-none !p-0 !px-0 !py-0 !h-12 !rounded-md !bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0;
   }
 
   .shad-form-item {
-    @apply flex h-[78px] flex-col justify-center rounded-xl border border-light-300 px-4 shadow-drop-1;
+    @apply flex h-[88px] flex-col justify-center rounded-xl border border-light-300 px-4 shadow-drop-1;
   }
   .shad-form-label {
-    @apply text-light-100 p-1 ml-2  body-2 w-full;
+    @apply text-light-100 p-1 body-2 w-full;
   }
   .shad-form-message {
     @apply text-red body-2 ml-4;
