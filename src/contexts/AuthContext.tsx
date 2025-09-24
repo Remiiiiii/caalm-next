@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { Models } from 'appwrite';
 import { getSessionUser } from '@/lib/actions/auth.actions';
+import { getCurrentUserFrom2FA } from '@/lib/actions/user.actions';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -37,14 +38,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         setLoading(true);
 
+        // First try to get session-based user
         const sessionUser = await getSessionUser();
 
         if (sessionUser) {
           setUser(sessionUser);
           setIsSessionValid(true);
         } else {
-          setUser(null);
-          setIsSessionValid(false);
+          // If no session user, try to get 2FA-based user
+          const twoFAUser = await getCurrentUserFrom2FA();
+
+          if (twoFAUser) {
+            // Convert the custom user object to match the expected format
+            const convertedUser = {
+              $id: twoFAUser.$id,
+              name: twoFAUser.fullName,
+              email: twoFAUser.email,
+              emailVerification: true,
+              phoneVerification: false,
+              prefs: {},
+              registration: new Date().toISOString(),
+              status: true,
+            } as Models.User<Models.Preferences>;
+
+            setUser(convertedUser);
+            setIsSessionValid(true);
+          } else {
+            setUser(null);
+            setIsSessionValid(false);
+          }
         }
       } catch (error) {
         console.error('AuthContext: Session check failed:', error);

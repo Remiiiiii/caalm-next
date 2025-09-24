@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createApiAdminClient } from '@/lib/appwrite/api-client';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
+import { getUninvitedUsers } from '@/lib/actions/user.actions';
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
       notificationsStatsResult,
       recentActivitiesResult,
       calendarEventsResult,
+      uninvitedUsersResult,
     ] = await Promise.allSettled([
       // Contracts data
       tablesDB.listRows(
@@ -111,6 +113,9 @@ export async function GET(request: NextRequest) {
         appwriteConfig.calendarEventsCollectionId,
         [Query.orderDesc('$createdAt'), Query.limit(50)]
       ),
+
+      // Uninvited users from Auth database
+      getUninvitedUsers(),
     ]);
 
     // Helper function to safely get results
@@ -165,6 +170,12 @@ export async function GET(request: NextRequest) {
     ).length;
     const totalNotifications = notificationsStats.total;
 
+    // Get uninvited users result
+    const uninvitedUsers =
+      uninvitedUsersResult.status === 'fulfilled'
+        ? uninvitedUsersResult.value
+        : [];
+
     const unifiedData = {
       stats: {
         totalContracts,
@@ -175,6 +186,7 @@ export async function GET(request: NextRequest) {
       files: files.documents,
       invitations: invitations.documents,
       authUsers: users.documents,
+      uninvitedUsers: uninvitedUsers,
       reports: reports.documents,
       departments: getResult(departmentsResult).documents,
       reportTemplates: getResult(reportTemplatesResult).documents,

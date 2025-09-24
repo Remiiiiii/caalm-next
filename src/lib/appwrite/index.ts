@@ -28,7 +28,7 @@ export const createSessionClient = async () => {
   const session = (await cookies()).get('appwrite-session');
 
   if (!session || !session.value) {
-    console.error('createSessionClient: No session found');
+    // Don't log this as an error since it's expected in 2FA flow
     throw new Error('No session found');
   }
 

@@ -11,6 +11,7 @@ interface DashboardData {
   files: unknown[];
   invitations: unknown[];
   authUsers: unknown[];
+  uninvitedUsers: unknown[];
   reports: unknown[];
   departments: unknown[];
   reportTemplates: unknown[];
@@ -74,6 +75,7 @@ export const useUnifiedDashboardData = (orgId: string) => {
     files: data?.data?.files || [],
     invitations: data?.data?.invitations || [],
     authUsers: data?.data?.authUsers || [],
+    uninvitedUsers: data?.data?.uninvitedUsers || [],
     reports: data?.data?.reports || [],
     departments: data?.data?.departments || [],
     reportTemplates: data?.data?.reportTemplates || [],

@@ -97,9 +97,25 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     });
     console.log('sendEmailOTP: OTP stored in database');
 
+    // Get user's full name from database
+    let userFullName = 'User';
+    try {
+      const userResponse = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.usersCollectionId,
+        queries: [Query.equal('email', email)],
+      });
+
+      if (userResponse.rows.length > 0) {
+        userFullName = userResponse.rows[0].fullName || 'User';
+      }
+    } catch (error) {
+      console.warn('Could not retrieve user full name:', error);
+    }
+
     // Send OTP via Mailgun
     const { mailgunService } = await import('../services/mailgun');
-    await mailgunService.sendOTPEmail(email, otp);
+    await mailgunService.sendOTPEmail(email, otp, { fullName: userFullName });
     console.log('sendEmailOTP: OTP sent via Mailgun successfully');
 
     // Return a dummy userId for compatibility with existing code
@@ -284,9 +300,11 @@ export const finalizeAccountAfterEmailVerification = async ({
 export const verifyOTP = async ({
   email,
   otp,
+  accountId,
 }: {
   email: string;
   otp: string;
+  accountId?: string;
 }) => {
   try {
     console.log('verifyOTP: Starting OTP verification for email:', email);
@@ -330,6 +348,16 @@ export const verifyOTP = async ({
     });
 
     console.log('verifyOTP: OTP verified successfully');
+
+    // If accountId is provided (sign-in flow), return it for client-side session creation
+    if (accountId) {
+      console.log('verifyOTP: Returning accountId for sign-in flow');
+      return {
+        success: true,
+        accountId: accountId,
+      };
+    }
+
     return { success: true };
   } catch (error) {
     console.error('verifyOTP: Error occurred:', error);
@@ -454,7 +482,49 @@ export const getCurrentUser = async () => {
 
     return parseStringify(user.rows[0]);
   } catch (error) {
+    // Don't log session errors as they're expected in 2FA flow
+    if (error instanceof Error && error.message.includes('No session found')) {
+      return null; // Return null instead of logging error
+    }
     console.log('getCurrentUser - Error:', error);
+    return null;
+  }
+};
+
+export const getCurrentUserFrom2FA = async () => {
+  try {
+    const cookieStore = await cookies();
+    const hasCompleted2FA = cookieStore.get('2fa_completed');
+    const userIdFromCookie = cookieStore.get('2fa_user_id');
+
+    if (!hasCompleted2FA?.value || !userIdFromCookie?.value) {
+      console.log(
+        'getCurrentUserFrom2FA - No 2FA completion or user ID cookie found'
+      );
+      return null;
+    }
+
+    // Get the actual user data from the database using the stored user ID
+    const { tablesDB } = await createAdminClient();
+    const userResponse = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId,
+      queries: [Query.equal('$id', userIdFromCookie.value)],
+    });
+
+    if (userResponse.total === 0) {
+      console.log('getCurrentUserFrom2FA - User not found in database');
+      return null;
+    }
+
+    const user = userResponse.rows[0];
+    console.log(
+      'getCurrentUserFrom2FA - Returning actual user data for 2FA-authenticated user'
+    );
+    return parseStringify(user);
+  } catch (error) {
+    console.error('getCurrentUserFrom2FA - Error occurred:', error);
+    return null;
   }
 };
 
@@ -466,8 +536,11 @@ export const signOutUser = async () => {
   } catch (error) {
     console.log('No active session to delete:', error);
   } finally {
-    // Always delete the session cookie and redirect
-    (await cookies()).delete('appwrite-session');
+    // Always delete the session cookie and 2FA cookies, then redirect
+    const cookieStore = await cookies();
+    cookieStore.delete('appwrite-session');
+    cookieStore.delete('2fa_completed');
+    cookieStore.delete('2fa_user_id');
     redirect('/sign-in');
   }
 };
@@ -773,6 +846,23 @@ export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
     tableId: INVITATIONS_COLLECTION,
     rowId: invite.$id,
     data: { revoked: true, status: 'revoked' },
+  });
+  return { success: true };
+};
+
+export const deleteInvitation = async ({ token }: RevokeInvitationParams) => {
+  const { tablesDB } = await createAdminClient();
+  const result = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId,
+    tableId: INVITATIONS_COLLECTION,
+    queries: [Query.equal('token', token)],
+  });
+  if (result.total === 0) throw new Error('Invalid invitation token');
+  const invite = result.rows[0];
+  await tablesDB.deleteRow({
+    databaseId: appwriteConfig.databaseId,
+    tableId: INVITATIONS_COLLECTION,
+    rowId: invite.$id,
   });
   return { success: true };
 };

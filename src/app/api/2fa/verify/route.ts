@@ -37,9 +37,6 @@ export async function POST(request: NextRequest) {
       if (userResponse.rows.length === 0) {
         // For testing purposes, if user doesn't exist, create a mock response
         // In production, you would return an error
-        console.warn(
-          `User ${userId} not found in database. This might be a test user.`
-        );
 
         // For testing, accept any 6-digit code
         if (code.length === 6 && /^\d{6}$/.test(code)) {
@@ -53,6 +50,14 @@ export async function POST(request: NextRequest) {
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
             maxAge: 60 * 60 * 24 * 30, // 30 days (same as setup)
+          });
+
+          // For test mode, use a known user ID from the database
+          response.cookies.set('2fa_user_id', '68682eba0038a0e0b7fd', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 30, // 30 days
           });
 
           return response;
@@ -83,12 +88,20 @@ export async function POST(request: NextRequest) {
           message: '2FA verification successful',
         });
 
-        // Set a cookie to indicate 2FA verification is complete
+        // Set cookies to indicate 2FA verification is complete and store user info
         response.cookies.set('2fa_completed', 'true', {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 30, // 30 days (same as setup)
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+        });
+
+        // Store the actual user ID for data retrieval
+        response.cookies.set('2fa_user_id', user.$id, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 30, // 30 days
         });
 
         return response;

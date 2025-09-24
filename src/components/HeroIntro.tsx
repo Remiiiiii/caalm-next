@@ -175,7 +175,7 @@ const HeroIntro = () => {
         </p>
         <div className="mt-10 flex justify-center sm:flex-row gap-3 sm:gap-4 w-full max-w-xs sm:max-w-none mx-auto">
           <button
-            className="group bg-gradient-to-r from-[#00C1CB] via-[#078FAB] via-[#0E638F] via-[#11487D] to-[#162768] hover:from-[#162768] hover:via-[#11487D] hover:via-[#0E638F] hover:via-[#078FAB] hover:to-[#00C1CB] text-white  rounded-full shadow-md px-4 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center"
+            className="group bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] hover:from-[#162768] hover:via-[#0E638F] hover:to-[#00C1CB] text-white  rounded-full shadow-md px-4 py-2 sm:px-8 transition-all duration-200 w-full sm:w-auto flex items-center justify-center"
             style={{ fontSize: '1rem' }}
           >
             Get Started

@@ -1,5 +1,6 @@
 import FormData from 'form-data';
 import Mailgun from 'mailgun.js';
+import { Models } from 'appwrite';
 
 interface EmailOptions {
   to: string | string[];
@@ -7,6 +8,16 @@ interface EmailOptions {
   text?: string;
   html?: string;
   from?: string;
+}
+
+interface MailgunServiceProps {
+  user?:
+    | (Models.User<Models.Preferences> & {
+        accountId?: string;
+        fullName?: string;
+      })
+    | null;
+  fullName?: string;
 }
 
 class MailgunService {
@@ -52,19 +63,17 @@ class MailgunService {
     }
   }
 
-  async sendOTPEmail(email: string, otp: string, fullName?: string) {
+  async sendOTPEmail(email: string, otp: string, user: MailgunServiceProps) {
     const subject = 'Your CAALM Solutions Verification Code';
-    const text = `Hello ${
-      fullName || 'User'
-    },\n\nYour verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you didn't request this code, please ignore this email.\n\nBest regards,\nCAALM Solutions Team`;
+    const fullName = user?.fullName || 'User';
+    const firstName = fullName.split(' ')[0];
+    const text = `Hello ${firstName},\n\nYour verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you didn't request this code, please ignore this email.\n\nBest regards,\nCAALM Solutions Team`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #078FAB; text-align: center;">CAALM Solutions</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #333; margin-top: 0;">Hello ${
-            fullName || 'User'
-          },</h3>
+          <h3 style="color: #333; margin-top: 0;">Hello ${firstName},</h3>
           <p style="color: #666; font-size: 16px;">Your verification code is:</p>
           <div style="background-color: #078FAB; color: white; font-size: 24px; font-weight: bold; text-align: center; padding: 15px; border-radius: 6px; letter-spacing: 3px; margin: 20px 0;">
             ${otp}
@@ -84,15 +93,17 @@ class MailgunService {
     });
   }
 
-  async sendWelcomeEmail(email: string, fullName: string) {
+  async sendWelcomeEmail(email: string, user: MailgunServiceProps) {
     const subject = 'Welcome to CAALM Solutions!';
-    const text = `Hello ${fullName},\n\nWelcome to CAALM Solutions! Your account has been successfully created.\n\nYou can now access all our features and start managing your contracts and documents.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
+    const fullName = user?.fullName || 'User';
+    const firstName = fullName.split(' ')[0];
+    const text = `Hello ${firstName},\n\nWelcome to CAALM Solutions! Your account has been successfully created.\n\nYou can now access all our features and start managing your contracts and documents.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #078FAB; text-align: center;">Welcome to CAALM Solutions!</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #333; margin-top: 0;">Hello ${fullName},</h3>
+          <h3 style="color: #333; margin-top: 0;">Hello ${firstName},</h3>
           <p style="color: #666; font-size: 16px;">Welcome to CAALM Solutions! Your account has been successfully created.</p>
           <p style="color: #666; font-size: 16px;">You can now access all our features and start managing your contracts and documents.</p>
           <p style="color: #666; font-size: 16px;">If you have any questions, please don't hesitate to contact our support team.</p>

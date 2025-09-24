@@ -48,7 +48,7 @@ const OTPModal = ({
 
     try {
       // Use the new verifyOTP function for both sign-in and sign-up
-      const res = await verifyOTP({ email, otp });
+      const res = await verifyOTP({ email, otp, accountId });
       if (res?.success) {
         // Only call onSuccess if verification was successful
         console.log('OTP verification successful, calling onSuccess');

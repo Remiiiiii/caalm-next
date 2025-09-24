@@ -93,13 +93,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
         if (res?.accountId) {
           setSuccess(true);
           setAccountId(res.accountId);
-          console.log(
-            'Setting showOTPModal to true, accountId:',
-            res.accountId
-          );
           setShowOTPModal(true); // Show OTP modal
         } else {
-          console.log('Sign-in failed, setting error message:', res?.error);
           setErrorMessage(res?.error || 'Failed to sign in. Please try again.');
         }
       } catch (error) {
@@ -279,40 +274,22 @@ const AuthForm = ({ type }: { type: FormType }) => {
               // Close the OTP modal first
               setShowOTPModal(false);
 
-              // After successful OTP verification, check 2FA status via API
+              // After successful OTP verification, get user info and check 2FA status
               try {
-                const response = await fetch('/api/auth/check-2fa-status');
-                const data = await response.json();
-
-                if (data.has2FA) {
-                  // User has 2FA enabled - show TOTP verification
-                  setUserId(data.user.$id);
-                  setShow2FAVerification(true);
-                } else if (data.needsSetup) {
-                  // User needs to set up 2FA
-                  setUserId(data.user.$id);
-                  setShow2FASetup(true);
-                } else {
-                  // User already has 2FA completed, redirect to dashboard
-                  const user = data.user;
-                  if (user?.role === 'executive')
-                    router.push('/dashboard/executive');
-                  else if (user?.role === 'manager')
-                    router.push('/dashboard/manager');
-                  else if (user?.role === 'admin')
-                    router.push('/dashboard/admin');
-                  else router.push('/dashboard');
-                }
-              } catch (error) {
-                console.error('Error checking 2FA status:', error);
-                // Fallback to original method
                 const user = await getUserByEmail(form.getValues('email'));
+
                 if (user?.$id) {
                   setUserId(user.$id);
                   await checkTwoFactorStatus(user.$id);
                 } else {
                   router.push('/dashboard');
                 }
+              } catch (error) {
+                console.error(
+                  'Error getting user info after OTP verification:',
+                  error
+                );
+                router.push('/dashboard');
               }
             }}
           />
@@ -343,13 +320,22 @@ const AuthForm = ({ type }: { type: FormType }) => {
             email={form.getValues('email')}
             onSuccess={async () => {
               // After successful TOTP verification, redirect by role
-              const user = await getUserByEmail(form.getValues('email'));
-              if (user?.role === 'executive')
-                router.push('/dashboard/executive');
-              else if (user?.role === 'manager')
-                router.push('/dashboard/manager');
-              else if (user?.role === 'admin') router.push('/dashboard/admin');
-              else router.push('/dashboard');
+              try {
+                const user = await getUserByEmail(form.getValues('email'));
+
+                if (user?.role === 'executive') {
+                  router.push('/dashboard/executive');
+                } else if (user?.role === 'manager') {
+                  router.push('/dashboard/manager');
+                } else if (user?.role === 'admin') {
+                  router.push('/dashboard/admin');
+                } else {
+                  router.push('/dashboard');
+                }
+              } catch (error) {
+                console.error('Error getting user info for redirect:', error);
+                router.push('/dashboard');
+              }
             }}
             onClose={() => setShow2FAVerification(false)}
           />

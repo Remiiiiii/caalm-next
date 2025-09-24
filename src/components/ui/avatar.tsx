@@ -36,7 +36,7 @@ const Avatar: React.FC<AvatarProps> = ({
     '#0d9488', // teal-600
     '#ea580c', // orange-600
 
-    // #ACDDDE', // blue-600
+    // '#ACDDDE', // blue-600
     // '#B7F4CD', // green-600
     // '#EBD2FC', // purple-600
     // '#F1C9C1', // pink-600
@@ -44,7 +44,7 @@ const Avatar: React.FC<AvatarProps> = ({
     // '#FAEFA7', // yellow-600
     // '#FD7E89', // red-600
     // '#E4F8F0', // teal-600
-    // '#FED2AB
+    // '#FED2AB',
   ];
   // Generate a more diverse color index using multiple characters from userId
   const hash = userId.split('').reduce((acc, char) => {

@@ -9,7 +9,13 @@ import {
   SelectScrollable,
   SelectItem,
 } from '@/components/ui/select-scrollable';
-import { Users, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
+import {
+  Users,
+  FileText,
+  AlertTriangle,
+  CheckCircle,
+  Trash2,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 import dynamic from 'next/dynamic';
@@ -42,7 +48,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import Avatar from '@/components/ui/avatar';
 import ClientTimestamp from '@/components/ClientTimestamp';
 import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
-import { databases } from '@/lib/appwrite/client';
+import { tablesDB } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'appwrite';
 import {
@@ -116,6 +122,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     files,
     invitations,
     authUsers,
+    uninvitedUsers,
     isLoading: unifiedLoading,
     refresh: refreshUnified,
   } = useUnifiedDashboardData(orgId || 'default_organization');
@@ -167,6 +174,24 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       refreshUnified();
     } catch (error) {
       console.error('Failed to revoke invitation:', error);
+      throw error;
+    }
+  };
+
+  const deleteInvitation = async (token: string) => {
+    try {
+      const response = await fetch(`/api/invitations/${token}/delete`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete invitation');
+      }
+
+      // Don't refresh here - let the calling function handle it
+      // to prevent race conditions and UI flicker
+    } catch (error) {
+      console.error('Failed to delete invitation:', error);
       throw error;
     }
   };
@@ -224,6 +249,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const [inviteForm, setInviteForm] = useState({
     selectedUserId: '',
     role: '',
+    department: '',
     division: '',
   });
   const [loading, setLoading] = useState(false);
@@ -234,6 +260,12 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const [revokeToken, setRevokeToken] = useState<string | null>(null);
   const [revokeEmail, setRevokeEmail] = useState<string | null>(null);
   const [revokingToken, setRevokingToken] = useState<string | null>(null);
+
+  // Delete confirmation dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteToken, setDeleteToken] = useState<string | null>(null);
+  const [deleteEmail, setDeleteEmail] = useState<string | null>(null);
+  const [deletingToken, setDeletingToken] = useState<string | null>(null);
   const [removingInvitations, setRemovingInvitations] = useState<Set<string>>(
     new Set()
   );
@@ -307,7 +339,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     setLoading(true);
 
     // Find the selected user
-    const selectedUser = authUsers.find(
+    const selectedUser = (uninvitedUsers as UninvitedUser[]).find(
       (u: UninvitedUser) => u.$id === inviteForm.selectedUserId
     );
     if (!selectedUser) {
@@ -329,6 +361,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         email: selectedUser.email,
         name: selectedUser.fullName,
         role: inviteForm.role,
+        department: inviteForm.department,
         division: inviteForm.division,
         orgId,
         invitedBy: adminName,
@@ -341,7 +374,12 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       });
 
       // Reset form
-      setInviteForm({ selectedUserId: '', role: '', division: '' });
+      setInviteForm({
+        selectedUserId: '',
+        role: '',
+        department: '',
+        division: '',
+      });
 
       // Clear the adding state after animation
       setTimeout(() => {
@@ -366,6 +404,12 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     setRevokeToken(token);
     setRevokeEmail(email);
     setShowRevokeDialog(true);
+  };
+
+  const handleDelete = async (token: string, email: string) => {
+    setDeleteToken(token);
+    setDeleteEmail(email);
+    setShowDeleteDialog(true);
   };
 
   const confirmRevoke = async () => {
@@ -409,6 +453,75 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     setShowRevokeDialog(false);
     setRevokeToken(null);
     setRevokeEmail(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteToken) return;
+
+    try {
+      // Add visual feedback - mark as deleting
+      setDeletingToken(deleteToken);
+      setRemovingInvitations((prev) => new Set(prev).add(deleteToken));
+
+      // Optimistically update the UI by immediately removing the invitation from the cache
+      const currentData = await refreshUnified();
+      if (currentData?.data?.invitations) {
+        const updatedInvitations = (
+          currentData.data.invitations as Invitation[]
+        ).filter((inv: Invitation) => inv.token !== deleteToken);
+
+        // Update the cache immediately
+        await refreshUnified(
+          {
+            ...currentData,
+            data: {
+              ...currentData.data,
+              invitations: updatedInvitations,
+            },
+          },
+          { revalidate: false }
+        );
+      }
+
+      // Show success toast immediately after optimistic update
+      toast({
+        title: 'Invitation Deleted',
+        description: 'The invitation has been permanently deleted.',
+      });
+
+      // Then perform the actual delete operation
+      await deleteInvitation(deleteToken);
+
+      // Finally, revalidate to ensure data consistency
+      await refreshUnified();
+    } catch {
+      // If delete fails, refresh to restore the original state
+      await refreshUnified();
+      toast({
+        title: 'Error',
+        description: 'Failed to delete invitation. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setShowDeleteDialog(false);
+      setDeleteToken(null);
+      setDeleteEmail(null);
+      setDeletingToken(null);
+      // Clear the removing state after a short delay to allow animation
+      setTimeout(() => {
+        setRemovingInvitations((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(deleteToken!);
+          return newSet;
+        });
+      }, 300);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteDialog(false);
+    setDeleteToken(null);
+    setDeleteEmail(null);
   };
 
   const resendInvitation = async () => {
@@ -579,42 +692,44 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   </div>
                 ) : files && files.length > 0 ? (
                   <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4">
-                    {files.slice(0, 10).map((file: Models.Document) => {
-                      const fileDoc = file as unknown as FileDocument;
-                      return (
-                        <div
-                          key={file.$id}
-                          className="border border-border rounded-lg p-4"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <Thumbnail
-                                type={fileDoc.type}
-                                extension={fileDoc.extension}
-                                url={fileDoc.url}
-                              />
-                              <div className="flex flex-col gap-1 min-w-0 flex-1">
-                                <h4 className="font-medium text-navy truncate max-w-[200px]">
-                                  {fileDoc.name}
-                                </h4>
-                                <p className="text-sm text-slate-dark">
-                                  <FormattedDateTime
-                                    date={file.$createdAt}
-                                    className="text-xs text-slate-light"
-                                  />
-                                </p>
+                    {(files as Models.Document[])
+                      .slice(0, 10)
+                      .map((file: Models.Document) => {
+                        const fileDoc = file as unknown as FileDocument;
+                        return (
+                          <div
+                            key={file.$id}
+                            className="border border-border rounded-lg p-4"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <Thumbnail
+                                  type={fileDoc.type}
+                                  extension={fileDoc.extension}
+                                  url={fileDoc.url}
+                                />
+                                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                  <h4 className="font-medium text-navy truncate max-w-[200px]">
+                                    {fileDoc.name}
+                                  </h4>
+                                  <p className="text-sm text-slate-dark">
+                                    <FormattedDateTime
+                                      date={file.$createdAt}
+                                      className="text-xs text-slate-light"
+                                    />
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                            <div className="ml-3 flex-shrink-0">
-                              {/* <ActionDropdown
+                              <div className="ml-3 flex-shrink-0">
+                                {/* <ActionDropdown
                                 file={file}
                                 onStatusChange={refreshFiles}
                               /> */}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                     {files.length > 10 && (
                       <div className="text-center py-2">
                         <p className="text-xs text-slate-light">
@@ -704,22 +819,24 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   }
                   placeholder="Select a user 
                   "
-                  className="min-w-[200px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                  className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                 >
-                  {authUsers.map((user: UninvitedUser) => (
-                    <SelectItem key={user.$id} value={user.$id}>
-                      <div className="flex items-center gap-3">
-                        <Avatar
-                          name={user.fullName}
-                          userId={user.$id}
-                          size="sm"
-                        />
-                        <span>
-                          {user.fullName} ({user.email})
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {(uninvitedUsers as UninvitedUser[]).map(
+                    (user: UninvitedUser) => (
+                      <SelectItem key={user.$id} value={user.$id}>
+                        <div className="flex items-center gap-3">
+                          <Avatar
+                            name={user.fullName}
+                            userId={user.$id}
+                            size="sm"
+                          />
+                          <span>
+                            {user.fullName} ({user.email})
+                          </span>
+                        </div>
+                      </SelectItem>
+                    )
+                  )}
                 </SelectScrollable>
                 <SelectScrollable
                   value={inviteForm.role}
@@ -727,11 +844,35 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     setInviteForm({ ...inviteForm, role: value })
                   }
                   placeholder="Select role"
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                  className="min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                 >
                   <SelectItem value="executive">Executive</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                </SelectScrollable>
+
+                <SelectScrollable
+                  value={inviteForm.department}
+                  onValueChange={(value) =>
+                    setInviteForm({ ...inviteForm, department: value })
+                  }
+                  placeholder="Select department"
+                  className="min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                >
+                  <SelectItem value="administration">Administration</SelectItem>
+                  <SelectItem value="behavioral-health">
+                    Behavioral Health
+                  </SelectItem>
+                  <SelectItem value="child-welfare">Child Welfare</SelectItem>
+                  <SelectItem value="clinic">Clinic</SelectItem>
+                  <SelectItem value="c-suite">C-Suite</SelectItem>
+                  <SelectItem value="cfs">CFS</SelectItem>
+                  <SelectItem value="finance">Finance</SelectItem>
+                  <SelectItem value="hr">Human Resources</SelectItem>
+                  <SelectItem value="it">Information Technology</SelectItem>
+                  <SelectItem value="legal">Legal</SelectItem>
+                  <SelectItem value="operations">Operations</SelectItem>
+                  <SelectItem value="residential">Residential</SelectItem>
                 </SelectScrollable>
 
                 <SelectScrollable
@@ -740,7 +881,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     setInviteForm({ ...inviteForm, division: value })
                   }
                   placeholder="Select division"
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                  className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                 >
                   <SelectItem value="admin">Administration</SelectItem>
                   <SelectItem value="behavioralhealth">
@@ -755,13 +896,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 </SelectScrollable>
                 <Button
                   type="submit"
-                  disabled={loading || authUsers.length === 0}
+                  disabled={
+                    loading || (uninvitedUsers as UninvitedUser[]).length === 0
+                  }
                   className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
                   {loading ? 'Inviting...' : 'Send Invite'}
                 </Button>
               </form>
-              {authUsers.length === 0 && (
+              {(uninvitedUsers as UninvitedUser[]).length === 0 && (
                 <p className="text-sm text-gray-500 mt-2 text-center">
                   No users found in Auth database
                 </p>
@@ -818,7 +961,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                         </td>
                       </tr>
                     ) : (
-                      invitations.map((inv: Invitation) => (
+                      (invitations as Invitation[]).map((inv: Invitation) => (
                         <tr
                           key={inv.$id}
                           className={`border-b text-center hover:bg-gray-50 transition-all duration-300 ${
@@ -865,6 +1008,21 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                               {resendingToken === inv.token
                                 ? 'Resending...'
                                 : 'Resend'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleDelete(inv.token, inv.email)}
+                              disabled={deletingToken === inv.token}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                color: '#f87774',
+                              }}
+                            >
+                              {deletingToken === inv.token ? (
+                                'Deleting...'
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </td>
                         </tr>
@@ -1013,6 +1171,95 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                   Revoke
                 </AlertDialogAction>
               </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Professional Delete Confirmation Dialog */}
+          <AlertDialog
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
+          >
+            <AlertDialogContent className="bg-white/95 backdrop-blur-sm border border-slate-200 shadow-2xl rounded-lg max-w-md mx-4">
+              <AlertDialogHeader className="pb-1">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                    <Trash2
+                      className="h-5 w-5"
+                      style={{
+                        color: '#0E638F',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <AlertDialogTitle className="text-lg font-semibold sidebar-gradient-text">
+                      Delete Invitation?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-sm text-slate-600 mt-1">
+                      This action cannot be undone
+                    </AlertDialogDescription>
+                  </div>
+                </div>
+              </AlertDialogHeader>
+
+              <div className="px-6 pb-6">
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
+                  <h4 className="text-sm font-medium text-slate-900 mb-3">
+                    Invitation Details
+                  </h4>
+                  <div className="space-y-2">
+                    {deleteEmail && (
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-sm text-slate-600">
+                          Email Address:
+                        </span>
+                        <span className="text-sm font-medium text-slate-900">
+                          {deleteEmail}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-sm text-slate-600">
+                        Request Date:
+                      </span>
+                      <span className="text-sm font-medium text-slate-900">
+                        {new Date().toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <div className="w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center mt-0.5">
+                      <span className="text-xs text-white font-bold">!</span>
+                    </div>
+                    <p className="text-sm text-amber-800">
+                      <strong>Warning:</strong> This will permanently remove the
+                      invitation from the system. The recipient will no longer
+                      be able to access their invitation link.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
+                <AlertDialogCancel
+                  onClick={cancelDelete}
+                  className="primary-btn"
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDelete}
+                  className="primary-btn"
+                >
+                  Delete Invitation
+                </AlertDialogAction>
+              </div>
             </AlertDialogContent>
           </AlertDialog>
         </div>

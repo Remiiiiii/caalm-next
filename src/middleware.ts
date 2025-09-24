@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
 
   // Coming Soon Mode - redirect to coming soon page in production
   if (
-    process.env.NODE_ENV === 'production' && 
+    process.env.NODE_ENV === 'production' &&
     process.env.SHOW_COMING_SOON === 'true' &&
     pathname !== '/coming-soon' &&
     !pathname.startsWith('/api') &&
@@ -18,7 +18,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public routes that should never require auth
-  const publicPaths = ['/', '/sign-in', '/sign-up', '/terms', '/privacy', '/coming-soon'];
+  const publicPaths = [
+    '/',
+    '/sign-in',
+    '/sign-up',
+    '/terms',
+    '/privacy',
+    '/coming-soon',
+  ];
 
   // Static and system paths to always allow
   const systemPathPrefixes = ['/api', '/_next', '/favicon.ico', '/assets'];
@@ -60,6 +67,11 @@ export async function middleware(request: NextRequest) {
   if (isProtectedPath) {
     const hasCompleted2FA = request.cookies.get('2fa_completed');
     const session = request.cookies.get('appwrite-session');
+
+    // If user has completed 2FA, allow access even without traditional session
+    if (hasCompleted2FA?.value === 'true') {
+      return NextResponse.next();
+    }
 
     // If no session exists, redirect to sign-in
     if (!session?.value) {
