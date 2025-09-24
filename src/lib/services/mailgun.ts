@@ -182,6 +182,65 @@ class MailgunService {
       html,
     });
   }
+
+  async sendComingSoonConfirmation(email: string) {
+    const subject = 'Welcome to CAALM Solutions - Early Access Confirmed';
+    const text = `Thank you for your interest in CAALM Solutions!\n\nWe've added you to our early access list. You'll be among the first to know when we launch our AI-powered contract management platform.\n\nWhat to expect:\n- Early access to the platform\n- Exclusive launch updates\n- Priority support during beta\n\nWe're excited to have you on board!\n\nBest regards,\nCAALM Solutions Team`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #078FAB; text-align: center;">Welcome to Early Access!</h2>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #333; margin-top: 0;">Thank you for your interest!</h3>
+          <p style="color: #666; font-size: 16px;">We've added you to our early access list. You'll be among the first to know when we launch our AI-powered contract management platform.</p>
+          
+          <div style="background-color: #e3f2fd; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #078FAB;">
+            <p style="color: #1976d2; font-size: 14px; margin: 0;"><strong>What to expect:</strong></p>
+            <ul style="color: #666; font-size: 14px; margin: 10px 0 0 0; padding-left: 20px;">
+              <li>Early access to the platform</li>
+              <li>Exclusive launch updates</li>
+              <li>Priority support during beta</li>
+            </ul>
+          </div>
+          
+          <p style="color: #666; font-size: 16px;">We're excited to have you on board!</p>
+        </div>
+        <p style="color: #999; font-size: 12px; text-align: center;">Best regards,<br>CAALM Solutions Team</p>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject,
+      text,
+      html,
+    });
+  }
+
+  async notifyTeamOfNewSignup(email: string) {
+    const subject = 'New Coming Soon Signup - CAALM Solutions';
+    const text = `New early access signup received:\n\nEmail: ${email}\nTimestamp: ${new Date().toISOString()}\n\nThis person has expressed interest in our platform and should be added to the early access list.`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #078FAB; text-align: center;">New Early Access Signup</h2>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #333; margin-top: 0;">Signup Details</h3>
+          <p style="color: #666; font-size: 16px;"><strong>Email:</strong> ${email}</p>
+          <p style="color: #666; font-size: 16px;"><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+          <p style="color: #666; font-size: 16px;">This person has expressed interest in our platform and should be added to the early access list.</p>
+        </div>
+      </div>
+    `;
+
+    // Send to support email
+    return this.sendEmail({
+      to: 'support@caalmsolutions.com',
+      subject,
+      text,
+      html,
+    });
+  }
 }
 
 // Export a singleton instance

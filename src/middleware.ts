@@ -4,8 +4,21 @@ import type { NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Coming Soon Mode - redirect to coming soon page in production
+  if (
+    process.env.NODE_ENV === 'production' && 
+    process.env.SHOW_COMING_SOON === 'true' &&
+    pathname !== '/coming-soon' &&
+    !pathname.startsWith('/api') &&
+    !pathname.startsWith('/_next') &&
+    !pathname.startsWith('/assets') &&
+    !pathname.startsWith('/favicon.ico')
+  ) {
+    return NextResponse.redirect(new URL('/coming-soon', request.url));
+  }
+
   // Public routes that should never require auth
-  const publicPaths = ['/', '/sign-in', '/sign-up', '/terms', '/privacy'];
+  const publicPaths = ['/', '/sign-in', '/sign-up', '/terms', '/privacy', '/coming-soon'];
 
   // Static and system paths to always allow
   const systemPathPrefixes = ['/api', '/_next', '/favicon.ico', '/assets'];
