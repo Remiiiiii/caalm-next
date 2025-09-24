@@ -1,7 +1,7 @@
 'use client';
 
 // import { useAnimationFrame } from 'framer-motion';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, Suspense } from 'react';
 // import {
 //   Database,
 //   Bell,
@@ -152,7 +152,9 @@ const HeroIntro = () => {
       </div>
 
       {/* Signup Success Banner */}
-      <SignupSuccessBanner />
+      <Suspense fallback={<div />}>
+        <SignupSuccessBanner />
+      </Suspense>
 
       <div className="relative z-20 w-full mt-6">
         <TrustedBrands />
