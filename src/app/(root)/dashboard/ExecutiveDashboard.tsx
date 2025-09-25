@@ -2,7 +2,7 @@
 
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,6 +48,9 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import Avatar from '@/components/ui/avatar';
 import ClientTimestamp from '@/components/ClientTimestamp';
 import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
+import WeatherWidget from '@/components/WeatherWidget';
+import CompanyNewsFeed from '@/components/CompanyNewsFeed';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { tablesDB } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'appwrite';
@@ -115,6 +118,19 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const { toast } = useToast();
   const { orgId } = useOrganization();
   const adminName = 'Executive'; // Replace with actual admin name
+
+  // Widget scroll functionality
+  const widgetScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollWidgets = (direction: 'left' | 'right') => {
+    if (widgetScrollRef.current) {
+      const scrollAmount = direction === 'left' ? -324 : 324; // 300px widget + 24px gap
+      widgetScrollRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   // Use unified dashboard data hook
   const {
@@ -589,21 +605,57 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         <div className="h2 font-bold sidebar-gradient-text">
           {getRoleDisplay(user?.role || '')}
         </div>
+        <h1 className="text-lg font-bold text-slate-700">
+          {user?.fullName || ''}{' '}
+          <span className="text-lg text-slate-light">
+            {`| ${user?.division || 'Unknown Division'}`}
+          </span>
+        </h1>
         <div className="text-xs text-slate-500">
           Last updated: <ClientTimestamp />
         </div>
       </div>
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mb-6">
         <CardContent className="p-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-lg font-bold text-slate-700">
-              {user?.fullName || ''}{' '}
-              <span className="text-lg text-slate-light">
-                {`| ${user?.division || 'Unknown Division'}`}
-              </span>
-            </h1>
+          {/* Navigation Arrows */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
+            onClick={() => scrollWidgets('left')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
+            onClick={() => scrollWidgets('right')}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+
+          {/* Scrollable Widgets Container */}
+          <div
+            ref={widgetScrollRef}
+            className="flex gap-6 overflow-x-auto scrollbar-hide px-12 py-2"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            <WeatherWidget />
+            <CompanyNewsFeed />
           </div>
         </CardContent>
+
+        {/* Custom scrollbar styles */}
+        <style jsx>{`
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
       </Card>
 
       {/* Stats Grid */}

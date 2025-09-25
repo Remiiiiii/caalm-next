@@ -26,7 +26,7 @@ All prices shown are Monthly and Yearly (Yearly saves 20%).
   - **Reports** (basic) via `ReportsPage`
   - **Email support**
   - **Analytical data retention**: 90 days
-  - **Storage**: 5GB
+  - **Storage**: 10GB
   <!-- - **Rate limits** suitable for small teams (e.g., 15 requests/minute per workspace) -->
 
 ---
