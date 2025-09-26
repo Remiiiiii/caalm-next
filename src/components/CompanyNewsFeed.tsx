@@ -182,7 +182,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({ limit = 5 }) => {
 
   if (loading) {
     return (
-      <Card className="w-[300px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
+      <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
         <CardHeader className="pb-3 pt-4 px-4">
           <CardTitle className="text-sm font-semibold sidebar-gradient-text">
             Company News
@@ -204,7 +204,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({ limit = 5 }) => {
 
   if (error && newsItems.length === 0) {
     return (
-      <Card className="w-[300px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
+      <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
         <CardHeader className="pb-3 pt-4 px-4">
           <CardTitle className="text-sm font-semibold sidebar-gradient-text">
             Company News
@@ -228,7 +228,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({ limit = 5 }) => {
   }
 
   return (
-    <Card className="w-[300px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+    <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
       {/* Header */}
       <CardHeader className="pb-3 pt-4 px-4">
         <div className="flex items-center gap-2">
@@ -280,7 +280,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({ limit = 5 }) => {
         </div>
 
         {/* Footer with view all link */}
-        <div className="mt-3 pt-2 border-t border-white/20">
+        <div className="mt-3 border-t border-white/20">
           <div className="flex items-center justify-center">
             <button className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-800 transition-colors duration-200">
               <span>View All News</span>

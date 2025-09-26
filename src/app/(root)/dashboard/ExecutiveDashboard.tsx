@@ -50,6 +50,8 @@ import ClientTimestamp from '@/components/ClientTimestamp';
 import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
 import WeatherWidget from '@/components/WeatherWidget';
 import CompanyNewsFeed from '@/components/CompanyNewsFeed';
+import ContractStatusPieChart from '@/components/ContractStatusPieChart';
+import DepartmentPerformanceWidget from '@/components/DepartmentPerformanceWidget';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { tablesDB } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
@@ -119,18 +121,52 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const { orgId } = useOrganization();
   const adminName = 'Executive'; // Replace with actual admin name
 
-  // Widget scroll functionality
+  // Widget pagination functionality
   const widgetScrollRef = useRef<HTMLDivElement>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const widgetsPerPage = 3;
+  const widgetWidth = 240;
+  const widgetGap = 16;
+  const pageWidth =
+    widgetsPerPage * widgetWidth + (widgetsPerPage - 1) * widgetGap;
 
-  const scrollWidgets = (direction: 'left' | 'right') => {
+  const scrollToPage = (pageNumber: number) => {
     if (widgetScrollRef.current) {
-      const scrollAmount = direction === 'left' ? -324 : 324; // 300px widget + 24px gap
-      widgetScrollRef.current.scrollBy({
+      const scrollAmount = pageNumber * pageWidth;
+      widgetScrollRef.current.scrollTo({
         left: scrollAmount,
         behavior: 'smooth',
       });
+      setCurrentPage(pageNumber);
     }
   };
+
+  const scrollWidgets = (direction: 'left' | 'right') => {
+    const newPage = direction === 'left' ? currentPage - 1 : currentPage + 1;
+    if (newPage >= 0 && newPage <= 1) {
+      // 0 = Page 1, 1 = Page 2
+      scrollToPage(newPage);
+    }
+  };
+
+  // Track scroll position to update current page
+  useEffect(() => {
+    const handleScroll = () => {
+      if (widgetScrollRef.current) {
+        const scrollLeft = widgetScrollRef.current.scrollLeft;
+        const newPage = Math.round(scrollLeft / pageWidth);
+        if (newPage !== currentPage && newPage >= 0 && newPage <= 1) {
+          setCurrentPage(newPage);
+        }
+      }
+    };
+
+    const scrollContainer = widgetScrollRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    }
+  }, [currentPage, pageWidth]);
 
   // Use unified dashboard data hook
   const {
@@ -600,722 +636,754 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       >
         <source src="/assets/video/wave.mp4" type="video/mp4" />
       </video>
-      {/* Dashboard Header */}
-      <div className="flex justify-between items-end mb-4">
-        <div className="h2 font-bold sidebar-gradient-text">
-          {getRoleDisplay(user?.role || '')}
-        </div>
-        <h1 className="text-lg font-bold text-slate-700">
-          {user?.fullName || ''}{' '}
-          <span className="text-lg text-slate-light">
-            {`| ${user?.division || 'Unknown Division'}`}
-          </span>
-        </h1>
-        <div className="text-xs text-slate-500">
-          Last updated: <ClientTimestamp />
-        </div>
-      </div>
-      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mb-6">
-        <CardContent className="p-6">
-          {/* Navigation Arrows */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
-            onClick={() => scrollWidgets('left')}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
-            onClick={() => scrollWidgets('right')}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-
-          {/* Scrollable Widgets Container */}
-          <div
-            ref={widgetScrollRef}
-            className="flex gap-6 overflow-x-auto scrollbar-hide px-12 py-2"
-            style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-            }}
-          >
-            <WeatherWidget />
-            <CompanyNewsFeed />
+      {/* Main Content Container */}
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Dashboard Header */}
+        <div className="flex justify-between items-end mb-4">
+          <div className="h2 font-bold sidebar-gradient-text">
+            {getRoleDisplay(user?.role || '')}
           </div>
-        </CardContent>
+          <h1 className="text-lg font-bold text-slate-700">
+            {user?.fullName || ''}{' '}
+            <span className="text-lg text-slate-light">
+              {`| ${user?.division || 'Unknown Division'}`}
+            </span>
+          </h1>
+          <div className="text-xs text-slate-500">
+            Last updated: <ClientTimestamp />
+          </div>
+        </div>
+        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mb-6">
+          <CardContent className="p-3">
+            {/* Navigation Arrows */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
+              onClick={() => scrollWidgets('left')}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
 
-        {/* Custom scrollbar styles */}
-        <style jsx>{`
-          .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
-      </Card>
+            <Button
+              variant="outline"
+              size="sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
+              onClick={() => scrollWidgets('right')}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {unifiedLoading
-          ? [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
-          : stats.map((stat, index) => (
-              <Card
-                key={index}
-                className="bg-white/30 backdrop-blur border border-white/40 shadow-lg"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm  font-medium sidebar-gradient-text">
-                        {stat.title}
-                      </p>
-                      <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-                        <span>{stat.value}</span>
-                        <span className="inline-block ml-2 pb-1">
-                          <stat.icon
-                            className={`h-8 w-8 ${stat.color.replace(
-                              'text-',
-                              'text-'
-                            )}`}
-                          />
-                        </span>
+            {/* Scrollable Widgets Container */}
+            <div
+              ref={widgetScrollRef}
+              className="flex gap-4 overflow-x-hidden scrollbar-hide ml-10 px-1 py-2 rounded-lg"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                width: `${pageWidth}px`,
+                maxWidth: `${pageWidth}px`,
+              }}
+            >
+              {/* Page 1: Weather, Company News, Contract Status */}
+              <div className="flex gap-2 min-w-full">
+                <WeatherWidget />
+                <CompanyNewsFeed />
+                <ContractStatusPieChart />
+              </div>
+
+              {/* Page 2: Department Performance, Future widgets */}
+              <div className="flex gap-2 min-w-full">
+                <DepartmentPerformanceWidget />
+                {/* Future widgets will be added here */}
+              </div>
+            </div>
+          </CardContent>
+
+          {/* Custom scrollbar styles */}
+          <style jsx>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+        </Card>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {unifiedLoading
+            ? [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
+            : stats.map((stat, index) => (
+                <Card
+                  key={index}
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-lg"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm  font-medium sidebar-gradient-text">
+                          {stat.title}
+                        </p>
+                        <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                          <span>{stat.value}</span>
+                          <span className="inline-block ml-2 pb-1">
+                            <stat.icon
+                              className={`h-8 w-8 ${stat.color.replace(
+                                'text-',
+                                'text-'
+                              )}`}
+                            />
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              ))}
+        </div>
+
+        {/* Dashboard Content */}
+        <div className="relative z-10 py-8">
+          <div className="space-y-6">
+            <div className="grid lg:grid-cols-6 gap-6">
+              {/* Recent Activity */}
+              <div className="lg:col-span-3">
+                <RecentActivity />
+              </div>
+
+              {/* Calendar View */}
+              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-3">
+                <CardContent className="p-4">
+                  <CalendarView
+                    user={user}
+                    onEventClick={(event) => {
+                      console.log('Event clicked:', event);
+                      // TODO: Implement event details modal or navigation
+                    }}
+                    onDateSelect={(date) => {
+                      console.log('Date selected:', date);
+                      // TODO: Implement date-specific actions
+                    }}
+                    onEventCreate={(event) => {
+                      console.log('New event created:', event);
+                      // Event is now automatically saved to database
+                      toast({
+                        title: 'Success',
+                        description: `Event "${event.title}" created successfully!`,
+                      });
+                    }}
+                  />
                 </CardContent>
               </Card>
-            ))}
-      </div>
-
-      {/* Dashboard Content */}
-      <div className="relative z-10 py-8">
-        <div className="space-y-6">
-          <div className="grid lg:grid-cols-6 gap-6">
-            {/* Recent Activity */}
-            <div className="lg:col-span-3">
-              <RecentActivity />
             </div>
 
-            {/* Calendar View */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-3">
-              <CardContent className="p-4">
-                <CalendarView
-                  user={user}
-                  onEventClick={(event) => {
-                    console.log('Event clicked:', event);
-                    // TODO: Implement event details modal or navigation
-                  }}
-                  onDateSelect={(date) => {
-                    console.log('Date selected:', date);
-                    // TODO: Implement date-specific actions
-                  }}
-                  onEventCreate={(event) => {
-                    console.log('New event created:', event);
-                    // Event is now automatically saved to database
-                    toast({
-                      title: 'Success',
-                      description: `Event "${event.title}" created successfully!`,
-                    });
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent files uploaded and Pending Approvals */}
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Recent files uploaded */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                  Recent Files Uploaded
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {unifiedLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <FileItemSkeleton key={i} />
-                    ))}
-                  </div>
-                ) : files && files.length > 0 ? (
-                  <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4">
-                    {(files as Models.Document[])
-                      .slice(0, 10)
-                      .map((file: Models.Document) => {
-                        const fileDoc = file as unknown as FileDocument;
-                        return (
-                          <div
-                            key={file.$id}
-                            className="border border-border rounded-lg p-4"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <Thumbnail
-                                  type={fileDoc.type}
-                                  extension={fileDoc.extension}
-                                  url={fileDoc.url}
-                                />
-                                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                                  <h4 className="font-medium text-navy truncate max-w-[200px]">
-                                    {fileDoc.name}
-                                  </h4>
-                                  <p className="text-sm text-slate-dark">
-                                    <FormattedDateTime
-                                      date={file.$createdAt}
-                                      className="text-xs text-slate-light"
-                                    />
-                                  </p>
+            {/* Recent files uploaded and Pending Approvals */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Recent files uploaded */}
+              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                    Recent Files Uploaded
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {unifiedLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <FileItemSkeleton key={i} />
+                      ))}
+                    </div>
+                  ) : files && files.length > 0 ? (
+                    <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4">
+                      {(files as Models.Document[])
+                        .slice(0, 10)
+                        .map((file: Models.Document) => {
+                          const fileDoc = file as unknown as FileDocument;
+                          return (
+                            <div
+                              key={file.$id}
+                              className="border border-border rounded-lg p-4"
+                            >
+                              <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <Thumbnail
+                                    type={fileDoc.type}
+                                    extension={fileDoc.extension}
+                                    url={fileDoc.url}
+                                  />
+                                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                    <h4 className="font-medium text-navy truncate max-w-[200px]">
+                                      {fileDoc.name}
+                                    </h4>
+                                    <p className="text-sm text-slate-dark">
+                                      <FormattedDateTime
+                                        date={file.$createdAt}
+                                        className="text-xs text-slate-light"
+                                      />
+                                    </p>
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="ml-3 flex-shrink-0">
-                                {/* <ActionDropdown
+                                <div className="ml-3 flex-shrink-0">
+                                  {/* <ActionDropdown
                                 file={file}
                                 onStatusChange={refreshFiles}
                               /> */}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    {files.length > 10 && (
-                      <div className="text-center py-2">
-                        <p className="text-xs text-slate-light">
-                          +{files.length - 10} more files
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-center text-slate-light">
-                    No files uploaded
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Pending Approvals */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                  Pending Approvals
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {pendingApprovals.map((approval) => (
-                    <div
-                      key={approval.id}
-                      className="border border-border rounded-lg p-4"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-navy">
-                          {approval.type}
-                        </h4>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
-                          >
-                            Deny
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
-                          >
-                            Approve
-                          </Button>
+                          );
+                        })}
+                      {files.length > 10 && (
+                        <div className="text-center py-2">
+                          <p className="text-xs text-slate-light">
+                            +{files.length - 10} more files
+                          </p>
                         </div>
-                      </div>
-                      <p className="text-sm text-slate-dark">
-                        {approval.requester || approval.title}
-                      </p>
-                      {approval.division && (
-                        <p className="text-xs text-slate-light">
-                          Division: {approval.division}
-                        </p>
-                      )}
-                      {approval.amount && (
-                        <p className="text-xs text-slate-light">
-                          Amount: {approval.amount}
-                        </p>
                       )}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Invitation Management Section */}
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                Invite New User to Caalm
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form
-                className="flex flex-col md:flex-row gap-4 items-center"
-                onSubmit={handleInviteSubmit}
-              >
-                <SelectScrollable
-                  value={inviteForm.selectedUserId}
-                  onValueChange={(value) =>
-                    setInviteForm({ ...inviteForm, selectedUserId: value })
-                  }
-                  placeholder="Select a user 
-                  "
-                  className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-                >
-                  {(uninvitedUsers as UninvitedUser[]).map(
-                    (user: UninvitedUser) => (
-                      <SelectItem key={user.$id} value={user.$id}>
-                        <div className="flex items-center gap-3">
-                          <Avatar
-                            name={user.fullName}
-                            userId={user.$id}
-                            size="sm"
-                          />
-                          <span>
-                            {user.fullName} ({user.email})
-                          </span>
-                        </div>
-                      </SelectItem>
-                    )
+                  ) : (
+                    <p className="text-center text-slate-light">
+                      No files uploaded
+                    </p>
                   )}
-                </SelectScrollable>
-                <SelectScrollable
-                  value={inviteForm.role}
-                  onValueChange={(value) =>
-                    setInviteForm({ ...inviteForm, role: value })
-                  }
-                  placeholder="Select role"
-                  className="min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-                >
-                  <SelectItem value="executive">Executive</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectScrollable>
+                </CardContent>
+              </Card>
 
-                <SelectScrollable
-                  value={inviteForm.department}
-                  onValueChange={(value) =>
-                    setInviteForm({ ...inviteForm, department: value })
-                  }
-                  placeholder="Select department"
-                  className="min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-                >
-                  <SelectItem value="administration">Administration</SelectItem>
-                  <SelectItem value="behavioral-health">
-                    Behavioral Health
-                  </SelectItem>
-                  <SelectItem value="child-welfare">Child Welfare</SelectItem>
-                  <SelectItem value="clinic">Clinic</SelectItem>
-                  <SelectItem value="c-suite">C-Suite</SelectItem>
-                  <SelectItem value="cfs">CFS</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="hr">Human Resources</SelectItem>
-                  <SelectItem value="it">Information Technology</SelectItem>
-                  <SelectItem value="legal">Legal</SelectItem>
-                  <SelectItem value="operations">Operations</SelectItem>
-                  <SelectItem value="residential">Residential</SelectItem>
-                </SelectScrollable>
-
-                <SelectScrollable
-                  value={inviteForm.division}
-                  onValueChange={(value) =>
-                    setInviteForm({ ...inviteForm, division: value })
-                  }
-                  placeholder="Select division"
-                  className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-                >
-                  <SelectItem value="admin">Administration</SelectItem>
-                  <SelectItem value="behavioralhealth">
-                    Behavioral Health
-                  </SelectItem>
-                  <SelectItem value="c-suite">C-Suite</SelectItem>
-                  <SelectItem value="cins-fins-snap">CFS</SelectItem>
-                  <SelectItem value="childwelfare">Child Welfare</SelectItem>
-                  <SelectItem value="clinic">Clinic</SelectItem>
-                  {/* <SelectItem value="management">Management</SelectItem> */}
-                  <SelectItem value="residential">Residential</SelectItem>
-                </SelectScrollable>
-                <Button
-                  type="submit"
-                  disabled={
-                    loading || (uninvitedUsers as UninvitedUser[]).length === 0
-                  }
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
-                >
-                  {loading ? 'Inviting...' : 'Send Invite'}
-                </Button>
-              </form>
-              {(uninvitedUsers as UninvitedUser[]).length === 0 && (
-                <p className="text-sm text-gray-500 mt-2 text-center">
-                  No users found in Auth database
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                Pending Invitations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto border rounded">
-                <table className="min-w-full text-xs">
-                  <thead className="bg-gray-50 text-center">
-                    <tr>
-                      <th className="text-slate-700 text-center px-4 py-2">
-                        Name
-                      </th>
-                      <th className="text-slate-700 text-center px-4 py-2">
-                        Email
-                      </th>
-                      <th className="text-slate-700 text-center px-4 py-2">
-                        Role
-                      </th>
-                      <th className="text-slate-700 text-center px-4 py-2">
-                        Invited
-                      </th>
-                      <th className="text-slate-700 text-center px-4 py-2">
-                        Expires
-                      </th>
-                      <th className="text-slate-700 text-center px-4 py-2">
-                        Status
-                      </th>
-                      <th className="text-slate-700 text-center px-4 py-2">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unifiedLoading ? (
-                      [1, 2, 3].map((i) => (
-                        <TableRowSkeleton key={i} columns={7} />
-                      ))
-                    ) : invitations.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="text-center py-8 text-gray-400"
-                        >
-                          No pending invitations
-                        </td>
-                      </tr>
-                    ) : (
-                      (invitations as Invitation[]).map((inv: Invitation) => (
-                        <tr
-                          key={inv.$id}
-                          className={`border-b text-center hover:bg-gray-50 transition-all duration-300 ${
-                            removingInvitations.has(inv.token)
-                              ? 'invitation-removing'
-                              : addingInvitations.has(inv.token)
-                              ? 'invitation-adding'
-                              : ''
-                          }`}
-                        >
-                          <td className="pl-2 ">{inv.name}</td>
-                          <td>{inv.email}</td>
-                          <td>{inv.role}</td>
-                          <td>
-                            <ClientDate dateString={inv.$createdAt} />
-                          </td>
-                          <td>
-                            <ClientDate dateString={inv.expiresAt} />
-                          </td>
-                          <td>
-                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-[#B3EBF2] text-[#12477D]">
-                              {inv.status}
-                            </span>
-                          </td>
-                          <td className="space-x-2">
+              {/* Pending Approvals */}
+              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                    Pending Approvals
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {pendingApprovals.map((approval) => (
+                      <div
+                        key={approval.id}
+                        className="border border-border rounded-lg p-4"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium text-navy">
+                            {approval.type}
+                          </h4>
+                          <div className="flex space-x-2">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleRevoke(inv.token, inv.email)}
-                              disabled={revokingToken === inv.token}
-                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                             >
-                              {revokingToken === inv.token
-                                ? 'Revoking...'
-                                : 'Revoke'}
+                              Deny
                             </Button>
                             <Button
                               size="sm"
-                              variant="secondary"
-                              onClick={() => handleResend(inv.token)}
-                              disabled={resendingToken === inv.token}
-                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                             >
-                              {resendingToken === inv.token
-                                ? 'Resending...'
-                                : 'Resend'}
+                              Approve
                             </Button>
-                            <Button
+                          </div>
+                        </div>
+                        <p className="text-sm text-slate-dark">
+                          {approval.requester || approval.title}
+                        </p>
+                        {approval.division && (
+                          <p className="text-xs text-slate-light">
+                            Division: {approval.division}
+                          </p>
+                        )}
+                        {approval.amount && (
+                          <p className="text-xs text-slate-light">
+                            Amount: {approval.amount}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Invitation Management Section */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                  Invite New User to Caalm
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form
+                  className="flex flex-col md:flex-row gap-4 items-center"
+                  onSubmit={handleInviteSubmit}
+                >
+                  <SelectScrollable
+                    value={inviteForm.selectedUserId}
+                    onValueChange={(value) =>
+                      setInviteForm({ ...inviteForm, selectedUserId: value })
+                    }
+                    placeholder="Select a user 
+                  "
+                    className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                  >
+                    {(uninvitedUsers as UninvitedUser[]).map(
+                      (user: UninvitedUser) => (
+                        <SelectItem key={user.$id} value={user.$id}>
+                          <div className="flex items-center gap-3">
+                            <Avatar
+                              name={user.fullName}
+                              userId={user.$id}
                               size="sm"
-                              onClick={() => handleDelete(inv.token, inv.email)}
-                              disabled={deletingToken === inv.token}
-                              style={{
-                                backgroundColor: '#ffffff',
-                                color: '#f87774',
-                              }}
-                            >
-                              {deletingToken === inv.token ? (
-                                'Deleting...'
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
+                            />
+                            <span>
+                              {user.fullName} ({user.email})
+                            </span>
+                          </div>
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectScrollable>
+                  <SelectScrollable
+                    value={inviteForm.role}
+                    onValueChange={(value) =>
+                      setInviteForm({ ...inviteForm, role: value })
+                    }
+                    placeholder="Select role"
+                    className="min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                  >
+                    <SelectItem value="executive">Executive</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectScrollable>
+
+                  <SelectScrollable
+                    value={inviteForm.department}
+                    onValueChange={(value) =>
+                      setInviteForm({ ...inviteForm, department: value })
+                    }
+                    placeholder="Select department"
+                    className="min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                  >
+                    <SelectItem value="administration">
+                      Administration
+                    </SelectItem>
+                    <SelectItem value="behavioral-health">
+                      Behavioral Health
+                    </SelectItem>
+                    <SelectItem value="child-welfare">Child Welfare</SelectItem>
+                    <SelectItem value="clinic">Clinic</SelectItem>
+                    <SelectItem value="c-suite">C-Suite</SelectItem>
+                    <SelectItem value="cfs">CFS</SelectItem>
+                    <SelectItem value="finance">Finance</SelectItem>
+                    <SelectItem value="hr">Human Resources</SelectItem>
+                    <SelectItem value="it">Information Technology</SelectItem>
+                    <SelectItem value="legal">Legal</SelectItem>
+                    <SelectItem value="operations">Operations</SelectItem>
+                    <SelectItem value="residential">Residential</SelectItem>
+                  </SelectScrollable>
+
+                  <SelectScrollable
+                    value={inviteForm.division}
+                    onValueChange={(value) =>
+                      setInviteForm({ ...inviteForm, division: value })
+                    }
+                    placeholder="Select division"
+                    className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                  >
+                    <SelectItem value="admin">Administration</SelectItem>
+                    <SelectItem value="behavioralhealth">
+                      Behavioral Health
+                    </SelectItem>
+                    <SelectItem value="c-suite">C-Suite</SelectItem>
+                    <SelectItem value="cins-fins-snap">CFS</SelectItem>
+                    <SelectItem value="childwelfare">Child Welfare</SelectItem>
+                    <SelectItem value="clinic">Clinic</SelectItem>
+                    {/* <SelectItem value="management">Management</SelectItem> */}
+                    <SelectItem value="residential">Residential</SelectItem>
+                  </SelectScrollable>
+                  <Button
+                    type="submit"
+                    disabled={
+                      loading ||
+                      (uninvitedUsers as UninvitedUser[]).length === 0
+                    }
+                    className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                  >
+                    {loading ? 'Inviting...' : 'Send Invite'}
+                  </Button>
+                </form>
+                {(uninvitedUsers as UninvitedUser[]).length === 0 && (
+                  <p className="text-sm text-gray-500 mt-2 text-center">
+                    No users found in Auth database
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+                  Pending Invitations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto border rounded">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-gray-50 text-center">
+                      <tr>
+                        <th className="text-slate-700 text-center px-4 py-2">
+                          Name
+                        </th>
+                        <th className="text-slate-700 text-center px-4 py-2">
+                          Email
+                        </th>
+                        <th className="text-slate-700 text-center px-4 py-2">
+                          Role
+                        </th>
+                        <th className="text-slate-700 text-center px-4 py-2">
+                          Invited
+                        </th>
+                        <th className="text-slate-700 text-center px-4 py-2">
+                          Expires
+                        </th>
+                        <th className="text-slate-700 text-center px-4 py-2">
+                          Status
+                        </th>
+                        <th className="text-slate-700 text-center px-4 py-2">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {unifiedLoading ? (
+                        [1, 2, 3].map((i) => (
+                          <TableRowSkeleton key={i} columns={7} />
+                        ))
+                      ) : invitations.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="text-center py-8 text-gray-400"
+                          >
+                            No pending invitations
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                      ) : (
+                        (invitations as Invitation[]).map((inv: Invitation) => (
+                          <tr
+                            key={inv.$id}
+                            className={`border-b text-center hover:bg-gray-50 transition-all duration-300 ${
+                              removingInvitations.has(inv.token)
+                                ? 'invitation-removing'
+                                : addingInvitations.has(inv.token)
+                                ? 'invitation-adding'
+                                : ''
+                            }`}
+                          >
+                            <td className="pl-2 ">{inv.name}</td>
+                            <td>{inv.email}</td>
+                            <td>{inv.role}</td>
+                            <td>
+                              <ClientDate dateString={inv.$createdAt} />
+                            </td>
+                            <td>
+                              <ClientDate dateString={inv.expiresAt} />
+                            </td>
+                            <td>
+                              <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-[#B3EBF2] text-[#12477D]">
+                                {inv.status}
+                              </span>
+                            </td>
+                            <td className="space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handleRevoke(inv.token, inv.email)
+                                }
+                                disabled={revokingToken === inv.token}
+                                className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                              >
+                                {revokingToken === inv.token
+                                  ? 'Revoking...'
+                                  : 'Revoke'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleResend(inv.token)}
+                                disabled={resendingToken === inv.token}
+                                className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                              >
+                                {resendingToken === inv.token
+                                  ? 'Resending...'
+                                  : 'Resend'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  handleDelete(inv.token, inv.email)
+                                }
+                                disabled={deletingToken === inv.token}
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  color: '#f87774',
+                                }}
+                              >
+                                {deletingToken === inv.token ? (
+                                  'Deleting...'
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Edit User Modal */}
-          <Dialog open={false} onOpenChange={() => {}}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit User</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium">Full Name</label>
-                  <Input
-                    name="fullName"
-                    value=""
-                    onChange={() => {}}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Division</label>
-                  <select
-                    name="division"
-                    value=""
-                    onChange={() => {}}
-                    className="w-full border rounded px-2 py-1"
-                    required
-                  >
-                    <option value="">Select division</option>
-                    <option value="childwelfare">Child Welfare</option>
-                    <option value="behavioralhealth">Behavioral Health</option>
-                    <option value="finance">Finance</option>
-                    <option value="admin">Administration</option>
-                    <option value="admin">Administration</option>
-                    <option value="c-suite">C-Suite</option>
-                    <option value="managerial">Managerial</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Role</label>
-                  <select
-                    name="role"
-                    value=""
-                    onChange={() => {}}
-                    className="w-full border rounded px-2 py-1"
-                    required
-                  >
-                    <option value="executive">Executive</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-                {/* editError && (
-                  <div className="text-red-600 text-sm">{editError}</div>
-                ) */}
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {}}
-                    disabled={false}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={false}>
-                    {false ? 'Saving...' : 'Save'}
-                  </Button>
-                </div>
-                {false && (
-                  <div className="text-center text-slate-500">
-                    Saving changes...
-                  </div>
-                )}
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          {/* Enhanced Revoke Confirmation Dialog */}
-          <AlertDialog
-            open={showRevokeDialog}
-            onOpenChange={setShowRevokeDialog}
-          >
-            <AlertDialogContent className="bg-[#F6F7FA] backdrop-blur border border-white/50 shadow-xl rounded-xl max-w-md mx-4">
-              <AlertDialogHeader className="text-center pb-4">
-                <div className="flex justify-center mb-3">
-                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">⚠️</span>
-                  </div>
-                </div>
-                <AlertDialogTitle className="text-xl sidebar-gradient-text">
-                  Revoke this invitation?
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-slate-600 text-sm mt-2">
-                  User won&apos;t be able to accept it afterward.
-                </AlertDialogDescription>
-                <div className="border border-b-0 border-slate-300 "></div>
-              </AlertDialogHeader>
-
-              <div className="px-6 pb-4">
-                <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-                  {revokeEmail && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-700">
-                        Email:
-                      </span>
-                      <span className="text-sm text-slate-600">
-                        {revokeEmail}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700">
-                      Date:
-                    </span>
-                    <span className="text-sm text-slate-600">
-                      {new Date().toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs text-amber-800 font-medium">
-                    ⚠️ This action can&apos;t be undone
-                  </p>
-                </div>
-              </div>
-              <AlertDialogFooter className="flex-col sm:flex-row gap-3 px-6 pb-6">
-                <AlertDialogCancel
-                  onClick={cancelRevoke}
-                  className="w-full sm:w-auto bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 transition-colors rounded-lg px-4 py-2 font-medium"
+            {/* Edit User Modal */}
+            <Dialog open={false} onOpenChange={() => {}}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit User</DialogTitle>
+                </DialogHeader>
+                <form
+                  onSubmit={(e) => e.preventDefault()}
+                  className="space-y-4"
                 >
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={confirmRevoke}
-                  className="w-full sm:w-auto bg-red-500/80 backdrop-blur border border-red-400/50 shadow-md text-slate-700 hover:bg-red-600/80 transition-colors rounded-lg px-4 py-2 font-medium"
-                >
-                  Revoke
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
-          {/* Professional Delete Confirmation Dialog */}
-          <AlertDialog
-            open={showDeleteDialog}
-            onOpenChange={setShowDeleteDialog}
-          >
-            <AlertDialogContent className="bg-white/95 backdrop-blur-sm border border-slate-200 shadow-2xl rounded-lg max-w-md mx-4">
-              <AlertDialogHeader className="pb-1">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-                    <Trash2
-                      className="h-5 w-5"
-                      style={{
-                        color: '#0E638F',
-                      }}
+                  <div>
+                    <label className="block text-sm font-medium">
+                      Full Name
+                    </label>
+                    <Input
+                      name="fullName"
+                      value=""
+                      onChange={() => {}}
+                      required
                     />
                   </div>
                   <div>
-                    <AlertDialogTitle className="text-lg font-semibold sidebar-gradient-text">
-                      Delete Invitation?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-sm text-slate-600 mt-1">
-                      This action cannot be undone
-                    </AlertDialogDescription>
+                    <label className="block text-sm font-medium">
+                      Division
+                    </label>
+                    <select
+                      name="division"
+                      value=""
+                      onChange={() => {}}
+                      className="w-full border rounded px-2 py-1"
+                      required
+                    >
+                      <option value="">Select division</option>
+                      <option value="childwelfare">Child Welfare</option>
+                      <option value="behavioralhealth">
+                        Behavioral Health
+                      </option>
+                      <option value="finance">Finance</option>
+                      <option value="admin">Administration</option>
+                      <option value="admin">Administration</option>
+                      <option value="c-suite">C-Suite</option>
+                      <option value="managerial">Managerial</option>
+                    </select>
                   </div>
-                </div>
-              </AlertDialogHeader>
+                  <div>
+                    <label className="block text-sm font-medium">Role</label>
+                    <select
+                      name="role"
+                      value=""
+                      onChange={() => {}}
+                      className="w-full border rounded px-2 py-1"
+                      required
+                    >
+                      <option value="executive">Executive</option>
+                      <option value="manager">Manager</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  {/* editError && (
+                  <div className="text-red-600 text-sm">{editError}</div>
+                ) */}
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {}}
+                      disabled={false}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={false}>
+                      {false ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                  {false && (
+                    <div className="text-center text-slate-500">
+                      Saving changes...
+                    </div>
+                  )}
+                </form>
+              </DialogContent>
+            </Dialog>
 
-              <div className="px-6 pb-6">
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-                  <h4 className="text-sm font-medium text-slate-900 mb-3">
-                    Invitation Details
-                  </h4>
-                  <div className="space-y-2">
-                    {deleteEmail && (
-                      <div className="flex items-center justify-between py-1">
-                        <span className="text-sm text-slate-600">
-                          Email Address:
+            {/* Enhanced Revoke Confirmation Dialog */}
+            <AlertDialog
+              open={showRevokeDialog}
+              onOpenChange={setShowRevokeDialog}
+            >
+              <AlertDialogContent className="bg-[#F6F7FA] backdrop-blur border border-white/50 shadow-xl rounded-xl max-w-md mx-4">
+                <AlertDialogHeader className="text-center pb-4">
+                  <div className="flex justify-center mb-3">
+                    <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                      <span className="text-2xl">⚠️</span>
+                    </div>
+                  </div>
+                  <AlertDialogTitle className="text-xl sidebar-gradient-text">
+                    Revoke this invitation?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-slate-600 text-sm mt-2">
+                    User won&apos;t be able to accept it afterward.
+                  </AlertDialogDescription>
+                  <div className="border border-b-0 border-slate-300 "></div>
+                </AlertDialogHeader>
+
+                <div className="px-6 pb-4">
+                  <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                    {revokeEmail && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-700">
+                          Email:
                         </span>
-                        <span className="text-sm font-medium text-slate-900">
-                          {deleteEmail}
+                        <span className="text-sm text-slate-600">
+                          {revokeEmail}
                         </span>
                       </div>
                     )}
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-sm text-slate-600">
-                        Request Date:
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">
+                        Date:
                       </span>
-                      <span className="text-sm font-medium text-slate-900">
-                        {new Date().toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                      <span className="text-sm text-slate-600">
+                        {new Date().toLocaleDateString()}
                       </span>
                     </div>
                   </div>
-                </div>
 
-                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <div className="w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center mt-0.5">
-                      <span className="text-xs text-white font-bold">!</span>
-                    </div>
-                    <p className="text-sm text-amber-800">
-                      <strong>Warning:</strong> This will permanently remove the
-                      invitation from the system. The recipient will no longer
-                      be able to access their invitation link.
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-xs text-amber-800 font-medium">
+                      ⚠️ This action can&apos;t be undone
                     </p>
                   </div>
                 </div>
-              </div>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-3 px-6 pb-6">
+                  <AlertDialogCancel
+                    onClick={cancelRevoke}
+                    className="w-full sm:w-auto bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 transition-colors rounded-lg px-4 py-2 font-medium"
+                  >
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={confirmRevoke}
+                    className="w-full sm:w-auto bg-red-500/80 backdrop-blur border border-red-400/50 shadow-md text-slate-700 hover:bg-red-600/80 transition-colors rounded-lg px-4 py-2 font-medium"
+                  >
+                    Revoke
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
-              <div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
-                <AlertDialogCancel
-                  onClick={cancelDelete}
-                  className="primary-btn"
-                >
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={confirmDelete}
-                  className="primary-btn"
-                >
-                  Delete Invitation
-                </AlertDialogAction>
-              </div>
-            </AlertDialogContent>
-          </AlertDialog>
+            {/* Professional Delete Confirmation Dialog */}
+            <AlertDialog
+              open={showDeleteDialog}
+              onOpenChange={setShowDeleteDialog}
+            >
+              <AlertDialogContent className="bg-white/95 backdrop-blur-sm border border-slate-200 shadow-2xl rounded-lg max-w-md mx-4">
+                <AlertDialogHeader className="pb-1">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                      <Trash2
+                        className="h-5 w-5"
+                        style={{
+                          color: '#0E638F',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <AlertDialogTitle className="text-lg font-semibold sidebar-gradient-text">
+                        Delete Invitation?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-sm text-slate-600 mt-1">
+                        This action cannot be undone
+                      </AlertDialogDescription>
+                    </div>
+                  </div>
+                </AlertDialogHeader>
+
+                <div className="px-6 pb-6">
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
+                    <h4 className="text-sm font-medium text-slate-900 mb-3">
+                      Invitation Details
+                    </h4>
+                    <div className="space-y-2">
+                      {deleteEmail && (
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-sm text-slate-600">
+                            Email Address:
+                          </span>
+                          <span className="text-sm font-medium text-slate-900">
+                            {deleteEmail}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-sm text-slate-600">
+                          Request Date:
+                        </span>
+                        <span className="text-sm font-medium text-slate-900">
+                          {new Date().toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <div className="w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-xs text-white font-bold">!</span>
+                      </div>
+                      <p className="text-sm text-amber-800">
+                        <strong>Warning:</strong> This will permanently remove
+                        the invitation from the system. The recipient will no
+                        longer be able to access their invitation link.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
+                  <AlertDialogCancel
+                    onClick={cancelDelete}
+                    className="primary-btn"
+                  >
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={confirmDelete}
+                    className="primary-btn"
+                  >
+                    Delete Invitation
+                  </AlertDialogAction>
+                </div>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
-      </div>
+      </div>{' '}
+      {/* Close Main Content Container */}
     </div>
   );
 };

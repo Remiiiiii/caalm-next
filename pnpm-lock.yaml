@@ -233,6 +233,9 @@ importers:
       react-intersection-observer:
         specifier: ^9.16.0
         version: 9.16.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      react-minimal-pie-chart:
+        specifier: ^9.1.1
+        version: 9.1.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       react-pdf:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.1.13)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -3972,6 +3975,12 @@ packages:
   react-merge-refs@2.1.1:
     resolution: {integrity: sha512-jLQXJ/URln51zskhgppGJ2ub7b2WFKGq3cl3NYKtlHoTG+dN2q7EzWrn3hN3EgPsTMvpR9tpq5ijdp7YwFZkag==}
 
+  react-minimal-pie-chart@9.1.1:
+    resolution: {integrity: sha512-zirxMg8ETFKmncvreel4ooMvHIrAXWQAyXHNnqxKTtJeM2m8ipNRhsCxGXszXgwz9zUliFhWceNp6q4lTxHlJQ==}
+    peerDependencies:
+      react: ^16.8.0 || ^17 || ^18 || ^19
+      react-dom: ^16.8.0 || ^17 || ^18 || ^19
+
   react-pdf@10.1.0:
     resolution: {integrity: sha512-iUI1YqWgwwZcsXjrehTp3Yi8nT/bvTaWULaRMMyJWvoqqSlopk4LQQ9GDqUnDtX3gzT2glrqrLbjIPl56a+Q3w==}
     peerDependencies:
@@ -4416,6 +4425,10 @@ packages:
 
   svg-arc-to-cubic-bezier@3.2.0:
     resolution: {integrity: sha512-djbJ/vZKZO+gPoSDThGNpKDO+o+bAeA4XQKovvkNCqnIS2t+S4qnLAGQhyyrulhCFRl1WWzAp0wUDV8PpTVU3g==}
+
+  svg-partial-circle@1.0.0:
+    resolution: {integrity: sha512-jDWgNzrlpsGo9A7/tdjCy6+1RzeeANYV1a3JtNYC/0ZXI3U+3VMucuNv7JuKti9VVBdyNxNO1CZs/k0xS1lUFA==}
+    engines: {node: '>=6'}
 
   swr@2.3.6:
     resolution: {integrity: sha512-wfHRmHWk/isGNMwlLGlZX5Gzz/uTgo0o2IRuTMcf4CPuPFJZlq0rDaKUx+ozB5nBOReNV1kiOyzMfj+MBMikLw==}
@@ -8865,6 +8878,12 @@ snapshots:
 
   react-merge-refs@2.1.1: {}
 
+  react-minimal-pie-chart@9.1.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+    dependencies:
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
+      svg-partial-circle: 1.0.0
+
   react-pdf@10.1.0(@types/react@19.1.13)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       clsx: 2.1.1
@@ -9406,6 +9425,8 @@ snapshots:
   supports-preserve-symlinks-flag@1.0.0: {}
 
   svg-arc-to-cubic-bezier@3.2.0: {}
+
+  svg-partial-circle@1.0.0: {}
 
   swr@2.3.6(react@19.1.1):
     dependencies:

@@ -296,7 +296,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 
   if (loading) {
     return (
-      <Card className="w-[300px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
+      <Card className="w-[300px] h-[300px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
         <CardHeader className="pb-3 pt-4 px-4">
           <div className="flex items-center justify-between">
             <div>
@@ -333,7 +333,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 
   if (error) {
     return (
-      <Card className="w-[300px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
+      <Card className="w-[300px] h-[300px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
         <CardHeader className="pb-3 pt-4 px-4">
           <div className="flex items-center justify-between">
             <div>
@@ -374,7 +374,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   if (!weatherData) return null;
 
   return (
-    <Card className="w-[300px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+    <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
       {/* Header with location and time */}
       <CardHeader className="pb-3 pt-4 px-4">
         <div className="flex items-center justify-between">
@@ -468,7 +468,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
             </div>
           </div>
           {/* Weather condition indicator */}
-          <div className="flex items-center justify-center pt-1">
+          <div className="flex items-center justify-center !-mt-1">
             <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
               <div
                 className={`w-2 h-2 rounded-full ${
