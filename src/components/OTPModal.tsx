@@ -40,6 +40,7 @@ const OTPModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [lastError, setLastError] = useState('');
+  const [isResending, setIsResending] = useState(false);
 
   const handleVerify = async () => {
     setIsLoading(true);
@@ -104,6 +105,7 @@ const OTPModal = ({
   };
 
   const handleResendOtp = async () => {
+    setIsResending(true);
     try {
       setError(''); // Clear previous errors
       setLastError(''); // Clear last error too
@@ -141,6 +143,8 @@ const OTPModal = ({
         setError(genericError);
         setLastError(genericError);
       }
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -230,16 +234,29 @@ const OTPModal = ({
               {error || lastError}
             </p>
             {!(error || lastError).includes('sent!') && (
-              <button
-                onClick={() => {
-                  setError('');
-                  setLastError('');
-                  setOtp(''); // Clear the OTP input
-                }}
-                className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
-              >
-                Clear error and try again
-              </button>
+              <div className="mt-2 flex flex-col gap-2">
+                {(error || lastError).includes('expired') && (
+                  <button
+                    onClick={handleResendOtp}
+                    disabled={isResending}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isResending
+                      ? 'Sending...'
+                      : 'Request new verification code'}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setError('');
+                    setLastError('');
+                    setOtp(''); // Clear the OTP input
+                  }}
+                  className="text-xs text-red-600 hover:text-red-800 underline"
+                >
+                  Clear error and try again
+                </button>
+              </div>
             )}
           </div>
         )}
