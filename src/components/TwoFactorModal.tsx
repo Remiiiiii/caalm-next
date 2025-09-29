@@ -181,8 +181,8 @@ const TwoFactorModal = ({
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="shad-alert-dialog max-w-md">
         <AlertDialogHeader className="relative flex justify-center">
-          <AlertDialogTitle className="h2 text-center flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-500" />
+          <AlertDialogTitle className="h2 text-center flex items-center gap-2 sidebar-gradient-text">
+            <Shield className="h-5 w-5 text-navy" />
             Two-Factor Authentication Setup
             <Image
               src="/assets/icons/close-dark.svg"
@@ -193,7 +193,7 @@ const TwoFactorModal = ({
               onClick={onClose}
             />
           </AlertDialogTitle>
-          <AlertDialogDescription className="subtitle-2 text-center">
+          <AlertDialogDescription className="subtitle-2 text-light-100 text-center">
             {step === 'setup' &&
               'Two-factor authentication is required for account security'}
             {step === 'verify' &&
@@ -205,13 +205,13 @@ const TwoFactorModal = ({
         {step === 'setup' && (
           <div className="space-y-4">
             <div className="text-center">
-              <p className="text-sm text-light-200 mb-4">
+              <p className="text-sm text-light-100 mb-4">
                 Two-factor authentication is mandatory for all users to ensure
                 account security.
               </p>
               <div className="flex items-center justify-center gap-2 mb-4">
-                <Smartphone className="h-4 w-4 text-blue-500" />
-                <span className="text-sm text-light-200">
+                <Smartphone className="h-4 w-4 text-navy" />
+                <span className="text-sm text-light-100">
                   Use an authenticator app like Google Authenticator or Authy
                 </span>
               </div>
@@ -220,7 +220,7 @@ const TwoFactorModal = ({
             <div className="flex gap-3 ">
               <Button
                 onClick={setupTwoFactor}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-slate-700"
+                className="primary-btn"
                 disabled={isLoading}
               >
                 <Shield className="h-4 w-4 mr-2 text-slate-700" />
@@ -247,11 +247,11 @@ const TwoFactorModal = ({
                     </div>
 
                     <div className="text-center space-y-2">
-                      <p className="text-sm text-light-200">
+                      <p className="text-sm text-light-100">
                         Scan this QR code with your authenticator app:
                       </p>
                       <div className="flex items-center gap-2 justify-center">
-                        <span className="text-xs text-light-200">
+                        <span className="text-xs text-light-100">
                           Secret Key:
                         </span>
                         <div className="flex items-center gap-1">
@@ -279,7 +279,7 @@ const TwoFactorModal = ({
             )}
 
             <div className="space-y-3">
-              <p className="text-sm text-light-200 text-center">
+              <p className="text-sm text-light-100 text-center">
                 After scanning the QR code, enter the 6-digit verification code:
               </p>
               <Input
@@ -291,12 +291,12 @@ const TwoFactorModal = ({
                     e.target.value.replace(/\D/g, '').slice(0, 6)
                   )
                 }
-                className="text-center text-lg tracking-widest"
+                className="text-center text-lg tracking-widest border border-[#03AFBF]"
                 maxLength={6}
               />
               <Button
                 onClick={verifyTwoFactor}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-slate-700"
+                className="primary-btn"
                 disabled={verificationCode.length !== 6 || isLoading}
               >
                 {isLoading ? (
@@ -306,7 +306,7 @@ const TwoFactorModal = ({
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="h-4 w-4 mr-2 text-slate-700" />
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
                     Verify & Continue
                   </>
                 )}
@@ -318,7 +318,7 @@ const TwoFactorModal = ({
         {step === 'success' && (
           <div className="space-y-4 text-center">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-            <p className="text-sm text-light-200">
+            <p className="text-sm text-light-100">
               Two-factor authentication has been successfully set up.
               Redirecting...
             </p>

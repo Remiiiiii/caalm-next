@@ -121,11 +121,11 @@ export async function PUT(request: NextRequest) {
       try {
         const client = await createAdminClient();
 
-        // First, check if the user exists
+        // First, check if the user exists by accountId
         const userResponse = await client.tablesDB.listRows({
           databaseId: appwriteConfig.databaseId,
           tableId: appwriteConfig.usersCollectionId,
-          queries: [Query.equal('$id', storedData.userId)],
+          queries: [Query.equal('accountId', storedData.userId)],
         });
 
         if (userResponse.rows.length === 0) {
@@ -153,7 +153,7 @@ export async function PUT(request: NextRequest) {
         await client.tablesDB.updateRow(
           appwriteConfig.databaseId,
           appwriteConfig.usersCollectionId,
-          storedData.userId,
+          userResponse.rows[0].$id, // Use the actual document ID from the users collection
           updateData
         );
 

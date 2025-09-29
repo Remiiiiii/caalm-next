@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,15 +42,17 @@ const OTPModal = ({
   const [lastError, setLastError] = useState('');
   const [isResending, setIsResending] = useState(false);
   const [hasAutoSent, setHasAutoSent] = useState(false);
+  const hasAutoSentRef = useRef(false);
 
   // Use parent-controlled isOpen prop
   const modalIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
 
   // Automatically send OTP when modal opens
   useEffect(() => {
-    if (modalIsOpen && email && !hasAutoSent) {
+    if (modalIsOpen && email && !hasAutoSent && !hasAutoSentRef.current) {
       console.log('Auto-sending OTP to:', email);
       setHasAutoSent(true);
+      hasAutoSentRef.current = true;
 
       // Auto-send OTP without showing loading state
       sendEmailOTP({ email })
@@ -67,10 +69,12 @@ const OTPModal = ({
         })
         .catch((error) => {
           console.error('Failed to auto-send OTP', error);
-          // Don't show error for auto-send, user can use resend button
+          // Reset hasAutoSent on error so user can try again
+          setHasAutoSent(false);
+          hasAutoSentRef.current = false;
         });
     }
-  }, [modalIsOpen, email, hasAutoSent]);
+  }, [modalIsOpen, email]); // Removed hasAutoSent from dependencies to prevent re-runs
 
   const handleVerify = async () => {
     setIsLoading(true);
@@ -186,6 +190,7 @@ const OTPModal = ({
       setOtp('');
       setAttempts(0);
       setHasAutoSent(false); // Reset auto-send state
+      hasAutoSentRef.current = false; // Reset ref as well
 
       // Call parent's onClose if provided
       if (onClose) {

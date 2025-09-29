@@ -303,13 +303,31 @@ const AuthForm = ({ type }: { type: FormType }) => {
             onClose={() => setShow2FASetup(false)}
             onSuccess={async () => {
               // After successful 2FA setup, redirect by role
-              const user = await getUserByEmail(form.getValues('email'));
-              if (user?.role === 'executive')
-                router.push('/dashboard/executive');
-              else if (user?.role === 'manager')
-                router.push('/dashboard/manager');
-              else if (user?.role === 'admin') router.push('/dashboard/admin');
-              else router.push('/dashboard');
+              try {
+                const user = await getUserByEmail(form.getValues('email'));
+                console.log('2FA Setup Success - User data:', user);
+
+                if (user?.role === 'executive') {
+                  console.log('Redirecting to executive dashboard');
+                  router.push('/dashboard/executive');
+                } else if (user?.role === 'manager') {
+                  console.log('Redirecting to manager dashboard');
+                  router.push('/dashboard/manager');
+                } else if (user?.role === 'admin') {
+                  console.log('Redirecting to admin dashboard');
+                  router.push('/dashboard/admin');
+                } else {
+                  console.log('Redirecting to default dashboard');
+                  router.push('/dashboard');
+                }
+              } catch (error) {
+                console.error(
+                  'Error during 2FA setup success callback:',
+                  error
+                );
+                // Fallback navigation
+                router.push('/dashboard');
+              }
             }}
           />
         )}
