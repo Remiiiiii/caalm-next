@@ -41,6 +41,33 @@ const OTPModal = ({
   const [attempts, setAttempts] = useState(0);
   const [lastError, setLastError] = useState('');
   const [isResending, setIsResending] = useState(false);
+  const [hasAutoSent, setHasAutoSent] = useState(false);
+
+  // Automatically send OTP when modal opens
+  useEffect(() => {
+    if (modalIsOpen && email && !hasAutoSent) {
+      console.log('Auto-sending OTP to:', email);
+      setHasAutoSent(true);
+
+      // Auto-send OTP without showing loading state
+      sendEmailOTP({ email })
+        .then(() => {
+          console.log('Auto OTP sent successfully');
+          setError('Verification code sent! Please check your email.');
+          setLastError('Verification code sent! Please check your email.');
+
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            setError('');
+            setLastError('');
+          }, 3000);
+        })
+        .catch((error) => {
+          console.error('Failed to auto-send OTP', error);
+          // Don't show error for auto-send, user can use resend button
+        });
+    }
+  }, [modalIsOpen, email, hasAutoSent]);
 
   const handleVerify = async () => {
     setIsLoading(true);
@@ -155,6 +182,7 @@ const OTPModal = ({
       setLastError('');
       setOtp('');
       setAttempts(0);
+      setHasAutoSent(false); // Reset auto-send state
 
       // Call parent's onClose if provided
       if (onClose) {
@@ -190,8 +218,9 @@ const OTPModal = ({
             />
           </AlertDialogTitle>
           <AlertDialogDescription className="subtitle-2 text-center">
-            We&apos;ve sent you a code to{' '}
-            <span className="pl-1 text-brand">{email}</span>
+            {hasAutoSent
+              ? `We've sent you a code to ${email}`
+              : `Sending verification code to ${email}...`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <InputOTP
