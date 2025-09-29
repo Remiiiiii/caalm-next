@@ -4,6 +4,7 @@ import 'aos/dist/aos.css';
 import type { ReactNode } from 'react';
 import { Poppins } from 'next/font/google';
 import SWRProvider from '@/components/providers/SWRProvider';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -44,7 +45,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         suppressHydrationWarning
         className={`${poppins.variable} font-poppins antialiased`}
       >
-        <SWRProvider>{children}</SWRProvider>
+        <ErrorBoundary>
+          <SWRProvider>{children}</SWRProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

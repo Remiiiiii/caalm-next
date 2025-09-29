@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Hide error details in production
+  ...(process.env.NODE_ENV === 'production' && {
+    experimental: {
+      serverComponentsExternalPackages: [],
+    },
+  }),
   experimental: {
     serverActions: {
       bodySizeLimit: '100MB',
