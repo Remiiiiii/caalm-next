@@ -43,6 +43,9 @@ const OTPModal = ({
   const [isResending, setIsResending] = useState(false);
   const [hasAutoSent, setHasAutoSent] = useState(false);
 
+  // Use parent-controlled isOpen prop
+  const modalIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
+
   // Automatically send OTP when modal opens
   useEffect(() => {
     if (modalIsOpen && email && !hasAutoSent) {
@@ -192,9 +195,6 @@ const OTPModal = ({
       }
     }
   };
-
-  // Use parent-controlled isOpen prop
-  const modalIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
 
   return (
     <AlertDialog open={modalIsOpen} onOpenChange={handleModalClose}>
