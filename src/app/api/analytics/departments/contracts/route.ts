@@ -127,13 +127,19 @@ export async function GET() {
       },
       Finance: {
         name: 'Finance',
-        divisions: [],
+        divisions: [
+          {
+            id: 'accounting',
+            name: 'Accounting',
+            description: 'Financial accounting and reporting',
+          },
+        ],
       },
       Administration: {
         name: 'Administration',
         divisions: [
           {
-            id: 'HR',
+            id: 'hr',
             name: 'Human Resources',
             description: 'Human resources administration',
           },
@@ -147,14 +153,19 @@ export async function GET() {
         name: 'Operations',
         divisions: [
           {
+            id: 'behavioral-health',
+            name: 'Behavioral Health',
+            description: 'Behavioral health services and outcomes',
+          },
+          {
             id: 'child-welfare',
             name: 'Child Welfare',
             description: 'Child welfare services and program metrics',
           },
           {
-            id: 'behavioral-health',
-            name: 'Behavioral Health',
-            description: 'Behavioral health services and outcomes',
+            id: 'clinic',
+            name: 'Clinic',
+            description: 'Clinical services and patient outcomes',
           },
           {
             id: 'cfs',
@@ -165,11 +176,6 @@ export async function GET() {
             id: 'residential',
             name: 'Residential',
             description: 'Residential services and facility metrics',
-          },
-          {
-            id: 'clinic',
-            name: 'Clinic',
-            description: 'Clinical services and patient outcomes',
           },
         ],
       },
@@ -183,6 +189,16 @@ export async function GET() {
       },
       Executive: {
         name: 'Executive',
+        divisions: [
+          {
+            id: 'c-suite',
+            name: 'C-Suite',
+            description: 'Executive leadership and strategic management',
+          },
+        ],
+      },
+      Engineering: {
+        name: 'Engineering',
         divisions: [],
       },
       Engineering: {
@@ -211,14 +227,14 @@ export async function GET() {
       departmentStats.staffCount = departmentStaffCount;
 
       const divisions = deptConfig.divisions.map((division) => {
-        // Map division ID to database division name
+        // Division IDs now match database division names directly
         const dbDivisionMap: Record<string, string> = {
-          'child-welfare': 'childwelfare',
-          'behavioral-health': 'behavioralhealth',
-          cfs: 'cins-fins-snap',
+          'child-welfare': 'child-welfare',
+          'behavioral-health': 'behavioral-health',
+          cfs: 'cfs',
           residential: 'residential',
           clinic: 'clinic',
-          administration: 'administration',
+          hr: 'hr',
           support: 'support',
           'help-desk': 'help-desk',
         };

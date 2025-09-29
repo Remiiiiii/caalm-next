@@ -281,7 +281,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       id: 1,
       type: 'User Registration',
       requester: 'David Wilson - Admin',
-      division: 'Admin',
+      division: 'hr',
     },
     {
       id: 2,
@@ -408,6 +408,17 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       // Mark as adding for visual feedback
       const tempToken = `temp_token_${Date.now()}`;
       setAddingInvitations((prev) => new Set(prev).add(tempToken));
+
+      // Debug: Log the form values being sent
+      console.log('Frontend: Sending invitation with values:', {
+        email: selectedUser.email,
+        name: selectedUser.fullName,
+        role: inviteForm.role,
+        department: inviteForm.department,
+        division: inviteForm.division,
+        divisionType: typeof inviteForm.division,
+        divisionLength: inviteForm.division?.length,
+      });
 
       await createInvitation({
         email: selectedUser.email,
@@ -961,22 +972,17 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     placeholder="Select department"
                     className="min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                   >
-                    <SelectItem value="administration">
+                    <SelectItem value="IT">IT</SelectItem>
+                    <SelectItem value="Finance">Finance</SelectItem>
+                    <SelectItem value="Administration">
                       Administration
                     </SelectItem>
-                    <SelectItem value="behavioral-health">
-                      Behavioral Health
-                    </SelectItem>
-                    <SelectItem value="child-welfare">Child Welfare</SelectItem>
-                    <SelectItem value="clinic">Clinic</SelectItem>
-                    <SelectItem value="c-suite">C-Suite</SelectItem>
-                    <SelectItem value="cfs">CFS</SelectItem>
-                    <SelectItem value="finance">Finance</SelectItem>
-                    <SelectItem value="hr">Human Resources</SelectItem>
-                    <SelectItem value="it">Information Technology</SelectItem>
-                    <SelectItem value="legal">Legal</SelectItem>
-                    <SelectItem value="operations">Operations</SelectItem>
-                    <SelectItem value="residential">Residential</SelectItem>
+                    <SelectItem value="Legal">Legal</SelectItem>
+                    <SelectItem value="Operations">Operations</SelectItem>
+                    <SelectItem value="Sales">Sales</SelectItem>
+                    <SelectItem value="Marketing">Marketing</SelectItem>
+                    <SelectItem value="Executive">Executive</SelectItem>
+                    <SelectItem value="Engineering">Engineering</SelectItem>
                   </SelectScrollable>
 
                   <SelectScrollable
@@ -987,16 +993,19 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     placeholder="Select division"
                     className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                   >
-                    <SelectItem value="admin">Administration</SelectItem>
-                    <SelectItem value="behavioralhealth">
+                    <SelectItem value="behavioral-health">
                       Behavioral Health
                     </SelectItem>
-                    <SelectItem value="c-suite">C-Suite</SelectItem>
-                    <SelectItem value="cins-fins-snap">CFS</SelectItem>
-                    <SelectItem value="childwelfare">Child Welfare</SelectItem>
+                    <SelectItem value="child-welfare">Child Welfare</SelectItem>
                     <SelectItem value="clinic">Clinic</SelectItem>
-                    {/* <SelectItem value="management">Management</SelectItem> */}
+                    <SelectItem value="c-suite">C-Suite</SelectItem>
+                    <SelectItem value="cfs">CFS</SelectItem>
+                    <SelectItem value="hr">Human Resources</SelectItem>
                     <SelectItem value="residential">Residential</SelectItem>
+                    <SelectItem value="support">Support</SelectItem>
+                    <SelectItem value="help-desk">Help Desk</SelectItem>
+                    <SelectItem value="accounting">Accounting</SelectItem>
+                    {/* <SelectItem value="management">Management</SelectItem> */}
                   </SelectScrollable>
                   <Button
                     type="submit"
@@ -1176,15 +1185,18 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                       required
                     >
                       <option value="">Select division</option>
-                      <option value="childwelfare">Child Welfare</option>
-                      <option value="behavioralhealth">
+                      <option value="child-welfare">Child Welfare</option>
+                      <option value="behavioral-health">
                         Behavioral Health
                       </option>
-                      <option value="finance">Finance</option>
-                      <option value="admin">Administration</option>
-                      <option value="admin">Administration</option>
+                      <option value="clinic">Clinic</option>
+                      <option value="residential">Residential</option>
+                      <option value="cfs">CFS</option>
+                      <option value="hr">Human Resources</option>
+                      <option value="support">Support</option>
+                      <option value="help-desk">Help Desk</option>
+                      <option value="accounting">Accounting</option>
                       <option value="c-suite">C-Suite</option>
-                      <option value="managerial">Managerial</option>
                     </select>
                   </div>
                   <div>

@@ -7,7 +7,7 @@ import { parseStringify } from '../utils';
 import { cookies } from 'next/headers';
 import { avatarPlaceholderUrl } from '../../../constants';
 import { redirect } from 'next/navigation';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import * as sdk from 'node-appwrite';
 import { triggerUserInvitationNotification } from '../utils/notificationTriggers';
 import { type UserDivision } from '../../../constants';
@@ -658,7 +658,7 @@ export const signInUser = async ({ email }: { email: string }) => {
   }
 };
 
-const INVITATIONS_COLLECTION = 'invitations';
+const INVITATIONS_COLLECTION = appwriteConfig.invitationsCollectionId;
 
 // Types for invitation functions
 interface CreateInvitationParams {
@@ -666,6 +666,7 @@ interface CreateInvitationParams {
   orgId: string;
   role: string;
   department: string;
+  division?: string;
   name: string;
   expiresInDays?: number;
   invitedBy: string;
@@ -692,78 +693,182 @@ export const createInvitation = async ({
   orgId,
   role,
   department,
+  division,
   name,
   expiresInDays = 7,
   invitedBy,
 }: CreateInvitationParams) => {
-  const { tablesDB } = await createAdminClient();
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(
-    Date.now() + expiresInDays * 24 * 60 * 60 * 1000
-  ).toISOString();
-  const status = 'pending';
-  const revoked = false;
-
-  const normalizedRole = role.toLowerCase();
-  if (!allowedRoles.includes(normalizedRole as AllowedRole)) {
-    throw new Error(
-      `Invalid role: ${role}. Must be one of ${allowedRoles.join(', ')}`
-    );
-  }
-
-  // 1. Create invitation document
-  await tablesDB.createRow({
-    databaseId: appwriteConfig.databaseId,
-    tableId: INVITATIONS_COLLECTION,
-    rowId: ID.unique(),
-    data: {
+  try {
+    console.log('createInvitation: Starting invitation creation for:', email);
+    console.log('createInvitation: Parameters:', {
       email,
       orgId,
-      role: normalizedRole,
+      role,
       department,
+      division,
       name,
-      token,
-      expiresAt,
-      status,
-      revoked,
       invitedBy,
-    },
-  });
+    });
+    const { tablesDB } = await createAdminClient();
+    console.log('createInvitation: Admin client created successfully');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(
+      Date.now() + expiresInDays * 24 * 60 * 60 * 1000
+    ).toISOString();
+    const status = 'pending';
+    const revoked = false;
 
-  // 2. Send invite link email (using Mailgun)
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://www.caalmsolutions.com';
-  const inviteLink = `${baseUrl}/invite/accept?token=${token}`;
-
-  // Send the invite email via Mailgun
-  try {
-    const { mailgunService } = await import('../services/mailgun');
-    await mailgunService.sendInvitationEmail(
-      email,
-      name,
-      inviteLink,
+    const normalizedRole = role.toLowerCase();
+    console.log('createInvitation: Role validation:', {
+      originalRole: role,
       normalizedRole,
-      department
-    );
-    console.log('Invitation email sent via Mailgun to:', email);
-  } catch (error) {
-    console.error('Failed to send invite email via Mailgun:', error);
-    throw error;
-  }
+      allowedRoles,
+    });
+    if (!allowedRoles.includes(normalizedRole as AllowedRole)) {
+      console.error('createInvitation: Invalid role:', {
+        role,
+        normalizedRole,
+        allowedRoles,
+      });
+      throw new Error(
+        `Invalid role: ${role}. Must be one of ${allowedRoles.join(', ')}`
+      );
+    }
+    console.log('createInvitation: Role validation passed');
 
-  // Trigger user invitation notification
-  try {
-    await triggerUserInvitationNotification(
-      invitedBy, // Notify the person who sent the invitation
+    // Validate division against expected enum values
+    const validDivisions = [
+      'c-suite',
+      'clinic',
+      'residential',
+      'help-desk',
+      'hr',
+      'support',
+      'accounting',
+      'behavioral-health',
+      'child-welfare',
+      'cfs',
+    ];
+
+    // Debug: Log the received parameters
+    console.log('createInvitation: Received parameters:', {
       email,
-      name
-    );
-  } catch (error) {
-    console.error('Failed to trigger user invitation notification:', error);
-    // Don't throw error here as the invitation was created successfully
-  }
+      role,
+      department,
+      division,
+      divisionType: typeof division,
+      divisionLength: division?.length,
+      divisionTrimmed: division?.trim(),
+      isValidDivision: validDivisions.includes(division?.trim() || ''),
+      validDivisions,
+      name,
+      orgId,
+      invitedBy,
+    });
 
-  return { email, token, expiresAt };
+    // Validate division value if provided
+    if (division && !validDivisions.includes(division.trim())) {
+      console.error('createInvitation: Invalid division value:', {
+        received: division,
+        trimmed: division.trim(),
+        validOptions: validDivisions,
+      });
+      throw new Error(
+        `Invalid division value: "${division}". Must be one of: ${validDivisions.join(
+          ', '
+        )}`
+      );
+    }
+
+    // 1. Create invitation document
+    console.log('createInvitation: Creating database row...');
+    await tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: INVITATIONS_COLLECTION,
+      rowId: ID.unique(),
+      data: {
+        email,
+        orgId,
+        role: normalizedRole,
+        department: department?.trim(),
+        division: division?.trim(),
+        name,
+        token,
+        expiresAt,
+        status,
+        revoked,
+        invitedBy,
+      },
+    });
+    console.log('createInvitation: Database row created successfully');
+
+    // 2. Send invite link email (using Mailgun)
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || 'https://www.caalmsolutions.com';
+    const inviteLink = `${baseUrl}/invite/accept?token=${token}`;
+
+    // Send the invite email via Mailgun
+    try {
+      const { mailgunService } = await import('../services/mailgun');
+      await mailgunService.sendInvitationEmail(
+        email,
+        name,
+        inviteLink,
+        normalizedRole,
+        department
+      );
+      console.log('Invitation email sent via Mailgun to:', email);
+    } catch (error) {
+      console.error('Failed to send invite email via Mailgun:', error);
+      throw error;
+    }
+
+    // Trigger user invitation notification
+    try {
+      await triggerUserInvitationNotification(
+        invitedBy, // Notify the person who sent the invitation
+        email,
+        name
+      );
+    } catch (error) {
+      console.error('Failed to trigger user invitation notification:', error);
+      // Don't throw error here as the invitation was created successfully
+    }
+
+    return { email, token, expiresAt };
+  } catch (error) {
+    console.error('createInvitation: Error occurred:', error);
+
+    // Handle specific errors with user-friendly messages
+    if (error instanceof Error) {
+      if (
+        error.message.includes('permission') ||
+        error.message.includes('unauthorized')
+      ) {
+        throw new Error('You do not have permission to create invitations.');
+      } else if (
+        error.message.includes('network') ||
+        error.message.includes('connection')
+      ) {
+        throw new Error(
+          'Network error. Please check your connection and try again.'
+        );
+      } else if (
+        error.message.includes('database') ||
+        error.message.includes('collection')
+      ) {
+        throw new Error('Database error. Please try again later.');
+      } else {
+        // Log the original error for debugging but return a user-friendly message
+        console.error('createInvitation: Original error:', error);
+        throw new Error('Failed to create invitation. Please try again.');
+      }
+    }
+
+    // Fallback for unknown error types
+    console.error('createInvitation: Unknown error:', error);
+    throw new Error('An unexpected error occurred. Please try again.');
+  }
 };
 
 export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
@@ -797,6 +902,48 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   let user = await getUserByEmail(invite.email);
   if (!user) {
     const normalizedRole = invite.role.toLowerCase();
+
+    // Validate division against expected enum values
+    const validDivisions = [
+      'c-suite',
+      'clinic',
+      'residential',
+      'help-desk',
+      'hr',
+      'support',
+      'accounting',
+      'behavioral-health',
+      'child-welfare',
+      'cfs',
+    ];
+
+    console.log('acceptInvitation: Creating user with data:', {
+      fullName: invite.name,
+      email: invite.email,
+      role: normalizedRole,
+      department: invite.department,
+      division: invite.division,
+      divisionType: typeof invite.division,
+      divisionLength: invite.division?.length,
+      divisionTrimmed: invite.division?.trim(),
+      isValidDivision: validDivisions.includes(invite.division?.trim() || ''),
+      validDivisions,
+    });
+
+    // Validate division value
+    if (invite.division && !validDivisions.includes(invite.division.trim())) {
+      console.error('acceptInvitation: Invalid division value:', {
+        received: invite.division,
+        trimmed: invite.division.trim(),
+        validOptions: validDivisions,
+      });
+      throw new Error(
+        `Invalid division value: "${
+          invite.division
+        }". Must be one of: ${validDivisions.join(', ')}`
+      );
+    }
+
     await tablesDB.createRow({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.usersCollectionId,
@@ -808,6 +955,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
         accountId,
         role: normalizedRole,
         department: invite.department,
+        division: invite.division,
       },
     });
     user = await getUserByEmail(invite.email);
@@ -992,7 +1140,7 @@ export const getInvitationByToken = async (token: string) => {
   const { tablesDB } = await createAdminClient();
   const result = await tablesDB.listRows({
     databaseId: appwriteConfig.databaseId,
-    tableId: 'invitations',
+    tableId: INVITATIONS_COLLECTION,
     queries: [Query.equal('token', token)],
   });
   return result.total > 0 ? result.rows[0] : null;
@@ -1168,7 +1316,7 @@ export const getUninvitedUsers = async () => {
     // Get all pending invitations
     const pendingInvitations = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId,
-      tableId: 'invitations',
+      tableId: INVITATIONS_COLLECTION,
       queries: [Query.equal('status', 'pending')],
     });
 

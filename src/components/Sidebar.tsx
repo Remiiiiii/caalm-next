@@ -29,12 +29,12 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
     if (!dbDivision) return undefined;
 
     const divisionMap: Record<string, string> = {
-      childwelfare: 'child-welfare',
-      behavioralhealth: 'behavioral-health',
+      'child-welfare': 'child-welfare',
+      'behavioral-health': 'behavioral-health',
       clinic: 'clinic',
       residential: 'residential',
-      'cins-fins-snap': 'cfs',
-      administration: 'administration',
+      cfs: 'cfs',
+      hr: 'hr',
       'c-suite': 'c-suite',
       managerial: 'management',
       finance: 'finance',

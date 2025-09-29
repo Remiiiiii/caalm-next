@@ -368,12 +368,16 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="IT">IT</SelectItem>
+                    <SelectItem value="Finance">Finance</SelectItem>
                     <SelectItem value="Administration">
                       Administration
                     </SelectItem>
-                    <SelectItem value="Finance">Finance</SelectItem>
                     <SelectItem value="Legal">Legal</SelectItem>
                     <SelectItem value="Operations">Operations</SelectItem>
+                    <SelectItem value="Sales">Sales</SelectItem>
+                    <SelectItem value="Marketing">Marketing</SelectItem>
+                    <SelectItem value="Executive">Executive</SelectItem>
+                    <SelectItem value="Engineering">Engineering</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

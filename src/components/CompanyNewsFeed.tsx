@@ -90,7 +90,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({ limit = 5 }) => {
       date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       type: 'info',
       priority: 'medium',
-      department: 'Admin',
+      department: 'Administration',
     },
     {
       id: '4',

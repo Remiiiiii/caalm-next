@@ -138,11 +138,11 @@ const MyContractsPage = () => {
   ): string[] => {
     if (department === 'Operations') {
       return [
-        'childwelfare',
-        'behavioralhealth',
+        'child-welfare',
+        'behavioral-health',
         'clinic',
         'residential',
-        'cins-fins-snap',
+        'cfs',
       ];
     } else if (department === 'IT') {
       return ['support', 'help-desk'];

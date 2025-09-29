@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
         name: 'Administration',
         divisions: [
           {
-            id: 'HR',
+            id: 'hr',
             name: 'Human Resources',
             description: 'Human resources administration',
           },
@@ -167,14 +167,19 @@ export async function GET(request: NextRequest) {
         name: 'Operations',
         divisions: [
           {
+            id: 'behavioral-health',
+            name: 'Behavioral Health',
+            description: 'Behavioral health services and outcomes',
+          },
+          {
             id: 'child-welfare',
             name: 'Child Welfare',
             description: 'Child welfare services and program metrics',
           },
           {
-            id: 'behavioral-health',
-            name: 'Behavioral Health',
-            description: 'Behavioral health services and outcomes',
+            id: 'clinic',
+            name: 'Clinic',
+            description: 'Clinical services and patient outcomes',
           },
           {
             id: 'cfs',
@@ -185,11 +190,6 @@ export async function GET(request: NextRequest) {
             id: 'residential',
             name: 'Residential',
             description: 'Residential services and facility metrics',
-          },
-          {
-            id: 'clinic',
-            name: 'Clinic',
-            description: 'Clinical services and patient outcomes',
           },
         ],
       },
@@ -224,16 +224,16 @@ export async function GET(request: NextRequest) {
       const departmentContracts = contractsByDepartment[deptKey] || [];
       const departmentStats = calculateStats(departmentContracts);
 
-      // Map division IDs to database division names
+      // Division IDs now match database division names directly
       const dbDivisionMap: Record<string, string> = {
-        'child-welfare': 'childwelfare',
-        'behavioral-health': 'behavioralhealth',
-        cfs: 'cins-fins-snap',
+        'child-welfare': 'child-welfare',
+        'behavioral-health': 'behavioral-health',
+        cfs: 'cfs',
         residential: 'residential',
         clinic: 'clinic',
         support: 'support',
         'help-desk': 'help-desk',
-        HR: 'HR',
+        hr: 'hr',
         'c-suite': 'c-suite',
         accounting: 'accounting',
       };

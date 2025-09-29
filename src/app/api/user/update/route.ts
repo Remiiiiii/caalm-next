@@ -10,13 +10,16 @@ export async function PATCH(req: NextRequest) {
     }
     // Validate division if provided
     const allowedDivisions = [
-      'childwelfare',
-      'behavioralhealth',
-      'finance',
-      'operations',
-      'administration',
+      'behavioral-health',
+      'child-welfare',
+      'clinic',
       'c-suite',
-      'managerial',
+      'cfs',
+      'hr',
+      'residential',
+      'support',
+      'help-desk',
+      'accounting',
     ];
     let divisionValue = undefined;
     if (division !== undefined) {

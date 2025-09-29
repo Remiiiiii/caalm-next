@@ -5,9 +5,9 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 
 function mapRouteToDbDepartment(routeDept: string): string {
   const mapping: Record<string, string> = {
-    'child-welfare': 'childwelfare',
-    'behavioral-health': 'behavioralhealth',
-    cfs: 'cins-fins-snap',
+    'child-welfare': 'child-welfare',
+    'behavioral-health': 'behavioral-health',
+    cfs: 'cfs',
     residential: 'residential',
     clinic: 'clinic',
     administration: 'administration',

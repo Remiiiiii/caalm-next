@@ -33,12 +33,16 @@ export const NAVIGATION_CONFIG = {
 
 // Consistent route mapping
 export const ROUTE_MAPPING = {
-  childwelfare: 'child-welfare',
-  behavioralhealth: 'behavioral-health',
-  'cins-fins-snap': 'cfs',
-  administration: 'administration',
-  residential: 'residential',
+  'behavioral-health': 'behavioral-health',
+  'child-welfare': 'child-welfare',
   clinic: 'clinic',
+  'c-suite': 'c-suite',
+  cfs: 'cfs',
+  hr: 'hr',
+  residential: 'residential',
+  support: 'support',
+  'help-desk': 'help-desk',
+  accounting: 'accounting',
 } as const;
 
 export const mapDatabaseToRouteDivision = (dbDivision: string): string => {

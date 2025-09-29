@@ -165,16 +165,16 @@ export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 // Organizational Hierarchy Types
 export type UserDivision =
-  | 'HR' // Reports to Administration Department
-  | 'c-suite' // Reports to Executive Department
-  | 'childwelfare' // Reports to Operations Department
-  | 'behavioralhealth' // Reports to Operations Department
+  | 'behavioral-health' // Reports to Operations Department
+  | 'child-welfare' // Reports to Operations Department
   | 'clinic' // Reports to Operations Department
+  | 'c-suite' // Reports to Executive Department
+  | 'cfs' // Reports to Operations Department
+  | 'hr' // Reports to Administration Department
   | 'residential' // Reports to Operations Department
-  | 'cins-fins-snap' // Reports to Operations Department
   | 'support' // Reports to IT Department
-  | 'help-desk'
-  | 'accounting'; //  Reports to Finance Department
+  | 'help-desk' // Reports to IT Department
+  | 'accounting'; // Reports to Finance Department
 
 export type ContractDepartment =
   | 'IT'
@@ -189,13 +189,13 @@ export type ContractDepartment =
 
 // User Division to Parent Department Mapping
 export const DIVISION_TO_DEPARTMENT: Record<UserDivision, string> = {
-  HR: 'Administration',
-  'c-suite': 'Executive',
-  childwelfare: 'Operations',
-  behavioralhealth: 'Operations',
+  'behavioral-health': 'Operations',
+  'child-welfare': 'Operations',
   clinic: 'Operations',
+  'c-suite': 'Executive',
+  cfs: 'Operations',
+  hr: 'Administration',
   residential: 'Operations',
-  'cins-fins-snap': 'Operations',
   support: 'IT',
   'help-desk': 'IT',
   accounting: 'Finance',
@@ -216,13 +216,13 @@ export const CONTRACT_DEPARTMENTS: ContractDepartment[] = [
 
 // User Divisions for profile settings
 export const USER_DIVISIONS: UserDivision[] = [
-  'HR',
-  'c-suite',
-  'childwelfare',
-  'behavioralhealth',
+  'behavioral-health',
+  'child-welfare',
   'clinic',
+  'c-suite',
+  'cfs',
+  'hr',
   'residential',
-  'cins-fins-snap',
   'support',
   'help-desk',
   'accounting',
@@ -251,10 +251,10 @@ export const getParentDepartment = (division: UserDivision): string => {
 // Check if division is an operations subdivision
 export const isOperationsSubdivision = (division: UserDivision): boolean => {
   return [
-    'childwelfare',
-    'behavioralhealth',
+    'behavioral-health',
+    'child-welfare',
     'clinic',
     'residential',
-    'cins-fins-snap',
+    'cfs',
   ].includes(division);
 };
