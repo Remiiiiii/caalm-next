@@ -138,3 +138,4 @@ playwright-report/
 
 # Feature documentation
 docs/
+.vercel
