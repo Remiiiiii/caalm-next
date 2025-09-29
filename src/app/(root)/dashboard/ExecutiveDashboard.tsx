@@ -45,6 +45,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { capitalizeRole } from '@/lib/utils';
 import Avatar from '@/components/ui/avatar';
 import ClientTimestamp from '@/components/ClientTimestamp';
 import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
@@ -587,29 +588,40 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     setDeleteEmail(null);
   };
 
-  const resendInvitation = async () => {
-    // TODO: Implement actual email sending logic
-    // For now, just simulate a delay
-    return new Promise((resolve) => setTimeout(resolve, 1000));
-  };
-
   const handleResend = async (token: string) => {
     setResendingToken(token);
-    await resendInvitation();
-    setResendingToken(null);
+    try {
+      const response = await fetch(`/api/invitations/${token}/resend`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to resend invitation');
+      }
+
+      const result = await response.json();
+      toast({
+        title: 'Success',
+        description: result.message,
+      });
+    } catch (error) {
+      console.error('Failed to resend invitation:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to resend invitation',
+        variant: 'destructive',
+      });
+    } finally {
+      setResendingToken(null);
+    }
   };
 
   const getRoleDisplay = (role: string) => {
-    switch (role) {
-      case 'executive':
-        return 'Executive';
-      case 'manager':
-        return 'Manager';
-      case 'admin':
-        return 'Admin';
-      default:
-        return role;
-    }
+    return capitalizeRole(role);
   };
   // const getDepartmentDisplay = (department: string) => {
   //   switch (department) {
@@ -1088,7 +1100,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                           >
                             <td className="pl-2 ">{inv.name}</td>
                             <td>{inv.email}</td>
-                            <td>{inv.role}</td>
+                            <td>{capitalizeRole(inv.role)}</td>
                             <td>
                               <ClientDate dateString={inv.$createdAt} />
                             </td>
@@ -1096,7 +1108,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                               <ClientDate dateString={inv.expiresAt} />
                             </td>
                             <td>
-                              <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-[#B3EBF2] text-[#12477D]">
+                              <span
+                                className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                  inv.status === 'accepted'
+                                    ? 'bg-[#86FDCD] text-[#2ED525]'
+                                    : inv.status === 'revoked'
+                                    ? 'bg-[#FFC8C8] text-[#FD6868]'
+                                    : 'bg-[#FFF8AA] text-[#FB9B00]'
+                                }`}
+                              >
                                 {inv.status}
                               </span>
                             </td>

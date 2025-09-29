@@ -285,3 +285,25 @@ export function getFileTypesParams(type: string): FileType[] {
       return ['document'];
   }
 }
+
+// ROLE UTILS
+export const capitalizeRole = (role: string): string => {
+  if (!role) return '';
+  
+  // Handle special cases first
+  switch (role.toLowerCase()) {
+    case 'head_admin':
+      return 'Executive';
+    case 'hr_admin':
+      return 'Admin';
+    case 'manager':
+      return 'Manager';
+    case 'executive':
+      return 'Executive';
+    case 'admin':
+      return 'Admin';
+    default:
+      // Capitalize first letter for any other role
+      return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+  }
+};

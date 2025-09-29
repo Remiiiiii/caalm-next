@@ -1,6 +1,7 @@
 import FormData from 'form-data';
 import Mailgun from 'mailgun.js';
 import { Models } from 'appwrite';
+import { capitalizeRole } from '@/lib/utils';
 
 interface EmailOptions {
   to: string | string[];
@@ -159,15 +160,16 @@ class MailgunService {
     role: string,
     department: string
   ) {
+    const capitalizedRole = capitalizeRole(role);
     const subject = "You're invited to join CAALM Solutions";
-    const text = `Hello ${fullName},\n\nYou have been invited to join CAALM Solutions as a ${role} in the ${department} department.\n\nClick the link below to accept your invitation and complete your account setup:\n\n${inviteLink}\n\nThis invitation will expire in 7 days.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
+    const text = `Hello ${fullName},\n\nYou have been invited to join CAALM Solutions as a ${capitalizedRole} in the ${department} department.\n\nClick the link below to accept your invitation and complete your account setup:\n\n${inviteLink}\n\nThis invitation will expire in 7 days.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #078FAB; text-align: center;">You're Invited to Join CAALM Solutions!</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #333; margin-top: 0;">Hello ${fullName},</h3>
-          <p style="color: #666; font-size: 16px;">You have been invited to join CAALM Solutions as a <strong>${role}</strong> in the <strong>${department}</strong> department.</p>
+          <p style="color: #666; font-size: 16px;">You have been invited to join CAALM Solutions as a <strong>${capitalizedRole}</strong> in the <strong>${department}</strong> department.</p>
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${inviteLink}" style="background-color: #078FAB; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold; display: inline-block;">Accept Invitation</a>

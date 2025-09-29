@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Trash, ListFilter } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
+import { capitalizeRole } from '@/lib/utils';
 
 const statusColor = {
   active: 'bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl',
@@ -254,7 +255,7 @@ const UserManagement = () => {
                             </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {user.role}
+                            {capitalizeRole(user.role)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                             {user.department || 'N/A'}

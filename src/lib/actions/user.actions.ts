@@ -1146,6 +1146,69 @@ export const getInvitationByToken = async (token: string) => {
   return result.total > 0 ? result.rows[0] : null;
 };
 
+export const resendInvitation = async ({ token }: { token: string }) => {
+  try {
+    console.log('resendInvitation: Starting resend for token:', token);
+
+    const { tablesDB } = await createAdminClient();
+
+    // Get the invitation details
+    const result = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: INVITATIONS_COLLECTION,
+      queries: [Query.equal('token', token)],
+    });
+
+    if (result.rows.length === 0) {
+      throw new Error('Invitation not found');
+    }
+
+    const invitation = result.rows[0];
+    console.log('resendInvitation: Found invitation:', invitation);
+
+    // Check if invitation is still valid (not revoked and not expired)
+    if (invitation.revoked) {
+      throw new Error('Cannot resend a revoked invitation');
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(invitation.expiresAt);
+    if (now > expiresAt) {
+      throw new Error('Cannot resend an expired invitation');
+    }
+
+    // Generate new invite link
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || 'https://www.caalmsolutions.com';
+    const inviteLink = `${baseUrl}/invite/accept?token=${token}`;
+
+    // Send the invite email via Mailgun
+    const { mailgunService } = await import('../services/mailgun');
+    await mailgunService.sendInvitationEmail(
+      invitation.email,
+      invitation.name,
+      inviteLink,
+      invitation.role,
+      invitation.department
+    );
+
+    console.log(
+      'resendInvitation: Email resent successfully to:',
+      invitation.email
+    );
+
+    return { success: true, email: invitation.email };
+  } catch (error) {
+    console.error('resendInvitation: Error occurred:', error);
+
+    if (error instanceof Error) {
+      throw new Error(`Failed to resend invitation: ${error.message}`);
+    } else {
+      throw new Error('Failed to resend invitation');
+    }
+  }
+};
+
 /**
  * Update a user's profile in the users collection.
  * @param {Object} params

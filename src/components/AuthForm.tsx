@@ -279,8 +279,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 const user = await getUserByEmail(form.getValues('email'));
 
                 if (user?.$id) {
-                  setUserId(user.$id);
-                  await checkTwoFactorStatus(user.$id);
+                  setUserId(user.accountId || user.$id);
+                  await checkTwoFactorStatus(user.accountId || user.$id);
                 } else {
                   router.push('/dashboard');
                 }

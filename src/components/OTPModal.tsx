@@ -47,34 +47,24 @@ const OTPModal = ({
   // Use parent-controlled isOpen prop
   const modalIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
 
-  // Automatically send OTP when modal opens
+  // Show success message when modal opens (OTP already sent by signInUser)
   useEffect(() => {
-    if (modalIsOpen && email && !hasAutoSent && !hasAutoSentRef.current) {
-      console.log('Auto-sending OTP to:', email);
+    if (modalIsOpen && email && !hasAutoSentRef.current) {
+      console.log('OTP Modal opened for:', email);
       setHasAutoSent(true);
       hasAutoSentRef.current = true;
 
-      // Auto-send OTP without showing loading state
-      sendEmailOTP({ email })
-        .then(() => {
-          console.log('Auto OTP sent successfully');
-          setError('Verification code sent! Please check your email.');
-          setLastError('Verification code sent! Please check your email.');
+      // Show success message since OTP was already sent by signInUser
+      setError('Verification code sent! Please check your email.');
+      setLastError('Verification code sent! Please check your email.');
 
-          // Clear success message after 3 seconds
-          setTimeout(() => {
-            setError('');
-            setLastError('');
-          }, 3000);
-        })
-        .catch((error) => {
-          console.error('Failed to auto-send OTP', error);
-          // Reset hasAutoSent on error so user can try again
-          setHasAutoSent(false);
-          hasAutoSentRef.current = false;
-        });
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setError('');
+        setLastError('');
+      }, 3000);
     }
-  }, [modalIsOpen, email]); // Removed hasAutoSent from dependencies to prevent re-runs
+  }, [modalIsOpen, email]);
 
   const handleVerify = async () => {
     setIsLoading(true);
@@ -148,15 +138,15 @@ const OTPModal = ({
       await sendEmailOTP({ email });
       console.log('OTP resent successfully');
 
-      // Show success feedback
-      setError('Verification code sent! Please check your email.');
-      setLastError('Verification code sent! Please check your email.');
+      // // Show success feedback
+      // setError('Verification code sent! Please check your email.');
+      // setLastError('Verification code sent! Please check your email.');
 
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setError('');
-        setLastError('');
-      }, 3000);
+      // // Clear success message after 3 seconds
+      // setTimeout(() => {
+      //   setError('');
+      //   setLastError('');
+      // }, 3000);
     } catch (error) {
       console.error('Failed to resend OTP', error);
       console.log('Resend error type:', typeof error);

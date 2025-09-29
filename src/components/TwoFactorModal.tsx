@@ -49,6 +49,7 @@ const TwoFactorModal = ({
   const setupTwoFactor = async () => {
     try {
       setIsLoading(true);
+      console.log('TwoFactorModal: Setting up 2FA for userId:', userId);
 
       const response = await fetch('/api/2fa/setup', {
         method: 'POST',
@@ -217,13 +218,13 @@ const TwoFactorModal = ({
               </div>
             </div>
 
-            <div className="flex gap-3 ">
+            <div className="flex gap-3 justify-center">
               <Button
                 onClick={setupTwoFactor}
                 className="primary-btn"
                 disabled={isLoading}
               >
-                <Shield className="h-4 w-4 mr-2 text-slate-700" />
+                <Shield className="h-4 w-4 mr-2 text-white" />
                 {isLoading ? 'Setting up...' : 'Setup 2FA'}
               </Button>
             </div>
@@ -294,23 +295,25 @@ const TwoFactorModal = ({
                 className="text-center text-lg tracking-widest border border-[#03AFBF]"
                 maxLength={6}
               />
-              <Button
-                onClick={verifyTwoFactor}
-                className="primary-btn"
-                disabled={verificationCode.length !== 6 || isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                    Verify & Continue
-                  </>
-                )}
-              </Button>
+              <div className="flex justify-center">
+                <Button
+                  onClick={verifyTwoFactor}
+                  className="primary-btn"
+                  disabled={verificationCode.length !== 6 || isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                      Verify & Continue
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         )}

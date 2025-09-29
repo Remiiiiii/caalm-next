@@ -122,13 +122,27 @@ export async function PUT(request: NextRequest) {
         const client = await createAdminClient();
 
         // First, check if the user exists by accountId
+        console.log(
+          '2FA Setup: Looking for user with accountId:',
+          storedData.userId
+        );
         const userResponse = await client.tablesDB.listRows({
           databaseId: appwriteConfig.databaseId,
           tableId: appwriteConfig.usersCollectionId,
           queries: [Query.equal('accountId', storedData.userId)],
         });
 
+        console.log('2FA Setup: User query result:', {
+          total: userResponse.total,
+          rowsLength: userResponse.rows?.length || 0,
+          userId: storedData.userId,
+        });
+
         if (userResponse.rows.length === 0) {
+          console.error(
+            '2FA Setup: User not found with accountId:',
+            storedData.userId
+          );
           return NextResponse.json(
             { error: 'User not found' },
             { status: 404 }

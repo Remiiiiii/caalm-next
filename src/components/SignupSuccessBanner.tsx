@@ -53,7 +53,8 @@ const SignupSuccessBanner = () => {
                 <li className="flex items-center gap-3 ">
                   <Mail className="h-5 w-5 text-[#626364] flex-shrink-0" />
                   <span className="font-medium sidebar-gradient-text">
-                    You'll receive an invitation link within 24-48 hours
+                    If approved, you'll receive an invitation link within 24-48
+                    hours
                   </span>
                 </li>
                 <li className="flex items-center gap-2">

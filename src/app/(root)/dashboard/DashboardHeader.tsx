@@ -9,6 +9,7 @@ import { Client, TablesDB, Query } from 'appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Models } from 'appwrite';
 import { signOutUser } from '@/lib/actions/user.actions';
+import { capitalizeRole } from '@/lib/utils';
 
 interface DashboardHeaderProps {
   user?: Models.User<Models.Preferences> | null;
@@ -57,16 +58,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   };
 
   const getRoleDisplay = (role: string) => {
-    switch (role) {
-      case 'head_admin':
-        return 'Executive';
-      case 'manager':
-        return 'Manager';
-      case 'hr_admin':
-        return 'Admin';
-      default:
-        return role;
-    }
+    return capitalizeRole(role);
   };
 
   return (

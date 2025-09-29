@@ -6,6 +6,7 @@ import React from 'react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
+import { capitalizeRole } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
@@ -84,8 +85,11 @@ function TestSWRInner() {
           ) : files && files.length > 0 ? (
             <div className="space-y-2">
               {files.slice(0, 5).map((file: Record<string, unknown>) => (
-                <div key={file.$id} className="p-2 bg-gray-50 rounded">
-                  {file.name}
+                <div
+                  key={file.$id as string}
+                  className="p-2 bg-gray-50 rounded"
+                >
+                  {file.name as string}
                 </div>
               ))}
             </div>
@@ -117,8 +121,8 @@ function TestSWRInner() {
           ) : invitations && invitations.length > 0 ? (
             <div className="space-y-2">
               {invitations.slice(0, 5).map((inv: Record<string, unknown>) => (
-                <div key={inv.$id} className="p-2 bg-gray-50 rounded">
-                  {inv.email} - {inv.role}
+                <div key={inv.$id as string} className="p-2 bg-gray-50 rounded">
+                  {inv.email as string} - {capitalizeRole(inv.role as string)}
                 </div>
               ))}
             </div>
@@ -150,8 +154,11 @@ function TestSWRInner() {
           ) : authUsers && authUsers.length > 0 ? (
             <div className="space-y-2">
               {authUsers.slice(0, 5).map((user: Record<string, unknown>) => (
-                <div key={user.$id} className="p-2 bg-gray-50 rounded">
-                  {user.email} - {user.fullName}
+                <div
+                  key={user.$id as string}
+                  className="p-2 bg-gray-50 rounded"
+                >
+                  {user.email as string} - {user.fullName as string}
                 </div>
               ))}
             </div>
