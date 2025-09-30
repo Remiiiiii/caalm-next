@@ -10,7 +10,7 @@ import React, {
 import { Models } from 'appwrite';
 import { getSessionUser } from '@/lib/actions/auth.actions';
 import { getCurrentUserFrom2FA } from '@/lib/actions/user.actions';
-// Removed useRouter import to prevent multiple router instances
+import { usePathname } from 'next/navigation';
 
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null;
@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [isSessionValid, setIsSessionValid] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
@@ -49,32 +50,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(sessionUser);
           setIsSessionValid(true);
         } else {
-          // If no session user, try to get 2FA-based user
-          console.log('AuthContext: Checking 2FA-based user');
-          const twoFAUser = await getCurrentUserFrom2FA();
+          // Check for 2FA-based authentication only if we're on a dashboard route
+          // This prevents automatic authentication on sign-in page
+          const isDashboardRoute =
+            pathname && pathname.startsWith('/dashboard');
+          const isAuthRoute = pathname && (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up'));
+
           console.log(
-            'AuthContext: 2FA user check result:',
-            twoFAUser ? 'Found' : 'Not found'
+            'AuthContext: Current pathname:',
+            pathname,
+            'isDashboardRoute:',
+            isDashboardRoute,
+            'isAuthRoute:',
+            isAuthRoute
           );
 
-          if (twoFAUser) {
-            console.log('AuthContext: Using 2FA-based user');
-            // Convert the custom user object to match the expected format
-            const convertedUser = {
-              $id: twoFAUser.$id,
-              name: twoFAUser.fullName,
-              email: twoFAUser.email,
-              emailVerification: true,
-              phoneVerification: false,
-              prefs: {},
-              registration: new Date().toISOString(),
-              status: true,
-            } as Models.User<Models.Preferences>;
+          if (isAuthRoute) {
+            // Explicitly set to null on auth routes to prevent any 2FA interference
+            console.log('AuthContext: On auth route, explicitly setting user to null');
+            setUser(null);
+            setIsSessionValid(false);
+          } else if (isDashboardRoute) {
+            console.log(
+              'AuthContext: On dashboard route, checking 2FA-based user'
+            );
+            const twoFAUser = await getCurrentUserFrom2FA();
+            console.log(
+              'AuthContext: 2FA user check result:',
+              twoFAUser ? 'Found' : 'Not found'
+            );
 
-            setUser(convertedUser);
-            setIsSessionValid(true);
+            if (twoFAUser) {
+              console.log('AuthContext: Using 2FA-based user for dashboard');
+              // Convert the custom user object to match the expected format
+              const convertedUser = {
+                $id: twoFAUser.$id,
+                name: twoFAUser.fullName,
+                email: twoFAUser.email,
+                emailVerification: true,
+                phoneVerification: false,
+                prefs: {},
+                registration: new Date().toISOString(),
+                status: true,
+              } as Models.User<Models.Preferences>;
+
+              setUser(convertedUser);
+              setIsSessionValid(true);
+            } else {
+              console.log('AuthContext: No 2FA user found, setting to null');
+              setUser(null);
+              setIsSessionValid(false);
+            }
           } else {
-            console.log('AuthContext: No valid user found, setting to null');
+            console.log('AuthContext: Not on dashboard or auth route, setting to null');
             setUser(null);
             setIsSessionValid(false);
           }
@@ -89,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     checkSession();
-  }, []);
+  }, [pathname]);
 
   const logout = async (reason: 'manual' | 'inactivity' = 'manual') => {
     try {

@@ -13,7 +13,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -43,6 +43,81 @@ const authFormSchema = (formType: FormType) => {
   });
 };
 
+// Memoized TwoFactorModal component to prevent excessive re-renders
+const MemoizedTwoFactorModal = memo(
+  ({
+    email,
+    userId,
+    show2FASetup,
+    onClose,
+    onSuccess,
+  }: {
+    email: string;
+    userId: string | null;
+    show2FASetup: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+  }) => {
+    const shouldShowModal = show2FASetup && !!userId;
+
+    // Only log when modal should actually show
+    if (shouldShowModal) {
+      console.log('AuthForm: TwoFactorModal should show:', {
+        show2FASetup,
+        userId,
+        shouldShowModal,
+      });
+    }
+
+    return (
+      <TwoFactorModal
+        email={email}
+        userId={userId || ''}
+        isOpen={shouldShowModal}
+        onClose={onClose}
+        onSuccess={onSuccess}
+      />
+    );
+  }
+);
+
+// Memoized TwoFactorVerificationModal component to prevent excessive re-renders
+const MemoizedTwoFactorVerificationModal = memo(
+  ({
+    email,
+    userId,
+    show2FAVerification,
+    onClose,
+    onSuccess,
+  }: {
+    email: string;
+    userId: string | null;
+    show2FAVerification: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+  }) => {
+    const shouldShowModal = show2FAVerification && !!userId;
+
+    // Only log when modal should actually show
+    if (shouldShowModal) {
+      console.log('AuthForm: TwoFactorVerificationModal should show:', {
+        show2FAVerification,
+        userId,
+        shouldShowModal,
+      });
+    }
+
+    return (
+      <TwoFactorVerificationModal
+        userId={userId || ''}
+        email={email}
+        onSuccess={onSuccess}
+        onClose={onClose}
+      />
+    );
+  }
+);
+
 const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -58,6 +133,18 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const [show2FASetup, setShow2FASetup] = useState(false);
   const [show2FAVerification, setShow2FAVerification] = useState(false);
 
+  // Debug logging for 2FA modal states (only when they change to true)
+  useEffect(() => {
+    if (show2FASetup || show2FAVerification) {
+      console.log('AuthForm: 2FA modal states changed:', {
+        show2FASetup,
+        show2FAVerification,
+        userId,
+        type,
+      });
+    }
+  }, [show2FASetup, show2FAVerification, userId, type]);
+
   const formSchema = authFormSchema(type);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -69,6 +156,18 @@ const AuthForm = ({ type }: { type: FormType }) => {
       setLogoutMessage(getLogoutMessage(reason));
     }
   }, [searchParams]);
+
+  // Clear 2FA cookies when on sign-in page to prevent interference
+  useEffect(() => {
+    if (type === 'sign-in') {
+      // Clear 2FA cookies to prevent them from interfering with sign-in flow
+      document.cookie =
+        '2fa_completed=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie =
+        '2fa_user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      console.log('AuthForm: Cleared 2FA cookies on sign-in page');
+    }
+  }, [type]);
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof formSchema>>({
@@ -120,6 +219,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
   const checkTwoFactorStatus = async (userId: string) => {
     try {
+      console.log('AuthForm: Checking 2FA status for userId:', userId);
       const response = await fetch('/api/2fa/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,22 +227,29 @@ const AuthForm = ({ type }: { type: FormType }) => {
       });
 
       const data = await response.json();
+      console.log('AuthForm: 2FA status response:', data);
 
       if (data.success) {
         if (data.has2FA) {
           // User has 2FA enabled - show TOTP verification only
+          console.log(
+            'AuthForm: User has 2FA enabled, showing verification modal'
+          );
           setShow2FAVerification(true);
         } else {
           // User doesn't have 2FA - show setup
+          console.log('AuthForm: User does not have 2FA, showing setup modal');
           setShow2FASetup(true);
         }
       } else {
         // If check fails, assume no 2FA and show setup
+        console.log('AuthForm: 2FA status check failed, showing setup modal');
         setShow2FASetup(true);
       }
     } catch (error) {
       console.error('Error checking 2FA status:', error);
       // If check fails, assume no 2FA and show setup
+      console.log('AuthForm: 2FA status check error, showing setup modal');
       setShow2FASetup(true);
     }
   };
@@ -282,6 +389,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
                   setUserId(user.accountId || user.$id);
                   await checkTwoFactorStatus(user.accountId || user.$id);
                 } else {
+                  // If no user found, redirect to dashboard
                   router.push('/dashboard');
                 }
               } catch (error) {
@@ -295,11 +403,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
           />
         )}
 
-        {type === 'sign-in' && (
-          <TwoFactorModal
+        {type === 'sign-in' && show2FASetup && userId && (
+          <MemoizedTwoFactorModal
             email={form.getValues('email')}
-            userId={userId || ''}
-            isOpen={show2FASetup && !!userId}
+            userId={userId}
+            show2FASetup={show2FASetup}
             onClose={() => setShow2FASetup(false)}
             onSuccess={async () => {
               // After successful 2FA setup, redirect by role
@@ -308,32 +416,21 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 const user = await getUserByEmail(form.getValues('email'));
                 console.log('2FA Setup Success - User data:', user);
 
+                // Force a page reload to refresh the authentication state
+                // This ensures the 2FA cookies are properly recognized
                 if (user?.role === 'executive') {
                   console.log('Redirecting to executive dashboard');
-                  router.push('/dashboard/executive');
+                  window.location.href = '/dashboard/executive';
                 } else if (user?.role === 'manager') {
                   console.log('Redirecting to manager dashboard');
-                  router.push('/dashboard/manager');
+                  window.location.href = '/dashboard/manager';
                 } else if (user?.role === 'admin') {
                   console.log('Redirecting to admin dashboard');
-                  router.push('/dashboard/admin');
+                  window.location.href = '/dashboard/admin';
                 } else {
                   console.log('Redirecting to default dashboard');
-                  router.push('/dashboard');
+                  window.location.href = '/dashboard';
                 }
-
-                // Fallback navigation in case router.push fails
-                setTimeout(() => {
-                  if (user?.role === 'executive') {
-                    window.location.href = '/dashboard/executive';
-                  } else if (user?.role === 'manager') {
-                    window.location.href = '/dashboard/manager';
-                  } else if (user?.role === 'admin') {
-                    window.location.href = '/dashboard/admin';
-                  } else {
-                    window.location.href = '/dashboard';
-                  }
-                }, 2000);
               } catch (error) {
                 console.error(
                   'Error during 2FA setup success callback:',
@@ -341,37 +438,39 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 );
                 // Fallback navigation
                 console.log('Using fallback navigation to /dashboard');
-                router.push('/dashboard');
+                window.location.href = '/dashboard';
               }
             }}
           />
         )}
 
-        {type === 'sign-in' && (
-          <TwoFactorVerificationModal
-            userId={userId || ''}
+        {type === 'sign-in' && show2FAVerification && userId && (
+          <MemoizedTwoFactorVerificationModal
             email={form.getValues('email')}
-            isOpen={show2FAVerification && !!userId}
+            userId={userId}
+            show2FAVerification={show2FAVerification}
+            onClose={() => setShow2FAVerification(false)}
             onSuccess={async () => {
               // After successful TOTP verification, redirect by role
               try {
                 const user = await getUserByEmail(form.getValues('email'));
 
+                // Force a page reload to refresh the authentication state
+                // This ensures the 2FA cookies are properly recognized
                 if (user?.role === 'executive') {
-                  router.push('/dashboard/executive');
+                  window.location.href = '/dashboard/executive';
                 } else if (user?.role === 'manager') {
-                  router.push('/dashboard/manager');
+                  window.location.href = '/dashboard/manager';
                 } else if (user?.role === 'admin') {
-                  router.push('/dashboard/admin');
+                  window.location.href = '/dashboard/admin';
                 } else {
-                  router.push('/dashboard');
+                  window.location.href = '/dashboard';
                 }
               } catch (error) {
                 console.error('Error getting user info for redirect:', error);
-                router.push('/dashboard');
+                window.location.href = '/dashboard';
               }
             }}
-            onClose={() => setShow2FAVerification(false)}
           />
         )}
 
