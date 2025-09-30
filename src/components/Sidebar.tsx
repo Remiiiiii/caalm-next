@@ -13,14 +13,14 @@ import {
 } from '@/constants/navigation';
 
 interface Props {
-  fullName: string;
-  avatar: string;
+  name?: string;
+  avatar?: string;
   email: string;
-  role: 'executive' | 'admin' | 'manager';
+  role?: 'executive' | 'admin' | 'manager';
   division?: string;
 }
 
-const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
+const Sidebar = ({ name, avatar, email, role, division }: Props) => {
   const router = useRouter();
   const pathname = usePathname();
   const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
@@ -763,14 +763,14 @@ const Sidebar = ({ fullName, avatar, email, role, division }: Props) => {
           />
         ) : (
           <Avatar
-            name={fullName}
+            name={name}
             userId={email}
             size="lg"
             className="sidebar-user-avatar"
           />
         )}
         <div className="hidden lg:block">
-          <p className="subtitle-2 capitalize">{fullName}</p>
+          <p className="subtitle-2 capitalize">{name || 'User'}</p>
           <p className="caption">{email}</p>
         </div>
       </div>

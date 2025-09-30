@@ -179,8 +179,15 @@ export async function PUT(request: NextRequest) {
           message: '2FA setup completed successfully',
         });
 
-        // Set cookie to indicate 2FA is completed
+        // Set cookies to indicate 2FA is completed and store user ID
         response.cookies.set('2fa_completed', 'true', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+        });
+
+        response.cookies.set('2fa_user_id', userResponse.rows[0].$id, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',

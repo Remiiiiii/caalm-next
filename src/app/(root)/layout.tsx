@@ -1,41 +1,62 @@
+'use client';
+
 import React from 'react';
-import {
-  getCurrentUser,
-  getCurrentUserFrom2FA,
-} from '@/lib/actions/user.actions';
-import { redirect } from 'next/navigation';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import Sidebar from '@/components/Sidebar';
 import MobileNavigation from '@/components/MobileNavigation';
 import DashboardHeader from '@/components/DashboardHeader';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-const Layout = async ({ children }: { children: React.ReactNode }) => {
-  // Try to get user from session first, then fall back to 2FA-based auth
-  let currentUser = await getCurrentUser();
+const LayoutContent = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-  if (!currentUser) {
-    // If no session-based user, try 2FA-based user
-    currentUser = await getCurrentUserFrom2FA();
-  }
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/sign-in');
+    }
+  }, [user, loading, router]);
 
-  if (!currentUser) {
-    redirect('/sign-in');
-  }
-
+  // Always render the same structure, but conditionally show content
   return (
-    <AuthProvider>
-      <OrganizationProvider>
+    <>
+      {loading ? (
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      ) : !user ? (
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600">Redirecting to sign in...</p>
+          </div>
+        </div>
+      ) : (
         <main className="flex h-screen">
-          <Sidebar {...currentUser} />
+          <Sidebar {...user} />
           <section className="flex h-full w-full flex-1 flex-col">
-            <MobileNavigation {...currentUser} />
-            <DashboardHeader user={currentUser} />
+            <MobileNavigation {...user} />
+            <DashboardHeader user={user} />
             <div className="main-content">{children}</div>
           </section>
           <Toaster />
         </main>
+      )}
+    </>
+  );
+};
+
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <AuthProvider>
+      <OrganizationProvider>
+        <LayoutContent>{children}</LayoutContent>
       </OrganizationProvider>
     </AuthProvider>
   );

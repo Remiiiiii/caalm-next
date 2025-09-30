@@ -259,11 +259,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
             </Link>
           </div>
         </form>
-        {type === 'sign-in' && showOTPModal && accountId && (
+        {type === 'sign-in' && (
           <OTPModal
             email={form.getValues('email')}
-            accountId={accountId}
-            isOpen={showOTPModal}
+            accountId={accountId || ''}
+            isOpen={showOTPModal && !!accountId}
             onClose={() => {
               setShowOTPModal(false);
             }}
@@ -295,14 +295,15 @@ const AuthForm = ({ type }: { type: FormType }) => {
           />
         )}
 
-        {type === 'sign-in' && show2FASetup && userId && (
+        {type === 'sign-in' && (
           <TwoFactorModal
             email={form.getValues('email')}
-            userId={userId}
-            isOpen={show2FASetup}
+            userId={userId || ''}
+            isOpen={show2FASetup && !!userId}
             onClose={() => setShow2FASetup(false)}
             onSuccess={async () => {
               // After successful 2FA setup, redirect by role
+              console.log('2FA Setup Success callback triggered');
               try {
                 const user = await getUserByEmail(form.getValues('email'));
                 console.log('2FA Setup Success - User data:', user);
@@ -320,22 +321,37 @@ const AuthForm = ({ type }: { type: FormType }) => {
                   console.log('Redirecting to default dashboard');
                   router.push('/dashboard');
                 }
+
+                // Fallback navigation in case router.push fails
+                setTimeout(() => {
+                  if (user?.role === 'executive') {
+                    window.location.href = '/dashboard/executive';
+                  } else if (user?.role === 'manager') {
+                    window.location.href = '/dashboard/manager';
+                  } else if (user?.role === 'admin') {
+                    window.location.href = '/dashboard/admin';
+                  } else {
+                    window.location.href = '/dashboard';
+                  }
+                }, 2000);
               } catch (error) {
                 console.error(
                   'Error during 2FA setup success callback:',
                   error
                 );
                 // Fallback navigation
+                console.log('Using fallback navigation to /dashboard');
                 router.push('/dashboard');
               }
             }}
           />
         )}
 
-        {type === 'sign-in' && show2FAVerification && userId && (
+        {type === 'sign-in' && (
           <TwoFactorVerificationModal
-            userId={userId}
+            userId={userId || ''}
             email={form.getValues('email')}
+            isOpen={show2FAVerification && !!userId}
             onSuccess={async () => {
               // After successful TOTP verification, redirect by role
               try {

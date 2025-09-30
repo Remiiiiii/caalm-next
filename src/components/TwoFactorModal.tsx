@@ -137,7 +137,12 @@ const TwoFactorModal = ({
 
         // Wait a moment then proceed
         setTimeout(() => {
-          onSuccess();
+          console.log('TwoFactorModal: Closing modal and calling onSuccess');
+          onClose(); // Close the modal first
+          // Add a small delay to ensure modal is closed before calling onSuccess
+          setTimeout(() => {
+            onSuccess(); // Then call the success callback
+          }, 100);
         }, 1500);
       } else {
         throw new Error(data.error);

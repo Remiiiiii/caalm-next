@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, X, Save, Clock, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,13 +83,33 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   const [expiryStartDate, setExpiryStartDate] = useState<Date | undefined>();
   const [expiryEndDate, setExpiryEndDate] = useState<Date | undefined>();
 
+  const loadRecentSearches = useCallback(async () => {
+    if (!user?.$id) return;
+    try {
+      const recent = await getRecentSearches(user.$id, 5);
+      setRecentSearches(recent);
+    } catch (error) {
+      console.error('Failed to load recent searches:', error);
+    }
+  }, [user?.$id]);
+
+  const loadSavedSearches = useCallback(async () => {
+    if (!user?.$id) return;
+    try {
+      const saved = await getSavedSearches(user.$id);
+      setSavedSearches(saved);
+    } catch (error) {
+      console.error('Failed to load saved searches:', error);
+    }
+  }, [user?.$id]);
+
   // Load recent and saved searches on mount
   useEffect(() => {
     if (user?.$id) {
       loadRecentSearches();
       loadSavedSearches();
     }
-  }, [user?.$id]);
+  }, [user?.$id, loadRecentSearches, loadSavedSearches]);
 
   // Load suggestions when query changes
   useEffect(() => {
@@ -100,26 +120,6 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
       setShowSuggestions(false);
     }
   }, [query]);
-
-  const loadRecentSearches = async () => {
-    if (!user?.$id) return;
-    try {
-      const recent = await getRecentSearches(user.$id, 5);
-      setRecentSearches(recent);
-    } catch (error) {
-      console.error('Failed to load recent searches:', error);
-    }
-  };
-
-  const loadSavedSearches = async () => {
-    if (!user?.$id) return;
-    try {
-      const saved = await getSavedSearches(user.$id);
-      setSavedSearches(saved);
-    } catch (error) {
-      console.error('Failed to load saved searches:', error);
-    }
-  };
 
   const loadSuggestions = async () => {
     try {

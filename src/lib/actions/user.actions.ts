@@ -497,6 +497,11 @@ export const getCurrentUserFrom2FA = async () => {
     const hasCompleted2FA = cookieStore.get('2fa_completed');
     const userIdFromCookie = cookieStore.get('2fa_user_id');
 
+    console.log('getCurrentUserFrom2FA - Cookie check:', {
+      hasCompleted2FA: hasCompleted2FA?.value || 'Not found',
+      userIdFromCookie: userIdFromCookie?.value || 'Not found',
+    });
+
     if (!hasCompleted2FA?.value || !userIdFromCookie?.value) {
       console.log(
         'getCurrentUserFrom2FA - No 2FA completion or user ID cookie found'

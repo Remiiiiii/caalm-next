@@ -77,6 +77,7 @@ export const useUserRole = (): UserRole => {
     fetchUserRole();
   }, [user, isClient]);
 
+  // Always return the same structure, but conditionally show data
   return {
     role: isClient ? role : '',
     division: isClient ? division : '',

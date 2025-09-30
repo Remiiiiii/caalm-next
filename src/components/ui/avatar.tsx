@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface AvatarProps {
-  name: string;
+  name?: string;
   userId: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -16,13 +16,16 @@ const Avatar: React.FC<AvatarProps> = ({
   className,
   showName = false,
 }) => {
-  // Generate initials from full name
-  const initials = name
-    .split(' ')
-    .map((name) => name.charAt(0))
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  // Generate initials from full name, handle undefined/null names
+  const initials =
+    name && typeof name === 'string'
+      ? name
+          .split(' ')
+          .map((name) => name.charAt(0))
+          .join('')
+          .toUpperCase()
+          .slice(0, 2)
+      : 'U'; // Default to 'U' for User if name is undefined
 
   // Generate a consistent color based on user ID
   const colors = [
