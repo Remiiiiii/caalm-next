@@ -12,14 +12,20 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 const LayoutContent = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isSessionValid } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/sign-in');
-    }
-  }, [user, loading, router]);
+    // Add a small delay to allow AuthContext to properly validate 2FA sessions
+    const timer = setTimeout(() => {
+      if (!loading && !user && !isSessionValid) {
+        console.log('Layout: Redirecting to sign-in - no valid session found');
+        router.push('/sign-in');
+      }
+    }, 1000); // 1 second delay to allow session validation
+
+    return () => clearTimeout(timer);
+  }, [user, loading, isSessionValid, router]);
 
   // Always render the same structure, but conditionally show content
   return (

@@ -39,11 +39,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(true);
 
         // Check if we're on an auth route first
-        const isAuthRoute = pathname && (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up'));
-        
+        const isAuthRoute =
+          pathname &&
+          (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up'));
+
         if (isAuthRoute) {
           // Explicitly set to null on auth routes to prevent any interference
-          console.log('AuthContext: On auth route, explicitly setting user to null');
+          console.log(
+            'AuthContext: On auth route, explicitly setting user to null'
+          );
           setUser(null);
           setIsSessionValid(false);
           setLoading(false);
@@ -54,12 +58,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           const sessionResponse = await fetch('/api/auth/session', {
             credentials: 'include',
+            cache: 'no-store', // Ensure fresh session check
           });
 
           if (sessionResponse.ok) {
             const sessionData = await sessionResponse.json();
             if (sessionData.valid && sessionData.user) {
-              console.log('AuthContext: Valid session found via API:', sessionData.authType);
+              console.log(
+                'AuthContext: Valid session found via API:',
+                sessionData.authType
+              );
               // Convert the API response to match the expected format
               const convertedUser = {
                 $id: sessionData.user.$id,
@@ -76,7 +84,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setIsSessionValid(true);
               setLoading(false);
               return;
+            } else {
+              console.log('AuthContext: Session API returned invalid session:', sessionData);
             }
+          } else {
+            console.log('AuthContext: Session API returned error:', sessionResponse.status);
           }
         } catch (error) {
           console.error('AuthContext: Session API check failed:', error);
@@ -95,7 +107,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsSessionValid(true);
         } else {
           // Check for 2FA-based authentication only if we're on a dashboard route
-          const isDashboardRoute = pathname && pathname.startsWith('/dashboard');
+          const isDashboardRoute =
+            pathname && pathname.startsWith('/dashboard');
 
           console.log(
             'AuthContext: Current pathname:',
