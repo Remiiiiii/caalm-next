@@ -45,8 +45,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(sessionUser);
           setIsSessionValid(true);
         } else {
+<<<<<<< Updated upstream
           // If no session user, try to get 2FA-based user
           const twoFAUser = await getCurrentUserFrom2FA();
+=======
+          // Check for 2FA-based authentication only if we're on a dashboard route
+          // This prevents automatic authentication on sign-in page
+          const isDashboardRoute =
+            pathname && pathname.startsWith('/dashboard');
+          const isAuthRoute =
+            pathname &&
+            (pathname.startsWith('/sign-in') ||
+              pathname.startsWith('/sign-up'));
+>>>>>>> Stashed changes
 
           if (twoFAUser) {
             // Convert the custom user object to match the expected format
@@ -61,9 +72,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               status: true,
             } as Models.User<Models.Preferences>;
 
+<<<<<<< Updated upstream
             setUser(convertedUser);
             setIsSessionValid(true);
           } else {
+=======
+          if (isAuthRoute) {
+            // Explicitly set to null on auth routes to prevent any 2FA interference
+            console.log(
+              'AuthContext: On auth route, explicitly setting user to null'
+            );
+            setUser(null);
+            setIsSessionValid(false);
+          } else if (isDashboardRoute) {
+            console.log(
+              'AuthContext: On dashboard route, checking 2FA-based user'
+            );
+            const twoFAUser = await getCurrentUserFrom2FA();
+            console.log(
+              'AuthContext: 2FA user check result:',
+              twoFAUser ? 'Found' : 'Not found'
+            );
+
+            if (twoFAUser) {
+              console.log('AuthContext: Using 2FA-based user for dashboard');
+              // Convert the custom user object to match the expected format
+              const convertedUser = {
+                $id: twoFAUser.$id,
+                name: twoFAUser.fullName,
+                email: twoFAUser.email,
+                emailVerification: true,
+                phoneVerification: false,
+                prefs: {},
+                registration: new Date().toISOString(),
+                status: true,
+              } as Models.User<Models.Preferences>;
+
+              setUser(convertedUser);
+              setIsSessionValid(true);
+            } else {
+              console.log('AuthContext: No 2FA user found, setting to null');
+              setUser(null);
+              setIsSessionValid(false);
+            }
+          } else {
+            console.log(
+              'AuthContext: Not on dashboard or auth route, setting to null'
+            );
+>>>>>>> Stashed changes
             setUser(null);
             setIsSessionValid(false);
           }
