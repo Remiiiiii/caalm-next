@@ -105,6 +105,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
               alt="logo"
               width={50}
               height={50}
+              style={{ width: '50px', height: '50px' }}
             />
           </div>
           {children}

@@ -37,15 +37,16 @@ const AuthWrapper = ({ children }: AuthWrapperProps) => {
     checkAuth();
   }, [router]);
 
-  if (loading) {
-    return <div>Loading...</div>; // You can replace this with a proper loading component
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  return <AuthenticatedLayout user={user}>{children}</AuthenticatedLayout>;
+  // Always render the same structure, but conditionally show content
+  return (
+    <>
+      {loading ? (
+        <div>Loading...</div> // You can replace this with a proper loading component
+      ) : !user ? null : (
+        <AuthenticatedLayout user={user}>{children}</AuthenticatedLayout>
+      )}
+    </>
+  );
 };
 
 export default AuthWrapper;

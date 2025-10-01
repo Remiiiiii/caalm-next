@@ -10,7 +10,7 @@ import React, {
 import { Models } from 'appwrite';
 import { getSessionUser } from '@/lib/actions/auth.actions';
 import { getCurrentUserFrom2FA } from '@/lib/actions/user.actions';
-import { useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null;
@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [isSessionValid, setIsSessionValid] = useState(false);
-  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
@@ -38,53 +38,73 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         setLoading(true);
 
-        // First try to get session-based user
+        // Check if we're on an auth route first
+        const isAuthRoute = pathname && (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up'));
+        
+        if (isAuthRoute) {
+          // Explicitly set to null on auth routes to prevent any interference
+          console.log('AuthContext: On auth route, explicitly setting user to null');
+          setUser(null);
+          setIsSessionValid(false);
+          setLoading(false);
+          return;
+        }
+
+        // Try to validate session through the API endpoint
+        try {
+          const sessionResponse = await fetch('/api/auth/session', {
+            credentials: 'include',
+          });
+
+          if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
+            if (sessionData.valid && sessionData.user) {
+              console.log('AuthContext: Valid session found via API:', sessionData.authType);
+              // Convert the API response to match the expected format
+              const convertedUser = {
+                $id: sessionData.user.$id,
+                name: sessionData.user.name,
+                email: sessionData.user.email,
+                emailVerification: true,
+                phoneVerification: false,
+                prefs: {},
+                registration: new Date().toISOString(),
+                status: true,
+              } as Models.User<Models.Preferences>;
+
+              setUser(convertedUser);
+              setIsSessionValid(true);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('AuthContext: Session API check failed:', error);
+        }
+
+        // Fallback: Try legacy session check
         const sessionUser = await getSessionUser();
+        console.log(
+          'AuthContext: Legacy session user check result:',
+          sessionUser ? 'Found' : 'Not found'
+        );
 
         if (sessionUser) {
+          console.log('AuthContext: Using legacy session-based user');
           setUser(sessionUser);
           setIsSessionValid(true);
         } else {
-<<<<<<< Updated upstream
-          // If no session user, try to get 2FA-based user
-          const twoFAUser = await getCurrentUserFrom2FA();
-=======
           // Check for 2FA-based authentication only if we're on a dashboard route
-          // This prevents automatic authentication on sign-in page
-          const isDashboardRoute =
-            pathname && pathname.startsWith('/dashboard');
-          const isAuthRoute =
-            pathname &&
-            (pathname.startsWith('/sign-in') ||
-              pathname.startsWith('/sign-up'));
->>>>>>> Stashed changes
+          const isDashboardRoute = pathname && pathname.startsWith('/dashboard');
 
-          if (twoFAUser) {
-            // Convert the custom user object to match the expected format
-            const convertedUser = {
-              $id: twoFAUser.$id,
-              name: twoFAUser.fullName,
-              email: twoFAUser.email,
-              emailVerification: true,
-              phoneVerification: false,
-              prefs: {},
-              registration: new Date().toISOString(),
-              status: true,
-            } as Models.User<Models.Preferences>;
+          console.log(
+            'AuthContext: Current pathname:',
+            pathname,
+            'isDashboardRoute:',
+            isDashboardRoute
+          );
 
-<<<<<<< Updated upstream
-            setUser(convertedUser);
-            setIsSessionValid(true);
-          } else {
-=======
-          if (isAuthRoute) {
-            // Explicitly set to null on auth routes to prevent any 2FA interference
-            console.log(
-              'AuthContext: On auth route, explicitly setting user to null'
-            );
-            setUser(null);
-            setIsSessionValid(false);
-          } else if (isDashboardRoute) {
+          if (isDashboardRoute) {
             console.log(
               'AuthContext: On dashboard route, checking 2FA-based user'
             );
@@ -116,10 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setIsSessionValid(false);
             }
           } else {
-            console.log(
-              'AuthContext: Not on dashboard or auth route, setting to null'
-            );
->>>>>>> Stashed changes
+            console.log('AuthContext: Not on dashboard route, setting to null');
             setUser(null);
             setIsSessionValid(false);
           }
@@ -134,7 +151,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     checkSession();
-  }, []);
+  }, [pathname]);
 
   const logout = async (reason: 'manual' | 'inactivity' = 'manual') => {
     try {
@@ -155,56 +172,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('session');
         sessionStorage.clear();
 
-        // Redirect based on reason
+        // Redirect based on reason using window.location to avoid router conflicts
         if (reason === 'inactivity') {
-          router.push('/sign-in?reason=inactivity');
+          window.location.href = '/sign-in?reason=inactivity';
         } else {
-          router.push('/sign-in');
+          window.location.href = '/sign-in';
         }
       } else {
         console.error('Logout failed');
         // Force logout even if API fails
         setUser(null);
         setIsSessionValid(false);
-        router.push('/sign-in');
+        window.location.href = '/sign-in';
       }
     } catch (error) {
       console.error('Logout error:', error);
       // Force logout even if API fails
       setUser(null);
       setIsSessionValid(false);
-      router.push('/sign-in');
+      window.location.href = '/sign-in';
     }
   };
 
-  // Don't render children until mounted to prevent hydration mismatches
-  if (!mounted) {
-    return <div style={{ visibility: 'hidden' }}>{children}</div>;
-  }
-
+  // Always render the same structure, but conditionally show content
   return (
     <AuthContext.Provider
       value={{ user, setUser, loading, logout, isSessionValid }}
     >
-      {children}
+      {!mounted ? (
+        <div style={{ visibility: 'hidden' }}>{children}</div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    console.warn(
-      'useAuth called outside of AuthProvider - this might be a hydration issue'
-    );
-    // Return a default context to prevent crashes during hydration
-    return {
+
+  // Always return the same structure, but conditionally show data
+  return (
+    context || {
       user: null,
       setUser: () => {},
       loading: true,
       logout: async () => {},
       isSessionValid: false,
-    };
-  }
-  return context;
+    }
+  );
 };

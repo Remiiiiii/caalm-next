@@ -1,6 +1,7 @@
 'use client';
 
 import AuthForm from '@/components/AuthForm';
+import SplineCanvas from '@/components/SplineCanvas';
 import { Suspense } from 'react';
 
 const SignIn = () => {
@@ -9,11 +10,11 @@ const SignIn = () => {
       {/* Spline Component for 3D Robot Illustration */}
       <div className="mb-8 lg:hidden">
         <div className="rounded-2xl bg-white shadow-lg p-6 border border-gray-100">
-          <iframe
-            src="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
+          <SplineCanvas
+            scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
             className="w-full h-64"
-            style={{ border: 'none' }}
-            title="Sign-in Spline"
+            delayMs={1000}
+            durationMs={500}
           />
         </div>
       </div>

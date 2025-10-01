@@ -19,10 +19,17 @@ export async function POST(request: NextRequest) {
     try {
       // Check if user has 2FA enabled by looking for stored 2FA data
       // In production, you would store this in a separate collection or user profile
+      console.log('2FA Status: Looking for user with accountId:', userId);
       const userResponse = await client.tablesDB.listRows({
         databaseId: appwriteConfig.databaseId,
         tableId: appwriteConfig.usersCollectionId,
-        queries: [Query.equal('$id', userId)],
+        queries: [Query.equal('accountId', userId)],
+      });
+
+      console.log('2FA Status: User query result:', {
+        total: userResponse.total,
+        rowsLength: userResponse.rows?.length || 0,
+        userId: userId,
       });
 
       if (userResponse.rows.length > 0) {
@@ -38,6 +45,14 @@ export async function POST(request: NextRequest) {
           user.twoFactorFactorId !== undefined &&
           user.twoFactorSetupAt !== null &&
           user.twoFactorSetupAt !== undefined;
+
+        console.log('2FA Status: User 2FA fields:', {
+          twoFactorEnabled: user.twoFactorEnabled,
+          hasSecret: !!user.twoFactorSecret,
+          hasFactorId: !!user.twoFactorFactorId,
+          hasSetupAt: !!user.twoFactorSetupAt,
+          has2FA: has2FA,
+        });
 
         return NextResponse.json({
           success: true,

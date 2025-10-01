@@ -55,14 +55,14 @@ const OTPModal = ({
       hasAutoSentRef.current = true;
 
       // Show success message since OTP was already sent by signInUser
-      setError('Verification code sent! Please check your email.');
-      setLastError('Verification code sent! Please check your email.');
+      // setError('Verification code sent! Please check your email.');
+      // setLastError('Verification code sent! Please check your email.');
 
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setError('');
-        setLastError('');
-      }, 3000);
+      // // Clear success message after 3 seconds
+      // setTimeout(() => {
+      //   setError('');
+      //   setLastError('');
+      // }, 3000);
     }
   }, [modalIsOpen, email]);
 

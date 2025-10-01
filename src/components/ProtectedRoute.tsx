@@ -19,19 +19,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }, [user, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null; // Or a spinner
-  }
-
-  return <>{children}</>;
+  // Always render the same structure, but conditionally show content
+  return (
+    <>
+      {loading ? (
+        <div className="flex justify-center items-center h-screen">
+          Loading...
+        </div>
+      ) : !user ? null : ( // Or a spinner
+        children
+      )}
+    </>
+  );
 };
 
 export default ProtectedRoute;
