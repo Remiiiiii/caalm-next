@@ -85,10 +85,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setLoading(false);
               return;
             } else {
-              console.log('AuthContext: Session API returned invalid session:', sessionData);
+              console.log(
+                'AuthContext: Session API returned invalid session:',
+                sessionData
+              );
             }
           } else {
-            console.log('AuthContext: Session API returned error:', sessionResponse.status);
+            console.log(
+              'AuthContext: Session API returned error:',
+              sessionResponse.status
+            );
           }
         } catch (error) {
           console.error('AuthContext: Session API check failed:', error);

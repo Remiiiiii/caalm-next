@@ -70,43 +70,26 @@ export async function middleware(request: NextRequest) {
 
     // If user has completed 2FA, allow access even without traditional session
     if (hasCompleted2FA?.value === 'true') {
+      console.log('Middleware: 2FA completed, allowing access');
       return NextResponse.next();
     }
 
     // If no session exists, redirect to sign-in
     if (!session?.value) {
+      console.log('Middleware: No session found, redirecting to sign-in');
       return NextResponse.redirect(new URL('/sign-in', request.url));
     }
 
     // If user hasn't completed 2FA and is trying to access protected routes
     if (!hasCompleted2FA) {
+      console.log('Middleware: 2FA not completed, redirecting to settings');
       // Redirect to settings to complete 2FA setup
       return NextResponse.redirect(new URL('/settings', request.url));
     }
 
-    // Validate session for protected routes
-    try {
-      // Validate session by calling our session validation endpoint
-      const sessionValidationUrl = new URL('/api/auth/session', request.url);
-      const sessionResponse = await fetch(sessionValidationUrl, {
-        headers: {
-          Cookie: request.headers.get('cookie') || '',
-        },
-      });
-
-      if (!sessionResponse.ok) {
-        // Session is invalid, redirect to sign-in
-        return NextResponse.redirect(
-          new URL('/sign-in?reason=session_expired', request.url)
-        );
-      }
-    } catch (error) {
-      console.error('Session validation error in middleware:', error);
-      // On error, redirect to sign-in to be safe
-      return NextResponse.redirect(
-        new URL('/sign-in?reason=validation_error', request.url)
-      );
-    }
+    // If we have both session and 2FA, allow access
+    console.log('Middleware: Both session and 2FA found, allowing access');
+    return NextResponse.next();
   }
 
   return NextResponse.next();
