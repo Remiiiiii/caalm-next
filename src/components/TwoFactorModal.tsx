@@ -294,23 +294,25 @@ const TwoFactorModal = ({
                 className="text-center text-lg tracking-widest border border-[#03AFBF]"
                 maxLength={6}
               />
-              <Button
-                onClick={verifyTwoFactor}
-                className="primary-btn"
-                disabled={verificationCode.length !== 6 || isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                    Verify & Continue
-                  </>
-                )}
-              </Button>
+              <div className="flex justify-center">
+                <Button
+                  onClick={verifyTwoFactor}
+                  className="primary-btn"
+                  disabled={verificationCode.length !== 6 || isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                      Verify & Continue
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         )}
