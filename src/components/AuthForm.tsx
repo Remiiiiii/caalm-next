@@ -166,6 +166,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
                       <Input
                         placeholder=" Enter your full name"
                         {...field}
+                        value={field.value ? ` ${field.value.replace(/^ /, '')}` : ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/^ /, '');
+                          field.onChange(value);
+                        }}
                         className="shad-input"
                       />
                     </FormControl>
@@ -186,6 +191,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
                     <Input
                       placeholder=" Enter your email"
                       {...field}
+                      value={field.value ? ` ${field.value.replace(/^ /, '')}` : ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/^ /, '');
+                        field.onChange(value);
+                      }}
                       className="shad-input"
                     />
                   </FormControl>
