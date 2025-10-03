@@ -116,6 +116,21 @@ interface ExecutiveDashboardProps {
     | null;
 }
 
+// Map invitation status to badge colors
+const getInvitationStatusBadgeClasses = (status: string): string => {
+  const normalizedStatus = status?.toLowerCase?.() ?? '';
+  switch (normalizedStatus) {
+    case 'pending':
+      return 'bg-[#fef6f0] text-[#ebc620]';
+    case 'revoked':
+      return 'bg-[#fff1f1] text-[#fe8787]';
+    case 'accepted':
+      return 'bg-[#ccf3e9] text-[#3dd9b3]';
+    default:
+      return 'bg-gray-100 text-gray-600';
+  }
+};
+
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const { toast } = useToast();
   const { orgId } = useOrganization();
@@ -1096,7 +1111,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                               <ClientDate dateString={inv.expiresAt} />
                             </td>
                             <td>
-                              <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-[#B3EBF2] text-[#12477D]">
+                              <span
+                                className={`inline-block px-2 py-1 rounded text-xs font-medium ${getInvitationStatusBadgeClasses(inv.status)}`}
+                              >
                                 {inv.status}
                               </span>
                             </td>
