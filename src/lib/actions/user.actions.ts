@@ -72,6 +72,47 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
   try {
     console.log('sendEmailOTP: Starting OTP send for email:', email);
 
+    const { tablesDB } = await createAdminClient();
+    console.log('sendEmailOTP: Admin client created successfully');
+
+    // Check if an OTP was recently sent (within the last 30 seconds) to prevent duplicates
+    const thirtySecondsAgo = new Date();
+    thirtySecondsAgo.setSeconds(thirtySecondsAgo.getSeconds() - 30);
+
+    const recentOtpResponse = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.otpTokensCollectionId,
+      queries: [
+        Query.equal('email', email),
+        Query.equal('used', false),
+        Query.greaterThan('$createdAt', thirtySecondsAgo.toISOString()),
+      ],
+    });
+
+    if (recentOtpResponse.rows.length > 0) {
+      console.log('sendEmailOTP: Recent OTP found, skipping duplicate send for:', email);
+      // Return success but don't send duplicate email
+      return ID.unique();
+    }
+
+    // Also check if there's any valid (non-expired) unused OTP for this email
+    const now = new Date();
+    const validOtpResponse = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.otpTokensCollectionId,
+      queries: [
+        Query.equal('email', email),
+        Query.equal('used', false),
+        Query.greaterThan('expiresAt', now.toISOString()),
+      ],
+    });
+
+    if (validOtpResponse.rows.length > 0) {
+      console.log('sendEmailOTP: Valid unused OTP already exists, skipping duplicate send for:', email);
+      // Return success but don't send duplicate email
+      return ID.unique();
+    }
+
     // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log('sendEmailOTP: Generated OTP:', otp);
@@ -79,9 +120,6 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     // Store OTP in database with expiration (5 minutes)
     const expirationTime = new Date();
     expirationTime.setMinutes(expirationTime.getMinutes() + 5);
-
-    const { tablesDB } = await createAdminClient();
-    console.log('sendEmailOTP: Admin client created successfully');
 
     // Store OTP in the database
     await tablesDB.createRow({
