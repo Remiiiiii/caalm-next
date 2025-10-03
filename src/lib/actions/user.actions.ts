@@ -260,7 +260,7 @@ export const finalizeAccountAfterEmailVerification = async ({
 
   // 4. Add messaging target so user can be added as a subscriber manually
   try {
-    await addUserEmailTarget(accountId, email);
+    await addUserEmailTarget({ userId: accountId, email });
   } catch (error) {
     console.warn(
       'Failed to add email target, but continuing with account creation:',
@@ -1036,7 +1036,13 @@ export const listPendingInvitations = async ({
   return result.rows;
 };
 
-export const addUserEmailTarget = async (userId: string, email: string) => {
+export const addUserEmailTarget = async ({
+  userId,
+  email,
+}: {
+  userId: string;
+  email: string;
+}) => {
   const client = new sdk.Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
@@ -1088,7 +1094,13 @@ export const addUserEmailTarget = async (userId: string, email: string) => {
   }
 };
 
-export const addUserSmsTarget = async (userId: string, e164Phone: string) => {
+export const addUserSmsTarget = async ({
+  userId,
+  e164Phone,
+}: {
+  userId: string;
+  e164Phone: string;
+}) => {
   const client = new sdk.Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)

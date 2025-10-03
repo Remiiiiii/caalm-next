@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify the TOTP code using the user's stored secret
-      const isValid = verifyTOTPCode(user.twoFactorSecret, code);
+      const isValid = verifyTOTPCode({ secret: user.twoFactorSecret, code });
 
       if (isValid) {
         const response = NextResponse.json({

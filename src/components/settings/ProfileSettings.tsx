@@ -17,7 +17,13 @@ const ProfileSettings = () => {
   });
   const { toast } = useToast();
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = ({
+    field,
+    value,
+  }: {
+    field: string;
+    value: string;
+  }) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -62,7 +68,9 @@ const ProfileSettings = () => {
           <Input
             id="fullName"
             value={formData.fullName}
-            onChange={(e) => handleInputChange('fullName', e.target.value)}
+            onChange={(e) =>
+              handleInputChange({ field: 'fullName', value: e.target.value })
+            }
             className="mt-1"
           />
         </div>
@@ -75,7 +83,9 @@ const ProfileSettings = () => {
             id="email"
             type="email"
             value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
+            onChange={(e) =>
+              handleInputChange({ field: 'email', value: e.target.value })
+            }
             className="mt-1"
           />
         </div>
@@ -87,7 +97,9 @@ const ProfileSettings = () => {
           <Input
             id="division"
             value={formData.division}
-            onChange={(e) => handleInputChange('division', e.target.value)}
+            onChange={(e) =>
+              handleInputChange({ field: 'division', value: e.target.value })
+            }
             className="mt-1"
             disabled
           />
@@ -100,7 +112,9 @@ const ProfileSettings = () => {
           <Input
             id="role"
             value={formData.role}
-            onChange={(e) => handleInputChange('role', e.target.value)}
+            onChange={(e) =>
+              handleInputChange({ field: 'role', value: e.target.value })
+            }
             className="mt-1"
             disabled
           />

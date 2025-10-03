@@ -49,7 +49,13 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Mock data generation
-  const generateTrendData = (dept?: string, range: string = '1y') => {
+  const generateTrendData = ({
+    dept,
+    range = '1y',
+  }: {
+    dept?: string;
+    range?: string;
+  }) => {
     const periods = {
       '6m': 6,
       '1y': 12,
@@ -84,7 +90,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
     }
 
     // Adjust data based on department
-    if (department && department !== 'all') {
+    if (dept && dept !== 'all') {
       const departmentMultiplier =
         {
           'child-welfare': 0.25,
@@ -93,7 +99,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
           residential: 0.18,
           clinic: 0.22,
           administration: 0.1,
-        }[department] || 0.2;
+        }[dept] || 0.2;
 
       data.forEach((item) => {
         item.contracts = Math.round(item.contracts * departmentMultiplier);
@@ -108,7 +114,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
   useEffect(() => {
     setIsLoading(true);
     setTimeout(() => {
-      setTrendData(generateTrendData(department, timeRange));
+      setTrendData(generateTrendData({ dept: department, range: timeRange }));
       setIsLoading(false);
     }, 1000);
   }, [department, timeRange]);

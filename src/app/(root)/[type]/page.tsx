@@ -153,7 +153,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
   );
   // Format total size using convertFileSize
   const { convertFileSize } = await import('@/lib/utils');
-  const totalSizeFormatted = convertFileSize(totalSizeBytes);
+  const totalSizeFormatted = convertFileSize({ sizeInBytes: totalSizeBytes });
 
   return (
     <div className="page-container">

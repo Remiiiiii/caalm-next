@@ -19,7 +19,13 @@ function parseCurrencyToNumber(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function sectionFor(md: string, heading: string): string | null {
+function sectionFor({
+  md,
+  heading,
+}: {
+  md: string;
+  heading: string;
+}): string | null {
   const re = new RegExp(
     `###\\s+${heading}\\s*[\\r\\n]([\\s\\S]*?)(?=\\n###\\s+|$)`,
     'i'
@@ -80,7 +86,7 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
     ];
 
     const plans: PricingPlan[] = planDefs.map(({ key, name }) => {
-      const sec = sectionFor(md as string, name) || '';
+      const sec = sectionFor({ md: md as string, heading: name }) || '';
       const { monthly, yearly } = extractPrices(sec);
       const features = extractFeatures(sec);
       return { key, name, monthly, yearly, features };

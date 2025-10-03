@@ -296,7 +296,13 @@ export const useUnreadCount = (userId?: string) => {
 };
 
 // Hook for recent notifications
-export const useRecentNotifications = (userId?: string, limit: number = 5) => {
+export const useRecentNotifications = ({
+  userId,
+  limit = 5,
+}: {
+  userId?: string;
+  limit?: number;
+}) => {
   const { user } = useAuth();
   const currentUserId = userId || user?.$id;
 
