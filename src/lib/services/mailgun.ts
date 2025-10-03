@@ -22,24 +22,38 @@ interface MailgunServiceProps {
 }
 
 class MailgunService {
-  private mg: any;
+  private mg: any = null;
   private domain: string;
+  private initialized: boolean = false;
 
   constructor() {
-    const mailgun = new Mailgun(FormData);
-    this.mg = mailgun.client({
-      username: 'api',
-      key: process.env.MAILGUN_API_KEY || '',
-      // For EU domains, uncomment and modify the URL:
-      // url: 'https://api.eu.mailgun.net'
-    });
-
-    // Use your actual domain or sandbox domain
+    // Don't initialize Mailgun client in constructor to avoid build-time errors
     this.domain = process.env.MAILGUN_DOMAIN || 'caalmsolutions.com';
+  }
+
+  private initializeMailgun() {
+    if (!this.initialized) {
+      const apiKey = process.env.MAILGUN_API_KEY;
+      if (!apiKey) {
+        console.error('MAILGUN_API_KEY environment variable is not set');
+        throw new Error('MAILGUN_API_KEY environment variable is required');
+      }
+      
+      const mailgun = new Mailgun(FormData);
+      this.mg = mailgun.client({
+        username: 'api',
+        key: apiKey,
+        // For EU domains, uncomment and modify the URL:
+        // url: 'https://api.eu.mailgun.net'
+      });
+      
+      this.initialized = true;
+    }
   }
 
   async sendEmail(options: EmailOptions) {
     try {
+      this.initializeMailgun();
       const { to, subject, text, html, from } = options;
 
       const fromAddress = from || `Mailgun Sandbox <postmaster@${this.domain}>`;
