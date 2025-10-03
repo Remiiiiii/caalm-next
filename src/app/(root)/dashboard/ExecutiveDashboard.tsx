@@ -1096,7 +1096,12 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                               <ClientDate dateString={inv.expiresAt} />
                             </td>
                             <td>
-                              <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-[#B3EBF2] text-[#12477D]">
+                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                inv.status === 'pending' ? 'bg-[#fef6f0] text-[#ebc620]' :
+                                inv.status === 'revoked' ? 'bg-[#fff1f1] text-[#fe8787]' :
+                                inv.status === 'accepted' ? 'bg-[#ccf3e9] text-[#3dd9b3]' :
+                                'bg-[#B3EBF2] text-[#12477D]' // fallback for any other status
+                              }`}>
                                 {inv.status}
                               </span>
                             </td>
