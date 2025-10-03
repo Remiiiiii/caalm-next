@@ -217,13 +217,13 @@ const TwoFactorModal = ({
               </div>
             </div>
 
-            <div className="flex gap-3 ">
+            <div className="flex gap-3 justify-center">
               <Button
                 onClick={setupTwoFactor}
                 className="primary-btn"
                 disabled={isLoading}
               >
-                <Shield className="h-4 w-4 mr-2 text-slate-700" />
+                <Shield className="h-4 w-4 mr-2" style={{ color: '#ffffff' }} />
                 {isLoading ? 'Setting up...' : 'Setup 2FA'}
               </Button>
             </div>
