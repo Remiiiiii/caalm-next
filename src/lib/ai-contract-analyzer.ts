@@ -35,7 +35,7 @@ export interface AIAnalysisRequest {
   analysisType?: 'comprehensive' | 'financial' | 'compliance' | 'risk';
 }
 
-import { model } from '@/lib/ai/gemini';
+import { getModel } from '@/lib/ai/gemini';
 import { SAMContract } from '@/lib/sam-config';
 
 export class ContractAnalyzer {

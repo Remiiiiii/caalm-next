@@ -3,7 +3,7 @@
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Query } from 'node-appwrite';
-import { model } from '@/lib/ai/gemini';
+import { getModel } from '@/lib/ai/gemini';
 // Fluent Reports import removed - will be handled server-side only
 
 export interface GenerateReportData {
@@ -409,6 +409,7 @@ async function generateAIAnalysis(data: {
     `;
 
     console.log('Calling Gemini AI model...');
+    const model = getModel();
     const result = await model.generateContent(prompt);
     console.log('Got result from Gemini');
     const response = await result.response;

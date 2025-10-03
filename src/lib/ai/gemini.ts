@@ -1,16 +1,28 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize Gemini AI - Use server-side environment variable
-const apiKey = process.env.GOOGLE_API_KEY;
-if (!apiKey) {
-  console.error('GOOGLE_API_KEY environment variable is not set');
-}
-const genAI = new GoogleGenerativeAI(apiKey || '');
+// Lazy initialization of Gemini AI to avoid build-time errors
+let genAI: GoogleGenerativeAI | null = null;
+let model: any = null;
 
-// Initialize the model - Use the correct model name
-export const model = genAI.getGenerativeModel({
-  model: 'gemini-2.0-flash-exp',
-});
+function initializeGemini() {
+  if (!genAI) {
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      console.error('GOOGLE_API_KEY environment variable is not set');
+      throw new Error('GOOGLE_API_KEY environment variable is required');
+    }
+    genAI = new GoogleGenerativeAI(apiKey);
+    model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash-exp',
+    });
+  }
+  return model;
+}
+
+// Export a function to get the model instead of the model directly
+export const getModel = () => {
+  return initializeGemini();
+};
 
 export interface DocumentAnalysis {
   summary: string;
@@ -130,6 +142,7 @@ export const analyzeDocument = async (
     `;
 
     console.log('Sending prompt to Gemini AI...');
+    const model = getModel();
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
@@ -259,6 +272,7 @@ export const answerQuestion = async (
       Answer in plain text format - no JSON, no special formatting, just a natural, human-readable response.
     `;
 
+    const model = getModel();
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
