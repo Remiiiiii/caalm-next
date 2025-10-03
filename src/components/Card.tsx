@@ -133,7 +133,7 @@ const Card = ({
             onRefresh={onRefresh}
             userRole={userRole}
           />
-          <p className="body-1">{convertFileSize(file.size)}</p>
+          <p className="body-1">{convertFileSize({ sizeInBytes: file.size })}</p>
         </div>
       </div>
       <div className="file-card-details">

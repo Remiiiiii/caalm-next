@@ -36,7 +36,11 @@ export async function POST(request: NextRequest) {
     const accountName = 'user@example.com';
 
     // Generate QR code URL
-    const qrUrl = generateTOTPQRUrl(secret, accountName, 'CAALM');
+    const qrUrl = generateTOTPQRUrl({
+      secret,
+      accountName,
+      issuer: 'CAALM',
+    });
 
     // Store the secret temporarily (in production, you'd store this securely)
     const factorId = `totp_${userId}_${Date.now()}`;
@@ -114,7 +118,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verify the TOTP code
-    const isValid = verifyTOTPCode(storedData.secret, code);
+    const isValid = verifyTOTPCode({ secret: storedData.secret, code });
 
     if (isValid) {
       // Store the verified secret in the user's profile

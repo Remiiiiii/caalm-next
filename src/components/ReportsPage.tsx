@@ -87,7 +87,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
     }
   }, [reportGeneratorOpen]);
 
-  const handleGenerateReport = async (department: string) => {
+  const handleGenerateReport = async ({ department }: { department: string }) => {
     setSelectedDepartment(department);
     setReportGeneratorOpen(true);
     // Reset generating state when opening modal
@@ -141,7 +141,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
     }
   };
 
-  const handleDeleteReport = (reportId: string, reportTitle: string) => {
+  const handleDeleteReport = ({
+    reportId,
+    reportTitle,
+  }: {
+    reportId: string;
+    reportTitle: string;
+  }) => {
     setReportToDelete({ id: reportId, title: reportTitle });
     setDeleteDialogOpen(true);
   };
@@ -339,7 +345,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
               <Button
                 key={dept}
                 variant="outline"
-                onClick={() => handleGenerateReport(dept)}
+                onClick={() => handleGenerateReport({ department: dept })}
                 disabled={generatingDepartment === dept}
                 className="primary-btn"
               >
@@ -518,10 +524,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        handleDeleteReport(
+                        handleDeleteReport({
                           reportId,
-                          reportData.title || 'Untitled Report'
-                        )
+                          reportTitle: reportData.title || 'Untitled Report',
+                        })
                       }
                       className="primary-btn  col-span-2"
                     >
@@ -551,7 +557,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
             <div className="flex justify-center">
               <Button
                 className="primary-btn h-[52px] px-6 shadow-drop-1"
-                onClick={() => handleGenerateReport('all')}
+                onClick={() => handleGenerateReport({ department: 'all' })}
                 disabled={false}
               >
                 <svg
