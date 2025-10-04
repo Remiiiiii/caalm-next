@@ -123,10 +123,21 @@ export class TOTP {
 // Utility functions for easy use
 export const generateTOTPSecret = () => TOTP.generateSecret();
 export const generateTOTPCode = (secret: string) => TOTP.generateCode(secret);
-export const verifyTOTPCode = (secret: string, code: string) =>
-  TOTP.verifyCode(secret, code);
-export const generateTOTPQRUrl = (
-  secret: string,
-  accountName: string,
-  issuer?: string
-) => TOTP.generateQRUrl(secret, accountName, issuer);
+export const verifyTOTPCode = ({
+  secret,
+  code,
+  window = 1,
+}: {
+  secret: string;
+  code: string;
+  window?: number;
+}) => TOTP.verifyCode(secret, code, window);
+export const generateTOTPQRUrl = ({
+  secret,
+  accountName,
+  issuer,
+}: {
+  secret: string;
+  accountName: string;
+  issuer?: string;
+}) => TOTP.generateQRUrl(secret, accountName, issuer);

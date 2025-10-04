@@ -86,7 +86,7 @@ const FileUsageOverview = ({ user, totalSpace }: FileUsageOverviewProps) => {
                     className="rounded-full"
                   />
                   <h4 className="text-lg font-semibold text-navy">
-                    {convertFileSize(summary.size) || 0}
+                    {convertFileSize({ sizeInBytes: summary.size }) || 0}
                   </h4>
                 </div>
                 <h5 className="text-sm font-medium text-slate-dark mb-1">

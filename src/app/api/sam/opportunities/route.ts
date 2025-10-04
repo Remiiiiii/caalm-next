@@ -113,9 +113,9 @@ export async function POST(request: NextRequest) {
       searchFilters.responseDeadlineOption !== 'Anytime'
     ) {
       // Handle response deadline mapping on server side
-      const deadlineDate = mapResponseDeadlineServer(
-        searchFilters.responseDeadlineOption
-      );
+      const deadlineDate = mapResponseDeadlineServer({
+        responseOption: searchFilters.responseDeadlineOption,
+      });
       if (deadlineDate) {
         searchParams.rdlfrom = getDefaultFromDate();
         searchParams.rdlto = deadlineDate;
@@ -155,30 +155,34 @@ export async function POST(request: NextRequest) {
 /**
  * Server-side response deadline mapping
  */
-function mapResponseDeadlineServer(responseOption: string): string | null {
+function mapResponseDeadlineServer({
+  responseOption,
+}: {
+  responseOption: string;
+}): string | null {
   const today = new Date();
 
   const options: Record<string, () => string> = {
-    'Next Day': () => addDays(today, 1),
-    'Next 2 Days': () => addDays(today, 2),
-    'Next 3 Days': () => addDays(today, 3),
-    'Next Week': () => addDays(today, 7),
-    'Next Month': () => addMonths(today, 1),
-    'Next 3 Months': () => addMonths(today, 3),
-    'Next Year': () => addMonths(today, 12),
+    'Next Day': () => addDays({ date: today, days: 1 }),
+    'Next 2 Days': () => addDays({ date: today, days: 2 }),
+    'Next 3 Days': () => addDays({ date: today, days: 3 }),
+    'Next Week': () => addDays({ date: today, days: 7 }),
+    'Next Month': () => addMonths({ date: today, months: 1 }),
+    'Next 3 Months': () => addMonths({ date: today, months: 3 }),
+    'Next Year': () => addMonths({ date: today, months: 12 }),
   };
 
   const mapper = options[responseOption];
   return mapper ? mapper() : null;
 }
 
-function addDays(date: Date, days: number): string {
+function addDays({ date, days }: { date: Date; days: number }): string {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result.toLocaleDateString('en-US');
 }
 
-function addMonths(date: Date, months: number): string {
+function addMonths({ date, months }: { date: Date; months: number }): string {
   const result = new Date(date);
   result.setMonth(result.getMonth() + months);
   return result.toLocaleDateString('en-US');

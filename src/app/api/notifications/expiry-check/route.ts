@@ -19,7 +19,13 @@ const getDaysUntil = (dateStr: string) => {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
-const getDocInfo = (doc: Record<string, unknown>, type: string) => {
+const getDocInfo = ({
+  doc,
+  type,
+}: {
+  doc: Record<string, unknown>;
+  type: string;
+}) => {
   if (type === 'contracts') {
     return {
       name: (doc.contractName as string) || '',
@@ -99,7 +105,7 @@ export async function POST(_req: NextRequest) {
       tableId: collection,
     });
     for (const doc of docs.rows) {
-      const { name, expiry } = getDocInfo(doc, type);
+      const { name, expiry } = getDocInfo({ doc, type });
       if (!expiry) continue;
       const daysUntil = getDaysUntil(expiry);
       if (THRESHOLDS.includes(daysUntil)) {

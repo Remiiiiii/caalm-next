@@ -11,8 +11,12 @@ export async function GET() {
     // Test TOTP functionality
     const secret = generateTOTPSecret();
     const code = generateTOTPCode(secret);
-    const isValid = verifyTOTPCode(secret, code);
-    const qrUrl = generateTOTPQRUrl(secret, 'test@example.com', 'CAALM');
+    const isValid = verifyTOTPCode({ secret, code });
+    const qrUrl = generateTOTPQRUrl({
+      secret,
+      accountName: 'test@example.com',
+      issuer: 'CAALM',
+    });
 
     return NextResponse.json({
       success: true,

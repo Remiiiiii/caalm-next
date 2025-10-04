@@ -26,7 +26,7 @@ const ImageThumbnail = ({ file }: { file: UIFileDoc }) => (
     <div className="flex flex-col">
       <p className="subtitle-2 mb-1">{file.name}</p>
       <FormattedDateTime date={file.$createdAt} className="caption" />
-      <p className="text-sm text-slate-600">{convertFileSize(file.size)}</p>
+      <p className="text-sm text-slate-600">{convertFileSize({ sizeInBytes: file.size })}</p>
     </div>
   </div>
 );
@@ -505,7 +505,7 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
         <div className="flex items-center justify-between py-2 border-t border-slate-200">
           <span className="text-sm text-slate-600 font-medium">Size</span>
           <span className="text-sm text-slate-800 font-semibold">
-            {convertFileSize(file.size)}
+            {convertFileSize({ sizeInBytes: file.size })}
           </span>
         </div>
         <div className="flex items-center justify-between py-2 border-t border-slate-200">

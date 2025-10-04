@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       const userResponse = await client.tablesDB.listRows({
         databaseId: appwriteConfig.databaseId,
         tableId: appwriteConfig.usersCollectionId,
-        queries: [Query.equal('$id', userId)],
+        queries: [Query.equal('accountId', userId)],
       });
 
       if (userResponse.rows.length > 0) {

@@ -38,43 +38,43 @@ export async function GET(request: NextRequest) {
       uninvitedUsersResult,
     ] = await Promise.allSettled([
       // Contracts data
-      tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.contractsCollectionId,
-        [Query.limit(1000)]
-      ),
+      tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.contractsCollectionId || 'contracts',
+        queries: [Query.limit(1000)],
+      }),
 
       // Users data
-      tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.usersCollectionId,
-        [Query.limit(1000)]
-      ),
+      tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.usersCollectionId || 'users',
+        queries: [Query.limit(1000)],
+      }),
 
       // Invitations data
-      tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.invitationsCollectionId,
-        [Query.equal('orgId', orgId), Query.limit(100)]
-      ),
+      tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.invitationsCollectionId || 'invitations',
+        queries: [Query.equal('orgId', orgId), Query.limit(100)],
+      }),
 
       // Files data
-      tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.filesCollectionId,
-        [Query.orderDesc('$createdAt'), Query.limit(10)]
-      ),
+      tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.filesCollectionId || 'files',
+        queries: [Query.orderDesc('$createdAt'), Query.limit(10)],
+      }),
 
       // Reports data
-      tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.reportsCollectionId,
-        [
+      tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.reportsCollectionId || 'reports',
+        queries: [
           Query.equal('userId', userId),
           Query.orderDesc('$createdAt'),
           Query.limit(20),
-        ]
-      ),
+        ],
+      }),
 
       // Departments data (static)
       Promise.resolve({ documents: [] }), // Placeholder for departments
@@ -83,36 +83,36 @@ export async function GET(request: NextRequest) {
       Promise.resolve({ documents: [] }), // Placeholder for report templates
 
       // Notifications data
-      tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        [
+      tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        queries: [
           Query.equal('userId', userId),
           Query.orderDesc('$createdAt'),
           Query.limit(50),
-        ]
-      ),
+        ],
+      }),
 
       // Notifications stats
-      tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        [Query.equal('userId', userId)]
-      ),
+      tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        queries: [Query.equal('userId', userId)],
+      }),
 
       // Recent activities
-      tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.recentActivityCollectionId,
-        [Query.orderDesc('$createdAt'), Query.limit(15)]
-      ),
+      tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.recentActivityCollectionId || 'recent-activity',
+        queries: [Query.orderDesc('$createdAt'), Query.limit(15)],
+      }),
 
       // Calendar events
-      tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.calendarEventsCollectionId,
-        [Query.orderDesc('$createdAt'), Query.limit(50)]
-      ),
+      tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.calendarEventsCollectionId || 'calendar-events',
+        queries: [Query.orderDesc('$createdAt'), Query.limit(50)],
+      }),
 
       // Uninvited users from Auth database
       getUninvitedUsers(),
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
       if (result.status === 'fulfilled') {
         return {
           ...result.value,
-          documents: result.value.rows || result.value.documents,
+          documents: result.value.rows || result.value.documents || [],
         };
       }
       console.error('Database query failed:', result.reason);

@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Trash2,
+  RefreshCw,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -116,6 +117,21 @@ interface ExecutiveDashboardProps {
       })
     | null;
 }
+
+// Map invitation status to badge colors
+const getInvitationStatusBadgeClasses = (status: string): string => {
+  const normalizedStatus = status?.toLowerCase?.() ?? '';
+  switch (normalizedStatus) {
+    case 'pending':
+      return 'bg-[#fef6f0] text-[#ebc620]';
+    case 'revoked':
+      return 'bg-[#fff1f1] text-[#fe8787]';
+    case 'accepted':
+      return 'bg-[#ccf3e9] text-[#3dd9b3]';
+    default:
+      return 'bg-gray-100 text-gray-600';
+  }
+};
 
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const { toast } = useToast();
@@ -306,6 +322,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     division: '',
   });
   const [loading, setLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
   const [resendingToken, setResendingToken] = useState<string | null>(null);
 
   // Revoke confirmation dialog state
@@ -377,6 +394,26 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       clearInterval(timer);
     };
   }, []);
+
+  const handleRefreshUsers = async () => {
+    setRefreshLoading(true);
+    try {
+      await refreshUnified();
+      toast({
+        title: 'Success',
+        description: 'User list refreshed successfully',
+      });
+    } catch (error) {
+      console.error('Error refreshing users:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh user list',
+        variant: 'destructive',
+      });
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -934,91 +971,115 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               </CardHeader>
               <CardContent>
                 <form
-                  className="flex flex-col md:flex-row gap-4 items-center"
+                  className="flex flex-col gap-4"
                   onSubmit={handleInviteSubmit}
                 >
-                  <SelectScrollable
-                    value={inviteForm.selectedUserId}
-                    onValueChange={(value) =>
-                      setInviteForm({ ...inviteForm, selectedUserId: value })
-                    }
-                    placeholder="Select a user 
-                  "
-                    className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-                  >
-                    {(uninvitedUsers as UninvitedUser[]).map(
-                      (user: UninvitedUser) => (
-                        <SelectItem key={user.$id} value={user.$id}>
-                          <div className="flex items-center gap-3">
-                            <Avatar
-                              name={user.fullName}
-                              userId={user.$id}
-                              size="sm"
-                            />
-                            <span>
-                              {user.fullName} ({user.email})
-                            </span>
-                          </div>
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectScrollable>
-                  <SelectScrollable
-                    value={inviteForm.role}
-                    onValueChange={(value) =>
-                      setInviteForm({ ...inviteForm, role: value })
-                    }
-                    placeholder="Select role"
-                    className="min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-                  >
-                    <SelectItem value="executive">Executive</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectScrollable>
+                  {/* User Selection Section */}
+                  <div className="flex flex-row gap-2 items-center justify-between">
+                    <SelectScrollable
+                      value={inviteForm.selectedUserId}
+                      onValueChange={(value) =>
+                        setInviteForm({ ...inviteForm, selectedUserId: value })
+                      }
+                      placeholder="Select a user"
+                      className=" bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                    >
+                      {(uninvitedUsers as UninvitedUser[]).map(
+                        (user: UninvitedUser) => (
+                          <SelectItem key={user.$id} value={user.$id}>
+                            <div className="flex items-center gap-3">
+                              <Avatar
+                                name={user.fullName}
+                                userId={user.$id}
+                                size="sm"
+                              />
+                              <span>
+                                {user.fullName} ({user.email})
+                              </span>
+                            </div>
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectScrollable>
 
-                  <SelectScrollable
-                    value={inviteForm.department}
-                    onValueChange={(value) =>
-                      setInviteForm({ ...inviteForm, department: value })
-                    }
-                    placeholder="Select department"
-                    className="min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-                  >
-                    <SelectItem value="IT">IT</SelectItem>
-                    <SelectItem value="Finance">Finance</SelectItem>
-                    <SelectItem value="Administration">
-                      Administration
-                    </SelectItem>
-                    <SelectItem value="Legal">Legal</SelectItem>
-                    <SelectItem value="Operations">Operations</SelectItem>
-                    <SelectItem value="Sales">Sales</SelectItem>
-                    <SelectItem value="Marketing">Marketing</SelectItem>
-                    <SelectItem value="Executive">Executive</SelectItem>
-                    <SelectItem value="Engineering">Engineering</SelectItem>
-                  </SelectScrollable>
+                    {/* Refresh button positioned to the right of Select a user dropdown */}
+                    <Button
+                      type="button"
+                      onClick={handleRefreshUsers}
+                      disabled={refreshLoading}
+                      className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 mr-2 ${
+                          refreshLoading ? 'animate-spin' : ''
+                        }`}
+                      />
+                      {refreshLoading ? 'Refreshing...' : 'Refresh User List'}
+                    </Button>
+                  </div>
 
-                  <SelectScrollable
-                    value={inviteForm.division}
-                    onValueChange={(value) =>
-                      setInviteForm({ ...inviteForm, division: value })
-                    }
-                    placeholder="Select division"
-                    className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-                  >
-                    <SelectItem value="behavioral-health">
-                      Behavioral Health
-                    </SelectItem>
-                    <SelectItem value="child-welfare">Child Welfare</SelectItem>
-                    <SelectItem value="clinic">Clinic</SelectItem>
-                    <SelectItem value="c-suite">C-Suite</SelectItem>
-                    <SelectItem value="cfs">CFS</SelectItem>
-                    <SelectItem value="hr">Human Resources</SelectItem>
-                    <SelectItem value="residential">Residential</SelectItem>
-                    <SelectItem value="support">Support</SelectItem>
-                    <SelectItem value="help-desk">Help Desk</SelectItem>
-                    <SelectItem value="accounting">Accounting</SelectItem>
-                    {/* <SelectItem value="management">Management</SelectItem> */}
-                  </SelectScrollable>
+                  {/* Role and Department Selection Section */}
+                  <div className="flex flex-col md:flex-row gap-4 items-center">
+                    <SelectScrollable
+                      value={inviteForm.role}
+                      onValueChange={(value) =>
+                        setInviteForm({ ...inviteForm, role: value })
+                      }
+                      placeholder="Select role"
+                      className="min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                    >
+                      <SelectItem value="executive">Executive</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectScrollable>
+
+                    <SelectScrollable
+                      value={inviteForm.department}
+                      onValueChange={(value) =>
+                        setInviteForm({ ...inviteForm, department: value })
+                      }
+                      placeholder="Select department"
+                      className="min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                    >
+                      <SelectItem value="IT">IT</SelectItem>
+                      <SelectItem value="Finance">Finance</SelectItem>
+                      <SelectItem value="Administration">
+                        Administration
+                      </SelectItem>
+                      <SelectItem value="Legal">Legal</SelectItem>
+                      <SelectItem value="Operations">Operations</SelectItem>
+                      <SelectItem value="Sales">Sales</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="Executive">Executive</SelectItem>
+                      <SelectItem value="Engineering">Engineering</SelectItem>
+                    </SelectScrollable>
+
+                    <SelectScrollable
+                      value={inviteForm.division}
+                      onValueChange={(value) =>
+                        setInviteForm({ ...inviteForm, division: value })
+                      }
+                      placeholder="Select division"
+                      className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                    >
+                      <SelectItem value="behavioral-health">
+                        Behavioral Health
+                      </SelectItem>
+                      <SelectItem value="child-welfare">
+                        Child Welfare
+                      </SelectItem>
+                      <SelectItem value="clinic">Clinic</SelectItem>
+                      <SelectItem value="c-suite">C-Suite</SelectItem>
+                      <SelectItem value="cfs">CFS</SelectItem>
+                      <SelectItem value="hr">Human Resources</SelectItem>
+                      <SelectItem value="residential">Residential</SelectItem>
+                      <SelectItem value="support">Support</SelectItem>
+                      <SelectItem value="help-desk">Help Desk</SelectItem>
+                      <SelectItem value="accounting">Accounting</SelectItem>
+                      {/* <SelectItem value="management">Management</SelectItem> */}
+                    </SelectScrollable>
+                  </div>
+
                   <Button
                     type="submit"
                     disabled={
@@ -1109,13 +1170,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                             </td>
                             <td>
                               <span
-                                className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                                  inv.status === 'accepted'
-                                    ? 'bg-[#86FDCD] text-[#2ED525]'
-                                    : inv.status === 'revoked'
-                                    ? 'bg-[#FFC8C8] text-[#FD6868]'
-                                    : 'bg-[#FFF8AA] text-[#FB9B00]'
-                                }`}
+                                className={`inline-block px-2 py-1 rounded text-xs font-medium ${getInvitationStatusBadgeClasses(
+                                  inv.status
+                                )}`}
                               >
                                 {inv.status}
                               </span>
