@@ -157,11 +157,7 @@ const MyContractsPage = () => {
     (sum, file) => sum + (file.size || 0),
     0
   );
-<<<<<<< Current (Your changes)
-  const totalSizeFormatted = convertFileSize(totalSizeBytes);
-=======
   const totalSizeFormatted = convertFileSize({ sizeInBytes: totalSizeBytes });
->>>>>>> Incoming (Background Agent changes)
 
   if (loading) {
     return (
