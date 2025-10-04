@@ -61,8 +61,11 @@ const ProfileSettings = () => {
           </Label>
           <Input
             id="fullName"
-            value={formData.fullName}
-            onChange={(e) => handleInputChange('fullName', e.target.value)}
+            value={formData.fullName ? ` ${formData.fullName.replace(/^ /, '')}` : ''}
+            onChange={(e) => {
+              const value = e.target.value.replace(/^ /, '');
+              handleInputChange('fullName', value);
+            }}
             className="mt-1"
           />
         </div>
@@ -74,8 +77,11 @@ const ProfileSettings = () => {
           <Input
             id="email"
             type="email"
-            value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
+            value={formData.email ? ` ${formData.email.replace(/^ /, '')}` : ''}
+            onChange={(e) => {
+              const value = e.target.value.replace(/^ /, '');
+              handleInputChange('email', value);
+            }}
             className="mt-1"
           />
         </div>

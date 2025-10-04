@@ -138,7 +138,7 @@ const OTPModal = ({
       await sendEmailOTP({ email });
       console.log('OTP resent successfully');
 
-      // // Show success feedback
+      // Show success feedback
       // setError('Verification code sent! Please check your email.');
       // setLastError('Verification code sent! Please check your email.');
 

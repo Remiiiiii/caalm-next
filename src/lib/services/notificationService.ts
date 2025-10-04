@@ -38,8 +38,9 @@ class NotificationService {
     try {
       const { tablesDB } = await this.getClient();
       const response = await tablesDB.listRows({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.notificationTypesCollectionId,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId:
+          appwriteConfig.notificationTypesCollectionId || 'notification-types',
         queries: [Query.equal('enabled', true), Query.orderDesc('$createdAt')],
       });
       return response.rows as unknown as NotificationType[];
@@ -53,8 +54,9 @@ class NotificationService {
     try {
       const { tablesDB } = await this.getClient();
       const response = await tablesDB.listRows({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.notificationTypesCollectionId,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId:
+          appwriteConfig.notificationTypesCollectionId || 'notification-types',
         queries: [
           Query.equal('type_key', typeKey),
           Query.equal('enabled', true),
@@ -71,12 +73,13 @@ class NotificationService {
     type: Omit<NotificationType, '$id' | '$createdAt' | '$updatedAt'>
   ): Promise<NotificationType> {
     try {
-      const response = await tablesDB.createRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationTypesCollectionId,
-        'unique()',
-        type
-      );
+      const response = await tablesDB.createRow({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId:
+          appwriteConfig.notificationTypesCollectionId || 'notification-types',
+        rowId: 'unique()',
+        data: type,
+      });
       return response as unknown as NotificationType;
     } catch (error) {
       console.error('Failed to create notification type:', error);
@@ -92,8 +95,9 @@ class NotificationService {
   ): Promise<NotificationType> {
     try {
       const response = await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        collectionId: appwriteConfig.notificationTypesCollectionId,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        collectionId:
+          appwriteConfig.notificationTypesCollectionId || 'notification-types',
         documentId: id,
         data: updates,
       });
@@ -106,11 +110,12 @@ class NotificationService {
 
   async deleteNotificationType(id: string): Promise<void> {
     try {
-      await tablesDB.deleteRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationTypesCollectionId,
-        id
-      );
+      await tablesDB.deleteRow({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId:
+          appwriteConfig.notificationTypesCollectionId || 'notification-types',
+        rowId: id,
+      });
     } catch (error) {
       console.error('Failed to delete notification type:', error);
       throw new Error('Failed to delete notification type');
@@ -193,14 +198,14 @@ class NotificationService {
       queries.push(Query.limit(limit));
       queries.push(Query.offset(offset));
 
-      const response = await tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        queries
-      );
+      const response = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        queries,
+      });
 
       return {
-        data: response.documents as unknown as Notification[],
+        data: response.rows as unknown as Notification[],
         total: response.total,
         page,
         limit,
@@ -213,11 +218,11 @@ class NotificationService {
 
   async getNotification(id: string): Promise<Notification> {
     try {
-      const response = await tablesDB.getRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        id
-      );
+      const response = await tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        rowId: id,
+      });
       return response as unknown as Notification;
     } catch (error) {
       console.error('Failed to fetch notification:', error);
@@ -253,12 +258,12 @@ class NotificationService {
           : undefined,
       };
 
-      const response = await tablesDB.createRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        'unique()',
-        notificationData
-      );
+      const response = await tablesDB.createRow({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        rowId: 'unique()',
+        data: notificationData,
+      });
 
       // Send SMS notification if user has SMS enabled
       await this.sendSMSNotification(notification.userId, notificationData);
@@ -276,9 +281,9 @@ class NotificationService {
   ): Promise<Notification> {
     try {
       const response = await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        collectionId: appwriteConfig.notificationsCollectionId,
-        documentId: id,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        rowId: id,
         data: updates,
       });
       return response as unknown as Notification;
@@ -291,9 +296,9 @@ class NotificationService {
   async markAsRead(id: string): Promise<Notification> {
     try {
       const response = await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        collectionId: appwriteConfig.notificationsCollectionId,
-        documentId: id,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        rowId: id,
         data: { read: true },
       });
       return response as unknown as Notification;
@@ -306,9 +311,9 @@ class NotificationService {
   async markAsUnread(id: string): Promise<Notification> {
     try {
       const response = await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        collectionId: appwriteConfig.notificationsCollectionId,
-        documentId: id,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        rowId: id,
         data: { read: false },
       });
       return response as unknown as Notification;
@@ -321,21 +326,20 @@ class NotificationService {
   async markAllAsRead(userId: string): Promise<void> {
     try {
       // Get all unread notifications for the user
-      const unreadNotifications = await tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        [Query.equal('userId', userId), Query.equal('read', false)]
-      );
+      const unreadNotifications = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        queries: [Query.equal('userId', userId), Query.equal('read', false)],
+      });
 
       // Update each notification
-      const updatePromises = unreadNotifications.documents.map(
-        (notification: any) =>
-          tablesDB.updateRow({
-            databaseId: appwriteConfig.databaseId,
-            collectionId: appwriteConfig.notificationsCollectionId,
-            documentId: notification.$id,
-            data: { read: true },
-          })
+      const updatePromises = unreadNotifications.rows.map((notification: any) =>
+        tablesDB.updateRow({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+          rowId: notification.$id,
+          data: { read: true },
+        })
       );
 
       await Promise.all(updatePromises);
@@ -347,11 +351,11 @@ class NotificationService {
 
   async deleteNotification(id: string): Promise<void> {
     try {
-      await tablesDB.deleteRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        id
-      );
+      await tablesDB.deleteRow({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        rowId: id,
+      });
     } catch (error) {
       console.error('Failed to delete notification:', error);
       throw new Error('Failed to delete notification');
@@ -361,11 +365,11 @@ class NotificationService {
   async deleteMultipleNotifications(ids: string[]): Promise<void> {
     try {
       const deletePromises = ids.map((id) =>
-        tablesDB.deleteRow(
-          appwriteConfig.databaseId,
-          appwriteConfig.notificationsCollectionId,
-          id
-        )
+        tablesDB.deleteRow({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+          rowId: id,
+        })
       );
 
       await Promise.all(deletePromises);
@@ -380,8 +384,8 @@ class NotificationService {
     try {
       // Get all notifications for the user
       const allNotifications = await tablesDB.listRows({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.notificationsCollectionId,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
         queries: [Query.equal('userId', userId)],
       });
 
@@ -465,11 +469,11 @@ class NotificationService {
   // Utility Methods
   async getUnreadCount(userId: string): Promise<number> {
     try {
-      const response = await tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        [Query.equal('userId', userId), Query.equal('read', false)]
-      );
+      const response = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        queries: [Query.equal('userId', userId), Query.equal('read', false)],
+      });
       return response.total;
     } catch (error) {
       console.error('Failed to get unread count:', error);
@@ -482,16 +486,16 @@ class NotificationService {
     limit: number = 5
   ): Promise<Notification[]> {
     try {
-      const response = await tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        [
+      const response = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+        queries: [
           Query.equal('userId', userId),
           Query.orderDesc('$createdAt'),
           Query.limit(limit),
-        ]
-      );
-      return response.documents as unknown as Notification[];
+        ],
+      });
+      return response.rows as unknown as Notification[];
     } catch (error) {
       console.error('Failed to get recent notifications:', error);
       throw new Error('Failed to get recent notifications');
@@ -504,8 +508,10 @@ class NotificationService {
   ): Promise<NotificationSettingsDoc | null> {
     try {
       const response = await tablesDB.listRows({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.notificationSettingsCollectionId,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId:
+          appwriteConfig.notificationSettingsCollectionId ||
+          'notification-settings',
         queries: [Query.equal('user_id', userId), Query.limit(1)],
       });
       return (response.rows[0] as unknown as NotificationSettingsDoc) || null;
@@ -533,17 +539,21 @@ class NotificationService {
 
       const response = existing
         ? await tablesDB.updateRow({
-            databaseId: appwriteConfig.databaseId,
-            collectionId: appwriteConfig.notificationSettingsCollectionId,
-            documentId: existing.$id,
+            databaseId: appwriteConfig.databaseId || 'default-db',
+            tableId:
+              appwriteConfig.notificationSettingsCollectionId ||
+              'notification-settings',
+            rowId: existing.$id,
             data: doc,
           })
-        : await tablesDB.createRow(
-            appwriteConfig.databaseId,
-            appwriteConfig.notificationSettingsCollectionId,
-            'unique()',
-            doc
-          );
+        : await tablesDB.createRow({
+            databaseId: appwriteConfig.databaseId || 'default-db',
+            tableId:
+              appwriteConfig.notificationSettingsCollectionId ||
+              'notification-settings',
+            rowId: 'unique()',
+            data: doc,
+          });
 
       return response as unknown as NotificationSettingsDoc;
     } catch (error) {

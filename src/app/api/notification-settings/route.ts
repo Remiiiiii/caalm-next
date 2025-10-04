@@ -50,7 +50,7 @@ export async function PUT(request: NextRequest) {
       /^\+\d{10,15}$/.test(body.phoneNumber)
     ) {
       try {
-        await addUserSmsTarget(body.userId, body.phoneNumber);
+        await addUserSmsTarget({ userId: body.userId, e164Phone: body.phoneNumber });
       } catch (e) {
         console.warn('Failed to create SMS target:', e);
         // Do not fail the request if SMS target creation fails; settings upsert succeeded

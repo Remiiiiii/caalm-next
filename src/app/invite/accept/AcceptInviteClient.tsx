@@ -2,18 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import OTPModal from '@/components/OTPModal';
 
 export default function AcceptInviteClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token');
   const [error, setError] = useState('');
-  const [inviteData, setInviteData] = useState<{
-    email: string;
-    accountId: string;
-    role: string;
-  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -27,45 +21,60 @@ export default function AcceptInviteClient() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.success) {
-          setInviteData({
-            email: data.email,
-            accountId: data.accountId,
-            role: data.role,
-          });
+          // Store invitation acceptance success in sessionStorage for sign-in page
+          sessionStorage.setItem(
+            'invitationAccepted',
+            JSON.stringify({
+              email: data.email,
+              role: data.role,
+              department: data.department,
+            })
+          );
+
+          // Redirect to sign-in page instead of showing OTP modal directly
+          router.push('/sign-in?invitation=accepted');
         } else {
           setError(data?.error || 'Failed to accept invitation.');
+          setIsLoading(false);
         }
       })
       .catch(() => {
         setError('Invalid or expired invitation.');
-      })
-      .finally(() => {
         setIsLoading(false);
       });
   }, [token]);
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Processing your invitation...</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (error) return <div>Error: {error}</div>;
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h2 className="text-lg font-semibold text-red-800 mb-2">
+              Invitation Error
+            </h2>
+            <p className="text-red-600">{error}</p>
+            <button
+              onClick={() => router.push('/sign-in')}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Go to Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  if (!inviteData) return <div>No invitation data available.</div>;
-
-  return (
-    <OTPModal
-      email={inviteData.email}
-      accountId={inviteData.accountId}
-      onSuccess={() => {
-        // Redirect to dashboard based on role
-        if (inviteData.role === 'executive')
-          router.push('/dashboard/executive');
-        else if (inviteData.role === 'manager')
-          router.push('/dashboard/manager');
-        else if (inviteData.role === 'admin') router.push('/dashboard/admin');
-        else router.push('/dashboard');
-      }}
-      onClose={() => {
-        router.push('/sign-in');
-      }}
-    />
-  );
+  return null;
 }

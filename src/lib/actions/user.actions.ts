@@ -30,8 +30,8 @@ export const getUserByEmail = async (email: string) => {
     console.log('getUserByEmail: Admin client created successfully');
 
     const result = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
       queries: [Query.equal('email', email)],
     });
 
@@ -52,8 +52,8 @@ export const getUserById = async (userId: string) => {
   const { tablesDB } = await createAdminClient();
   try {
     const result = await tablesDB.getRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
       rowId: userId,
     });
     return result;
@@ -72,6 +72,53 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
   try {
     console.log('sendEmailOTP: Starting OTP send for email:', email);
 
+    const { tablesDB } = await createAdminClient();
+    console.log('sendEmailOTP: Admin client created successfully');
+
+    // Check if an OTP was recently sent (within the last 30 seconds) to prevent duplicates
+    const thirtySecondsAgo = new Date();
+    thirtySecondsAgo.setSeconds(thirtySecondsAgo.getSeconds() - 30);
+
+    const recentOtpResponse = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
+      queries: [
+        Query.equal('email', email),
+        Query.equal('used', false),
+        Query.greaterThan('$createdAt', thirtySecondsAgo.toISOString()),
+      ],
+    });
+
+    if (recentOtpResponse.rows.length > 0) {
+      console.log(
+        'sendEmailOTP: Recent OTP found, skipping duplicate send for:',
+        email
+      );
+      // Return success but don't send duplicate email
+      return ID.unique();
+    }
+
+    // Also check if there's any valid (non-expired) unused OTP for this email
+    const now = new Date();
+    const validOtpResponse = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
+      queries: [
+        Query.equal('email', email),
+        Query.equal('used', false),
+        Query.greaterThan('expiresAt', now.toISOString()),
+      ],
+    });
+
+    if (validOtpResponse.rows.length > 0) {
+      console.log(
+        'sendEmailOTP: Valid unused OTP already exists, skipping duplicate send for:',
+        email
+      );
+      // Return success but don't send duplicate email
+      return ID.unique();
+    }
+
     // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log('sendEmailOTP: Generated OTP:', otp);
@@ -80,13 +127,10 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     const expirationTime = new Date();
     expirationTime.setMinutes(expirationTime.getMinutes() + 5);
 
-    const { tablesDB } = await createAdminClient();
-    console.log('sendEmailOTP: Admin client created successfully');
-
     // Store OTP in the database
     await tablesDB.createRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.otpTokensCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
       rowId: ID.unique(),
       data: {
         email,
@@ -101,8 +145,8 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     let userFullName = 'User';
     try {
       const userResponse = await tablesDB.listRows({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.usersCollectionId,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.usersCollectionId || 'users',
         queries: [Query.equal('email', email)],
       });
 
@@ -215,8 +259,8 @@ export const finalizeAccountAfterEmailVerification = async ({
     const existingUser = await getUserByEmail(email);
     if (!existingUser) {
       await tablesDB.createRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.usersCollectionId,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.usersCollectionId || 'users',
         rowId: ID.unique(),
         data: {
           fullName: fullName,
@@ -234,8 +278,8 @@ export const finalizeAccountAfterEmailVerification = async ({
       // Update existing user's fullName if it's empty
       if (!existingUser.fullName || existingUser.fullName === '') {
         await tablesDB.updateRow({
-          databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.usersCollectionId,
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.usersCollectionId || 'users',
           rowId: existingUser.$id,
           data: {
             fullName: fullName,
@@ -260,7 +304,7 @@ export const finalizeAccountAfterEmailVerification = async ({
 
   // 4. Add messaging target so user can be added as a subscriber manually
   try {
-    await addUserEmailTarget(accountId, email);
+    await addUserEmailTarget({ userId: accountId, email });
   } catch (error) {
     console.warn(
       'Failed to add email target, but continuing with account creation:',
@@ -313,8 +357,8 @@ export const verifyOTP = async ({
 
     // Find the OTP in the database
     const result = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.otpTokensCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
       queries: [
         Query.equal('email', email),
         Query.equal('otp', otp),
@@ -339,8 +383,8 @@ export const verifyOTP = async ({
 
     // Mark OTP as used
     await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.otpTokensCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
       rowId: otpRecord.$id,
       data: {
         used: true,
@@ -467,8 +511,8 @@ export const getCurrentUser = async () => {
     console.log('getCurrentUser - Account ID:', result.$id);
 
     const user = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
       queries: [Query.equal('accountId', result.$id)],
     });
 
@@ -484,7 +528,11 @@ export const getCurrentUser = async () => {
   } catch (error) {
     // Don't log session errors as they're expected in 2FA flow
     if (error instanceof Error && error.message.includes('No session found')) {
-      return null; // Return null instead of logging error
+      // If no session found, try to get user from 2FA cookies
+      console.log(
+        'getCurrentUser - No session found, checking 2FA authentication'
+      );
+      return await getCurrentUserFrom2FA();
     }
     console.log('getCurrentUser - Error:', error);
     return null;
@@ -510,23 +558,31 @@ export const getCurrentUserFrom2FA = async () => {
     }
 
     // Get the actual user data from the database using the stored user ID
-    const { tablesDB } = await createAdminClient();
-    const userResponse = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
-      queries: [Query.equal('$id', userIdFromCookie.value)],
-    });
+    try {
+      const { tablesDB } = await createAdminClient();
+      const userResponse = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.usersCollectionId || 'users',
+        queries: [Query.equal('$id', userIdFromCookie.value)],
+      });
 
-    if (userResponse.total === 0) {
-      console.log('getCurrentUserFrom2FA - User not found in database');
+      if (userResponse.total === 0) {
+        console.log('getCurrentUserFrom2FA - User not found in database');
+        return null;
+      }
+
+      const user = userResponse.rows[0];
+      console.log(
+        'getCurrentUserFrom2FA - Returning actual user data for 2FA-authenticated user'
+      );
+      return parseStringify(user);
+    } catch (fetchError) {
+      console.error(
+        'getCurrentUserFrom2FA - Database fetch failed:',
+        fetchError
+      );
       return null;
     }
-
-    const user = userResponse.rows[0];
-    console.log(
-      'getCurrentUserFrom2FA - Returning actual user data for 2FA-authenticated user'
-    );
-    return parseStringify(user);
   } catch (error) {
     console.error('getCurrentUserFrom2FA - Error occurred:', error);
     return null;
@@ -589,8 +645,8 @@ export const signInUser = async ({ email }: { email: string }) => {
       // Create the missing users collection document
       const { tablesDB } = await createAdminClient();
       await tablesDB.createRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.usersCollectionId,
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.usersCollectionId || 'users',
         rowId: ID.unique(),
         data: {
           fullName: authUser.name || '',
@@ -663,7 +719,8 @@ export const signInUser = async ({ email }: { email: string }) => {
   }
 };
 
-const INVITATIONS_COLLECTION = appwriteConfig.invitationsCollectionId;
+const INVITATIONS_COLLECTION =
+  appwriteConfig.invitationsCollectionId || 'invitations';
 
 // Types for invitation functions
 interface CreateInvitationParams {
@@ -788,7 +845,7 @@ export const createInvitation = async ({
     // 1. Create invitation document
     console.log('createInvitation: Creating database row...');
     await tablesDB.createRow({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: INVITATIONS_COLLECTION,
       rowId: ID.unique(),
       data: {
@@ -879,7 +936,7 @@ export const createInvitation = async ({
 export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   const { tablesDB } = await createAdminClient();
   const result = await tablesDB.listRows({
-    databaseId: appwriteConfig.databaseId,
+    databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
     queries: [Query.equal('token', token)],
   });
@@ -950,8 +1007,8 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     }
 
     await tablesDB.createRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
       rowId: sdk.ID.unique(),
       data: {
         fullName: invite.name,
@@ -969,7 +1026,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 
   // 3. Mark invitation as accepted
   await tablesDB.updateRow({
-    databaseId: appwriteConfig.databaseId,
+    databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
     rowId: invite.$id,
     data: { status: 'accepted' },
@@ -988,14 +1045,14 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
   const { tablesDB } = await createAdminClient();
   const result = await tablesDB.listRows({
-    databaseId: appwriteConfig.databaseId,
+    databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
     queries: [Query.equal('token', token)],
   });
   if (result.total === 0) throw new Error('Invalid invitation token');
   const invite = result.rows[0];
   await tablesDB.updateRow({
-    databaseId: appwriteConfig.databaseId,
+    databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
     rowId: invite.$id,
     data: { revoked: true, status: 'revoked' },
@@ -1006,14 +1063,14 @@ export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
 export const deleteInvitation = async ({ token }: RevokeInvitationParams) => {
   const { tablesDB } = await createAdminClient();
   const result = await tablesDB.listRows({
-    databaseId: appwriteConfig.databaseId,
+    databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
     queries: [Query.equal('token', token)],
   });
   if (result.total === 0) throw new Error('Invalid invitation token');
   const invite = result.rows[0];
   await tablesDB.deleteRow({
-    databaseId: appwriteConfig.databaseId,
+    databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
     rowId: invite.$id,
   });
@@ -1025,7 +1082,7 @@ export const listPendingInvitations = async ({
 }: ListPendingInvitationsParams) => {
   const { tablesDB } = await createAdminClient();
   const result = await tablesDB.listRows({
-    databaseId: appwriteConfig.databaseId,
+    databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
     queries: [
       Query.equal('orgId', orgId),
@@ -1036,7 +1093,13 @@ export const listPendingInvitations = async ({
   return result.rows;
 };
 
-export const addUserEmailTarget = async (userId: string, email: string) => {
+export const addUserEmailTarget = async ({
+  userId,
+  email,
+}: {
+  userId: string;
+  email: string;
+}) => {
   const client = new sdk.Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
@@ -1088,7 +1151,13 @@ export const addUserEmailTarget = async (userId: string, email: string) => {
   }
 };
 
-export const addUserSmsTarget = async (userId: string, e164Phone: string) => {
+export const addUserSmsTarget = async ({
+  userId,
+  e164Phone,
+}: {
+  userId: string;
+  e164Phone: string;
+}) => {
   const client = new sdk.Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
@@ -1144,7 +1213,7 @@ export const addUserSmsTarget = async (userId: string, e164Phone: string) => {
 export const getInvitationByToken = async (token: string) => {
   const { tablesDB } = await createAdminClient();
   const result = await tablesDB.listRows({
-    databaseId: appwriteConfig.databaseId,
+    databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
     queries: [Query.equal('token', token)],
   });
@@ -1237,8 +1306,8 @@ export const updateUserProfile = async ({
     const { tablesDB } = await createAdminClient();
     // Find the user document by accountId
     const userList = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
       queries: [Query.equal('accountId', accountId)],
     });
     if (userList.total === 0) throw new Error('User not found');
@@ -1250,8 +1319,8 @@ export const updateUserProfile = async ({
     if (division !== undefined) updatePayload.division = division;
     // Update the user document
     const updatedUser = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
       rowId: userDoc.$id,
       data: updatePayload,
     });
@@ -1269,8 +1338,8 @@ export const listAllUsers = async () => {
   try {
     const { tablesDB } = await createAdminClient();
     const result = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
     });
     return result.rows;
   } catch (error) {
@@ -1282,8 +1351,8 @@ export const getActiveUsersCount = async () => {
   try {
     const { tablesDB } = await createAdminClient();
     const result = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
       queries: [Query.equal('status', 'active')],
     });
     return result.total;
@@ -1301,8 +1370,8 @@ export const deleteUser = async (userId: string) => {
   try {
     const { tablesDB } = await createAdminClient();
     await tablesDB.deleteRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
       rowId: userId,
     });
     return { success: true };
@@ -1315,8 +1384,8 @@ export const getContracts = async () => {
   const { tablesDB } = await createAdminClient();
   try {
     const res = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.contractsCollectionId || 'contracts',
     });
     return parseStringify(res.rows);
   } catch (error) {
@@ -1329,7 +1398,7 @@ export const getUnreadNotificationsCount = async (userId: string) => {
   const { tablesDB } = await createAdminClient();
   try {
     const res = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: 'notifications',
       queries: [Query.equal('userId', userId), Query.equal('read', false)],
     });
@@ -1377,13 +1446,13 @@ export const getUninvitedUsers = async () => {
 
     // Get all users in the users collection (invited users)
     const invitedUsers = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
     });
 
     // Get all pending invitations
     const pendingInvitations = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: INVITATIONS_COLLECTION,
       queries: [Query.equal('status', 'pending')],
     });

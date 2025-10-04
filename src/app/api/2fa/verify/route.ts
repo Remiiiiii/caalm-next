@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
 
       // Get the user's stored 2FA secret from their profile
       const userResponse = await client.tablesDB.listRows({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.usersCollectionId,
-        queries: [Query.equal('$id', userId)],
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.usersCollectionId!,
+        queries: [Query.equal('accountId', userId)],
       });
 
       if (userResponse.rows.length === 0) {
@@ -80,12 +80,13 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify the TOTP code using the user's stored secret
-      const isValid = verifyTOTPCode(user.twoFactorSecret, code);
+      const isValid = verifyTOTPCode({ secret: user.twoFactorSecret, code });
 
       if (isValid) {
         const response = NextResponse.json({
           success: true,
           message: '2FA verification successful',
+          accountId: user.accountId, // Return accountId for session creation
         });
 
         // Set cookies to indicate 2FA verification is complete and store user info

@@ -155,8 +155,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   }, [isOpen, welcomeMessageLoaded, chatMessages.length, analyze]);
 
-  const handleSendMessage = async (msg?: string) => {
-    const message = msg || newMessage;
+  const handleSendMessage = async ({ message: overrideMessage }: { message?: string } = {}) => {
+    const message = overrideMessage || newMessage;
     if (!message.trim()) return;
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -239,7 +239,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      handleSendMessage({ message: undefined });
     }
   };
 
@@ -774,7 +774,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSendMessage();
+                        handleSendMessage({ message: undefined });
                       }}
                       disabled={!newMessage.trim() || isLoading}
                       className="bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] hover:from-[#078FAB] hover:via-[#11487D] hover:to-[#00C1CB] text-white rounded-full p-2 shadow-drop-1 transition-all duration-300"
@@ -807,7 +807,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                             className="text-xs rounded-full bg-white border-light-300 hover:bg-light-400 hover:border-[#00C1CB] focus:ring-2 focus:ring-[#078FAB] focus:outline-none transition-all duration-200 shadow-drop-1"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleSendMessage(q);
+                              handleSendMessage({ message: q });
                             }}
                             disabled={isLoading}
                           >

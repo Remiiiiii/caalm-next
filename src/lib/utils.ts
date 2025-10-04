@@ -9,18 +9,24 @@ export const parseStringify = (value: unknown) =>
 
 export const convertFileToUrl = (file: File) => URL.createObjectURL(file);
 
-export const convertFileSize = (sizeInBytes: number, digits?: number) => {
+export const convertFileSize = ({
+  sizeInBytes,
+  digits = 1,
+}: {
+  sizeInBytes: number;
+  digits?: number;
+}) => {
   if (sizeInBytes < 1024) {
-    return sizeInBytes + ' Bytes'; // Less than 1 KB, show in Bytes
+    return sizeInBytes + ' Bytes';
   } else if (sizeInBytes < 1024 * 1024) {
     const sizeInKB = sizeInBytes / 1024;
-    return sizeInKB.toFixed(digits || 1) + ' KB'; // Less than 1 MB, show in KB
+    return sizeInKB.toFixed(digits) + ' KB';
   } else if (sizeInBytes < 1024 * 1024 * 1024) {
     const sizeInMB = sizeInBytes / (1024 * 1024);
-    return sizeInMB.toFixed(digits || 1) + ' MB'; // Less than 1 GB, show in MB
+    return sizeInMB.toFixed(digits) + ' MB';
   } else {
     const sizeInGB = sizeInBytes / (1024 * 1024 * 1024);
-    return sizeInGB.toFixed(digits || 1) + ' GB'; // 1 GB or more, show in GB
+    return sizeInGB.toFixed(digits) + ' GB';
   }
 };
 
@@ -145,10 +151,13 @@ export const formatDate = (isoString: string | null | undefined) => {
   return `${day} ${month}, ${year}`; // ${time},
 };
 
-export const getFileIcon = (
-  extension: string | undefined,
-  type: FileType | string
-) => {
+export const getFileIcon = ({
+  extension,
+  type,
+}: {
+  extension: string | undefined;
+  type: FileType | string;
+}) => {
   switch (extension) {
     // Document
     case 'pdf':
@@ -289,7 +298,7 @@ export function getFileTypesParams(type: string): FileType[] {
 // ROLE UTILS
 export const capitalizeRole = (role: string): string => {
   if (!role) return '';
-  
+
   // Handle special cases first
   switch (role.toLowerCase()) {
     case 'head_admin':

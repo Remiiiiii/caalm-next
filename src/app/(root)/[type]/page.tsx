@@ -6,9 +6,16 @@ import Card from '@/components/Card';
 import { getFileTypesParams } from '@/lib/utils';
 import FileUsageOverview from '@/components/FileUsageOverview';
 import { UIFileDoc } from '@/types/files';
+
+type FileType = 'image' | 'video' | 'audio' | 'document' | 'other';
 import { createAdminClient } from '@/lib/appwrite/admin';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'appwrite';
+
+interface SearchParamProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  params: Promise<{ [key: string]: string | string[] | undefined }>;
+}
 
 const Page = async ({ searchParams, params }: SearchParamProps) => {
   const type = ((await params)?.type as string) || '';
@@ -56,8 +63,8 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
     // Get all contracts from the contracts collection (not filtered by owner)
     const contractsResult = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
       queries: queries,
     });
 
@@ -69,8 +76,8 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
         if (contract.fileId) {
           try {
             fileData = await databases.getDocument(
-              appwriteConfig.databaseId,
-              appwriteConfig.filesCollectionId,
+              appwriteConfig.databaseId!,
+              appwriteConfig.filesCollectionId!,
               contract.fileId
             );
           } catch (error) {
@@ -90,6 +97,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
           $permissions: contract.$permissions,
           $collectionId: contract.$collectionId,
           $databaseId: contract.$databaseId,
+          $sequence: contract.$sequence || 0,
 
           // Use contract data as primary source
           name: contract.contractName || contract.name || 'Untitled Contract',
@@ -131,9 +139,9 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
     files = await getFiles({ types, searchText, sort });
 
     // If type is 'images', filter to only png, jpg, jpeg
-    filteredDocuments = files.rows as UIFileDoc[];
+    filteredDocuments = files.documents as UIFileDoc[];
     if (type.toLowerCase() === 'images') {
-      filteredDocuments = files.rows.filter((file: UIFileDoc) => {
+      filteredDocuments = files.documents.filter((file: UIFileDoc) => {
         const ext = (file.extension || '').toLowerCase();
         return ext === 'png' || ext === 'jpg' || ext === 'jpeg';
       });
@@ -153,7 +161,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
   );
   // Format total size using convertFileSize
   const { convertFileSize } = await import('@/lib/utils');
-  const totalSizeFormatted = convertFileSize(totalSizeBytes);
+  const totalSizeFormatted = convertFileSize({ sizeInBytes: totalSizeBytes });
 
   return (
     <div className="page-container">

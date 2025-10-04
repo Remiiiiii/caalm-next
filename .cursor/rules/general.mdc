@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+
+Tech stack: React (Next.js), Tailwind, ShadCN, Appwrite, pnpm, Node. JS
+
+- Use `pnpm add` when installing new packages.
+- Use `npx shadcn add` to add new shadcn components.
+- Never try to start the app itself (I have it running in a separate terminal), instead, if you need to restart the server on localhost:3000 first use the `taskkill` command and then the `pnpm run dev` command.
