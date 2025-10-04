@@ -62,20 +62,31 @@ function extractFeatures(section: string): string[] {
 export async function loadPricingFromMarkdown(): Promise<PricingData> {
   // Try multiple locations to be resilient on different deploy targets (e.g., Vercel)
   const candidatePaths = [
-    path.join(process.cwd(), 'docs', 'PRICING.md'),
-    path.join(process.cwd(), 'public', 'docs', 'PRICING.md'),
     path.join(process.cwd(), 'public', 'PRICING.md'),
+    path.join(process.cwd(), 'public', 'docs', 'PRICING.md'),
+    path.join(process.cwd(), 'docs', 'PRICING.md'),
   ];
 
   let md: string | null = null;
+  let lastError: Error | null = null;
+
   for (const p of candidatePaths) {
     try {
       md = await fs.readFile(p, 'utf8');
+      console.log(`Successfully loaded pricing from: ${p}`);
       break;
     } catch (err) {
-      console.error(err);
+      lastError = err as Error;
       // continue trying next path
     }
+  }
+
+  if (!md && lastError) {
+    console.warn(
+      `Could not find PRICING.md in any of the candidate paths:`,
+      candidatePaths
+    );
+    console.warn(`Last error:`, lastError.message);
   }
 
   if (md) {
