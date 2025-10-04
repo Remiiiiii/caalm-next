@@ -325,8 +325,16 @@ const UserManagement = () => {
               </label>
               <Input
                 name="fullName"
+<<<<<<< Current (Your changes)
                 value={editForm.fullName}
                 onChange={handleEditChange}
+=======
+                value={editForm.fullName ? ` ${editForm.fullName.replace(/^ /, '')}` : ''}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/^ /, '');
+                  setEditForm({ ...editForm, fullName: value });
+                }}
+>>>>>>> Incoming (Background Agent changes)
                 required
               />
             </div>

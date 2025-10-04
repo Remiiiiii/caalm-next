@@ -57,18 +57,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
   } | null>(null);
   const [show2FASetup, setShow2FASetup] = useState(false);
   const [show2FAVerification, setShow2FAVerification] = useState(false);
+  const [invitationMessage, setInvitationMessage] = useState('');
 
   const formSchema = authFormSchema(type);
   const searchParams = useSearchParams();
   const router = useRouter();
-
-  // Check for logout reason in URL params
-  useEffect(() => {
-    const reason = searchParams?.get('reason');
-    if (reason) {
-      setLogoutMessage(getLogoutMessage(reason));
-    }
-  }, [searchParams]);
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof formSchema>>({
@@ -79,6 +72,37 @@ const AuthForm = ({ type }: { type: FormType }) => {
       password: '',
     },
   });
+
+  // Check for logout reason and invitation acceptance in URL params
+  useEffect(() => {
+    const reason = searchParams?.get('reason');
+    const invitation = searchParams?.get('invitation');
+
+    if (reason) {
+      setLogoutMessage(getLogoutMessage(reason));
+    }
+
+    if (invitation === 'accepted') {
+      // Check if we have invitation data in sessionStorage
+      const invitationData = sessionStorage.getItem('invitationAccepted');
+      if (invitationData) {
+        try {
+          const data = JSON.parse(invitationData);
+          setInvitationMessage(
+            `Welcome! Your invitation has been accepted. Please sign in with ${data.email} to complete your account setup.`
+          );
+
+          // Pre-fill the email field
+          form.setValue('email', data.email);
+
+          // Clear the sessionStorage data
+          sessionStorage.removeItem('invitationAccepted');
+        } catch (error) {
+          console.error('Error parsing invitation data:', error);
+        }
+      }
+    }
+  }, [searchParams, form]);
 
   // 2. Define a submit handler.
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -93,7 +117,27 @@ const AuthForm = ({ type }: { type: FormType }) => {
         if (res?.accountId) {
           setSuccess(true);
           setAccountId(res.accountId);
-          setShowOTPModal(true); // Show OTP modal
+
+          // Check if user came from invitation acceptance
+          const invitation = searchParams?.get('invitation');
+          if (invitation === 'accepted') {
+            // For invited users, skip OTP and proceed directly to 2FA check
+            try {
+              const user = await getUserByEmail(values.email);
+              if (user?.accountId) {
+                setUserId(user.accountId);
+                await checkTwoFactorStatus(user.accountId);
+              } else {
+                router.push('/dashboard');
+              }
+            } catch (error) {
+              console.error('Error getting user info for invited user:', error);
+              router.push('/dashboard');
+            }
+          } else {
+            // For regular users, show OTP modal
+            setShowOTPModal(true);
+          }
         } else {
           setErrorMessage(res?.error || 'Failed to sign in. Please try again.');
         }
@@ -166,6 +210,13 @@ const AuthForm = ({ type }: { type: FormType }) => {
                       <Input
                         placeholder=" Enter your full name"
                         {...field}
+                        value={
+                          field.value ? ` ${field.value.replace(/^ /, '')}` : ''
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/^ /, '');
+                          field.onChange(value);
+                        }}
                         className="shad-input"
                       />
                     </FormControl>
@@ -186,6 +237,13 @@ const AuthForm = ({ type }: { type: FormType }) => {
                     <Input
                       placeholder=" Enter your email"
                       {...field}
+                      value={
+                        field.value ? ` ${field.value.replace(/^ /, '')}` : ''
+                      }
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/^ /, '');
+                        field.onChange(value);
+                      }}
                       className="shad-input"
                     />
                   </FormControl>
@@ -219,6 +277,30 @@ const AuthForm = ({ type }: { type: FormType }) => {
               )}
             </span>
           </Button>
+
+          {invitationMessage && (
+            <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+              <div className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0">
+                <svg
+                  className="w-6 h-6"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-800">
+                  Invitation Accepted
+                </p>
+                <p className="text-sm text-green-700">{invitationMessage}</p>
+              </div>
+            </div>
+          )}
 
           {logoutMessage && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
@@ -278,9 +360,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
               try {
                 const user = await getUserByEmail(form.getValues('email'));
 
-                if (user?.$id) {
-                  setUserId(user.$id);
-                  await checkTwoFactorStatus(user.$id);
+                if (user?.accountId) {
+                  setUserId(user.accountId);
+                  await checkTwoFactorStatus(user.accountId);
                 } else {
                   router.push('/dashboard');
                 }
@@ -302,31 +384,44 @@ const AuthForm = ({ type }: { type: FormType }) => {
             isOpen={show2FASetup}
             onClose={() => setShow2FASetup(false)}
             onSuccess={async () => {
-              // After successful 2FA setup, redirect by role
+              // After successful 2FA setup, ensure session is established and redirect by role
               try {
+                console.log('2FA Setup completed, refreshing user data...');
+
+                // Add a small delay to ensure database is updated
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+
                 const user = await getUserByEmail(form.getValues('email'));
                 console.log('2FA Setup Success - User data:', user);
 
-                if (user?.role === 'executive') {
+                if (!user) {
+                  console.error('User not found after 2FA setup');
+                  router.push('/dashboard');
+                  return;
+                }
+
+                // Force a page reload to ensure session is properly established
+                // This helps with middleware and authentication state
+                if (user.role === 'executive') {
                   console.log('Redirecting to executive dashboard');
-                  router.push('/dashboard/executive');
-                } else if (user?.role === 'manager') {
+                  window.location.href = '/dashboard/executive';
+                } else if (user.role === 'manager') {
                   console.log('Redirecting to manager dashboard');
-                  router.push('/dashboard/manager');
-                } else if (user?.role === 'admin') {
+                  window.location.href = '/dashboard/manager';
+                } else if (user.role === 'admin') {
                   console.log('Redirecting to admin dashboard');
-                  router.push('/dashboard/admin');
+                  window.location.href = '/dashboard/admin';
                 } else {
                   console.log('Redirecting to default dashboard');
-                  router.push('/dashboard');
+                  window.location.href = '/dashboard';
                 }
               } catch (error) {
                 console.error(
                   'Error during 2FA setup success callback:',
                   error
                 );
-                // Fallback navigation
-                router.push('/dashboard');
+                // Fallback navigation with page reload
+                window.location.href = '/dashboard';
               }
             }}
           />
@@ -341,18 +436,25 @@ const AuthForm = ({ type }: { type: FormType }) => {
               try {
                 const user = await getUserByEmail(form.getValues('email'));
 
-                if (user?.role === 'executive') {
-                  router.push('/dashboard/executive');
-                } else if (user?.role === 'manager') {
-                  router.push('/dashboard/manager');
-                } else if (user?.role === 'admin') {
-                  router.push('/dashboard/admin');
+                if (!user) {
+                  console.error('User not found after TOTP verification');
+                  window.location.href = '/dashboard';
+                  return;
+                }
+
+                // Use window.location.href for consistent behavior
+                if (user.role === 'executive') {
+                  window.location.href = '/dashboard/executive';
+                } else if (user.role === 'manager') {
+                  window.location.href = '/dashboard/manager';
+                } else if (user.role === 'admin') {
+                  window.location.href = '/dashboard/admin';
                 } else {
-                  router.push('/dashboard');
+                  window.location.href = '/dashboard';
                 }
               } catch (error) {
                 console.error('Error getting user info for redirect:', error);
-                router.push('/dashboard');
+                window.location.href = '/dashboard';
               }
             }}
             onClose={() => setShow2FAVerification(false)}

@@ -81,9 +81,9 @@ export const useDashboardData = (orgId: string) => {
       // Optimistic update - add the invitation immediately to the UI
       const optimisticInvitation: Invitation = {
         $id: `temp_${Date.now()}`, // Temporary ID for optimistic update
-        name: invitationData.name,
-        email: invitationData.email,
-        role: invitationData.role,
+        name: invitationData.name as string,
+        email: invitationData.email as string,
+        role: invitationData.role as string,
         token: `temp_token_${Date.now()}`, // Temporary token
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
         status: 'pending',

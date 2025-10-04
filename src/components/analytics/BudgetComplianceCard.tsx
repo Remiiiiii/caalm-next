@@ -119,7 +119,7 @@ const BudgetComplianceCard = () => {
     return null;
   };
 
-  const onPieEnter = (_: unknown, index: number) => {
+  const onPieEnter = ({ index }: { index: number }) => {
     setActiveIndex(index);
   };
 

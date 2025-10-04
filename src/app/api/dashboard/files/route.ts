@@ -15,8 +15,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch all recent files (not filtered by owner for dashboard)
     const files = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.filesCollectionId,
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.filesCollectionId || 'files',
       queries: [
         Query.limit(limit),
         Query.orderDesc('$createdAt'), // Most recent first

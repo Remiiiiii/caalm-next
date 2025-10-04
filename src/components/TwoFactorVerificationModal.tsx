@@ -145,10 +145,10 @@ const TwoFactorVerificationModal = ({
         )}
 
         <AlertDialogFooter>
-          <div className="flex w-full flex-col gap-4">
+          <div className="flex w-full flex-col gap-4 items-center">
             <AlertDialogAction
               onClick={handleVerify}
-              className="shad-submit-btn h-12"
+              className="shad-submit-btn h-12 w-auto px-8"
               type="button"
               disabled={otp.length !== 6 || isLoading}
             >
