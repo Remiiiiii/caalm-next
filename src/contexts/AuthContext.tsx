@@ -54,7 +54,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // This prevents automatic authentication on sign-in page
           const isDashboardRoute =
             pathname && pathname.startsWith('/dashboard');
-          const isAuthRoute = pathname && (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up'));
+          const isAuthRoute =
+            pathname &&
+            (pathname.startsWith('/sign-in') ||
+              pathname.startsWith('/sign-up'));
 
           console.log(
             'AuthContext: Current pathname:',
@@ -67,7 +70,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (isAuthRoute) {
             // Explicitly set to null on auth routes to prevent any 2FA interference
-            console.log('AuthContext: On auth route, explicitly setting user to null');
+            console.log(
+              'AuthContext: On auth route, explicitly setting user to null'
+            );
             setUser(null);
             setIsSessionValid(false);
           } else if (isDashboardRoute) {
@@ -87,12 +92,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 $id: twoFAUser.$id,
                 name: twoFAUser.fullName,
                 email: twoFAUser.email,
+                role: twoFAUser.role,
+                division: twoFAUser.division,
+                avatar: twoFAUser.avatar,
                 emailVerification: true,
                 phoneVerification: false,
                 prefs: {},
                 registration: new Date().toISOString(),
                 status: true,
-              } as Models.User<Models.Preferences>;
+              } as Models.User<Models.Preferences> & {
+                role?: string;
+                division?: string;
+                avatar?: string;
+              };
 
               setUser(convertedUser);
               setIsSessionValid(true);
@@ -102,7 +114,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setIsSessionValid(false);
             }
           } else {
-            console.log('AuthContext: Not on dashboard or auth route, setting to null');
+            console.log(
+              'AuthContext: Not on dashboard or auth route, setting to null'
+            );
             setUser(null);
             setIsSessionValid(false);
           }
