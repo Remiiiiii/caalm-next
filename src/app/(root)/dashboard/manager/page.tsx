@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import ManagerDashboard from '../ManagerDashboard';
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';
