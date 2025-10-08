@@ -54,6 +54,7 @@ import WeatherWidget from '@/components/WeatherWidget';
 import CompanyNewsFeed from '@/components/CompanyNewsFeed';
 import ContractStatusPieChart from '@/components/ContractStatusPieChart';
 import DepartmentPerformanceWidget from '@/components/DepartmentPerformanceWidget';
+import ContractExpiryAlerts from '@/components/ContractExpiryAlerts';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { tablesDB } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
@@ -752,10 +753,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 <ContractStatusPieChart />
               </div>
 
-              {/* Page 2: Department Performance, Future widgets */}
+              {/* Page 2: Department Performance, Contract Expiry Alerts */}
               <div className="flex gap-2 min-w-full">
                 <DepartmentPerformanceWidget />
-                {/* Future widgets will be added here */}
+                <ContractExpiryAlerts />
               </div>
             </div>
           </CardContent>
