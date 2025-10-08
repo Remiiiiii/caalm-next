@@ -4,7 +4,7 @@ import { updateUserProfile } from '@/lib/actions/user.actions';
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { accountId, fullName, role, division } = body;
+    const { accountId, fullName, role, division, avatarUrl } = body;
     if (!accountId) {
       return NextResponse.json({ error: 'Missing accountId' }, { status: 400 });
     }
@@ -36,6 +36,7 @@ export async function PATCH(req: NextRequest) {
       fullName,
       role,
       division: divisionValue,
+      avatarUrl,
     });
     return NextResponse.json({ user: updatedUser });
   } catch (error) {

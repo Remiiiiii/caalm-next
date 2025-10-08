@@ -1296,11 +1296,13 @@ export const updateUserProfile = async ({
   fullName,
   division,
   role,
+  avatarUrl,
 }: {
   accountId: string;
   fullName?: string;
   division?: UserDivision;
   role?: string;
+  avatarUrl?: string; // if empty string, clears avatar
 }) => {
   try {
     const { tablesDB } = await createAdminClient();
@@ -1322,7 +1324,10 @@ export const updateUserProfile = async ({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: appwriteConfig.usersCollectionId || 'users',
       rowId: userDoc.$id,
-      data: updatePayload,
+      data: {
+        ...updatePayload,
+        ...(avatarUrl !== undefined ? { avatar: avatarUrl } : {}),
+      },
     });
     return updatedUser;
   } catch (error) {
