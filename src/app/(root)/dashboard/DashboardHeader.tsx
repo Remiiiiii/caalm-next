@@ -10,6 +10,7 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 import { Models } from 'appwrite';
 import { signOutUser } from '@/lib/actions/user.actions';
 import { capitalizeRole } from '@/lib/utils';
+import ProfilePicture from '@/components/ProfilePicture';
 
 interface DashboardHeaderProps {
   user?: Models.User<Models.Preferences> | null;
@@ -27,11 +28,11 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
         if (!user) return;
         const client = new Client();
         client
-          .setEndpoint(appwriteConfig.endpointUrl)
-          .setProject(appwriteConfig.projectId);
+          .setEndpoint(appwriteConfig.endpointUrl!)
+          .setProject(appwriteConfig.projectId!);
         const tablesDB = new TablesDB(client);
         const res = await tablesDB.listRows({
-          databaseId: appwriteConfig.databaseId,
+          databaseId: appwriteConfig.databaseId!,
           tableId: 'notifications',
           queries: [
             Query.equal('userId', user.$id),
@@ -78,10 +79,12 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
                 <div className="text-sm text-foreground">
                   <p className="font-medium text-navy">{user.name}</p>
                   <p className="text-xs text-slate-dark">
-                    {getRoleDisplay(user.prefs?.role || '')} -{' '}
-                    {user.prefs?.division || 'Unknown Division'}
+                    {getRoleDisplay((user.prefs as any)?.role || '')} -{' '}
+                    {(user.prefs as any)?.division || 'Unknown Division'}
                   </p>
                 </div>
+
+                <ProfilePicture user={user} size="md" />
 
                 <Button
                   variant="ghost"
