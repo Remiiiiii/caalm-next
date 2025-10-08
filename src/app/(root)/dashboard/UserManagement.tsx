@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,8 @@ const UserManagement = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const { toast } = useToast();
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Use the real-time users hook
   const { users, isLoading, error, refresh } = useUsers({
@@ -57,6 +59,21 @@ const UserManagement = () => {
     $id: string;
     department?: string;
   })[];
+
+  // Derived filtered users based on search query (name or email or department or role)
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return typedUsers;
+    return typedUsers.filter((u) => {
+      const name = (u.fullName || '').toLowerCase();
+      const email = (u.email || '').toLowerCase();
+      const dept = (u.department || '').toLowerCase();
+      const role = (u.role || '').toLowerCase();
+      return (
+        name.includes(q) || email.includes(q) || dept.includes(q) || role.includes(q)
+      );
+    });
+  }, [typedUsers, search]);
 
   // User edit handlers
   const closeEditModal = () => {
@@ -133,19 +150,34 @@ const UserManagement = () => {
   };
 
   const toggleSelectAll = () => {
-    // Implementation for select all functionality
-    console.log('Toggle select all');
+    const allVisibleIds = new Set(filteredUsers.map((u) => u.$id));
+    const isAllSelected = filteredUsers.every((u) => selectedIds.has(u.$id));
+    if (isAllSelected) {
+      // Deselect only the currently visible ones
+      const next = new Set(selectedIds);
+      allVisibleIds.forEach((id) => next.delete(id));
+      setSelectedIds(next);
+    } else {
+      // Select all visible
+      const next = new Set(selectedIds);
+      allVisibleIds.forEach((id) => next.add(id));
+      setSelectedIds(next);
+    }
   };
 
   const toggleSelectUser = (id: string) => {
-    // Implementation for selecting individual users
-    console.log('Toggle select user:', id);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleBulkDelete = async () => {
     try {
       // Here you would typically call an API to delete multiple users
-      console.log('Bulk deleting users');
+      console.log('Bulk deleting users:', Array.from(selectedIds));
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -156,6 +188,7 @@ const UserManagement = () => {
       });
 
       setShowBulkDeleteDialog(false);
+      setSelectedIds(new Set());
       // Refresh users to get the latest data
       refresh();
     } catch (error) {
@@ -210,13 +243,33 @@ const UserManagement = () => {
             <div className="space-y-4">
               {/* Search and bulk actions */}
               <div className="flex items-center justify-between">
-                <Input placeholder="Search users..." className="max-w-sm" />
+                <Input
+                  placeholder="Search users..."
+                  className="max-w-sm"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
                 <div className="flex items-center space-x-2">
-                  <Checkbox onCheckedChange={toggleSelectAll} />
+                  <Checkbox
+                    checked={
+                      filteredUsers.length > 0 &&
+                      filteredUsers.every((u) => selectedIds.has(u.$id))
+                        ? true
+                        : selectedIds.size > 0 &&
+                          filteredUsers.some((u) => selectedIds.has(u.$id))
+                        ? 'indeterminate'
+                        : false
+                    }
+                    onCheckedChange={toggleSelectAll}
+                  />
                   <span className="text-sm text-gray-500">Select all</span>
+                  <span className="inline-flex items-center px-2 py-1 rounded bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 text-xs">
+                    Selected: {selectedIds.size}
+                  </span>
                   <Button
                     variant="destructive"
                     size="sm"
+                    disabled={selectedIds.size === 0}
                     onClick={() => setShowBulkDeleteDialog(true)}
                   >
                     <Trash className="h-4 w-4 mr-2" />
@@ -238,7 +291,7 @@ const UserManagement = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {typedUsers.map((user) => (
+                    {filteredUsers.map((user) => (
                       <tr
                         key={user.$id}
                         className="border-b text-center hover:bg-gray-50 transition-all duration-300"
@@ -246,6 +299,7 @@ const UserManagement = () => {
                         <td className="pl-2 text-left">
                           <div className="flex items-center">
                             <Checkbox
+                              checked={selectedIds.has(user.$id)}
                               onCheckedChange={() => toggleSelectUser(user.$id)}
                             />
                             <div className="ml-4">
@@ -300,7 +354,7 @@ const UserManagement = () => {
                 </table>
               </div>
 
-              {users.length === 0 && !isLoading && (
+              {filteredUsers.length === 0 && !isLoading && (
                 <div className="text-center py-8">
                   <p className="text-gray-500">No users found</p>
                 </div>
