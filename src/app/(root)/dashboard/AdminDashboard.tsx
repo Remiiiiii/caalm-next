@@ -14,6 +14,7 @@ import {
   Shield,
 } from 'lucide-react';
 import RecentActivity from '@/components/RecentActivity';
+import ContractExpiryAlertsWidget from '@/components/ContractExpiryAlertsWidget';
 import { useAdminStats } from '@/hooks/useAdminStats';
 import { StatCardSkeleton } from '@/components/ui/skeletons';
 
@@ -278,6 +279,9 @@ const AdminDashboard = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Contract Expiry Alerts */}
+          <ContractExpiryAlertsWidget maxVisible={2} />
+          
           {/* Recent Activity */}
           <RecentActivity />
 

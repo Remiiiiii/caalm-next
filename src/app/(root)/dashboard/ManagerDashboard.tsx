@@ -11,6 +11,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import RecentActivity from '@/components/RecentActivity';
+import ContractExpiryAlertsWidget from '@/components/ContractExpiryAlertsWidget';
 import { useManagerContracts } from '@/hooks/useManagerContracts';
 import {
   StatCardSkeleton,
@@ -247,6 +248,9 @@ const ManagerDashboard = () => {
 
             {/* Sidebar */}
             <div className="space-y-6">
+              {/* Contract Expiry Alerts */}
+              <ContractExpiryAlertsWidget maxVisible={3} />
+              
               {/* Recent Activity */}
               <RecentActivity />
 
