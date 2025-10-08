@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,13 +13,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Trash, ListFilter } from 'lucide-react';
+import { Trash, ListFilter, Pencil } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { capitalizeRole } from '@/lib/utils';
 
-const statusColor = {
-  active: 'bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl',
-  inactive: 'bg-destructive/10 text-destructive text-xs rounded-xl',
+// Map user status to badge colors to mirror Executive Dashboard invitations table
+const getUserStatusBadgeClasses = (status: string): string => {
+  const normalized = status?.toLowerCase?.() ?? '';
+  switch (normalized) {
+    case 'active':
+      return 'bg-[#ccf3e9] text-[#3dd9b3] text-xs rounded';
+    case 'inactive':
+      return 'bg-[#fff1f1] text-[#fe8787] text-xs rounded';
+    case 'pending':
+      return 'bg-[#fef6f0] text-[#ebc620] text-xs rounded';
+    default:
+      return 'bg-gray-100 text-gray-600 text-xs rounded';
+  }
 };
 
 const UserManagement = () => {
@@ -35,6 +45,8 @@ const UserManagement = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const { toast } = useToast();
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Use the real-time users hook
   const { users, isLoading, error, refresh } = useUsers({
@@ -47,6 +59,21 @@ const UserManagement = () => {
     $id: string;
     department?: string;
   })[];
+
+  // Derived filtered users based on search query (name or email or department or role)
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return typedUsers;
+    return typedUsers.filter((u) => {
+      const name = (u.fullName || '').toLowerCase();
+      const email = (u.email || '').toLowerCase();
+      const dept = (u.department || '').toLowerCase();
+      const role = (u.role || '').toLowerCase();
+      return (
+        name.includes(q) || email.includes(q) || dept.includes(q) || role.includes(q)
+      );
+    });
+  }, [typedUsers, search]);
 
   // User edit handlers
   const closeEditModal = () => {
@@ -123,19 +150,34 @@ const UserManagement = () => {
   };
 
   const toggleSelectAll = () => {
-    // Implementation for select all functionality
-    console.log('Toggle select all');
+    const allVisibleIds = new Set(filteredUsers.map((u) => u.$id));
+    const isAllSelected = filteredUsers.every((u) => selectedIds.has(u.$id));
+    if (isAllSelected) {
+      // Deselect only the currently visible ones
+      const next = new Set(selectedIds);
+      allVisibleIds.forEach((id) => next.delete(id));
+      setSelectedIds(next);
+    } else {
+      // Select all visible
+      const next = new Set(selectedIds);
+      allVisibleIds.forEach((id) => next.add(id));
+      setSelectedIds(next);
+    }
   };
 
   const toggleSelectUser = (id: string) => {
-    // Implementation for selecting individual users
-    console.log('Toggle select user:', id);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleBulkDelete = async () => {
     try {
       // Here you would typically call an API to delete multiple users
-      console.log('Bulk deleting users');
+      console.log('Bulk deleting users:', Array.from(selectedIds));
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -146,6 +188,7 @@ const UserManagement = () => {
       });
 
       setShowBulkDeleteDialog(false);
+      setSelectedIds(new Set());
       // Refresh users to get the latest data
       refresh();
     } catch (error) {
@@ -172,12 +215,16 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center justify-between text-lg font-bold sidebar-gradient-text">
             <span>User Management</span>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+              >
                 <ListFilter className="h-4 w-4 mr-2" />
                 Filter
               </Button>
@@ -196,13 +243,33 @@ const UserManagement = () => {
             <div className="space-y-4">
               {/* Search and bulk actions */}
               <div className="flex items-center justify-between">
-                <Input placeholder="Search users..." className="max-w-sm" />
+                <Input
+                  placeholder="Search users..."
+                  className="max-w-sm"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
                 <div className="flex items-center space-x-2">
-                  <Checkbox onCheckedChange={toggleSelectAll} />
+                  <Checkbox
+                    checked={
+                      filteredUsers.length > 0 &&
+                      filteredUsers.every((u) => selectedIds.has(u.$id))
+                        ? true
+                        : selectedIds.size > 0 &&
+                          filteredUsers.some((u) => selectedIds.has(u.$id))
+                        ? 'indeterminate'
+                        : false
+                    }
+                    onCheckedChange={toggleSelectAll}
+                  />
                   <span className="text-sm text-gray-500">Select all</span>
+                  <span className="inline-flex items-center px-2 py-1 rounded bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 text-xs">
+                    Selected: {selectedIds.size}
+                  </span>
                   <Button
                     variant="destructive"
                     size="sm"
+                    disabled={selectedIds.size === 0}
                     onClick={() => setShowBulkDeleteDialog(true)}
                   >
                     <Trash className="h-4 w-4 mr-2" />
@@ -211,99 +278,83 @@ const UserManagement = () => {
                 </div>
               </div>
 
-              {/* Users table */}
-              <div className="border rounded-lg">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          User
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Role
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Department
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {typedUsers.map((user) => (
-                        <tr key={user.$id} className="hover:bg-gray-50">
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <Checkbox
-                                onCheckedChange={() =>
-                                  toggleSelectUser(user.$id)
-                                }
-                              />
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {user.fullName}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {user.email}
-                                </div>
+              {/* Users table styled like Executive Dashboard's Pending Invitations */}
+              <div className="overflow-x-auto border rounded">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-50 text-center">
+                    <tr>
+                      <th className="text-slate-700 text-center px-4 py-2">User</th>
+                      <th className="text-slate-700 text-center px-4 py-2">Role</th>
+                      <th className="text-slate-700 text-center px-4 py-2">Department</th>
+                      <th className="text-slate-700 text-center px-4 py-2">Status</th>
+                      <th className="text-slate-700 text-center px-4 py-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user) => (
+                      <tr
+                        key={user.$id}
+                        className="border-b text-center hover:bg-gray-50 transition-all duration-300"
+                      >
+                        <td className="pl-2 text-left">
+                          <div className="flex items-center">
+                            <Checkbox
+                              checked={selectedIds.has(user.$id)}
+                              onCheckedChange={() => toggleSelectUser(user.$id)}
+                            />
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {user.fullName}
                               </div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
                             </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {capitalizeRole(user.role)}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {user.department || 'N/A'}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <span
-                              className={
-                                statusColor[
-                                  user.status as keyof typeof statusColor
-                                ]
-                              }
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {capitalizeRole(user.role)}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {user.department || 'N/A'}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`inline-block px-2 py-1 font-medium ${getUserStatusBadgeClasses(user.status as string)}`}>
+                            {user.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center justify-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditUser(user);
+                                setEditForm({
+                                  fullName: user.fullName,
+                                  department: user.department || '',
+                                  role: user.role,
+                                });
+                              }}
+                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
                             >
-                              {user.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex items-center space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditUser(user);
-                                  setEditForm({
-                                    fullName: user.fullName,
-                                    department: user.department || '',
-                                    role: user.role,
-                                  });
-                                }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleDeleteUser(user.$id)}
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleDeleteUser(user.$id)}
+                              style={{ backgroundColor: '#ffffff', color: '#f87774' }}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
-              {users.length === 0 && !isLoading && (
+              {filteredUsers.length === 0 && !isLoading && (
                 <div className="text-center py-8">
                   <p className="text-gray-500">No users found</p>
                 </div>
