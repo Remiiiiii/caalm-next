@@ -16,7 +16,14 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
+    console.log(
+      'Layout useEffect - loading:',
+      loading,
+      'user:',
+      user ? 'Found' : 'Not found'
+    );
     if (!loading && !user) {
+      console.log('Layout: Redirecting to sign-in - no user found');
       router.push('/sign-in');
     }
   }, [user, loading, router]);

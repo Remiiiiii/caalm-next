@@ -317,13 +317,13 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
               } else {
                 // Other roles see only their own dashboard
                 sectionItems = section.items.filter((item) =>
-                  item.roles.includes(role)
+                  role ? item.roles.includes(role) : false
                 );
               }
             } else {
               // For non-dashboard sections, filter by role
               sectionItems = section.items.filter((item) =>
-                item.roles.includes(role)
+                role ? item.roles.includes(role) : false
               );
 
               // For managers, filter subitems based on their department

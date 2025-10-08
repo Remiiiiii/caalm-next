@@ -10,6 +10,7 @@ import QuickActions from '@/components/QuickActions';
 import { Models } from 'appwrite';
 import { signOutUser } from '@/lib/actions/user.actions';
 import { getUnreadNotificationsCount } from '@/lib/actions/notification.actions';
+import ProfilePicture from '@/components/ProfilePicture';
 
 interface DashboardHeaderProps {
   user?:
@@ -70,6 +71,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
           {/* Action buttons */}
           {user && (
             <div className="flex items-center space-x-2">
+              <ProfilePicture user={user} size="sm" />
               <Button
                 variant="ghost"
                 onClick={() => setNotifOpen(true)}

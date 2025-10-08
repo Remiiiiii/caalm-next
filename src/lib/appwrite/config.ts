@@ -35,7 +35,13 @@ export const appwriteConfig = {
   notificationSettingsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_SETTINGS_COLLECTION,
 
+  notesCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_NOTES_COLLECTION || 'notes',
+
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET,
+
+  profilePicturesBucketId:
+    process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET,
 
   secretKey: process.env.NEXT_APPWRITE_API_KEY,
 

@@ -53,7 +53,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Check for 2FA-based authentication only if we're on a dashboard route
           // This prevents automatic authentication on sign-in page
           const isDashboardRoute =
-            pathname && pathname.startsWith('/dashboard');
+            pathname &&
+            (pathname.startsWith('/dashboard') ||
+              pathname.startsWith('/analytics') ||
+              pathname.startsWith('/contracts') ||
+              pathname.startsWith('/my-contracts') ||
+              pathname.startsWith('/settings') ||
+              pathname.startsWith('/search') ||
+              pathname.startsWith('/licenses') ||
+              pathname.startsWith('/uploads') ||
+              pathname.startsWith('/images') ||
+              pathname.startsWith('/media') ||
+              pathname.startsWith('/others') ||
+              pathname.startsWith('/audits') ||
+              pathname.startsWith('/team'));
           const isAuthRoute =
             pathname &&
             (pathname.startsWith('/sign-in') ||
@@ -77,7 +90,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsSessionValid(false);
           } else if (isDashboardRoute) {
             console.log(
-              'AuthContext: On dashboard route, checking 2FA-based user'
+              'AuthContext: On protected route, checking 2FA-based user for path:',
+              pathname
             );
             const twoFAUser = await getCurrentUserFrom2FA();
             console.log(

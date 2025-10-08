@@ -25,6 +25,8 @@ import FormattedDateTime from '@/components/FormattedDateTime';
 import Thumbnail from '@/components/Thumbnail';
 import CalendarView from '@/components/CalendarView';
 import RecentActivity from '@/components/RecentActivity';
+import ContractExpiryAlertsWidget from '@/components/ContractExpiryAlertsWidget';
+import QuickNotesWidget from '@/components/QuickNotesWidget';
 
 import { Models } from 'node-appwrite';
 import {
@@ -752,10 +754,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 <ContractStatusPieChart />
               </div>
 
-              {/* Page 2: Department Performance, Future widgets */}
-              <div className="flex gap-2 min-w-full">
+              {/* Page 2: Department Performance, Contract Expiry Alerts, Quick Notes */}
+              <div className="flex gap-2 min-w-full -ml-2">
                 <DepartmentPerformanceWidget />
-                {/* Future widgets will be added here */}
+                <QuickNotesWidget user={user} />
+                <ContractExpiryAlertsWidget
+                  maxVisible={2}
+                  showSettings={false}
+                  compact={true}
+                />
               </div>
             </div>
           </CardContent>

@@ -10,6 +10,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import RecentActivity from '@/components/RecentActivity';
+import ContractExpiryAlertsWidget from '@/components/ContractExpiryAlertsWidget';
 
 const HRDashboard = () => {
   const trainingStats = [
@@ -280,8 +281,11 @@ const HRDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
-        <RecentActivity />
+        {/* Sidebar with Contract Expiry Alerts and Recent Activity */}
+        <div className="space-y-6">
+          <ContractExpiryAlertsWidget maxVisible={3} />
+          <RecentActivity />
+        </div>
       </div>
     </div>
   );

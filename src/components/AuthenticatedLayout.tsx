@@ -45,7 +45,7 @@ const AuthenticatedLayout = ({
     <OrganizationProvider>
       <main className="flex h-screen">
         <Sidebar
-          fullName={user.name || 'Unknown User'}
+          name={user.name || 'Unknown User'}
           avatar={user.prefs?.avatar || avatarPlaceholderUrl}
           email={currentUser.email}
           role={user.role || 'manager'}

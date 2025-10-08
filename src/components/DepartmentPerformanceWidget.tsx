@@ -79,7 +79,7 @@ const DepartmentPerformanceWidget: React.FC<
 
   if (loading) {
     return (
-      <Card className="min-w-[300px] max-w-[300px] h-[280px] bg-white/90 backdrop-blur-sm border border-white/40 shadow-lg rounded-lg overflow-hidden">
+      <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
         <CardHeader className="pb-3 pt-4 px-4">
           <CardTitle className="text-sm font-semibold sidebar-gradient-text">
             Department Performance
@@ -101,7 +101,7 @@ const DepartmentPerformanceWidget: React.FC<
 
   if (error) {
     return (
-      <Card className="min-w-[300px] max-w-[300px] h-[280px] bg-white/90 backdrop-blur-sm border border-white/40 shadow-lg rounded-lg overflow-hidden">
+      <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
         <CardHeader className="pb-3 pt-4 px-4">
           <CardTitle className="text-sm font-semibold sidebar-gradient-text">
             Department Performance
@@ -125,7 +125,7 @@ const DepartmentPerformanceWidget: React.FC<
   }
 
   return (
-    <Card className="min-w-[300px] max-w-[300px] h-[280px] bg-white/90 backdrop-blur-sm border border-white/40 shadow-lg rounded-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+    <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
       {/* Header */}
       <CardHeader className="pb-3 pt-4 px-4">
         <div className="flex items-center gap-2">
@@ -155,7 +155,7 @@ const DepartmentPerformanceWidget: React.FC<
             </div>
 
             {/* Trend indicator with better styling */}
-            <div className="text-right bg-white/30 rounded-lg px-3 py-1 backdrop-blur-sm">
+            <div className="text-right bg-white/20 rounded-lg px-3 py-1 backdrop-blur-sm border border-white/20">
               <div className="text-xs text-slate-500 font-medium">Trend</div>
               <div className="flex items-center gap-1">
                 {getTrendIcon(performanceData.trend)}
@@ -209,7 +209,7 @@ const DepartmentPerformanceWidget: React.FC<
             </div>
           </div>
           {/* Performance status indicator */}
-          <div className="flex items-center justify-center !-mt-1">
+          <div className="flex items-center justify-center !mt-6">
             <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
               <span className="text-xs text-slate-600 font-medium">
