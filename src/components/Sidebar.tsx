@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Fragment } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import Avatar from '@/components/ui/avatar';
+import LegacyAvatar from '@/components/ui/avatar';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAnalyticsPrefetch } from '@/hooks/useAnalyticsPrefetch';
 import {
@@ -762,7 +762,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
             className="sidebar-user-avatar"
           />
         ) : (
-          <Avatar
+          <LegacyAvatar
             name={name}
             userId={email}
             size="lg"

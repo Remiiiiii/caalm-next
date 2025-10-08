@@ -1,7 +1,56 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
+"use client"
 
-interface AvatarProps {
+import * as React from "react"
+import * as AvatarPrimitive from "@radix-ui/react-avatar"
+
+import { cn } from "@/lib/utils"
+
+const Avatar = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+      className
+    )}
+    {...props}
+  />
+))
+Avatar.displayName = AvatarPrimitive.Root.displayName
+
+const AvatarImage = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Image>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Image
+    ref={ref}
+    className={cn("aspect-square h-full w-full", className)}
+    {...props}
+  />
+))
+AvatarImage.displayName = AvatarPrimitive.Image.displayName
+
+const AvatarFallback = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Fallback>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Fallback
+    ref={ref}
+    className={cn(
+      "flex h-full w-full items-center justify-center rounded-full bg-muted",
+      className
+    )}
+    {...props}
+  />
+))
+AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
+
+export { Avatar, AvatarImage, AvatarFallback }
+
+// Legacy Avatar component for backward compatibility
+interface LegacyAvatarProps {
   name?: string;
   userId: string;
   size?: 'sm' | 'md' | 'lg';
@@ -9,7 +58,7 @@ interface AvatarProps {
   showName?: boolean;
 }
 
-const Avatar: React.FC<AvatarProps> = ({
+const LegacyAvatar: React.FC<LegacyAvatarProps> = ({
   name,
   userId,
   size = 'md',
@@ -38,16 +87,6 @@ const Avatar: React.FC<AvatarProps> = ({
     '#dc2626', // red-600
     '#0d9488', // teal-600
     '#ea580c', // orange-600
-
-    // '#ACDDDE', // blue-600
-    // '#B7F4CD', // green-600
-    // '#EBD2FC', // purple-600
-    // '#F1C9C1', // pink-600
-    // '#DAD5F4', // indigo-600
-    // '#FAEFA7', // yellow-600
-    // '#FD7E89', // red-600
-    // '#E4F8F0', // teal-600
-    // '#FED2AB',
   ];
   // Generate a more diverse color index using multiple characters from userId
   const hash = userId.split('').reduce((acc, char) => {
@@ -55,15 +94,6 @@ const Avatar: React.FC<AvatarProps> = ({
   }, 0);
   const colorIndex = hash % colors.length;
   const avatarColor = colors[colorIndex];
-
-  // Debug logging
-  console.log('Avatar Debug:', {
-    userId,
-    colorIndex,
-    avatarColor,
-    hash,
-    firstChar: userId.charCodeAt(0),
-  });
 
   // Size classes
   const sizeClasses = {
@@ -88,4 +118,4 @@ const Avatar: React.FC<AvatarProps> = ({
   );
 };
 
-export default Avatar;
+export default LegacyAvatar;

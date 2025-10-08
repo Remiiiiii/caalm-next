@@ -47,7 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { capitalizeRole } from '@/lib/utils';
-import Avatar from '@/components/ui/avatar';
+import LegacyAvatar from '@/components/ui/avatar';
 import ClientTimestamp from '@/components/ClientTimestamp';
 import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -988,7 +988,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                         (user: UninvitedUser) => (
                           <SelectItem key={user.$id} value={user.$id}>
                             <div className="flex items-center gap-3">
-                              <Avatar
+                              <LegacyAvatar
                                 name={user.fullName}
                                 userId={user.$id}
                                 size="sm"
