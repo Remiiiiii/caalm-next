@@ -25,6 +25,7 @@ import FormattedDateTime from '@/components/FormattedDateTime';
 import Thumbnail from '@/components/Thumbnail';
 import CalendarView from '@/components/CalendarView';
 import RecentActivity from '@/components/RecentActivity';
+import ContractExpiryAlertsWidget from '@/components/ContractExpiryAlertsWidget';
 
 import { Models } from 'node-appwrite';
 import {
@@ -805,13 +806,18 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         <div className="relative z-10 py-8">
           <div className="space-y-6">
             <div className="grid lg:grid-cols-6 gap-6">
+              {/* Contract Expiry Alerts */}
+              <div className="lg:col-span-2">
+                <ContractExpiryAlertsWidget maxVisible={4} />
+              </div>
+              
               {/* Recent Activity */}
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-2">
                 <RecentActivity />
               </div>
 
               {/* Calendar View */}
-              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-3">
+              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-2">
                 <CardContent className="p-4">
                   <CalendarView
                     user={user}
