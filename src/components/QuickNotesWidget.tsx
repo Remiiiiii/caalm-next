@@ -8,6 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useNotes } from '@/hooks/useNotes';
 import { Note } from '@/lib/actions/notes.actions';
 import { useToast } from '@/hooks/use-toast';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import LinkExtension from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
 import {
   StickyNote,
   Plus,
@@ -18,8 +22,12 @@ import {
   Calendar,
   AlertTriangle,
   MoreVertical,
-  Image,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
   List,
+  ListOrdered,
 } from 'lucide-react';
 import {
   Dialog,
@@ -66,6 +74,112 @@ interface QuickNotesWidgetProps {
   };
 }
 
+// Tiptap editor configuration
+const editorExtensions = [
+  StarterKit.configure({
+    bulletList: {
+      keepMarks: true,
+      keepAttributes: false,
+    },
+    orderedList: {
+      keepMarks: true,
+      keepAttributes: false,
+    },
+  }),
+  LinkExtension.configure({
+    openOnClick: false,
+    HTMLAttributes: {
+      class: 'text-blue-500 underline cursor-pointer',
+    },
+  }),
+  Placeholder.configure({
+    placeholder: 'Take a note...',
+  }),
+];
+
+// Toolbar component for Tiptap editor (footer version)
+const EditorToolbar = ({ editor }: { editor: any }) => {
+  if (!editor) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        className={`h-6 w-6 p-0 ${
+          editor.isActive('bold') ? 'bg-slate-200' : ''
+        }`}
+        title="Bold"
+      >
+        <Bold className="h-3 w-3" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+        className={`h-6 w-6 p-0 ${
+          editor.isActive('italic') ? 'bg-slate-200' : ''
+        }`}
+        title="Italic"
+      >
+        <Italic className="h-3 w-3" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+        className={`h-6 w-6 p-0 ${
+          editor.isActive('underline') ? 'bg-slate-200' : ''
+        }`}
+        title="Underline"
+      >
+        <Underline className="h-3 w-3" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+        className={`h-6 w-6 p-0 ${
+          editor.isActive('strike') ? 'bg-slate-200' : ''
+        }`}
+        title="Strikethrough"
+      >
+        <Strikethrough className="h-3 w-3" />
+      </Button>
+      <div className="w-px h-4 bg-slate-300 mx-0.5" />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        className={`h-6 w-6 p-0 ${
+          editor.isActive('bulletList') ? 'bg-slate-200' : ''
+        }`}
+        title="Bullet List"
+      >
+        <List className="h-3 w-3" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        className={`h-6 w-6 p-0 ${
+          editor.isActive('orderedList') ? 'bg-slate-200' : ''
+        }`}
+        title="Numbered List"
+      >
+        <ListOrdered className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+};
+
 const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
   userId,
   user,
@@ -92,9 +206,60 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
   // Form state
   const [newNote, setNewNote] = useState({ title: '', content: '' });
   const [editNote, setEditNote] = useState({ title: '', content: '' });
-  const [isImageUploading, setIsImageUploading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Set client state on mount
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Tiptap editors - only initialize on client side
+  const newNoteEditor = useEditor(
+    {
+      extensions: editorExtensions,
+      content: newNote.content,
+      immediatelyRender: false,
+      onUpdate: ({ editor }) => {
+        setNewNote((prev) => ({ ...prev, content: editor.getHTML() }));
+      },
+      editorProps: {
+        attributes: {
+          class: 'prose prose-sm max-w-none focus:outline-none',
+        },
+      },
+    },
+    [isClient]
+  );
+
+  const editNoteEditor = useEditor(
+    {
+      extensions: editorExtensions,
+      content: editNote.content,
+      immediatelyRender: false,
+      onUpdate: ({ editor }) => {
+        setEditNote((prev) => ({ ...prev, content: editor.getHTML() }));
+      },
+      editorProps: {
+        attributes: {
+          class: 'prose prose-sm max-w-none focus:outline-none',
+        },
+      },
+    },
+    [isClient]
+  );
+
+  // Update editor content when state changes
+  React.useEffect(() => {
+    if (newNoteEditor && newNote.content !== newNoteEditor.getHTML()) {
+      newNoteEditor.commands.setContent(newNote.content);
+    }
+  }, [newNote.content, newNoteEditor]);
+
+  React.useEffect(() => {
+    if (editNoteEditor && editNote.content !== editNoteEditor.getHTML()) {
+      editNoteEditor.commands.setContent(editNote.content);
+    }
+  }, [editNote.content, editNoteEditor]);
 
   const handleCreateNote = async () => {
     if (!newNote.title.trim() || !newNote.content.trim()) return;
@@ -181,80 +346,11 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
     setIsDeleteDialogOpen(true);
   };
 
-  // Image upload handler
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Toolbar functions
-  const insertBulletPoint = () => {
-    const textarea = document.activeElement as HTMLTextAreaElement;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const text = textarea.value;
-      const before = text.substring(0, start);
-      const after = text.substring(end);
-      const newText = before + '• ' + after;
-
-      if (textarea.id === 'newNoteContent') {
-        setNewNote((prev) => ({ ...prev, content: newText }));
-      } else {
-        setEditNote((prev) => ({ ...prev, content: newText }));
-      }
-
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 2;
-      }, 0);
-    }
-  };
-
-  const toggleBold = () => {
-    const textarea = document.activeElement as HTMLTextAreaElement;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selectedText = textarea.value.substring(start, end);
-      const newText = `**${selectedText}**`;
-      const text = textarea.value;
-      const before = text.substring(0, start);
-      const after = text.substring(end);
-      const finalText = before + newText + after;
-
-      if (textarea.id === 'newNoteContent') {
-        setNewNote((prev) => ({ ...prev, content: finalText }));
-      } else {
-        setEditNote((prev) => ({ ...prev, content: finalText }));
-      }
-    }
-  };
-
-  const toggleItalic = () => {
-    const textarea = document.activeElement as HTMLTextAreaElement;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selectedText = textarea.value.substring(start, end);
-      const newText = `*${selectedText}*`;
-      const text = textarea.value;
-      const before = text.substring(0, start);
-      const after = text.substring(end);
-      const finalText = before + newText + after;
-
-      if (textarea.id === 'newNoteContent') {
-        setNewNote((prev) => ({ ...prev, content: finalText }));
-      } else {
-        setEditNote((prev) => ({ ...prev, content: finalText }));
-      }
-    }
+  // Helper function to strip HTML tags for display
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
   };
 
   const formatDate = (dateString: string) => {
@@ -266,8 +362,10 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
   };
 
   const truncateContent = (content: string, maxWords: number = 25) => {
-    const words = content.split(' ');
-    if (words.length <= maxWords) return content;
+    // Strip HTML tags first, then truncate
+    const plainText = stripHtml(content);
+    const words = plainText.split(' ');
+    if (words.length <= maxWords) return plainText;
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
@@ -438,9 +536,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
                 size="sm"
                 onClick={() => setIsCreateDialogOpen(false)}
                 className="h-6 w-6 p-0 hover:bg-yellow-200/60"
-              >
-                <X className="h-4 w-4 text-slate-600" />
-              </Button>
+              ></Button>
             </div>
           </div>
 
@@ -455,117 +551,35 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
                 placeholder="Title"
                 className="bg-transparent border-b border-slate-300 shadow-none text-base font-medium placeholder:text-slate-400 focus-visible:ring-0 p-0"
               />
-              <Textarea
-                id="newNoteContent"
-                value={newNote.content}
-                onChange={(e) =>
-                  setNewNote((prev) => ({ ...prev, content: e.target.value }))
-                }
-                placeholder="Take a note..."
-                className="bg-transparent border-0 shadow-none text-sm placeholder:text-slate-400 focus-visible:ring-0 p-0 min-h-[120px] resize-none"
-              />
-              {imagePreview && (
-                <div className="mt-3">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="max-w-full h-32 object-cover rounded"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setImagePreview(null);
-                      setImageFile(null);
-                    }}
-                    className="text-red-500 hover:text-red-700 mt-2"
-                  >
-                    Remove Image
-                  </Button>
-                </div>
-              )}
+              <div className="min-h-[120px]">
+                {isClient && <EditorContent editor={newNoteEditor} />}
+                {!isClient && (
+                  <div className="min-h-[120px] p-2 text-slate-400">
+                    Loading editor...
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Footer Toolbar */}
-          <div className="bg-slate-50/80 border-t border-slate-200 px-4 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleBold}
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Bold"
-              >
-                <span className="text-xs font-bold">B</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleItalic}
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Italic"
-              >
-                <span className="text-xs italic">I</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Underline"
-              >
-                <span className="text-xs underline">U</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Strikethrough"
-              >
-                <span className="text-xs line-through">ab</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={insertBulletPoint}
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Bullet Point"
-              >
-                <List className="h-3 w-3" />
-              </Button>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                  title="Upload Image"
-                  asChild
-                >
-                  <span>
-                    <Image className="h-3 w-3" />
-                  </span>
-                </Button>
-              </label>
+          {/* Footer */}
+          <div className="bg-slate-50/80 border-t border-slate-200 px-4 py-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-4">
+              {isClient && <EditorToolbar editor={newNoteEditor} />}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsCreateDialogOpen(false)}
-                className="text-xs px-3 primary-btn"
+                onClick={() => setIsEditDialogOpen(false)}
+                className="text-xs px-3 primary-btn py-1 h-7"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreateNote}
-                disabled={!newNote.content.trim()}
-                className="primary-btn text-xs px-3 py-1 h-7"
+                disabled={!stripHtml(newNote.content).trim()}
+                className="primary-btn text-xs px-3 -ml-2 py-1 h-7"
               >
                 <Save className="h-3 w-3 mr-1" />
                 Save
@@ -590,13 +604,34 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-yellow-200/60"
+                    title="More Options"
+                  >
+                    <MoreVertical className="h-3 w-3 rotate-90" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => openDeleteDialog(selectedNote!)}
+                    className="text-slate-700 hover:text-red focus:text-red"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2 text-red" />
+                    Delete Note
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsEditDialogOpen(false)}
                 className="h-6 w-6 p-0 hover:bg-yellow-200/60"
               >
-                <X className="h-4 w-4 text-slate-600" />
+                {/* <X className="h-4 w-4 text-slate-600" /> */}
               </Button>
             </div>
           </div>
@@ -612,132 +647,38 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
                 placeholder="Title"
                 className="bg-transparent border-b border-slate-300 shadow-none text-base font-medium placeholder:text-slate-400 focus-visible:ring-0 p-0"
               />
-              <Textarea
-                id="editNoteContent"
-                value={editNote.content}
-                onChange={(e) =>
-                  setEditNote((prev) => ({
-                    ...prev,
-                    content: e.target.value,
-                  }))
-                }
-                placeholder="Take a note..."
-                className="bg-transparent border-0 shadow-none text-sm placeholder:text-slate-400 focus-visible:ring-0 p-0 min-h-[120px] resize-none"
-              />
-              {selectedNote?.imageUrl && (
-                <div className="mt-3">
-                  <img
-                    src={selectedNote.imageUrl}
-                    alt="Note attachment"
-                    className="max-w-full h-32 object-cover rounded"
-                  />
-                </div>
-              )}
+              <div className="min-h-[120px]">
+                {isClient && <EditorContent editor={editNoteEditor} />}
+                {!isClient && (
+                  <div className="min-h-[120px] p-2 text-slate-400">
+                    Loading editor...
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Footer Toolbar */}
-          <div className="bg-slate-50/80 border-t border-slate-200 px-4 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleBold}
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Bold"
-              >
-                <span className="text-xs font-bold">B</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleItalic}
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Italic"
-              >
-                <span className="text-xs italic">I</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Underline"
-              >
-                <span className="text-xs underline">U</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Strikethrough"
-              >
-                <span className="text-xs line-through">ab</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={insertBulletPoint}
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                title="Bullet Point"
-              >
-                <List className="h-3 w-3" />
-              </Button>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                  title="Upload Image"
-                  asChild
-                >
-                  <span>
-                    <Image className="h-3 w-3" />
-                  </span>
-                </Button>
-              </label>
+          {/* Footer */}
+          <div className="bg-slate-50/80 border-t border-slate-200 px-4 py-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-4">
+              {isClient && <EditorToolbar editor={editNoteEditor} />}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditDialogOpen(false)}
-                className="text-xs px-3 primary-btn"
+                className="text-xs px-3 primary-btn py-1 h-7"
               >
                 Cancel
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-200"
-                    title="More Options"
-                  >
-                    <MoreVertical className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => openDeleteDialog(selectedNote!)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 focus:text-red-700 focus:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Note
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+
               <Button
                 onClick={handleEditNote}
-                disabled={!editNote.content.trim()}
-                className="primary-btn text-xs px-3 py-1 h-7"
+                disabled={!stripHtml(editNote.content).trim()}
+                className="primary-btn text-xs px-3 -ml-2 py-1 h-7 !w-26 "
               >
-                <Save className="h-3 w-3 mr-1" />
+                <Save className="h-3 w-3" />
                 Update
               </Button>
             </div>
@@ -825,14 +766,83 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Custom scrollbar styles */}
-      <style jsx>{`
+      {/* Custom styles */}
+      <style jsx global>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+
+        /* Tiptap editor styling to match modal theme */
+        .ProseMirror {
+          outline: none !important;
+          padding: 0 !important;
+          min-height: 100px !important;
+          background: transparent !important;
+          color: inherit !important;
+          font-size: 14px !important;
+          line-height: 1.5 !important;
+        }
+
+        .ProseMirror p.is-editor-empty:first-child::before {
+          content: attr(data-placeholder);
+          float: left;
+          color: #94a3b8;
+          pointer-events: none;
+          height: 0;
+        }
+
+        .ProseMirror h1 {
+          font-size: 1.5rem;
+          font-weight: 600;
+          margin: 0.5rem 0;
+        }
+
+        .ProseMirror h2 {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin: 0.5rem 0;
+        }
+
+        .ProseMirror h3 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin: 0.5rem 0;
+        }
+
+        .ProseMirror ul,
+        .ProseMirror ol {
+          padding-left: 1.5rem;
+          margin: 0.5rem 0;
+        }
+
+        .ProseMirror li {
+          margin: 0.25rem 0;
+        }
+
+        .ProseMirror a {
+          color: #3b82f6;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+
+        .ProseMirror strong {
+          font-weight: 600;
+        }
+
+        .ProseMirror em {
+          font-style: italic;
+        }
+
+        .ProseMirror u {
+          text-decoration: underline;
+        }
+
+        .ProseMirror s {
+          text-decoration: line-through;
         }
       `}</style>
     </>

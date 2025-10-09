@@ -11,8 +11,6 @@ export interface Note {
   content: string;
   userId: string;
   userName?: string;
-  imageUrl?: string;
-  imageId?: string;
   $createdAt: string;
   $updatedAt: string;
 }
@@ -22,16 +20,12 @@ export interface CreateNoteParams {
   content: string;
   userId: string;
   userName?: string;
-  imageUrl?: string;
-  imageId?: string;
 }
 
 export interface UpdateNoteParams {
   noteId: string;
   title?: string;
   content?: string;
-  imageUrl?: string;
-  imageId?: string;
 }
 
 // Create a new note
@@ -48,8 +42,6 @@ export async function createNote(params: CreateNoteParams): Promise<Note> {
         content: params.content,
         userId: params.userId,
         userName: params.userName || '',
-        imageUrl: params.imageUrl || '',
-        imageId: params.imageId || '',
       }
     );
 
@@ -100,8 +92,6 @@ export async function updateNote(params: UpdateNoteParams): Promise<Note> {
     const updateData: Record<string, any> = {};
     if (params.title !== undefined) updateData.title = params.title;
     if (params.content !== undefined) updateData.content = params.content;
-    if (params.imageUrl !== undefined) updateData.imageUrl = params.imageUrl;
-    if (params.imageId !== undefined) updateData.imageId = params.imageId;
 
     const note = await databases.updateDocument(
       appwriteConfig.databaseId!,

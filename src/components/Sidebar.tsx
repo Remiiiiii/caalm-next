@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment } from 'react';
+import { Fragment, useEffect } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import Avatar from '@/components/ui/avatar';
@@ -21,6 +21,31 @@ interface Props {
 }
 
 const Sidebar = ({ name, avatar, email, role, division }: Props) => {
+  const performHardRefresh = () => {
+    window.location.href = window.location.href;
+  };
+
+  // Function for button click
+  const handleButtonClick = () => {
+    handleKeyDown(
+      new KeyboardEvent('keydown', { ctrlKey: true, shiftKey: true, key: 'R' })
+    );
+  };
+
+  // Function for keyboard shortcut
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.ctrlKey && event.shiftKey && event.key === 'R') {
+      event.preventDefault();
+      performHardRefresh();
+    }
+  };
+
+  // Add keyboard event listener
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const router = useRouter();
   const pathname = usePathname();
   const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
@@ -282,9 +307,9 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
 
         {/* Hard Refresh Button */}
         <button
-          onClick={() => (window.location.href = window.location.href)}
+          onClick={handleButtonClick}
           className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-200 shadow-md hover:shadow-lg"
-          title="Hard Refresh (Ctrl+F5)"
+          title="Hard Refresh (Ctrl+Shift+R)"
           type="button"
         >
           <svg
