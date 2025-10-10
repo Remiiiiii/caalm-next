@@ -304,7 +304,7 @@ const AdminAnalyticsDashboard = () => {
           <div className="text-red-600 mb-4">⚠️ Error Loading Analytics</div>
           <p className="text-red-700 mb-4">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => window.location.href = window.location.pathname}
             className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
           >
             Retry
