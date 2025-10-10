@@ -2,9 +2,11 @@ import { SWRConfiguration } from 'swr';
 
 // Global SWR configuration
 export const swrConfig: SWRConfiguration = {
-  // Default fetcher function
+  // Default fetcher function with cache control
   fetcher: async (url: string) => {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      cache: process.env.NODE_ENV === 'development' ? 'no-store' : 'default',
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -17,8 +19,8 @@ export const swrConfig: SWRConfiguration = {
   revalidateIfStale: true,
   revalidateOnMount: true, // Always revalidate on mount
 
-  // Deduplication - Very short interval for immediate updates
-  dedupingInterval: 500, // Prevent duplicate requests within 500ms
+  // Deduplication - Disabled in dev for instant updates
+  dedupingInterval: process.env.NODE_ENV === 'development' ? 0 : 500,
 
   // Error retry
   errorRetryCount: 3,
@@ -27,11 +29,11 @@ export const swrConfig: SWRConfiguration = {
   // Cache settings
   keepPreviousData: false, // Don't keep stale data, always show fresh data
 
-  // Focus revalidation - Very frequent
-  focusThrottleInterval: 1000, // Throttle focus revalidation to 1 second
+  // Focus revalidation - No throttle in dev
+  focusThrottleInterval: process.env.NODE_ENV === 'development' ? 0 : 1000,
 
-  // Refresh interval for automatic updates
-  refreshInterval: 10000, // Refresh every 10 seconds by default
+  // Refresh interval for automatic updates - More frequent in dev
+  refreshInterval: process.env.NODE_ENV === 'development' ? 2000 : 10000,
 };
 
 // SWR keys for consistent caching

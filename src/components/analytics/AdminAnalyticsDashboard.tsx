@@ -317,31 +317,31 @@ const AdminAnalyticsDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-end">
+      <div className="flex justify-center">
         <div>
           <h1 className="h1 sidebar-gradient-text text-center">
-            Administration Department Analytics
+            Organizational Performance Dashboard
           </h1>
-          <p className="body-1 text-light-200 text-center">
-            Comprehensive overview of administrative operations
+          <p className="body-1 text-light-200 text-center py-2">
+            Cross-departmental performance metrics and insights
           </p>
         </div>
-        <div className="flex space-x-3">
-          <Button
-            onClick={handleExport}
-            className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button
-            variant="outline"
-            className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            View
-          </Button>
-        </div>
+      </div>
+      <div className="flex space-x-3 justify-end">
+        <Button
+          onClick={handleExport}
+          className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Export
+        </Button>
+        <Button
+          variant="outline"
+          className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+        >
+          <Eye className="h-4 w-4 mr-2" />
+          View
+        </Button>
       </div>
 
       {/* Global Quick Stats */}
@@ -411,7 +411,7 @@ const AdminAnalyticsDashboard = () => {
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
           <CardTitle className="h2 sidebar-gradient-text">
-            Department Analytics
+            Departmental Performance Breakdown
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -512,7 +512,7 @@ const AdminAnalyticsDashboard = () => {
                                 <Badge
                                   key={division.id}
                                   variant="outline"
-                                  className="text-xs bg-white/10 backdrop-blur"
+                                  className="text-xs bg-white/10 backdrop-blur sidebar-gradient-text"
                                 >
                                   {division.name}
                                 </Badge>
@@ -520,7 +520,7 @@ const AdminAnalyticsDashboard = () => {
                               {dept.divisions.length > 3 && (
                                 <Badge
                                   variant="outline"
-                                  className="text-xs bg-white/10 backdrop-blur"
+                                  className="text-xs bg-white/10 backdrop-blur sidebar-gradient-text"
                                 >
                                   +{dept.divisions.length - 3} more
                                 </Badge>

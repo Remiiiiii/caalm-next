@@ -121,12 +121,17 @@ const UserManagement = () => {
 
   const uniqueDepartments = useMemo(
     () =>
-      [...new Set(typedUsers.map((user) => user.department))].filter(Boolean),
+      [...new Set(typedUsers.map((user) => user.department))].filter(
+        Boolean
+      ) as string[],
     [typedUsers]
   );
 
   const uniqueStatuses = useMemo(
-    () => [...new Set(typedUsers.map((user) => user.status))].filter(Boolean),
+    () =>
+      [...new Set(typedUsers.map((user) => user.status))].filter(
+        Boolean
+      ) as string[],
     [typedUsers]
   );
 

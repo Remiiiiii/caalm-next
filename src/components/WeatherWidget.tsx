@@ -167,10 +167,10 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
         let apiUrl: string;
         if (lat !== 0 && lon !== 0) {
           // Use coordinates for more accurate weather data
-          apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+          apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=imperial`;
         } else {
           // Use city name
-          apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+          apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=imperial`;
         }
 
         const response = await fetch(apiUrl);
@@ -287,7 +287,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   };
 
   const formatTemperature = (temp: number) => {
-    return `${Math.round(temp)}°C`;
+    return `${Math.round(temp)}°F`;
   };
 
   const formatWindSpeed = (speed: number) => {

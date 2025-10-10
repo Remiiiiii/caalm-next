@@ -49,15 +49,33 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Static assets - cache aggressively in production, disable in dev
       {
         source: '/:all*(js|css|svg|png|jpg|jpeg|gif|webp|avif)',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value:
+              process.env.NODE_ENV === 'development'
+                ? 'no-cache, no-store, must-revalidate'
+                : 'public, max-age=31536000, immutable',
           },
         ],
       },
+      // HTML/page routes - disable caching in development
+      {
+        source: '/((?!api|_next/static|_next/image|favicon.ico).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value:
+              process.env.NODE_ENV === 'development'
+                ? 'no-cache, no-store, must-revalidate, max-age=0'
+                : 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+      // Analytics routes
       {
         source: '/analytics/:path*',
         headers: [
