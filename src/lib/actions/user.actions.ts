@@ -12,6 +12,11 @@ import * as sdk from 'node-appwrite';
 import { triggerUserInvitationNotification } from '../utils/notificationTriggers';
 import { type UserDivision } from '../../../constants';
 import { tablesDB } from '../appwrite/client';
+import {
+  notifyOTPVerified,
+  notifyInvitationSent,
+  notifyInvitationAccepted,
+} from '../utils/smsNotifications';
 
 export type AppUser = {
   fullName: string;
@@ -333,6 +338,9 @@ export const finalizeAccountAfterEmailVerification = async ({
       'Executive notification sent for new user request from:',
       email
     );
+
+    // Also send SMS notification using our new system
+    await notifyOTPVerified(email, fullName);
   } catch (error) {
     console.error('Failed to notify executives about new user request:', error);
     // Don't throw error here as the main account creation should still succeed
@@ -392,6 +400,19 @@ export const verifyOTP = async ({
     });
 
     console.log('verifyOTP: OTP verified successfully');
+
+    // Send SMS notification to admins for sign-up (not sign-in)
+    if (!accountId) {
+      try {
+        const userInfo = await getUserByEmail(email);
+        if (userInfo) {
+          await notifyOTPVerified(email, userInfo.fullName);
+        }
+      } catch (error) {
+        console.error('Failed to send OTP verification SMS:', error);
+        // Don't throw - SMS failure shouldn't block user flow
+      }
+    }
 
     // If accountId is provided (sign-in flow), return it for client-side session creation
     if (accountId) {
@@ -864,6 +885,19 @@ export const createInvitation = async ({
     });
     console.log('createInvitation: Database row created successfully');
 
+    // Send SMS notification to admins, executives, and managers
+    try {
+      await notifyInvitationSent(
+        email,
+        name,
+        normalizedRole,
+        department || 'N/A'
+      );
+    } catch (error) {
+      console.error('Failed to send invitation SMS:', error);
+      // Don't throw - SMS failure shouldn't block invitation creation
+    }
+
     // 2. Send invite link email (using Mailgun)
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL || 'https://www.caalmsolutions.com';
@@ -1031,6 +1065,19 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     rowId: invite.$id,
     data: { status: 'accepted' },
   });
+
+  // Send SMS notification to admins, executives, and department managers
+  try {
+    await notifyInvitationAccepted(
+      invite.email,
+      invite.name,
+      invite.role,
+      invite.department || 'N/A'
+    );
+  } catch (error) {
+    console.error('Failed to send invitation acceptance SMS:', error);
+    // Don't throw - SMS failure shouldn't block invitation acceptance
+  }
 
   // 4. Return info for frontend to redirect to dashboard
   return {
@@ -1228,7 +1275,7 @@ export const resendInvitation = async ({ token }: { token: string }) => {
 
     // Get the invitation details
     const result = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId!,
       tableId: INVITATIONS_COLLECTION,
       queries: [Query.equal('token', token)],
     });

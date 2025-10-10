@@ -350,6 +350,7 @@ export async function triggerNewUserRequestNotification(
 
 /**
  * Send SMS notifications to executives about new user requests
+ * Updated to use our new Twilio-based SMS system
  */
 async function sendSMSNotificationsToExecutives(
   userEmail: string,
@@ -357,66 +358,26 @@ async function sendSMSNotificationsToExecutives(
   executives: any[]
 ): Promise<void> {
   try {
-    const { createAdminClient } = await import('../appwrite');
-    const { appwriteConfig } = await import('../appwrite/config');
+    // Use our new SMS notification system
+    const { sendOnboardingSMS } = await import('./smsNotifications');
 
-    const { tablesDB } = await createAdminClient();
+    // Filter executives who have phone numbers
+    const executivesWithPhones = executives.filter((exec) => exec.phone);
 
-    // Get SMS targets for executives
-    for (const executive of executives) {
-      try {
-        // Check if executive has SMS targets
-        const client = new (await import('node-appwrite')).Client()
-          .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-          .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-          .setKey(process.env.NEXT_APPWRITE_API_KEY!);
-
-        const users = new (await import('node-appwrite')).Users(client);
-        const targets = await users.listTargets({
-          userId: executive.accountId,
-        });
-
-        // Find SMS targets
-        const smsTargets = targets.targets.filter(
-          (target: any) => target.providerType === 'sms'
-        );
-
-        if (smsTargets.length > 0) {
-          // Send SMS to each phone number
-          for (const smsTarget of smsTargets) {
-            try {
-              const { getAppwriteMessagingService } = await import(
-                '../services/appwriteMessagingService'
-              );
-              const messaging = await getAppwriteMessagingService();
-
-              if (messaging.isConfigured()) {
-                const smsMessage = `CAALM Alert: New user request from ${userFullName} (${userEmail}). Please review in the dashboard.`;
-
-                await messaging.sendSmsNotification(
-                  executive.accountId,
-                  smsMessage
-                );
-
-                console.log(
-                  `SMS sent to executive ${executive.fullName} at ${smsTarget.identifier}`
-                );
-              }
-            } catch (smsError) {
-              console.error(
-                `Failed to send SMS to executive ${executive.fullName}:`,
-                smsError
-              );
-            }
-          }
-        }
-      } catch (targetError) {
-        console.error(
-          `Failed to get SMS targets for executive ${executive.fullName}:`,
-          targetError
-        );
-      }
+    if (executivesWithPhones.length === 0) {
+      console.log(
+        'No executives with phone numbers found for SMS notification'
+      );
+      return;
     }
+
+    const message = `CAALM Alert: New user request from ${userFullName} (${userEmail}). Please review in the dashboard.`;
+
+    await sendOnboardingSMS(executivesWithPhones, message);
+
+    console.log(
+      `Sent SMS notifications to ${executivesWithPhones.length} executives`
+    );
   } catch (error) {
     console.error('Failed to send SMS notifications to executives:', error);
     // Don't throw error to avoid breaking the main flow

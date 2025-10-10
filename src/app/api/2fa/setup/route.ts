@@ -7,6 +7,7 @@ import {
   verifyTOTPCode,
 } from '@/lib/totp';
 import { Query } from 'node-appwrite';
+import { notify2FACompleted } from '@/lib/utils/smsNotifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -177,6 +178,17 @@ export async function PUT(request: NextRequest) {
 
         // Clean up the temporary secret
         tempSecrets.delete(factorId);
+
+        // Send SMS notification to admins and executives
+        try {
+          const user = userResponse.rows[0];
+          if (user.email && user.fullName) {
+            await notify2FACompleted(user.email, user.fullName);
+          }
+        } catch (smsError) {
+          console.error('Failed to send 2FA completion SMS:', smsError);
+          // Don't throw - SMS failure shouldn't block 2FA setup
+        }
 
         const response = NextResponse.json({
           success: true,

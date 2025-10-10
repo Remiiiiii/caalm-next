@@ -20,10 +20,15 @@ let appwriteMessagingService: any = null;
 
 async function getAppwriteMessagingService() {
   if (!appwriteMessagingService) {
-    const { appwriteMessagingService: service } = await import(
-      './appwriteMessagingService'
-    );
-    appwriteMessagingService = service;
+    try {
+      const { appwriteMessagingService: service } = await import(
+        './appwriteMessagingService'
+      );
+      appwriteMessagingService = service;
+    } catch (error) {
+      console.warn('Appwrite messaging service not available:', error);
+      return null;
+    }
   }
   return appwriteMessagingService;
 }
@@ -579,7 +584,7 @@ class NotificationService {
       const messaging = await getAppwriteMessagingService();
 
       // Check if Appwrite messaging is configured
-      if (!messaging.isConfigured()) {
+      if (!messaging || !messaging.isConfigured()) {
         console.log(
           'Appwrite messaging not configured, skipping SMS notification'
         );
