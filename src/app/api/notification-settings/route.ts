@@ -41,7 +41,6 @@ export async function PUT(request: NextRequest) {
       phoneNumber: body.phoneNumber,
       notificationTypes: body.notificationTypes,
       frequency: body.frequency,
-      fcmToken: body.fcmToken,
     });
 
     // If a phoneNumber was provided and appears valid E.164, add/update Auth SMS target
@@ -50,7 +49,10 @@ export async function PUT(request: NextRequest) {
       /^\+\d{10,15}$/.test(body.phoneNumber)
     ) {
       try {
-        await addUserSmsTarget({ userId: body.userId, e164Phone: body.phoneNumber });
+        await addUserSmsTarget({
+          userId: body.userId,
+          e164Phone: body.phoneNumber,
+        });
       } catch (e) {
         console.warn('Failed to create SMS target:', e);
         // Do not fail the request if SMS target creation fails; settings upsert succeeded

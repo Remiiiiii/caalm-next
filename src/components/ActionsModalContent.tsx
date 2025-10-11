@@ -26,7 +26,9 @@ const ImageThumbnail = ({ file }: { file: UIFileDoc }) => (
     <div className="flex flex-col">
       <p className="subtitle-2 mb-1">{file.name}</p>
       <FormattedDateTime date={file.$createdAt} className="caption" />
-      <p className="text-sm text-slate-600">{convertFileSize({ sizeInBytes: file.size })}</p>
+      <p className="text-sm text-slate-600">
+        {convertFileSize({ sizeInBytes: file.size })}
+      </p>
     </div>
   </div>
 );

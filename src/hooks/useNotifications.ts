@@ -34,7 +34,7 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
     data: notifications,
     error,
     isLoading,
-    mutate,
+    mutate: mutateNotifications,
   } = useSWR(
     currentUserId ? `/api/notifications?userId=${currentUserId}` : null,
     fetcher,
@@ -59,15 +59,14 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
       });
 
       // Optimistic update
-      mutate(
-        `/api/notifications?userId=${currentUserId}`,
+      await mutateNotifications(
         (current: Notification[]) =>
           current?.map((notification) =>
             notification.$id === notificationId
               ? { ...notification, read: true }
               : notification
           ),
-        false
+        { revalidate: false }
       );
 
       // Revalidate stats
@@ -85,15 +84,14 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
       });
 
       // Optimistic update
-      mutate(
-        `/api/notifications?userId=${currentUserId}`,
+      await mutateNotifications(
         (current: Notification[]) =>
           current?.map((notification) =>
             notification.$id === notificationId
               ? { ...notification, read: false }
               : notification
           ),
-        false
+        { revalidate: false }
       );
 
       // Revalidate stats
@@ -111,11 +109,10 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
       });
 
       // Optimistic update
-      mutate(
-        `/api/notifications?userId=${currentUserId}`,
+      await mutateNotifications(
         (current: Notification[]) =>
           current?.map((notification) => ({ ...notification, read: true })),
-        false
+        { revalidate: false }
       );
 
       // Revalidate stats
@@ -133,13 +130,12 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
       });
 
       // Optimistic update
-      mutate(
-        `/api/notifications?userId=${currentUserId}`,
+      await mutateNotifications(
         (current: Notification[]) =>
           current?.filter(
             (notification) => notification.$id !== notificationId
           ),
-        false
+        { revalidate: false }
       );
 
       // Revalidate stats
@@ -187,7 +183,7 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
     markAllAsRead,
     deleteNotification,
     createNotification,
-    mutate: () => mutate(`/api/notifications?userId=${currentUserId}`),
+    mutate: () => mutateNotifications(),
   };
 };
 

@@ -107,9 +107,7 @@ export async function notifyOTPVerified(email: string, name?: string) {
   const adminUsers = await getUsersByRoles(['admin']);
   console.log('SMS: Found admin users:', adminUsers.length);
   const adminsWithPhones = await getUsersWithPhoneNumbers(adminUsers);
-  const message = `New user ${
-    name || email
-  } (${email}) has verified their email and is pending approval.`;
+  const message = `New user ${name} (${email}) has verified their email and is pending approval.`;
   await sendOnboardingSMS(adminsWithPhones, message);
 }
 
@@ -126,7 +124,7 @@ export async function notifyInvitationSent(
     'manager',
   ]);
   const recipientsWithPhones = await getUsersWithPhoneNumbers(recipientUsers);
-  const message = `Invitation sent to ${name} (${email}) for ${role} role in ${department}.`;
+  const message = `Invitation sent to ${name} (${email}) for the ${role} role in the ${department} department.`;
   await sendOnboardingSMS(recipientsWithPhones, message);
 }
 
@@ -146,7 +144,7 @@ export async function notifyInvitationAccepted(
     deptManagerUsers
   );
   const allRecipients = [...adminAndExecWithPhones, ...deptManagersWithPhones];
-  const message = `${name} has accepted the invitation for ${role} in ${department}.`;
+  const message = `${name} has accepted the invitation for ${role} in the ${department} department.`;
   await sendOnboardingSMS(allRecipients, message);
 }
 

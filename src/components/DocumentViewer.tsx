@@ -155,7 +155,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   }, [isOpen, welcomeMessageLoaded, chatMessages.length, analyze]);
 
-  const handleSendMessage = async ({ message: overrideMessage }: { message?: string } = {}) => {
+  const handleSendMessage = async ({
+    message: overrideMessage,
+  }: { message?: string } = {}) => {
     const message = overrideMessage || newMessage;
     if (!message.trim()) return;
     const userMessage: ChatMessage = {
