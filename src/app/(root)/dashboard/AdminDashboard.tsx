@@ -141,9 +141,10 @@ const AdminDashboard = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* System Overview */}
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* System Overview */}
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -275,15 +276,15 @@ const AdminDashboard = () => {
               )}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Contract Expiry Alerts */}
-          <ContractExpiryAlertsWidget maxVisible={2} />
-          
           {/* Recent Activity */}
           <RecentActivity />
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Contract Expiry Alerts */}
+          <ContractExpiryAlertsWidget maxVisible={2} />
 
           {/* Quick Actions */}
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
