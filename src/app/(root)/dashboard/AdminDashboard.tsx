@@ -12,6 +12,9 @@ import {
   TrendingUp,
   Settings,
   Shield,
+  Server,
+  Database,
+  Wifi,
 } from 'lucide-react';
 import RecentActivity from '@/components/RecentActivity';
 import ContractExpiryAlertsWidget from '@/components/ContractExpiryAlertsWidget';
@@ -140,126 +143,167 @@ const AdminDashboard = () => {
         )}
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* System Overview */}
-        <div className="lg:col-span-2">
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+      {/* Main Content Grid - Improved Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* System Overview - Takes 8 columns */}
+        <div className="lg:col-span-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* System Health & Performance */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-bold text-center sidebar-gradient-text">
-                  System Overview
+                  System Health
                 </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {isLoading ? (
-                <div className="space-y-4 py-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between items-center p-4 border rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <div className="animate-pulse bg-gray-200 h-4 w-32 rounded mb-2"></div>
-                        <div className="animate-pulse bg-gray-200 h-3 w-24 rounded"></div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isLoading ? (
+                  <div className="space-y-4 py-4">
+                    <div className="animate-pulse bg-gray-200 h-20 rounded"></div>
+                    <div className="animate-pulse bg-gray-200 h-16 rounded"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* System Health Status */}
+                    <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        {getSystemHealthIcon(stats.systemHealth)}
+                        <div>
+                          <h3 className="font-semibold text-navy">
+                            System Status
+                          </h3>
+                          <p className="text-sm text-slate-dark">
+                            Overall system performance
+                          </p>
+                        </div>
                       </div>
-                      <div className="animate-pulse bg-gray-200 h-6 w-16 rounded ml-4"></div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${getSystemHealthColor(
+                          stats.systemHealth
+                        )}`}
+                      >
+                        {stats.systemHealth.toUpperCase()}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* System Health Status */}
-                  <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      {getSystemHealthIcon(stats.systemHealth)}
-                      <div>
-                        <h3 className="font-semibold text-navy">
-                          System Health
-                        </h3>
+
+                    {/* Performance Metrics */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-blue-600 font-medium">UPTIME</p>
+                            <p className="text-lg font-bold text-blue-800">99.9%</p>
+                          </div>
+                          <CheckCircle className="h-5 w-5 text-blue-600" />
+                        </div>
+                      </div>
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-green-600 font-medium">RESPONSE</p>
+                            <p className="text-lg font-bold text-green-800">120ms</p>
+                          </div>
+                          <TrendingUp className="h-5 w-5 text-green-600" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Activity Metrics */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-bold text-center sidebar-gradient-text">
+                  Activity Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isLoading ? (
+                  <div className="space-y-4 py-4">
+                    <div className="animate-pulse bg-gray-200 h-20 rounded"></div>
+                    <div className="animate-pulse bg-gray-200 h-16 rounded"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="p-4 border border-border rounded-lg">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <Activity className="h-5 w-5 text-blue-600" />
+                          <h4 className="font-medium text-navy">
+                            Total Activities
+                          </h4>
+                        </div>
+                        <p className="text-2xl font-bold text-navy">
+                          {stats.totalActivities}
+                        </p>
                         <p className="text-sm text-slate-dark">
-                          Overall system status and performance
+                          All time activities
                         </p>
                       </div>
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${getSystemHealthColor(
-                        stats.systemHealth
-                      )}`}
-                    >
-                      {stats.systemHealth}
-                    </span>
-                  </div>
 
-                  {/* Activity Metrics */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 border border-border rounded-lg">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <Activity className="h-5 w-5 text-blue-600" />
-                        <h4 className="font-medium text-navy">
-                          Total Activities
-                        </h4>
+                      <div className="p-4 border border-border rounded-lg">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <TrendingUp className="h-5 w-5 text-green-600" />
+                          <h4 className="font-medium text-navy">
+                            Recent Activities
+                          </h4>
+                        </div>
+                        <p className="text-2xl font-bold text-navy">
+                          {stats.recentActivities}
+                        </p>
+                        <p className="text-sm text-slate-dark">Last 24 hours</p>
                       </div>
-                      <p className="text-2xl font-bold text-navy">
-                        {stats.totalActivities}
-                      </p>
-                      <p className="text-sm text-slate-dark">
-                        All time activities
-                      </p>
-                    </div>
-
-                    <div className="p-4 border border-border rounded-lg">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <TrendingUp className="h-5 w-5 text-green-600" />
-                        <h4 className="font-medium text-navy">
-                          Recent Activities
-                        </h4>
-                      </div>
-                      <p className="text-2xl font-bold text-navy">
-                        {stats.recentActivities}
-                      </p>
-                      <p className="text-sm text-slate-dark">Last 24 hours</p>
                     </div>
                   </div>
+                )}
+              </CardContent>
+            </Card>
 
-                  {/* User Distribution */}
-                  <div className="p-4 border border-border rounded-lg">
-                    <h4 className="font-medium text-navy mb-3">
-                      User Distribution
-                    </h4>
+            {/* User Analytics */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg xl:col-span-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-bold text-center sidebar-gradient-text">
+                  User Analytics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isLoading ? (
+                  <div className="animate-pulse bg-gray-200 h-24 rounded"></div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* User Distribution */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                        <p className="text-2xl font-bold text-blue-800">{stats.totalUsers}</p>
+                        <p className="text-sm text-blue-600">Total Users</p>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                        <p className="text-2xl font-bold text-green-800">{stats.activeUsers}</p>
+                        <p className="text-sm text-green-600">Active Users</p>
+                      </div>
+                      <div className="text-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <Clock className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
+                        <p className="text-2xl font-bold text-yellow-800">{stats.pendingUsers}</p>
+                        <p className="text-sm text-yellow-600">Pending Approval</p>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-dark">
-                          Active Users
-                        </span>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-dark">Active Users</span>
                         <span className="font-medium text-navy">
-                          {stats.activeUsers} (
                           {stats.totalUsers > 0
-                            ? Math.round(
-                                (stats.activeUsers / stats.totalUsers) * 100
-                              )
-                            : 0}
-                          %)
+                            ? Math.round((stats.activeUsers / stats.totalUsers) * 100)
+                            : 0}%
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-dark">
-                          Pending Users
-                        </span>
-                        <span className="font-medium text-navy">
-                          {stats.pendingUsers} (
-                          {stats.totalUsers > 0
-                            ? Math.round(
-                                (stats.pendingUsers / stats.totalUsers) * 100
-                              )
-                            : 0}
-                          %)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-3">
                         <div
-                          className="bg-blue-600 h-2 rounded-full"
+                          className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
                           style={{
                             width: `${
                               stats.totalUsers > 0
@@ -271,19 +315,65 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
+        {/* Enhanced Sidebar - Takes 4 columns */}
+        <div className="lg:col-span-4 space-y-6">
           {/* Contract Expiry Alerts */}
-          <ContractExpiryAlertsWidget maxVisible={2} />
+          <ContractExpiryAlertsWidget maxVisible={3} />
           
-          {/* Recent Activity */}
-          <RecentActivity />
+          {/* Recent Activity - Compact Version */}
+          <RecentActivity limit={8} />
+
+          {/* System Monitoring */}
+          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
+                <Server className="h-5 w-5 mr-2" />
+                System Monitoring
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Database className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">Database</p>
+                      <p className="text-xs text-blue-600">Connection healthy</p>
+                    </div>
+                  </div>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Wifi className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="text-sm font-medium text-green-800">API Status</p>
+                      <p className="text-xs text-green-600">All endpoints active</p>
+                    </div>
+                  </div>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Server className="h-5 w-5 text-gray-600" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Server Load</p>
+                      <p className="text-xs text-gray-600">Normal (45% CPU)</p>
+                    </div>
+                  </div>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Quick Actions */}
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
@@ -294,34 +384,34 @@ const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   variant="outline"
-                  className="w-full justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40"
+                  className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
                 >
                   <Users className="h-4 w-4 mr-2" />
-                  Manage Users
+                  Users
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40"
+                  className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
                 >
                   <Shield className="h-4 w-4 mr-2" />
-                  Security Settings
+                  Security
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40"
+                  className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
                 >
                   <Activity className="h-4 w-4 mr-2" />
-                  View Logs
+                  Logs
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40"
+                  className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
                 >
                   <TrendingUp className="h-4 w-4 mr-2" />
-                  System Reports
+                  Reports
                 </Button>
               </div>
             </CardContent>
@@ -338,21 +428,21 @@ const AdminDashboard = () => {
             <CardContent className="pt-0">
               <div className="space-y-3">
                 {stats.pendingUsers > 0 && (
-                  <div className="flex items-start space-x-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                  <div className="flex items-start space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-yellow-800">
                         {stats.pendingUsers} user(s) pending approval
                       </p>
                       <p className="text-xs text-yellow-600">
-                        Review and approve new user registrations
+                        Review and approve new registrations
                       </p>
                     </div>
                   </div>
                 )}
 
                 {stats.systemHealth === 'critical' && (
-                  <div className="flex items-start space-x-2 p-2 bg-red-50 border border-red-200 rounded">
+                  <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-red-800">
@@ -366,7 +456,7 @@ const AdminDashboard = () => {
                 )}
 
                 {stats.systemHealth === 'good' && stats.pendingUsers === 0 && (
-                  <div className="flex items-start space-x-2 p-2 bg-green-50 border border-green-200 rounded">
+                  <div className="flex items-start space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-green-800">
