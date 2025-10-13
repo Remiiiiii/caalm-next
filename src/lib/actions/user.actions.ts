@@ -411,16 +411,18 @@ export const verifyOTP = async ({
     console.log('verifyOTP: OTP verified successfully');
 
     // Send SMS notification to admins for sign-up (not sign-in)
+    // Run in background without blocking the response
     if (!accountId) {
-      try {
-        const userInfo = await getUserByEmail(email);
-        if (userInfo) {
-          await notifyOTPVerified(email, userInfo.fullName);
-        }
-      } catch (error) {
-        console.error('Failed to send OTP verification SMS:', error);
-        // Don't throw - SMS failure shouldn't block user flow
-      }
+      getUserByEmail(email)
+        .then((userInfo) => {
+          if (userInfo) {
+            return notifyOTPVerified(email, userInfo.fullName);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to send OTP verification SMS:', error);
+          // Don't throw - SMS failure shouldn't block user flow
+        });
     }
 
     // If accountId is provided (sign-in flow), return it for client-side session creation

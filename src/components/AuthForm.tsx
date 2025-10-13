@@ -586,11 +586,17 @@ const AuthForm = ({ type }: { type: FormType }) => {
               setPendingSignup(null);
             }}
             onSuccess={async () => {
-              await finalizeAccountAfterEmailVerification({
+              // Redirect immediately for better UX
+              router.push('/?signup=success');
+
+              // Run finalization in background without blocking the redirect
+              finalizeAccountAfterEmailVerification({
                 fullName: pendingSignup.fullName,
                 email: pendingSignup.email,
+              }).catch((error) => {
+                console.error('Background finalization error:', error);
+                // Error is logged but doesn't affect user experience
               });
-              router.push('/?signup=success');
             }}
           />
         )}
