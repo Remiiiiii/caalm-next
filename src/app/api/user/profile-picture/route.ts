@@ -82,26 +82,25 @@ export async function POST(request: NextRequest) {
     );
     console.log('File uploaded with ID:', uploadedFile.$id);
 
-    // Get file URL
-    const fileUrl = storage.getFileView(
-      appwriteConfig.profilePicturesBucketId!,
-      uploadedFile.$id
-    );
-
-    // Update user document with new profile image
+    // Update user document with only the file ID (not the URL)
     await databases.updateDocument(
       appwriteConfig.databaseId!,
       appwriteConfig.usersCollectionId!,
       userId,
       {
         profileImageId: uploadedFile.$id,
-        profileImage: fileUrl.toString(),
       }
+    );
+
+    // Generate file URL for response (URL object converted to string properly)
+    const fileUrl = storage.getFileView(
+      appwriteConfig.profilePicturesBucketId!,
+      uploadedFile.$id
     );
 
     return NextResponse.json({
       success: true,
-      imageUrl: fileUrl.toString(),
+      imageUrl: fileUrl.href, // Use .href to get the actual URL string
       fileId: uploadedFile.$id,
     });
   } catch (error) {
@@ -141,14 +140,13 @@ export async function DELETE(request: NextRequest) {
         user.profileImageId
       );
 
-      // Update user document to remove profile image
+      // Update user document to remove profile image ID
       await databases.updateDocument(
         appwriteConfig.databaseId!,
         appwriteConfig.usersCollectionId!,
         userId,
         {
           profileImageId: null,
-          profileImage: null,
         }
       );
     }

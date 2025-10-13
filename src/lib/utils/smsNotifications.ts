@@ -78,27 +78,30 @@ async function getDepartmentManagers(department: string) {
   return result.rows;
 }
 
-// Send SMS in background (non-blocking)
+// Send SMS (awaitable for reliability in serverless environments)
 export async function sendOnboardingSMS(recipients: any[], message: string) {
-  setImmediate(async () => {
-    try {
-      if (recipients.length === 0) {
-        console.log('No recipients with phone numbers for SMS notification');
-        return;
-      }
-
-      const notifications = recipients.map((user) => ({
-        to: twilioService.formatPhoneNumber(user.phone),
-        message,
-        priority: 'medium' as const,
-      }));
-
-      await twilioService.sendBulkSMS(notifications);
-      console.log(`Sent ${notifications.length} onboarding SMS notifications`);
-    } catch (error) {
-      console.error('Background SMS send failed:', error);
+  try {
+    if (recipients.length === 0) {
+      console.log('SMS: No recipients with phone numbers for SMS notification');
+      return;
     }
-  });
+
+    console.log(`SMS: Preparing to send to ${recipients.length} recipients`);
+
+    const notifications = recipients.map((user) => ({
+      to: twilioService.formatPhoneNumber(user.phone),
+      message,
+      priority: 'medium' as const,
+    }));
+
+    await twilioService.sendBulkSMS(notifications);
+    console.log(
+      `SMS: Successfully sent ${notifications.length} onboarding SMS notifications`
+    );
+  } catch (error) {
+    console.error('SMS: Failed to send SMS:', error);
+    // Don't throw - let the parent function continue
+  }
 }
 
 // Notification 1: OTP Verified - Admin only
@@ -111,21 +114,38 @@ export async function notifyOTPVerified(email: string, name?: string) {
   await sendOnboardingSMS(adminsWithPhones, message);
 }
 
-// Notification 2: Invitation Sent - Admin, Executive, Manager
+// Notification 2: Invitation Sent - Admin, Executive, Department Managers only
 export async function notifyInvitationSent(
   email: string,
   name: string,
   role: string,
   department: string
 ) {
-  const recipientUsers = await getUsersByRoles([
-    'admin',
-    'executive',
-    'manager',
-  ]);
-  const recipientsWithPhones = await getUsersWithPhoneNumbers(recipientUsers);
+  console.log('SMS: notifyInvitationSent called for', {
+    email,
+    name,
+    role,
+    department,
+  });
+
+  const adminAndExecUsers = await getUsersByRoles(['admin', 'executive']);
+  console.log('SMS: Found admin/exec users:', adminAndExecUsers.length);
+
+  const deptManagerUsers = await getDepartmentManagers(department);
+  console.log('SMS: Found department managers:', deptManagerUsers.length);
+
+  const adminAndExecWithPhones = await getUsersWithPhoneNumbers(
+    adminAndExecUsers
+  );
+  const deptManagersWithPhones = await getUsersWithPhoneNumbers(
+    deptManagerUsers
+  );
+  const allRecipients = [...adminAndExecWithPhones, ...deptManagersWithPhones];
+
+  console.log('SMS: Total recipients with phones:', allRecipients.length);
+
   const message = `Invitation sent to ${name} (${email}) for the ${role} role in the ${department} department.`;
-  await sendOnboardingSMS(recipientsWithPhones, message);
+  await sendOnboardingSMS(allRecipients, message);
 }
 
 // Notification 3: Invitation Accepted - Admin, Executive, Department Managers
@@ -135,8 +155,19 @@ export async function notifyInvitationAccepted(
   role: string,
   department: string
 ) {
+  console.log('SMS: notifyInvitationAccepted called for', {
+    email,
+    name,
+    role,
+    department,
+  });
+
   const adminAndExecUsers = await getUsersByRoles(['admin', 'executive']);
+  console.log('SMS: Found admin/exec users:', adminAndExecUsers.length);
+
   const deptManagerUsers = await getDepartmentManagers(department);
+  console.log('SMS: Found department managers:', deptManagerUsers.length);
+
   const adminAndExecWithPhones = await getUsersWithPhoneNumbers(
     adminAndExecUsers
   );
@@ -144,14 +175,41 @@ export async function notifyInvitationAccepted(
     deptManagerUsers
   );
   const allRecipients = [...adminAndExecWithPhones, ...deptManagersWithPhones];
+
+  console.log('SMS: Total recipients with phones:', allRecipients.length);
+
   const message = `${name} has accepted the invitation for ${role} in the ${department} department.`;
   await sendOnboardingSMS(allRecipients, message);
 }
 
-// Notification 4: 2FA Completed - Admin and Executive
-export async function notify2FACompleted(email: string, name: string) {
-  const recipientUsers = await getUsersByRoles(['admin', 'executive']);
-  const recipientsWithPhones = await getUsersWithPhoneNumbers(recipientUsers);
+// Notification 4: 2FA Completed - Admin, Executive, and Department Managers
+export async function notify2FACompleted(
+  email: string,
+  name: string,
+  department: string
+) {
+  console.log('SMS: notify2FACompleted called for', {
+    email,
+    name,
+    department,
+  });
+
+  const adminAndExecUsers = await getUsersByRoles(['admin', 'executive']);
+  console.log('SMS: Found admin/exec users:', adminAndExecUsers.length);
+
+  const deptManagerUsers = await getDepartmentManagers(department);
+  console.log('SMS: Found department managers:', deptManagerUsers.length);
+
+  const adminAndExecWithPhones = await getUsersWithPhoneNumbers(
+    adminAndExecUsers
+  );
+  const deptManagersWithPhones = await getUsersWithPhoneNumbers(
+    deptManagerUsers
+  );
+  const allRecipients = [...adminAndExecWithPhones, ...deptManagersWithPhones];
+
+  console.log('SMS: Total recipients with phones:', allRecipients.length);
+
   const message = `${name} (${email}) has completed 2FA setup and is ready to access the system.`;
-  await sendOnboardingSMS(recipientsWithPhones, message);
+  await sendOnboardingSMS(allRecipients, message);
 }

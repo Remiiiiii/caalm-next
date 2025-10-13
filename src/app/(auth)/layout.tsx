@@ -53,13 +53,21 @@ const layout = ({ children }: { children: React.ReactNode }) => {
               </div>
 
               {/* Spline Component */}
-              <div className="relative -mt-2 md:-mt-10 mb-2">
+              <div className=" -mt-2 md:-mt-10 mb-2 relative w-full h-[500px] rounded-2xl overflow-hidden">
+                {/* Orbiting Blocks around Spline - positioned to orbit around the center */}
+                <OrbitingBlocks />
+
                 <SplineCanvas
                   scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
-                  className="w-full h-full min-h-[220px] md:min-h-[260px] xl:min-h-[288px] relative z-10"
+                  className="w-full h-full relative z-10"
+                  delayMs={1000}
+                  durationMs={1000}
                 />
-                <OrbitingBlocks />
+
+                {/* Overlay gradient for better text readability */}
+                <div className="absolute inset-0 pointer-events-none z-20" />
               </div>
+
               <div className="flex items-center gap-2 mt-2 justify-center">
                 <div className="flex -space-x-2">
                   <Image

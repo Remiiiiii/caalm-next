@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Avatar from '@/components/ui/avatar';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Camera, Upload, Trash2, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { Models } from 'appwrite';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { refreshUser } = useAuth();
 
   // Size configurations
   const sizeConfig = {
@@ -54,6 +56,28 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
   };
 
   const config = sizeConfig[size];
+
+  // Sync profileImageUrl with user.prefs when user changes
+  useEffect(() => {
+    const imageUrl = (user?.prefs as any)?.profileImage || null;
+    console.log('ProfilePicture: User changed, updating image URL:', {
+      userId: user?.$id,
+      imageUrl,
+      profileImageId: (user?.prefs as any)?.profileImageId,
+      hasImageUrl: !!imageUrl,
+      imageUrlLength: imageUrl?.length,
+    });
+    setProfileImageUrl(imageUrl);
+  }, [user]);
+
+  // Log when profileImageUrl state changes
+  useEffect(() => {
+    console.log('ProfilePicture: profileImageUrl state updated:', {
+      profileImageUrl,
+      isString: typeof profileImageUrl === 'string',
+      willRenderImage: !!profileImageUrl,
+    });
+  }, [profileImageUrl]);
 
   const handleFileSelect = () => {
     fileInputRef.current?.click();
@@ -122,6 +146,9 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
       const result = await response.json();
       setProfileImageUrl(result.imageUrl);
 
+      // Refresh user data to get the updated profile image
+      await refreshUser();
+
       toast({
         title: 'Profile picture updated',
         description: 'Your profile picture has been updated successfully.',
@@ -162,6 +189,9 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 
       setProfileImageUrl(null);
 
+      // Refresh user data to clear the profile image
+      await refreshUser();
+
       toast({
         title: 'Profile picture removed',
         description: 'Your profile picture has been removed successfully.',
@@ -199,11 +229,33 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
         config.container,
         className
       )}
+      style={{
+        border: '2px solid #00c1cb',
+      }}
     >
       <img
         src={profileImageUrl}
         alt={user.name || 'Profile'}
         className="w-full h-full object-cover"
+        onLoad={() => {
+          console.log(
+            'ProfilePicture: Image loaded successfully!',
+            profileImageUrl
+          );
+        }}
+        onError={(e: any) => {
+          console.error('ProfilePicture: Image failed to load:', {
+            src: profileImageUrl,
+            errorType: e.type,
+            target: e.target,
+            currentSrc: e.target?.currentSrc,
+            naturalWidth: e.target?.naturalWidth,
+            naturalHeight: e.target?.naturalHeight,
+          });
+          console.error('Full error event:', e);
+          // Fallback to showing avatar if image fails
+          setProfileImageUrl(null);
+        }}
       />
     </div>
   ) : (

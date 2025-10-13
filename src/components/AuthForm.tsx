@@ -395,7 +395,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
           {invitationMessage && (
             <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
-              <div className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0">
+              <div className="h-6 w-6 text-green mt-0.5 flex-shrink-0">
                 <svg
                   className="w-6 h-6"
                   fill="currentColor"
@@ -409,10 +409,10 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-medium text-green-800">
+                <p className="text-sm font-medium text-slate-700">
                   Invitation Accepted
                 </p>
-                <p className="text-sm text-green-700">{invitationMessage}</p>
+                <p className="text-sm text-slate-700">{invitationMessage}</p>
               </div>
             </div>
           )}

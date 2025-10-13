@@ -18,6 +18,7 @@ interface AuthContextType {
   loading: boolean;
   logout: (reason?: 'manual' | 'inactivity') => Promise<void>;
   isSessionValid: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -101,6 +102,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (twoFAUser) {
               console.log('AuthContext: Using 2FA-based user for dashboard');
+
+              // Generate profile image URL from fileId
+              let profileImageUrl = null;
+              if (twoFAUser.profileImageId) {
+                const bucketId =
+                  process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET;
+                const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+                const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
+
+                if (bucketId && endpoint && projectId) {
+                  // Use direct Appwrite URL (bucket must have "Any" read permission)
+                  profileImageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${twoFAUser.profileImageId}/view?project=${projectId}`;
+                  console.log(
+                    'AuthContext: Generated profile image URL:',
+                    profileImageUrl
+                  );
+                }
+              }
+
               // Convert the custom user object to match the expected format
               const convertedUser = {
                 $id: twoFAUser.$id,
@@ -111,7 +131,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 avatar: twoFAUser.avatar,
                 emailVerification: true,
                 phoneVerification: false,
-                prefs: {},
+                prefs: {
+                  profileImage: profileImageUrl,
+                  profileImageId: twoFAUser.profileImageId || null,
+                },
                 registration: new Date().toISOString(),
                 status: true,
               } as Models.User<Models.Preferences> & {
@@ -146,6 +169,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     checkSession();
   }, [pathname]);
+
+  const refreshUser = async () => {
+    try {
+      // Check if on dashboard route (2FA-based user)
+      const isDashboardRoute =
+        pathname?.startsWith('/dashboard') ||
+        pathname?.startsWith('/file') ||
+        pathname === '/';
+
+      if (isDashboardRoute) {
+        const twoFAUser = await getCurrentUserFrom2FA();
+        if (twoFAUser) {
+          // Generate profile image URL from fileId
+          let profileImageUrl = null;
+          if (twoFAUser.profileImageId) {
+            const bucketId =
+              process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET;
+            const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+            const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
+
+            if (bucketId && endpoint && projectId) {
+              // Use direct Appwrite URL (bucket must have "Any" read permission)
+              profileImageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${twoFAUser.profileImageId}/view?project=${projectId}`;
+              console.log(
+                'refreshUser: Generated profile image URL:',
+                profileImageUrl
+              );
+            }
+          }
+
+          const convertedUser = {
+            $id: twoFAUser.$id,
+            name: twoFAUser.fullName,
+            email: twoFAUser.email,
+            role: twoFAUser.role,
+            division: twoFAUser.division,
+            avatar: twoFAUser.avatar,
+            emailVerification: true,
+            phoneVerification: false,
+            prefs: {
+              profileImage: profileImageUrl,
+              profileImageId: twoFAUser.profileImageId || null,
+            },
+            registration: new Date().toISOString(),
+            status: true,
+          } as Models.User<Models.Preferences> & {
+            role?: string;
+            division?: string;
+            avatar?: string;
+          };
+          setUser(convertedUser);
+        }
+      } else {
+        // For session-based user
+        const sessionUser = await getSessionUser();
+        if (sessionUser) {
+          setUser(sessionUser);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
 
   const logout = async (reason: 'manual' | 'inactivity' = 'manual') => {
     try {
@@ -191,7 +277,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Always render the same structure, but conditionally show content
   return (
     <AuthContext.Provider
-      value={{ user, setUser, loading, logout, isSessionValid }}
+      value={{ user, setUser, loading, logout, isSessionValid, refreshUser }}
     >
       {!mounted ? (
         <div style={{ visibility: 'hidden' }}>{children}</div>
@@ -213,6 +299,7 @@ export const useAuth = () => {
       loading: true,
       logout: async () => {},
       isSessionValid: false,
+      refreshUser: async () => {},
     }
   );
 };

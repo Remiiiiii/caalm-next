@@ -179,11 +179,15 @@ export async function PUT(request: NextRequest) {
         // Clean up the temporary secret
         tempSecrets.delete(factorId);
 
-        // Send SMS notification to admins and executives
+        // Send SMS notification to admins, executives, and department managers
         try {
           const user = userResponse.rows[0];
-          if (user.email && user.fullName) {
-            await notify2FACompleted(user.email, user.fullName);
+          if (user.email && user.fullName && user.department) {
+            await notify2FACompleted(
+              user.email,
+              user.fullName,
+              user.department
+            );
           }
         } catch (smsError) {
           console.error('Failed to send 2FA completion SMS:', smsError);

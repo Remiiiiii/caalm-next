@@ -36,7 +36,11 @@ export async function POST(request: NextRequest) {
         break;
 
       case '2fa-completed':
-        await notify2FACompleted('test@example.com', 'Test User');
+        await notify2FACompleted(
+          'test@example.com',
+          'Test User',
+          'Engineering'
+        );
         break;
 
       default:

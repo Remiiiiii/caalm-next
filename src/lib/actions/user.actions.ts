@@ -307,45 +307,54 @@ export const finalizeAccountAfterEmailVerification = async ({
     // The user can still sign in, but their name won't be in the custom collection
   }
 
-  // 4. Add messaging target so user can be added as a subscriber manually
-  try {
-    await addUserEmailTarget({ userId: accountId, email });
-  } catch (error) {
-    console.warn(
-      'Failed to add email target, but continuing with account creation:',
-      error
-    );
-    // Don't throw error here as the main account creation should still succeed
-  }
+  // 4-6. Run non-critical operations in parallel (don't await)
+  // These operations run in the background and don't block the user's redirect
+  Promise.allSettled([
+    // Add messaging target
+    addUserEmailTarget({ userId: accountId, email }).catch((error) => {
+      console.warn('Failed to add email target:', error);
+    }),
 
-  // 5. Send confirmation email to user about their request
-  try {
-    const { mailgunService } = await import('../services/mailgun');
-    await mailgunService.sendAccountRequestConfirmation(email, fullName);
-    console.log('Account request confirmation email sent to:', email);
-  } catch (error) {
-    console.error('Failed to send account request confirmation email:', error);
-    // Don't throw error here as the main account creation should still succeed
-  }
+    // Send confirmation email
+    (async () => {
+      try {
+        const { mailgunService } = await import('../services/mailgun');
+        await mailgunService.sendAccountRequestConfirmation(email, fullName);
+        console.log('Account request confirmation email sent to:', email);
+      } catch (error) {
+        console.error(
+          'Failed to send account request confirmation email:',
+          error
+        );
+      }
+    })(),
 
-  // 6. Notify executives about the new user request
-  try {
-    const { triggerNewUserRequestNotification } = await import(
-      '../utils/notificationTriggers'
-    );
-    await triggerNewUserRequestNotification(email, fullName);
-    console.log(
-      'Executive notification sent for new user request from:',
-      email
-    );
+    // Notify executives
+    (async () => {
+      try {
+        const { triggerNewUserRequestNotification } = await import(
+          '../utils/notificationTriggers'
+        );
+        await triggerNewUserRequestNotification(email, fullName);
+        console.log(
+          'Executive notification sent for new user request from:',
+          email
+        );
 
-    // Also send SMS notification using our new system
-    await notifyOTPVerified(email, fullName);
-  } catch (error) {
-    console.error('Failed to notify executives about new user request:', error);
-    // Don't throw error here as the main account creation should still succeed
-  }
+        // Also send SMS notification using our new system
+        await notifyOTPVerified(email, fullName);
+      } catch (error) {
+        console.error(
+          'Failed to notify executives about new user request:',
+          error
+        );
+      }
+    })(),
+  ]).then(() => {
+    console.log('Background tasks completed for user:', email);
+  });
 
+  // Return immediately without waiting for background tasks
   return { accountId };
 };
 
