@@ -209,12 +209,14 @@ const DepartmentPerformanceWidget: React.FC<
             </div>
           </div>
           {/* Performance status indicator */}
-          <div className="flex items-center justify-center !mt-6">
-            <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-              <span className="text-xs text-slate-600 font-medium">
-                Live Performance Data
-              </span>
+          <div className="mt-3 border-t border-white/20">
+            <div className="flex items-center justify-center">
+              <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                <span className="text-xs text-slate-600 font-medium">
+                  Live Performance Data
+                </span>
+              </div>
             </div>
           </div>
         </div>

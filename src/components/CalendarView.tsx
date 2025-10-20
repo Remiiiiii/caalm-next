@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,9 @@ import {
   Grid3X3,
   CalendarDays,
   ChevronDownIcon,
+  Settings,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import {
   format,
@@ -55,6 +58,8 @@ import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import ExpandedCalendarView from '@/components/ExpandedCalendarView';
 import { CalendarEventSkeleton } from '@/components/ui/skeletons';
+import CalendarSettings from '@/components/CalendarSettings';
+import { hasMicrosoftCalendarIntegration } from '@/lib/actions/calendar.actions';
 
 // Local event interface for component use
 interface LocalCalendarEvent {
@@ -110,6 +115,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [creatingEvent, setCreatingEvent] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [outlookConnected, setOutlookConnected] = useState(false);
   const [newEvent, setNewEvent] = useState<NewEventForm>({
     title: '',
     date: new Date(),
@@ -129,6 +136,22 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   // Combine database events with prop events
   const allEvents = [...calendarEvents, ...events];
+
+  // Check Outlook connection status
+  useEffect(() => {
+    const checkOutlookConnection = async () => {
+      if (user?.$id) {
+        try {
+          const connected = await hasMicrosoftCalendarIntegration(user.$id);
+          setOutlookConnected(connected);
+        } catch (error) {
+          console.error('Error checking Outlook connection:', error);
+        }
+      }
+    };
+
+    checkOutlookConnection();
+  }, [user]);
 
   const handleDateSelect = (date: Date | undefined) => {
     // Don't allow selecting past dates
@@ -196,6 +219,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       },
     };
     return configs[type];
+  };
+
+  // Check if event is from Outlook
+  const isOutlookEvent = (event: LocalCalendarEvent): boolean => {
+    return !!(event as any).outlook_id || (event as any).source === 'outlook';
   };
 
   const handleAddEvent = async () => {
@@ -391,8 +419,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                               )}
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="text-xs text-slate-500 mb-1">
-                                {config.label}
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="text-xs text-slate-500">
+                                  {config.label}
+                                </div>
+                                {isOutlookEvent(event) && (
+                                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                                    <CheckCircle className="h-3 w-3" />
+                                    <span>Outlook</span>
+                                  </div>
+                                )}
                               </div>
                               <div className="font-semibold text-slate-800 text-sm mb-1">
                                 {event.title}
@@ -494,6 +530,39 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               </TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {/* Outlook Status Indicator */}
+          {outlookConnected && (
+            <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
+              <CheckCircle className="h-3 w-3" />
+              <span>Outlook</span>
+            </div>
+          )}
+
+          {/* Settings Button */}
+          <Dialog open={showSettings} onOpenChange={setShowSettings}>
+            <DialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0 hover:bg-slate-100"
+                title="Calendar Settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
+              <DialogHeader>
+                <DialogTitle className="sidebar-gradient-text">
+                  Calendar Settings
+                </DialogTitle>
+              </DialogHeader>
+              <CalendarSettings
+                userId={user?.$id || ''}
+                onClose={() => setShowSettings(false)}
+              />
+            </DialogContent>
+          </Dialog>
 
           {/* Expand Button */}
           <ExpandedCalendarView

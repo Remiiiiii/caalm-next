@@ -500,7 +500,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
             </div>
             <div className="flex gap-2 min-w-full -ml-2">
               <DepartmentPerformanceWidget />
-              <QuickNotesWidget user={user as any} />
+              {user && <QuickNotesWidget user={user as any} />}
               <ContractExpiryAlertsWidget
                 maxVisible={2}
                 showSettings={false}
@@ -588,253 +588,108 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
         )}
       </div>
 
-      {/* Main Content Grid - Enhanced Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* System Overview - Takes 8 columns */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* System Health & Performance */}
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold text-center sidebar-gradient-text">
-                System Health
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {isLoading ? (
-                <div className="space-y-4 py-4">
-                  <div className="animate-pulse bg-gray-200 h-20 rounded"></div>
+      {/* Main Content Grid - Reconfigured Layout */}
+      <div className="space-y-6">
+        {/* Row 1: System Status, System Alerts (col 1) | Activity Overview (col 2) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Column 1: System Status & Activity Overview  */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* System Status */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold sidebar-gradient-text">
+                  System Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isLoading ? (
                   <div className="animate-pulse bg-gray-200 h-16 rounded"></div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* System Health Status */}
-                  <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-                    <div className="flex items-center space-x-3">
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
                       {getSystemHealthIcon(stats.systemHealth)}
-                      <div>
-                        <h3 className="font-semibold text-navy">
-                          System Status
-                        </h3>
-                        <p className="text-sm text-slate-dark">
-                          Overall system performance
-                        </p>
-                      </div>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getSystemHealthColor(
+                          stats.systemHealth
+                        )}`}
+                      >
+                        {stats.systemHealth.toUpperCase()}
+                      </span>
                     </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${getSystemHealthColor(
-                        stats.systemHealth
-                      )}`}
-                    >
-                      {stats.systemHealth.toUpperCase()}
-                    </span>
-                  </div>
-
-                  {/* Performance Metrics */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-blue-600 font-medium">
-                            UPTIME
-                          </p>
-                          <p className="text-lg font-bold text-blue-800">
-                            99.9%
-                          </p>
-                        </div>
-                        <CheckCircle className="h-5 w-5 text-blue-600" />
-                      </div>
-                    </div>
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-green-600 font-medium">
-                            RESPONSE
-                          </p>
-                          <p className="text-lg font-bold text-green-800">
-                            120ms
-                          </p>
-                        </div>
-                        <TrendingUp className="h-5 w-5 text-green-600" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <RecentActivity />
-
-          {/* Calendar */}
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-            <CardContent className="p-4">
-              <CalendarView
-                user={user as any}
-                onEventCreate={() =>
-                  toast({
-                    title: 'Success',
-                    description: 'Event created successfully!',
-                  })
-                }
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Enhanced Sidebar - Takes 4 columns */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Activity Overview */}
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
-                <Activity className="h-5 w-5 mr-2" />
-                Activity Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {isLoading ? (
-                <div className="space-y-3">
-                  <div className="animate-pulse bg-gray-200 h-12 rounded"></div>
-                  <div className="animate-pulse bg-gray-200 h-12 rounded"></div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Activity className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">
-                          Total Activities
-                        </p>
-                        <p className="text-xs text-blue-600">
-                          All time activities
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-2xl font-bold text-navy">
-                      {stats.totalActivities}
+                    <p className="text-xs text-slate-dark">
+                      Overall system performance
                     </p>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <TrendingUp className="h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="text-sm font-medium text-green-800">
-                          Recent Activities
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <div className="text-center p-2 bg-blue-50 border border-blue-200 rounded">
+                        <p className="text-xs text-blue-600 font-medium">
+                          UPTIME
                         </p>
-                        <p className="text-xs text-green-600">Last 24 hours</p>
+                        <p className="text-sm font-bold text-blue-800">99.9%</p>
+                      </div>
+                      <div className="text-center p-2 bg-green-50 border border-green-200 rounded">
+                        <p className="text-xs text-green-600 font-medium">
+                          RESPONSE
+                        </p>
+                        <p className="text-sm font-bold text-green-800">
+                          120ms
+                        </p>
                       </div>
                     </div>
-                    <p className="text-2xl font-bold text-navy">
-                      {stats.recentActivities}
-                    </p>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* System Monitoring */}
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
-                <Server className="h-5 w-5 mr-2" />
-                System Monitoring
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Database className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800">
-                        Database
-                      </p>
-                      <p className="text-xs text-blue-600">
-                        Connection healthy
-                      </p>
-                    </div>
-                  </div>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Wifi className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="text-sm font-medium text-green-800">
-                        API Status
-                      </p>
-                      <p className="text-xs text-green-600">
-                        All endpoints active
-                      </p>
-                    </div>
-                  </div>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Server className="h-5 w-5 text-gray-600" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">
-                        Server Load
-                      </p>
-                      <p className="text-xs text-gray-600">Normal (45% CPU)</p>
-                    </div>
-                  </div>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
-                <Settings className="h-5 w-5 mr-2" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Users
-                </Button>
-                <Button
-                  variant="outline"
-                  className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
-                >
-                  <Shield className="h-4 w-4 mr-2" />
-                  Security
-                </Button>
-                <Button
-                  variant="outline"
-                  className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
-                >
+            {/* Activity Overview */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-sm font-bold sidebar-gradient-text">
                   <Activity className="h-4 w-4 mr-2" />
-                  Logs
-                </Button>
-                <Button
-                  variant="outline"
-                  className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
-                >
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Reports
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                  Activity Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isLoading ? (
+                  <div className="space-y-2">
+                    <div className="animate-pulse bg-gray-200 h-8 rounded"></div>
+                    <div className="animate-pulse bg-gray-200 h-8 rounded"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Activity className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <p className="text-xs font-medium text-blue-800">
+                            Total Activities
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-lg font-bold text-navy">
+                        {stats.totalActivities}
+                      </p>
+                    </div>
 
-          {/* System Alerts */}
+                    <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                        <div>
+                          <p className="text-xs font-medium text-green-800">
+                            Recent Activities
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-lg font-bold text-navy">
+                        {stats.recentActivities}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Column 2: System Alerts */}
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
@@ -843,43 +698,25 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {stats.pendingUsers > 0 && (
-                  <div className="flex items-start space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                  <div className="flex items-start space-x-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-yellow-800">
-                        {stats.pendingUsers} user(s) pending approval
-                      </p>
-                      <p className="text-xs text-yellow-600">
-                        Review and approve new registrations
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {stats.systemHealth === 'critical' && (
-                  <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-red-800">
-                        System health critical
-                      </p>
-                      <p className="text-xs text-red-600">
-                        Immediate attention required
+                      <p className="text-xs font-medium text-yellow-800">
+                        {stats.pendingUsers} pending approval
                       </p>
                     </div>
                   </div>
                 )}
 
                 {stats.systemHealth === 'good' && stats.pendingUsers === 0 && (
-                  <div className="flex items-start space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-start space-x-2 p-2 bg-green-50 border border-green-200 rounded-lg">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-green-800">
+                      <p className="text-xs font-medium text-green-800">
                         All systems operational
                       </p>
-                      <p className="text-xs text-green-600">
+                      <p className="text-[10px] text-green-600">
                         No issues detected
                       </p>
                     </div>
@@ -888,7 +725,133 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
               </div>
             </CardContent>
           </Card>
+        </div>
 
+        {/* Row 2: Calendar (col 1) | System Monitoring + Quick Actions (col 2) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Column 1: Calendar - Full Height */}
+          {user && (
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardContent className="p-4">
+                <CalendarView
+                  user={user as any}
+                  onEventCreate={() =>
+                    toast({
+                      title: 'Success',
+                      description: 'Event created successfully!',
+                    })
+                  }
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Column 2: System Monitoring + Quick Actions */}
+          <div className="space-y-6">
+            {/* System Monitoring */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
+                  <Server className="h-5 w-5 mr-2" />
+                  System Monitoring
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Database className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">
+                          Database
+                        </p>
+                        <p className="text-xs text-blue-600">
+                          Connection healthy
+                        </p>
+                      </div>
+                    </div>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Wifi className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          API Status
+                        </p>
+                        <p className="text-xs text-green-600">
+                          All endpoints active
+                        </p>
+                      </div>
+                    </div>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Server className="h-5 w-5 text-gray-600" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">
+                          Server Load
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          Normal (45% CPU)
+                        </p>
+                      </div>
+                    </div>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
+                  <Settings className="h-5 w-5 mr-2" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Users
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Security
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
+                  >
+                    <Activity className="h-4 w-4 mr-2" />
+                    Logs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Reports
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Row 3: Recent Files Uploaded (col 1) | Recent Activity (col 2) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Files Uploaded */}
           <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
             <CardHeader className="pb-3">
@@ -947,6 +910,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
               )}
             </CardContent>
           </Card>
+
+          {/* Recent Activity */}
+          <RecentActivity />
         </div>
       </div>
 

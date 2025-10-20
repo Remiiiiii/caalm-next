@@ -51,4 +51,14 @@ export const appwriteConfig = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
   twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
+
+  // Microsoft Calendar Integration
+  microsoftClientId: process.env.MICROSOFT_CLIENT_ID,
+  microsoftClientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+  microsoftTenantId: process.env.MICROSOFT_TENANT_ID,
+  microsoftRedirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI,
+
+  // Calendar Integrations Collection
+  calendarIntegrationsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION,
 };

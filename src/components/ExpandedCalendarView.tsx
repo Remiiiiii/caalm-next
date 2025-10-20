@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -46,6 +47,10 @@ import {
   Edit,
   Trash2,
   ChevronDownIcon,
+  Settings,
+  CheckCircle,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import {
   format,
@@ -65,6 +70,11 @@ import { cn } from '@/lib/utils';
 import { createCalendarEvent } from '@/lib/actions/calendar.client';
 import { useToast } from '@/hooks/use-toast';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import CalendarSettings from '@/components/CalendarSettings';
+import {
+  hasMicrosoftCalendarIntegration,
+  syncMicrosoftCalendar,
+} from '@/lib/actions/calendar.actions';
 
 // Local event interface for component use
 interface LocalCalendarEvent {
@@ -115,6 +125,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
   onEventClick,
   onDateSelect,
   onEventCreate,
+  user,
 }) => {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -134,6 +145,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     permissions: 'view',
     linkEnabled: false,
   });
+  const [showSettings, setShowSettings] = useState(false);
+  const [outlookConnected, setOutlookConnected] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // New event form state
   const [newEvent, setNewEvent] = useState<NewEventForm>({
@@ -149,6 +163,55 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
   // Combine local events with calendar events
   const allEvents = [...events, ...(calendarEvents || [])];
+
+  // Check Outlook connection status
+  useEffect(() => {
+    const checkOutlookConnection = async () => {
+      if (user?.$id) {
+        try {
+          const connected = await hasMicrosoftCalendarIntegration(user.$id);
+          setOutlookConnected(connected);
+        } catch (error) {
+          console.error('Error checking Outlook connection:', error);
+        }
+      }
+    };
+
+    checkOutlookConnection();
+  }, [user]);
+
+  const handleSync = async () => {
+    if (!user?.$id) return;
+
+    try {
+      setSyncing(true);
+      const result = await syncMicrosoftCalendar(user.$id);
+
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: result.message,
+        });
+        // Refresh calendar events
+        mutate();
+      } else {
+        toast({
+          title: 'Sync Failed',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error syncing calendar:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to sync calendar',
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -185,6 +248,11 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
       },
     };
     return configs[type];
+  };
+
+  // Check if event is from Outlook
+  const isOutlookEvent = (event: LocalCalendarEvent): boolean => {
+    return !!(event as any).outlook_id || (event as any).source === 'outlook';
   };
 
   const handleAddEvent = async () => {
@@ -337,7 +405,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                     <div
                       key={event.id}
                       className={cn(
-                        'text-xs p-1 rounded cursor-pointer truncate',
+                        'text-xs p-1 rounded cursor-pointer truncate relative',
                         config.color
                       )}
                       onClick={(e) => {
@@ -345,7 +413,12 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                         handleEventClick(event);
                       }}
                     >
-                      {event.title}
+                      <div className="flex items-center gap-1">
+                        <span className="truncate">{event.title}</span>
+                        {isOutlookEvent(event) && (
+                          <CheckCircle className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -413,7 +486,12 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                         handleEventClick(event);
                       }}
                     >
-                      <div className="font-medium">{event.title}</div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <div className="font-medium flex-1">{event.title}</div>
+                        {isOutlookEvent(event) && (
+                          <CheckCircle className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                        )}
+                      </div>
                       {event.startTime && (
                         <div className="text-xs opacity-75">
                           {event.startTime}
@@ -543,6 +621,59 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                   <Printer className="h-4 w-4 mr-2" />
                   Print
                 </Button>
+
+                {/* Outlook Status and Controls */}
+                {outlookConnected && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
+                      <CheckCircle className="h-3 w-3" />
+                      <span>Outlook</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSync}
+                      disabled={syncing}
+                      className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                    >
+                      {syncing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />{' '}
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" /> Sync
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Settings Button */}
+                <Dialog open={showSettings} onOpenChange={setShowSettings}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Settings
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
+                    <DialogHeader>
+                      <DialogTitle className="sidebar-gradient-text">
+                        Calendar Settings
+                      </DialogTitle>
+                    </DialogHeader>
+                    <CalendarSettings
+                      userId={user?.$id || ''}
+                      onClose={() => setShowSettings(false)}
+                    />
+                  </DialogContent>
+                </Dialog>
 
                 <Button
                   onClick={() => setIsAddEventOpen(true)}

@@ -225,18 +225,21 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
   const avatarContent = profileImageUrl ? (
     <div
       className={cn(
-        'rounded-full overflow-hidden',
+        'rounded-full overflow-hidden relative',
         config.container,
         className
       )}
       style={{
-        border: '2px solid #00c1cb',
+        background: 'linear-gradient(135deg, #12477d 0%, #03afbf 100%)',
+        padding: '3px',
+        width: '38px',
+        height: '38px',
       }}
     >
       <img
         src={profileImageUrl}
         alt={user.name || 'Profile'}
-        className="w-full h-full object-cover"
+        className="w-25 h-25 object-cover rounded-full border-2 border-[#FCFEFF]"
         onLoad={() => {
           console.log(
             'ProfilePicture: Image loaded successfully!',

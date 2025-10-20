@@ -1,0 +1,49 @@
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  deleteCalendarIntegration,
+  getCalendarIntegration,
+} from '@/lib/actions/calendar-integration.actions';
+import { createSessionClient } from '@/lib/appwrite';
+
+export async function POST(request: NextRequest) {
+  try {
+    // Get current user session
+    const sessionClient = await createSessionClient();
+    const account = await sessionClient.account.get();
+
+    if (!account) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get the integration to delete
+    const integration = await getCalendarIntegration(account.$id, 'microsoft');
+
+    if (!integration) {
+      return NextResponse.json(
+        { error: 'No Microsoft calendar integration found' },
+        { status: 404 }
+      );
+    }
+
+    // Delete the integration
+    await deleteCalendarIntegration(integration.$id!);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Microsoft calendar integration disconnected successfully',
+    });
+  } catch (error) {
+    console.error('Microsoft disconnect error:', error);
+
+    return NextResponse.json(
+      {
+        error: 'Failed to disconnect Microsoft calendar',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
