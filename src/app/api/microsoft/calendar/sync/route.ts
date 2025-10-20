@@ -19,16 +19,17 @@ import {
   SyncConflict,
   SyncError,
 } from '@/lib/microsoft/sync';
-import { createSessionClient } from '@/lib/appwrite';
+import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
 import { CalendarEvent } from '@/lib/actions/calendar.actions';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get current user session
-    const sessionClient = await createSessionClient();
-    const account = await sessionClient.account.get();
+    // Get current user ID
+    let userId: string;
 
-    if (!account) {
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get valid integration
-    const integration = await getValidIntegration(account.$id, 'microsoft');
+    const integration = await getValidIntegration(userId, 'microsoft');
 
     if (!integration) {
       return NextResponse.json(
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     // Perform bidirectional sync
     const syncResult = await performBidirectionalSync(
       graphClient,
-      account.$id,
+      userId,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
       strategy
@@ -133,7 +134,7 @@ async function performBidirectionalSync(
     });
 
     // Populate Outlook event map
-    outlookEvents.forEach((event) => {
+    outlookEvents.forEach((event: any) => {
       const key = generateEventKey(event);
       outlookEventMap.set(key, event);
     });

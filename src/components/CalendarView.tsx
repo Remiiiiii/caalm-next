@@ -135,7 +135,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   );
 
   // Combine database events with prop events
-  const allEvents = [...calendarEvents, ...events];
+  const allEvents: LocalCalendarEvent[] = [
+    ...calendarEvents,
+    ...events,
+  ] as LocalCalendarEvent[];
 
   // Check Outlook connection status
   useEffect(() => {

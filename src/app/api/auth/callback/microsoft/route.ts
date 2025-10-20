@@ -5,7 +5,7 @@ import {
   calculateTokenExpiry,
 } from '@/lib/microsoft/oauth';
 import { createCalendarIntegration } from '@/lib/actions/calendar-integration.actions';
-import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
+import { createSessionClient } from '@/lib/appwrite';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
@@ -54,12 +54,11 @@ export async function GET(request: NextRequest) {
     // Clear the state cookie
     cookieStore.delete('microsoft-oauth-state');
 
-    // Get current user ID
-    let userId: string;
+    // Get current user session
+    const sessionClient = await createSessionClient();
+    const account = await sessionClient.account.get();
 
-    try {
-      userId = await getCurrentUserId();
-    } catch (authError) {
+    if (!account) {
       return NextResponse.redirect(
         `${
           process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -78,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     // Store integration in database
     await createCalendarIntegration({
-      user_id: userId,
+      user_id: account.$id,
       provider: 'microsoft',
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,

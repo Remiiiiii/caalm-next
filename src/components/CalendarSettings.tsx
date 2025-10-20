@@ -89,9 +89,40 @@ export default function CalendarSettings({
     }
   };
 
-  const handleConnect = () => {
-    // Redirect to Microsoft OAuth
-    window.location.href = '/api/microsoft/auth';
+  const handleConnect = async () => {
+    try {
+      // First check if user is authenticated
+      const response = await fetch('/api/microsoft/auth', {
+        method: 'GET',
+        redirect: 'manual', // Don't follow redirects automatically
+      });
+
+      if (response.status === 401) {
+        const errorData = await response.json();
+        toast({
+          title: 'Authentication Required',
+          description:
+            errorData.message || 'Please log in to your CAALM account first',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (response.status === 302 || response.status === 200) {
+        // If we get a redirect or success, follow it
+        window.location.href = '/api/microsoft/auth';
+      } else {
+        throw new Error(`Unexpected response: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error initiating Microsoft OAuth:', error);
+      toast({
+        title: 'Connection Failed',
+        description:
+          'Failed to connect to Microsoft Outlook. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDisconnect = async () => {

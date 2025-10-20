@@ -22,7 +22,7 @@ export interface SyncConflict {
 export interface SyncError {
   eventId: string;
   error: string;
-  operation: 'create' | 'update' | 'delete';
+  operation: 'create' | 'update' | 'delete' | 'sync';
 }
 
 /**
@@ -306,13 +306,14 @@ export function validateEventForSync(event: CalendarEvent | GraphEvent): {
     }
   } else {
     // Graph event validation
-    if (!event.subject?.trim()) {
+    const graphEvent = event as GraphEvent;
+    if (!graphEvent.subject?.trim()) {
       errors.push('Event subject is required');
     }
-    if (!event.start?.dateTime) {
+    if (!graphEvent.start?.dateTime) {
       errors.push('Event start time is required');
     }
-    if (!isValid(parseISO(event.start.dateTime))) {
+    if (!isValid(parseISO(graphEvent.start.dateTime))) {
       errors.push('Invalid event start time');
     }
   }

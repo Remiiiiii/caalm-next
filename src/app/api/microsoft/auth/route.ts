@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAuthUrl, validateConfig } from '@/lib/microsoft/oauth';
+import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
@@ -7,21 +8,30 @@ export async function GET(request: NextRequest) {
     // Validate configuration
     validateConfig();
 
-    // Get current user session
-    const cookieStore = await cookies();
-    const session = cookieStore.get('appwrite-session');
+    // Get current user ID
+    let userId: string;
 
-    if (!session?.value) {
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        {
+          error: 'Authentication required',
+          message:
+            'Please log in to your CAALM account first before connecting Microsoft Outlook',
+          action: 'login',
+        },
         { status: 401 }
       );
     }
 
-    // Generate state parameter for CSRF protection
-    const state = `${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    // Generate state parameter for CSRF protection with user ID
+    const state = `${userId}_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(2)}`;
 
     // Store state in cookie for validation
+    const cookieStore = await cookies();
     cookieStore.set('microsoft-oauth-state', state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -56,7 +66,11 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to initiate Microsoft OAuth' },
+      {
+        error: 'Failed to initiate Microsoft OAuth',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        type: error instanceof Error ? error.constructor.name : 'Unknown',
+      },
       { status: 500 }
     );
   }

@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createGraphClient } from '@/lib/microsoft/graph-client';
 import { getValidIntegration } from '@/lib/actions/calendar-integration.actions';
-import { createSessionClient } from '@/lib/appwrite';
+import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
 import { caalmEventToGraph, graphEventToCaalm } from '@/lib/microsoft/sync';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get current user session
-    const sessionClient = await createSessionClient();
-    const account = await sessionClient.account.get();
+    // Get current user ID
+    let userId: string;
 
-    if (!account) {
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get valid integration
-    const integration = await getValidIntegration(account.$id, 'microsoft');
+    const integration = await getValidIntegration(userId, 'microsoft');
 
     if (!integration) {
       return NextResponse.json(
@@ -72,11 +73,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get current user session
-    const sessionClient = await createSessionClient();
-    const account = await sessionClient.account.get();
+    // Get current user ID
+    let userId: string;
 
-    if (!account) {
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get valid integration
-    const integration = await getValidIntegration(account.$id, 'microsoft');
+    const integration = await getValidIntegration(userId, 'microsoft');
 
     if (!integration) {
       return NextResponse.json(
@@ -139,11 +141,12 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // Get current user session
-    const sessionClient = await createSessionClient();
-    const account = await sessionClient.account.get();
+    // Get current user ID
+    let userId: string;
 
-    if (!account) {
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -151,7 +154,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get valid integration
-    const integration = await getValidIntegration(account.$id, 'microsoft');
+    const integration = await getValidIntegration(userId, 'microsoft');
 
     if (!integration) {
       return NextResponse.json(
@@ -210,11 +213,12 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Get current user session
-    const sessionClient = await createSessionClient();
-    const account = await sessionClient.account.get();
+    // Get current user ID
+    let userId: string;
 
-    if (!account) {
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -222,7 +226,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get valid integration
-    const integration = await getValidIntegration(account.$id, 'microsoft');
+    const integration = await getValidIntegration(userId, 'microsoft');
 
     if (!integration) {
       return NextResponse.json(

@@ -3,15 +3,16 @@ import {
   deleteCalendarIntegration,
   getCalendarIntegration,
 } from '@/lib/actions/calendar-integration.actions';
-import { createSessionClient } from '@/lib/appwrite';
+import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get current user session
-    const sessionClient = await createSessionClient();
-    const account = await sessionClient.account.get();
+    // Get current user ID
+    let userId: string;
 
-    if (!account) {
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the integration to delete
-    const integration = await getCalendarIntegration(account.$id, 'microsoft');
+    const integration = await getCalendarIntegration(userId, 'microsoft');
 
     if (!integration) {
       return NextResponse.json(
