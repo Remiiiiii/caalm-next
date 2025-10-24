@@ -984,7 +984,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="participants">Participants</Label>
+                  <Label
+                    className="block text-md text-slate-700 mb-1"
+                    htmlFor="participants"
+                  >
+                    Participants
+                  </Label>
 
                   {/* Selected Participants Display */}
                   {selectedParticipants.length > 0 && (
@@ -1019,7 +1024,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                         setParticipantSearch(value);
                         searchUsers(value);
                       }}
-                      className="w-full"
+                      className="bg-white/30 backdrop-blur border border-white/40 shadow-md"
                     />
 
                     {/* Search Results */}
