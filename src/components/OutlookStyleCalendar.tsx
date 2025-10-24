@@ -1172,7 +1172,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       >
                         {newEvent.startTime ||
                           getSmartPlaceholderTimes(newEvent.date).startTime}
-                        <CalendarDays className="h-3 w-3" />
+                        <Clock className="h-3 w-3" />
                       </Button>
                       <Input
                         id="startTime"
@@ -1206,7 +1206,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       >
                         {newEvent.endTime ||
                           getSmartPlaceholderTimes(newEvent.date).endTime}
-                        <CalendarDays className="h-3 w-3" />
+                        <Clock className="h-3 w-3" />
                       </Button>
                       <Input
                         id="endTime"
