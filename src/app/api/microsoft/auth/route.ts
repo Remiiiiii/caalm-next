@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAuthUrl, validateConfig } from '@/lib/microsoft/oauth';
 import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
+import { getRedirectUri } from '@/lib/config/environment';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {

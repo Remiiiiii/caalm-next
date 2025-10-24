@@ -22,8 +22,8 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
   const searchText = ((await searchParams)?.query as string) || '';
   const sort = ((await searchParams)?.sort as string) || '';
 
-  let files: { documents: UIFileDoc[] };
-  let filteredDocuments: UIFileDoc[];
+  let files: { documents: UIFileDoc[] } = { documents: [] };
+  let filteredDocuments: UIFileDoc[] = [];
 
   // Special handling for contracts - get ALL contracts from contracts collection
   if (type.toLowerCase() === 'contracts') {
@@ -153,6 +153,11 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
   // Get current user
   const user = await getCurrentUser();
+
+  // Ensure filteredDocuments is always defined
+  if (!filteredDocuments) {
+    filteredDocuments = files?.documents || [];
+  }
 
   // Calculate total size in bytes
   const totalSizeBytes = filteredDocuments.reduce(

@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:restart": "taskkill /F /IM node.exe 2>nul || echo \"No Node processes to kill\" && npm run dev",
+    "dev:setup": "node scripts/setup-dev.js && pnpm run dev",
+    "restart": "taskkill /F /IM node.exe 2>nul || echo \"No Node processes to kill\" && pnpm run dev",
     "build": "next build",
+    "build:prod": "NODE_ENV=production next build",
     "start": "next start",
+    "start:prod": "NODE_ENV=production next start",
     "lint": "next lint",
     "test": "playwright test",
     "test:clean": "playwright test --reporter=html && rm -rf test-results",

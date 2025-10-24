@@ -380,7 +380,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
           <div
             key={day}
-            className="p-1.5 text-center text-xs font-medium text-slate-600 bg-slate-50"
+            className="p-3 text-center text-sm font-medium text-slate-600 bg-slate-50"
           >
             {day}
           </div>
@@ -399,26 +399,24 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
             <div
               key={day.toISOString()}
               className={cn(
-                'min-h-[140px] p-1.5 pt-1 border border-slate-200 cursor-pointer transition-colors',
+                'min-h-[120px] p-2 border border-slate-200 cursor-pointer transition-colors',
                 !isCurrentMonth && 'bg-slate-50 text-slate-400',
                 isSelected && 'bg-blue-50 border-blue-300',
                 isCurrentDay && 'bg-blue-100'
               )}
               onClick={() => handleDateSelect(day)}
             >
-              <div className="text-xs font-medium mb-0.5">
-                {format(day, 'd')}
-              </div>
+              <div className="text-sm font-medium mb-1">{format(day, 'd')}</div>
 
               {/* Events for this day */}
-              <div className="space-y-0.5">
-                {dayEvents.slice(0, 2).map((event) => {
+              <div className="space-y-1">
+                {dayEvents.slice(0, 3).map((event) => {
                   const config = getEventTypeConfig(event.type);
                   return (
                     <div
                       key={event.id}
                       className={cn(
-                        'text-[10px] p-0.5 rounded cursor-pointer truncate relative',
+                        'text-xs p-1 rounded cursor-pointer truncate relative',
                         config.color
                       )}
                       onClick={(e) => {
@@ -426,18 +424,18 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                         handleEventClick(event);
                       }}
                     >
-                      <div className="flex items-center gap-0.5">
+                      <div className="flex items-center gap-1">
                         <span className="truncate">{event.title}</span>
                         {isOutlookEvent(event) && (
-                          <CheckCircle className="h-2 w-2 text-blue-600 flex-shrink-0" />
+                          <CheckCircle className="h-3 w-3 text-blue-600 flex-shrink-0" />
                         )}
                       </div>
                     </div>
                   );
                 })}
-                {dayEvents.length > 2 && (
-                  <div className="text-[10px] text-slate-500 text-center">
-                    +{dayEvents.length - 2} more
+                {dayEvents.length > 3 && (
+                  <div className="text-xs text-slate-500 text-center">
+                    +{dayEvents.length - 3} more
                   </div>
                 )}
               </div>
@@ -538,11 +536,11 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
           <DialogHeader className="sr-only">
             <DialogTitle>Expanded Calendar View</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col h-full overflow-hidden">
+          <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex items-center justify-between p-3 border-b bg-white flex-shrink-0">
-              <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-bold sidebar-gradient-text">
+            <div className="flex items-center justify-between p-6 border-b bg-white">
+              <div className="flex items-center space-x-4">
+                <h2 className="text-2xl font-bold sidebar-gradient-text">
                   Calendar
                 </h2>
                 <div className="flex items-center space-x-2">
@@ -567,7 +565,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="text-sm font-medium">
+                <div className="text-lg font-medium">
                   {format(currentMonth, 'MMMM yyyy')}
                 </div>
                 <Button
@@ -583,26 +581,26 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                 </Button>
               </div>
 
-              <div className="flex items-center space-x-1 flex-wrap gap-1">
+              <div className="flex items-center space-x-2">
                 <Tabs
                   value={viewMode}
                   onValueChange={(value) =>
                     setViewMode(value as 'month' | 'week')
                   }
                 >
-                  <TabsList className="grid w-full grid-cols-2 h-8">
+                  <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger
                       value="month"
-                      className="flex items-center space-x-1 text-xs px-2"
+                      className="flex items-center space-x-2"
                     >
-                      <Grid3X3 className="h-3 w-3" />
+                      <Grid3X3 className="h-4 w-4" />
                       <span>Month</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="week"
-                      className="flex items-center space-x-1 text-xs px-2"
+                      className="flex items-center space-x-2"
                     >
-                      <CalendarDays className="h-3 w-3" />
+                      <CalendarDays className="h-4 w-4" />
                       <span>Week</span>
                     </TabsTrigger>
                   </TabsList>
@@ -611,53 +609,52 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 h-8 px-2"
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
-                  <Filter className="h-3 w-3 mr-1" />
-                  <span className="text-xs">Filter</span>
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter
                 </Button>
 
                 <Button
                   size="sm"
                   variant="outline"
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 h-8 px-2"
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
-                  <Share2 className="h-3 w-3 mr-1" />
-                  <span className="text-xs">Share</span>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
                 </Button>
 
                 <Button
                   size="sm"
                   variant="outline"
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 h-8 px-2"
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
-                  <Printer className="h-3 w-3 mr-1" />
-                  <span className="text-xs">Print</span>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
                 </Button>
 
                 {/* Outlook Status and Controls */}
                 {outlookConnected && (
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-100 text-green-800 rounded-md text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
                       <CheckCircle className="h-3 w-3" />
-                      <span className="text-[10px]">Outlook</span>
+                      <span>Outlook</span>
                     </div>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={handleSync}
                       disabled={syncing}
-                      className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 h-8 px-2"
+                      className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                     >
                       {syncing ? (
                         <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          <span className="text-xs">Syncing...</span>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />{' '}
+                          Syncing...
                         </>
                       ) : (
                         <>
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                          <span className="text-xs">Sync</span>
+                          <RefreshCw className="h-4 w-4 mr-2" /> Sync
                         </>
                       )}
                     </Button>
@@ -670,10 +667,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 h-8 px-2"
+                      className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                     >
-                      <Settings className="h-3 w-3 mr-1" />
-                      <span className="text-xs">Settings</span>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Settings
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
@@ -691,10 +688,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
                 <Button
                   onClick={() => setIsAddEventOpen(true)}
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 h-8 px-2"
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
-                  <Plus className="h-3 w-3 mr-1" />
-                  <span className="text-xs">New Event</span>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Event
                 </Button>
               </div>
             </div>

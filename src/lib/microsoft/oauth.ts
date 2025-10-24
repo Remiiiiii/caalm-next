@@ -1,4 +1,5 @@
 import { appwriteConfig } from '@/lib/appwrite/config';
+import { getRedirectUri } from '@/lib/config/environment';
 
 export interface MicrosoftTokens {
   access_token: string;
@@ -19,10 +20,13 @@ export interface MicrosoftUser {
  * Generate Microsoft OAuth authorization URL
  */
 export function generateAuthUrl(state?: string): string {
+  // Use smart detection for redirect URI
+  const redirectUri = getRedirectUri();
+
   const params = new URLSearchParams({
     client_id: appwriteConfig.microsoftClientId!,
     response_type: 'code',
-    redirect_uri: appwriteConfig.microsoftRedirectUri!,
+    redirect_uri: redirectUri,
     scope: 'Calendars.Read Calendars.ReadWrite offline_access User.Read',
     response_mode: 'query',
     state: state || 'default',
@@ -43,11 +47,14 @@ export async function exchangeCodeForTokens(
     appwriteConfig.microsoftTenantId || 'common'
   }/oauth2/v2.0/token`;
 
+  // Use smart detection for redirect URI
+  const redirectUri = getRedirectUri();
+
   const body = new URLSearchParams({
     client_id: appwriteConfig.microsoftClientId!,
     client_secret: appwriteConfig.microsoftClientSecret!,
     code,
-    redirect_uri: appwriteConfig.microsoftRedirectUri!,
+    redirect_uri: redirectUri,
     grant_type: 'authorization_code',
   });
 
@@ -76,6 +83,9 @@ export async function refreshAccessToken(
   const tokenEndpoint = `https://login.microsoftonline.com/${
     appwriteConfig.microsoftTenantId || 'common'
   }/oauth2/v2.0/token`;
+
+  // Use smart detection for redirect URI
+  const redirectUri = getRedirectUri();
 
   const body = new URLSearchParams({
     client_id: appwriteConfig.microsoftClientId!,
@@ -142,15 +152,18 @@ export function calculateTokenExpiry(expiresIn: number): Date {
  * Validate Microsoft OAuth configuration
  */
 export function validateConfig(): void {
-  const required = [
-    'microsoftClientId',
-    'microsoftClientSecret',
-    'microsoftRedirectUri',
-  ];
+  const required = ['microsoftClientId', 'microsoftClientSecret'];
 
   for (const key of required) {
     if (!appwriteConfig[key as keyof typeof appwriteConfig]) {
       throw new Error(`Missing required Microsoft OAuth configuration: ${key}`);
     }
+  }
+
+  // Validate that redirect URI can be generated
+  try {
+    getRedirectUri();
+  } catch (error) {
+    throw new Error(`Invalid redirect URI configuration: ${error}`);
   }
 }

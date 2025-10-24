@@ -98,6 +98,17 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       ],
     },
     {
+      header: 'Calendar',
+      items: [
+        {
+          name: 'Calendar View',
+          icon: '/assets/icons/calendar.svg',
+          url: '/calendar',
+          roles: ['executive', 'manager', 'admin'],
+        },
+      ],
+    },
+    {
       header: 'Contracts',
       items: [
         // Only Executive and Admin can see All Contracts
@@ -391,6 +402,15 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                           />
                         </svg>
                       </span>
+                    ) : section.header === 'Calendar' ? (
+                      <span className="text-[#03AFBF]">
+                        <Image
+                          src="/assets/icons/calendar.svg"
+                          alt="calendar"
+                          width={24}
+                          height={24}
+                        />
+                      </span>
                     ) : section.header === 'Contracts' ? (
                       <span className="text-[#03AFBF]">
                         <Image
@@ -629,6 +649,16 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                                 <Image
                                   src="/assets/icons/user-management.svg"
                                   alt="team"
+                                  width={20}
+                                  height={20}
+                                />
+                              </span>
+                            )}
+                            {name === 'Calendar View' && (
+                              <span className="gap-1">
+                                <Image
+                                  src="/assets/icons/calendar.svg"
+                                  alt="calendar"
                                   width={20}
                                   height={20}
                                 />

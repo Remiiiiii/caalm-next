@@ -67,7 +67,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               pathname.startsWith('/media') ||
               pathname.startsWith('/others') ||
               pathname.startsWith('/audits') ||
-              pathname.startsWith('/team'));
+              pathname.startsWith('/team') ||
+              pathname.startsWith('/calendar'));
           const isAuthRoute =
             pathname &&
             (pathname.startsWith('/sign-in') ||

@@ -556,7 +556,20 @@ export const getCurrentUser = async () => {
 
     if (user.total === 0) return null;
 
-    return parseStringify(user.rows[0]);
+    // Return only the user data, not the client objects
+    const userData = user.rows[0];
+    return parseStringify({
+      $id: userData.$id,
+      fullName: userData.fullName,
+      email: userData.email,
+      avatar: userData.avatar,
+      accountId: userData.accountId,
+      role: userData.role,
+      division: userData.division,
+      status: userData.status,
+      $createdAt: userData.$createdAt,
+      $updatedAt: userData.$updatedAt,
+    });
   } catch (error) {
     // Don't log session errors as they're expected in 2FA flow
     if (error instanceof Error && error.message.includes('No session found')) {
@@ -607,7 +620,20 @@ export const getCurrentUserFrom2FA = async () => {
       console.log(
         'getCurrentUserFrom2FA - Returning actual user data for 2FA-authenticated user'
       );
-      return parseStringify(user);
+
+      // Return only the user data, not any client objects
+      return parseStringify({
+        $id: user.$id,
+        fullName: user.fullName,
+        email: user.email,
+        avatar: user.avatar,
+        accountId: user.accountId,
+        role: user.role,
+        division: user.division,
+        status: user.status,
+        $createdAt: user.$createdAt,
+        $updatedAt: user.$updatedAt,
+      });
     } catch (fetchError) {
       console.error(
         'getCurrentUserFrom2FA - Database fetch failed:',

@@ -89,40 +89,10 @@ export default function CalendarSettings({
     }
   };
 
-  const handleConnect = async () => {
-    try {
-      // First check if user is authenticated
-      const response = await fetch('/api/microsoft/auth', {
-        method: 'GET',
-        redirect: 'manual', // Don't follow redirects automatically
-      });
-
-      if (response.status === 401) {
-        const errorData = await response.json();
-        toast({
-          title: 'Authentication Required',
-          description:
-            errorData.message || 'Please log in to your CAALM account first',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (response.status === 302 || response.status === 200) {
-        // If we get a redirect or success, follow it
-        window.location.href = '/api/microsoft/auth';
-      } else {
-        throw new Error(`Unexpected response: ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Error initiating Microsoft OAuth:', error);
-      toast({
-        title: 'Connection Failed',
-        description:
-          'Failed to connect to Microsoft Outlook. Please try again.',
-        variant: 'destructive',
-      });
-    }
+  const handleConnect = () => {
+    // Redirect to Microsoft OAuth endpoint
+    // The API route will handle authentication validation and redirect to Microsoft
+    window.location.href = '/api/microsoft/auth';
   };
 
   const handleDisconnect = async () => {
@@ -178,6 +148,42 @@ export default function CalendarSettings({
       });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleEmergencyStop = async () => {
+    try {
+      const response = await fetch('/api/microsoft/disable-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: 'Emergency Stop',
+          description:
+            'Sync has been immediately disabled. No new events will be created.',
+          variant: 'destructive',
+        });
+        await loadIntegrationStatus();
+      } else {
+        toast({
+          title: 'Stop Failed',
+          description: result.message || 'Failed to stop sync',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Emergency stop error:', error);
+      toast({
+        title: 'Emergency Stop Error',
+        description: 'Failed to stop sync',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -313,9 +319,17 @@ export default function CalendarSettings({
                     )}
                   </Button>
                   <Button
-                    onClick={handleDisconnect}
+                    onClick={handleEmergencyStop}
                     size="sm"
                     variant="destructive"
+                    className="flex-1"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" /> Emergency Stop
+                  </Button>
+                  <Button
+                    onClick={handleDisconnect}
+                    size="sm"
+                    variant="outline"
                     className="flex-1"
                   >
                     Disconnect
@@ -332,6 +346,20 @@ export default function CalendarSettings({
                   <p className="text-blue-600">
                     Sync events between CAALM and Microsoft Outlook
                     automatically
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium">
+                    Important: Use a Work/School Account
+                  </p>
+                  <p className="text-amber-600">
+                    Personal Microsoft accounts (hotmail.com, outlook.com) have
+                    limited calendar access. Please use a work or school
+                    Microsoft account for full functionality.
                   </p>
                 </div>
               </div>

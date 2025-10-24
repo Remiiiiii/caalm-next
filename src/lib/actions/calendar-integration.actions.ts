@@ -41,8 +41,17 @@ export const createCalendarIntegration = async (
   try {
     const adminClient = await createAdminClient();
 
+    // Store tokens as JSON string to fit within Appwrite's limits
+    const tokensJson = JSON.stringify({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+    });
+
     const integrationData = {
-      ...data,
+      user_id: data.user_id,
+      provider: data.provider,
+      tokens_json: tokensJson,
+      token_expiry: data.token_expiry,
       connected_at: new Date().toISOString(),
       sync_enabled: data.sync_enabled ?? true,
     };
@@ -53,6 +62,8 @@ export const createCalendarIntegration = async (
       ID.unique(),
       integrationData
     );
+
+    // Tokens are now stored as JSON in the main record
 
     return response as unknown as CalendarIntegration;
   } catch (error) {
@@ -85,7 +96,21 @@ export const getCalendarIntegration = async (
       return null;
     }
 
-    return response.rows[0] as unknown as CalendarIntegration;
+    const integration = response.rows[0] as unknown as CalendarIntegration;
+
+    // Parse tokens from JSON field
+    try {
+      if (integration.tokens_json) {
+        const tokens = JSON.parse(integration.tokens_json);
+        integration.access_token = tokens.access_token;
+        integration.refresh_token = tokens.refresh_token;
+      }
+    } catch (parseError) {
+      console.error('Error parsing tokens JSON:', parseError);
+      // Return integration without tokens - will need to re-authenticate
+    }
+
+    return integration;
   } catch (error) {
     console.error('Error getting calendar integration:', error);
     throw error;
@@ -107,7 +132,27 @@ export const getUserCalendarIntegrations = async (
       [Query.equal('user_id', userId)]
     );
 
-    return response.rows as unknown as CalendarIntegration[];
+    const integrations = response.rows as unknown as CalendarIntegration[];
+
+    // Parse tokens from JSON field for all integrations
+    for (const integration of integrations) {
+      try {
+        if (integration.tokens_json) {
+          const tokens = JSON.parse(integration.tokens_json);
+          integration.access_token = tokens.access_token;
+          integration.refresh_token = tokens.refresh_token;
+        }
+      } catch (parseError) {
+        console.error(
+          'Error parsing tokens JSON for integration:',
+          integration.$id,
+          parseError
+        );
+        // Continue without tokens for this integration
+      }
+    }
+
+    return integrations;
   } catch (error) {
     console.error('Error getting user calendar integrations:', error);
     throw error;
@@ -128,13 +173,18 @@ export const updateCalendarIntegrationTokens = async (
 
     const tokenExpiry = calculateTokenExpiry(expiresIn).toISOString();
 
+    // Update tokens as JSON in the main integration record
+    const tokensJson = JSON.stringify({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
     const response = await adminClient.tablesDB.updateRow({
       databaseId: appwriteConfig.databaseId!,
       tableId: appwriteConfig.calendarIntegrationsCollectionId!,
       rowId: integrationId,
       data: {
-        access_token: accessToken,
-        refresh_token: refreshToken,
+        tokens_json: tokensJson,
         token_expiry: tokenExpiry,
       },
     });
@@ -339,5 +389,68 @@ export const getIntegrationStats = async (
       microsoft: false,
       google: false,
     };
+  }
+};
+
+/**
+ * Update calendar integration settings (like sync_enabled)
+ */
+export const updateCalendarIntegration = async (
+  userId: string,
+  updates: Partial<Pick<CalendarIntegration, 'sync_enabled' | 'last_sync'>>
+): Promise<CalendarIntegration | null> => {
+  try {
+    const adminClient = await createAdminClient();
+
+    // Find the existing integration
+    const response = await adminClient.databases.listDocuments(
+      appwriteConfig.databaseId!,
+      appwriteConfig.calendarIntegrationsCollectionId!,
+      [Query.equal('user_id', userId), Query.equal('provider', 'microsoft')]
+    );
+
+    if (response.documents.length === 0) {
+      console.error('No Microsoft integration found to update');
+      return null;
+    }
+
+    const integration = response.documents[0];
+
+    // Prepare update data
+    const updateData: any = {};
+    if (updates.sync_enabled !== undefined) {
+      updateData.sync_enabled = updates.sync_enabled;
+    }
+    if (updates.last_sync !== undefined) {
+      updateData.last_sync = updates.last_sync;
+    }
+
+    // Update the integration
+    const updatedIntegration = await adminClient.databases.updateDocument(
+      appwriteConfig.databaseId!,
+      appwriteConfig.calendarIntegrationsCollectionId!,
+      integration.$id,
+      updateData
+    );
+
+    // Parse tokens from stored JSON
+    const tokens = JSON.parse(updatedIntegration.tokens || '{}');
+
+    return {
+      $id: updatedIntegration.$id,
+      user_id: updatedIntegration.user_id,
+      provider: updatedIntegration.provider,
+      access_token: tokens.access_token || '',
+      refresh_token: tokens.refresh_token || '',
+      token_expiry: updatedIntegration.token_expiry,
+      connected_at: updatedIntegration.connected_at,
+      last_sync: updatedIntegration.last_sync,
+      sync_enabled: updatedIntegration.sync_enabled,
+      $createdAt: updatedIntegration.$createdAt,
+      $updatedAt: updatedIntegration.$updatedAt,
+    };
+  } catch (error) {
+    console.error('Error updating calendar integration:', error);
+    throw error;
   }
 };

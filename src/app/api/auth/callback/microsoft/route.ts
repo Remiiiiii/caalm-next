@@ -5,7 +5,8 @@ import {
   calculateTokenExpiry,
 } from '@/lib/microsoft/oauth';
 import { createCalendarIntegration } from '@/lib/actions/calendar-integration.actions';
-import { createSessionClient } from '@/lib/appwrite';
+import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
+import { getAppUrl } from '@/lib/config/environment';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         `${
           process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/dashboard?error=microsoft_oauth_${error}`
+        }/calendar?error=microsoft_oauth_${error}`
       );
     }
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         `${
           process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/dashboard?error=missing_parameters`
+        }/calendar?error=missing_parameters`
       );
     }
 
@@ -47,23 +48,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         `${
           process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/dashboard?error=invalid_state`
+        }/calendar?error=invalid_state`
       );
     }
 
     // Clear the state cookie
     cookieStore.delete('microsoft-oauth-state');
 
-    // Get current user session
-    const sessionClient = await createSessionClient();
-    const account = await sessionClient.account.get();
+    // Get current user ID using smart authentication
+    let userId: string;
 
-    if (!account) {
-      return NextResponse.redirect(
-        `${
-          process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/dashboard?error=no_session`
-      );
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
+      return NextResponse.redirect(`${getAppUrl()}/calendar?error=no_session`);
     }
 
     // Exchange code for tokens
@@ -77,7 +75,7 @@ export async function GET(request: NextRequest) {
 
     // Store integration in database
     await createCalendarIntegration({
-      user_id: account.$id,
+      user_id: userId,
       provider: 'microsoft',
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
@@ -85,11 +83,9 @@ export async function GET(request: NextRequest) {
       sync_enabled: true,
     });
 
-    // Redirect to dashboard with success message
+    // Redirect to calendar page with success message
     return NextResponse.redirect(
-      `${
-        process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      }/dashboard?success=microsoft_connected&user=${encodeURIComponent(
+      `${getAppUrl()}/calendar?success=microsoft_connected&user=${encodeURIComponent(
         userInfo.displayName
       )}`
     );
@@ -111,9 +107,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.redirect(
-      `${
-        process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      }/dashboard?error=microsoft_callback_${errorMessage}`
+      `${getAppUrl()}/dashboard?error=microsoft_callback_${errorMessage}`
     );
   }
 }

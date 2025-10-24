@@ -10,7 +10,8 @@ import {
 export interface CalendarEvent {
   $id?: string;
   title: string;
-  date: string;
+  startDate: string;
+  endDate?: string;
   type: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit';
   description?: string;
   contractName?: string;
@@ -25,7 +26,8 @@ export interface CalendarEvent {
 
 export interface CreateCalendarEventData {
   title: string;
-  date: string;
+  startDate: string;
+  endDate?: string;
   type: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit';
   description?: string;
   contractName?: string;
@@ -72,9 +74,9 @@ export const getCalendarEventsByMonth = async (
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [
-        Query.greaterThanEqual('date', startDate),
-        Query.lessThanEqual('date', endDate),
-        Query.orderAsc('date'),
+        Query.greaterThanEqual('startDate', startDate),
+        Query.lessThanEqual('startDate', endDate),
+        Query.orderAsc('startDate'),
       ]
     );
     console.log('Database response:', response);
@@ -82,6 +84,42 @@ export const getCalendarEventsByMonth = async (
   } catch (error) {
     console.error('Error fetching calendar events by month:', error);
     throw error;
+  }
+};
+
+// Get calendar events with Microsoft Outlook sync
+export const getCalendarEventsWithSync = async (
+  year: number,
+  month: number,
+  userId: string
+): Promise<CalendarEvent[]> => {
+  try {
+    // First, get local CAALM events
+    const localEvents = await getCalendarEventsByMonth(year, month);
+
+    // Check if user has Microsoft integration
+    const hasIntegration = await hasMicrosoftCalendarIntegration(userId);
+
+    if (hasIntegration) {
+      try {
+        // Trigger sync to fetch Outlook events
+        const syncResult = await syncMicrosoftCalendar(userId);
+        console.log('Microsoft sync result:', syncResult);
+
+        // After sync, get updated events (including synced Outlook events)
+        const syncedEvents = await getCalendarEventsByMonth(year, month);
+        return syncedEvents;
+      } catch (syncError) {
+        console.error('Error syncing Microsoft calendar:', syncError);
+        // Return local events even if sync fails
+        return localEvents;
+      }
+    }
+
+    return localEvents;
+  } catch (error) {
+    console.error('Error fetching calendar events with sync:', error);
+    return [];
   }
 };
 
@@ -101,8 +139,8 @@ export const getCalendarEventsByDate = async (
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [
-        Query.greaterThanEqual('date', startOfDay.toISOString()),
-        Query.lessThanEqual('date', endOfDay.toISOString()),
+        Query.greaterThanEqual('startDate', startOfDay.toISOString()),
+        Query.lessThanEqual('startDate', endOfDay.toISOString()),
         Query.orderAsc('startTime'),
       ]
     );
@@ -118,7 +156,23 @@ export const createCalendarEvent = async (
   eventData: CreateCalendarEventData
 ): Promise<CalendarEvent> => {
   try {
+    console.log('createCalendarEvent called with data:', eventData);
+    console.log('Database ID:', appwriteConfig.databaseId);
+    console.log(
+      'Calendar Events Collection ID:',
+      appwriteConfig.calendarEventsCollectionId
+    );
+
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
     const adminClient = await createAdminClient();
+    console.log('Admin client created successfully');
+
     const response = await adminClient.tablesDB.createRow(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
@@ -126,18 +180,33 @@ export const createCalendarEvent = async (
       eventData
     );
 
+    console.log('Event created successfully:', response);
+
     // Create a recent activity for the new event
-    await createEventActivity(
-      'New Event Added',
-      eventData.title,
-      response.$id,
-      eventData.createdBy,
-      eventData.createdBy
-    );
+    try {
+      await createEventActivity(
+        'New Event Added',
+        eventData.title,
+        response.$id,
+        eventData.createdBy,
+        eventData.createdBy
+      );
+      console.log('Recent activity created successfully');
+    } catch (activityError) {
+      console.warn('Failed to create recent activity:', activityError);
+      // Don't throw here as the main event was created successfully
+    }
 
     return response as unknown as CalendarEvent;
   } catch (error) {
     console.error('Error creating calendar event:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      eventData,
+      databaseId: appwriteConfig.databaseId,
+      calendarEventsCollectionId: appwriteConfig.calendarEventsCollectionId,
+    });
     throw error;
   }
 };
@@ -188,9 +257,9 @@ export const getCalendarEventsByWeek = async (
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [
-        Query.greaterThanEqual('date', startDate),
-        Query.lessThanEqual('date', endDate),
-        Query.orderAsc('date'),
+        Query.greaterThanEqual('startDate', startDate),
+        Query.lessThanEqual('startDate', endDate),
+        Query.orderAsc('startDate'),
       ]
     );
     return response.rows as unknown as CalendarEvent[];
@@ -244,13 +313,16 @@ export const syncMicrosoftCalendar = async (
       };
     }
 
-    // Call the sync API endpoint
-    const response = await fetch('/api/microsoft/calendar/sync', {
+    // Call the sync API endpoint with absolute URL and user ID
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/microsoft/calendar/sync`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-User-ID': userId, // Pass user ID in header
       },
       body: JSON.stringify({
+        userId, // Also pass in body for redundancy
         startDate: new Date(
           Date.now() - 30 * 24 * 60 * 60 * 1000
         ).toISOString(), // 30 days ago
@@ -300,13 +372,18 @@ export const createCalendarEventWithSync = async (
     if (hasIntegration) {
       try {
         // Sync the new event to Microsoft
-        const response = await fetch('/api/microsoft/calendar/events', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(eventData),
-        });
+        const baseUrl =
+          process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const response = await fetch(
+          `${baseUrl}/api/microsoft/calendar/events`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(eventData),
+          }
+        );
 
         if (response.ok) {
           const result = await response.json();
@@ -350,16 +427,21 @@ export const updateCalendarEventWithSync = async (
     if (hasIntegration && outlookId) {
       try {
         // Sync the updated event to Microsoft
-        const response = await fetch('/api/microsoft/calendar/events', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            eventId: outlookId,
-            eventData: eventData,
-          }),
-        });
+        const baseUrl =
+          process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const response = await fetch(
+          `${baseUrl}/api/microsoft/calendar/events`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              eventId: outlookId,
+              eventData: eventData,
+            }),
+          }
+        );
 
         if (!response.ok) {
           console.error('Failed to sync updated event to Microsoft');

@@ -31,8 +31,59 @@ export interface SyncError {
 export function graphEventToCaalm(
   graphEvent: GraphEvent
 ): CreateCalendarEventData {
-  const startDate = parseISO(graphEvent.start.dateTime);
-  const endDate = parseISO(graphEvent.end.dateTime);
+  // Validate required fields
+  if (!graphEvent.start?.dateTime) {
+    throw new Error('Graph event missing start date');
+  }
+  if (!graphEvent.end?.dateTime) {
+    throw new Error('Graph event missing end date');
+  }
+  if (!graphEvent.subject) {
+    throw new Error('Graph event missing subject');
+  }
+
+  let startDate: Date;
+  let endDate: Date;
+
+  try {
+    startDate = parseISO(graphEvent.start.dateTime);
+    if (!isValid(startDate)) {
+      throw new Error('Invalid start date format');
+    }
+
+    // parseISO handles timezone conversion, but we need to ensure
+    // the date is displayed in the user's local timezone
+    // The date-fns format function will automatically use local timezone
+  } catch (error) {
+    console.error('Invalid Graph event start date:', graphEvent.start.dateTime);
+    throw new Error('Invalid start date format');
+  }
+
+  try {
+    endDate = parseISO(graphEvent.end.dateTime);
+    if (!isValid(endDate)) {
+      throw new Error('Invalid end date format');
+    }
+
+    // parseISO handles timezone conversion, but we need to ensure
+    // the date is displayed in the user's local timezone
+    // The date-fns format function will automatically use local timezone
+  } catch (error) {
+    console.error('Invalid Graph event end date:', graphEvent.end.dateTime);
+    throw new Error('Invalid end date format');
+  }
+
+  // Ensure end date is after start date
+  if (endDate <= startDate) {
+    throw new Error('End date must be after start date');
+  }
+
+  console.log('Converting Graph event to CAALM:', {
+    subject: graphEvent.subject,
+    startDateTime: graphEvent.start.dateTime,
+    parsedStartDate: startDate.toISOString(),
+    timezone: graphEvent.start.timeZone,
+  });
 
   // Determine event type based on categories or subject
   let eventType: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit' =
@@ -54,13 +105,31 @@ export function graphEventToCaalm(
   const contractMatch = graphEvent.subject.match(/contract[:\s]+([^-\n]+)/i);
   const amountMatch = graphEvent.body?.content?.match(/\$[\d,]+\.?\d*/);
 
+  // Format start and end times for CAALM (use local time)
+  // Ensure we're using the correct timezone for display
+  const startTime = format(startDate, 'HH:mm');
+  const endTime = format(endDate, 'HH:mm');
+
+  // Use the date part only for the date field (YYYY-MM-DD format)
+  const dateOnly = format(startDate, 'yyyy-MM-dd');
+
+  console.log('Converted event details:', {
+    title: graphEvent.subject,
+    originalStart: graphEvent.start.dateTime,
+    parsedStartDate: startDate.toISOString(),
+    convertedDate: dateOnly,
+    startTime,
+    endTime,
+    timezone: graphEvent.start.timeZone,
+  });
+
   return {
     title: graphEvent.subject,
-    date: startDate.toISOString(),
+    startDate: dateOnly, // Use date-only format (YYYY-MM-DD) for CAALM
     type: eventType,
     description: graphEvent.body?.content || '',
-    startTime: format(startDate, 'HH:mm'),
-    endTime: format(endDate, 'HH:mm'),
+    startTime,
+    endTime,
     contractName: contractMatch ? contractMatch[1].trim() : undefined,
     amount: amountMatch ? amountMatch[0] : undefined,
     participants: graphEvent.attendees
@@ -76,10 +145,62 @@ export function graphEventToCaalm(
 export function caalmEventToGraph(
   caalmEvent: CalendarEvent
 ): Omit<GraphEvent, 'id'> {
-  const startDate = new Date(caalmEvent.date);
-  const endDate = caalmEvent.endTime
-    ? new Date(`${caalmEvent.date.split('T')[0]}T${caalmEvent.endTime}:00`)
-    : new Date(startDate.getTime() + 60 * 60 * 1000); // Default 1 hour duration
+  // Ensure we have a valid date
+  let startDate: Date;
+  try {
+    // Handle both ISO format and date-only format
+    if (caalmEvent.startDate.includes('T')) {
+      // ISO format
+      startDate = new Date(caalmEvent.startDate);
+    } else {
+      // Date-only format (YYYY-MM-DD) - add time component
+      const dateStr = caalmEvent.startDate;
+      const timeStr = caalmEvent.startTime || '00:00';
+      startDate = new Date(`${dateStr}T${timeStr}:00`);
+    }
+
+    if (isNaN(startDate.getTime())) {
+      throw new Error('Invalid date');
+    }
+  } catch (error) {
+    console.error('Invalid CAALM event date:', caalmEvent.startDate);
+    startDate = new Date(); // Fallback to current date
+  }
+
+  // Calculate end date with better validation
+  let endDate: Date;
+  if (caalmEvent.endTime) {
+    try {
+      // Ensure we have a valid date string
+      const dateStr = caalmEvent.startDate.includes('T')
+        ? caalmEvent.startDate.split('T')[0]
+        : caalmEvent.startDate;
+      if (!dateStr || dateStr.length !== 10) {
+        throw new Error('Invalid date format');
+      }
+
+      // Validate end time format (HH:mm)
+      const timePattern = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timePattern.test(caalmEvent.endTime)) {
+        throw new Error('Invalid time format');
+      }
+
+      endDate = new Date(`${dateStr}T${caalmEvent.endTime}:00`);
+      if (isNaN(endDate.getTime())) {
+        throw new Error('Invalid end time');
+      }
+
+      // Ensure end time is after start time
+      if (endDate <= startDate) {
+        throw new Error('End time must be after start time');
+      }
+    } catch (error) {
+      console.error('Invalid CAALM event end time:', caalmEvent.endTime, error);
+      endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Default 1 hour
+    }
+  } else {
+    endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Default 1 hour duration
+  }
 
   // Map CAALM event types to Graph categories
   const categoryMap: Record<string, string[]> = {
@@ -107,18 +228,72 @@ export function caalmEventToGraph(
     bodyContent += `\n\nParticipants: ${caalmEvent.participants}`;
   }
 
+  // Validate the event data before returning
+  if (!subject || subject.trim().length === 0) {
+    throw new Error('Event subject cannot be empty');
+  }
+
+  if (!startDate || isNaN(startDate.getTime())) {
+    throw new Error('Invalid start date');
+  }
+
+  if (!endDate || isNaN(endDate.getTime())) {
+    throw new Error('Invalid end date');
+  }
+
+  if (endDate <= startDate) {
+    throw new Error('End date must be after start date');
+  }
+
+  // Additional validation for Microsoft Graph API compatibility
+  if (subject.length > 255) {
+    throw new Error('Event subject is too long (max 255 characters)');
+  }
+
+  if (bodyContent && bodyContent.length > 10000) {
+    throw new Error('Event body is too long (max 10000 characters)');
+  }
+
+  // Ensure dates are not too far in the past or future
+  const now = new Date();
+  const oneYearAgo = new Date(
+    now.getFullYear() - 1,
+    now.getMonth(),
+    now.getDate()
+  );
+  const oneYearFromNow = new Date(
+    now.getFullYear() + 1,
+    now.getMonth(),
+    now.getDate()
+  );
+
+  if (startDate < oneYearAgo || startDate > oneYearFromNow) {
+    throw new Error(
+      'Event date is outside acceptable range (1 year ago to 1 year from now)'
+    );
+  }
+
+  // Ensure proper timezone handling for Microsoft Graph
+  const timeZone = 'America/New_York'; // Use a consistent timezone
+
+  // Format dates properly for Microsoft Graph API
+  const formatDateTime = (date: Date): string => {
+    // Microsoft Graph expects ISO 8601 format
+    return date.toISOString();
+  };
+
   return {
-    subject,
+    subject: subject.trim(),
     start: {
-      dateTime: startDate.toISOString(),
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      dateTime: formatDateTime(startDate),
+      timeZone: timeZone,
     },
     end: {
-      dateTime: endDate.toISOString(),
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      dateTime: formatDateTime(endDate),
+      timeZone: timeZone,
     },
     body: {
-      content: bodyContent,
+      content: bodyContent || 'No description',
       contentType: 'text',
     },
     categories,
@@ -134,7 +309,7 @@ export function detectConflict(
   caalmEvent: CalendarEvent,
   outlookEvent: GraphEvent
 ): SyncConflict | null {
-  const caalmStart = new Date(caalmEvent.date);
+  const caalmStart = new Date(caalmEvent.startDate);
   const outlookStart = parseISO(outlookEvent.start.dateTime);
 
   // Time conflict: events overlap significantly
@@ -220,7 +395,7 @@ export function resolveConflict(
 
     case 'newest':
       const caalmTime = new Date(
-        conflict.caalmEvent.$createdAt || conflict.caalmEvent.date
+        conflict.caalmEvent.$createdAt || conflict.caalmEvent.startDate
       );
       const outlookTime = new Date(
         conflict.outlookEvent.lastModifiedDateTime ||
@@ -298,11 +473,11 @@ export function validateEventForSync(event: CalendarEvent | GraphEvent): {
     if (!event.title?.trim()) {
       errors.push('Event title is required');
     }
-    if (!event.date) {
-      errors.push('Event date is required');
+    if (!event.startDate) {
+      errors.push('Event start date is required');
     }
-    if (!isValid(new Date(event.date))) {
-      errors.push('Invalid event date');
+    if (!isValid(new Date(event.startDate))) {
+      errors.push('Invalid event start date');
     }
   } else {
     // Graph event validation

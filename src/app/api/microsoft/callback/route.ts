@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         `${
           process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/dashboard?error=microsoft_oauth_${error}`
+        }/calendar?error=microsoft_oauth_${error}`
       );
     }
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         `${
           process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/dashboard?error=missing_parameters`
+        }/calendar?error=missing_parameters`
       );
     }
 
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         `${
           process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/dashboard?error=invalid_state`
+        }/calendar?error=invalid_state`
       );
     }
 
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         `${
           process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/dashboard?error=no_session`
+        }/calendar?error=no_session`
       );
     }
 
@@ -86,11 +86,10 @@ export async function GET(request: NextRequest) {
       sync_enabled: true,
     });
 
-    // Redirect to dashboard with success message
+    // Redirect to calendar page with success message
+    const { getAppUrl } = await import('@/lib/config/environment');
     return NextResponse.redirect(
-      `${
-        process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      }/dashboard?success=microsoft_connected&user=${encodeURIComponent(
+      `${getAppUrl()}/calendar?success=microsoft_connected&user=${encodeURIComponent(
         userInfo.displayName
       )}`
     );
@@ -111,10 +110,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const { getAppUrl } = await import('@/lib/config/environment');
     return NextResponse.redirect(
-      `${
-        process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      }/dashboard?error=microsoft_callback_${errorMessage}`
+      `${getAppUrl()}/calendar?error=microsoft_callback_${errorMessage}`
     );
   }
 }

@@ -71,13 +71,12 @@ export class MicrosoftGraphClient {
     this.refreshToken = refreshToken;
     this.tokenExpiry = tokenExpiry;
 
+    // Initialize the Graph client with a minimal auth provider
+    // We'll handle authentication manually in each method, but the SDK requires an auth provider
     this.client = Client.init({
       authProvider: {
         getAccessToken: async () => {
-          // Check if token needs refresh
-          if (isTokenExpired(this.tokenExpiry)) {
-            await this.refreshTokens();
-          }
+          // Return the current access token - we'll refresh manually if needed
           return this.accessToken;
         },
       },
@@ -89,11 +88,34 @@ export class MicrosoftGraphClient {
    */
   private async refreshTokens(): Promise<void> {
     try {
+      console.log(
+        'Refreshing tokens with refresh token:',
+        this.refreshToken.substring(0, 20) + '...'
+      );
+      console.log('Current token expiry:', this.tokenExpiry.toISOString());
+      console.log('Current time:', new Date().toISOString());
+
       const tokens = await refreshAccessToken(this.refreshToken);
+      console.log(
+        'Token refresh successful, new access token:',
+        tokens.access_token.substring(0, 20) + '...'
+      );
+      console.log(
+        'New refresh token:',
+        tokens.refresh_token.substring(0, 20) + '...'
+      );
+      console.log('Token expires in:', tokens.expires_in, 'seconds');
+
       this.accessToken = tokens.access_token;
       this.refreshToken = tokens.refresh_token;
       this.tokenExpiry = new Date(Date.now() + tokens.expires_in * 1000);
+      console.log('New token expiry:', this.tokenExpiry.toISOString());
     } catch (error) {
+      console.error('Token refresh failed:', error);
+      console.error(
+        'Refresh token being used:',
+        this.refreshToken.substring(0, 20) + '...'
+      );
       throw new Error(`Failed to refresh tokens: ${error}`);
     }
   }
@@ -103,11 +125,34 @@ export class MicrosoftGraphClient {
    */
   async getCalendars(): Promise<GraphCalendar[]> {
     try {
-      const response = (await this.client
-        .api('/me/calendars')
-        .get()) as GraphCalendarListResponse;
-      return response.value;
+      // Check if token needs refresh before making the request
+      if (isTokenExpired(this.tokenExpiry)) {
+        console.log('Token expired, refreshing...');
+        await this.refreshTokens();
+      }
+
+      const response = await fetch(
+        'https://graph.microsoft.com/v1.0/me/calendars',
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Graph API calendars error:', errorText);
+        throw new Error(
+          `Graph API error: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      return data.value || [];
     } catch (error) {
+      console.error('Error getting calendars:', error);
       throw new Error(`Failed to get calendars: ${error}`);
     }
   }
@@ -121,20 +166,58 @@ export class MicrosoftGraphClient {
     endDate?: Date
   ): Promise<GraphEvent[]> {
     try {
-      let query = `/me/calendars/${calendarId}/events`;
-
-      if (startDate && endDate) {
-        const start = startDate.toISOString();
-        const end = endDate.toISOString();
-        query += `?$filter=start/dateTime ge '${start}' and end/dateTime le '${end}'`;
+      // Check if token needs refresh before making the request
+      if (isTokenExpired(this.tokenExpiry)) {
+        console.log('Token expired, refreshing...');
+        await this.refreshTokens();
       }
 
-      const response = (await this.client
-        .api(query)
-        .get()) as GraphEventListResponse;
+      // Use direct HTTP requests instead of the Graph client
+      let url = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events`;
 
-      return response.value;
+      // Add basic query parameters for better compatibility
+      const params = new URLSearchParams();
+      params.append('$orderby', 'start/dateTime asc');
+      params.append('$top', '50'); // Limit to 50 events to avoid large responses
+
+      if (startDate && endDate) {
+        // Use a simpler date filter format
+        const start = startDate.toISOString().split('T')[0]; // Just the date part
+        const end = endDate.toISOString().split('T')[0];
+        params.append(
+          '$filter',
+          `start/dateTime ge '${start}T00:00:00' and start/dateTime le '${end}T23:59:59'`
+        );
+      }
+
+      url += `?${params.toString()}`;
+
+      console.log('Graph API URL:', url);
+      console.log(
+        'Using access token:',
+        this.accessToken.substring(0, 20) + '...'
+      );
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Graph API error response:', errorText);
+        throw new Error(
+          `Graph API error: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log('Graph API response:', data);
+      return data.value || [];
     } catch (error) {
+      console.error('Graph API error:', error);
       throw new Error(`Failed to get events: ${error}`);
     }
   }
@@ -147,10 +230,33 @@ export class MicrosoftGraphClient {
     calendarId: string = 'primary'
   ): Promise<GraphEvent> {
     try {
-      return (await this.client
-        .api(`/me/calendars/${calendarId}/events/${eventId}`)
-        .get()) as GraphEvent;
+      // Check if token needs refresh before making the request
+      if (isTokenExpired(this.tokenExpiry)) {
+        console.log('Token expired, refreshing...');
+        await this.refreshTokens();
+      }
+
+      const response = await fetch(
+        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events/${eventId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Graph API event error:', errorText);
+        throw new Error(
+          `Graph API error: ${response.status} ${response.statusText}`
+        );
+      }
+
+      return await response.json();
     } catch (error) {
+      console.error('Error getting event:', error);
       throw new Error(`Failed to get event: ${error}`);
     }
   }
@@ -163,10 +269,39 @@ export class MicrosoftGraphClient {
     calendarId: string = 'primary'
   ): Promise<GraphEvent> {
     try {
-      return (await this.client
-        .api(`/me/calendars/${calendarId}/events`)
-        .post(event)) as GraphEvent;
+      // Check if token needs refresh before making the request
+      if (isTokenExpired(this.tokenExpiry)) {
+        console.log('Token expired, refreshing...');
+        await this.refreshTokens();
+      }
+
+      const response = await fetch(
+        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(event),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Graph API create event error:', errorText);
+        console.error(
+          'Request body that failed:',
+          JSON.stringify(event, null, 2)
+        );
+        throw new Error(
+          `Graph API error: ${response.status} ${response.statusText} - ${errorText}`
+        );
+      }
+
+      return await response.json();
     } catch (error) {
+      console.error('Error creating event:', error);
       throw new Error(`Failed to create event: ${error}`);
     }
   }
@@ -180,10 +315,35 @@ export class MicrosoftGraphClient {
     calendarId: string = 'primary'
   ): Promise<GraphEvent> {
     try {
-      return (await this.client
-        .api(`/me/calendars/${calendarId}/events/${eventId}`)
-        .patch(event)) as GraphEvent;
+      // Check if token needs refresh before making the request
+      if (isTokenExpired(this.tokenExpiry)) {
+        console.log('Token expired, refreshing...');
+        await this.refreshTokens();
+      }
+
+      const response = await fetch(
+        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events/${eventId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(event),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Graph API update event error:', errorText);
+        throw new Error(
+          `Graph API error: ${response.status} ${response.statusText}`
+        );
+      }
+
+      return await response.json();
     } catch (error) {
+      console.error('Error updating event:', error);
       throw new Error(`Failed to update event: ${error}`);
     }
   }
@@ -196,10 +356,32 @@ export class MicrosoftGraphClient {
     calendarId: string = 'primary'
   ): Promise<void> {
     try {
-      await this.client
-        .api(`/me/calendars/${calendarId}/events/${eventId}`)
-        .delete();
+      // Check if token needs refresh before making the request
+      if (isTokenExpired(this.tokenExpiry)) {
+        console.log('Token expired, refreshing...');
+        await this.refreshTokens();
+      }
+
+      const response = await fetch(
+        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events/${eventId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Graph API delete event error:', errorText);
+        throw new Error(
+          `Graph API error: ${response.status} ${response.statusText}`
+        );
+      }
     } catch (error) {
+      console.error('Error deleting event:', error);
       throw new Error(`Failed to delete event: ${error}`);
     }
   }
@@ -253,6 +435,33 @@ export class MicrosoftGraphClient {
     endOfWeek.setHours(23, 59, 59, 999);
 
     return this.getEventsInRange(startOfWeek, endOfWeek, calendarId);
+  }
+
+  /**
+   * Get user information from Microsoft Graph
+   */
+  async getUserInfo(): Promise<any> {
+    try {
+      const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Graph API user info error:', errorText);
+        throw new Error(
+          `Graph API error: ${response.status} ${response.statusText}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting user info:', error);
+      throw new Error(`Failed to get user info: ${error}`);
+    }
   }
 
   /**

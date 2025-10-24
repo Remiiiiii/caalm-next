@@ -3,7 +3,8 @@
 export interface CalendarEvent {
   $id?: string;
   title: string;
-  date: string;
+  startDate: string;
+  endDate?: string;
   type: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit';
   description?: string;
   contractName?: string;
@@ -18,7 +19,8 @@ export interface CalendarEvent {
 
 export interface CreateCalendarEventData {
   title: string;
-  date: string;
+  startDate: string;
+  endDate?: string;
   type: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit';
   description?: string;
   contractName?: string;
