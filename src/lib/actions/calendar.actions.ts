@@ -20,6 +20,7 @@ export interface CalendarEvent {
   endTime?: string;
   participants?: string;
   createdBy: string;
+  outlook_id?: string;
   $createdAt?: string;
   $updatedAt?: string;
 }

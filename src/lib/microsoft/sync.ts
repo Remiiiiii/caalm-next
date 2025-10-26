@@ -105,13 +105,18 @@ export function graphEventToCaalm(
   const contractMatch = graphEvent.subject.match(/contract[:\s]+([^-\n]+)/i);
   const amountMatch = graphEvent.body?.content?.match(/\$[\d,]+\.?\d*/);
 
-  // Format start and end times for CAALM (use local time)
-  // Ensure we're using the correct timezone for display
+  // Format start and end times for CAALM (use UTC to avoid timezone issues)
   const startTime = format(startDate, 'HH:mm');
   const endTime = format(endDate, 'HH:mm');
 
-  // Use the date part only for the date field (YYYY-MM-DD format)
-  const dateOnly = format(startDate, 'yyyy-MM-dd');
+  // CRITICAL FIX: Use UTC date to prevent day shifts due to timezone conversion
+  // Extract date components in UTC to ensure we get the correct day
+  const startDateUTC = new Date(
+    startDate.getUTCFullYear(),
+    startDate.getUTCMonth(),
+    startDate.getUTCDate()
+  );
+  const dateOnly = format(startDateUTC, 'yyyy-MM-dd');
 
   console.log('Converted event details:', {
     title: graphEvent.subject,

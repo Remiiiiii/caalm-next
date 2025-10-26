@@ -19,6 +19,7 @@ import {
 } from '../utils/smsNotifications';
 
 export type AppUser = {
+  $id: string;
   fullName: string;
   email: string;
   avatar: string;
@@ -1566,3 +1567,32 @@ export const getUninvitedUsers = async () => {
     return [];
   }
 };
+
+export async function fetchUserNamesByIds(
+  userIds: string[]
+): Promise<AppUser[]> {
+  if (!userIds || userIds.length === 0) {
+    return [];
+  }
+
+  try {
+    const response = await fetch('/api/users/get-by-ids', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userIds }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch user names');
+    }
+
+    const users: AppUser[] = await response.json();
+    return users;
+  } catch (error) {
+    console.error('Error in fetchUserNamesByIds:', error);
+    return [];
+  }
+}

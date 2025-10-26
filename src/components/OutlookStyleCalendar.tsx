@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
+
 import {
   Dialog,
   DialogContent,
@@ -130,6 +132,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
   );
+
+  // Participant names state
+  const [participantNames, setParticipantNames] = useState<string[]>([]);
+  const [loadingNames, setLoadingNames] = useState(false);
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
@@ -291,6 +298,34 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
     checkOutlookConnection();
   }, [user]);
+
+  // Add this useEffect to fetch participant names
+  useEffect(() => {
+    if (selectedEvent?.participants && selectedEvent.participants.length > 0) {
+      setLoadingNames(true);
+      // Handle both string and array formats
+      const participantIds = Array.isArray(selectedEvent.participants)
+        ? selectedEvent.participants
+        : selectedEvent.participants
+            .split(',')
+            .map((id: string) => id.trim())
+            .filter((id: string) => id.length > 0);
+
+      fetchUserNamesByIds(participantIds)
+        .then((users) => {
+          setParticipantNames(users.map((user) => user.fullName));
+          setLoadingNames(false);
+        })
+        .catch((error) => {
+          console.error('Failed to fetch participant names:', error);
+          setParticipantNames([]);
+          setLoadingNames(false);
+        });
+    } else {
+      setParticipantNames([]);
+      setLoadingNames(false);
+    }
+  }, [selectedEvent?.participants]); // Re-run when participants change
 
   const handleSync = async () => {
     if (!user?.$id) return;
@@ -1344,12 +1379,23 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   </div>
                 )}
 
-                {selectedEvent.participants && (
-                  <div className="flex items-start gap-2 text-sm text-gray-600">
-                    <Users className="w-4 h-4 mt-0.5" />
-                    <span>{selectedEvent.participants}</span>
-                  </div>
-                )}
+                {selectedEvent.participants &&
+                  selectedEvent.participants.length > 0 && (
+                    <div className="flex items-start gap-2 text-sm text-gray-600">
+                      <Users className="w-4 h-4 mt-0.5" />
+                      <span>
+                        {loadingNames ? (
+                          <span className="text-gray-400">
+                            Loading participants...
+                          </span>
+                        ) : participantNames.length > 0 ? (
+                          participantNames.join(', ')
+                        ) : (
+                          'No participants'
+                        )}
+                      </span>
+                    </div>
+                  )}
               </div>
 
               {/* AI Suggestions (Outlook-style) */}

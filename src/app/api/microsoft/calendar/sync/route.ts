@@ -8,7 +8,6 @@ import {
   getCalendarEvents,
   createCalendarEvent,
   updateCalendarEvent,
-  deleteCalendarEvent,
 } from '@/lib/actions/calendar.actions';
 import {
   graphEventToCaalm,
@@ -16,10 +15,7 @@ import {
   detectConflict,
   resolveConflict,
   SyncResult,
-  SyncConflict,
-  SyncError,
 } from '@/lib/microsoft/sync';
-import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
 import { CalendarEvent } from '@/lib/actions/calendar.actions';
 
 // Enhanced sync lock with timestamp to prevent stale locks
@@ -247,7 +243,7 @@ export async function POST(request: NextRequest) {
     const syncResult = (await Promise.race([
       syncPromise,
       timeoutPromise,
-    ])) as any;
+    ])) as SyncResult;
 
     console.log('Sync completed:', syncResult);
 
@@ -262,16 +258,11 @@ export async function POST(request: NextRequest) {
         type: conflict.conflictType,
         caalmEvent: conflict.caalmEvent?.title || 'Unknown',
         outlookEvent: conflict.outlookEvent?.subject || 'Unknown',
-        field: conflict.field,
-        caalmValue: conflict.caalmValue,
-        outlookValue: conflict.outlookValue,
       })),
       errors: syncResult.errors.map((error) => ({
         eventId: error.eventId,
         operation: error.operation,
         error: error.error,
-        eventTitle: error.eventTitle || 'Unknown',
-        eventDate: error.eventDate || 'Unknown',
       })),
     };
 
@@ -291,9 +282,6 @@ export async function POST(request: NextRequest) {
           eventId: error.eventId,
           operation: error.operation,
           error: error.error,
-          eventTitle: error.eventTitle,
-          eventDate: error.eventDate,
-          stack: error.stack,
         });
       });
     }
@@ -413,7 +401,9 @@ async function performBidirectionalSync(
 
       // Use the primary calendar
       primaryCalendar =
-        calendars.find((cal) => cal.isDefaultCalendar) || calendars[0];
+        calendars.find(
+          (cal: { isDefaultCalendar?: boolean }) => cal.isDefaultCalendar
+        ) || calendars[0];
       console.log('Using calendar:', primaryCalendar.name, primaryCalendar.id);
 
       outlookEvents = await graphClient.getEventsInRange(
@@ -541,7 +531,7 @@ async function performBidirectionalSync(
                 outlookEventId: outlookEvent.id,
                 caalmEventData: {
                   title: caalmEventData.title,
-                  date: caalmEventData.date,
+                  startDate: caalmEventData.startDate,
                   startTime: caalmEventData.startTime,
                 },
               });
@@ -564,29 +554,52 @@ async function performBidirectionalSync(
     }
 
     // Process CAALM-only events (push to Outlook)
-    console.log('Processing CAALM-only events:', caalmOnlyKeys.length);
+    console.log('Processing CAALM-only events:', caalmOnlyKeys.size);
     for (const key of caalmOnlyKeys) {
       const caalmEvent = caalmEventMap.get(key)!;
 
       try {
-        // CRITICAL: Check if this event already has an outlook_id (already synced)
+        // Check if this event already has an outlook_id (already synced to Outlook)
+        // Only skip if the event already exists in Outlook
         if (caalmEvent.outlook_id) {
-          console.log(
-            'Skipping already synced CAALM event:',
-            caalmEvent.title,
-            'outlook_id:',
-            caalmEvent.outlook_id
-          );
-          continue;
+          // Verify the event still exists in Outlook before skipping
+          try {
+            const outlookEvent = outlookEvents.find(
+              (e) => e.id === caalmEvent.outlook_id
+            );
+            if (outlookEvent) {
+              console.log(
+                'Skipping already synced CAALM event:',
+                caalmEvent.title,
+                'outlook_id:',
+                caalmEvent.outlook_id
+              );
+              continue;
+            } else {
+              // Outlook event was deleted, remove outlook_id to allow re-sync
+              console.log(
+                'Outlook event not found, removing outlook_id for:',
+                caalmEvent.title
+              );
+              await updateCalendarEvent(caalmEvent.$id!, {
+                ...caalmEvent,
+                outlook_id: undefined,
+              } as any);
+            }
+          } catch (error) {
+            console.error('Error checking Outlook event:', error);
+            // Continue to attempt sync
+          }
         }
 
         // Validate the event before converting
-        if (!caalmEvent.date || !caalmEvent.title) {
+        if (!caalmEvent.startDate || !caalmEvent.title) {
           console.warn('Skipping invalid CAALM event:', caalmEvent);
           continue;
         }
 
-        // Additional check: Skip events created by sync to prevent loops
+        // Skip events created by Outlook sync to prevent loops (but allow manually created events)
+        // This is a safeguard to prevent circular sync loops
         if (caalmEvent.createdBy === 'outlook-sync') {
           console.log(
             'Skipping CAALM event created by Outlook sync:',
@@ -597,7 +610,7 @@ async function performBidirectionalSync(
 
         console.log('Converting CAALM event to Graph format:', {
           title: caalmEvent.title,
-          date: caalmEvent.date,
+          startDate: caalmEvent.startDate,
           type: caalmEvent.type,
         });
 
@@ -651,21 +664,24 @@ async function performBidirectionalSync(
         }
 
         // Enhanced error logging for debugging
-        const errorDetails = {
+        console.error('❌ Detailed sync error:', {
           eventId: caalmEvent.$id || 'unknown',
           error: error instanceof Error ? error.message : 'Unknown error',
           operation: 'create',
           eventData: {
             title: caalmEvent.title,
-            date: caalmEvent.date,
+            startDate: caalmEvent.startDate,
             type: caalmEvent.type,
             endTime: caalmEvent.endTime,
           },
           stack: error instanceof Error ? error.stack : undefined,
-        };
+        });
 
-        console.error('❌ Detailed sync error:', errorDetails);
-        result.errors.push(errorDetails);
+        result.errors.push({
+          eventId: caalmEvent.$id || 'unknown',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          operation: 'create' as const,
+        });
       }
     }
 
@@ -723,7 +739,7 @@ async function performBidirectionalSync(
         console.error('Error creating CAALM event from Outlook event:', error);
         console.error('Outlook event data:', outlookEvent);
         // Enhanced error logging for debugging
-        const errorDetails = {
+        console.error('Detailed Outlook to CAALM error:', {
           eventId: outlookEvent.id || 'unknown',
           error: error instanceof Error ? error.message : 'Unknown error',
           operation: 'create',
@@ -734,10 +750,13 @@ async function performBidirectionalSync(
             body: outlookEvent.body,
           },
           stack: error instanceof Error ? error.stack : undefined,
-        };
+        });
 
-        console.error('Detailed Outlook to CAALM error:', errorDetails);
-        result.errors.push(errorDetails);
+        result.errors.push({
+          eventId: outlookEvent.id || 'unknown',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          operation: 'create' as const,
+        });
       }
     }
 
@@ -813,7 +832,7 @@ async function performBidirectionalSync(
 function generateEventKey(event: any): string {
   // Normalize the event data for consistent key generation
   const title = (event.title || event.subject || '').toLowerCase().trim();
-  const startDateTime = event.start?.dateTime || event.date || '';
+  const startDateTime = event.start?.dateTime || event.startDate || '';
 
   // Extract just the date part for comparison (YYYY-MM-DD)
   let datePart = '';
@@ -833,7 +852,7 @@ function generateEventKey(event: any): string {
 
   console.log('Generated event key:', key, 'for event:', {
     title: event.title || event.subject,
-    start: event.start?.dateTime || event.date,
+    start: event.start?.dateTime || event.startDate,
   });
 
   return key;
