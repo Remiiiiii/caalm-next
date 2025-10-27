@@ -124,6 +124,10 @@ export async function PUT(request: NextRequest) {
     if (isValid) {
       // Store the verified secret in the user's profile
       try {
+        if (!appwriteConfig.databaseId || !appwriteConfig.usersCollectionId) {
+          throw new Error('Missing required Appwrite configuration');
+        }
+
         const client = await createAdminClient();
 
         // First, check if the user exists by accountId
@@ -169,12 +173,12 @@ export async function PUT(request: NextRequest) {
           console.warn('twoFactorSetupAt field not available in schema');
         }
 
-        await client.tablesDB.updateRow(
-          appwriteConfig.databaseId,
-          appwriteConfig.usersCollectionId,
-          userResponse.rows[0].$id, // Use the actual document ID from the users collection
-          updateData
-        );
+        await client.tablesDB.updateRow({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.usersCollectionId,
+          rowId: userResponse.rows[0].$id, // Use the actual document ID from the users collection
+          data: updateData,
+        });
 
         // Clean up the temporary secret
         tempSecrets.delete(factorId);

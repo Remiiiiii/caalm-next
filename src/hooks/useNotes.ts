@@ -33,10 +33,16 @@ export const useNotes = ({
       console.log('useNotes: Fetched notes:', fetchedNotes);
       setNotes(fetchedNotes);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch notes';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch notes';
       setError(errorMessage);
       console.error('Error fetching notes:', err);
-      console.error('Error details:', JSON.stringify(err, null, 2));
+      console.error('Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined,
+        type: typeof err,
+        constructor: err?.constructor?.name,
+      });
     } finally {
       setIsLoading(false);
     }

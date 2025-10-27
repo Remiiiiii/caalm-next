@@ -12,6 +12,7 @@ import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -48,6 +49,7 @@ import {
   X,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   CalendarDays,
   Grid3X3,
   Share2,
@@ -94,6 +96,7 @@ interface OutlookStyleCalendarProps {
 
 interface LocalCalendarEvent {
   $id?: string;
+  id?: string;
   title: string;
   startDate: string | Date;
   endDate?: string | Date;
@@ -136,6 +139,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Participant names state
   const [participantNames, setParticipantNames] = useState<string[]>([]);
   const [loadingNames, setLoadingNames] = useState(false);
+
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
@@ -604,11 +611,46 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     }
   };
 
-  const handleDeleteEvent = async () => {
-    if (!selectedEvent || !selectedEvent.$id) return;
+  const handleDeleteEvent = () => {
+    console.log('Delete button clicked, selectedEvent:', selectedEvent);
+    if (!selectedEvent || (!selectedEvent.$id && !selectedEvent.id)) {
+      console.log('No selected event or event ID');
+      return;
+    }
+
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!selectedEvent || (!selectedEvent.$id && !selectedEvent.id)) {
+      return;
+    }
+
+    // Use $id if available (from database), otherwise use id (from converted event)
+    const eventId = selectedEvent.$id || selectedEvent.id;
+    console.log('Attempting to delete event with ID:', eventId);
 
     try {
-      await deleteCalendarEvent(selectedEvent.$id);
+      const response = await fetch(
+        `/api/calendar/events?id=${eventId}${
+          deleteReason ? `&reason=${encodeURIComponent(deleteReason)}` : ''
+        }`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      console.log('Delete response status:', response.status);
+      console.log('Delete response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log('Delete error data:', errorData);
+        throw new Error(errorData.message || 'Failed to delete event');
+      }
+
+      const result = await response.json();
+      console.log('Delete success result:', result);
 
       toast({
         title: 'Success',
@@ -616,7 +658,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       });
 
       setIsEditEventOpen(false);
+      setIsDeleteModalOpen(false);
       setSelectedEvent(null);
+      setDeleteReason('');
       refresh();
     } catch (error) {
       console.error('Error deleting event:', error);
@@ -626,6 +670,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         variant: 'destructive',
       });
     }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteReason('');
   };
 
   const openEditDialog = (event: LocalCalendarEvent) => {
@@ -1375,27 +1424,41 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 {selectedEvent.description && (
                   <div className="flex items-start gap-2 text-sm text-gray-600">
                     <MessageSquare className="w-4 h-4 mt-0.5" />
-                    <span>{selectedEvent.description}</span>
+                    <span
+                      dangerouslySetInnerHTML={{
+                        __html: selectedEvent.description,
+                      }}
+                    />
                   </div>
                 )}
 
-                {selectedEvent.participants &&
-                  selectedEvent.participants.length > 0 && (
-                    <div className="flex items-start gap-2 text-sm text-gray-600">
-                      <Users className="w-4 h-4 mt-0.5" />
-                      <span>
-                        {loadingNames ? (
-                          <span className="text-gray-400">
-                            Loading participants...
-                          </span>
-                        ) : participantNames.length > 0 ? (
-                          participantNames.join(', ')
-                        ) : (
-                          'No participants'
-                        )}
-                      </span>
-                    </div>
-                  )}
+                {(() => {
+                  // Check if participants exist (handle both string and array formats)
+                  const hasParticipants =
+                    selectedEvent.participants &&
+                    (Array.isArray(selectedEvent.participants)
+                      ? selectedEvent.participants.length > 0
+                      : selectedEvent.participants.trim().length > 0);
+
+                  return (
+                    hasParticipants && (
+                      <div className="flex items-start gap-2 text-sm text-gray-600">
+                        <Users className="w-4 h-4 mt-0.5" />
+                        <span>
+                          {loadingNames ? (
+                            <span className="text-gray-400">
+                              Loading participants...
+                            </span>
+                          ) : participantNames.length > 0 ? (
+                            participantNames.join(', ')
+                          ) : (
+                            'No participants'
+                          )}
+                        </span>
+                      </div>
+                    )
+                  );
+                })()}
               </div>
 
               {/* AI Suggestions (Outlook-style) */}
@@ -1520,6 +1583,57 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 Cancel
               </Button>
               <Button onClick={handleShare}>Share</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Delete Event
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{selectedEvent?.title}"? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label
+                htmlFor="deleteReason"
+                className="text-sm font-medium text-slate-700"
+              >
+                Reason for deletion (optional)
+              </Label>
+              <Textarea
+                id="deleteReason"
+                placeholder="Please provide a reason for deleting this event..."
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={cancelDelete}
+                className="border-slate-200 hover:bg-slate-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDeleteEvent}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete Event
+              </Button>
             </div>
           </div>
         </DialogContent>

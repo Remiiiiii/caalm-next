@@ -1,0 +1,277 @@
+import { createAdminClient } from '@/lib/appwrite';
+import { appwriteConfig } from '@/lib/appwrite/config';
+import { Query } from 'node-appwrite';
+import { logAuditEvent } from './audit-logger';
+import { getValidIntegration } from '@/lib/actions/calendar-integration.actions';
+import { createGraphClient } from '@/lib/microsoft/graph-client';
+
+interface DeletionSyncResult {
+  success: boolean;
+  error?: string;
+  retryCount: number;
+}
+
+/**
+ * Sync deletion to Outlook with retry logic
+ */
+export async function syncDeletionToOutlook(
+  eventId: string,
+  maxRetries: number = 3
+): Promise<DeletionSyncResult> {
+  let retryCount = 0;
+  let lastError: string | undefined;
+
+  while (retryCount < maxRetries) {
+    try {
+      // Get the event details
+      const adminClient = await createAdminClient();
+      const event = await adminClient.tablesDB.getRow(
+        appwriteConfig.databaseId!,
+        appwriteConfig.calendarEventsCollectionId!,
+        eventId
+      );
+
+      if (!event.outlook_id) {
+        // No Outlook ID means it was never synced, mark as successfully deleted
+        await adminClient.tablesDB.updateRow(
+          appwriteConfig.databaseId!,
+          appwriteConfig.calendarEventsCollectionId!,
+          eventId,
+          {
+            deletion_status: 'deleted_from_outlook',
+            deletion_synced: true,
+          }
+        );
+
+        await logAuditEvent({
+          event_id: eventId,
+          event_title: event.title,
+          action: 'sync_delete',
+          source: 'caalm',
+          user_id: event.deleted_by || 'system',
+          user_name: 'System',
+          user_email: 'system@caalm.com',
+          status: 'success',
+          metadata: { reason: 'No Outlook ID - event was never synced' },
+        });
+
+        return { success: true, retryCount };
+      }
+
+      // Get user integration for Microsoft Graph access
+      const integration = await getValidIntegration(
+        event.createdBy,
+        'microsoft'
+      );
+
+      if (!integration) {
+        // No Microsoft integration, mark as successfully deleted
+        await adminClient.tablesDB.updateRow(
+          appwriteConfig.databaseId!,
+          appwriteConfig.calendarEventsCollectionId!,
+          eventId,
+          {
+            deletion_status: 'deleted_from_outlook',
+            deletion_synced: true,
+          }
+        );
+
+        await logAuditEvent({
+          event_id: eventId,
+          event_title: event.title,
+          action: 'sync_delete',
+          source: 'caalm',
+          user_id: event.deleted_by || 'system',
+          user_name: 'System',
+          user_email: 'system@caalm.com',
+          status: 'success',
+          metadata: {
+            reason: 'No Microsoft integration - event was never synced',
+          },
+        });
+
+        return { success: true, retryCount };
+      }
+
+      // Create Graph client and delete from Outlook
+      const graphClient = createGraphClient(
+        integration.access_token,
+        integration.refresh_token,
+        new Date(integration.token_expiry)
+      );
+
+      await graphClient.deleteEvent(event.outlook_id);
+
+      // Successfully deleted from Outlook
+      await adminClient.tablesDB.updateRow(
+        appwriteConfig.databaseId!,
+        appwriteConfig.calendarEventsCollectionId!,
+        eventId,
+        {
+          deletion_status: 'deleted_from_outlook',
+          deletion_synced: true,
+        }
+      );
+
+      await logAuditEvent({
+        event_id: eventId,
+        event_title: event.title,
+        action: 'sync_delete',
+        source: 'caalm',
+        user_id: event.deleted_by || 'system',
+        user_name: 'System',
+        user_email: 'system@caalm.com',
+        status: 'success',
+        metadata: { retryCount },
+      });
+
+      return { success: true, retryCount };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Unknown error';
+      retryCount++;
+
+      // Log the error
+      await logAuditEvent({
+        event_id: eventId,
+        event_title: event.title || 'Unknown',
+        action: 'sync_delete',
+        source: 'caalm',
+        user_id: event.deleted_by || 'system',
+        user_name: 'System',
+        user_email: 'system@caalm.com',
+        status: 'failed',
+        error_message: lastError,
+        metadata: { retryCount, attempt: retryCount },
+      });
+
+      if (retryCount < maxRetries) {
+        const delayMs = Math.pow(2, retryCount) * 1000;
+        console.log(
+          `Retrying deletion sync in ${delayMs}ms (attempt ${
+            retryCount + 1
+          }/${maxRetries})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  // All retries failed
+  const adminClient = await createAdminClient();
+  await adminClient.tablesDB.updateRow(
+    appwriteConfig.databaseId!,
+    appwriteConfig.calendarEventsCollectionId!,
+    eventId,
+    {
+      deletion_status: 'deletion_failed',
+      deletion_synced: false,
+    }
+  );
+
+  return { success: false, error: lastError, retryCount };
+}
+
+/**
+ * Retry all failed deletions
+ */
+export async function retryFailedDeletions(): Promise<{
+  processed: number;
+  successful: number;
+  failed: number;
+}> {
+  try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
+    const adminClient = await createAdminClient();
+
+    // Find all events with failed deletion status
+    const response = await adminClient.tablesDB.listRows(
+      appwriteConfig.databaseId,
+      appwriteConfig.calendarEventsCollectionId,
+      [
+        Query.equal('deletion_status', 'deletion_failed'),
+        Query.isNotNull('deleted_at'),
+        Query.limit(50), // Process in batches
+      ]
+    );
+
+    const failedEvents = response.rows;
+    let successful = 0;
+    let failed = 0;
+
+    console.log(`Found ${failedEvents.length} failed deletions to retry`);
+
+    for (const event of failedEvents) {
+      const result = await syncDeletionToOutlook(event.$id, 2); // Reduced retries for batch processing
+
+      if (result.success) {
+        successful++;
+      } else {
+        failed++;
+      }
+    }
+
+    return {
+      processed: failedEvents.length,
+      successful,
+      failed,
+    };
+  } catch (error) {
+    console.error('Error retrying failed deletions:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get events that need deletion sync
+ */
+export async function getPendingDeletionSyncs(): Promise<any[]> {
+  try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
+    const adminClient = await createAdminClient();
+
+    const response = await adminClient.tablesDB.listRows(
+      appwriteConfig.databaseId,
+      appwriteConfig.calendarEventsCollectionId,
+      [
+        Query.equal('deletion_status', 'pending_outlook_deletion'),
+        Query.isNotNull('deleted_at'),
+        Query.orderAsc('deleted_at'),
+        Query.limit(100),
+      ]
+    );
+
+    return response.rows;
+  } catch (error) {
+    console.error('Error fetching pending deletion syncs:', error);
+    throw error;
+  }
+}
+
+/**
+ * Process pending deletion syncs (to be called by cron job)
+ */
+export async function processPendingDeletionSyncs(): Promise<void> {
+  try {
+    const pendingEvents = await getPendingDeletionSyncs();
+
+    console.log(`Processing ${pendingEvents.length} pending deletion syncs`);
+
+    for (const event of pendingEvents) {
+      await syncDeletionToOutlook(event.$id, 3);
+    }
+  } catch (error) {
+    console.error('Error processing pending deletion syncs:', error);
+  }
+}

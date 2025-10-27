@@ -4,6 +4,7 @@ import { swrConfig, swrKeys } from '@/lib/swr-config';
 
 interface LocalCalendarEvent {
   id: string;
+  $id?: string; // Preserve original database ID
   title: string;
   startDate?: Date;
   endDate?: Date;
@@ -59,6 +60,7 @@ const convertDBEventToLocal = (
 
   return {
     id: dbEvent.$id || '',
+    $id: dbEvent.$id, // Preserve original database ID
     title: dbEvent.title,
     startDate: normalizedStartDate,
     endDate: normalizedEndDate,

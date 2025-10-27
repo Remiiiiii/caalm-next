@@ -218,7 +218,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
           name: 'Audit Logs',
           icon: '/assets/icons/documents.svg',
           url: '/audits/audit',
-          roles: ['executive'],
+          roles: ['executive', 'admin'],
         },
         {
           name: 'Compliance Status',

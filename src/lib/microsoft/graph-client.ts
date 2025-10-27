@@ -179,6 +179,10 @@ export class MicrosoftGraphClient {
       const params = new URLSearchParams();
       params.append('$orderby', 'start/dateTime asc');
       params.append('$top', '50'); // Limit to 50 events to avoid large responses
+      params.append(
+        '$select',
+        'id,subject,start,end,body,location,attendees,isAllDay,showAs,sensitivity,importance,categories,createdDateTime,lastModifiedDateTime'
+      ); // Request attendees field
 
       if (startDate && endDate) {
         // Use a simpler date filter format

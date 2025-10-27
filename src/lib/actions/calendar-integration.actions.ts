@@ -19,6 +19,7 @@ export interface CalendarIntegration {
   connected_at: string;
   last_sync?: string;
   sync_enabled: boolean;
+  tokens_json?: string; // Added for database storage
   $createdAt?: string;
   $updatedAt?: string;
 }

@@ -21,6 +21,13 @@ export interface CalendarEvent {
   participants?: string;
   createdBy: string;
   outlook_id?: string;
+  deleted_at?: string;
+  deleted_by?: string;
+  deletion_status?:
+    | 'pending_outlook_deletion'
+    | 'deleted_from_outlook'
+    | 'deletion_failed';
+  deletion_synced?: boolean;
   $createdAt?: string;
   $updatedAt?: string;
 }
@@ -42,11 +49,21 @@ export interface CreateCalendarEventData {
 // Get all calendar events
 export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
   try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
     const adminClient = await createAdminClient();
     const response = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
-      [Query.orderDesc('$createdAt')]
+      [
+        Query.isNull('deleted_at'), // Exclude soft-deleted events
+        Query.orderDesc('$createdAt'),
+      ]
     );
     return response.rows as unknown as CalendarEvent[];
   } catch (error) {
@@ -61,6 +78,13 @@ export const getCalendarEventsByMonth = async (
   month: number
 ): Promise<CalendarEvent[]> => {
   try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
     console.log('Server action called with year:', year, 'month:', month);
     console.log('Database ID:', appwriteConfig.databaseId);
     console.log('Collection ID:', appwriteConfig.calendarEventsCollectionId);
@@ -75,6 +99,7 @@ export const getCalendarEventsByMonth = async (
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [
+        Query.isNull('deleted_at'), // Exclude soft-deleted events
         Query.greaterThanEqual('startDate', startDate),
         Query.lessThanEqual('startDate', endDate),
         Query.orderAsc('startDate'),
@@ -129,6 +154,13 @@ export const getCalendarEventsByDate = async (
   date: string
 ): Promise<CalendarEvent[]> => {
   try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
     const adminClient = await createAdminClient();
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
@@ -140,6 +172,7 @@ export const getCalendarEventsByDate = async (
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [
+        Query.isNull('deleted_at'), // Exclude soft-deleted events
         Query.greaterThanEqual('startDate', startOfDay.toISOString()),
         Query.lessThanEqual('startDate', endOfDay.toISOString()),
         Query.orderAsc('startTime'),
@@ -218,13 +251,20 @@ export const updateCalendarEvent = async (
   eventData: Partial<CreateCalendarEventData>
 ): Promise<CalendarEvent> => {
   try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
     const adminClient = await createAdminClient();
-    const response = await adminClient.tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.calendarEventsCollectionId,
-      rowId: eventId,
-      data: eventData,
-    });
+    const response = await adminClient.tablesDB.updateRow(
+      appwriteConfig.databaseId,
+      appwriteConfig.calendarEventsCollectionId,
+      eventId,
+      eventData
+    );
     return response as unknown as CalendarEvent;
   } catch (error) {
     console.error('Error updating calendar event:', error);
@@ -232,9 +272,51 @@ export const updateCalendarEvent = async (
   }
 };
 
-// Delete a calendar event
-export const deleteCalendarEvent = async (eventId: string): Promise<void> => {
+// Delete a calendar event (soft delete)
+export const deleteCalendarEvent = async (
+  eventId: string,
+  deletedBy?: string
+): Promise<void> => {
   try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
+    const adminClient = await createAdminClient();
+
+    // Perform soft delete by setting deleted_at timestamp
+    await adminClient.tablesDB.updateRow(
+      appwriteConfig.databaseId,
+      appwriteConfig.calendarEventsCollectionId,
+      eventId,
+      {
+        deleted_at: new Date().toISOString(),
+        deleted_by: deletedBy || null,
+        deletion_status: 'pending_outlook_deletion',
+        deletion_synced: false,
+      }
+    );
+  } catch (error) {
+    console.error('Error soft deleting calendar event:', error);
+    throw error;
+  }
+};
+
+// Hard delete a calendar event (permanent deletion)
+export const hardDeleteCalendarEvent = async (
+  eventId: string
+): Promise<void> => {
+  try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
     const adminClient = await createAdminClient();
     await adminClient.tablesDB.deleteRow(
       appwriteConfig.databaseId,
@@ -242,7 +324,37 @@ export const deleteCalendarEvent = async (eventId: string): Promise<void> => {
       eventId
     );
   } catch (error) {
-    console.error('Error deleting calendar event:', error);
+    console.error('Error hard deleting calendar event:', error);
+    throw error;
+  }
+};
+
+// Restore a soft-deleted calendar event
+export const restoreCalendarEvent = async (eventId: string): Promise<void> => {
+  try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
+    const adminClient = await createAdminClient();
+
+    // Remove soft delete markers
+    await adminClient.tablesDB.updateRow(
+      appwriteConfig.databaseId,
+      appwriteConfig.calendarEventsCollectionId,
+      eventId,
+      {
+        deleted_at: null,
+        deleted_by: null,
+        deletion_status: null,
+        deletion_synced: false,
+      }
+    );
+  } catch (error) {
+    console.error('Error restoring calendar event:', error);
     throw error;
   }
 };
@@ -253,11 +365,19 @@ export const getCalendarEventsByWeek = async (
   endDate: string
 ): Promise<CalendarEvent[]> => {
   try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
     const adminClient = await createAdminClient();
     const response = await adminClient.tablesDB.listRows(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       [
+        Query.isNull('deleted_at'), // Exclude soft-deleted events
         Query.greaterThanEqual('startDate', startDate),
         Query.lessThanEqual('startDate', endDate),
         Query.orderAsc('startDate'),
@@ -468,6 +588,13 @@ export const deleteCalendarEventWithSync = async (
 ): Promise<void> => {
   try {
     // Get the event first to check for Microsoft ID
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
     const adminClient = await createAdminClient();
     const event = (await adminClient.tablesDB.getRow(
       appwriteConfig.databaseId,

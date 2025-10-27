@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
     // Store integration in database
     await createCalendarIntegration({
       user_id: userId,
+
       provider: 'microsoft',
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,

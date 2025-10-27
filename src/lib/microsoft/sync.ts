@@ -105,9 +105,14 @@ export function graphEventToCaalm(
   const contractMatch = graphEvent.subject.match(/contract[:\s]+([^-\n]+)/i);
   const amountMatch = graphEvent.body?.content?.match(/\$[\d,]+\.?\d*/);
 
-  // Format start and end times for CAALM (use UTC to avoid timezone issues)
-  const startTime = format(startDate, 'HH:mm');
-  const endTime = format(endDate, 'HH:mm');
+  // Format start and end times for CAALM (preserve original timezone)
+  // Extract time components from the original datetime strings to avoid timezone conversion
+  const startTime =
+    graphEvent.start.dateTime.split('T')[1]?.split(':').slice(0, 2).join(':') ||
+    '00:00';
+  const endTime =
+    graphEvent.end.dateTime.split('T')[1]?.split(':').slice(0, 2).join(':') ||
+    '00:00';
 
   // CRITICAL FIX: Use UTC date to prevent day shifts due to timezone conversion
   // Extract date components in UTC to ensure we get the correct day
@@ -121,11 +126,18 @@ export function graphEventToCaalm(
   console.log('Converted event details:', {
     title: graphEvent.subject,
     originalStart: graphEvent.start.dateTime,
+    originalEnd: graphEvent.end.dateTime,
     parsedStartDate: startDate.toISOString(),
+    parsedEndDate: endDate.toISOString(),
     convertedDate: dateOnly,
     startTime,
     endTime,
     timezone: graphEvent.start.timeZone,
+    attendees: graphEvent.attendees?.length || 0,
+    attendeeDetails: graphEvent.attendees?.map((a) => ({
+      name: a.emailAddress.name,
+      email: a.emailAddress.address,
+    })),
   });
 
   return {
@@ -138,7 +150,7 @@ export function graphEventToCaalm(
     contractName: contractMatch ? contractMatch[1].trim() : undefined,
     amount: amountMatch ? amountMatch[0] : undefined,
     participants: graphEvent.attendees
-      ?.map((a) => a.emailAddress.address)
+      ?.map((a) => `${a.emailAddress.name} (${a.emailAddress.address})`)
       .join(', '),
     createdBy: 'outlook-sync', // Special identifier for synced events
   };
@@ -176,10 +188,15 @@ export function caalmEventToGraph(
   let endDate: Date;
   if (caalmEvent.endTime) {
     try {
-      // Ensure we have a valid date string
-      const dateStr = caalmEvent.startDate.includes('T')
+      // Use endDate if available, otherwise use startDate
+      const dateStr = caalmEvent.endDate
+        ? caalmEvent.endDate.includes('T')
+          ? caalmEvent.endDate.split('T')[0]
+          : caalmEvent.endDate
+        : caalmEvent.startDate.includes('T')
         ? caalmEvent.startDate.split('T')[0]
         : caalmEvent.startDate;
+
       if (!dateStr || dateStr.length !== 10) {
         throw new Error('Invalid date format');
       }

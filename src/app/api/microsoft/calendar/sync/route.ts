@@ -576,19 +576,34 @@ async function performBidirectionalSync(
               );
               continue;
             } else {
-              // Outlook event was deleted, remove outlook_id to allow re-sync
+              // Outlook event was deleted, delete the CAALM event too
               console.log(
-                'Outlook event not found, removing outlook_id for:',
+                'Outlook event not found, deleting CAALM event:',
                 caalmEvent.title
               );
-              await updateCalendarEvent(caalmEvent.$id!, {
-                ...caalmEvent,
-                outlook_id: undefined,
-              } as any);
+              const { deleteCalendarEvent } = await import(
+                '@/lib/actions/calendar.actions'
+              );
+              await deleteCalendarEvent(caalmEvent.$id!);
+              console.log('Successfully deleted CAALM event:', caalmEvent.$id);
+              continue; // Skip to next event
             }
           } catch (error) {
             console.error('Error checking Outlook event:', error);
-            // Continue to attempt sync
+            // If it's a 404 error, the event was deleted in Outlook
+            if (error instanceof Error && error.message.includes('404')) {
+              console.log(
+                'Outlook event deleted (404), deleting CAALM event:',
+                caalmEvent.title
+              );
+              const { deleteCalendarEvent } = await import(
+                '@/lib/actions/calendar.actions'
+              );
+              await deleteCalendarEvent(caalmEvent.$id!);
+              console.log('Successfully deleted CAALM event:', caalmEvent.$id);
+              continue; // Skip to next event
+            }
+            // Continue to attempt sync for other errors
           }
         }
 
