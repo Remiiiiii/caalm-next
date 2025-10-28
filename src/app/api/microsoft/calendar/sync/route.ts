@@ -286,6 +286,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // CRITICAL: Invalidate calendar cache after sync to ensure UI updates
+    const CacheManager = (await import('@/lib/services/cache-manager')).default;
+    await CacheManager.invalidateCalendar();
+    console.log('Cache invalidated after sync');
+
     return NextResponse.json({
       success: true,
       result: detailedResult,
@@ -455,10 +460,12 @@ async function performBidirectionalSync(
       caalmEventMap.set(key, event);
     });
 
-    // Populate Outlook event map
+    // Populate Outlook event map (both by key and by ID)
+    const outlookEventMapById = new Map<string, any>();
     outlookEvents.forEach((event: any) => {
       const key = generateEventKey(event);
       outlookEventMap.set(key, event);
+      outlookEventMapById.set(event.id, event);
     });
 
     // Find events that exist in both systems
@@ -553,151 +560,187 @@ async function performBidirectionalSync(
       }
     }
 
-    // Process CAALM-only events (push to Outlook)
+    // Process CAALM-only events (push to Outlook) with batch processing
     console.log('Processing CAALM-only events:', caalmOnlyKeys.size);
-    for (const key of caalmOnlyKeys) {
-      const caalmEvent = caalmEventMap.get(key)!;
 
-      try {
-        // Check if this event already has an outlook_id (already synced to Outlook)
-        // Only skip if the event already exists in Outlook
-        if (caalmEvent.outlook_id) {
-          // Verify the event still exists in Outlook before skipping
-          try {
-            const outlookEvent = outlookEvents.find(
-              (e) => e.id === caalmEvent.outlook_id
-            );
-            if (outlookEvent) {
-              console.log(
-                'Skipping already synced CAALM event:',
-                caalmEvent.title,
-                'outlook_id:',
-                caalmEvent.outlook_id
+    // Import batch processor
+    const { processBatches, chunk } = await import(
+      '@/lib/utils/batch-processor'
+    );
+
+    // Convert Set to Array and filter valid events
+    const caalmEventsToSync = Array.from(caalmOnlyKeys)
+      .map((key) => caalmEventMap.get(key)!)
+      .filter((event) => {
+        // Pre-filter invalid events
+        if (!event.startDate || !event.title) return false;
+        if (event.createdBy === 'outlook-sync') return false;
+        return true;
+      });
+
+    // Process in batches of 10 with concurrency of 5
+    const batches = chunk(caalmEventsToSync, 10);
+    console.log(
+      `Processing ${caalmEventsToSync.length} events in ${batches.length} batches`
+    );
+
+    for (const batch of batches) {
+      // Process each batch with concurrency control
+      const batchPromises = batch.map(async (caalmEvent) => {
+        const key = generateEventKey(caalmEvent);
+        console.log(`Processing batch item: ${caalmEvent.title}`);
+
+        try {
+          // Check if this event already has an outlook_id (already synced to Outlook)
+          // Only skip if the event already exists in Outlook
+          if (caalmEvent.outlook_id) {
+            // Verify the event still exists in Outlook before skipping
+            try {
+              const outlookEvent = outlookEvents.find(
+                (e) => e.id === caalmEvent.outlook_id
               );
-              continue;
-            } else {
-              // Outlook event was deleted, delete the CAALM event too
-              console.log(
-                'Outlook event not found, deleting CAALM event:',
-                caalmEvent.title
-              );
-              const { deleteCalendarEvent } = await import(
-                '@/lib/actions/calendar.actions'
-              );
-              await deleteCalendarEvent(caalmEvent.$id!);
-              console.log('Successfully deleted CAALM event:', caalmEvent.$id);
-              continue; // Skip to next event
+              if (outlookEvent) {
+                console.log(
+                  'Skipping already synced CAALM event:',
+                  caalmEvent.title,
+                  'outlook_id:',
+                  caalmEvent.outlook_id
+                );
+                return;
+              } else {
+                // Outlook event was deleted, delete the CAALM event too
+                console.log(
+                  'Outlook event not found, deleting CAALM event:',
+                  caalmEvent.title
+                );
+                const { deleteCalendarEvent } = await import(
+                  '@/lib/actions/calendar.actions'
+                );
+                await deleteCalendarEvent(caalmEvent.$id!);
+                console.log(
+                  'Successfully deleted CAALM event:',
+                  caalmEvent.$id
+                );
+                return; // Skip to next event
+              }
+            } catch (error) {
+              console.error('Error checking Outlook event:', error);
+              // If it's a 404 error, the event was deleted in Outlook
+              if (error instanceof Error && error.message.includes('404')) {
+                console.log(
+                  'Outlook event deleted (404), deleting CAALM event:',
+                  caalmEvent.title
+                );
+                const { deleteCalendarEvent } = await import(
+                  '@/lib/actions/calendar.actions'
+                );
+                await deleteCalendarEvent(caalmEvent.$id!);
+                console.log(
+                  'Successfully deleted CAALM event:',
+                  caalmEvent.$id
+                );
+                return; // Skip to next event
+              }
+              // Continue to attempt sync for other errors
             }
-          } catch (error) {
-            console.error('Error checking Outlook event:', error);
-            // If it's a 404 error, the event was deleted in Outlook
-            if (error instanceof Error && error.message.includes('404')) {
-              console.log(
-                'Outlook event deleted (404), deleting CAALM event:',
-                caalmEvent.title
-              );
-              const { deleteCalendarEvent } = await import(
-                '@/lib/actions/calendar.actions'
-              );
-              await deleteCalendarEvent(caalmEvent.$id!);
-              console.log('Successfully deleted CAALM event:', caalmEvent.$id);
-              continue; // Skip to next event
-            }
-            // Continue to attempt sync for other errors
           }
-        }
 
-        // Validate the event before converting
-        if (!caalmEvent.startDate || !caalmEvent.title) {
-          console.warn('Skipping invalid CAALM event:', caalmEvent);
-          continue;
-        }
+          // Validate the event before converting
+          if (!caalmEvent.startDate || !caalmEvent.title) {
+            console.warn('Skipping invalid CAALM event:', caalmEvent);
+            return;
+          }
 
-        // Skip events created by Outlook sync to prevent loops (but allow manually created events)
-        // This is a safeguard to prevent circular sync loops
-        if (caalmEvent.createdBy === 'outlook-sync') {
-          console.log(
-            'Skipping CAALM event created by Outlook sync:',
-            caalmEvent.title
-          );
-          continue;
-        }
+          // Skip events created by Outlook sync to prevent loops (but allow manually created events)
+          // This is a safeguard to prevent circular sync loops
+          if (caalmEvent.createdBy === 'outlook-sync') {
+            console.log(
+              'Skipping CAALM event created by Outlook sync:',
+              caalmEvent.title
+            );
+            return;
+          }
 
-        console.log('Converting CAALM event to Graph format:', {
-          title: caalmEvent.title,
-          startDate: caalmEvent.startDate,
-          type: caalmEvent.type,
-        });
-
-        const graphEvent = caalmEventToGraph(caalmEvent);
-
-        console.log('Converted Graph event:', {
-          subject: graphEvent.subject,
-          start: graphEvent.start,
-          end: graphEvent.end,
-        });
-
-        // Validate the converted event
-        if (
-          !graphEvent.subject ||
-          !graphEvent.start?.dateTime ||
-          !graphEvent.end?.dateTime
-        ) {
-          console.warn('Skipping invalid Graph event:', graphEvent);
-          continue;
-        }
-
-        console.log('Creating event in Microsoft Graph...');
-        const createdEvent = await graphClient.createEvent(
-          graphEvent,
-          primaryCalendar.id
-        );
-
-        // Store Outlook event ID in CAALM event for future reference
-        await updateCalendarEvent(caalmEvent.$id!, {
-          ...caalmEvent,
-          // Add outlook_id field to track the synced event
-          outlook_id: createdEvent.id,
-        } as any);
-
-        result.syncedEvents++;
-        console.log('Successfully created Outlook event:', createdEvent.id);
-      } catch (error) {
-        console.error(
-          'Failed to create Outlook event for CAALM event:',
-          caalmEvent.$id,
-          error
-        );
-
-        // Check if it's a validation error from our conversion
-        if (error instanceof Error && error.message.includes('Event')) {
-          console.warn(
-            'Skipping event due to validation error:',
-            error.message
-          );
-          continue; // Skip this event instead of adding to errors
-        }
-
-        // Enhanced error logging for debugging
-        console.error('❌ Detailed sync error:', {
-          eventId: caalmEvent.$id || 'unknown',
-          error: error instanceof Error ? error.message : 'Unknown error',
-          operation: 'create',
-          eventData: {
+          console.log('Converting CAALM event to Graph format:', {
             title: caalmEvent.title,
             startDate: caalmEvent.startDate,
             type: caalmEvent.type,
-            endTime: caalmEvent.endTime,
-          },
-          stack: error instanceof Error ? error.stack : undefined,
-        });
+          });
 
-        result.errors.push({
-          eventId: caalmEvent.$id || 'unknown',
-          error: error instanceof Error ? error.message : 'Unknown error',
-          operation: 'create' as const,
-        });
-      }
+          const graphEvent = caalmEventToGraph(caalmEvent);
+
+          console.log('Converted Graph event:', {
+            subject: graphEvent.subject,
+            start: graphEvent.start,
+            end: graphEvent.end,
+          });
+
+          // Validate the converted event
+          if (
+            !graphEvent.subject ||
+            !graphEvent.start?.dateTime ||
+            !graphEvent.end?.dateTime
+          ) {
+            console.warn('Skipping invalid Graph event:', graphEvent);
+            return;
+          }
+
+          console.log('Creating event in Microsoft Graph...');
+          const createdEvent = await graphClient.createEvent(
+            graphEvent,
+            primaryCalendar.id
+          );
+
+          // Store Outlook event ID in CAALM event for future reference
+          await updateCalendarEvent(caalmEvent.$id!, {
+            ...caalmEvent,
+            // Add outlook_id field to track the synced event
+            outlook_id: createdEvent.id,
+          } as any);
+
+          result.syncedEvents++;
+          console.log('Successfully created Outlook event:', createdEvent.id);
+        } catch (error) {
+          console.error(
+            'Failed to create Outlook event for CAALM event:',
+            caalmEvent.$id,
+            error
+          );
+
+          // Check if it's a validation error from our conversion
+          if (error instanceof Error && error.message.includes('Event')) {
+            console.warn(
+              'Skipping event due to validation error:',
+              error.message
+            );
+            return; // Skip this event instead of adding to errors
+          }
+
+          // Enhanced error logging for debugging
+          console.error('❌ Detailed sync error:', {
+            eventId: caalmEvent.$id || 'unknown',
+            error: error instanceof Error ? error.message : 'Unknown error',
+            operation: 'create',
+            eventData: {
+              title: caalmEvent.title,
+              startDate: caalmEvent.startDate,
+              type: caalmEvent.type,
+              endTime: caalmEvent.endTime,
+            },
+            stack: error instanceof Error ? error.stack : undefined,
+          });
+
+          result.errors.push({
+            eventId: caalmEvent.$id || 'unknown',
+            error: error instanceof Error ? error.message : 'Unknown error',
+            operation: 'create' as const,
+          });
+        }
+      });
+
+      // Wait for batch to complete before moving to next batch
+      const batchResults = await Promise.allSettled(batchPromises);
+      console.log(`Completed batch: ${batchResults.length} events processed`);
     }
 
     // Process Outlook-only events (pull to CAALM)
@@ -725,11 +768,24 @@ async function performBidirectionalSync(
 
         if (duplicateCheck) {
           console.log(
-            'Skipping duplicate Outlook event:',
+            'Outlook event already exists in CAALM, updating with latest data:',
             outlookEvent.subject,
-            'already exists in CAALM with outlook_id:',
+            'outlook_id:',
             duplicateCheck.outlook_id
           );
+
+          // Update the existing CAALM event with the latest Outlook data
+          const caalmEventData = graphEventToCaalm(outlookEvent);
+          caalmEventData.createdBy = duplicateCheck.createdBy; // Preserve original creator
+
+          console.log('Updating CAALM event:', duplicateCheck.$id);
+          await updateCalendarEvent(duplicateCheck.$id!, caalmEventData);
+
+          console.log(
+            'Successfully updated CAALM event from Outlook:',
+            duplicateCheck.$id
+          );
+          result.syncedEvents++;
           continue;
         }
 

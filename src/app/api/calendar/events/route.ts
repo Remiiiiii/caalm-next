@@ -7,6 +7,8 @@ import {
 import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
 import { logAuditEvent } from '@/lib/services/audit-logger';
 import { syncDeletionToOutlook } from '@/lib/services/deletion-sync';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +41,13 @@ export async function POST(request: NextRequest) {
     console.log('Creating calendar event via API:', eventWithUser);
 
     const createdEvent = await createCalendarEvent(eventWithUser);
+
+    // Invalidate calendar cache for the month
+    const eventDate = new Date(eventData.startDate);
+    await CacheManager.invalidateCalendar(
+      eventDate.getFullYear(),
+      eventDate.getMonth() + 1
+    );
 
     return NextResponse.json({
       success: true,
@@ -79,12 +88,19 @@ export async function GET(request: NextRequest) {
 
     console.log('Fetching calendar events for:', { year, month, userId });
 
-    const events = await getCalendarEventsByMonth(year, month);
+    // Check cache first
+    const cacheKey = CACHE_KEYS.calendar.events(year, month);
+    const cachedData = await CacheManager.withCache(
+      'calendar/events',
+      cacheKey,
+      async () => {
+        const events = await getCalendarEventsByMonth(year, month);
+        return { success: true, events };
+      },
+      CACHE_TTLS.medium
+    );
 
-    return NextResponse.json({
-      success: true,
-      events,
-    });
+    return NextResponse.json(cachedData);
   } catch (error) {
     console.error('Error fetching calendar events via API:', error);
     return NextResponse.json(
@@ -170,6 +186,9 @@ export async function DELETE(request: NextRequest) {
       console.error('Background deletion sync failed:', error);
       // The sync service will handle logging the failure
     });
+
+    // Invalidate all calendar caches (event could be in any month)
+    await CacheManager.invalidateCalendar();
 
     return NextResponse.json({
       success: true,

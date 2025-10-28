@@ -5,6 +5,8 @@ import {
   NotificationFilters,
   NotificationSort,
 } from '@/types/notifications';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,27 +28,49 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build filters
-    const filters: NotificationFilters = {};
-    if (search) filters.search = search;
-    if (type && type !== 'all') filters.type = type;
-    if (status && status !== 'all')
-      filters.status = status as 'read' | 'unread';
-    if (priority && priority !== 'all')
-      filters.priority = priority as 'low' | 'medium' | 'high' | 'urgent';
+    // Build cache key from filters
+    const cacheKey = `${CACHE_KEYS.notifications.user(
+      userId
+    )}:${page}:${limit}:${JSON.stringify({
+      search,
+      type,
+      status,
+      priority,
+      sortField,
+      sortDirection,
+    })}`;
 
-    // Build sort
-    const sort: NotificationSort = {
-      field: sortField as 'date' | 'priority' | 'type' | 'title',
-      direction: sortDirection as 'asc' | 'desc',
-    };
+    // For notifications, use shorter TTL since we have SSE for real-time updates
+    const result = await CacheManager.withCache(
+      'notifications',
+      cacheKey,
+      async () => {
+        // Build filters
+        const filters: NotificationFilters = {};
+        if (search) filters.search = search;
+        if (type && type !== 'all') filters.type = type;
+        if (status && status !== 'all')
+          filters.status = status as 'read' | 'unread';
+        if (priority && priority !== 'all')
+          filters.priority = priority as 'low' | 'medium' | 'high' | 'urgent';
 
-    const result = await notificationService.getNotifications(
-      userId,
-      Object.keys(filters).length > 0 ? filters : undefined,
-      sort,
-      page,
-      limit
+        // Build sort
+        const sort: NotificationSort = {
+          field: sortField as 'date' | 'priority' | 'type' | 'title',
+          direction: sortDirection as 'asc' | 'desc',
+        };
+
+        const notifications = await notificationService.getNotifications(
+          userId,
+          Object.keys(filters).length > 0 ? filters : undefined,
+          sort,
+          page,
+          limit
+        );
+
+        return notifications;
+      },
+      CACHE_TTLS.short // 2 minutes for notifications
     );
 
     return NextResponse.json(result);
@@ -72,6 +96,13 @@ export async function POST(request: NextRequest) {
     }
 
     const notification = await notificationService.createNotification(body);
+
+    // Invalidate cache for the user's notifications
+    await CacheManager.invalidateNotifications(body.userId);
+
+    // Broadcast new notification via SSE
+    const { broadcastToUser } = await import('./sse/route');
+    await broadcastToUser(body.userId, notification);
 
     return NextResponse.json({ data: notification }, { status: 201 });
   } catch (error) {

@@ -42,32 +42,133 @@ export function graphEventToCaalm(
     throw new Error('Graph event missing subject');
   }
 
+  // Convert ISO datetime strings to Date objects
+  // CRITICAL: Extract date components directly from the ISO string to avoid timezone conversion issues
   let startDate: Date;
   let endDate: Date;
+  let startDateOnly: string | undefined = undefined;
+  let startTimeOnly: string | undefined = undefined;
 
   try {
-    startDate = parseISO(graphEvent.start.dateTime);
+    const startDateTimeStr = graphEvent.start.dateTime;
+    console.log('Parsing start date:', startDateTimeStr);
+
+    // Parse the full ISO datetime
+    if (
+      !startDateTimeStr.includes('Z') &&
+      !startDateTimeStr.includes('+') &&
+      !startDateTimeStr.includes('-', 10)
+    ) {
+      startDate = new Date(startDateTimeStr);
+    } else {
+      startDate = parseISO(startDateTimeStr);
+    }
+
     if (!isValid(startDate)) {
       throw new Error('Invalid start date format');
     }
 
-    // parseISO handles timezone conversion, but we need to ensure
-    // the date is displayed in the user's local timezone
-    // The date-fns format function will automatically use local timezone
+    // DEBUG: Log the exact ISO string format
+    console.log('DEBUG: ISO string format:', {
+      fullString: startDateTimeStr,
+      hasZ: startDateTimeStr.includes('Z'),
+      hasPlusOffset: startDateTimeStr.includes('+'),
+      hasMinusOffset: startDateTimeStr.includes('-', 10),
+      timeZone: graphEvent.start.timeZone,
+      first10Chars: startDateTimeStr.substring(0, 10),
+      datePart: startDateTimeStr.substring(0, 10),
+      timePart: startDateTimeStr.substring(11, 19),
+    });
+
+    // CRITICAL FIX: Parse based on timezone information
+    // Check if datetime string has explicit timezone marker (Z or offset)
+    const hasExplicitTimezone =
+      startDateTimeStr.includes('Z') ||
+      startDateTimeStr.includes('+') ||
+      startDateTimeStr.match(/-\d{2}:\d{2}$/);
+
+    // Also check the timeZone field from Graph API
+    const isUTCTime =
+      graphEvent.start.timeZone === 'UTC' ||
+      graphEvent.start.timeZone === 'GMT' ||
+      graphEvent.start.timeZone.includes('Greenwich');
+
+    console.log('DEBUG: Has timezone info:', {
+      hasExplicitTimezone,
+      timeZoneField: graphEvent.start.timeZone,
+      isUTCTime,
+    });
+
+    // Extract date and time directly from the ISO string
+    const dateMatch = startDateTimeStr.match(
+      /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):/
+    );
+    if (dateMatch) {
+      startDateOnly = dateMatch[1]; // YYYY-MM-DD
+      let hour = parseInt(dateMatch[2]);
+      const minute = dateMatch[3];
+
+      // If the datetime is in UTC (either explicitly or via timeZone field), convert to local
+      if (hasExplicitTimezone || isUTCTime) {
+        console.log(
+          'DEBUG: Converting UTC time to local timezone:',
+          graphEvent.start.timeZone
+        );
+        // Append Z to force UTC interpretation
+        const utcString = hasExplicitTimezone
+          ? startDateTimeStr
+          : startDateTimeStr + 'Z';
+        const localDate = parseISO(utcString);
+        const localHour = localDate.getHours();
+        const localMinute = localDate.getMinutes();
+        startTimeOnly = `${localHour % 12 || 12}:${String(localMinute).padStart(
+          2,
+          '0'
+        )} ${localHour >= 12 ? 'PM' : 'AM'}`;
+        // Also update the date to use local date
+        startDateOnly = `${localDate.getFullYear()}-${String(
+          localDate.getMonth() + 1
+        ).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+        console.log('DEBUG: Converted to local time:', {
+          utcString,
+          localDate: localDate.toISOString(),
+          startTimeOnly,
+          startDateOnly,
+        });
+      } else {
+        // No UTC indication - treat as already in local time
+        startTimeOnly = `${hour % 12 || 12}:${minute} ${
+          hour >= 12 ? 'PM' : 'AM'
+        }`;
+      }
+
+      console.log('Extracted from ISO string:', {
+        dateOnly: startDateOnly,
+        timeOnly: startTimeOnly,
+      });
+    }
   } catch (error) {
     console.error('Invalid Graph event start date:', graphEvent.start.dateTime);
     throw new Error('Invalid start date format');
   }
 
   try {
-    endDate = parseISO(graphEvent.end.dateTime);
+    const endDateTimeStr = graphEvent.end.dateTime;
+    console.log('Parsing end date:', endDateTimeStr);
+
+    if (
+      !endDateTimeStr.includes('Z') &&
+      !endDateTimeStr.includes('+') &&
+      !endDateTimeStr.includes('-', 10)
+    ) {
+      endDate = new Date(endDateTimeStr);
+    } else {
+      endDate = parseISO(endDateTimeStr);
+    }
+
     if (!isValid(endDate)) {
       throw new Error('Invalid end date format');
     }
-
-    // parseISO handles timezone conversion, but we need to ensure
-    // the date is displayed in the user's local timezone
-    // The date-fns format function will automatically use local timezone
   } catch (error) {
     console.error('Invalid Graph event end date:', graphEvent.end.dateTime);
     throw new Error('Invalid end date format');
@@ -81,8 +182,10 @@ export function graphEventToCaalm(
   console.log('Converting Graph event to CAALM:', {
     subject: graphEvent.subject,
     startDateTime: graphEvent.start.dateTime,
+    endDateTime: graphEvent.end.dateTime,
+    timeZone: graphEvent.start.timeZone,
     parsedStartDate: startDate.toISOString(),
-    timezone: graphEvent.start.timeZone,
+    parsedEndDate: endDate.toISOString(),
   });
 
   // Determine event type based on categories or subject
@@ -105,23 +208,100 @@ export function graphEventToCaalm(
   const contractMatch = graphEvent.subject.match(/contract[:\s]+([^-\n]+)/i);
   const amountMatch = graphEvent.body?.content?.match(/\$[\d,]+\.?\d*/);
 
-  // Format start and end times for CAALM (preserve original timezone)
-  // Extract time components from the original datetime strings to avoid timezone conversion
-  const startTime =
-    graphEvent.start.dateTime.split('T')[1]?.split(':').slice(0, 2).join(':') ||
-    '00:00';
-  const endTime =
-    graphEvent.end.dateTime.split('T')[1]?.split(':').slice(0, 2).join(':') ||
-    '00:00';
+  // Use the directly extracted values from ISO string if available
+  // Otherwise format from Date objects
+  let startTime: string;
+  let endTime: string;
+  let dateOnly: string;
 
-  // CRITICAL FIX: Use UTC date to prevent day shifts due to timezone conversion
-  // Extract date components in UTC to ensure we get the correct day
-  const startDateUTC = new Date(
-    startDate.getUTCFullYear(),
-    startDate.getUTCMonth(),
-    startDate.getUTCDate()
-  );
-  const dateOnly = format(startDateUTC, 'yyyy-MM-dd');
+  // Use extracted values from ISO string to preserve original date/time
+  if (startDateOnly && startTimeOnly) {
+    dateOnly = startDateOnly;
+    startTime = startTimeOnly;
+
+    // Extract end time from ISO string with timezone conversion
+    const endStr = graphEvent.end.dateTime;
+    const endTimezone = graphEvent.end.timeZone;
+
+    // Check if end time is in UTC
+    const endHasExplicitTimezone =
+      endStr.includes('Z') ||
+      endStr.includes('+') ||
+      endStr.match(/-\d{2}:\d{2}$/);
+    const endIsUTCTime =
+      endTimezone === 'UTC' ||
+      endTimezone === 'GMT' ||
+      endTimezone?.includes('Greenwich');
+
+    if ((endHasExplicitTimezone || endIsUTCTime) && endTimezone) {
+      console.log('DEBUG: Converting end time from UTC to local timezone');
+      const endUTCString = endHasExplicitTimezone ? endStr : endStr + 'Z';
+      const localEndDate = parseISO(endUTCString);
+      const localEndHour = localEndDate.getHours();
+      const localEndMin = localEndDate.getMinutes();
+      endTime = `${localEndHour % 12 || 12}:${String(localEndMin).padStart(
+        2,
+        '0'
+      )} ${localEndHour >= 12 ? 'PM' : 'AM'}`;
+    } else {
+      const endMatch = endStr.match(/T(\d{2}):(\d{2})/);
+      if (endMatch) {
+        const endHour = parseInt(endMatch[1]);
+        const endMin = endMatch[2];
+        endTime = `${endHour % 12 || 12}:${endMin} ${
+          endHour >= 12 ? 'PM' : 'AM'
+        }`;
+      } else {
+        endTime = format(endDate, 'h:mm a');
+      }
+    }
+
+    console.log('Using extracted values:', { dateOnly, startTime, endTime });
+  } else {
+    // Fallback to Date object formatting
+    try {
+      startTime = format(startDate, 'h:mm a');
+      endTime = format(endDate, 'h:mm a');
+
+      // Extract date components to avoid day shift
+      const year = startDate.getFullYear();
+      const month = String(startDate.getMonth() + 1).padStart(2, '0');
+      const day = String(startDate.getDate()).padStart(2, '0');
+      dateOnly = `${year}-${month}-${day}`;
+
+      console.log('Using formatted values:', { dateOnly, startTime, endTime });
+    } catch (formatError) {
+      console.error('Error formatting dates:', formatError);
+      // Final fallback
+      const startStr = graphEvent.start.dateTime;
+      const endStr = graphEvent.end.dateTime;
+
+      const startMatch = startStr.match(/T(\d{2}):(\d{2})/);
+      const endMatch = endStr.match(/T(\d{2}):(\d{2})/);
+
+      if (startMatch && endMatch) {
+        const startHour = parseInt(startMatch[1]);
+        const startMin = startMatch[2];
+        const endHour = parseInt(endMatch[1]);
+        const endMin = endMatch[2];
+
+        startTime = `${startHour % 12 || 12}:${startMin} ${
+          startHour >= 12 ? 'PM' : 'AM'
+        }`;
+        endTime = `${endHour % 12 || 12}:${endMin} ${
+          endHour >= 12 ? 'PM' : 'AM'
+        }`;
+      } else {
+        startTime = '12:00 AM';
+        endTime = '1:00 AM';
+      }
+
+      const dateMatch = startStr.match(/^(\d{4}-\d{2}-\d{2})/);
+      dateOnly = dateMatch ? dateMatch[1] : format(new Date(), 'yyyy-MM-dd');
+
+      console.log('Using fallback values:', { dateOnly, startTime, endTime });
+    }
+  }
 
   console.log('Converted event details:', {
     title: graphEvent.subject,
@@ -140,18 +320,47 @@ export function graphEventToCaalm(
     })),
   });
 
+  // Build participants string from attendees
+  let participantsString = '';
+  if (graphEvent.attendees && graphEvent.attendees.length > 0) {
+    participantsString = graphEvent.attendees
+      .map((a) => {
+        if (a.emailAddress?.name && a.emailAddress?.address) {
+          return `${a.emailAddress.name} (${a.emailAddress.address})`;
+        } else if (a.emailAddress?.address) {
+          return a.emailAddress.address;
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  // Clean and validate description - ensure it's a string and within length limits
+  let description = '';
+  if (graphEvent.body?.content) {
+    // Remove HTML tags if content is HTML
+    description =
+      graphEvent.body.contentType === 'html'
+        ? graphEvent.body.content.replace(/<[^>]*>/g, '')
+        : graphEvent.body.content;
+
+    // Truncate to 1000 characters if necessary
+    if (description.length > 1000) {
+      description = description.substring(0, 1000);
+    }
+  }
+
   return {
     title: graphEvent.subject,
     startDate: dateOnly, // Use date-only format (YYYY-MM-DD) for CAALM
     type: eventType,
-    description: graphEvent.body?.content || '',
+    description: description || undefined, // Use undefined instead of empty string
     startTime,
     endTime,
     contractName: contractMatch ? contractMatch[1].trim() : undefined,
     amount: amountMatch ? amountMatch[0] : undefined,
-    participants: graphEvent.attendees
-      ?.map((a) => `${a.emailAddress.name} (${a.emailAddress.address})`)
-      .join(', '),
+    participants: participantsString || undefined,
     createdBy: 'outlook-sync', // Special identifier for synced events
   };
 }

@@ -25,7 +25,7 @@ export const useManagerContracts = ({
   pollingInterval = 20000, // 20 seconds for contracts (less frequent)
 }: UseManagerContractsOptions = {}) => {
   // Get current user first
-  const { data: currentUser } = useSWR(
+  const { data: currentUserResponse } = useSWR(
     swrKeys.currentUser(),
     swrConfig.fetcher || null,
     {
@@ -34,6 +34,9 @@ export const useManagerContracts = ({
       revalidateOnReconnect: true,
     }
   );
+
+  // Extract current user from response
+  const currentUser = currentUserResponse?.user || currentUserResponse?.data;
 
   // Use the global SWR key based on current user
   const key = currentUser?.$id

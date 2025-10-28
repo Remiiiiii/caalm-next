@@ -2,11 +2,77 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   compress: true,
+  poweredByHeader: false, // Remove X-Powered-By header for security
+
+  // TypeScript configuration
   typescript: {
     ignoreBuildErrors: true,
   },
+
+  // ESLint configuration
   eslint: {
     ignoreDuringBuilds: true,
+  },
+
+  // Compiler options
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? {
+            exclude: ['error', 'warn'],
+          }
+        : false,
+  },
+
+  // Webpack configuration for bundle optimization
+  webpack: (config, { isServer }) => {
+    // Optimize chunk splitting
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        moduleIds: 'deterministic',
+        runtimeChunk: 'single',
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            // Separate vendor chunk for large libraries
+            framework: {
+              name: 'framework',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-subscription)[\\/]/,
+              priority: 40,
+              enforce: true,
+            },
+            // UI components chunk
+            ui: {
+              name: 'ui',
+              test: /[\\/]node_modules[\\/]@radix-ui[\\/]/,
+              priority: 30,
+              enforce: true,
+            },
+            // Utilities chunk
+            utilities: {
+              name: 'utilities',
+              test: /[\\/]node_modules[\\/](date-fns|lodash)[\\/]/,
+              priority: 20,
+              enforce: true,
+            },
+            // Shared chunks
+            common: {
+              name: 'common',
+              minChunks: 2,
+              priority: 10,
+              reuseExistingChunk: true,
+              enforce: true,
+            },
+          },
+        },
+      };
+    }
+
+    return config;
   },
   // Hide error details in production
   ...(process.env.NODE_ENV === 'production' && {

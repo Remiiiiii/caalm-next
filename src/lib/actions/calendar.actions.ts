@@ -219,7 +219,7 @@ export const createCalendarEvent = async (
     // Create a recent activity for the new event
     try {
       await createEventActivity(
-        'New Event Added',
+        'New Calendar Event Added',
         eventData.title,
         response.$id,
         eventData.createdBy,

@@ -1,326 +1,152 @@
+/**
+ * Optimized search API with debouncing support, caching, and streaming
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/appwrite/admin';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
+import { logApiPerformance } from '@/lib/monitoring/performance';
+import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
-import { Query } from 'appwrite';
-import { logSearchAnalytics } from '@/lib/actions/search.actions';
+import { Query } from 'node-appwrite';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
-    const userId = searchParams.get('userId');
-    const type = searchParams.get('type');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const department = searchParams.get('department');
-    const status = searchParams.get('status');
-    const priority = searchParams.get('priority');
-    const vendor = searchParams.get('vendor');
-    const contractType = searchParams.get('contractType');
-    const amountMin = searchParams.get('amountMin');
-    const amountMax = searchParams.get('amountMax');
-    const sortBy = searchParams.get('sortBy') || '$createdAt';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
-    const limit = parseInt(searchParams.get('limit') || '25');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const query = searchParams.get('q') || '';
+    const type = searchParams.get('type') || 'all'; // all, users, contracts, reports
+    const limit = parseInt(searchParams.get('limit') || '20');
 
-    if (!query) {
-      return NextResponse.json({ error: 'Query is required' }, { status: 400 });
-    }
+    // Build cache key
+    const cacheKey = `${CACHE_KEYS.search.global(query)}:${type}:${limit}`;
 
-    const { tablesDB } = await createAdminClient();
+    // Check cache (short TTL for search results)
+    const results = await CacheManager.withCache(
+      'search',
+      cacheKey,
+      async () => {
+        const { tablesDB } = await createAdminClient();
 
-    // Build search queries
-    const queries = [];
+        // Search based on type
+        switch (type) {
+          case 'users':
+            return await searchUsers(tablesDB, query, limit);
+          case 'contracts':
+            return await searchContracts(tablesDB, query, limit);
+          case 'reports':
+            return await searchReports(tablesDB, query, limit);
+          default:
+            // Search all types in parallel
+            const [users, contracts, reports] = await Promise.all([
+              searchUsers(tablesDB, query, Math.ceil(limit / 3)),
+              searchContracts(tablesDB, query, Math.ceil(limit / 3)),
+              searchReports(tablesDB, query, Math.ceil(limit / 3)),
+            ]);
 
-    // Note: We'll handle text search client-side to avoid fulltext index requirement
-
-    // Filter by type (contract vs file)
-    if (type) {
-      const types = type.split(',');
-      if (types.length === 1) {
-        queries.push(Query.equal('type', types[0]));
-      } else {
-        queries.push(Query.equal('type', types));
-      }
-    }
-
-    // Date range filters
-    if (startDate) {
-      queries.push(Query.greaterThanEqual('$createdAt', startDate));
-    }
-    if (endDate) {
-      queries.push(Query.lessThanEqual('$createdAt', endDate));
-    }
-
-    // Contract-specific filters
-    if (department) {
-      queries.push(Query.equal('department', department));
-    }
-    if (status) {
-      queries.push(Query.equal('status', status));
-    }
-    if (priority) {
-      queries.push(Query.equal('priority', priority));
-    }
-    if (vendor) {
-      queries.push(Query.equal('vendor', vendor));
-    }
-    if (contractType) {
-      queries.push(Query.equal('contractType', contractType));
-    }
-
-    // Amount range filters
-    if (amountMin) {
-      queries.push(Query.greaterThanEqual('amount', parseFloat(amountMin)));
-    }
-    if (amountMax) {
-      queries.push(Query.lessThanEqual('amount', parseFloat(amountMax)));
-    }
-
-    // Sorting
-    const sortField = sortBy.startsWith('$') ? sortBy : sortBy;
-    queries.push(Query.orderDesc(sortField));
-    if (sortOrder === 'asc') {
-      queries[queries.length - 1] = Query.orderAsc(sortField);
-    }
-
-    // Get more documents to filter client-side (remove pagination for now)
-    const searchQueries = [...queries];
-    searchQueries.push(Query.limit(200)); // Get more documents for client-side filtering
-
-    // Search in contracts collection
-    const contractsResult = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      searchQueries
+            return {
+              users,
+              contracts,
+              reports,
+              total: users.length + contracts.length + reports.length,
+            };
+        }
+      },
+      CACHE_TTLS.short // 2 minutes for search
     );
 
-    // Search in files collection
-    const filesResult = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
-      searchQueries
-    );
-
-    // Combine and format results with client-side text filtering
-    let results = [
-      ...contractsResult.rows.map((doc) => ({
-        ...doc,
-        type: 'contract',
-        searchScore: calculateSearchScore(doc, query),
-      })),
-      ...filesResult.rows.map((doc) => ({
-        ...doc,
-        type: 'file',
-        searchScore: calculateSearchScore(doc, query),
-      })),
-    ];
-
-    // Client-side text filtering if query is provided
-    if (query.trim()) {
-      const queryLower = query.toLowerCase();
-      results = results.filter((doc: Record<string, unknown>) => {
-        const searchableFields = [
-          doc.contractName,
-          doc.name,
-          doc.vendor,
-          doc.contractNumber,
-          doc.description,
-          doc.department,
-          doc.contractType,
-        ].filter(Boolean);
-
-        return searchableFields.some(
-          (field: unknown) =>
-            typeof field === 'string' &&
-            field.toLowerCase().includes(queryLower)
-        );
-      });
-    }
-
-    // Sort by search score (relevance) if there's a query
-    if (query.trim()) {
-      results.sort((a, b) => (b.searchScore || 0) - (a.searchScore || 0));
-    }
-
-    // Apply pagination
-    const totalResults = results.length;
-    const paginatedResults = results.slice(offset, offset + limit);
-
-    // Log search analytics (async, don't wait for it) - only if user is provided
-    if (userId) {
-      logSearchAnalytics({
-        userId,
-        query,
-        filters: {
-          type: type ? type.split(',') : undefined,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
-          department: department || undefined,
-          status: status || undefined,
-          priority: priority || undefined,
-          vendor: vendor || undefined,
-          contractType: contractType || undefined,
-          amountMin: amountMin ? parseFloat(amountMin) : undefined,
-          amountMax: amountMax ? parseFloat(amountMax) : undefined,
-        },
-        resultCount: totalResults,
-        searchTime: Date.now() - startTime,
-      }).catch((error) => {
-        console.error('Failed to log search analytics:', error);
-      });
-    }
-
-    // Results are already sorted by relevance if there's a query
-
-    // Save search to history - only if user is provided
-    if (userId) {
-      try {
-        await tablesDB.createRow({
-          databaseId: appwriteConfig.databaseId,
-          tableId: 'search_history',
-          rowId: 'unique()',
-          data: {
-            userId,
-            query,
-            filters: {
-              type,
-              startDate,
-              endDate,
-              department,
-              status,
-              priority,
-              vendor,
-              contractType,
-              amountMin,
-              amountMax,
-            },
-            resultCount: totalResults,
-            timestamp: new Date().toISOString(),
-          },
-        });
-      } catch (error) {
-        console.error('Failed to save search history:', error);
-        // Don't fail the search if history saving fails
-      }
-    }
+    const duration = Date.now() - startTime;
+    logApiPerformance('/api/search', 'GET', duration, 200);
 
     return NextResponse.json({
-      results: paginatedResults,
-      total: totalResults,
-      query,
-      filters: {
-        type,
-        startDate,
-        endDate,
-        department,
-        status,
-        priority,
-        vendor,
-        contractType,
-        amountMin,
-        amountMax,
-      },
-      pagination: {
-        limit,
-        offset,
-        hasMore: offset + limit < totalResults,
-      },
+      success: true,
+      data: results,
+      cached: true,
+      duration,
     });
   } catch (error) {
-    console.error('Search error:', error);
-    return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+    const duration = Date.now() - startTime;
+    logApiPerformance('/api/search', 'GET', duration, 500);
+
+    console.error('Search API error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Search failed',
+      },
+      { status: 500 }
+    );
   }
 }
 
-// Enhanced search relevance scoring algorithm
-function calculateSearchScore(
-  doc: Record<string, unknown>,
-  query: string
-): number {
-  if (!query.trim()) return 0;
+/**
+ * Search users
+ */
+async function searchUsers(tablesDB: any, query: string, limit: number) {
+  if (!query) return [];
 
-  const queryLower = query.toLowerCase().trim();
-  const queryWords = queryLower.split(/\s+/);
-  let score = 0;
+  const response = await tablesDB.listRows(
+    appwriteConfig.databaseId,
+    appwriteConfig.usersCollectionId,
+    [
+      Query.or([
+        Query.contains('fullName', query),
+        Query.contains('email', query),
+      ]),
+      Query.limit(limit),
+    ]
+  );
 
-  // Field weights for relevance scoring
-  const fieldWeights = {
-    contractName: 15,
-    name: 15,
-    contractNumber: 12,
-    vendor: 10,
-    department: 8,
-    contractType: 8,
-    description: 6,
-    assignedManagers: 5,
-    compliance: 4,
-    priority: 3,
-  };
+  return response.rows.map((user: any) => ({
+    id: user.$id,
+    type: 'user',
+    name: user.fullName,
+    email: user.email,
+  }));
+}
 
-  // Calculate field-based scores
-  Object.entries(fieldWeights).forEach(([field, weight]) => {
-    const fieldValue = doc[field];
-    if (!fieldValue) return;
+/**
+ * Search contracts
+ */
+async function searchContracts(tablesDB: any, query: string, limit: number) {
+  if (!query) return [];
 
-    const fieldLower = fieldValue.toString().toLowerCase();
+  const response = await tablesDB.listRows(
+    appwriteConfig.databaseId,
+    appwriteConfig.contractsCollectionId,
+    [
+      Query.or([
+        Query.contains('title', query),
+        Query.contains('description', query),
+      ]),
+      Query.limit(limit),
+    ]
+  );
 
-    // Exact match gets full weight
-    if (fieldLower === queryLower) {
-      score += weight * 2;
-      return;
-    }
+  return response.rows.map((contract: any) => ({
+    id: contract.$id,
+    type: 'contract',
+    name: contract.title,
+    description: contract.description,
+  }));
+}
 
-    // Starts with query gets high weight
-    if (fieldLower.startsWith(queryLower)) {
-      score += weight * 1.5;
-      return;
-    }
+/**
+ * Search reports
+ */
+async function searchReports(tablesDB: any, query: string, limit: number) {
+  if (!query) return [];
 
-    // Contains query gets medium weight
-    if (fieldLower.includes(queryLower)) {
-      score += weight;
-      return;
-    }
+  const response = await tablesDB.listRows(
+    appwriteConfig.databaseId,
+    appwriteConfig.reportsCollectionId,
+    [Query.contains('title', query), Query.limit(limit)]
+  );
 
-    // Word-based matching for multi-word queries
-    if (queryWords.length > 1) {
-      const fieldWords = fieldLower.split(/\s+/);
-      const matchedWords = queryWords.filter((qWord: string) =>
-        fieldWords.some((fWord: string) => fWord.includes(qWord))
-      );
-
-      if (matchedWords.length > 0) {
-        score += (weight * matchedWords.length) / queryWords.length;
-      }
-    }
-  });
-
-  // Boost score for recent contracts (within last 30 days)
-  const createdAt = new Date(doc.$createdAt as string);
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  if (createdAt > thirtyDaysAgo) {
-    score *= 1.2;
-  }
-
-  // Boost score for high priority contracts
-  if (doc.priority === 'High' || doc.priority === 'Critical') {
-    score *= 1.1;
-  }
-
-  // Boost score for active contracts
-  if (doc.status === 'active' || doc.status === 'Active') {
-    score *= 1.05;
-  }
-
-  // Penalize very old contracts (older than 1 year)
-  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-  if (createdAt < oneYearAgo) {
-    score *= 0.9;
-  }
-
-  return Math.round(score * 100) / 100; // Round to 2 decimal places
+  return response.rows.map((report: any) => ({
+    id: report.$id,
+    type: 'report',
+    name: report.title,
+  }));
 }

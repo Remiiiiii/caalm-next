@@ -270,7 +270,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   });
 
   // Use proper data fetching hook with current month
-  const { events: calendarEvents, refresh } = useCalendarEvents({
+  const {
+    events: calendarEvents,
+    refresh,
+    forceRefresh,
+  } = useCalendarEvents({
     month: currentMonth,
     enableRealTime: true,
     pollingInterval: 10000,
@@ -342,12 +346,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       const result = await syncMicrosoftCalendar(user.$id);
 
       if (result.success) {
+        // Force refresh immediately to show synced events
+        await forceRefresh();
+
         toast({
           title: 'Success',
           description: result.message,
         });
-        // Refresh calendar events
-        refresh();
       } else {
         toast({
           title: 'Sync Failed',
@@ -652,21 +657,33 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       const result = await response.json();
       console.log('Delete success result:', result);
 
-      toast({
-        title: 'Success',
-        description: 'Event deleted successfully',
-      });
-
+      // Close dialogs and clear state IMMEDIATELY to prevent errors
       setIsEditEventOpen(false);
       setIsDeleteModalOpen(false);
       setSelectedEvent(null);
       setDeleteReason('');
-      refresh();
+
+      // Immediately force refresh to update the UI
+      await forceRefresh();
+
+      // Show success toast after UI is updated
+      toast({
+        title: 'Success',
+        description: 'Event deleted successfully',
+      });
     } catch (error) {
       console.error('Error deleting event:', error);
+
+      // Close dialogs even on error to prevent UI issues
+      setIsEditEventOpen(false);
+      setIsDeleteModalOpen(false);
+      setSelectedEvent(null);
+      setDeleteReason('');
+
       toast({
         title: 'Error',
-        description: 'Failed to delete event',
+        description:
+          error instanceof Error ? error.message : 'Failed to delete event',
         variant: 'destructive',
       });
     }
@@ -753,15 +770,20 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               className={cn(
                 'min-h-[120px] p-2 bg-white border border-gray-200 cursor-pointer transition-colors',
                 !isCurrentMonth && 'bg-gray-50 text-gray-400',
-                isSelected && 'bg-blue-50 border-blue-300',
-                isCurrentDay && 'bg-white' // White background for current day
+                isSelected && 'bg-blue-50 border-blue-300'
               )}
               onClick={() => handleDateSelect(day)}
             >
               <div className="flex items-center justify-start mb-1">
                 {isCurrentDay ? (
-                  <div className="w-6 h-6 rounded-full bg-[#0f5384] flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">
+                  <div
+                    className="w-7 h-7 rounded-full"
+                    style={{
+                      background:
+                        'linear-gradient(135deg, #12477d 0%, #03afbf 100%)',
+                    }}
+                  >
+                    <span className="text-white text-sm font-medium flex items-center justify-center h-full">
                       {format(day, 'd')}
                     </span>
                   </div>
@@ -906,7 +928,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setCurrentMonth(subWeeks(currentMonth, 1))}
+              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
               className="h-8 w-8 p-0 hover:bg-slate-100"
             >
               <ChevronLeft className="h-4 w-4 rotate-90" />
@@ -914,13 +936,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setCurrentMonth(addWeeks(currentMonth, 1))}
+              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
               className="h-8 w-8 p-0 hover:bg-slate-100"
             >
               <ChevronRight className="h-4 w-4 rotate-90" />
             </Button>
           </div>
-          <div className="text-lg font-medium">
+          <div className="text-2xl font-bold sidebar-gradient-text">
             {format(currentMonth, 'MMMM yyyy')}
           </div>
           <Button
@@ -930,7 +952,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               setCurrentMonth(new Date());
               setSelectedDate(new Date());
             }}
-            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+            className="bg-white/30 backdrop-blur border border-white/40 shadow-md sidebar-gradient-text hover:bg-white/40"
           >
             Today
           </Button>
@@ -946,12 +968,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 value="month"
                 className="flex items-center space-x-2"
               >
-                <Grid3X3 className="h-4 w-4" />
-                <span>Month</span>
+                <Grid3X3 className="h-4 w-4 text-slate-700 flex-shrink-0" />
+                <span className="sidebar-gradient-text">Month</span>
               </TabsTrigger>
               <TabsTrigger value="week" className="flex items-center space-x-2">
-                <CalendarDays className="h-4 w-4" />
-                <span>Week</span>
+                <CalendarDays className="h-4 w-4 flex-shrink-0" />
+                <span className="sidebar-gradient-text">Week</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -959,7 +981,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           <Button
             size="sm"
             variant="outline"
-            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+            className="bg-white/30 backdrop-blur border border-white/40 shadow-md sidebar-gradient-text hover:bg-white/40"
           >
             <Filter className="h-4 w-4 mr-2" />
             Filter
@@ -968,7 +990,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           <Button
             size="sm"
             variant="outline"
-            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+            className="bg-white/30 backdrop-blur border border-white/40 shadow-md sidebar-gradient-text hover:bg-white/40"
           >
             <Share2 className="h-4 w-4 mr-2" />
             Share
@@ -977,7 +999,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           <Button
             size="sm"
             variant="outline"
-            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+            className="bg-white/30 backdrop-blur border border-white/40 shadow-md sidebar-gradient-text hover:bg-white/40"
           >
             <Printer className="h-4 w-4 mr-2" />
             Print
@@ -990,7 +1012,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               variant="outline"
               onClick={handleSync}
               disabled={syncing}
-              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+              className="bg-white/30 backdrop-blur border border-white/40 shadow-md sidebar-gradient-text hover:bg-white/40"
             >
               {syncing ? (
                 <>
@@ -1010,9 +1032,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               <Button
                 size="sm"
                 variant="outline"
-                className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                className="bg-white/30 backdrop-blur border border-white/40 shadow-md sidebar-gradient-text hover:bg-white/40"
               >
-                <Settings className="h-4 w-4 mr-2" />
+                <Settings className="h-4 w-4 mr-2 text-slate-700" />
                 Settings
               </Button>
             </DialogTrigger>
@@ -1031,8 +1053,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
           <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40">
-                <Plus className="h-4 w-4 mr-2" />
+              <Button className="bg-white/30 backdrop-blur border border-white/40 shadow-md sidebar-gradient-text hover:bg-white/40">
+                <Plus className="h-4 w-4 mr-2 text-slate-700" />
                 New Event
               </Button>
             </DialogTrigger>
@@ -1424,41 +1446,44 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 {selectedEvent.description && (
                   <div className="flex items-start gap-2 text-sm text-gray-600">
                     <MessageSquare className="w-4 h-4 mt-0.5" />
-                    <span
-                      dangerouslySetInnerHTML={{
-                        __html: selectedEvent.description,
-                      }}
-                    />
+                    <span className="break-words">
+                      {selectedEvent.description.replace(/<[^>]*>/g, '')}
+                    </span>
                   </div>
                 )}
 
-                {(() => {
-                  // Check if participants exist (handle both string and array formats)
-                  const hasParticipants =
-                    selectedEvent.participants &&
-                    (Array.isArray(selectedEvent.participants)
-                      ? selectedEvent.participants.length > 0
-                      : selectedEvent.participants.trim().length > 0);
+                <div className="flex items-start gap-2 text-sm text-gray-600">
+                  <Users className="w-4 h-4 mt-0.5" />
+                  <span>
+                    {(() => {
+                      // Check if participants exist (handle both string and array formats)
+                      const hasParticipants =
+                        selectedEvent.participants &&
+                        (Array.isArray(selectedEvent.participants)
+                          ? selectedEvent.participants.length > 0
+                          : typeof selectedEvent.participants === 'string' &&
+                            selectedEvent.participants.trim().length > 0);
 
-                  return (
-                    hasParticipants && (
-                      <div className="flex items-start gap-2 text-sm text-gray-600">
-                        <Users className="w-4 h-4 mt-0.5" />
-                        <span>
-                          {loadingNames ? (
-                            <span className="text-gray-400">
-                              Loading participants...
-                            </span>
-                          ) : participantNames.length > 0 ? (
-                            participantNames.join(', ')
-                          ) : (
-                            'No participants'
-                          )}
+                      if (!hasParticipants) {
+                        return 'No participants';
+                      }
+
+                      return loadingNames ? (
+                        <span className="text-gray-400">
+                          Loading participants...
                         </span>
-                      </div>
-                    )
-                  );
-                })()}
+                      ) : participantNames.length > 0 ? (
+                        participantNames.join(', ')
+                      ) : Array.isArray(selectedEvent.participants) ? (
+                        selectedEvent.participants.join(', ')
+                      ) : selectedEvent.participants ? (
+                        selectedEvent.participants.toString()
+                      ) : (
+                        'No participants'
+                      );
+                    })()}
+                  </span>
+                </div>
               </div>
 
               {/* AI Suggestions (Outlook-style) */}

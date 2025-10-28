@@ -173,26 +173,24 @@ export class MicrosoftGraphClient {
       }
 
       // Use direct HTTP requests instead of the Graph client
-      let url = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events`;
+      let url = `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView`;
 
       // Add basic query parameters for better compatibility
       const params = new URLSearchParams();
+
+      // Use calendarView endpoint which returns times in user's timezone
+      // Specify timezone explicitly
+      if (startDate && endDate) {
+        params.append('startDateTime', startDate.toISOString());
+        params.append('endDateTime', endDate.toISOString());
+      }
+
       params.append('$orderby', 'start/dateTime asc');
       params.append('$top', '50'); // Limit to 50 events to avoid large responses
       params.append(
         '$select',
         'id,subject,start,end,body,location,attendees,isAllDay,showAs,sensitivity,importance,categories,createdDateTime,lastModifiedDateTime'
       ); // Request attendees field
-
-      if (startDate && endDate) {
-        // Use a simpler date filter format
-        const start = startDate.toISOString().split('T')[0]; // Just the date part
-        const end = endDate.toISOString().split('T')[0];
-        params.append(
-          '$filter',
-          `start/dateTime ge '${start}T00:00:00' and start/dateTime le '${end}T23:59:59'`
-        );
-      }
 
       url += `?${params.toString()}`;
 

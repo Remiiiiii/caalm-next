@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -42,6 +43,7 @@ interface IntegrationStatus {
   lastSync?: string;
   syncEnabled: boolean;
   loading: boolean;
+  userEmail?: string;
 }
 
 export default function CalendarSettings({
@@ -72,11 +74,26 @@ export default function CalendarSettings({
         getMicrosoftCalendarIntegration(userId),
       ]);
 
+      // Fetch user email from Microsoft Graph if integration exists
+      let userEmail: string | undefined;
+      if (integration && hasIntegration) {
+        try {
+          const userResponse = await fetch('/api/microsoft/user-info');
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            userEmail = userData.userPrincipalName;
+          }
+        } catch (error) {
+          console.warn('Could not fetch user email:', error);
+        }
+      }
+
       setIntegrationStatus({
         connected: hasIntegration,
         lastSync: integration?.last_sync,
         syncEnabled: integration?.sync_enabled ?? true,
         loading: false,
+        userEmail,
       });
     } catch (error) {
       console.error('Error loading integration status:', error);
@@ -127,10 +144,29 @@ export default function CalendarSettings({
       const result = await syncMicrosoftCalendar(userId);
 
       if (result.success) {
-        toast({
-          title: 'Success',
-          description: result.message,
-        });
+        // Check if there are errors to show details
+        const resultData = result as any;
+        let description = result.message;
+
+        // If there are errors in the result, include error details
+        if (resultData.result?.errors && resultData.result.errors.length > 0) {
+          const errorDetails = resultData.result.errors
+            .map((err: any) => `${err.operation}: ${err.error}`)
+            .join('\n');
+          description = `${result.message}\n\nErrors:\n${errorDetails}`;
+
+          toast({
+            title: 'Success with Errors',
+            description: description,
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Success',
+            description: result.message,
+          });
+        }
+
         await loadIntegrationStatus();
       } else {
         toast({
@@ -272,6 +308,30 @@ export default function CalendarSettings({
 
           {integrationStatus.connected ? (
             <div className="space-y-3">
+              {/* Connected Email Account */}
+              {integrationStatus.userEmail && (
+                <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Email account
+                  </h4>
+                  <div className="flex items-center gap-3">
+                    <Image
+                      src="/assets/images/365.png"
+                      alt="Microsoft 365"
+                      width={32}
+                      height={32}
+                      className="rounded"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {integrationStatus.userEmail}
+                      </p>
+                      <p className="text-xs text-gray-500">Microsoft 365</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Last Sync */}
               {integrationStatus.lastSync && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

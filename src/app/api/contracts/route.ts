@@ -5,6 +5,8 @@ import {
   NOTICE_TYPES,
   SET_ASIDE_TYPES,
 } from '@/lib/sam-config';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,11 +34,23 @@ export async function GET(request: NextRequest) {
       dept: searchParams.get('dept') || undefined,
     };
 
-    // Create SAM API service instance
-    const samService = createSAMApiService();
+    // Build cache key from search params
+    const cacheKey = `${CACHE_KEYS.contracts.all()}:${JSON.stringify(params)}`;
 
-    // Search for contracts
-    const results = await samService.searchContracts(params);
+    // Cache contract search results (10 minutes TTL)
+    const results = await CacheManager.withCache(
+      'contracts',
+      cacheKey,
+      async () => {
+        // Create SAM API service instance
+        const samService = createSAMApiService();
+
+        // Search for contracts
+        const contractResults = await samService.searchContracts(params);
+        return contractResults;
+      },
+      CACHE_TTLS.long
+    );
 
     return NextResponse.json({
       success: true,
@@ -90,11 +104,23 @@ export async function POST(request: NextRequest) {
       dept: body.dept,
     };
 
-    // Create SAM API service instance
-    const samService = createSAMApiService();
+    // Build cache key from search params
+    const cacheKey = `${CACHE_KEYS.contracts.all()}:${JSON.stringify(params)}`;
 
-    // Search for contracts
-    const results = await samService.searchContracts(params);
+    // Cache contract search results (10 minutes TTL)
+    const results = await CacheManager.withCache(
+      'contracts',
+      cacheKey,
+      async () => {
+        // Create SAM API service instance
+        const samService = createSAMApiService();
+
+        // Search for contracts
+        const contractResults = await samService.searchContracts(params);
+        return contractResults;
+      },
+      CACHE_TTLS.long
+    );
 
     return NextResponse.json({
       success: true,

@@ -59,7 +59,18 @@ function extractFeatures(section: string): string[] {
   return features;
 }
 
+// Cache the pricing data to avoid reading from file on every request
+let pricingCache: PricingData | null = null;
+let pricingCacheTime: number = 0;
+const PRICING_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export async function loadPricingFromMarkdown(): Promise<PricingData> {
+  // Return cached data if it's still valid
+  const now = Date.now();
+  if (pricingCache && now - pricingCacheTime < PRICING_CACHE_TTL) {
+    return pricingCache;
+  }
+
   // Try multiple locations to be resilient on different deploy targets (e.g., Vercel)
   const candidatePaths = [
     path.join(process.cwd(), 'public', 'PRICING.md'),
@@ -102,6 +113,10 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
       const features = extractFeatures(sec);
       return { key, name, monthly, yearly, features };
     });
+
+    // Cache the result
+    pricingCache = { plans };
+    pricingCacheTime = now;
 
     return { plans };
   }
@@ -164,6 +179,10 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
       ],
     },
   ];
+
+  // Cache the fallback defaults too
+  pricingCache = { plans: defaults };
+  pricingCacheTime = now;
 
   return { plans: defaults };
 }

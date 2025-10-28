@@ -1,49 +1,91 @@
+/**
+ * Global SWR configuration for optimal performance
+ */
+
 import { SWRConfiguration } from 'swr';
 
-// Global SWR configuration
-export const swrConfig: SWRConfiguration = {
-  // Default fetcher function with cache control
-  fetcher: async (url: string) => {
-    const response = await fetch(url, {
-      cache: process.env.NODE_ENV === 'development' ? 'no-store' : 'default',
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  },
+/**
+ * Default SWR fetcher with error handling
+ */
+export const fetcher = async (url: string) => {
+  const res = await fetch(url);
 
-  // Revalidation settings - More aggressive for fresh data
-  revalidateOnFocus: true,
-  revalidateOnReconnect: true,
-  revalidateIfStale: true,
-  revalidateOnMount: true, // Always revalidate on mount
+  if (!res.ok) {
+    const error = new Error('An error occurred while fetching the data.');
+    // Attach extra info to the error object
+    (error as any).status = res.status;
+    throw error;
+  }
 
-  // Deduplication - Disabled in dev for instant updates
-  dedupingInterval: process.env.NODE_ENV === 'development' ? 0 : 500,
-
-  // Error retry
-  errorRetryCount: 3,
-  errorRetryInterval: 1000, // Faster retry every 1 second
-
-  // Cache settings
-  keepPreviousData: false, // Don't keep stale data, always show fresh data
-
-  // Focus revalidation - No throttle in dev
-  focusThrottleInterval: process.env.NODE_ENV === 'development' ? 0 : 1000,
-
-  // Refresh interval for automatic updates - More frequent in dev
-  refreshInterval: process.env.NODE_ENV === 'development' ? 2000 : 10000,
+  return res.json();
 };
 
-// SWR keys for consistent caching
+/**
+ * SWR key generators for consistent caching
+ */
 export const swrKeys = {
+  currentUser: () => '/api/users/current',
+  users: () => '/api/users',
   calendarEvents: (year: number, month: number) =>
     `/api/calendar/events?year=${year}&month=${month}`,
+  managerContracts: (userId: string) => `/api/contracts?userId=${userId}`,
   recentActivities: (limit: number = 15) =>
     `/api/recent-activities?limit=${limit}`,
-  users: () => '/api/users',
-  currentUser: () => '/api/user/current',
-  managerContracts: (userId: string) => `/api/contracts/manager/${userId}`,
   adminStats: () => '/api/admin/stats',
+};
+
+/**
+ * Global SWR configuration
+ */
+export const swrConfig: SWRConfiguration = {
+  fetcher,
+  revalidateOnFocus: true, // Revalidate when window gets focused
+  revalidateOnReconnect: true, // Revalidate when network recovers
+  dedupingInterval: 2000, // Dedupe requests within 2 seconds
+  focusThrottleInterval: 5000, // Throttle revalidation on focus (5 seconds)
+  errorRetryCount: 3, // Retry failed requests 3 times
+  errorRetryInterval: 5000, // Wait 5 seconds between retries
+  shouldRetryOnError: (error: any) => {
+    // Don't retry on 4xx errors (client errors)
+    if (error?.status >= 400 && error?.status < 500) {
+      return false;
+    }
+    return true;
+  },
+  onError: (error, key) => {
+    // Log errors for monitoring
+    console.error('SWR Error:', {
+      key,
+      error: error.message,
+      status: (error as any).status,
+    });
+  },
+};
+
+/**
+ * SWR configuration for real-time data (short refresh interval)
+ */
+export const realTimeConfig: SWRConfiguration = {
+  ...swrConfig,
+  refreshInterval: 30000, // Refresh every 30 seconds
+  revalidateOnFocus: true,
+};
+
+/**
+ * SWR configuration for static data (long refresh interval)
+ */
+export const staticConfig: SWRConfiguration = {
+  ...swrConfig,
+  revalidateOnFocus: false, // Don't refetch on focus for static data
+  revalidateOnReconnect: false,
+  dedupingInterval: 60000, // Dedupe for 1 minute
+};
+
+/**
+ * SWR configuration for frequently changing data
+ */
+export const frequentConfig: SWRConfiguration = {
+  ...swrConfig,
+  refreshInterval: 5000, // Refresh every 5 seconds
+  dedupingInterval: 1000, // Dedupe for 1 second
 };

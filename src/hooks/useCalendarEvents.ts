@@ -28,31 +28,37 @@ interface UseCalendarEventsOptions {
 const convertDBEventToLocal = (
   dbEvent: DBCalendarEvent
 ): LocalCalendarEvent => {
-  const dbStartDate = new Date(dbEvent.startDate);
-
-  // Create a date in local timezone to avoid timezone shift issues
-  // Use the local date components directly instead of string conversion
-  const normalizedStartDate = new Date(
-    dbStartDate.getFullYear(),
-    dbStartDate.getMonth(),
-    dbStartDate.getDate()
-  );
-
-  // Handle endDate if it exists
+  // Parse the date string directly as date-only (no time component)
+  // If it's in format "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm:ss", extract just the date part
+  let normalizedStartDate: Date;
   let normalizedEndDate: Date | undefined;
-  if (dbEvent.endDate) {
-    const dbEndDate = new Date(dbEvent.endDate);
-    normalizedEndDate = new Date(
-      dbEndDate.getFullYear(),
-      dbEndDate.getMonth(),
-      dbEndDate.getDate()
-    );
+
+  try {
+    // If the date string includes a time component or timezone, extract just the date
+    const dateStr = dbEvent.startDate.split('T')[0]; // Get just YYYY-MM-DD
+    const [year, month, day] = dateStr.split('-').map(Number);
+
+    // Create date at noon local time to avoid timezone shift issues
+    normalizedStartDate = new Date(year, month - 1, day, 12, 0, 0);
+
+    // Do the same for endDate if it exists
+    if (dbEvent.endDate) {
+      const endDateStr = dbEvent.endDate.split('T')[0];
+      const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
+      normalizedEndDate = new Date(endYear, endMonth - 1, endDay, 12, 0, 0);
+    }
+  } catch (error) {
+    console.error('Error parsing dates:', error);
+    // Fallback to original parsing
+    normalizedStartDate = new Date(dbEvent.startDate);
+    if (dbEvent.endDate) {
+      normalizedEndDate = new Date(dbEvent.endDate);
+    }
   }
 
   console.log('Date conversion debug:', {
     originalStartDate: dbEvent.startDate,
     originalEndDate: dbEvent.endDate,
-    dbStartDate: dbStartDate.toISOString(),
     normalizedStartDate: normalizedStartDate.toISOString(),
     normalizedEndDate: normalizedEndDate?.toISOString(),
     localStartDate: normalizedStartDate.toLocaleDateString(),
@@ -125,13 +131,24 @@ export const useCalendarEvents = ({
   console.log('Events after conversion:', events);
   console.log('Events count:', events.length);
 
-  const refresh = () => mutate();
+  const refresh = async () => {
+    console.log('Refresh called, revalidating cache for key:', key);
+    // Force revalidation by passing true as second argument
+    await mutate(undefined, { revalidate: true });
+  };
+
+  const forceRefresh = () => {
+    console.log('Force refresh called, fetching new data immediately');
+    // Immediately fetch and update without waiting for cache
+    return mutate();
+  };
 
   return {
     events,
     isLoading,
     error,
     refresh,
+    forceRefresh,
     lastUpdate: new Date(),
   };
 };
