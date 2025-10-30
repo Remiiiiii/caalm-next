@@ -270,7 +270,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     try {
       const eventData = {
         title: newEvent.title,
-        date: (newEvent.date || new Date()).toISOString(),
+        startDate: (newEvent.date || new Date()).toISOString(),
         type: newEvent.type,
         description: newEvent.description,
         startTime: newEvent.startTime,
@@ -279,7 +279,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         participants: '',
         contractName: '',
         amount: '',
-      };
+      } as const;
 
       // Create event in database
       await createCalendarEvent(eventData);

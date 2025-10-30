@@ -24,6 +24,7 @@ import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { Trash2 } from 'lucide-react';
 import {
   deleteFile,
   renameFile,
@@ -349,8 +350,9 @@ const ActionDropdown = ({
             <CardFooter className="flex flex-col gap-3 md:flex-row">
               <Button
                 onClick={(e) => closeAllModals(e)}
-                className="modal-cancel-button"
+                className="primary-btn px-3 sm:px-4"
               >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
               <Button
@@ -403,8 +405,9 @@ const ActionDropdown = ({
             <CardFooter className="flex flex-col gap-3 md:flex-row">
               <Button
                 onClick={(e) => closeAllModals(e)}
-                className="modal-cancel-button"
+                className="primary-btn px-3 sm:px-4"
               >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
               <Button
@@ -450,9 +453,10 @@ const ActionDropdown = ({
             <CardFooter className="flex flex-col gap-3 md:flex-row">
               <Button
                 onClick={(e) => closeAllModals(e)}
-                className="primary-btn !w-full"
+                className="primary-btn px-3 sm:px-4 !w-full"
                 style={{ pointerEvents: 'auto' }}
               >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
             </CardFooter>
@@ -534,8 +538,9 @@ const ActionDropdown = ({
             <CardFooter className="flex flex-col gap-3 md:flex-row">
               <Button
                 onClick={(e) => closeAllModals(e)}
-                className="modal-cancel-button"
+                className="primary-btn px-3 sm:px-4"
               >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
               <Button
@@ -602,7 +607,11 @@ const ActionDropdown = ({
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3 md:flex-row">
-              <Button onClick={closeAllModals} className="modal-cancel-button">
+              <Button
+                onClick={closeAllModals}
+                className="primary-btn px-3 sm:px-4"
+              >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
               <Button

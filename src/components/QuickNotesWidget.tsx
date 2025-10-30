@@ -71,7 +71,7 @@ interface QuickNotesWidgetProps {
     $id: string;
     name?: string;
     [key: string]: any;
-  };
+  } | null;
 }
 
 // Tiptap editor configuration
@@ -572,8 +572,9 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditDialogOpen(false)}
-                className="text-xs px-3 primary-btn py-1 h-7"
+                className="primary-btn px-3 sm:px-4 text-xs py-1 h-7"
               >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
               <Button
@@ -668,8 +669,9 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditDialogOpen(false)}
-                className="text-xs px-3 primary-btn py-1 h-7"
+                className="primary-btn px-3 sm:px-4 text-xs py-1 h-7"
               >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
 
@@ -753,7 +755,8 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
           </div>
 
           <div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
-            <AlertDialogCancel className="primary-btn">
+            <AlertDialogCancel className="primary-btn px-3 sm:px-4">
+              <Trash2 className="w-4 h-4" />
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

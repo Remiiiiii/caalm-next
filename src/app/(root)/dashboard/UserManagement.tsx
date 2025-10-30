@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Trash, ListFilter, Pencil } from 'lucide-react';
+import { Trash, ListFilter, Pencil, Trash2 } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { capitalizeRole } from '@/lib/utils';
 
@@ -586,7 +586,13 @@ const UserManagement = () => {
             </div>
             {editError && <p className="text-red-600 text-sm">{editError}</p>}
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={closeEditModal}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeEditModal}
+                className="primary-btn px-3 sm:px-4"
+              >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
               <Button type="submit" disabled={editLoading}>
@@ -614,7 +620,9 @@ const UserManagement = () => {
             <Button
               variant="outline"
               onClick={() => setShowBulkDeleteDialog(false)}
+              className="primary-btn px-3 sm:px-4"
             >
+              <Trash2 className="w-4 h-4" />
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleBulkDelete}>

@@ -7,7 +7,7 @@ import { detectConflict, validateEventForSync } from '@/lib/microsoft/sync';
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId(request);
+    const userId = await getCurrentUserId();
     if (!userId) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },

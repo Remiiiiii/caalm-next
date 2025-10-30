@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -987,8 +987,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                   resetForm();
                 }}
                 disabled={isUploading}
-                className="primary-btn shimmer-hover"
+                className="primary-btn px-3 sm:px-4 shimmer-hover"
               >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
               <Button

@@ -4,7 +4,7 @@ import { getValidIntegration } from '@/lib/actions/calendar-integration.actions'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId(request);
+    const userId = await getCurrentUserId();
     if (!userId) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId(request);
+    const userId = await getCurrentUserId();
     if (!userId) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
@@ -111,4 +111,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Step 1: Get user ID
-    const userId = await getCurrentUserId(request);
+    const userId = await getCurrentUserId();
     if (!userId) {
       debugInfo.errors.push('No user ID found');
       return NextResponse.json(debugInfo, { status: 401 });
@@ -130,4 +130,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(debugInfo, { status: 500 });
   }
 }
-

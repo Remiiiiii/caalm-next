@@ -276,7 +276,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       // Create event in database
       const eventData = {
         title: newEvent.title.trim(),
-        date: newEvent.date?.toISOString() || new Date().toISOString(),
+        startDate: newEvent.date?.toISOString() || new Date().toISOString(),
         type: newEvent.type,
         description: newEvent.description?.trim() || '',
         contractName: newEvent.contractName?.trim() || '',

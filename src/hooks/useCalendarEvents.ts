@@ -15,6 +15,7 @@ interface LocalCalendarEvent {
   amount?: string;
   startTime?: string;
   endTime?: string;
+  location?: string;
   outlook_id?: string;
 }
 
@@ -77,6 +78,7 @@ const convertDBEventToLocal = (
     amount: dbEvent.amount,
     startTime: dbEvent.startTime,
     endTime: dbEvent.endTime,
+    location: dbEvent.location,
     outlook_id: dbEvent.outlook_id,
   };
 };

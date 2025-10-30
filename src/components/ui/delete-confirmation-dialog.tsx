@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 interface DeleteConfirmationDialogProps {
   open: boolean;
@@ -23,7 +23,9 @@ interface DeleteConfirmationDialogProps {
   isLoading?: boolean;
 }
 
-export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
+export const DeleteConfirmationDialog: React.FC<
+  DeleteConfirmationDialogProps
+> = ({
   open,
   onOpenChange,
   title,
@@ -66,7 +68,8 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
 
         <div className="py-4">
           <p className="text-sm text-gray-700">
-            Are you sure you want to delete <span className="font-medium text-gray-900">"{itemName}"</span>? 
+            Are you sure you want to delete{' '}
+            <span className="font-medium text-gray-900">"{itemName}"</span>?
             This action cannot be undone.
           </p>
         </div>
@@ -76,8 +79,9 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
             variant="outline"
             onClick={handleCancel}
             disabled={isLoading}
-            className="flex-1"
+            className="primary-btn px-3 sm:px-4 flex-1"
           >
+            <Trash2 className="w-4 h-4" />
             Cancel
           </Button>
           <Button

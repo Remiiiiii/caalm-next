@@ -361,6 +361,7 @@ export function graphEventToCaalm(
     contractName: contractMatch ? contractMatch[1].trim() : undefined,
     amount: amountMatch ? amountMatch[0] : undefined,
     participants: participantsString || undefined,
+    location: graphEvent.location?.displayName || undefined,
     createdBy: 'outlook-sync', // Special identifier for synced events
   };
 }
@@ -444,19 +445,25 @@ export function caalmEventToGraph(
 
   const categories = categoryMap[caalmEvent.type] || ['meeting'];
 
-  // Build subject with contract info if available
-  let subject = caalmEvent.title;
+  // Use just the event title as subject (no contract info in title)
+  const subject = caalmEvent.title;
+
+  // Build body content with proper formatting
+  let bodyContent = caalmEvent.description || '';
+
+  // Add contract information if available
   if (caalmEvent.contractName) {
-    subject = `Contract: ${caalmEvent.contractName} - ${caalmEvent.title}`;
+    bodyContent += `\n\nContract: ${caalmEvent.contractName}`;
   }
 
-  // Build body content
-  let bodyContent = caalmEvent.description || '';
+  // Add amount if available
   if (caalmEvent.amount) {
-    bodyContent += `\n\nAmount: ${caalmEvent.amount}`;
+    bodyContent += `\nAmount: ${caalmEvent.amount}`;
   }
+
+  // Add participants on a new line if available
   if (caalmEvent.participants) {
-    bodyContent += `\n\nParticipants: ${caalmEvent.participants}`;
+    bodyContent += `\n\nParticipants:\n${caalmEvent.participants}`;
   }
 
   // Validate the event data before returning
@@ -505,12 +512,23 @@ export function caalmEventToGraph(
   }
 
   // Ensure proper timezone handling for Microsoft Graph
-  const timeZone = 'America/New_York'; // Use a consistent timezone
+  // Prefer server's IANA timezone; fallback to UTC
+  const timeZone =
+    (Intl && Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
 
   // Format dates properly for Microsoft Graph API
   const formatDateTime = (date: Date): string => {
-    // Microsoft Graph expects ISO 8601 format
-    return date.toISOString();
+    // Microsoft Graph expects ISO 8601 format with timezone info
+    // Since we're using a specific timezone, we need to format it correctly
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    // Return in local time format that Graph API will interpret correctly
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   };
 
   return {
@@ -523,6 +541,12 @@ export function caalmEventToGraph(
       dateTime: formatDateTime(endDate),
       timeZone: timeZone,
     },
+    isAllDay: false,
+    location: caalmEvent.location
+      ? {
+          displayName: caalmEvent.location,
+        }
+      : undefined,
     body: {
       content: bodyContent || 'No description',
       contentType: 'text',

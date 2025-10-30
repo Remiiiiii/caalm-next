@@ -42,6 +42,7 @@ import {
   CheckCircle,
   Info,
   MessageSquare,
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -674,7 +675,12 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           </Button>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="text-sm">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="primary-btn px-3 sm:px-4 text-sm"
+            >
+              <Trash2 className="w-4 h-4" />
               Cancel
             </Button>
             <Button
@@ -708,7 +714,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                   setShowSmsSetupModal(false);
                   handleGlobalSettingChange('smsNotifications', false);
                 }}
+                className="primary-btn px-3 sm:px-4"
               >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction

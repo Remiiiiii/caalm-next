@@ -757,7 +757,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               {/* Page 2: Department Performance, Contract Expiry Alerts, Quick Notes */}
               <div className="flex gap-2 min-w-full -ml-2">
                 <DepartmentPerformanceWidget />
-                <QuickNotesWidget user={user} />
+                <QuickNotesWidget user={user ?? undefined} />
                 <ContractExpiryAlertsWidget
                   maxVisible={2}
                   showSettings={false}
@@ -1306,7 +1306,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                       variant="outline"
                       onClick={() => {}}
                       disabled={false}
+                      className="primary-btn px-3 sm:px-4"
                     >
+                      <Trash2 className="w-4 h-4" />
                       Cancel
                     </Button>
                     <Button type="submit" disabled={false}>
@@ -1374,8 +1376,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 <AlertDialogFooter className="flex-col sm:flex-row gap-3 px-6 pb-6">
                   <AlertDialogCancel
                     onClick={cancelRevoke}
-                    className="w-full sm:w-auto bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 transition-colors rounded-lg px-4 py-2 font-medium"
+                    className="primary-btn px-3 sm:px-4 w-full sm:w-auto"
                   >
+                    <Trash2 className="w-4 h-4" />
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction
@@ -1463,8 +1466,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 <div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
                   <AlertDialogCancel
                     onClick={cancelDelete}
-                    className="primary-btn"
+                    className="primary-btn px-3 sm:px-4"
                   >
+                    <Trash2 className="w-4 h-4" />
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction

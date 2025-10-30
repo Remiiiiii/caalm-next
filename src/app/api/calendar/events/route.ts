@@ -88,19 +88,34 @@ export async function GET(request: NextRequest) {
 
     console.log('Fetching calendar events for:', { year, month, userId });
 
-    // Check cache first
-    const cacheKey = CACHE_KEYS.calendar.events(year, month);
-    const cachedData = await CacheManager.withCache(
-      'calendar/events',
-      cacheKey,
-      async () => {
-        const events = await getCalendarEventsByMonth(year, month);
-        return { success: true, events };
-      },
-      CACHE_TTLS.medium
-    );
+    const noCacheHeader = request.headers.get('x-no-cache') === '1';
+    const noCacheQuery = (request.nextUrl.searchParams.get('noCache') || '') === '1';
 
-    return NextResponse.json(cachedData);
+    let payload: any;
+    if (noCacheHeader || noCacheQuery) {
+      // Bypass server cache entirely
+      const events = await getCalendarEventsByMonth(year, month);
+      payload = { success: true, events };
+    } else {
+      // Use server cache
+      const cacheKey = CACHE_KEYS.calendar.events(year, month);
+      payload = await CacheManager.withCache(
+        'calendar/events',
+        cacheKey,
+        async () => {
+          const events = await getCalendarEventsByMonth(year, month);
+          return { success: true, events };
+        },
+        CACHE_TTLS.medium
+      );
+    }
+
+    const res = NextResponse.json(payload);
+    // Prevent downstream/proxy caches from serving stale data to clients
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.headers.set('Pragma', 'no-cache');
+    res.headers.set('Expires', '0');
+    return res;
   } catch (error) {
     console.error('Error fetching calendar events via API:', error);
     return NextResponse.json(

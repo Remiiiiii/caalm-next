@@ -112,7 +112,7 @@ export default function InactivityDialog({
           <AlertDialogCancel
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white disabled:opacity-50"
+            className="primary-btn px-3 sm:px-4 flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white disabled:opacity-50"
           >
             <LogOut className="h-4 w-4" />
             {isLoggingOut ? 'Signing Out...' : 'Sign Out Now'}

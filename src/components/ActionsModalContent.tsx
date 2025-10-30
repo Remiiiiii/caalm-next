@@ -14,6 +14,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Button as ShadButton } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 
 import { tablesDB } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
@@ -424,8 +425,9 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
                       setSelectedDate(undefined);
                       setEditing(false);
                     }}
-                    className="text-slate-600 hover:text-slate-800"
+                    className="primary-btn px-3 sm:px-4 text-slate-600 hover:text-slate-800"
                   >
+                    <Trash2 className="w-4 h-4" />
                     Cancel
                   </ShadButton>
                 </div>

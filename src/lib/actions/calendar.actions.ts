@@ -19,6 +19,7 @@ export interface CalendarEvent {
   startTime?: string;
   endTime?: string;
   participants?: string;
+  location?: string;
   createdBy: string;
   outlook_id?: string;
   deleted_at?: string;
@@ -43,6 +44,7 @@ export interface CreateCalendarEventData {
   startTime?: string;
   endTime?: string;
   participants?: string;
+  location?: string;
   createdBy: string;
 }
 

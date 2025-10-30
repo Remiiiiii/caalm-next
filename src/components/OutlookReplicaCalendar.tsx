@@ -577,7 +577,9 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
               <Button
                 variant="outline"
                 onClick={() => setIsAddEventOpen(false)}
+                className="primary-btn px-3 sm:px-4"
               >
+                <Trash2 className="w-4 h-4" />
                 Cancel
               </Button>
               <Button onClick={handleCreateEvent} disabled={creatingEvent}>

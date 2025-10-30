@@ -19,7 +19,14 @@ import {
 import TwoFactorModal from '@/components/TwoFactorModal';
 import TwoFactorVerificationModal from '@/components/TwoFactorVerificationModal';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Smartphone, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import {
+  Shield,
+  Smartphone,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Trash2,
+} from 'lucide-react';
 import Image from 'next/image';
 import QRCode from 'qrcode';
 
@@ -485,7 +492,9 @@ export default function Test2FAPage() {
                       setVerificationCode('');
                       setSetupStep('qr');
                     }}
+                    className="primary-btn px-3 sm:px-4"
                   >
+                    <Trash2 className="w-4 h-4" />
                     Cancel
                   </Button>
                 </div>

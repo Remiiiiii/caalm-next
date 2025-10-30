@@ -98,9 +98,10 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const eventData = await request.json();
 
-    if (!eventData.title || !eventData.date) {
+    // Accept newer payload shape using startDate
+    if (!eventData.title || !eventData.startDate) {
       return NextResponse.json(
-        { error: 'Event title and date are required' },
+        { error: 'Event title and startDate are required' },
         { status: 400 }
       );
     }

@@ -8,12 +8,29 @@ import { SWRConfiguration } from 'swr';
  * Default SWR fetcher with error handling
  */
 export const fetcher = async (url: string) => {
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    cache: 'no-store',
+    headers: {
+      'x-no-cache': '1',
+    },
+  });
 
   if (!res.ok) {
-    const error = new Error('An error occurred while fetching the data.');
-    // Attach extra info to the error object
+    let errorMessage = 'An error occurred while fetching the data.';
+    let errorDetails: any = null;
+
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.message || errorMessage;
+      errorDetails = errorData;
+    } catch (error) {
+      errorMessage = res.statusText || errorMessage;
+    }
+
+    const error = new Error(errorMessage);
     (error as any).status = res.status;
+    (error as any).details = errorDetails;
+    (error as any).response = res;
     throw error;
   }
 
@@ -24,7 +41,7 @@ export const fetcher = async (url: string) => {
  * SWR key generators for consistent caching
  */
 export const swrKeys = {
-  currentUser: () => '/api/users/current',
+  currentUser: () => '/api/user/current',
   users: () => '/api/users',
   calendarEvents: (year: number, month: number) =>
     `/api/calendar/events?year=${year}&month=${month}`,
@@ -53,11 +70,16 @@ export const swrConfig: SWRConfiguration = {
     return true;
   },
   onError: (error, key) => {
-    // Log errors for monitoring
+    // Log errors for monitoring with safe property access
+    const errorMessage =
+      error?.message || (error as any)?.error || 'Unknown error';
+    const status = (error as any).status || 'unknown';
+
     console.error('SWR Error:', {
       key,
-      error: error.message,
-      status: (error as any).status,
+      error: errorMessage,
+      status: status,
+      details: (error as any).details || null,
     });
   },
 };
