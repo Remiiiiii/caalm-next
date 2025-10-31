@@ -383,7 +383,18 @@ export function caalmEventToGraph(
       // Date-only format (YYYY-MM-DD) - add time component
       const dateStr = caalmEvent.startDate;
       const timeStr = caalmEvent.startTime || '00:00';
-      startDate = new Date(`${dateStr}T${timeStr}:00`);
+      
+      // Create date by parsing components directly to avoid timezone issues
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      startDate = new Date(year, month - 1, day, hours, minutes, 0);
+      
+      console.log('Created startDate from components:', {
+        dateStr,
+        timeStr,
+        parsed: startDate.toISOString(),
+        local: startDate.toLocaleString(),
+      });
     }
 
     if (isNaN(startDate.getTime())) {
@@ -417,7 +428,18 @@ export function caalmEventToGraph(
         throw new Error('Invalid time format');
       }
 
-      endDate = new Date(`${dateStr}T${caalmEvent.endTime}:00`);
+      // Create date by parsing components directly to avoid timezone issues
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const [hours, minutes] = caalmEvent.endTime.split(':').map(Number);
+      endDate = new Date(year, month - 1, day, hours, minutes, 0);
+      
+      console.log('Created endDate from components:', {
+        dateStr,
+        timeStr: caalmEvent.endTime,
+        parsed: endDate.toISOString(),
+        local: endDate.toLocaleString(),
+      });
+      
       if (isNaN(endDate.getTime())) {
         throw new Error('Invalid end time');
       }
@@ -531,7 +553,7 @@ export function caalmEventToGraph(
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   };
 
-  return {
+  const graphEvent = {
     subject: subject.trim(),
     start: {
       dateTime: formatDateTime(startDate),
@@ -541,7 +563,6 @@ export function caalmEventToGraph(
       dateTime: formatDateTime(endDate),
       timeZone: timeZone,
     },
-    isAllDay: false,
     location: caalmEvent.location
       ? {
           displayName: caalmEvent.location,
@@ -552,9 +573,22 @@ export function caalmEventToGraph(
       contentType: 'text',
     },
     categories,
-    showAs: 'busy',
-    importance: caalmEvent.type === 'deadline' ? 'high' : 'normal',
+    showAs: 'busy' as const,
+    importance: caalmEvent.type === 'deadline' ? 'high' as const : 'normal' as const,
   };
+
+  console.log('Created Graph event for Outlook:', {
+    subject: graphEvent.subject,
+    start: graphEvent.start,
+    end: graphEvent.end,
+    caalmData: {
+      startDate: caalmEvent.startDate,
+      startTime: caalmEvent.startTime,
+      endTime: caalmEvent.endTime,
+    },
+  });
+
+  return graphEvent;
 }
 
 /**

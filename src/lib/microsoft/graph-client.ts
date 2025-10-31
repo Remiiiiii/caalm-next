@@ -277,6 +277,8 @@ export class MicrosoftGraphClient {
         await this.refreshTokens();
       }
 
+      console.log('Creating event in Outlook with payload:', JSON.stringify(event, null, 2));
+
       const response = await fetch(
         `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events`,
         {
