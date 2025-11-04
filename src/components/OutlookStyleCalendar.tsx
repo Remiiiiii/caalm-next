@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import Avatar from '@/components/ui/avatar';
 import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
 
 import {
@@ -26,6 +27,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import CalendarSettings from '@/components/CalendarSettings';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useAutoSync } from '@/hooks/useAutoSync';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -36,6 +38,7 @@ import {
 } from '@/components/ui/select';
 import {
   CalendarIcon,
+  Calendar as CalendarIconLucide,
   Plus,
   Pencil,
   Clock,
@@ -175,6 +178,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [outlookConnected, setOutlookConnected] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Enable automatic sync with Outlook (polls every 5 minutes)
+  const { triggerSync } = useAutoSync(user?.$id, outlookConnected);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [shareSettings, setShareSettings] = useState({
     users: [],
@@ -251,13 +257,54 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   };
 
   // Function to convert 24-hour format to 12-hour format for display
-  const formatTimeForDisplay = (time24: string) => {
-    if (!time24) return '';
-    const [hours, minutes] = time24.split(':');
+  const formatTimeForDisplay = (timeInput: string) => {
+    if (!timeInput) return '';
+    
+    // Check if already in 12-hour format with AM/PM
+    if (timeInput.includes('AM') || timeInput.includes('PM')) {
+      // Already formatted, just ensure proper spacing
+      return timeInput.replace(/\s+(AM|PM)/i, ' $1');
+    }
+    
+    // Parse 24-hour format (e.g., "19:00")
+    const [hours, minutes] = timeInput.split(':');
     const hour = parseInt(hours);
     const hours12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     const ampm = hour >= 12 ? 'PM' : 'AM';
     return `${hours12}:${minutes} ${ampm}`;
+  };
+
+  // Function to parse time string and convert to minutes since midnight for sorting
+  const parseTimeToMinutes = (timeStr: string | undefined): number => {
+    if (!timeStr) return 0; // Events without time come first (or use 1440 to put them last)
+    
+    // Check if it's 12-hour format (e.g., "8:00 AM" or "2:30 PM")
+    const twelveHourMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (twelveHourMatch) {
+      let hours = parseInt(twelveHourMatch[1]);
+      const minutes = parseInt(twelveHourMatch[2]);
+      const period = twelveHourMatch[3].toUpperCase();
+      
+      // Convert to 24-hour format
+      if (period === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      return hours * 60 + minutes;
+    }
+    
+    // Check if it's 24-hour format (e.g., "08:00" or "14:30")
+    const twentyFourHourMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
+    if (twentyFourHourMatch) {
+      const hours = parseInt(twentyFourHourMatch[1]);
+      const minutes = parseInt(twentyFourHourMatch[2]);
+      return hours * 60 + minutes;
+    }
+    
+    // If format is unrecognized, return 0
+    return 0;
   };
 
   // Function to fetch contracts from database
@@ -559,7 +606,16 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
   const getEventsForDate = (date: Date) => {
     return allEvents.filter((event) => {
-      const eventDate = new Date(event.startDate);
+      // event.startDate is already a Date object from useCalendarEvents
+      if (!event.startDate) return false;
+
+      // Extract just the date part for comparison (avoid timezone issues)
+      const eventDate =
+        event.startDate instanceof Date
+          ? event.startDate
+          : new Date(event.startDate);
+
+      // Compare dates directly using isSameDay which handles timezone-safe date comparison
       return isSameDay(eventDate, date);
     });
   };
@@ -614,11 +670,24 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         createdBy: user?.$id || 'user',
       };
 
-      console.log('Creating event with data:', eventData);
-      console.log('Original date:', newEvent.date);
-      console.log('Date string created:', dateString);
-      console.log('User object:', user);
-      console.log('User ID:', user?.$id);
+      console.log('Creating event with data:', {
+        ...eventData,
+        originalDate: newEvent.date.toISOString(),
+        originalDateLocal: newEvent.date.toLocaleDateString(),
+        dateStringCreated: dateString,
+        startTime: eventData.startTime,
+        endTime: eventData.endTime,
+      });
+      console.log('Date details:', {
+        year,
+        month,
+        day,
+        dateString,
+        endYear,
+        endMonth,
+        endDay,
+        endDateString,
+      });
 
       const response = await fetch('/api/calendar/events', {
         method: 'POST',
@@ -777,9 +846,16 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         return 'audit';
       };
 
+      // Create date string in YYYY-MM-DD format to avoid timezone issues
+      const eventDate = newEvent.date || new Date();
+      const year = eventDate.getFullYear();
+      const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+      const day = String(eventDate.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+
       const eventData = {
         title: newEvent.title,
-        startDate: (newEvent.date || new Date()).toISOString(),
+        startDate: dateString,
         type: normalizeType(newEvent.type as unknown as string),
         description: newEvent.description || '',
         startTime: newEvent.startTime || '',
@@ -965,21 +1041,35 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
         {/* Calendar days */}
         {days.map((day) => {
-          // Build local day range to avoid TZ drift (off-by-one)
-          const start = new Date(day);
-          start.setHours(0, 0, 0, 0);
-          const end = new Date(day);
-          end.setHours(23, 59, 59, 999);
+          // Use isSameDay for proper date comparison (handles timezone safely)
           const dayEvents = allEvents.filter((event) => {
-            const raw = (event as any)?.startDate || (event as any)?.date;
-            if (!raw) return false;
-            const d = new Date(raw);
-            return d >= start && d <= end;
+            // event.startDate is already a Date object from useCalendarEvents
+            if (!event.startDate) return false;
+
+            // Ensure we have a Date object
+            const eventDate =
+              event.startDate instanceof Date
+                ? event.startDate
+                : new Date(event.startDate);
+
+            // Use isSameDay for timezone-safe date comparison
+            // This ensures events show on the correct calendar day
+            return isSameDay(eventDate, day);
           });
 
           // Debug logging for specific dates
           if (dayEvents.length > 0) {
-            console.log(`Events for ${format(day, 'yyyy-MM-dd')}:`, dayEvents);
+            console.log(
+              `Events for ${format(day, 'yyyy-MM-dd')}:`,
+              dayEvents.map((e) => ({
+                title: e.title,
+                startDate: e.startDate?.toISOString(),
+                startDateLocal: e.startDate
+                  ? format(e.startDate, 'yyyy-MM-dd')
+                  : 'N/A',
+                startTime: e.startTime,
+              }))
+            );
           }
 
           const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -990,64 +1080,66 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             <div
               key={day.toISOString()}
               className={cn(
-                'min-h-[120px] max-h-[120px] overflow-hidden p-2 bg-white border border-gray-200 cursor-pointer transition-colors',
+                'min-h-[120px] max-h-[120px] overflow-hidden p-2 bg-white border border-gray-200 cursor-pointer transition-colors flex flex-col',
                 !isCurrentMonth && 'bg-gray-50 text-gray-400',
                 isSelected && 'bg-gray-50 border-blue-300'
               )}
               onClick={() => handleDateSelect(day)}
             >
-              <div className="flex items-center justify-start mb-1">
+              <div className="flex items-center justify-start mb-0.5 flex-shrink-0">
                 {isCurrentDay ? (
                   <div
-                    className="w-7 h-7 rounded-full"
+                    className="w-6 h-6 rounded-full"
                     style={{
                       background:
                         'linear-gradient(135deg, #12477d 0%, #03afbf 100%)',
                     }}
                   >
-                    <span className="text-white text-sm font-medium flex items-center justify-center h-full">
+                    <span className="text-white text-xs font-medium flex items-center justify-center h-full">
                       {format(day, 'd')}
                     </span>
                   </div>
                 ) : (
-                  <div className="text-sm font-medium">{format(day, 'd')}</div>
+                  <div className="text-xs font-medium">{format(day, 'd')}</div>
                 )}
               </div>
 
               {/* Events for this day */}
-              <div className="space-y-1">
-                {dayEvents.slice(0, 3).map((event, index) => {
-                  const config = getEventTypeConfig(event.type);
-                  return (
-                    <div
-                      key={event.$id || `event-${index}-${event.title}`}
-                      className="bg-gray-100 border-l-4 border-gray-400 p-2 rounded cursor-pointer hover:bg-gray-200 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditDialog(event);
-                      }}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
-                          {event.startTime
-                            ? formatTimeForDisplay(event.startTime)
-                            : 'All Day'}
-                        </span>
+              <div className="flex flex-col flex-1 min-h-0">
+                <div className="space-y-1">
+                  {dayEvents.slice(0, 2).map((event, index) => {
+                    const config = getEventTypeConfig(event.type);
+                    return (
+                      <div
+                        key={event.$id || `event-${index}-${event.title}`}
+                        className="bg-gray-100 border-l-4 border-gray-400 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-200 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditDialog(event);
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[10px] font-medium text-gray-600 whitespace-nowrap">
+                            {event.startTime
+                              ? formatTimeForDisplay(event.startTime)
+                              : 'All Day'}
+                          </span>
 
-                        <span className="text-xs text-gray-800 truncate">
-                          {event.title}
-                        </span>
-                        {event.outlook_id && (
-                          <CheckCircle className="h-4 w-4 text-green flex-shrink-0 ml-auto" />
-                        )}
+                          <span className="text-xs text-gray-800 truncate">
+                            {event.title}
+                          </span>
+                          {event.outlook_id && (
+                            <CheckCircle className="h-3 w-3 text-green flex-shrink-0 ml-auto" />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-                {dayEvents.length > 3 && (
+                    );
+                  })}
+                </div>
+                {dayEvents.length > 2 && (
                   <button
                     type="button"
-                    className="w-full text-xs text-slate-600 text-center hover:text-blue-600"
+                    className="w-full text-[10px] text-slate-600 text-center hover:text-blue-600 py-1 mt-auto"
                     onClick={(e) => {
                       e.stopPropagation();
                       setOverflowDate(day);
@@ -1055,7 +1147,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       setIsOverflowOpen(true);
                     }}
                   >
-                    +{dayEvents.length - 3} more
+                    +{dayEvents.length - 2} more
                   </button>
                 )}
               </div>
@@ -1069,50 +1161,115 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Overflow dialog listing all events for a selected day
   const OverflowDialog = () => (
     <Dialog open={isOverflowOpen} onOpenChange={setIsOverflowOpen}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {overflowDate
-              ? format(overflowDate, 'EEEE, MMMM d, yyyy')
-              : 'Events'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-2">
-          {overflowEvents.map((event) => {
-            const config = getEventTypeConfig(event.type);
-            const IconComp = config.icon;
-            return (
-              <button
-                key={
-                  event.$id || event.id || `${event.title}-${event.startDate}`
-                }
-                type="button"
-                onClick={() => {
-                  setIsOverflowOpen(false);
-                  openEditDialog(event);
-                }}
-                className={cn(
-                  'w-full text-left p-3 rounded border flex items-center gap-3 hover:bg-slate-50',
-                  'border-slate-200'
-                )}
-              >
-                <IconComp className="h-4 w-4 flex-shrink-0 text-slate-600" />
-                <span className="text-xs text-slate-600 flex-shrink-0">
-                  {event.startTime
-                    ? `${formatTimeForDisplay(event.startTime)}${
-                        event.endTime
-                          ? ` - ${formatTimeForDisplay(event.endTime)}`
-                          : ''
-                      }`
-                    : 'All Day'}
-                </span>
-                <span className="text-slate-400 text-xs">•</span>
-                <span className="text-sm font-medium truncate min-w-0">
-                  {event.title}
-                </span>
-              </button>
-            );
-          })}
+      <DialogContent className="max-w-2xl p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+        {/* Professional Header with Cap */}
+        <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
+          <div className="flex items-center px-6">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <CalendarIconLucide className="w-5 h-5 text-[#0f5384]" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-semibold sidebar-gradient-text mt-6">
+                {overflowDate
+                  ? format(overflowDate, 'EEEE, MMMM d, yyyy')
+                  : 'Events'}
+              </DialogTitle>
+              <p className="text-sm text-slate-600 mt-1">
+                {overflowEvents.length} event
+                {overflowEvents.length !== 1 ? 's' : ''} scheduled
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Event List */}
+        <div className="flex-1 overflow-y-auto p-6 bg-white">
+          <div className="space-y-3">
+            {[...overflowEvents]
+              .sort((a, b) => {
+                const timeA = parseTimeToMinutes(a.startTime);
+                const timeB = parseTimeToMinutes(b.startTime);
+                return timeA - timeB;
+              })
+              .map((event) => {
+              const config = getEventTypeConfig(event.type);
+              const IconComp = config.icon;
+              return (
+                <button
+                  key={
+                    event.$id || event.id || `${event.title}-${event.startDate}`
+                  }
+                  type="button"
+                  onClick={() => {
+                    setIsOverflowOpen(false);
+                    openEditDialog(event);
+                  }}
+                  className={cn(
+                    'w-full text-left p-4 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group',
+                    'shadow-sm hover:shadow-md'
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    {/* Icon with background */}
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
+                      <IconComp className="h-5 w-5 text-blue-600" />
+                    </div>
+
+                    {/* Event Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-semibold text-slate-900">
+                          {event.title}
+                        </span>
+                        {event.outlook_id && (
+                          <CheckCircle className="h-4 w-4 text-green flex-shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-600">
+                        <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>
+                          {event.startTime
+                            ? `${formatTimeForDisplay(event.startTime)}${
+                                event.endTime
+                                  ? ` - ${formatTimeForDisplay(event.endTime)}`
+                                  : ''
+                              }`
+                            : 'All Day'}
+                        </span>
+                      </div>
+                      {event.type && (
+                        <div className="mt-2">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                            {getEventTypeLabel(event.type as unknown as string)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Chevron Icon */}
+                    <div className="flex-shrink-0 flex items-center">
+                      <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <div className="text-xs text-slate-500">
+            Click on any event to view details
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setIsOverflowOpen(false)}
+            className="primary-btn px-4"
+          >
+            Close
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -1138,10 +1295,19 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
         {/* Day content */}
         {days.map((day) => {
-          const dayEvents = allEvents.filter(
-            (event) =>
-              event.startDate && isSameDay(new Date(event.startDate), day)
-          );
+          const dayEvents = allEvents.filter((event) => {
+            // event.startDate is already a Date object from useCalendarEvents
+            if (!event.startDate) return false;
+
+            // Ensure we have a Date object
+            const eventDate =
+              event.startDate instanceof Date
+                ? event.startDate
+                : new Date(event.startDate);
+
+            // Use isSameDay for timezone-safe date comparison
+            return isSameDay(eventDate, day);
+          });
           const isSelected = selectedDate && isSameDay(day, selectedDate);
           const isCurrentDay = isToday(day);
 
@@ -1433,11 +1599,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                           variant="secondary"
                           className="flex items-center gap-2 bg-blue-100 text-blue-800 border-blue-200 px-3 py-1"
                         >
-                          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                            {(participant.fullName || participant.name)
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
+                          <Avatar
+                            name={participant.fullName || participant.name}
+                            userId={participant.$id}
+                            size="sm"
+                          />
                           <span className="text-sm font-medium">
                             {participant.fullName || participant.name}
                           </span>
@@ -2019,7 +2185,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                         <div className="flex-1">
                           <div className="text-sm font-medium text-slate-900">
                             {format(
-                              new Date(selectedEvent.startDate),
+                              selectedEvent.startDate instanceof Date
+                                ? selectedEvent.startDate
+                                : new Date(selectedEvent.startDate),
                               'EEEE, MMMM d, yyyy'
                             )}
                           </div>
@@ -2395,7 +2563,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 <AlertTriangle className="w-5 h-5 text-[#f0c974]" />
               </div>
               <div>
-                <DialogTitle className="text-base font-semibold text-slate-900">
+                <DialogTitle className="text-base font-semibold sidebar-gradient-text">
                   Delete Event
                 </DialogTitle>
                 <DialogDescription className="text-sm text-slate-600 mt-1">
@@ -2420,7 +2588,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               value={deleteReason}
               onChange={(e) => setDeleteReason(e.target.value)}
               rows={4}
-              className="bg-white border-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-500 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-0"
+              className="bg-white border-slate-300 focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
             />
             <p className="text-xs text-slate-500">
               This helps your team understand why the event was removed.
@@ -2452,6 +2620,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+      <OverflowDialog />
     </div>
   );
 };

@@ -146,9 +146,15 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
 
     setCreatingEvent(true);
     try {
+      // Create date string in YYYY-MM-DD format to avoid timezone issues
+      const year = newEvent.date.getFullYear();
+      const month = String(newEvent.date.getMonth() + 1).padStart(2, '0');
+      const day = String(newEvent.date.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+
       const eventData = {
         title: newEvent.title,
-        date: newEvent.date.toISOString(),
+        startDate: dateString,
         type: newEvent.type,
         description: newEvent.description,
         startTime: newEvent.startTime,

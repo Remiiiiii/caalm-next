@@ -186,7 +186,7 @@ export class MicrosoftGraphClient {
       }
 
       params.append('$orderby', 'start/dateTime asc');
-      params.append('$top', '50'); // Limit to 50 events to avoid large responses
+      params.append('$top', '250'); // Increase limit to reduce pagination
       params.append(
         '$select',
         'id,subject,start,end,body,location,attendees,isAllDay,showAs,sensitivity,importance,categories,createdDateTime,lastModifiedDateTime'
@@ -200,24 +200,59 @@ export class MicrosoftGraphClient {
         this.accessToken.substring(0, 20) + '...'
       );
 
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Fetch all pages of events (handle pagination)
+      const allEvents: GraphEvent[] = [];
+      let nextLink: string | undefined = url;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Graph API error response:', errorText);
-        throw new Error(
-          `Graph API error: ${response.status} ${response.statusText}`
-        );
+      while (nextLink) {
+        // Get the server's local timezone (e.g., "Eastern Standard Time")
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const outlookTimezone = timezone === 'America/New_York' 
+          ? 'Eastern Standard Time' 
+          : timezone; // Use server timezone dynamically
+        
+        const response = await fetch(nextLink, {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+            'Prefer': `outlook.timezone="${outlookTimezone}"`,
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Graph API error response:', errorText);
+          throw new Error(
+            `Graph API error: ${response.status} ${response.statusText}`
+          );
+        }
+
+        const data = await response.json();
+        
+        // Add events from this page
+        if (data.value && Array.isArray(data.value)) {
+          allEvents.push(...data.value);
+        }
+
+        // Check for next page
+        nextLink = data['@odata.nextLink'];
+        
+        // Safety check: limit to 5 pages (1250 events max) to prevent infinite loops
+        if (allEvents.length >= 1250) {
+          console.warn('Reached maximum event limit (1250), stopping pagination');
+          break;
+        }
       }
 
-      const data = await response.json();
-      console.log('Graph API response:', data);
-      return data.value || [];
+      console.log(`Graph API fetched ${allEvents.length} events total`);
+      
+      // Remove duplicates based on event ID
+      const uniqueEvents = Array.from(
+        new Map(allEvents.map(event => [event.id, event])).values()
+      );
+      
+      console.log(`After deduplication: ${uniqueEvents.length} unique events`);
+      return uniqueEvents;
     } catch (error) {
       console.error('Graph API error:', error);
       throw new Error(`Failed to get events: ${error}`);

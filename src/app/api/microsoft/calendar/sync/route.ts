@@ -357,9 +357,22 @@ async function performBidirectionalSync(
     let primaryCalendar: any = null;
 
     try {
-      console.log('Fetching CAALM events...');
-      caalmEvents = await getCalendarEvents();
-      console.log('CAALM events found:', caalmEvents.length);
+      console.log('Fetching CAALM events within sync date range...');
+
+      // CRITICAL FIX: Fetch CAALM events within the same date range as Outlook
+      // This prevents old/future events from being processed when they're not in Outlook's range
+      const { getCalendarEventsByWeek } = await import(
+        '@/lib/actions/calendar.actions'
+      );
+      const startDateStr = syncStart.toISOString().split('T')[0]; // YYYY-MM-DD
+      const endDateStr = syncEnd.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      console.log('CAALM date range filter:', startDateStr, 'to', endDateStr);
+      caalmEvents = await getCalendarEventsByWeek(startDateStr, endDateStr);
+      console.log(
+        'CAALM events found (within date range):',
+        caalmEvents.length
+      );
     } catch (caalmError) {
       console.error('Error fetching CAALM events:', caalmError);
       result.errors.push({
@@ -451,46 +464,226 @@ async function performBidirectionalSync(
     }
 
     // Create maps for efficient lookup
-    const caalmEventMap = new Map<string, CalendarEvent>();
-    const outlookEventMap = new Map<string, any>();
+    const caalmEventMap = new Map<string, CalendarEvent>(); // By generated key
+    const caalmEventMapById = new Map<string, CalendarEvent>(); // By outlook_id (CRITICAL for updates)
+    const outlookEventMap = new Map<string, any>(); // By generated key
 
-    // Populate CAALM event map
+    // Populate CAALM event map (both by key and by outlook_id)
+    console.log('Building CAALM event map from', caalmEvents.length, 'events');
     caalmEvents.forEach((event) => {
       const key = generateEventKey(event);
       caalmEventMap.set(key, event);
+      // CRITICAL: Also index by outlook_id to handle updates when event details change
+      if (event.outlook_id) {
+        caalmEventMapById.set(event.outlook_id, event);
+      }
+    });
+    console.log('CAALM event map size:', caalmEventMap.size);
+    console.log('CAALM event map by outlook_id size:', caalmEventMapById.size);
+
+    // CRITICAL FILTER: Remove any Outlook events outside the sync date range BEFORE processing
+    // This prevents old events (like August) from being synced when creating new events
+    const filteredOutlookEvents = outlookEvents.filter((event: any) => {
+      if (!event.start?.dateTime) return false;
+      const eventStartDate = new Date(event.start.dateTime);
+      const isInRange =
+        eventStartDate >= syncStart && eventStartDate <= syncEnd;
+      if (!isInRange) {
+        console.log(
+          '⏭️ Filtering out Outlook event outside sync range:',
+          event.subject,
+          'Date:',
+          eventStartDate.toISOString(),
+          'Range:',
+          syncStart.toISOString(),
+          'to',
+          syncEnd.toISOString()
+        );
+      }
+      return isInRange;
     });
 
-    // Populate Outlook event map (both by key and by ID)
+    console.log(
+      `📊 Filtered Outlook events: ${outlookEvents.length} total → ${filteredOutlookEvents.length} within date range`
+    );
+
+    // Populate Outlook event map (both by key and by ID) - ONLY from filtered events
+    console.log(
+      'Building Outlook event map from',
+      filteredOutlookEvents.length,
+      'filtered events'
+    );
     const outlookEventMapById = new Map<string, any>();
-    outlookEvents.forEach((event: any) => {
+    filteredOutlookEvents.forEach((event: any) => {
       const key = generateEventKey(event);
       outlookEventMap.set(key, event);
       outlookEventMapById.set(event.id, event);
     });
+    console.log('Outlook event map size:', outlookEventMap.size);
 
     // Find events that exist in both systems
+    // CRITICAL: Match by outlook_id FIRST (handles updates when event details change)
+    // Then match by key for events without outlook_id
+    const commonEventsByOutlookId = new Map<
+      string,
+      { caalm: CalendarEvent; outlook: any }
+    >();
+    const matchedOutlookIds = new Set<string>();
+    const matchedCaalmKeys = new Set<string>();
+
+    // Match by outlook_id (handles event updates)
+    outlookEventMapById.forEach((outlookEvent, outlookId) => {
+      const caalmEvent = caalmEventMapById.get(outlookId);
+      if (caalmEvent) {
+        commonEventsByOutlookId.set(outlookId, {
+          caalm: caalmEvent,
+          outlook: outlookEvent,
+        });
+        matchedOutlookIds.add(outlookId);
+        matchedCaalmKeys.add(generateEventKey(caalmEvent));
+      }
+    });
+
+    // Also match by key for events without outlook_id or that weren't matched by ID
     const commonKeys = new Set(
-      [...caalmEventMap.keys()].filter((key) => outlookEventMap.has(key))
+      [...caalmEventMap.keys()].filter((key) => {
+        if (matchedCaalmKeys.has(key)) return false; // Already matched by outlook_id
+        return outlookEventMap.has(key);
+      })
     );
 
-    // Find events that only exist in CAALM
+    // Find events that only exist in CAALM (not matched by outlook_id or key)
     const caalmOnlyKeys = new Set(
-      [...caalmEventMap.keys()].filter((key) => !outlookEventMap.has(key))
+      [...caalmEventMap.keys()].filter((key) => {
+        const event = caalmEventMap.get(key)!;
+        // Exclude if matched by outlook_id
+        if (event.outlook_id && matchedOutlookIds.has(event.outlook_id))
+          return false;
+        // Exclude if matched by key
+        return !outlookEventMap.has(key);
+      })
     );
 
-    // Find events that only exist in Outlook
+    // Find events that only exist in Outlook (not matched by outlook_id or key)
     const outlookOnlyKeys = new Set(
-      [...outlookEventMap.keys()].filter((key) => !caalmEventMap.has(key))
+      [...outlookEventMap.keys()].filter((key) => {
+        const outlookEvent = outlookEventMap.get(key)!;
+        // Exclude if matched by outlook_id
+        if (outlookEvent.id && matchedOutlookIds.has(outlookEvent.id))
+          return false;
+        // Exclude if matched by key
+        return !caalmEventMap.has(key);
+      })
     );
 
-    // Process common events (check for conflicts)
+    console.log('📊 Event matching summary:', {
+      matchedByOutlookId: commonEventsByOutlookId.size,
+      matchedByKey: commonKeys.size,
+      caalmOnly: caalmOnlyKeys.size,
+      outlookOnly: outlookOnlyKeys.size,
+    });
+
+    // Process common events matched by outlook_id (handles updates when event details change)
+    for (const [outlookId, { caalm, outlook }] of commonEventsByOutlookId) {
+      const conflict = detectConflict(caalm, outlook);
+      if (conflict) {
+        console.log('🔍 Conflict detected (matched by outlook_id):', {
+          caalmEvent: caalm.title,
+          outlookEvent: outlook.subject,
+          conflictType: conflict.conflictType,
+          strategy: conflictStrategy,
+          outlookId,
+        });
+        result.conflicts.push(conflict);
+
+        // Resolve conflict based on strategy
+        const resolution = resolveConflict(conflict, conflictStrategy);
+        if (resolution.resolved && resolution.event) {
+          // Update the event in both systems
+          try {
+            if (resolution.event === caalm) {
+              // Update Outlook with CAALM version
+              const graphEvent = caalmEventToGraph(caalm);
+
+              // Validate Outlook event ID format
+              if (!outlook.id || outlook.id.length < 10) {
+                console.warn(
+                  'Invalid Outlook event ID, skipping update:',
+                  outlook.id
+                );
+                continue;
+              }
+
+              console.log('Updating Outlook event with CAALM data:', {
+                outlookEventId: outlook.id,
+                caalmEventId: caalm.$id,
+                graphEvent: {
+                  subject: graphEvent.subject,
+                  start: graphEvent.start,
+                  end: graphEvent.end,
+                },
+              });
+              await graphClient.updateEvent(
+                outlook.id,
+                graphEvent,
+                primaryCalendar.id
+              );
+            } else {
+              // Update CAALM with Outlook version (this handles time/date updates)
+              const caalmEventData = graphEventToCaalm(outlook);
+              console.log('🔄 Updating CAALM event with Outlook changes:', {
+                caalmEventId: caalm.$id,
+                outlookEventId: outlook.id,
+                oldTime: `${caalm.startDate} ${caalm.startTime}`,
+                newTime: `${caalmEventData.startDate} ${caalmEventData.startTime}`,
+                caalmEventData: {
+                  title: caalmEventData.title,
+                  startDate: caalmEventData.startDate,
+                  startTime: caalmEventData.startTime,
+                },
+              });
+              await updateCalendarEvent(caalm.$id!, caalmEventData);
+
+              // Invalidate cache for the updated event
+              const eventDate = new Date(caalmEventData.startDate);
+              const CacheManager = (
+                await import('@/lib/services/cache-manager')
+              ).default;
+              await CacheManager.invalidateCalendar(
+                eventDate.getFullYear(),
+                eventDate.getMonth() + 1
+              );
+            }
+            result.syncedEvents++;
+          } catch (error) {
+            console.error(
+              'Error updating event during conflict resolution:',
+              error
+            );
+            result.errors.push({
+              eventId: caalm.$id || outlook.id || 'unknown',
+              error: error instanceof Error ? error.message : 'Unknown error',
+              operation: 'update',
+            });
+          }
+        }
+      } else {
+        // No conflict detected, events are in sync
+        console.log('✅ Events match (no update needed):', {
+          title: caalm.title,
+          outlookId,
+        });
+      }
+    }
+
+    // Process common events matched by key (for events without outlook_id)
     for (const key of commonKeys) {
       const caalmEvent = caalmEventMap.get(key)!;
       const outlookEvent = outlookEventMap.get(key)!;
 
       const conflict = detectConflict(caalmEvent, outlookEvent);
       if (conflict) {
-        console.log('🔍 Conflict detected:', {
+        console.log('🔍 Conflict detected (matched by key):', {
           caalmEvent: caalmEvent.title,
           outlookEvent: outlookEvent.subject,
           conflictType: conflict.conflictType,
@@ -543,6 +736,16 @@ async function performBidirectionalSync(
                 },
               });
               await updateCalendarEvent(caalmEvent.$id!, caalmEventData);
+
+              // Invalidate cache for the updated event
+              const eventDate = new Date(caalmEventData.startDate);
+              const CacheManager = (
+                await import('@/lib/services/cache-manager')
+              ).default;
+              await CacheManager.invalidateCalendar(
+                eventDate.getFullYear(),
+                eventDate.getMonth() + 1
+              );
             }
             result.syncedEvents++;
           } catch (error) {
@@ -745,6 +948,9 @@ async function performBidirectionalSync(
 
     // Process Outlook-only events (pull to CAALM)
     console.log('Processing Outlook-only events:', outlookOnlyKeys.size);
+    let createdCount = 0;
+    let skippedCount = 0;
+
     for (const key of outlookOnlyKeys) {
       const outlookEvent = outlookEventMap.get(key)!;
 
@@ -754,57 +960,135 @@ async function performBidirectionalSync(
           outlookEvent.subject
         );
 
+        // CRITICAL: Re-fetch CAALM events within the same date range to get the latest state
+        // This prevents duplicate creation when multiple syncs run quickly
+        // MUST use date-filtered events to prevent old events from interfering with sync
+        console.log(
+          '🔄 Refreshing CAALM events list for duplicate check (within date range)...'
+        );
+        const { getCalendarEventsByWeek } = await import(
+          '@/lib/actions/calendar.actions'
+        );
+        const startDateStr = syncStart.toISOString().split('T')[0]; // YYYY-MM-DD
+        const endDateStr = syncEnd.toISOString().split('T')[0]; // YYYY-MM-DD
+        const latestCaalmEvents = await getCalendarEventsByWeek(
+          startDateStr,
+          endDateStr
+        );
+        console.log(
+          `📊 Latest CAALM events count (within date range): ${latestCaalmEvents.length}`
+        );
+
         // CRITICAL: Check if this Outlook event already exists in CAALM (prevent duplicates)
-        const existingCaalmEvents = await getCalendarEvents();
-        const duplicateCheck = existingCaalmEvents.find((existingEvent) => {
-          // Check by outlook_id first (most reliable)
-          if (existingEvent.outlook_id === outlookEvent.id) {
-            return true;
+        let duplicateCheck: CalendarEvent | undefined;
+
+        if (outlookEvent.id) {
+          // First check within date range (fast check)
+          duplicateCheck = latestCaalmEvents.find((existingEvent) => {
+            return existingEvent.outlook_id === outlookEvent.id;
+          });
+
+          // If not found in date range, check ALL events by outlook_id (CRITICAL: prevents recreating old events)
+          if (!duplicateCheck) {
+            const { getCalendarEvents } = await import(
+              '@/lib/actions/calendar.actions'
+            );
+            const allCaalmEvents = await getCalendarEvents();
+            duplicateCheck = allCaalmEvents.find((existingEvent) => {
+              return existingEvent.outlook_id === outlookEvent.id;
+            });
+            if (duplicateCheck) {
+              console.log(
+                `⚠️ Found existing event with same outlook_id outside date range:`,
+                outlookEvent.id,
+                'Existing event:',
+                duplicateCheck.title,
+                'Date:',
+                duplicateCheck.startDate
+              );
+            }
           }
-          // Fallback to key comparison
-          const existingKey = generateEventKey(existingEvent);
-          return existingKey === key;
-        });
+        }
+
+        // Also check by key if not found by outlook_id
+        if (!duplicateCheck) {
+          const checkKey = generateEventKey(outlookEvent);
+          duplicateCheck = latestCaalmEvents.find(
+            (e) => generateEventKey(e) === checkKey
+          );
+          if (duplicateCheck) {
+            console.log(`✅ Found duplicate by key: ${checkKey}`);
+          }
+        }
 
         if (duplicateCheck) {
           console.log(
-            'Outlook event already exists in CAALM, updating with latest data:',
+            '✅ Outlook event already exists in CAALM, skipping duplicate:',
             outlookEvent.subject,
             'outlook_id:',
-            duplicateCheck.outlook_id
-          );
-
-          // Update the existing CAALM event with the latest Outlook data
-          const caalmEventData = graphEventToCaalm(outlookEvent);
-          caalmEventData.createdBy = duplicateCheck.createdBy; // Preserve original creator
-
-          console.log('Updating CAALM event:', duplicateCheck.$id);
-          await updateCalendarEvent(duplicateCheck.$id!, caalmEventData);
-
-          console.log(
-            'Successfully updated CAALM event from Outlook:',
+            duplicateCheck.outlook_id || 'none',
+            'CAALM event ID:',
             duplicateCheck.$id
           );
+          skippedCount++;
           result.syncedEvents++;
+          continue;
+        }
+
+        // CRITICAL SAFEGUARD: Verify event is within sync date range before creating
+        // This prevents old events from being synced even if they somehow pass other checks
+        const eventStartDate = new Date(outlookEvent.start.dateTime);
+        if (eventStartDate < syncStart || eventStartDate > syncEnd) {
+          console.log(
+            '⏭️ Skipping Outlook event outside sync date range:',
+            outlookEvent.subject,
+            'Event date:',
+            eventStartDate.toISOString(),
+            'Sync range:',
+            syncStart.toISOString(),
+            'to',
+            syncEnd.toISOString()
+          );
+          skippedCount++;
           continue;
         }
 
         const caalmEventData = graphEventToCaalm(outlookEvent);
         caalmEventData.createdBy = userId;
 
-        console.log('Creating CAALM event:', caalmEventData.title);
+        console.log(
+          '🆕 Creating NEW CAALM event:',
+          caalmEventData.title,
+          'outlook_id:',
+          outlookEvent.id
+        );
         const createdEvent = await createCalendarEvent(caalmEventData);
 
-        // Store Outlook event ID in the created CAALM event
-        await updateCalendarEvent(createdEvent.$id!, {
-          ...createdEvent,
-          outlook_id: outlookEvent.id,
-        } as any);
+        // outlook_id is now set in graphEventToCaalm, no need to update
 
         console.log(
-          'Successfully created CAALM event from Outlook:',
-          createdEvent.$id
+          '✅ Successfully created NEW CAALM event from Outlook:',
+          createdEvent.$id,
+          'Title:',
+          caalmEventData.title
         );
+
+        // CRITICAL: Invalidate cache to ensure UI shows the new event immediately
+        // This prevents stale cache from causing duplicate detection failures
+        const eventDate = new Date(caalmEventData.startDate);
+        const CacheManager = (await import('@/lib/services/cache-manager'))
+          .default;
+        await CacheManager.invalidateCalendar(
+          eventDate.getFullYear(),
+          eventDate.getMonth() + 1
+        );
+        console.log(
+          '🔄 Invalidated cache for:',
+          eventDate.getFullYear(),
+          eventDate.getMonth() + 1
+        );
+
+        createdCount++;
         result.syncedEvents++;
       } catch (error) {
         console.error('Error creating CAALM event from Outlook event:', error);
@@ -830,6 +1114,13 @@ async function performBidirectionalSync(
         });
       }
     }
+
+    console.log('📊 Outlook-only processing complete:', {
+      total: outlookOnlyKeys.size,
+      created: createdCount,
+      skipped: skippedCount,
+      errors: result.errors.length,
+    });
 
     // Analyze error patterns for debugging
     if (result.errors.length > 0) {
@@ -899,31 +1190,73 @@ async function performBidirectionalSync(
 
 /**
  * Generate a unique key for event comparison
+ * CRITICAL: Includes time to allow multiple events with same title on same date
  */
 function generateEventKey(event: any): string {
   // Normalize the event data for consistent key generation
   const title = (event.title || event.subject || '').toLowerCase().trim();
   const startDateTime = event.start?.dateTime || event.startDate || '';
+  const startTime = event.startTime || '';
 
-  // Extract just the date part for comparison (YYYY-MM-DD)
+  // Extract date part (YYYY-MM-DD)
   let datePart = '';
   if (startDateTime) {
     try {
-      const date = new Date(startDateTime);
-      datePart = date.toISOString().split('T')[0]; // Get YYYY-MM-DD
+      // If the date is already in YYYY-MM-DD format, use it directly
+      if (startDateTime.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        datePart = startDateTime;
+      } else {
+        // If it's an ISO string or other format, extract the YYYY-MM-DD part
+        datePart = startDateTime.split('T')[0] || '';
+      }
     } catch (error) {
       console.warn('Invalid date in event:', startDateTime);
       datePart = startDateTime.split('T')[0] || '';
     }
   }
 
-  // Create a consistent key using title and date
+  // Extract time part and normalize it
+  let timePart = '';
+  if (startTime) {
+    // If time is in 12-hour format (e.g., "8:00 AM"), convert to 24-hour for consistency
+    const timeMatch = startTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1]);
+      const minutes = timeMatch[2];
+      const period = timeMatch[3].toUpperCase();
+
+      if (period === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      timePart = `${String(hours).padStart(2, '0')}:${minutes}`;
+    } else {
+      // Assume 24-hour format (e.g., "08:00" or "14:30")
+      timePart = startTime.split(' ')[0]; // Remove AM/PM if present
+    }
+  } else if (startDateTime) {
+    // Extract time from ISO string if available
+    const timeMatch = startDateTime.match(/T(\d{2}):(\d{2})/);
+    if (timeMatch) {
+      timePart = `${timeMatch[1]}:${timeMatch[2]}`;
+    }
+  }
+
+  // Default to "00:00" if no time found
+  if (!timePart) {
+    timePart = '00:00';
+  }
+
+  // Create a consistent key using title, date, AND time
   const normalizedTitle = title.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-  const key = `${normalizedTitle}_${datePart}`;
+  const normalizedTime = timePart.replace(/:/g, ''); // Remove colon for cleaner key
+  const key = `${normalizedTitle}_${datePart}_${normalizedTime}`;
 
   console.log('Generated event key:', key, 'for event:', {
     title: event.title || event.subject,
     start: event.start?.dateTime || event.startDate,
+    time: startTime,
   });
 
   return key;

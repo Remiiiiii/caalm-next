@@ -274,9 +274,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     setCreatingEvent(true);
     try {
       // Create event in database
+      // Create date string in YYYY-MM-DD format to avoid timezone issues
+      const eventDate = newEvent.date || new Date();
+      const year = eventDate.getFullYear();
+      const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+      const day = String(eventDate.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+
       const eventData = {
         title: newEvent.title.trim(),
-        startDate: newEvent.date?.toISOString() || new Date().toISOString(),
+        startDate: dateString,
         type: newEvent.type,
         description: newEvent.description?.trim() || '',
         contractName: newEvent.contractName?.trim() || '',

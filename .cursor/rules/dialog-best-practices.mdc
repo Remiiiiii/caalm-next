@@ -1,0 +1,162 @@
+---
+name: dialog-best-practices.mdc
+description: Enterprise/professional UI standards for dialogs and modals
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+- All dialogs, modals, and popups in the application must follow the enterprise/professional UI design standards.
+- When creating or updating any dialog, automatically apply the following structure:
+
+## Standard Dialog Structure
+
+### 1. Dialog Container
+
+```tsx
+<Dialog open={isOpen} onOpenChange={setIsOpen}>
+  <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+    {/* Professional Cap */}
+    <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+    {/* Header with gradient background */}
+    <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
+      <div className="flex items-center gap-3 px-6">
+        {/* Icon with circular background */}
+        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+          <IconComponent className="w-5 h-5 text-blue-600" />
+        </div>
+
+        {/* Title */}
+        <div>
+          <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+            Dialog Title
+          </DialogTitle>
+          <p className="text-sm text-slate-600 mt-1">
+            Optional subtitle or description
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {/* Scrollable Content */}
+    <div className="flex-1 overflow-y-auto p-6 bg-white">
+      {/* Main content here */}
+    </div>
+
+    {/* Professional Footer */}
+    <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+      <div className="text-xs text-slate-500">Optional footer text</div>
+      <div className="flex items-center gap-3">
+        <Button variant="outline" className="primary-btn px-3 sm:px-4">
+          Cancel
+        </Button>
+        <Button className="primary-btn px-3 sm:px-4">Action</Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+```
+
+## Required Design Elements
+
+### Professional Cap
+
+- Always include a thin horizontal bar at the top: `<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />`
+- This creates visual consistency and indicates an enterprise application
+
+### Header Section
+
+- Use gradient background: `bg-gradient-to-r from-blue-50 to-indigo-50`
+- Include a prominent icon in a circular colored background
+- Title uses `sidebar-gradient-text` for brand consistency
+- Subtitle uses `text-sm text-slate-600` for hierarchy
+
+### Content Section
+
+- Scrollable area with `flex-1 overflow-y-auto p-6 bg-white`
+- Use adequate padding (p-6 or p-4) for breathing room
+- Group related content in cards with `bg-slate-50 rounded-lg p-4 border border-slate-200`
+
+### Footer Section
+
+- Background: `bg-slate-50 border-t border-slate-200`
+- Include helpful text and action buttons
+- Use consistent button styling: `primary-btn px-3 sm:px-4`
+
+## Interactive Elements
+
+### Hoverable Cards/Items
+
+- Use subtle hover effects: `hover:bg-blue-50 hover:border-blue-300 transition-all duration-200`
+- Add shadow on hover for depth: `shadow-sm hover:shadow-md`
+- Use `group` class for coordinated hover states on parent and children
+
+### Icons
+
+- Use consistent icon sizing: `h-4 w-4` or `h-5 w-5` for most icons
+- Colored icons: `text-blue-600`, `text-green`, `text-slate-600` etc.
+- Circular icon backgrounds: `w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center`
+
+### Buttons
+
+- Primary action buttons: `className="primary-btn px-3 sm:px-4"`
+- Include icons in buttons when appropriate
+- Use consistent spacing: `gap-3` between buttons
+
+## Color Palette
+
+- Primary: Blue gradient (from-blue-50 to-indigo-50)
+- Background: White (bg-white) with slate-50 for sections
+- Borders: slate-200
+- Text:
+  - Primary: slate-900
+  - Secondary: slate-600
+  - Muted: slate-500
+  - Headers: sidebar-gradient-text (brand colors)
+- Accents: blue-600, green, purple-600
+
+## List/Event Items in Dialogs
+
+When displaying lists or events in dialogs:
+
+- Use cards with border-2 for emphasis
+- Include gradient icon backgrounds
+- Show metadata with icons (Clock, Users, etc.)
+- Add chevron indicators for clickable items
+- Use badges/tags for categories or status
+
+Example structure:
+
+```tsx
+<button className="w-full text-left p-4 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group shadow-sm hover:shadow-md">
+  <div className="flex items-start gap-4">
+    {/* Icon */}
+    <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
+      <Icon className="h-5 w-5 text-blue-600" />
+    </div>
+
+    {/* Content */}
+    <div className="flex-1 min-w-0">{/* Title and metadata */}</div>
+
+    {/* Indicator */}
+    <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+  </div>
+</button>
+```
+
+## Consistency Requirements
+
+- NEVER use plain DialogContent without the professional structure
+- NEVER skip the cap bar at the top
+- NEVER use flat backgrounds in headers - always use the gradient
+- NEVER forget to make content areas scrollable for overflow
+- ALWAYS include footer sections with proper background and borders
+- ALWAYS use consistent spacing and padding throughout
+- ALWAYS apply transition effects for interactive elements
+
+## Examples in Codebase
+
+Reference these components for correct implementation:
+
+- `OutlookStyleCalendar.tsx` - OverflowDialog
+- `OutlookStyleCalendar.tsx` - Event Review Dialog
+- `OutlookStyleCalendar.tsx` - Delete Confirmation Modal

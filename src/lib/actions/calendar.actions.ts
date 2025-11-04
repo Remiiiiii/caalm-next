@@ -46,6 +46,7 @@ export interface CreateCalendarEventData {
   participants?: string;
   location?: string;
   createdBy: string;
+  outlook_id?: string;
 }
 
 // Get all calendar events
@@ -92,8 +93,14 @@ export const getCalendarEventsByMonth = async (
     console.log('Collection ID:', appwriteConfig.calendarEventsCollectionId);
 
     const adminClient = await createAdminClient();
-    const startDate = new Date(year, month - 1, 1).toISOString();
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999).toISOString();
+    
+    // Format dates as YYYY-MM-DD strings to avoid timezone conversion issues
+    // when querying date strings stored in the same format
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endYear = month === 12 ? year + 1 : year;
+    const endMonth = month === 12 ? 1 : month + 1;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     console.log('Date range:', startDate, 'to', endDate);
 
@@ -447,9 +454,9 @@ export const syncMicrosoftCalendar = async (
       body: JSON.stringify({
         userId, // Also pass in body for redundancy
         startDate: new Date(
-          Date.now() - 30 * 24 * 60 * 60 * 1000
-        ).toISOString(), // 30 days ago
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+          Date.now() - 90 * 24 * 60 * 60 * 1000
+        ).toISOString(), // 90 days ago
+        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
         strategy: 'newest',
       }),
     });

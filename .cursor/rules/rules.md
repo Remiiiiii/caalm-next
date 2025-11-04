@@ -99,11 +99,29 @@ globs: \*_/_.{ts,tsx}
 
 ---
 
-# Restarting Server Indication
+name: dialog-best-practices.mdc
+description: Enterprise/professional UI standards for dialogs and modals
+globs: \*_/_.{ts,tsx,js,jsx}
 
-- include one of these indicators in responses for fixing / updating code:
-  🟢 No Restart Needed:
-  "✅ No server restart required - this is a frontend-only change"
-  "🔄 Page refresh sufficient - only UI components were modified"
-  🔴 Server Restart Required:
-  "⚠️ SERVER RESTART REQUIRED - server-side code was modified"
+---
+
+- All dialogs, modals, and popups must follow enterprise/professional UI design standards.
+- When creating or updating any dialog, automatically apply the standard structure with professional cap bar, gradient header, scrollable content, and footer.
+- Reference OutlookStyleCalendar.tsx dialogs for correct implementation patterns.
+- Use consistent color palette, spacing, and interactive elements throughout all dialogs.
+
+---
+
+name: server-restart-indication.mdc
+description: Server restart indication rules for code changes
+globs: \*_/_.{ts,tsx,js,jsx,md,json}
+
+---
+
+- Include one of these indicators in responses when fixing or updating code:
+- 🟢 No Restart Needed:
+  - "✅ No server restart required - this is a frontend-only change"
+  - "🔄 Page refresh sufficient - only UI components were modified"
+- 🔴 Server Restart Required:
+  - "⚠️ SERVER RESTART REQUIRED - server-side code was modified"
+- Use the appropriate indicator based on the scope of changes made

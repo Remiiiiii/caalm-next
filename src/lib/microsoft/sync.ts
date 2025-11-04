@@ -42,151 +42,93 @@ export function graphEventToCaalm(
     throw new Error('Graph event missing subject');
   }
 
-  // Convert ISO datetime strings to Date objects
-  // CRITICAL: Extract date components directly from the ISO string to avoid timezone conversion issues
-  let startDate: Date;
-  let endDate: Date;
-  let startDateOnly: string | undefined = undefined;
-  let startTimeOnly: string | undefined = undefined;
+  // CRITICAL: Extract date/time directly from ISO string without Date object conversion
+  // Microsoft Graph returns: "2025-11-01T17:00:00" or "2025-11-01T17:00:00.0000000"
+  // We need: startDate="2025-11-01", startTime="5:00 PM"
+  let startDateOnly: string;
+  let startTimeOnly: string;
+  let endDateOnly: string | undefined;
+  let endTimeOnly: string;
 
   try {
     const startDateTimeStr = graphEvent.start.dateTime;
-    console.log('Parsing start date:', startDateTimeStr);
-
-    // Parse the full ISO datetime
-    if (
-      !startDateTimeStr.includes('Z') &&
-      !startDateTimeStr.includes('+') &&
-      !startDateTimeStr.includes('-', 10)
-    ) {
-      startDate = new Date(startDateTimeStr);
-    } else {
-      startDate = parseISO(startDateTimeStr);
-    }
-
-    if (!isValid(startDate)) {
-      throw new Error('Invalid start date format');
-    }
-
-    // DEBUG: Log the exact ISO string format
-    console.log('DEBUG: ISO string format:', {
-      fullString: startDateTimeStr,
-      hasZ: startDateTimeStr.includes('Z'),
-      hasPlusOffset: startDateTimeStr.includes('+'),
-      hasMinusOffset: startDateTimeStr.includes('-', 10),
-      timeZone: graphEvent.start.timeZone,
-      first10Chars: startDateTimeStr.substring(0, 10),
-      datePart: startDateTimeStr.substring(0, 10),
-      timePart: startDateTimeStr.substring(11, 19),
+    console.log('🔍 Parsing Outlook event:', {
+      subject: graphEvent.subject,
+      startDateTime: startDateTimeStr,
+      endDateTime: graphEvent.end.dateTime,
+      timezone: graphEvent.start.timeZone,
     });
 
-    // CRITICAL FIX: Parse based on timezone information
-    // Check if datetime string has explicit timezone marker (Z or offset)
-    const hasExplicitTimezone =
-      startDateTimeStr.includes('Z') ||
-      startDateTimeStr.includes('+') ||
-      startDateTimeStr.match(/-\d{2}:\d{2}$/);
-
-    // Also check the timeZone field from Graph API
-    const isUTCTime =
-      graphEvent.start.timeZone === 'UTC' ||
-      graphEvent.start.timeZone === 'GMT' ||
-      graphEvent.start.timeZone.includes('Greenwich');
-
-    console.log('DEBUG: Has timezone info:', {
-      hasExplicitTimezone,
-      timeZoneField: graphEvent.start.timeZone,
-      isUTCTime,
-    });
-
-    // Extract date and time directly from the ISO string
-    const dateMatch = startDateTimeStr.match(
-      /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):/
+    // Extract date and time directly from ISO string using regex
+    // Format: "2025-11-01T17:00:00" or "2025-11-01T17:00:00.0000000"
+    const startMatch = startDateTimeStr.match(
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/
     );
-    if (dateMatch) {
-      startDateOnly = dateMatch[1]; // YYYY-MM-DD
-      let hour = parseInt(dateMatch[2]);
-      const minute = dateMatch[3];
 
-      // If the datetime is in UTC (either explicitly or via timeZone field), convert to local
-      if (hasExplicitTimezone || isUTCTime) {
-        console.log(
-          'DEBUG: Converting UTC time to local timezone:',
-          graphEvent.start.timeZone
-        );
-        // Append Z to force UTC interpretation
-        const utcString = hasExplicitTimezone
-          ? startDateTimeStr
-          : startDateTimeStr + 'Z';
-        const localDate = parseISO(utcString);
-        const localHour = localDate.getHours();
-        const localMinute = localDate.getMinutes();
-        startTimeOnly = `${localHour % 12 || 12}:${String(localMinute).padStart(
-          2,
-          '0'
-        )} ${localHour >= 12 ? 'PM' : 'AM'}`;
-        // Also update the date to use local date
-        startDateOnly = `${localDate.getFullYear()}-${String(
-          localDate.getMonth() + 1
-        ).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
-        console.log('DEBUG: Converted to local time:', {
-          utcString,
-          localDate: localDate.toISOString(),
-          startTimeOnly,
-          startDateOnly,
-        });
-      } else {
-        // No UTC indication - treat as already in local time
-        startTimeOnly = `${hour % 12 || 12}:${minute} ${
-          hour >= 12 ? 'PM' : 'AM'
-        }`;
-      }
-
-      console.log('Extracted from ISO string:', {
-        dateOnly: startDateOnly,
-        timeOnly: startTimeOnly,
-      });
+    if (!startMatch) {
+      throw new Error(`Invalid start datetime format: ${startDateTimeStr}`);
     }
+
+    // Extract components directly from regex match - NO Date object conversion
+    const [_, year, month, day, hourStr, minuteStr] = startMatch;
+    startDateOnly = `${year}-${month}-${day}`; // e.g., "2025-11-01"
+
+    // Microsoft Graph now returns times in LOCAL timezone (thanks to Prefer header)
+    // So we can extract the time directly without timezone conversion
+    const hour = parseInt(hourStr);
+    const minute = parseInt(minuteStr);
+
+    // Convert to 12-hour format for display
+    const hour12 = hour % 12 || 12;
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    startTimeOnly = `${hour12}:${String(minute).padStart(2, '0')} ${ampm}`; // e.g., "8:00 AM"
+
+    console.log('✅ Extracted start date/time:', {
+      original: startDateTimeStr,
+      extracted: { date: startDateOnly, time: startTimeOnly },
+      components: { year, month, day, hour, minute },
+    });
   } catch (error) {
-    console.error('Invalid Graph event start date:', graphEvent.start.dateTime);
-    throw new Error('Invalid start date format');
+    console.error('❌ Error parsing start date:', error);
+    throw new Error(`Invalid start date format: ${graphEvent.start.dateTime}`);
   }
 
+  // Parse end date/time the same way
   try {
     const endDateTimeStr = graphEvent.end.dateTime;
-    console.log('Parsing end date:', endDateTimeStr);
 
-    if (
-      !endDateTimeStr.includes('Z') &&
-      !endDateTimeStr.includes('+') &&
-      !endDateTimeStr.includes('-', 10)
-    ) {
-      endDate = new Date(endDateTimeStr);
-    } else {
-      endDate = parseISO(endDateTimeStr);
+    const endMatch = endDateTimeStr.match(
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/
+    );
+
+    if (!endMatch) {
+      throw new Error(`Invalid end datetime format: ${endDateTimeStr}`);
     }
 
-    if (!isValid(endDate)) {
-      throw new Error('Invalid end date format');
-    }
+    const [_, endYear, endMonth, endDay, endHourStr, endMinuteStr] = endMatch;
+
+    // Microsoft Graph now returns times in LOCAL timezone
+    // Extract directly without timezone conversion
+    const endHour = parseInt(endHourStr);
+    const endMinute = parseInt(endMinuteStr);
+
+    endDateOnly = `${endYear}-${endMonth}-${endDay}`;
+
+    const endHour12 = endHour % 12 || 12;
+    const endAmpm = endHour >= 12 ? 'PM' : 'AM';
+    endTimeOnly = `${endHour12}:${String(endMinute).padStart(
+      2,
+      '0'
+    )} ${endAmpm}`;
+
+    console.log('✅ Extracted end date/time:', {
+      original: endDateTimeStr,
+      extracted: { date: endDateOnly, time: endTimeOnly },
+    });
   } catch (error) {
-    console.error('Invalid Graph event end date:', graphEvent.end.dateTime);
-    throw new Error('Invalid end date format');
+    console.error('❌ Error parsing end date:', error);
+    throw new Error(`Invalid end date format: ${graphEvent.end.dateTime}`);
   }
-
-  // Ensure end date is after start date
-  if (endDate <= startDate) {
-    throw new Error('End date must be after start date');
-  }
-
-  console.log('Converting Graph event to CAALM:', {
-    subject: graphEvent.subject,
-    startDateTime: graphEvent.start.dateTime,
-    endDateTime: graphEvent.end.dateTime,
-    timeZone: graphEvent.start.timeZone,
-    parsedStartDate: startDate.toISOString(),
-    parsedEndDate: endDate.toISOString(),
-  });
 
   // Determine event type based on categories or subject
   let eventType: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit' =
@@ -208,116 +150,13 @@ export function graphEventToCaalm(
   const contractMatch = graphEvent.subject.match(/contract[:\s]+([^-\n]+)/i);
   const amountMatch = graphEvent.body?.content?.match(/\$[\d,]+\.?\d*/);
 
-  // Use the directly extracted values from ISO string if available
-  // Otherwise format from Date objects
-  let startTime: string;
-  let endTime: string;
-  let dateOnly: string;
-
-  // Use extracted values from ISO string to preserve original date/time
-  if (startDateOnly && startTimeOnly) {
-    dateOnly = startDateOnly;
-    startTime = startTimeOnly;
-
-    // Extract end time from ISO string with timezone conversion
-    const endStr = graphEvent.end.dateTime;
-    const endTimezone = graphEvent.end.timeZone;
-
-    // Check if end time is in UTC
-    const endHasExplicitTimezone =
-      endStr.includes('Z') ||
-      endStr.includes('+') ||
-      endStr.match(/-\d{2}:\d{2}$/);
-    const endIsUTCTime =
-      endTimezone === 'UTC' ||
-      endTimezone === 'GMT' ||
-      endTimezone?.includes('Greenwich');
-
-    if ((endHasExplicitTimezone || endIsUTCTime) && endTimezone) {
-      console.log('DEBUG: Converting end time from UTC to local timezone');
-      const endUTCString = endHasExplicitTimezone ? endStr : endStr + 'Z';
-      const localEndDate = parseISO(endUTCString);
-      const localEndHour = localEndDate.getHours();
-      const localEndMin = localEndDate.getMinutes();
-      endTime = `${localEndHour % 12 || 12}:${String(localEndMin).padStart(
-        2,
-        '0'
-      )} ${localEndHour >= 12 ? 'PM' : 'AM'}`;
-    } else {
-      const endMatch = endStr.match(/T(\d{2}):(\d{2})/);
-      if (endMatch) {
-        const endHour = parseInt(endMatch[1]);
-        const endMin = endMatch[2];
-        endTime = `${endHour % 12 || 12}:${endMin} ${
-          endHour >= 12 ? 'PM' : 'AM'
-        }`;
-      } else {
-        endTime = format(endDate, 'h:mm a');
-      }
-    }
-
-    console.log('Using extracted values:', { dateOnly, startTime, endTime });
-  } else {
-    // Fallback to Date object formatting
-    try {
-      startTime = format(startDate, 'h:mm a');
-      endTime = format(endDate, 'h:mm a');
-
-      // Extract date components to avoid day shift
-      const year = startDate.getFullYear();
-      const month = String(startDate.getMonth() + 1).padStart(2, '0');
-      const day = String(startDate.getDate()).padStart(2, '0');
-      dateOnly = `${year}-${month}-${day}`;
-
-      console.log('Using formatted values:', { dateOnly, startTime, endTime });
-    } catch (formatError) {
-      console.error('Error formatting dates:', formatError);
-      // Final fallback
-      const startStr = graphEvent.start.dateTime;
-      const endStr = graphEvent.end.dateTime;
-
-      const startMatch = startStr.match(/T(\d{2}):(\d{2})/);
-      const endMatch = endStr.match(/T(\d{2}):(\d{2})/);
-
-      if (startMatch && endMatch) {
-        const startHour = parseInt(startMatch[1]);
-        const startMin = startMatch[2];
-        const endHour = parseInt(endMatch[1]);
-        const endMin = endMatch[2];
-
-        startTime = `${startHour % 12 || 12}:${startMin} ${
-          startHour >= 12 ? 'PM' : 'AM'
-        }`;
-        endTime = `${endHour % 12 || 12}:${endMin} ${
-          endHour >= 12 ? 'PM' : 'AM'
-        }`;
-      } else {
-        startTime = '12:00 AM';
-        endTime = '1:00 AM';
-      }
-
-      const dateMatch = startStr.match(/^(\d{4}-\d{2}-\d{2})/);
-      dateOnly = dateMatch ? dateMatch[1] : format(new Date(), 'yyyy-MM-dd');
-
-      console.log('Using fallback values:', { dateOnly, startTime, endTime });
-    }
-  }
-
-  console.log('Converted event details:', {
+  console.log('📊 Final converted event data:', {
     title: graphEvent.subject,
-    originalStart: graphEvent.start.dateTime,
-    originalEnd: graphEvent.end.dateTime,
-    parsedStartDate: startDate.toISOString(),
-    parsedEndDate: endDate.toISOString(),
-    convertedDate: dateOnly,
-    startTime,
-    endTime,
-    timezone: graphEvent.start.timeZone,
-    attendees: graphEvent.attendees?.length || 0,
-    attendeeDetails: graphEvent.attendees?.map((a) => ({
-      name: a.emailAddress.name,
-      email: a.emailAddress.address,
-    })),
+    startDate: startDateOnly,
+    startTime: startTimeOnly,
+    endDate: endDateOnly,
+    endTime: endTimeOnly,
+    type: eventType,
   });
 
   // Build participants string from attendees
@@ -353,17 +192,46 @@ export function graphEventToCaalm(
 
   return {
     title: graphEvent.subject,
-    startDate: dateOnly, // Use date-only format (YYYY-MM-DD) for CAALM
+    startDate: startDateOnly, // YYYY-MM-DD format
+    endDate: endDateOnly, // YYYY-MM-DD format
+    startTime: startTimeOnly, // 12-hour format with AM/PM
+    endTime: endTimeOnly, // 12-hour format with AM/PM
     type: eventType,
-    description: description || undefined, // Use undefined instead of empty string
-    startTime,
-    endTime,
+    description: description || undefined,
     contractName: contractMatch ? contractMatch[1].trim() : undefined,
     amount: amountMatch ? amountMatch[0] : undefined,
     participants: participantsString || undefined,
     location: graphEvent.location?.displayName || undefined,
     createdBy: 'outlook-sync', // Special identifier for synced events
+    outlook_id: graphEvent.id, // Store Outlook ID immediately to prevent duplicates
   };
+}
+
+/**
+ * Helper function to parse time in multiple formats (HH:MM or h:mm AM/PM)
+ */
+function parseTimeString(timeStr: string): { hours: number; minutes: number } {
+  if (!timeStr) return { hours: 0, minutes: 0 };
+
+  // Check if it's 12-hour format (e.g., "1:00 PM" or "12:00 AM")
+  const twelveHourMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (twelveHourMatch) {
+    let hours = parseInt(twelveHourMatch[1]);
+    const minutes = parseInt(twelveHourMatch[2]);
+    const period = twelveHourMatch[3].toUpperCase();
+
+    if (period === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (period === 'AM' && hours === 12) {
+      hours = 0;
+    }
+
+    return { hours, minutes };
+  }
+
+  // Assume 24-hour format (e.g., "13:00" or "HH:MM")
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return { hours, minutes };
 }
 
 /**
@@ -375,27 +243,24 @@ export function caalmEventToGraph(
   // Ensure we have a valid date
   let startDate: Date;
   try {
-    // Handle both ISO format and date-only format
-    if (caalmEvent.startDate.includes('T')) {
-      // ISO format
-      startDate = new Date(caalmEvent.startDate);
-    } else {
-      // Date-only format (YYYY-MM-DD) - add time component
-      const dateStr = caalmEvent.startDate;
-      const timeStr = caalmEvent.startTime || '00:00';
-      
-      // Create date by parsing components directly to avoid timezone issues
-      const [year, month, day] = dateStr.split('-').map(Number);
-      const [hours, minutes] = timeStr.split(':').map(Number);
-      startDate = new Date(year, month - 1, day, hours, minutes, 0);
-      
-      console.log('Created startDate from components:', {
-        dateStr,
-        timeStr,
-        parsed: startDate.toISOString(),
-        local: startDate.toLocaleString(),
-      });
-    }
+    // Always use startTime from CAALM, regardless of startDate format
+    const dateStr = caalmEvent.startDate.includes('T')
+      ? caalmEvent.startDate.split('T')[0] // Extract just YYYY-MM-DD from ISO
+      : caalmEvent.startDate;
+
+    const timeStr = caalmEvent.startTime || '00:00';
+
+    // Create date by parsing components directly to avoid timezone issues
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const { hours, minutes } = parseTimeString(timeStr);
+    startDate = new Date(year, month - 1, day, hours, minutes, 0);
+
+    console.log('Created startDate from components:', {
+      dateStr,
+      timeStr,
+      parsed: startDate.toISOString(),
+      local: startDate.toLocaleString(),
+    });
 
     if (isNaN(startDate.getTime())) {
       throw new Error('Invalid date');
@@ -422,24 +287,18 @@ export function caalmEventToGraph(
         throw new Error('Invalid date format');
       }
 
-      // Validate end time format (HH:mm)
-      const timePattern = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-      if (!timePattern.test(caalmEvent.endTime)) {
-        throw new Error('Invalid time format');
-      }
-
       // Create date by parsing components directly to avoid timezone issues
       const [year, month, day] = dateStr.split('-').map(Number);
-      const [hours, minutes] = caalmEvent.endTime.split(':').map(Number);
+      const { hours, minutes } = parseTimeString(caalmEvent.endTime);
       endDate = new Date(year, month - 1, day, hours, minutes, 0);
-      
+
       console.log('Created endDate from components:', {
         dateStr,
         timeStr: caalmEvent.endTime,
         parsed: endDate.toISOString(),
         local: endDate.toLocaleString(),
       });
-      
+
       if (isNaN(endDate.getTime())) {
         throw new Error('Invalid end time');
       }
@@ -570,11 +429,12 @@ export function caalmEventToGraph(
       : undefined,
     body: {
       content: bodyContent || 'No description',
-      contentType: 'text',
+      contentType: 'text' as const,
     },
     categories,
     showAs: 'busy' as const,
-    importance: caalmEvent.type === 'deadline' ? 'high' as const : 'normal' as const,
+    importance:
+      caalmEvent.type === 'deadline' ? ('high' as const) : ('normal' as const),
   };
 
   console.log('Created Graph event for Outlook:', {
@@ -598,27 +458,118 @@ export function detectConflict(
   caalmEvent: CalendarEvent,
   outlookEvent: GraphEvent
 ): SyncConflict | null {
-  const caalmStart = new Date(caalmEvent.startDate);
-  const outlookStart = parseISO(outlookEvent.start.dateTime);
+  // CRITICAL: Properly combine date + time for accurate comparison
+  // CAALM stores date and time separately, Outlook stores them together
 
-  // Time conflict: events overlap significantly
-  const timeDiff = Math.abs(caalmStart.getTime() - outlookStart.getTime());
-  const timeConflict = timeDiff < 30 * 60 * 1000; // Within 30 minutes
-
-  // Content conflict: similar titles but different content
-  const titleSimilarity = calculateSimilarity(
-    caalmEvent.title,
-    outlookEvent.subject
+  // Parse CAALM date + time
+  const caalmDateStr = caalmEvent.startDate.includes('T')
+    ? caalmEvent.startDate.split('T')[0]
+    : caalmEvent.startDate;
+  const [year, month, day] = caalmDateStr.split('-').map(Number);
+  const { hours: caalmHours, minutes: caalmMinutes } = parseTimeString(
+    caalmEvent.startTime || '00:00'
   );
-  const contentConflict =
-    titleSimilarity > 0.7 &&
-    caalmEvent.description !== outlookEvent.body?.content;
+  const caalmStart = new Date(
+    year,
+    month - 1,
+    day,
+    caalmHours,
+    caalmMinutes,
+    0
+  );
 
-  if (timeConflict || contentConflict) {
+  // Parse Outlook date + time (already in UTC, needs local conversion)
+  const outlookMatch = outlookEvent.start.dateTime.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/
+  );
+
+  if (!outlookMatch) {
+    console.warn(
+      'Invalid Outlook datetime format:',
+      outlookEvent.start.dateTime
+    );
+    return null;
+  }
+
+  const [_, oYear, oMonth, oDay, oHour, oMinute] = outlookMatch;
+  const isUTC =
+    outlookEvent.start.timeZone === 'UTC' ||
+    outlookEvent.start.timeZone === 'utc';
+
+  let outlookStart: Date;
+  if (isUTC) {
+    // Convert UTC to local time
+    outlookStart = new Date(
+      Date.UTC(
+        parseInt(oYear),
+        parseInt(oMonth) - 1,
+        parseInt(oDay),
+        parseInt(oHour),
+        parseInt(oMinute),
+        0
+      )
+    );
+  } else {
+    // Already in local time
+    outlookStart = new Date(
+      parseInt(oYear),
+      parseInt(oMonth) - 1,
+      parseInt(oDay),
+      parseInt(oHour),
+      parseInt(oMinute),
+      0
+    );
+  }
+
+  // Time conflict: if times differ by more than 5 minutes, it's a real conflict
+  const timeDiff = Math.abs(caalmStart.getTime() - outlookStart.getTime());
+  const timeConflict = timeDiff > 5 * 60 * 1000; // More than 5 minutes difference
+
+  // Title conflict: titles must match exactly (case-insensitive)
+  const titleMatch =
+    caalmEvent.title.toLowerCase().trim() ===
+    outlookEvent.subject.toLowerCase().trim();
+
+  // Content conflict: only if titles match but descriptions differ significantly
+  let contentConflict = false;
+  if (titleMatch && caalmEvent.description && outlookEvent.body?.content) {
+    // Strip HTML and normalize whitespace for comparison
+    const caalmDesc = caalmEvent.description
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    const outlookDesc = outlookEvent.body.content
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+    // Only consider it a conflict if descriptions are very different
+    const descSimilarity = calculateSimilarity(caalmDesc, outlookDesc);
+    contentConflict = descSimilarity < 0.5; // Less than 50% similar
+  }
+
+  // Only report conflicts that actually need resolution
+  if (timeConflict || contentConflict || !titleMatch) {
+    console.log('🔍 Conflict details:', {
+      title: {
+        caalm: caalmEvent.title,
+        outlook: outlookEvent.subject,
+        match: titleMatch,
+      },
+      time: {
+        caalm: caalmStart.toLocaleString(),
+        outlook: outlookStart.toLocaleString(),
+        diffMinutes: Math.round(timeDiff / 60000),
+        conflict: timeConflict,
+      },
+      content: { conflict: contentConflict },
+    });
+
     return {
       caalmEvent,
       outlookEvent,
-      conflictType: timeConflict ? 'time' : 'content',
+      conflictType: timeConflict ? 'time' : !titleMatch ? 'content' : 'content',
       resolution: 'manual', // Default to manual resolution
     };
   }
@@ -683,18 +634,30 @@ export function resolveConflict(
       return { resolved: true, event: conflict.outlookEvent };
 
     case 'newest':
+      // Use $updatedAt if available, otherwise fall back to $createdAt
       const caalmTime = new Date(
-        conflict.caalmEvent.$createdAt || conflict.caalmEvent.startDate
+        (conflict.caalmEvent as any).$updatedAt ||
+          conflict.caalmEvent.$createdAt ||
+          conflict.caalmEvent.startDate
       );
       const outlookTime = new Date(
         conflict.outlookEvent.lastModifiedDateTime ||
           conflict.outlookEvent.createdDateTime ||
           ''
       );
+      
+      // Choose the event with the most recent modification time
+      const isOutlookNewer = outlookTime > caalmTime;
+      console.log('📅 Comparing modification times:', {
+        caalmTime: caalmTime.toISOString(),
+        outlookTime: outlookTime.toISOString(),
+        isOutlookNewer,
+        willUse: isOutlookNewer ? 'Outlook' : 'CAALM',
+      });
+      
       return {
         resolved: true,
-        event:
-          caalmTime > outlookTime ? conflict.caalmEvent : conflict.outlookEvent,
+        event: isOutlookNewer ? conflict.outlookEvent : conflict.caalmEvent,
       };
 
     case 'manual':

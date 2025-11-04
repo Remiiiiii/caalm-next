@@ -268,9 +268,16 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     setCreatingEvent(true);
 
     try {
+      // Create date string in YYYY-MM-DD format to avoid timezone issues
+      const eventDate = newEvent.date || new Date();
+      const year = eventDate.getFullYear();
+      const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+      const day = String(eventDate.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+
       const eventData = {
         title: newEvent.title,
-        startDate: (newEvent.date || new Date()).toISOString(),
+        startDate: dateString,
         type: newEvent.type,
         description: newEvent.description,
         startTime: newEvent.startTime,

@@ -43,7 +43,10 @@ export async function POST(request: NextRequest) {
     const createdEvent = await createCalendarEvent(eventWithUser);
 
     // Invalidate calendar cache for the month
-    const eventDate = new Date(eventData.startDate);
+    // Parse date string safely to avoid timezone shifts
+    const dateStr = eventData.startDate.split('T')[0]; // Get just YYYY-MM-DD
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const eventDate = new Date(year, month - 1, day);
     await CacheManager.invalidateCalendar(
       eventDate.getFullYear(),
       eventDate.getMonth() + 1
@@ -89,7 +92,8 @@ export async function GET(request: NextRequest) {
     console.log('Fetching calendar events for:', { year, month, userId });
 
     const noCacheHeader = request.headers.get('x-no-cache') === '1';
-    const noCacheQuery = (request.nextUrl.searchParams.get('noCache') || '') === '1';
+    const noCacheQuery =
+      (request.nextUrl.searchParams.get('noCache') || '') === '1';
 
     let payload: any;
     if (noCacheHeader || noCacheQuery) {
@@ -112,7 +116,10 @@ export async function GET(request: NextRequest) {
 
     const res = NextResponse.json(payload);
     // Prevent downstream/proxy caches from serving stale data to clients
-    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.headers.set(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, proxy-revalidate'
+    );
     res.headers.set('Pragma', 'no-cache');
     res.headers.set('Expires', '0');
     return res;

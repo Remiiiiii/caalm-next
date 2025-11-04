@@ -29,6 +29,7 @@ export interface CreateCalendarEventData {
   endTime?: string;
   participants?: string;
   createdBy: string;
+  outlook_id?: string;
 }
 
 // Client-side API calls for calendar events
@@ -53,7 +54,8 @@ export const getCalendarEventsByMonth = async (
     }
     const data = await response.json();
     console.log('Response data:', data);
-    return data;
+    // Extract events array from response wrapper if present
+    return Array.isArray(data) ? data : (data.events || []);
   } catch (error) {
     console.error('Error fetching calendar events by month:', error);
     return [];
