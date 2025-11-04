@@ -54,6 +54,7 @@ import {
   FileImage,
   FileArchive,
   FileText,
+  Minimize2,
 } from 'lucide-react';
 import { SAMContract } from '@/lib/sam-config';
 import { ContractAnalysis } from '@/lib/ai-contract-analyzer';
@@ -516,32 +517,38 @@ ${contractDetails.attachments
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="rounded-[26px] max-w-7xl max-h-[95vh] overflow-y-auto bg-white/95 backdrop-blur border border-white/40 shadow-drop-1 flex flex-col p-0">
         <DialogHeader className="px-6 py-6 pb-4">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 justify-end">
+            <Button size="sm" className="primary-btn">
+              <Star className="h-4 w-4" />
+              Save
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setShowAiPanel(!showAiPanel)}
+              className="shadow-drop-1 primary-btn"
+            >
+              <Bot className="h-4 w-4" />
+              AI Analysis
+            </Button>
+            <Button
+              size="sm"
+              onClick={onClose}
+              className="shadow-drop-1 primary-btn px-3 sm:px-4"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </Button>
+          </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div>
-                <DialogTitle className="mt-10 text-xl font-bold sidebar-gradient-text">
+                <DialogTitle className="mt-4 text-xl font-bold sidebar-gradient-text">
                   {contract.title}
                 </DialogTitle>
                 <div className="text-sm text-gray-600 mt-1">
                   ID: {contract.noticeId}
                 </div>
               </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-              <Button size="sm" className="primary-btn">
-                <Star className="h-4 w-4" />
-                Save
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setShowAiPanel(!showAiPanel)}
-                className="shadow-drop-1 primary-btn"
-              >
-                <Bot className="h-4 w-4" />
-                AI Analysis
-              </Button>
             </div>
           </div>
         </DialogHeader>
@@ -918,7 +925,7 @@ ${contractDetails.attachments
                     onClick={() => setShowAiPanel(false)}
                     className="shadow-drop-1"
                   >
-                    <X className="h-4 w-4" />
+                    <Minimize2 className="h-4 w-4" />
                   </Button>
                 </div>
 

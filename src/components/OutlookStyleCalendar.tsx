@@ -18,6 +18,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import CalendarAIChat from '@/components/CalendarAIChat';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Popover,
@@ -50,7 +57,7 @@ import {
   Trash2,
   MessageSquare,
   Paperclip,
-  X,
+  Minimize2,
   CheckCircle,
   AlertCircle,
   AlertTriangle,
@@ -207,6 +214,149 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   >([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
 
+  // AI Panel state
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiPanelMode, setAiPanelMode] = useState<'pre-reads' | 'chat'>('chat');
+  const [contractData, setContractData] = useState<{
+    title?: string;
+    description?: string;
+    noticeId?: string;
+    content?: string;
+  } | null>(null);
+  const [loadingContract, setLoadingContract] = useState(false);
+
+  // Fetch contract data for event
+  const fetchContractForEvent = async (event: LocalCalendarEvent) => {
+    if (!event.contractName) return null;
+
+    setLoadingContract(true);
+    try {
+      // Check if event type is contract review
+      const eventTypeLower = (event.type || '').toLowerCase();
+      const isContractReview =
+        eventTypeLower === 'contract review' ||
+        eventTypeLower === 'contract' ||
+        event.title.toLowerCase().includes('contract');
+
+      if (!isContractReview) {
+        return null;
+      }
+
+      // Try to fetch from SAM API first (if contractName looks like a noticeId)
+      // Notice IDs are typically alphanumeric strings
+      const isLikelyNoticeId = /^[A-Z0-9-]+$/.test(event.contractName.trim());
+
+      if (isLikelyNoticeId) {
+        try {
+          const response = await fetch(
+            `/api/sam/contract-details?noticeId=${encodeURIComponent(
+              event.contractName
+            )}`
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+              setContractData({
+                title: result.data.title || event.contractName,
+                description: result.data.description || '',
+                noticeId: result.data.noticeId || event.contractName,
+                content: result.data.description || '',
+              });
+              setLoadingContract(false);
+              return {
+                title: result.data.title || event.contractName,
+                description: result.data.description || '',
+                noticeId: result.data.noticeId || event.contractName,
+                content: result.data.description || '',
+              };
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to fetch from SAM API:', error);
+          // Continue to try database
+        }
+      }
+
+      // Try to fetch from database contracts collection
+      try {
+        const response = await fetch('/api/contracts/database');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.contracts) {
+            const matchingContract = result.contracts.find(
+              (c: { id: string; name: string }) =>
+                c.name.toLowerCase() ===
+                  (event.contractName || '').toLowerCase() ||
+                c.id === event.contractName
+            );
+
+            if (matchingContract) {
+              // Fetch full contract details if needed
+              setContractData({
+                title: matchingContract.name,
+                description: '',
+                noticeId: matchingContract.id,
+                content: '',
+              });
+              setLoadingContract(false);
+              return {
+                title: matchingContract.name,
+                description: '',
+                noticeId: matchingContract.id,
+                content: '',
+              };
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to fetch from database:', error);
+      }
+
+      // Fallback: use contractName as title
+      setContractData({
+        title: event.contractName,
+        description: '',
+        noticeId: '',
+        content: '',
+      });
+      setLoadingContract(false);
+      return {
+        title: event.contractName,
+        description: '',
+        noticeId: '',
+        content: '',
+      };
+    } catch (error) {
+      console.error('Error fetching contract:', error);
+      setLoadingContract(false);
+      return null;
+    }
+  };
+
+  // Handle opening AI panel
+  const handleOpenAiPanel = async (
+    mode: 'pre-reads' | 'chat',
+    event: LocalCalendarEvent | null
+  ) => {
+    setAiPanelMode(mode);
+    setShowAiPanel(true);
+
+    // If pre-reads mode and contract review, fetch contract data
+    if (mode === 'pre-reads' && event) {
+      await fetchContractForEvent(event);
+    } else {
+      setContractData(null);
+    }
+  };
+
+  // Reset contract data when panel closes
+  useEffect(() => {
+    if (!showAiPanel) {
+      setContractData(null);
+    }
+  }, [showAiPanel]);
+
   // Function to generate smart placeholder times
   const getSmartPlaceholderTimes = (selectedDate: Date) => {
     const now = new Date();
@@ -259,13 +409,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Function to convert 24-hour format to 12-hour format for display
   const formatTimeForDisplay = (timeInput: string) => {
     if (!timeInput) return '';
-    
+
     // Check if already in 12-hour format with AM/PM
     if (timeInput.includes('AM') || timeInput.includes('PM')) {
       // Already formatted, just ensure proper spacing
       return timeInput.replace(/\s+(AM|PM)/i, ' $1');
     }
-    
+
     // Parse 24-hour format (e.g., "19:00")
     const [hours, minutes] = timeInput.split(':');
     const hour = parseInt(hours);
@@ -277,24 +427,24 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Function to parse time string and convert to minutes since midnight for sorting
   const parseTimeToMinutes = (timeStr: string | undefined): number => {
     if (!timeStr) return 0; // Events without time come first (or use 1440 to put them last)
-    
+
     // Check if it's 12-hour format (e.g., "8:00 AM" or "2:30 PM")
     const twelveHourMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (twelveHourMatch) {
       let hours = parseInt(twelveHourMatch[1]);
       const minutes = parseInt(twelveHourMatch[2]);
       const period = twelveHourMatch[3].toUpperCase();
-      
+
       // Convert to 24-hour format
       if (period === 'PM' && hours !== 12) {
         hours += 12;
       } else if (period === 'AM' && hours === 12) {
         hours = 0;
       }
-      
+
       return hours * 60 + minutes;
     }
-    
+
     // Check if it's 24-hour format (e.g., "08:00" or "14:30")
     const twentyFourHourMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
     if (twentyFourHourMatch) {
@@ -302,7 +452,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       const minutes = parseInt(twentyFourHourMatch[2]);
       return hours * 60 + minutes;
     }
-    
+
     // If format is unrecognized, return 0
     return 0;
   };
@@ -1162,6 +1312,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const OverflowDialog = () => (
     <Dialog open={isOverflowOpen} onOpenChange={setIsOverflowOpen}>
       <DialogContent className="max-w-2xl p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+        <DialogTitle className="sr-only">
+          {overflowDate ? format(overflowDate, 'EEEE, MMMM d, yyyy') : 'Events'}
+        </DialogTitle>
         {/* Professional Header with Cap */}
         <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
         <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
@@ -1193,68 +1346,74 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 return timeA - timeB;
               })
               .map((event) => {
-              const config = getEventTypeConfig(event.type);
-              const IconComp = config.icon;
-              return (
-                <button
-                  key={
-                    event.$id || event.id || `${event.title}-${event.startDate}`
-                  }
-                  type="button"
-                  onClick={() => {
-                    setIsOverflowOpen(false);
-                    openEditDialog(event);
-                  }}
-                  className={cn(
-                    'w-full text-left p-4 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group',
-                    'shadow-sm hover:shadow-md'
-                  )}
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Icon with background */}
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
-                      <IconComp className="h-5 w-5 text-blue-600" />
-                    </div>
+                const config = getEventTypeConfig(event.type);
+                const IconComp = config.icon;
+                return (
+                  <button
+                    key={
+                      event.$id ||
+                      event.id ||
+                      `${event.title}-${event.startDate}`
+                    }
+                    type="button"
+                    onClick={() => {
+                      setIsOverflowOpen(false);
+                      openEditDialog(event);
+                    }}
+                    className={cn(
+                      'w-full text-left p-4 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group',
+                      'shadow-sm hover:shadow-md'
+                    )}
+                  >
+                    <div className="flex items-start gap-4">
+                      {/* Icon with background */}
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
+                        <IconComp className="h-5 w-5 text-blue-600" />
+                      </div>
 
-                    {/* Event Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-semibold text-slate-900">
-                          {event.title}
-                        </span>
-                        {event.outlook_id && (
-                          <CheckCircle className="h-4 w-4 text-green flex-shrink-0" />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-600">
-                        <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span>
-                          {event.startTime
-                            ? `${formatTimeForDisplay(event.startTime)}${
-                                event.endTime
-                                  ? ` - ${formatTimeForDisplay(event.endTime)}`
-                                  : ''
-                              }`
-                            : 'All Day'}
-                        </span>
-                      </div>
-                      {event.type && (
-                        <div className="mt-2">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                            {getEventTypeLabel(event.type as unknown as string)}
+                      {/* Event Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-semibold text-slate-900">
+                            {event.title}
+                          </span>
+                          {event.outlook_id && (
+                            <CheckCircle className="h-4 w-4 text-green flex-shrink-0" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-600">
+                          <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span>
+                            {event.startTime
+                              ? `${formatTimeForDisplay(event.startTime)}${
+                                  event.endTime
+                                    ? ` - ${formatTimeForDisplay(
+                                        event.endTime
+                                      )}`
+                                    : ''
+                                }`
+                              : 'All Day'}
                           </span>
                         </div>
-                      )}
-                    </div>
+                        {event.type && (
+                          <div className="mt-2">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                              {getEventTypeLabel(
+                                event.type as unknown as string
+                              )}
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Chevron Icon */}
-                    <div className="flex-shrink-0 flex items-center">
-                      <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                      {/* Chevron Icon */}
+                      <div className="flex-shrink-0 flex items-center">
+                        <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                      </div>
                     </div>
-                  </div>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })}
           </div>
         </div>
 
@@ -1532,6 +1691,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col">
+              <DialogTitle className="sr-only">
+                {selectedEvent ? 'Update Event' : 'Create New Event'}
+              </DialogTitle>
               <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
               {/* Professional Header */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
@@ -1613,7 +1775,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             className="h-4 w-4 p-0 hover:bg-blue-200 rounded-full"
                             onClick={() => removeParticipant(participant.$id)}
                           >
-                            <X className="h-3 w-3" />
+                            <Minimize2 className="h-3 w-3" />
                           </Button>
                         </Badge>
                       ))}
@@ -2130,6 +2292,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       {/* Event Review Dialog */}
       <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
         <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogTitle className="sr-only">
+            {selectedEvent?.title || 'Event Details'}
+          </DialogTitle>
           <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
           {/* Professional Header */}
           <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
@@ -2154,7 +2319,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   <div className="flex items-center mt-4 gap-2">
                     <FileSliders className="w-6 h-6 text-[#0f5384]" />
                     <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-                      {selectedEvent?.title}
+                      {selectedEvent?.title || 'Event Details'}
                     </DialogTitle>
                   </div>
                   <p className="text-sm text-slate-600 mt-1 ml-8">
@@ -2358,6 +2523,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     <Button
                       variant="outline"
                       className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50"
+                      onClick={() =>
+                        handleOpenAiPanel('pre-reads', selectedEvent)
+                      }
                     >
                       <Paperclip className="w-4 h-4 mr-3 text-slate-500" />
                       <div className="text-left">
@@ -2373,6 +2541,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     <Button
                       variant="outline"
                       className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50"
+                      onClick={() => handleOpenAiPanel('chat', selectedEvent)}
                     >
                       <MessageSquare className="w-4 h-4 mr-3 text-slate-500" />
                       <div className="text-left">
@@ -2621,6 +2790,21 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         </DialogContent>
       </Dialog>
       <OverflowDialog />
+
+      {/* AI Assistant Panel */}
+      <Sheet open={showAiPanel} onOpenChange={setShowAiPanel}>
+        <SheetContent
+          side="right"
+          className="w-full sm:w-[500px] p-0 flex flex-col h-full"
+        >
+          <CalendarAIChat
+            mode={aiPanelMode}
+            event={selectedEvent}
+            contractData={contractData}
+            onClose={() => setShowAiPanel(false)}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
