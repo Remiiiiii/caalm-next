@@ -7,6 +7,18 @@ import {
   hasActiveCalendarIntegration,
 } from './calendar-integration.actions';
 
+// Event attachments are stored as file ID references (same pattern as contracts use fileId)
+// Full file details are fetched from files collection when needed
+export interface CalendarEventAttachment {
+  $id: string; // File ID from files collection (reference)
+  name?: string; // Cached for display, can be fetched from files collection
+  url?: string; // Cached for display, can be fetched from files collection
+  type?: string;
+  extension?: string;
+  size?: number;
+  bucketFileId?: string;
+}
+
 export interface CalendarEvent {
   $id?: string;
   title: string;
@@ -22,6 +34,7 @@ export interface CalendarEvent {
   location?: string;
   createdBy: string;
   outlook_id?: string;
+  attachments?: string[]; // Array of file IDs (references to files collection, same pattern as contracts use fileId)
   deleted_at?: string;
   deleted_by?: string;
   deletion_status?:
@@ -47,6 +60,7 @@ export interface CreateCalendarEventData {
   location?: string;
   createdBy: string;
   outlook_id?: string;
+  attachments?: string[]; // Array of file IDs (references to files collection, same pattern as contracts use fileId)
 }
 
 // Get all calendar events
@@ -93,14 +107,16 @@ export const getCalendarEventsByMonth = async (
     console.log('Collection ID:', appwriteConfig.calendarEventsCollectionId);
 
     const adminClient = await createAdminClient();
-    
+
     // Format dates as YYYY-MM-DD strings to avoid timezone conversion issues
     // when querying date strings stored in the same format
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endYear = month === 12 ? year + 1 : year;
     const endMonth = month === 12 ? 1 : month + 1;
     const lastDay = new Date(year, month, 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(
+      lastDay
+    ).padStart(2, '0')}`;
 
     console.log('Date range:', startDate, 'to', endDate);
 
@@ -216,11 +232,17 @@ export const createCalendarEvent = async (
     const adminClient = await createAdminClient();
     console.log('Admin client created successfully');
 
+    // Filter out attachments if empty to avoid sending empty arrays
+    const dataToCreate = { ...eventData };
+    if (!dataToCreate.attachments || dataToCreate.attachments.length === 0) {
+      delete dataToCreate.attachments;
+    }
+
     const response = await adminClient.tablesDB.createRow(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       ID.unique(),
-      eventData
+      dataToCreate
     );
 
     console.log('Event created successfully:', response);
@@ -268,11 +290,18 @@ export const updateCalendarEvent = async (
     }
 
     const adminClient = await createAdminClient();
+
+    // Filter out attachments if empty or undefined to avoid schema errors
+    const dataToUpdate = { ...eventData };
+    if (dataToUpdate.attachments && dataToUpdate.attachments.length === 0) {
+      delete dataToUpdate.attachments;
+    }
+
     const response = await adminClient.tablesDB.updateRow(
       appwriteConfig.databaseId,
       appwriteConfig.calendarEventsCollectionId,
       eventId,
-      eventData
+      dataToUpdate
     );
     return response as unknown as CalendarEvent;
   } catch (error) {

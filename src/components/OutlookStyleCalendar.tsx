@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
 import {
   Sheet,
   SheetContent,
@@ -35,7 +36,7 @@ import { Calendar } from '@/components/ui/calendar';
 import CalendarSettings from '@/components/CalendarSettings';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { useAutoSync } from '@/hooks/useAutoSync';
-import { cn } from '@/lib/utils';
+import { cn, getFileType, convertFileSize } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -75,6 +76,7 @@ import {
   MapPin,
   Tag,
   FileSliders,
+  X,
 } from 'lucide-react';
 import {
   format,
@@ -108,6 +110,18 @@ interface OutlookStyleCalendarProps {
   user?: any;
 }
 
+// Event attachments are stored as file IDs (references to files collection)
+// Full file details are fetched when needed
+interface EventAttachment {
+  $id: string; // File ID from files collection
+  name: string;
+  url: string;
+  type: string;
+  extension: string;
+  size: number;
+  bucketFileId?: string;
+}
+
 interface LocalCalendarEvent {
   $id?: string;
   id?: string;
@@ -128,6 +142,7 @@ interface LocalCalendarEvent {
   location?: string;
   createdBy?: string;
   outlook_id?: string;
+  attachments?: EventAttachment[];
 }
 
 interface NewEventForm {
@@ -146,6 +161,7 @@ interface NewEventForm {
   contractName: string;
   participants: string;
   location: string;
+  attachments?: EventAttachment[];
 }
 
 const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
@@ -175,6 +191,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [selectedEvent, setSelectedEvent] = useState<LocalCalendarEvent | null>(
     null
   );
+  // State for fetched attachment details
+  const [attachmentDetails, setAttachmentDetails] = useState<
+    Record<string, EventAttachment>
+  >({});
   // Overflow dialog state for days with more than 3 events
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const [overflowDate, setOverflowDate] = useState<Date | null>(null);
@@ -231,16 +251,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
     setLoadingContract(true);
     try {
-      // Check if event type is contract review
-      const eventTypeLower = (event.type || '').toLowerCase();
-      const isContractReview =
-        eventTypeLower === 'contract review' ||
-        eventTypeLower === 'contract' ||
-        event.title.toLowerCase().includes('contract');
-
-      if (!isContractReview) {
-        return null;
-      }
+      // Fetch contract data if contractName exists, regardless of event type
+      // This allows contract access in chat mode even for non-contract-review events
 
       // Try to fetch from SAM API first (if contractName looks like a noticeId)
       // Notice IDs are typically alphanumeric strings
@@ -292,20 +304,77 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             );
 
             if (matchingContract) {
-              // Fetch full contract details if needed
-              setContractData({
-                title: matchingContract.name,
-                description: '',
-                noticeId: matchingContract.id,
-                content: '',
-              });
-              setLoadingContract(false);
-              return {
+              // Fetch contract with file details and extract PDF content
+              try {
+                const contractDetailsResponse = await fetch(
+                  `/api/contracts/get-details?contractId=${encodeURIComponent(
+                    matchingContract.id
+                  )}`
+                );
+
+                if (contractDetailsResponse.ok) {
+                  const contractDetails = await contractDetailsResponse.json();
+
+                  if (contractDetails.success && contractDetails.data) {
+                    const contractInfo = contractDetails.data;
+                    let extractedContent = '';
+
+                    // If file URL exists, extract PDF content
+                    if (contractInfo.fileUrl) {
+                      try {
+                        const extractResponse = await fetch(
+                          '/api/extract-pdf-text',
+                          {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              fileUrl: contractInfo.fileUrl,
+                            }),
+                          }
+                        );
+
+                        if (extractResponse.ok) {
+                          const extractResult = await extractResponse.json();
+                          if (extractResult.text) {
+                            extractedContent = extractResult.text;
+                          }
+                        }
+                      } catch (extractError) {
+                        console.warn(
+                          'Failed to extract PDF content:',
+                          extractError
+                        );
+                      }
+                    }
+
+                    const contractDataResult = {
+                      title: contractInfo.contractName || matchingContract.name,
+                      description: contractInfo.description || '',
+                      noticeId: matchingContract.id,
+                      content: extractedContent,
+                    };
+
+                    setContractData(contractDataResult);
+                    setLoadingContract(false);
+                    return contractDataResult;
+                  }
+                }
+              } catch (detailsError) {
+                console.warn('Failed to fetch contract details:', detailsError);
+              }
+
+              // Fallback: return contract without extracted content
+              const fallbackResult = {
                 title: matchingContract.name,
                 description: '',
                 noticeId: matchingContract.id,
                 content: '',
               };
+              setContractData(fallbackResult);
+              setLoadingContract(false);
+              return fallbackResult;
             }
           }
         }
@@ -342,8 +411,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     setAiPanelMode(mode);
     setShowAiPanel(true);
 
-    // If pre-reads mode and contract review, fetch contract data
-    if (mode === 'pre-reads' && event) {
+    // Fetch contract data if event has a contract associated with it
+    // This applies to both pre-reads and chat modes
+    if (event && event.contractName) {
       await fetchContractForEvent(event);
     } else {
       setContractData(null);
@@ -581,7 +651,171 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     contractName: '',
     participants: '',
     location: '',
+    attachments: [],
   });
+
+  // State for file uploads
+  const [uploadingFiles, setUploadingFiles] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>(
+    {}
+  );
+
+  // Handle file upload for event attachments
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'];
+
+    const filesToUpload: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const extension = file.name.split('.').pop()?.toLowerCase();
+
+      if (
+        !allowedTypes.includes(file.type) &&
+        !allowedExtensions.includes(extension || '')
+      ) {
+        toast({
+          title: 'Invalid file type',
+          description: `File "${file.name}" is not supported. Allowed types: JPG, JPEG, PNG, PDF, DOC, DOCX`,
+          variant: 'destructive',
+        });
+        continue;
+      }
+
+      if (file.size > 50 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: `File "${file.name}" exceeds 50MB limit`,
+          variant: 'destructive',
+        });
+        continue;
+      }
+
+      filesToUpload.push(file);
+    }
+
+    if (filesToUpload.length === 0) return;
+
+    setUploadingFiles(true);
+    const uploadedAttachments: EventAttachment[] = [];
+
+    try {
+      for (const file of filesToUpload) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', user?.$id || '');
+        formData.append('uploadId', `event_${Date.now()}_${Math.random()}`);
+
+        const response = await fetch('/api/files/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          const errorMessage =
+            result.error || result.details || `Failed to upload ${file.name}`;
+          throw new Error(errorMessage);
+        }
+
+        if (result.data) {
+          // Store the file ID reference (same as how contracts store fileId)
+          // The file is already stored in the files collection with all metadata
+          const { type, extension } = getFileType(result.data.name);
+          uploadedAttachments.push({
+            $id: result.data.$id, // This is the file document ID from files collection
+            name: result.data.name,
+            url: result.data.url,
+            type: type,
+            extension: extension,
+            size: result.data.size,
+            bucketFileId: result.data.bucketFileId,
+          });
+        }
+      }
+
+      setNewEvent((prev) => ({
+        ...prev,
+        attachments: [...(prev.attachments || []), ...uploadedAttachments],
+      }));
+
+      toast({
+        title: 'Success',
+        description: `${uploadedAttachments.length} file(s) uploaded successfully`,
+      });
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast({
+        title: 'Upload failed',
+        description:
+          error instanceof Error ? error.message : 'Failed to upload files',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  // Remove attachment
+  const handleRemoveAttachment = (attachmentId: string) => {
+    setNewEvent((prev) => ({
+      ...prev,
+      attachments: (prev.attachments || []).filter(
+        (att) => att.$id !== attachmentId
+      ),
+    }));
+  };
+
+  // Check if event type supports attachments
+  const supportsAttachments = (eventType: string): boolean => {
+    const type = eventType.toLowerCase();
+    return [
+      'meeting',
+      'audit',
+      'deadline discussion',
+      'contract review',
+      'internal review',
+    ].includes(type);
+  };
+
+  // Populate form when editing an event
+  useEffect(() => {
+    if (selectedEvent && isAddEventOpen) {
+      const eventDate =
+        selectedEvent.startDate instanceof Date
+          ? selectedEvent.startDate
+          : new Date(selectedEvent.startDate);
+      const endDate = selectedEvent.endDate
+        ? selectedEvent.endDate instanceof Date
+          ? selectedEvent.endDate
+          : new Date(selectedEvent.endDate)
+        : eventDate;
+
+      setNewEvent({
+        title: selectedEvent.title || '',
+        date: eventDate,
+        endDate: endDate,
+        type: selectedEvent.type || 'meeting',
+        description: selectedEvent.description || '',
+        startTime: selectedEvent.startTime || '',
+        endTime: selectedEvent.endTime || '',
+        contractName: selectedEvent.contractName || '',
+        participants: selectedEvent.participants || '',
+        location: selectedEvent.location || '',
+        attachments: selectedEvent.attachments || [],
+      });
+    }
+  }, [selectedEvent, isAddEventOpen]);
 
   // Fetch contracts when Contract Name becomes visible (when type is contract)
   useEffect(() => {
@@ -663,6 +897,52 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       setLoadingNames(false);
     }
   }, [selectedEvent?.participants]); // Re-run when participants change
+
+  // Fetch attachment details when selectedEvent changes
+  useEffect(() => {
+    const fetchAttachmentDetails = async () => {
+      if (selectedEvent?.attachments && selectedEvent.attachments.length > 0) {
+        const fileIds = selectedEvent.attachments.map((att: any) =>
+          typeof att === 'string' ? att : att.$id
+        );
+
+        if (fileIds.length === 0) {
+          setAttachmentDetails({});
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/files/get-by-ids', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileIds }),
+          });
+
+          if (response.ok) {
+            const files = await response.json();
+            const detailsMap: Record<string, EventAttachment> = {};
+            files.forEach((file: EventAttachment) => {
+              detailsMap[file.$id] = file;
+            });
+            setAttachmentDetails(detailsMap);
+          } else {
+            console.error(
+              'Failed to fetch attachment details:',
+              response.statusText
+            );
+            setAttachmentDetails({});
+          }
+        } catch (error) {
+          console.error('Error fetching attachment details:', error);
+          setAttachmentDetails({});
+        }
+      } else {
+        setAttachmentDetails({});
+      }
+    };
+
+    fetchAttachmentDetails();
+  }, [selectedEvent?.attachments]);
 
   const handleSync = async () => {
     if (!user?.$id) return;
@@ -804,6 +1084,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       const endDay = String(newEvent.endDate.getDate()).padStart(2, '0');
       const endDateString = `${endYear}-${endMonth}-${endDay}`;
 
+      // Store only file IDs (same pattern as contracts use fileId)
+      // Files are already stored in the files collection via /api/files/upload
+      const attachmentFileIds = (newEvent.attachments || []).map(
+        (att) => att.$id
+      );
+
       const eventData = {
         title: newEvent.title,
         startDate: dateString,
@@ -818,6 +1104,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           .join(', '),
         location: newEvent.location || undefined,
         createdBy: user?.$id || 'user',
+        attachments: attachmentFileIds, // Store array of file IDs (references to files collection)
       };
 
       console.log('Creating event with data:', {
@@ -872,14 +1159,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         contractName: '',
         participants: '',
         location: '',
+        attachments: [],
       });
       // Reset participant state
       setSelectedParticipants([]);
       setParticipantSearch('');
       setSearchResults([]);
 
-      // Force refresh of calendar events
-      await refresh();
+      // Force refresh of calendar events to ensure UI is updated
+      await forceRefresh();
       console.log('Calendar events refreshed after creation');
 
       // Auto-sync with Outlook if connected
@@ -956,6 +1244,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 .join(', ')
             : selectedEvent.participants || '',
         location: selectedEvent.location || undefined,
+        attachments: Array.isArray(selectedEvent.attachments)
+          ? selectedEvent.attachments.map((att: any) =>
+              typeof att === 'string' ? att : att.$id
+            )
+          : [],
       };
 
       await updateCalendarEvent(selectedEvent.$id, eventData);
@@ -967,7 +1260,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
       setIsEditEventOpen(false);
       setSelectedEvent(null);
-      refresh();
+      await forceRefresh();
     } catch (error) {
       console.error('Error updating event:', error);
       toast({
@@ -1018,6 +1311,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 .join(', ')
             : '',
         location: (newEvent as any).location || undefined,
+        attachments: (newEvent.attachments || []).map((att) => att.$id), // Store only file IDs
       };
 
       await updateCalendarEvent(selectedEvent.$id, eventData);
@@ -1025,7 +1319,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       toast({ title: 'Success', description: 'Event updated successfully' });
       setIsAddEventOpen(false);
       setSelectedEvent(null);
-      refresh();
+      await forceRefresh();
     } catch (error) {
       console.error('Error updating event from dialog:', error);
       toast({
@@ -1312,9 +1606,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const OverflowDialog = () => (
     <Dialog open={isOverflowOpen} onOpenChange={setIsOverflowOpen}>
       <DialogContent className="max-w-2xl p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-        <DialogTitle className="sr-only">
-          {overflowDate ? format(overflowDate, 'EEEE, MMMM d, yyyy') : 'Events'}
-        </DialogTitle>
+        <VisuallyHiddenPrimitive.Root>
+          <DialogTitle>
+            {overflowDate
+              ? format(overflowDate, 'EEEE, MMMM d, yyyy')
+              : 'Events'}
+          </DialogTitle>
+        </VisuallyHiddenPrimitive.Root>
         {/* Professional Header with Cap */}
         <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
         <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
@@ -1323,11 +1621,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               <CalendarIconLucide className="w-5 h-5 text-[#0f5384]" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-semibold sidebar-gradient-text mt-6">
+              <h2 className="text-xl font-semibold sidebar-gradient-text mt-6">
                 {overflowDate
                   ? format(overflowDate, 'EEEE, MMMM d, yyyy')
                   : 'Events'}
-              </DialogTitle>
+              </h2>
               <p className="text-sm text-slate-600 mt-1">
                 {overflowEvents.length} event
                 {overflowEvents.length !== 1 ? 's' : ''} scheduled
@@ -1691,9 +1989,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col">
-              <DialogTitle className="sr-only">
-                {selectedEvent ? 'Update Event' : 'Create New Event'}
-              </DialogTitle>
+              <VisuallyHiddenPrimitive.Root>
+                <DialogTitle>
+                  {selectedEvent ? 'Update Event' : 'Create New Event'}
+                </DialogTitle>
+              </VisuallyHiddenPrimitive.Root>
               <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
               {/* Professional Header */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
@@ -1707,9 +2007,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                         ) : (
                           <CalendarIcon className="h-5 w-5 text-[#0f5384]" />
                         )}
-                        <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+                        <h2 className="text-xl font-semibold sidebar-gradient-text">
                           {selectedEvent ? 'Update Event' : 'Create New Event'}
-                        </DialogTitle>
+                        </h2>
                       </div>
                       <p className="text-sm text-slate-600 mt-1 ml-7">
                         {selectedEvent
@@ -1775,7 +2075,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             className="h-4 w-4 p-0 hover:bg-blue-200 rounded-full"
                             onClick={() => removeParticipant(participant.$id)}
                           >
-                            <Minimize2 className="h-3 w-3" />
+                            <X className="h-3 w-3" />
                           </Button>
                         </Badge>
                       ))}
@@ -2230,6 +2530,94 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     className="bg-white border-slate-300 focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0 resize-none"
                   />
                 </div>
+
+                {/* Attachments Section - Only for specific event types */}
+                {supportsAttachments(newEvent.type) && (
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                      <Paperclip className="w-4 h-4 text-blue-600" />
+                      Attachments
+                    </Label>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="file"
+                          id="file-upload"
+                          multiple
+                          accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                          onChange={(e) => handleFileUpload(e.target.files)}
+                          className="hidden"
+                          disabled={uploadingFiles}
+                        />
+                        <Label
+                          htmlFor="file-upload"
+                          className={cn(
+                            'flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors',
+                            uploadingFiles && 'opacity-50 cursor-not-allowed'
+                          )}
+                        >
+                          {uploadingFiles ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                              <span className="text-sm text-slate-600">
+                                Uploading...
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Paperclip className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm text-slate-700">
+                                Upload Documents
+                              </span>
+                            </>
+                          )}
+                        </Label>
+                        <span className="text-xs text-slate-500">
+                          JPG, JPEG, PNG, PDF, DOC, DOCX (Max 50MB each)
+                        </span>
+                      </div>
+
+                      {/* Display uploaded attachments */}
+                      {newEvent.attachments &&
+                        newEvent.attachments.length > 0 && (
+                          <div className="space-y-2">
+                            {newEvent.attachments.map((attachment) => (
+                              <div
+                                key={attachment.$id}
+                                className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg"
+                              >
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-slate-900 truncate">
+                                      {attachment.name}
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                      {convertFileSize({
+                                        sizeInBytes: attachment.size,
+                                      })}{' '}
+                                      • {attachment.extension.toUpperCase()}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-red-50"
+                                  onClick={() =>
+                                    handleRemoveAttachment(attachment.$id)
+                                  }
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Professional Footer */}
@@ -2291,10 +2679,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
       {/* Event Review Dialog */}
       <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
-        <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
-          <DialogTitle className="sr-only">
-            {selectedEvent?.title || 'Event Details'}
-          </DialogTitle>
+        <DialogContent className="max-w-[650px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
+          <VisuallyHiddenPrimitive.Root>
+            <DialogTitle>{selectedEvent?.title || 'Event Details'}</DialogTitle>
+          </VisuallyHiddenPrimitive.Root>
           <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
           {/* Professional Header */}
           <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
@@ -2318,9 +2706,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 <div>
                   <div className="flex items-center mt-4 gap-2">
                     <FileSliders className="w-6 h-6 text-[#0f5384]" />
-                    <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+                    <h2 className="text-xl font-semibold sidebar-gradient-text">
                       {selectedEvent?.title || 'Event Details'}
-                    </DialogTitle>
+                    </h2>
                   </div>
                   <p className="text-sm text-slate-600 mt-1 ml-8">
                     Event Details & Management
@@ -2343,9 +2731,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   <div className="space-y-4">
                     {/* Date & Time */}
                     <div className="grid grid-cols-[1fr_.8fr] gap-4">
-                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <Clock className="w-4 h-4 text-blue-600" />
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                        <div className="w-8 h-8 bg-[#E6FAF9] rounded-full flex items-center justify-center mt-0.5">
+                          <Clock className="w-4 h-4 text-blue" />
                         </div>
                         <div className="flex-1">
                           <div className="text-sm font-medium text-slate-900">
@@ -2370,8 +2758,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                         </div>
                       </div>
                       {/* Event Type */}
-                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
                           <Tag className="w-4 h-4 text-purple-600" />
                         </div>
                         <div className="flex-1">
@@ -2389,8 +2777,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
                     {/* Participants */}
                     <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
-                        <Users className="w-4 h-4 text-green-600" />
+                      <div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
+                        <Users className="w-4 h-4 text-[#5558F9]" />
                       </div>
                       <div className="flex-1">
                         <div className="text-sm font-medium text-slate-900 mb-1">
@@ -2476,11 +2864,39 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       </div>
                     </div>
 
+                    {/* Contract */}
+                    {(() => {
+                      if (!selectedEvent) return null;
+                      const eventType = String(
+                        selectedEvent.type || ''
+                      ).toLowerCase();
+                      const isContractType =
+                        eventType === 'contract review' ||
+                        eventType === 'contract';
+                      if (!isContractType || !selectedEvent.contractName)
+                        return null;
+                      return (
+                        <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                          <div className="w-8 h-8 bg-[#f0ecec] rounded-full flex items-center justify-center mt-0.5">
+                            <FileText className="w-4 h-4 text-[#838181]" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-slate-900 mb-1">
+                              Contract
+                            </div>
+                            <div className="text-sm text-slate-600 break-words">
+                              {selectedEvent.contractName}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Location */}
                     {selectedEvent.location && (
                       <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mt-0.5">
-                          <MapPin className="w-4 h-4 text-orange-600" />
+                        <div className="w-8 h-8 bg-[#fae3d3] rounded-full flex items-center justify-center mt-0.5">
+                          <MapPin className="w-4 h-4 text-orange" />
                         </div>
                         <div className="flex-1">
                           <div className="text-sm font-medium text-slate-900 mb-1">
@@ -2494,21 +2910,107 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     )}
 
                     {/* Description */}
-                    {selectedEvent.description && (
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mt-0.5">
-                          <MessageSquare className="w-4 h-4 text-indigo-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-slate-900 mb-1">
-                            Description
+                    {selectedEvent.description &&
+                      selectedEvent.description.trim() && (
+                        <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mt-0.5">
+                            <MessageSquare className="w-4 h-4 text-indigo-600" />
                           </div>
-                          <div className="text-sm text-slate-600 break-words">
-                            {selectedEvent.description.replace(/<[^>]*>/g, '')}
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-slate-900 mb-1">
+                              Description
+                            </div>
+                            <div className="text-sm text-slate-600 break-words whitespace-pre-wrap">
+                              {selectedEvent.description
+                                .replace(/<[^>]*>/g, '')
+                                .trim()}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+
+                    {/* Attachments */}
+                    {(() => {
+                      const attachmentFileIds = (
+                        selectedEvent.attachments || []
+                      ).map((att: any) =>
+                        typeof att === 'string' ? att : att.$id
+                      );
+
+                      if (attachmentFileIds.length === 0) return null;
+
+                      return (
+                        <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                            <Paperclip className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-slate-900 mb-2">
+                              Attachments ({attachmentFileIds.length})
+                            </div>
+                            <div className="space-y-2">
+                              {attachmentFileIds.map((fileId: string) => {
+                                const attachment = attachmentDetails[fileId];
+                                if (!attachment) {
+                                  return (
+                                    <div
+                                      key={fileId}
+                                      className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200"
+                                    >
+                                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium text-slate-900 truncate">
+                                            Loading...
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div
+                                    key={attachment.$id}
+                                    className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <a
+                                          href={attachment.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline truncate block"
+                                        >
+                                          {attachment.name}
+                                        </a>
+                                        <p className="text-xs text-slate-500">
+                                          {convertFileSize({
+                                            sizeInBytes: attachment.size,
+                                          })}{' '}
+                                          • {attachment.extension.toUpperCase()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => {
+                                        window.open(attachment.url, '_blank');
+                                      }}
+                                    >
+                                      <Eye className="w-4 h-4 text-blue-600" />
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -2522,7 +3024,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   <div className="space-y-3">
                     <Button
                       variant="outline"
-                      className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50"
+                      className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
                       onClick={() =>
                         handleOpenAiPanel('pre-reads', selectedEvent)
                       }
@@ -2540,7 +3042,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
                     <Button
                       variant="outline"
-                      className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50"
+                      className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
                       onClick={() => handleOpenAiPanel('chat', selectedEvent)}
                     >
                       <MessageSquare className="w-4 h-4 mr-3 text-slate-500" />
@@ -2722,6 +3224,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+          <VisuallyHiddenPrimitive.Root>
+            <DialogTitle>Delete Event</DialogTitle>
+          </VisuallyHiddenPrimitive.Root>
           {/* Cap */}
           <div className="h-4 w-full bg-[#d6d7d8] opacity-70 " />
 
@@ -2732,9 +3237,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 <AlertTriangle className="w-5 h-5 text-[#f0c974]" />
               </div>
               <div>
-                <DialogTitle className="text-base font-semibold sidebar-gradient-text">
+                <h2 className="text-base font-semibold sidebar-gradient-text">
                   Delete Event
-                </DialogTitle>
+                </h2>
                 <DialogDescription className="text-sm text-slate-600 mt-1">
                   Are you sure you want to delete "{selectedEvent?.title}"? This
                   action cannot be undone.
@@ -2795,7 +3300,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       <Sheet open={showAiPanel} onOpenChange={setShowAiPanel}>
         <SheetContent
           side="right"
-          className="w-full sm:w-[500px] p-0 flex flex-col h-full"
+          className="!w-full sm:!w-[500px] md:!w-[600px] lg:!w-[700px] !max-w-none p-0 flex flex-col h-full"
         >
           <CalendarAIChat
             mode={aiPanelMode}

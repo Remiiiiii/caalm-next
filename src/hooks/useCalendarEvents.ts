@@ -17,6 +17,8 @@ interface LocalCalendarEvent {
   endTime?: string;
   location?: string;
   outlook_id?: string;
+  createdBy?: string;
+  attachments?: Array<{ $id: string }>; // File ID references (array of file IDs from files collection)
 }
 
 interface UseCalendarEventsOptions {
@@ -28,23 +30,23 @@ interface UseCalendarEventsOptions {
 // Helper function to parse time in multiple formats
 const parseTime = (timeStr: string): { hours: number; minutes: number } => {
   if (!timeStr) return { hours: 0, minutes: 0 };
-  
+
   // Check if it's 12-hour format (e.g., "1:00 PM" or "12:00 AM")
   const twelveHourMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   if (twelveHourMatch) {
     let hours = parseInt(twelveHourMatch[1]);
     const minutes = parseInt(twelveHourMatch[2]);
     const period = twelveHourMatch[3].toUpperCase();
-    
+
     if (period === 'PM' && hours !== 12) {
       hours += 12;
     } else if (period === 'AM' && hours === 12) {
       hours = 0;
     }
-    
+
     return { hours, minutes };
   }
-  
+
   // Assume 24-hour format (e.g., "13:00" or "HH:MM")
   const [hours, minutes] = timeStr.split(':').map(Number);
   return { hours, minutes };
@@ -68,7 +70,7 @@ const convertDBEventToLocal = (
     if (dbEvent.startTime) {
       const { hours, minutes } = parseTime(dbEvent.startTime);
       normalizedStartDate = new Date(year, month - 1, day, hours, minutes, 0);
-      
+
       // Validate the date
       if (isNaN(normalizedStartDate.getTime())) {
         throw new Error('Invalid start date');
@@ -82,16 +84,23 @@ const convertDBEventToLocal = (
     if (dbEvent.endDate) {
       const endDateStr = dbEvent.endDate.split('T')[0];
       const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
-      
+
       // Parse end time if available, otherwise default to midnight
       if (dbEvent.endTime) {
         const { hours, minutes } = parseTime(dbEvent.endTime);
-        normalizedEndDate = new Date(endYear, endMonth - 1, endDay, hours, minutes, 0);
+        normalizedEndDate = new Date(
+          endYear,
+          endMonth - 1,
+          endDay,
+          hours,
+          minutes,
+          0
+        );
       } else {
         // No time specified - use midnight
         normalizedEndDate = new Date(endYear, endMonth - 1, endDay, 0, 0, 0);
       }
-      
+
       // Validate the end date
       if (normalizedEndDate && isNaN(normalizedEndDate.getTime())) {
         throw new Error('Invalid end date');
@@ -129,6 +138,14 @@ const convertDBEventToLocal = (
     endTime: dbEvent.endTime,
     location: dbEvent.location,
     outlook_id: dbEvent.outlook_id,
+    createdBy: dbEvent.createdBy,
+    // Attachments are stored as file IDs (array of strings)
+    // We'll fetch full file details when needed for display
+    attachments: Array.isArray((dbEvent as any).attachments)
+      ? (dbEvent as any).attachments.map((fileId: string) => ({
+          $id: fileId, // File ID reference
+        }))
+      : [],
   };
 };
 
@@ -188,10 +205,14 @@ export const useCalendarEvents = ({
     await mutate(undefined, { revalidate: true });
   };
 
-  const forceRefresh = () => {
+  const forceRefresh = async () => {
     console.log('Force refresh called, fetching new data immediately');
-    // Immediately fetch and update without waiting for cache
-    return mutate();
+    // Clear cache and force revalidation to ensure deleted events don't reappear
+    await mutate(undefined, {
+      revalidate: true,
+      populateCache: true,
+      rollbackOnError: false,
+    });
   };
 
   return {
