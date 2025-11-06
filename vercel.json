@@ -9,6 +9,11 @@
       "main": true
     }
   },
+  "gitlab": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
   "bitbucket": {
     "deploymentEnabled": {
       "main": true
