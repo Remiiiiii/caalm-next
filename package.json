@@ -19,6 +19,7 @@
     "clean:deps": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
     "deps:update": "pnpm update --latest",
     "deps:check": "pnpm outdated",
+    "test:redis": "node scripts/test-redis.js",
     "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {

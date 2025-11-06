@@ -4,11 +4,16 @@
  */
 
 import { kv } from '@vercel/kv';
+import Redis from 'ioredis';
 
 // Check if Redis is available
 const isRedisAvailable = !!(
   process.env.KV_REST_API_URL || process.env.REDIS_URL
 );
+
+// Check which Redis implementation to use
+const useVercelKV = !!process.env.KV_REST_API_URL;
+const useStandardRedis = !!process.env.REDIS_URL && !useVercelKV;
 
 /**
  * Redis cache interface
@@ -116,11 +121,125 @@ class VercelKVCache implements CacheService {
 }
 
 /**
+ * Standard Redis implementation using ioredis
+ */
+class StandardRedisCache implements CacheService {
+  private client: Redis;
+
+  constructor() {
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl) {
+      throw new Error('REDIS_URL environment variable is required');
+    }
+
+    this.client = new Redis(redisUrl, {
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+      reconnectOnError: (err) => {
+        const targetError = 'READONLY';
+        if (err.message.includes(targetError)) {
+          return true;
+        }
+        return false;
+      },
+    });
+
+    this.client.on('error', (err) => {
+      console.error('Redis connection error:', err);
+    });
+
+    this.client.on('connect', () => {
+      console.log('Redis connected successfully');
+    });
+  }
+
+  async get<T>(key: string): Promise<T | null> {
+    try {
+      const value = await this.client.get(key);
+      if (value === null) return null;
+      return JSON.parse(value) as T;
+    } catch (error) {
+      console.error('Redis GET error:', error);
+      return null;
+    }
+  }
+
+  async set(key: string, value: any, ttl: number = 300): Promise<void> {
+    try {
+      const serialized = JSON.stringify(value);
+      await this.client.setex(key, ttl, serialized);
+    } catch (error) {
+      console.error('Redis SET error:', error);
+    }
+  }
+
+  async del(key: string): Promise<void> {
+    try {
+      await this.client.del(key);
+    } catch (error) {
+      console.error('Redis DEL error:', error);
+    }
+  }
+
+  async exists(key: string): Promise<boolean> {
+    try {
+      const result = await this.client.exists(key);
+      return result === 1;
+    } catch (error) {
+      console.error('Redis EXISTS error:', error);
+      return false;
+    }
+  }
+
+  async clear(pattern: string): Promise<void> {
+    try {
+      const stream = this.client.scanStream({
+        match: pattern,
+        count: 100,
+      });
+
+      const pipeline = this.client.pipeline();
+      let keysToDelete: string[] = [];
+
+      stream.on('data', (keys: string[]) => {
+        keysToDelete = keysToDelete.concat(keys);
+        if (keysToDelete.length >= 100) {
+          keysToDelete.forEach((key) => pipeline.del(key));
+          keysToDelete = [];
+        }
+      });
+
+      stream.on('end', async () => {
+        if (keysToDelete.length > 0) {
+          keysToDelete.forEach((key) => pipeline.del(key));
+        }
+        await pipeline.exec();
+      });
+    } catch (error) {
+      console.error('Redis CLEAR error:', error);
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    await this.client.quit();
+  }
+}
+
+/**
  * Create cache service instance
  */
 function createCacheService(): CacheService {
   if (isRedisAvailable) {
-    return new VercelKVCache();
+    if (useVercelKV) {
+      console.log('Using Vercel KV for Redis caching');
+      return new VercelKVCache();
+    } else if (useStandardRedis) {
+      console.log('Using standard Redis (ioredis) for caching');
+      return new StandardRedisCache();
+    }
   }
 
   // Fallback to in-memory cache for development
@@ -227,10 +346,21 @@ export async function getOrSet<T>(
 export async function getStats(): Promise<{
   available: boolean;
   type: string;
+  provider?: string;
 }> {
+  let provider: string | undefined;
+  if (isRedisAvailable) {
+    if (useVercelKV) {
+      provider = 'vercel-kv';
+    } else if (useStandardRedis) {
+      provider = 'standard-redis';
+    }
+  }
+
   return {
     available: isRedisAvailable,
     type: isRedisAvailable ? 'redis' : 'memory',
+    provider,
   };
 }
 
