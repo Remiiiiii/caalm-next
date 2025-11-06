@@ -1,8 +1,22 @@
 {
   "git": {
     "deploymentEnabled": {
-      "main": true,
-      "[!main]": false
+      "main": true
+    }
+  },
+  "github": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
+  "gitlab": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
+  "bitbucket": {
+    "deploymentEnabled": {
+      "main": true
     }
   }
 }
