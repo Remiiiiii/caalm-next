@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +77,7 @@ import {
   Tag,
   FileSliders,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import {
   format,
@@ -244,6 +245,28 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     content?: string;
   } | null>(null);
   const [loadingContract, setLoadingContract] = useState(false);
+
+  const selectedEventWithDetails = useMemo(() => {
+    if (!selectedEvent) return null;
+    if (!selectedEvent.attachments || selectedEvent.attachments.length === 0) {
+      return selectedEvent;
+    }
+
+    const enrichedAttachments = selectedEvent.attachments.map(
+      (attachment: any) => {
+        if (!attachment) return attachment;
+        const fileId =
+          typeof attachment === 'string' ? attachment : attachment.$id;
+        const detail = attachmentDetails[fileId];
+        return detail ? detail : attachment;
+      }
+    );
+
+    return {
+      ...selectedEvent,
+      attachments: enrichedAttachments,
+    } as LocalCalendarEvent;
+  }, [selectedEvent, attachmentDetails]);
 
   // Fetch contract data for event
   const fetchContractForEvent = async (event: LocalCalendarEvent) => {
@@ -926,10 +949,25 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             });
             setAttachmentDetails(detailsMap);
           } else {
-            console.error(
-              'Failed to fetch attachment details:',
-              response.statusText
-            );
+            // Try to get the actual error message from the response
+            let errorMessage = response.statusText;
+            try {
+              const errorData = await response.json();
+              errorMessage =
+                errorData.error || errorData.message || response.statusText;
+              console.error('Failed to fetch attachment details:', {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorMessage,
+                details: errorData.details,
+              });
+            } catch (parseError) {
+              console.error('Failed to fetch attachment details:', {
+                status: response.status,
+                statusText: response.statusText,
+                parseError,
+              });
+            }
             setAttachmentDetails({});
           }
         } catch (error) {
@@ -2958,7 +2996,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                       className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200"
                                     >
                                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                        <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
                                         <div className="flex-1 min-w-0">
                                           <p className="text-sm font-medium text-slate-900 truncate">
                                             Loading...
@@ -3304,7 +3342,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         >
           <CalendarAIChat
             mode={aiPanelMode}
-            event={selectedEvent}
+            event={selectedEventWithDetails || selectedEvent}
             contractData={contractData}
             onClose={() => setShowAiPanel(false)}
           />

@@ -17,6 +17,11 @@ import {
   Minimize2,
   Copy,
   Check,
+  NotebookPen,
+  HelpCircle,
+  ClipboardList,
+  Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 import Image from 'next/image';
 import { format } from 'date-fns';
@@ -63,6 +68,54 @@ interface CalendarAIChatProps {
   onClose?: () => void;
 }
 
+const RECOMMENDED_ACTIONS = {
+  chat: [
+    {
+      title: 'Draft a message',
+      description:
+        'Craft a polished note that references meeting context and attachments.',
+      value: 'Help me draft a message to the organizer.',
+      icon: NotebookPen,
+    },
+    {
+      title: 'Plan questions',
+      description:
+        'Uncover meeting-specific questions to keep the discussion focused.',
+      value: 'What questions should I ask during the meeting?',
+      icon: HelpCircle,
+    },
+    {
+      title: 'Review pre-work',
+      description:
+        'Get a clear checklist of documents or tasks to prepare beforehand.',
+      value: 'What should I prepare before this meeting?',
+      icon: ClipboardList,
+    },
+  ],
+  'pre-reads': [
+    {
+      title: 'Summarize attachments',
+      description: 'Condense the key points in the attached documents.',
+      value: 'Summarize the attached documents.',
+      icon: FileText,
+    },
+    {
+      title: 'Extract action items',
+      description:
+        'Highlight action items or follow-ups I should track after the meeting.',
+      value: 'List action items from the pre-reads.',
+      icon: ClipboardList,
+    },
+    {
+      title: 'Identify risks',
+      description:
+        'Point out potential risks or concerns the team should be aware of.',
+      value: 'Are there any risks noted in the documents?',
+      icon: AlertTriangle,
+    },
+  ],
+} as const;
+
 const CalendarAIChat: React.FC<CalendarAIChatProps> = ({
   mode,
   event,
@@ -73,6 +126,9 @@ const CalendarAIChat: React.FC<CalendarAIChatProps> = ({
   const [aiInput, setAiInput] = useState<string>('');
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
   const [welcomeMessageLoaded, setWelcomeMessageLoaded] = useState(false);
+  const [preReadsPromptSent, setPreReadsPromptSent] = useState(false);
+  const lastPreReadsPromptKeyRef = useRef<string | null>(null);
+  const autoPromptPendingRef = useRef(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [organizerInfo, setOrganizerInfo] = useState<{
     name?: string;
@@ -266,40 +322,65 @@ const CalendarAIChat: React.FC<CalendarAIChatProps> = ({
     setAiInput('');
     setIsAiLoading(false);
     setWelcomeMessageLoaded(false);
+    setPreReadsPromptSent(false);
+    lastPreReadsPromptKeyRef.current = null;
   }, [mode, event?.title]);
 
-  // Auto-send pre-reads prompt when mode is 'pre-reads' and contract data is available
+  // Auto-send pre-reads prompt when entering pre-read mode
   useEffect(() => {
     if (
-      mode === 'pre-reads' &&
-      contractData &&
-      chatMessages.length === 0 &&
-      !isAiLoading &&
-      !welcomeMessageLoaded
+      mode !== 'pre-reads' ||
+      chatMessages.length > 0 ||
+      isAiLoading ||
+      autoPromptPendingRef.current
     ) {
+      return;
+    }
+
+    const meetingTitle = event?.title || 'Contract Review';
+    const contractTitle =
+      contractData?.title ||
+      contractData?.noticeId ||
+      meetingTitle ||
+      'Contract';
+
+    const promptKey = `${mode}-${meetingTitle}`;
+
+    if (lastPreReadsPromptKeyRef.current === promptKey) {
+      return;
+    }
+
+    lastPreReadsPromptKeyRef.current = promptKey;
+
+    if (!preReadsPromptSent) {
       const preReadsPrompt = `Recommend top pre-reads for this contract review meeting so that I can contribute effectively. 
      
       Analyze the contract content and provide specific recommendations. 
   
       Include:
-- Key sections to review
-- Important terms and conditions to understand
-- Relevant background information
-- Questions to prepare for the meeting
+ - Key sections to review
+ - Important terms and conditions to understand
+ - Relevant background information
+ - Questions to prepare for the meeting
+ 
+Meeting: ${meetingTitle}
+Contract: ${contractTitle}`;
 
-Meeting: ${event?.title || 'Contract Review'}
-Contract: ${contractData.title || contractData.noticeId || 'Contract'}`;
-
-      handleSendMessage(preReadsPrompt, true);
+      setPreReadsPromptSent(true);
       setWelcomeMessageLoaded(true);
+      autoPromptPendingRef.current = true;
+      handleSendMessage(preReadsPrompt, true).finally(() => {
+        autoPromptPendingRef.current = false;
+      });
     }
   }, [
     mode,
-    contractData,
     event,
     chatMessages.length,
     isAiLoading,
-    welcomeMessageLoaded,
+    preReadsPromptSent,
+    contractData?.title,
+    contractData?.noticeId,
   ]);
 
   // Build context for AI requests
@@ -402,15 +483,110 @@ Contract: ${contractData.title || contractData.noticeId || 'Contract'}`;
     try {
       const context = buildContext();
 
+      const rawAttachments = Array.isArray(event?.attachments)
+        ? event.attachments
+        : [];
+
+      let attachmentsForProcessing = rawAttachments;
+
+      if (rawAttachments.length > 0) {
+        const attachmentsMissingDetails = rawAttachments.filter(
+          (attachment: any) => {
+            if (!attachment) return false;
+            if (typeof attachment === 'string') return true;
+            return !attachment.url || !attachment.extension || !attachment.name;
+          }
+        );
+
+        if (attachmentsMissingDetails.length > 0) {
+          const fileIdsToFetch = Array.from(
+            new Set(
+              rawAttachments
+                .map((attachment: any) => {
+                  if (typeof attachment === 'string') {
+                    return attachment;
+                  }
+                  return attachment.$id || attachment.fileId || attachment.id;
+                })
+                .filter(
+                  (id): id is string => typeof id === 'string' && id.length > 0
+                )
+            )
+          );
+
+          if (fileIdsToFetch.length > 0) {
+            try {
+              const detailsResponse = await fetch('/api/files/get-by-ids', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ fileIds: fileIdsToFetch }),
+              });
+
+              if (detailsResponse.ok) {
+                const fetchedDetails = await detailsResponse.json();
+                const detailMap = new Map(
+                  fetchedDetails.map((detail: any) => [detail.$id, detail])
+                );
+
+                attachmentsForProcessing = rawAttachments.map(
+                  (attachment: any) => {
+                    const fileId =
+                      typeof attachment === 'string'
+                        ? attachment
+                        : attachment.$id || attachment.fileId || attachment.id;
+
+                    const detail = fileId ? detailMap.get(fileId) : null;
+
+                    if (detail) {
+                      if (typeof attachment === 'string') {
+                        return detail;
+                      }
+                      return { ...attachment, ...detail };
+                    }
+
+                    return attachment;
+                  }
+                );
+              } else {
+                console.error('Failed to resolve attachment details for AI:', {
+                  status: detailsResponse.status,
+                  statusText: detailsResponse.statusText,
+                });
+              }
+            } catch (resolveError) {
+              console.error(
+                'Error resolving attachment details for AI:',
+                resolveError
+              );
+            }
+          }
+        }
+      }
+
       // Extract content from attachments
       let attachmentContents = '';
-      if (event?.attachments && event.attachments.length > 0) {
+      if (attachmentsForProcessing.length > 0) {
         try {
-          const extractionPromises = event.attachments.map(
-            async (attachment) => {
+          const extractionPromises = attachmentsForProcessing.map(
+            async (attachment: any) => {
               try {
+                const fileId =
+                  typeof attachment === 'string'
+                    ? attachment
+                    : attachment.$id || attachment.fileId || attachment.id;
+                const displayName = attachment.name || fileId || 'Attachment';
+
+                if (!attachment.url) {
+                  return `\n\n--- ${displayName} ---\n(Attachment metadata available but file URL is missing; content cannot be retrieved.)\n`;
+                }
+
                 // For PDFs, use the dedicated extraction API
-                if (attachment.extension.toLowerCase() === 'pdf') {
+                if (
+                  attachment.extension &&
+                  attachment.extension.toLowerCase() === 'pdf'
+                ) {
                   const extractResponse = await fetch('/api/extract-pdf-text', {
                     method: 'POST',
                     headers: {
@@ -418,30 +594,42 @@ Contract: ${contractData.title || contractData.noticeId || 'Contract'}`;
                     },
                     body: JSON.stringify({
                       fileUrl: attachment.url,
-                      fileName: attachment.name,
+                      fileName: displayName,
                     }),
                   });
 
                   if (extractResponse.ok) {
                     const extractResult = await extractResponse.json();
-                    return `\n\n--- Content from ${attachment.name} ---\n${
+                    return `\n\n--- Content from ${displayName} ---\n${
                       extractResult.text || 'Unable to extract text'
                     }\n`;
                   }
                 } else {
                   // For other file types (images, docs), note that extraction may be limited
                   // The AI will have access to the file URLs and metadata
-                  return `\n\n--- ${
-                    attachment.name
-                  } (${attachment.extension.toUpperCase()}) ---\n(File attached - content extraction may be limited for ${attachment.extension.toUpperCase()} files)\n`;
+                  return `\n\n--- ${displayName} (${
+                    attachment.extension
+                      ? attachment.extension.toUpperCase()
+                      : 'FILE'
+                  }) ---\n(File attached - content extraction may be limited for ${
+                    attachment.extension
+                      ? attachment.extension.toUpperCase()
+                      : 'these'
+                  } files)\n`;
                 }
-                return `\n\n--- ${attachment.name} ---\n(Content extraction not available)\n`;
+                return `\n\n--- ${displayName} ---\n(Content extraction not available)\n`;
               } catch (error) {
-                console.warn(
-                  `Failed to extract content from ${attachment.name}:`,
-                  error
-                );
-                return `\n\n--- ${attachment.name} ---\n(Unable to extract content)\n`;
+                console.warn('Failed to extract content from attachment:', {
+                  attachment,
+                  error,
+                });
+                const fallbackName =
+                  (attachment && attachment.name) ||
+                  (typeof attachment === 'string'
+                    ? attachment
+                    : attachment?.$id) ||
+                  'Attachment';
+                return `\n\n--- ${fallbackName} ---\n(Unable to extract content)\n`;
               }
             }
           );
@@ -459,14 +647,11 @@ Contract: ${contractData.title || contractData.noticeId || 'Contract'}`;
       const fileContent = (contractData?.content || '') + attachmentContents;
 
       // Log contract and attachment availability for debugging
-      if (
-        contractData ||
-        (event?.attachments && event.attachments.length > 0)
-      ) {
+      if (contractData || attachmentsForProcessing.length > 0) {
         console.log('Data available for AI:', {
           hasContractContent: !!contractData?.content,
           contractContentLength: contractData?.content?.length || 0,
-          attachmentCount: event?.attachments?.length || 0,
+          attachmentCount: attachmentsForProcessing.length,
           attachmentContentsLength: attachmentContents.length,
           mode: mode,
         });
@@ -613,6 +798,55 @@ Contract: ${contractData.title || contractData.noticeId || 'Contract'}`;
       {/* Chat Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-6">
+          {mode === 'pre-reads' &&
+            chatMessages.length === 0 &&
+            !isAiLoading &&
+            !preReadsPromptSent && (
+              <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
+                <div className="border-b border-slate-100 px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#078FAB]/10 text-[#078FAB]">
+                      <Sparkles className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-900">
+                        Kickstart your pre-read review
+                      </h4>
+                      <p className="text-xs text-slate-500">
+                        Use one of the quick prompts below to analyze the
+                        attached documents faster.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 p-5">
+                  {RECOMMENDED_ACTIONS['pre-reads'].map(
+                    ({ value, title, description, icon: Icon }, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSuggestedAction(value)}
+                        className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-[#078FAB] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-1"
+                      >
+                        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#078FAB]/10 text-[#078FAB]">
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <span className="flex-1">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {title}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {description}
+                          </p>
+                        </span>
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
           {/* Welcome message for chat mode */}
           {mode === 'chat' &&
             chatMessages.length === 0 &&
@@ -796,22 +1030,31 @@ Contract: ${contractData.title || contractData.noticeId || 'Contract'}`;
         !isAiLoading &&
         !welcomeMessageLoaded && (
           <div className="px-4 pb-4">
-            <div className="space-y-2">
-              {[
-                'Help me draft a message to the organizer.',
-                'What questions should I ask during the meeting?',
-                'What should I prepare before this meeting?',
-              ].map((action, idx) => (
-                <Button
-                  key={idx}
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-left h-auto py-2 px-3 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 text-sm"
-                  onClick={() => handleSuggestedAction(action)}
-                >
-                  {action}
-                </Button>
-              ))}
+            <div className="space-y-3">
+              {RECOMMENDED_ACTIONS.chat.map(
+                ({ value, title, description, icon: Icon }, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSuggestedAction(value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#078FAB] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-1"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#078FAB]/10 text-[#078FAB]">
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {title}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {description}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              )}
             </div>
           </div>
         )}
