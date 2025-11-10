@@ -140,8 +140,20 @@ export const normalizeUserRole = (role?: string | null): UserRole => {
   if (!role) {
     return 'viewer';
   }
-  const normalizedKey = role.toLowerCase();
-  return LEGACY_ROLE_MAPPING[normalizedKey] || 'viewer';
+  // Trim whitespace and convert to lowercase for consistent matching
+  const normalizedKey = role.trim().toLowerCase();
+  const mappedRole = LEGACY_ROLE_MAPPING[normalizedKey] || 'viewer';
+  
+  // Log normalization for debugging (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[normalizeUserRole]', {
+      input: role,
+      normalized: normalizedKey,
+      mapped: mappedRole,
+    });
+  }
+  
+  return mappedRole;
 };
 
 export type LegacyRole = 'executive' | 'manager' | 'admin' | 'viewer';

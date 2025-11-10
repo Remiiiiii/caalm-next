@@ -53,7 +53,7 @@ export interface CalendarEvent {
   requiresApproval?: boolean;
   approvalStatus?: CalendarApprovalStatus;
   pendingApprovalId?: string | null;
-  overrides?: PermissionOverrideRecord[];
+  overrides?: PermissionOverrideRecord[] | string; // Can be array (in-memory) or JSON string (from DB)
   $createdAt?: string;
   $updatedAt?: string;
 }
@@ -108,6 +108,25 @@ export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
   }
 };
 
+/**
+ * Parse overrides field from JSON string to array
+ */
+const parseEventOverrides = (
+  overrides: unknown
+): PermissionOverrideRecord[] => {
+  if (typeof overrides === 'string') {
+    try {
+      return JSON.parse(overrides) as PermissionOverrideRecord[];
+    } catch (error) {
+      console.error('Error parsing overrides JSON:', error);
+      return [];
+    }
+  } else if (Array.isArray(overrides)) {
+    return overrides;
+  }
+  return [];
+};
+
 export const getCalendarEventById = async (
   eventId: string
 ): Promise<CalendarEvent | null> => {
@@ -120,13 +139,18 @@ export const getCalendarEventById = async (
     }
 
     const adminClient = await createAdminClient();
-    const response = await adminClient.tablesDB.getRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      eventId
-    );
+    const response = await adminClient.tablesDB.getRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      rowId: eventId,
+    });
 
-    return (response as unknown as CalendarEvent) || null;
+    const event = response as unknown as Record<string, unknown>;
+
+    // Parse overrides from JSON string if stored as string
+    event.overrides = parseEventOverrides(event.overrides);
+
+    return event as unknown as CalendarEvent;
   } catch (error) {
     console.error('Error fetching calendar event by ID:', error);
     return null;
@@ -280,14 +304,20 @@ export const createCalendarEvent = async (
     const dataToCreate: Record<string, unknown> = {
       ...eventData,
     };
-    if (!dataToCreate.attachments || dataToCreate.attachments.length === 0) {
-      delete dataToCreate.attachments;
+
+    // Handle overrides: serialize to JSON string if it's an array (stored as string in DB)
+    if (dataToCreate.overrides && Array.isArray(dataToCreate.overrides)) {
+      dataToCreate.overrides = JSON.stringify(dataToCreate.overrides);
+    } else if (!dataToCreate.overrides) {
+      // If overrides is not provided, set to empty array as JSON string
+      dataToCreate.overrides = JSON.stringify([]);
     }
 
+    // Set default values for RBAC fields if not provided
     if (!dataToCreate.sensitivityLevel) {
       dataToCreate.sensitivityLevel = 'standard';
     }
-    if (typeof dataToCreate.requiresApproval === 'undefined') {
+    if (dataToCreate.requiresApproval === undefined) {
       dataToCreate.requiresApproval = false;
     }
     if (!dataToCreate.approvalStatus) {
@@ -298,8 +328,13 @@ export const createCalendarEvent = async (
     if (!dataToCreate.pendingApprovalId) {
       dataToCreate.pendingApprovalId = null;
     }
-    if (!Array.isArray(dataToCreate.overrides)) {
-      dataToCreate.overrides = [];
+
+    if (
+      !dataToCreate.attachments ||
+      !Array.isArray(dataToCreate.attachments) ||
+      dataToCreate.attachments.length === 0
+    ) {
+      delete dataToCreate.attachments;
     }
 
     const response = await adminClient.tablesDB.createRow(
@@ -357,32 +392,68 @@ export const updateCalendarEvent = async (
 
     // Filter out attachments if empty or undefined to avoid schema errors
     const dataToUpdate: Record<string, unknown> = { ...eventData };
-    if (dataToUpdate.attachments && dataToUpdate.attachments.length === 0) {
+
+    // Handle overrides: serialize to JSON string if it's an array (stored as string in DB)
+    if (
+      dataToUpdate.overrides !== undefined &&
+      dataToUpdate.overrides !== null
+    ) {
+      if (Array.isArray(dataToUpdate.overrides)) {
+        dataToUpdate.overrides = JSON.stringify(dataToUpdate.overrides);
+      }
+      // If it's already a string, keep it as-is
+    }
+    // If overrides is undefined/null, don't include it in the update (partial update)
+
+    if (
+      dataToUpdate.attachments &&
+      Array.isArray(dataToUpdate.attachments) &&
+      dataToUpdate.attachments.length === 0
+    ) {
       delete dataToUpdate.attachments;
     }
-    if (dataToUpdate.sensitivityLevel === undefined) {
-      delete dataToUpdate.sensitivityLevel;
-    }
-    if (dataToUpdate.requiresApproval === undefined) {
-      delete dataToUpdate.requiresApproval;
-    }
-    if (dataToUpdate.approvalStatus === undefined) {
-      delete dataToUpdate.approvalStatus;
-    }
-    if (dataToUpdate.pendingApprovalId === undefined) {
-      delete dataToUpdate.pendingApprovalId;
-    }
-    if (!Array.isArray(dataToUpdate.overrides)) {
-      delete dataToUpdate.overrides;
-    }
 
-    const response = await adminClient.tablesDB.updateRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      eventId,
-      dataToUpdate
-    );
-    return response as unknown as CalendarEvent;
+    const response = await adminClient.tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      rowId: eventId,
+      data: dataToUpdate,
+    });
+    
+    // Convert to plain object to ensure serialization
+    const raw = response as unknown as Record<string, unknown>;
+    
+    // Return plain object with only serializable fields
+    return {
+      $id: String(raw.$id || eventId),
+      title: String(raw.title || ''),
+      startDate: String(raw.startDate || ''),
+      endDate: raw.endDate ? String(raw.endDate) : undefined,
+      type: raw.type as CalendarEvent['type'],
+      description: raw.description ? String(raw.description) : undefined,
+      contractName: raw.contractName ? String(raw.contractName) : undefined,
+      amount: raw.amount ? String(raw.amount) : undefined,
+      startTime: raw.startTime ? String(raw.startTime) : undefined,
+      endTime: raw.endTime ? String(raw.endTime) : undefined,
+      participants: raw.participants ? String(raw.participants) : undefined,
+      location: raw.location ? String(raw.location) : undefined,
+      createdBy: String(raw.createdBy || ''),
+      createdByUserId: raw.createdByUserId ? String(raw.createdByUserId) : undefined,
+      createdByAccountId: raw.createdByAccountId ? String(raw.createdByAccountId) : undefined,
+      outlook_id: raw.outlook_id ? String(raw.outlook_id) : undefined,
+      attachments: raw.attachments ? (Array.isArray(raw.attachments) ? raw.attachments.map(String) : [String(raw.attachments)]) : undefined,
+      deleted_at: raw.deleted_at ? String(raw.deleted_at) : undefined,
+      deleted_by: raw.deleted_by ? String(raw.deleted_by) : undefined,
+      deletion_status: raw.deletion_status as CalendarEvent['deletion_status'],
+      deletion_synced: Boolean(raw.deletion_synced),
+      sensitivityLevel: raw.sensitivityLevel as CalendarEvent['sensitivityLevel'],
+      requiresApproval: Boolean(raw.requiresApproval),
+      approvalStatus: raw.approvalStatus as CalendarEvent['approvalStatus'],
+      pendingApprovalId: raw.pendingApprovalId ? String(raw.pendingApprovalId) : null,
+      overrides: raw.overrides ? (typeof raw.overrides === 'string' ? raw.overrides : JSON.stringify(raw.overrides)) : undefined,
+      $createdAt: raw.$createdAt ? String(raw.$createdAt) : undefined,
+      $updatedAt: raw.$updatedAt ? String(raw.$updatedAt) : undefined,
+    } as CalendarEvent;
   } catch (error) {
     console.error('Error updating calendar event:', error);
     throw error;
@@ -713,11 +784,12 @@ export const deleteCalendarEventWithSync = async (
     }
 
     const adminClient = await createAdminClient();
-    const event = (await adminClient.tablesDB.getRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      eventId
-    )) as unknown as CalendarEvent;
+    const response = await adminClient.tablesDB.getRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      rowId: eventId,
+    });
+    const event = response as unknown as CalendarEvent;
 
     // Check if this event has a Microsoft ID and user has integration
     const hasIntegration = await hasActiveCalendarIntegration(

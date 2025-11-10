@@ -13,8 +13,18 @@ export async function getCurrentUserId(): Promise<string> {
   } catch (sessionError) {
     // If session fails, try 2FA authentication
     const user2FA = await getCurrentUserFrom2FA();
-    if (user2FA && user2FA.$id) {
-      return user2FA.$id;
+    if (user2FA) {
+      // Return accountId for 2FA users, as that's what getUserByAccountId expects
+      // If accountId is not set, fall back to $id
+      const accountId = user2FA.accountId || user2FA.$id;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[getCurrentUserId] Using 2FA user:', {
+          userId: user2FA.$id,
+          accountId: user2FA.accountId,
+          returning: accountId,
+        });
+      }
+      return accountId;
     } else {
       throw new Error('No valid authentication found');
     }

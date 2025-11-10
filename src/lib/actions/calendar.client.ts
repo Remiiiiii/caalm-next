@@ -111,3 +111,40 @@ export const createCalendarEvent = async (
     throw error; // Re-throw to let the component handle it
   }
 };
+
+// Update an existing calendar event
+export const updateCalendarEvent = async (
+  eventId: string,
+  eventData: Partial<CreateCalendarEventData>
+): Promise<CalendarEvent | null> => {
+  try {
+    console.log('Updating event data to API:', { eventId, eventData });
+
+    const response = await fetch(`${API_BASE}/events?id=${eventId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(eventData),
+    });
+
+    console.log('Update response status:', response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('API Error response:', errorData);
+      throw new Error(
+        errorData.message ||
+          errorData.details ||
+          `Failed to update calendar event: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    console.log('Successfully updated event:', result);
+    return result.event || result;
+  } catch (error) {
+    console.error('Error updating calendar event:', error);
+    throw error; // Re-throw to let the component handle it
+  }
+};

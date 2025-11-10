@@ -13,7 +13,11 @@ import { syncDeletionToOutlook } from '@/lib/services/deletion-sync';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 import { evaluateCalendarPermission } from '@/lib/auth/guards';
-import { createCalendarApprovalRequest } from '@/lib/actions/calendar-approval.actions';
+import {
+  createCalendarApprovalRequest,
+  updateCalendarApprovalRequest,
+  getCalendarApprovalById,
+} from '@/lib/actions/calendar-approval.actions';
 
 const buildPermissionErrorResponse = (
   reason: string,
@@ -26,7 +30,14 @@ const buildPermissionErrorResponse = (
       reason,
       requiredApproval: Boolean(requiredApproval),
     },
-    { status: reason === 'user_not_found' ? 404 : reason === 'pending_approval' ? 409 : 403 }
+    {
+      status:
+        reason === 'user_not_found'
+          ? 404
+          : reason === 'pending_approval'
+          ? 409
+          : 403,
+    }
   );
 };
 
@@ -41,12 +52,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(
+      '[POST /api/calendar/events] Checking permissions for userId:',
+      userId
+    );
     const permissionCheck = await evaluateCalendarPermission({
       userAccountId: userId,
       action: 'create',
     });
 
+    console.log('[POST /api/calendar/events] Permission check result:', {
+      allowed: permissionCheck.allowed,
+      reason: permissionCheck.reason,
+      userRole: permissionCheck.userRole,
+      userId: permissionCheck.userId,
+    });
+
     if (!permissionCheck.allowed) {
+      console.error('[POST /api/calendar/events] Permission denied:', {
+        reason: permissionCheck.reason,
+        userRole: permissionCheck.userRole,
+        userId: permissionCheck.userId,
+      });
       return buildPermissionErrorResponse(
         permissionCheck.reason || 'permission_denied',
         permissionCheck.requiredApproval
@@ -64,25 +91,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate required fields
+    if (!eventData.title || !eventData.startDate) {
+      return NextResponse.json(
+        { success: false, message: 'Title and startDate are required' },
+        { status: 400 }
+      );
+    }
+
     // Add the user ID to the event data
-    const eventWithUser: Partial<CreateCalendarEventData> & {
-      createdBy: string;
-      createdByAccountId: string;
-      createdByUserId?: string;
-      sensitivityLevel?: string;
-      requiresApproval?: boolean;
-      approvalStatus?: string;
-    } = {
-      ...eventData,
+    const requestedSensitivityLevel = (eventData.sensitivityLevel as
+      | 'standard'
+      | 'restricted'
+      | 'confidential') || 'standard';
+    
+    const eventWithUser: CreateCalendarEventData = {
+      title: eventData.title as string,
+      startDate: eventData.startDate as string,
+      endDate: (eventData.endDate as string) || (eventData.startDate as string),
+      type:
+        (eventData.type as
+          | 'contract'
+          | 'deadline'
+          | 'meeting'
+          | 'review'
+          | 'audit') || 'meeting',
+      description: (eventData.description as string) || '',
+      startTime: (eventData.startTime as string) || '',
+      endTime: (eventData.endTime as string) || '',
       createdBy: userId,
       createdByAccountId: userId,
       createdByUserId: permissionCheck.userId || undefined,
+      contractName: (eventData.contractName as string) || '',
+      participants: (eventData.participants as string) || '',
+      location: (eventData.location as string) || undefined,
+      attachments: Array.isArray(eventData.attachments)
+        ? eventData.attachments
+        : undefined,
+      sensitivityLevel: requestedSensitivityLevel,
+      requiresApproval: requestedSensitivityLevel !== 'standard',
+      approvalStatus: requestedSensitivityLevel !== 'standard' ? 'pending' : 'not_required',
+      overrides: Array.isArray(eventData.overrides)
+        ? eventData.overrides
+        : undefined,
     };
 
-    const sensitivityLevel =
-      eventWithUser.sensitivityLevel || eventData.sensitivityLevel || 'standard';
+    const sensitivityLevel = eventWithUser.sensitivityLevel || 'standard';
     const requiresApproval =
-      Boolean(eventWithUser.requiresApproval) || sensitivityLevel !== 'standard';
+      Boolean(eventData.requiresApproval) || sensitivityLevel !== 'standard';
 
     if (requiresApproval) {
       eventWithUser.requiresApproval = true;
@@ -104,7 +160,7 @@ export async function POST(request: NextRequest) {
         requestedByUserId: permissionCheck.userId || undefined,
         changeSummary: {
           before: null,
-          after: eventWithUser,
+          after: eventWithUser as unknown as Record<string, unknown>,
         },
         sensitivityLevel,
       });
@@ -117,7 +173,16 @@ export async function POST(request: NextRequest) {
 
     // Invalidate calendar cache for the month
     // Parse date string safely to avoid timezone shifts
-    const dateStr = eventData.startDate.split('T')[0]; // Get just YYYY-MM-DD
+    if (!eventData.startDate) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'startDate is required for cache invalidation',
+        },
+        { status: 400 }
+      );
+    }
+    const dateStr = (eventData.startDate as string).split('T')[0]; // Get just YYYY-MM-DD
     const [year, month, day] = dateStr.split('-').map(Number);
     const eventDate = new Date(year, month - 1, day);
     await CacheManager.invalidateCalendar(
@@ -224,6 +289,194 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const userId = await getCurrentUserId();
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const eventId = searchParams.get('id');
+
+    if (!eventId) {
+      return NextResponse.json(
+        { success: false, message: 'Event ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const eventData = body as Partial<CreateCalendarEventData>;
+
+    console.log('Updating calendar event via API:', {
+      eventId,
+      userId,
+      eventData,
+    });
+
+    const event = await getCalendarEventById(eventId);
+
+    if (!event) {
+      return NextResponse.json(
+        { success: false, message: 'Event not found' },
+        { status: 404 }
+      );
+    }
+
+    const permissionCheck = await evaluateCalendarPermission({
+      userAccountId: userId,
+      action: 'update',
+      event,
+    });
+
+    if (!permissionCheck.allowed) {
+      return buildPermissionErrorResponse(
+        permissionCheck.reason || 'permission_denied',
+        permissionCheck.requiredApproval
+      );
+    }
+
+    // Check if event requires approval for updates
+    const sensitivityLevel = eventData.sensitivityLevel || event.sensitivityLevel || 'standard';
+    const requiresApproval =
+      Boolean(eventData.requiresApproval) ||
+      sensitivityLevel === 'restricted' ||
+      sensitivityLevel === 'confidential';
+
+    let updatedEvent: CalendarEvent;
+    let pendingApprovalId: string | null = null;
+
+    // Check if this is a resubmission after changes were requested
+    const isResubmission =
+      event.approvalStatus === 'changes_requested' &&
+      event.pendingApprovalId !== null &&
+      event.pendingApprovalId !== undefined;
+
+    if (requiresApproval && event.approvalStatus !== 'approved') {
+      if (isResubmission) {
+        // Update existing approval request instead of creating a new one
+        const existingApproval = await getCalendarApprovalById(event.pendingApprovalId!);
+        
+        if (existingApproval && existingApproval.status === 'pending') {
+          // Update the existing approval request with new changeSummary
+          console.log(
+            `[PUT /api/calendar/events] Updating existing approval ${event.pendingApprovalId} for resubmission`
+          );
+          await updateCalendarApprovalRequest({
+            approvalId: event.pendingApprovalId!,
+            changeSummary: {
+              before: event as unknown as Record<string, unknown>,
+              after: { ...event, ...eventData } as unknown as Record<string, unknown>,
+            },
+            clearReviewerNotes: true, // Clear previous reviewer notes since this is a resubmission
+          });
+
+          pendingApprovalId = event.pendingApprovalId!;
+
+          // Update event with pending approval status (back in review queue)
+          updatedEvent = await updateCalendarEvent(eventId, {
+            ...eventData,
+            approvalStatus: 'pending',
+            pendingApprovalId,
+          });
+        } else {
+          // Existing approval not found or not pending, create new one
+          if (existingApproval && existingApproval.status !== 'pending') {
+            console.warn(
+              `[PUT /api/calendar/events] Approval ${event.pendingApprovalId} exists but status is ${existingApproval.status}, creating new approval`
+            );
+          } else if (!existingApproval) {
+            console.warn(
+              `[PUT /api/calendar/events] Approval ${event.pendingApprovalId} not found, creating new approval`
+            );
+          }
+          
+          const approval = await createCalendarApprovalRequest({
+            eventId,
+            changeType: 'update',
+            requestedByAccountId: userId,
+            requestedByUserId: permissionCheck.userId || undefined,
+            changeSummary: {
+              before: event as unknown as Record<string, unknown>,
+              after: { ...event, ...eventData } as unknown as Record<string, unknown>,
+            },
+            sensitivityLevel,
+          });
+
+          pendingApprovalId = approval.$id;
+
+          updatedEvent = await updateCalendarEvent(eventId, {
+            ...eventData,
+            approvalStatus: 'pending',
+            pendingApprovalId,
+          });
+        }
+      } else {
+        // Create new approval request for update
+        const approval = await createCalendarApprovalRequest({
+          eventId,
+          changeType: 'update',
+          requestedByAccountId: userId,
+          requestedByUserId: permissionCheck.userId || undefined,
+          changeSummary: {
+            before: event as unknown as Record<string, unknown>,
+            after: { ...event, ...eventData } as unknown as Record<string, unknown>,
+          },
+          sensitivityLevel,
+        });
+
+        pendingApprovalId = approval.$id;
+
+        // Update event with pending approval status
+        updatedEvent = await updateCalendarEvent(eventId, {
+          ...eventData,
+          approvalStatus: 'pending',
+          pendingApprovalId,
+        });
+      }
+    } else {
+      // Update event directly (no approval required)
+      updatedEvent = await updateCalendarEvent(eventId, eventData);
+    }
+
+    // Invalidate calendar cache for the month
+    if (eventData.startDate || event.startDate) {
+      const dateStr = (eventData.startDate || event.startDate) as string;
+      const datePart = dateStr.split('T')[0];
+      const [year, month] = datePart.split('-').map(Number);
+      await CacheManager.invalidateCalendar(year, month);
+    }
+
+    return NextResponse.json({
+      success: true,
+      event: updatedEvent,
+      approval:
+        pendingApprovalId !== null
+          ? {
+              id: pendingApprovalId,
+              status: 'pending',
+            }
+          : null,
+    });
+  } catch (error) {
+    console.error('Error updating calendar event via API:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error ? error.message : 'Failed to update event',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const userId = await getCurrentUserId();
@@ -268,10 +521,34 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!permissionCheck.allowed) {
-      return buildPermissionErrorResponse(
-        permissionCheck.reason || 'permission_denied',
-        permissionCheck.requiredApproval
-      );
+      // If permission is denied due to pending approval, check if we can create a cancellation approval
+      if (permissionCheck.reason === 'pending_approval') {
+        // Check if there's already a pending cancellation approval
+        const { listCalendarApprovalRequests } = await import('@/lib/actions/calendar-approval.actions');
+        const pendingApprovals = await listCalendarApprovalRequests({ status: 'pending' });
+        const existingCancelApproval = pendingApprovals.find(
+          (approval) => approval.eventId === eventId && approval.changeType === 'cancel'
+        );
+
+        if (existingCancelApproval) {
+          // Already has a pending cancellation approval
+          return NextResponse.json({
+            success: false,
+            message: 'A cancellation request is already pending approval',
+            reason: 'pending_approval',
+            approvalId: existingCancelApproval.$id,
+          }, { status: 409 });
+        }
+
+        // Allow creating a cancellation approval even if there's a pending creation approval
+        // The permission check blocking was removed for cancellation actions
+      } else {
+        // Other permission denials
+        return buildPermissionErrorResponse(
+          permissionCheck.reason || 'permission_denied',
+          permissionCheck.requiredApproval
+        );
+      }
     }
 
     const sensitivityLevel = event.sensitivityLevel || 'standard';
@@ -279,6 +556,22 @@ export async function DELETE(request: NextRequest) {
       Boolean(event.requiresApproval) ||
       sensitivityLevel === 'restricted' ||
       sensitivityLevel === 'confidential';
+
+    // Check if there's already a pending cancellation approval
+    const { listCalendarApprovalRequests } = await import('@/lib/actions/calendar-approval.actions');
+    const pendingApprovals = await listCalendarApprovalRequests({ status: 'pending' });
+    const existingCancelApproval = pendingApprovals.find(
+      (approval) => approval.eventId === eventId && approval.changeType === 'cancel'
+    );
+
+    if (existingCancelApproval) {
+      return NextResponse.json({
+        success: false,
+        message: 'A cancellation request is already pending approval',
+        reason: 'pending_approval',
+        approvalId: existingCancelApproval.$id,
+      }, { status: 409 });
+    }
 
     if (requiresApproval) {
       const approval = await createCalendarApprovalRequest({
@@ -302,6 +595,7 @@ export async function DELETE(request: NextRequest) {
         success: true,
         message: 'Cancellation pending approval',
         approvalId: approval.$id,
+        requiresApproval: true,
       });
     }
 

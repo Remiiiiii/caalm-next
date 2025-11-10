@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -47,10 +47,19 @@ import {
   Edit,
   Trash2,
   ChevronDownIcon,
+  ChevronDown,
+  ChevronUp,
   Settings,
   CheckCircle,
   RefreshCw,
   Loader2,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  FileCheck,
+  CalendarPlus,
+  MessageSquare,
+  X,
 } from 'lucide-react';
 import {
   format,
@@ -65,6 +74,7 @@ import {
   eachDayOfInterval as eachDay,
   isToday,
   isSameMonth,
+  formatDistanceToNow,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { createCalendarEvent } from '@/lib/actions/calendar.client';
@@ -79,6 +89,7 @@ import type {
   CalendarApprovalRequest,
   CalendarApprovalChangeSummary,
 } from '@/lib/actions/calendar-approval.actions';
+import { getCalendarApprovalById } from '@/lib/actions/calendar-approval.actions';
 import {
   CalendarApprovalStatus,
   CalendarSensitivity,
@@ -148,6 +159,22 @@ interface ExpandedCalendarViewProps {
   } | null;
 }
 
+// Map sensitivity level to badge color classes
+const getSensitivityBadgeClasses = (
+  sensitivityLevel: CalendarSensitivity
+): string => {
+  switch (sensitivityLevel) {
+    case 'standard':
+      return 'bg-[#d4fcee] text-[#10b981] border-[#10b981]';
+    case 'restricted':
+      return 'bg-[#f5f2f9] text-[#a06ce2] border-[#a06ce2]';
+    case 'confidential':
+      return 'bg-[#d9e3f9] text-[#0033A0] border-[#0033A0]';
+    default:
+      return 'bg-slate-50 text-slate-700 border-slate-200';
+  }
+};
+
 const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
   events = [],
   onEventClick,
@@ -200,6 +227,49 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     isLoading: approvalsLoading,
     refresh: refreshApprovals,
   } = useCalendarApprovals({ status: 'pending', enabled: isApprover });
+
+  // Pending approvals collapse state
+  const [isApprovalsExpanded, setIsApprovalsExpanded] = useState(true);
+
+  // Approval dialog state
+  const [selectedApproval, setSelectedApproval] =
+    useState<CalendarApprovalRequest | null>(null);
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [isProcessingApproval, setIsProcessingApproval] = useState(false);
+  const [reviewerNotes, setReviewerNotes] = useState('');
+  const [eventApprovalRequest, setEventApprovalRequest] =
+    useState<CalendarApprovalRequest | null>(null);
+  const [loadingApprovalRequest, setLoadingApprovalRequest] = useState(false);
+
+  // Fetch approval request when event detail dialog opens for events with changes_requested or rejected status
+  useEffect(() => {
+    const fetchApprovalRequest = async () => {
+      if (
+        !selectedEvent ||
+        !selectedEvent.pendingApprovalId ||
+        (selectedEvent.approvalStatus !== 'changes_requested' &&
+          selectedEvent.approvalStatus !== 'rejected')
+      ) {
+        setEventApprovalRequest(null);
+        return;
+      }
+
+      setLoadingApprovalRequest(true);
+      try {
+        const approval = await getCalendarApprovalById(
+          selectedEvent.pendingApprovalId
+        );
+        setEventApprovalRequest(approval);
+      } catch (error) {
+        console.error('Failed to fetch approval request:', error);
+        setEventApprovalRequest(null);
+      } finally {
+        setLoadingApprovalRequest(false);
+      }
+    };
+
+    fetchApprovalRequest();
+  }, [selectedEvent?.pendingApprovalId, selectedEvent?.approvalStatus]);
 
   const selectedEventPermissions = useMemo(() => {
     if (!selectedEvent) {
@@ -434,6 +504,73 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     }
   };
 
+  const handleApprovalDecision = async (
+    decision: 'approved' | 'rejected' | 'changes_requested'
+  ) => {
+    if (!selectedApproval) return;
+
+    setIsProcessingApproval(true);
+
+    try {
+      const response = await fetch('/api/approvals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          approvalId: selectedApproval.$id,
+          action: decision,
+          reviewerNotes: reviewerNotes.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process approval');
+      }
+
+      const result = await response.json();
+
+      // Show success toast
+      const decisionLabels: Record<string, string> = {
+        approved: 'Approved',
+        rejected: 'Denied',
+        changes_requested: 'Changes Requested',
+      };
+
+      toast({
+        title: `Request ${decisionLabels[decision]}`,
+        description: `The approval request has been ${decisionLabels[decision].toLowerCase()}.`,
+        variant: 'default',
+      });
+
+      // Refresh approvals list and calendar events
+      if (refreshApprovals) {
+        await refreshApprovals();
+      }
+      if (refresh) {
+        await refresh();
+      }
+
+      // Close dialog and reset state
+      setIsApprovalDialogOpen(false);
+      setSelectedApproval(null);
+      setReviewerNotes('');
+    } catch (error) {
+      console.error('Error processing approval:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to process approval request',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingApproval(false);
+    }
+  };
+
   const handleShare = async () => {
     try {
       // Generate shareable link
@@ -464,6 +601,118 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     }
   };
 
+  // DateCell component that checks if "+n more" is visible and enables scrolling if needed
+  const DateCell: React.FC<{
+    day: Date;
+    dayEvents: EventWithExtras[];
+    isCurrentMonth: boolean;
+    isSelected: boolean;
+    isCurrentDay: boolean;
+  }> = ({ day, dayEvents, isCurrentMonth, isSelected, isCurrentDay }) => {
+    const cellRef = useRef<HTMLDivElement>(null);
+    const eventsContainerRef = useRef<HTMLDivElement>(null);
+    const moreIndicatorRef = useRef<HTMLDivElement>(null);
+    const [needsScroll, setNeedsScroll] = useState(false);
+
+    useEffect(() => {
+      // Check visibility on mount and when events change
+      const checkVisibility = () => {
+        if (
+          !cellRef.current ||
+          !eventsContainerRef.current ||
+          dayEvents.length <= 3
+        ) {
+          setNeedsScroll(false);
+          return;
+        }
+
+        // If there's no "+n more" indicator, no need to scroll
+        if (!moreIndicatorRef.current) {
+          setNeedsScroll(false);
+          return;
+        }
+
+        const cellRect = cellRef.current.getBoundingClientRect();
+        const indicatorRect = moreIndicatorRef.current.getBoundingClientRect();
+
+        // Check if the "+n more" indicator is within the visible bounds of the cell
+        const isVisible =
+          indicatorRect.top >= cellRect.top &&
+          indicatorRect.bottom <= cellRect.bottom;
+
+        setNeedsScroll(!isVisible);
+      };
+
+      // Use requestAnimationFrame and setTimeout to ensure DOM is fully rendered
+      // This checks visibility after page load
+      const timeoutId = setTimeout(() => {
+        requestAnimationFrame(() => {
+          checkVisibility();
+        });
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }, [dayEvents.length]);
+
+    return (
+      <div
+        ref={cellRef}
+        className={cn(
+          'min-h-[120px] p-2 border border-slate-200 cursor-pointer transition-colors flex flex-col',
+          !isCurrentMonth && 'bg-slate-50 text-slate-400',
+          isSelected && 'bg-blue-50 border-blue-300',
+          isCurrentDay && 'bg-blue-100'
+        )}
+        onClick={() => handleDateSelect(day)}
+      >
+        <div className="text-sm font-medium mb-1 flex-shrink-0">
+          {format(day, 'd')}
+        </div>
+
+        {/* Events for this day */}
+        <div
+          ref={eventsContainerRef}
+          className={cn(
+            'space-y-1 flex-1 min-h-0',
+            needsScroll && 'overflow-y-auto'
+          )}
+        >
+          {dayEvents.slice(0, 3).map((event) => {
+            const config = getEventTypeConfig(event.type);
+            return (
+              <div
+                key={event.id}
+                className={cn(
+                  'text-xs p-1 rounded cursor-pointer truncate relative flex-shrink-0',
+                  config.color
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEventClick(event);
+                }}
+              >
+                <div className="flex items-center gap-1">
+                  <span className="truncate">{event.title}</span>
+                  {isOutlookEvent(event) && (
+                    <CheckCircle className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {dayEvents.length > 3 && (
+            <div
+              ref={moreIndicatorRef}
+              className="text-xs text-slate-500 text-center flex-shrink-0"
+            >
+              +{dayEvents.length - 3} more
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderMonthView = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -485,7 +734,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
         {/* Calendar days */}
         {days.map((day) => {
-        const dayEvents = normalizedEvents.filter(
+          const dayEvents = normalizedEvents.filter(
             (event) => event.date && isSameDay(new Date(event.date), day)
           );
           const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -493,50 +742,14 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
           const isCurrentDay = isToday(day);
 
           return (
-            <div
+            <DateCell
               key={day.toISOString()}
-              className={cn(
-                'min-h-[120px] p-2 border border-slate-200 cursor-pointer transition-colors',
-                !isCurrentMonth && 'bg-slate-50 text-slate-400',
-                isSelected && 'bg-blue-50 border-blue-300',
-                isCurrentDay && 'bg-blue-100'
-              )}
-              onClick={() => handleDateSelect(day)}
-            >
-              <div className="text-sm font-medium mb-1">{format(day, 'd')}</div>
-
-              {/* Events for this day */}
-              <div className="space-y-1">
-                {dayEvents.slice(0, 3).map((event) => {
-                  const config = getEventTypeConfig(event.type);
-                  return (
-                    <div
-                      key={event.id}
-                      className={cn(
-                        'text-xs p-1 rounded cursor-pointer truncate relative',
-                        config.color
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEventClick(event);
-                      }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span className="truncate">{event.title}</span>
-                        {isOutlookEvent(event) && (
-                          <CheckCircle className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {dayEvents.length > 3 && (
-                  <div className="text-xs text-slate-500 text-center">
-                    +{dayEvents.length - 3} more
-                  </div>
-                )}
-              </div>
-            </div>
+              day={day}
+              dayEvents={dayEvents}
+              isCurrentMonth={isCurrentMonth}
+              isSelected={isSelected}
+              isCurrentDay={isCurrentDay}
+            />
           );
         })}
       </div>
@@ -803,83 +1016,202 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
             </div>
 
             {isApprover && (
-              <div className="border-b bg-slate-50 px-6 py-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-700">
-                      Pending approvals
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      {approvalsLoading
-                        ? 'Loading approvals...'
-                        : approvals.length
-                        ? `${approvals.length} awaiting review`
-                        : 'No pending approvals'}
-                    </p>
+              <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-5 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
+                      <FileCheck className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-900">
+                        Pending Approvals
+                      </h3>
+                      <p className="text-xs font-medium text-slate-600 mt-0.5">
+                        {approvalsLoading ? (
+                          <span className="flex items-center gap-1.5">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Loading approvals...
+                          </span>
+                        ) : approvals.length > 0 ? (
+                          <span className="flex items-center gap-1.5">
+                            <AlertCircle className="h-3 w-3 text-amber-500" />
+                            {approvals.length} {approvals.length === 1 ? 'request' : 'requests'} awaiting your review
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-green-600">
+                            <CheckCircle2 className="h-3 w-3" />
+                            All caught up
+                          </span>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => refreshApprovals()}
-                    className="bg-white text-slate-700 hover:bg-slate-100"
+                  <button
+                    onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
+                    aria-expanded={isApprovalsExpanded}
+                    aria-label={isApprovalsExpanded ? 'Collapse approvals' : 'Expand approvals'}
                   >
-                    <RefreshCw className="h-3 w-3 mr-2" />
-                    Refresh
-                  </Button>
+                    {isApprovalsExpanded ? (
+                      <ChevronUp className="h-5 w-5 text-slate-600 group-hover:text-slate-900 transition-colors" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-slate-600 group-hover:text-slate-900 transition-colors" />
+                    )}
+                  </button>
                 </div>
-                <div className="mt-3 max-h-32 space-y-2 overflow-auto">
-                  {!approvalsLoading &&
-                    approvals.map((approval: CalendarApprovalRequest) => {
-                      const summary =
-                        (approval.changeSummary as CalendarApprovalChangeSummary) ||
-                        {};
-                      const after = (summary.after || {}) as Record<
-                        string,
-                        unknown
-                      >;
-                      const before = (summary.before || {}) as Record<
-                        string,
-                        unknown
-                      >;
-                      const title =
-                        (after.title as string) ||
-                        (before.title as string) ||
-                        'Untitled';
-                      return (
-                        <div
-                          key={approval.$id}
-                          className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-slate-700">
-                              {title}
-                            </span>
-                            <Badge variant="outline">
-                              {approval.changeType}
-                            </Badge>
-                          </div>
-                          <p className="mt-1 capitalize text-slate-500">
-                            Submitted{' '}
-                            {approval.submittedAt
-                              ? new Date(
-                                  approval.submittedAt
-                                ).toLocaleString()
-                              : 'recently'}
-                          </p>
+                {isApprovalsExpanded && (
+                  <div className="mt-4 space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                    {!approvalsLoading && approvals.length > 0 && (
+                      <>
+                        {approvals.map((approval: CalendarApprovalRequest) => {
+                          const summary =
+                            (approval.changeSummary as CalendarApprovalChangeSummary) ||
+                            {};
+                          const after = (summary.after || {}) as Record<
+                            string,
+                            unknown
+                          >;
+                          const before = (summary.before || {}) as Record<
+                            string,
+                            unknown
+                          >;
+                          const title =
+                            (after.title as string) ||
+                            (before.title as string) ||
+                            'Untitled Event';
+                          const sensitivityLevel =
+                            (after.sensitivityLevel as CalendarSensitivity) ||
+                            approval.sensitivityLevel ||
+                            'standard';
+                          const submittedTime = approval.submittedAt
+                            ? new Date(approval.submittedAt)
+                            : null;
+                          const timeAgo = submittedTime
+                            ? formatDistanceToNow(submittedTime, { addSuffix: true })
+                            : 'recently';
+
+                          // Icon and color based on change type
+                          const getChangeTypeConfig = (
+                            type: string
+                          ): { icon: React.ReactNode; color: string; bgColor: string } => {
+                            switch (type) {
+                              case 'create':
+                                return {
+                                  icon: <Plus className="h-4 w-4" />,
+                                  color: 'text-green-600',
+                                  bgColor: 'bg-green-50',
+                                };
+                              case 'update':
+                                return {
+                                  icon: <Edit className="h-4 w-4" />,
+                                  color: 'text-blue-600',
+                                  bgColor: 'bg-blue-50',
+                                };
+                              case 'cancel':
+                                return {
+                                  icon: <XCircle className="h-4 w-4" />,
+                                  color: 'text-red-600',
+                                  bgColor: 'bg-red-50',
+                                };
+                              default:
+                                return {
+                                  icon: <FileCheck className="h-4 w-4" />,
+                                  color: 'text-slate-600',
+                                  bgColor: 'bg-slate-50',
+                                };
+                            }
+                          };
+
+                          const changeTypeConfig = getChangeTypeConfig(
+                            approval.changeType
+                          );
+
+                          return (
+                            <div
+                              key={approval.$id}
+                              className="group relative rounded-lg border border-slate-200 bg-white px-4 py-3.5 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer"
+                              onClick={() => {
+                                setSelectedApproval(approval);
+                                setIsApprovalDialogOpen(true);
+                                setReviewerNotes('');
+                              }}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div
+                                  className={cn(
+                                    'flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0',
+                                    changeTypeConfig.bgColor
+                                  )}
+                                >
+                                  <div className={changeTypeConfig.color}>
+                                    {changeTypeConfig.icon}
+                                  </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                                    <h4 className="text-sm font-semibold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                                      {title}
+                                    </h4>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[10px] font-medium px-2 py-0.5 uppercase tracking-wide border-slate-300 text-slate-700"
+                                      >
+                                        {approval.changeType}
+                                      </Badge>
+                                      {sensitivityLevel !== 'standard' && (
+                                        <Badge
+                                          className={cn(
+                                            'text-[10px] font-medium px-2 py-0.5 border hover:opacity-100',
+                                            getSensitivityBadgeClasses(sensitivityLevel)
+                                          )}
+                                        >
+                                          {SENSITIVITY_LABELS[sensitivityLevel]}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-slate-500">
+                                    <span className="flex items-center gap-1.5">
+                                      <Clock className="h-3 w-3" />
+                                      {timeAgo}
+                                    </span>
+                                    {submittedTime && (
+                                      <span className="text-slate-400">
+                                        {format(submittedTime, 'MMM d, h:mm a')}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                    {!approvalsLoading && approvals.length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-3">
+                          <CheckCircle2 className="h-6 w-6 text-green-600" />
                         </div>
-                      );
-                    })}
-                  {!approvalsLoading && approvals.length === 0 && (
-                    <div className="text-xs text-slate-500">
-                      You're all caught up.
-                    </div>
-                  )}
-                  {approvalsLoading && (
-                    <div className="text-xs text-slate-500">
-                      Gathering latest requests...
-                    </div>
-                  )}
-                </div>
+                        <p className="text-sm font-medium text-slate-900 mb-1">
+                          All caught up
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          No pending approval requests at this time
+                        </p>
+                      </div>
+                    )}
+                    {approvalsLoading && (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Loading approval requests...</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -888,6 +1220,309 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
               {viewMode === 'month' ? renderMonthView() : renderWeekView()}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approval Review Dialog */}
+      <Dialog
+        open={isApprovalDialogOpen}
+        onOpenChange={setIsApprovalDialogOpen}
+      >
+        <DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>
+              {selectedApproval ? 'Review Approval Request' : 'Approval Details'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+          
+          {selectedApproval && (
+            <>
+              {/* Header */}
+              <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 px-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100">
+                      {selectedApproval.changeType === 'create' ? (
+                        <CalendarPlus className="h-5 w-5 text-blue-600" />
+                      ) : selectedApproval.changeType === 'update' ? (
+                        <Edit className="h-5 w-5 text-blue-600" />
+                      ) : (
+                        <Trash2 className="h-5 w-5 text-red-600" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold sidebar-gradient-text">
+                        Review Approval Request
+                      </h2>
+                      <p className="text-sm text-slate-600 mt-0.5">
+                        {selectedApproval.changeType === 'create'
+                          ? 'New Event Creation'
+                          : selectedApproval.changeType === 'update'
+                          ? 'Event Update'
+                          : 'Event Cancellation'}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="text-xs font-medium px-3 py-1 uppercase tracking-wide border-amber-300 text-amber-700 bg-amber-50"
+                  >
+                    Pending Review
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-6 space-y-6">
+                  {/* Event Summary */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 text-sm font-semibold mb-4 text-slate-700">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      Event Information
+                    </div>
+
+                    {(() => {
+                      const summary = selectedApproval.changeSummary || {};
+                      const after = (summary.after || {}) as Record<string, unknown>;
+                      const before = (summary.before || {}) as Record<string, unknown>;
+                      const eventTitle =
+                        (after.title as string) ||
+                        (before.title as string) ||
+                        'Untitled Event';
+                      const eventDate = after.startDate
+                        ? new Date(after.startDate as string)
+                        : before.startDate
+                        ? new Date(before.startDate as string)
+                        : null;
+                      const eventDescription =
+                        (after.description as string) ||
+                        (before.description as string) ||
+                        'No description provided';
+
+                      return (
+                        <div className="space-y-4">
+                          {/* Title and Sensitivity */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-base font-semibold text-slate-900">
+                              {eventTitle}
+                            </h3>
+                            {selectedApproval.sensitivityLevel !== 'standard' && (
+                              <Badge
+                                className={cn(
+                                  'text-xs font-medium px-2 py-0.5 border',
+                                  getSensitivityBadgeClasses(
+                                    selectedApproval.sensitivityLevel
+                                  )
+                                )}
+                              >
+                                {SENSITIVITY_LABELS[selectedApproval.sensitivityLevel]}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Date & Time */}
+                          {eventDate && (
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                              <div className="w-8 h-8 bg-[#E6FAF9] rounded-full flex items-center justify-center mt-0.5">
+                                <Clock className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-slate-900">
+                                  {format(eventDate, 'EEEE, MMMM d, yyyy')}
+                                </div>
+                                {(() => {
+                                  const startTimeStr =
+                                    after.startTime != null
+                                      ? String(after.startTime)
+                                      : '';
+                                  const endTimeStr =
+                                    after.endTime != null
+                                      ? String(after.endTime)
+                                      : '';
+                                  if (startTimeStr || endTimeStr) {
+                                    return (
+                                      <div className="text-sm text-slate-600 mt-1">
+                                        {startTimeStr}
+                                        {startTimeStr && endTimeStr ? ' - ' : ''}
+                                        {endTimeStr}
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Description */}
+                          {eventDescription && eventDescription !== 'No description provided' && (
+                            <div className="p-3 bg-white rounded-lg border border-slate-200">
+                              <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                                {eventDescription}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Change Summary for Updates */}
+                          {selectedApproval.changeType === 'update' && (
+                            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                              <div className="flex items-center gap-2 text-sm font-semibold mb-2 text-amber-900">
+                                <AlertCircle className="w-4 h-4" />
+                                Changes Made
+                              </div>
+                              <div className="space-y-2 text-sm text-amber-800">
+                                {Object.keys(after).map((key) => {
+                                  const beforeValue = before[key];
+                                  const afterValue = after[key];
+                                  if (
+                                    beforeValue !== afterValue &&
+                                    !['$id', 'updatedAt', 'createdAt'].includes(key)
+                                  ) {
+                                    return (
+                                      <div key={key} className="flex items-start gap-2">
+                                        <span className="font-medium capitalize">
+                                          {key.replace(/([A-Z])/g, ' $1').trim()}:
+                                        </span>
+                                        <span className="flex-1">
+                                          {beforeValue ? (
+                                            <>
+                                              <span className="line-through text-amber-600">
+                                                {String(beforeValue)}
+                                              </span>
+                                              {' → '}
+                                              <span className="font-semibold">
+                                                {String(afterValue)}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <span className="font-semibold">
+                                              {String(afterValue)}
+                                            </span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Request Details */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 text-sm font-semibold mb-4 text-slate-700">
+                      <Clock className="w-4 h-4 text-blue-600" />
+                      Request Details
+                    </div>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Submitted:</span>
+                        <span className="font-medium text-slate-900">
+                          {selectedApproval.submittedAt
+                            ? format(
+                                new Date(selectedApproval.submittedAt),
+                                'MMM d, yyyy h:mm a'
+                              )
+                            : 'Unknown'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Request Type:</span>
+                        <Badge
+                          variant="outline"
+                          className="text-xs font-medium px-2 py-0.5 uppercase"
+                        >
+                          {selectedApproval.changeType}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reviewer Notes */}
+                  <div className="space-y-2">
+                    <Label htmlFor="reviewer-notes-expanded" className="text-sm font-semibold text-slate-700">
+                      Reviewer Notes (Optional)
+                    </Label>
+                    <Textarea
+                      id="reviewer-notes-expanded"
+                      placeholder="Add any notes or feedback for the requester..."
+                      value={reviewerNotes}
+                      onChange={(e) => setReviewerNotes(e.target.value)}
+                      className="min-h-[100px] resize-none"
+                      disabled={isProcessingApproval}
+                    />
+                    <p className="text-xs text-slate-500">
+                      These notes will be visible to the event creator and included in the audit log.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="sticky bottom-0 border-t border-slate-200 bg-white px-6 py-4 flex items-center gap-3">
+                <Button
+                  onClick={() => setIsApprovalDialogOpen(false)}
+                  disabled={isProcessingApproval}
+                  className="primary-btn px-3 sm:px-4 flex-1"
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!selectedApproval) return;
+                    await handleApprovalDecision('rejected');
+                  }}
+                  disabled={isProcessingApproval}
+                  className="primary-btn px-3 sm:px-4 flex-1"
+                >
+                  {isProcessingApproval ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <XCircle className="w-4 h-4" />
+                  )}
+                  Deny
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!selectedApproval) return;
+                    await handleApprovalDecision('changes_requested');
+                  }}
+                  disabled={isProcessingApproval}
+                  className="primary-btn px-3 sm:px-4 flex-1"
+                >
+                  {isProcessingApproval ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <MessageSquare className="w-4 h-4" />
+                  )}
+                  Request Changes
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!selectedApproval) return;
+                    await handleApprovalDecision('approved');
+                  }}
+                  disabled={isProcessingApproval}
+                  className="primary-btn px-3 sm:px-4 flex-1"
+                >
+                  {isProcessingApproval ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  Approve
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1215,6 +1850,62 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                   </p>
                 )}
               </div>
+
+              {/* Reviewer Notes Section */}
+              {(selectedEvent.approvalStatus === 'changes_requested' ||
+                selectedEvent.approvalStatus === 'rejected') &&
+                eventApprovalRequest?.reviewerNotes && (
+                  <div
+                    className={cn(
+                      'rounded-lg p-4 border mt-4',
+                      selectedEvent.approvalStatus === 'changes_requested'
+                        ? 'bg-amber-50 border-amber-200'
+                        : 'bg-red-50 border-red-200'
+                    )}
+                  >
+                    <div className="flex items-center gap-2 text-sm font-semibold mb-3">
+                      {selectedEvent.approvalStatus === 'changes_requested' ? (
+                        <>
+                          <MessageSquare className="w-4 h-4 text-amber-700" />
+                          <span className="text-amber-900">Requested Changes</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-4 h-4 text-red-700" />
+                          <span className="text-red-900">Denial Reason</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <p
+                        className={cn(
+                          'text-sm whitespace-pre-wrap',
+                          selectedEvent.approvalStatus === 'changes_requested'
+                            ? 'text-amber-800'
+                            : 'text-red-800'
+                        )}
+                      >
+                        {eventApprovalRequest.reviewerNotes}
+                      </p>
+                      {eventApprovalRequest.decidedAt && (
+                        <p
+                          className={cn(
+                            'text-xs',
+                            selectedEvent.approvalStatus === 'changes_requested'
+                              ? 'text-amber-600'
+                              : 'text-red-600'
+                          )}
+                        >
+                          Reviewed on{' '}
+                          {format(
+                            new Date(eventApprovalRequest.decidedAt),
+                            'MMM d, yyyy h:mm a'
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
               {selectedEvent.date && (
                 <div className="flex items-center space-x-2 text-sm text-slate-600">

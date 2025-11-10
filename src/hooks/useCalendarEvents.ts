@@ -164,7 +164,20 @@ const convertDBEventToLocal = (
     requiresApproval: Boolean(dbEvent.requiresApproval),
     approvalStatus: dbEvent.approvalStatus || 'not_required',
     pendingApprovalId: dbEvent.pendingApprovalId || null,
-    overrides: Array.isArray(dbEvent.overrides) ? dbEvent.overrides : [],
+    overrides: (() => {
+      // Parse overrides from JSON string if stored as string, otherwise use as-is
+      if (typeof dbEvent.overrides === 'string') {
+        try {
+          return JSON.parse(dbEvent.overrides) as PermissionOverrideRecord[];
+        } catch (error) {
+          console.error('Error parsing overrides JSON:', error);
+          return [];
+        }
+      } else if (Array.isArray(dbEvent.overrides)) {
+        return dbEvent.overrides;
+      }
+      return [];
+    })(),
   };
 };
 

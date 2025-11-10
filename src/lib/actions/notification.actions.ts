@@ -32,7 +32,7 @@ export const createNotification = async ({
   try {
     const notification = await tablesDB.createRow({
       databaseId: appwriteConfig.databaseId,
-      tableId: 'notifications',
+      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
       rowId: ID.unique(),
       data: {
         userId,
@@ -55,7 +55,7 @@ export const getNotifications = async (userId: string) => {
   try {
     const notifications = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId,
-      tableId: 'notifications',
+      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
       queries: [Query.equal('userId', userId), Query.orderDesc('$createdAt')],
     });
     return notifications;
@@ -69,7 +69,7 @@ export const markNotificationAsRead = async (notificationId: string) => {
   try {
     const notification = await tablesDB.updateRow({
       databaseId: appwriteConfig.databaseId,
-      tableId: 'notifications',
+      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
       rowId: notificationId,
       data: { read: true },
     });
@@ -84,7 +84,7 @@ export const markNotificationAsUnread = async (notificationId: string) => {
   try {
     const notification = await tablesDB.updateRow({
       databaseId: appwriteConfig.databaseId,
-      tableId: 'notifications',
+      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
       rowId: notificationId,
       data: { read: false },
     });
@@ -99,7 +99,7 @@ export const deleteNotification = async (notificationId: string) => {
   try {
     await tablesDB.deleteRow(
       appwriteConfig.databaseId,
-      'notifications',
+      appwriteConfig.notificationsCollectionId || 'notifications',
       notificationId
     );
     return { success: true };
@@ -113,7 +113,7 @@ export const getUnreadNotificationsCount = async (userId: string) => {
   try {
     const notifications = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId,
-      tableId: 'notifications',
+      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
       queries: [Query.equal('userId', userId), Query.equal('read', false)],
     });
     return notifications.total;

@@ -82,9 +82,30 @@ export const resolveCalendarPermissions = ({
   overrides = [],
   context,
 }: ResolveCalendarPermissionsArgs): CalendarPermissionMap => {
+  // Ensure role is valid, fallback to viewer if not
+  const validRole = role in CALENDAR_ROLE_PERMISSIONS 
+    ? role 
+    : 'viewer';
+  
+  if (role !== validRole) {
+    console.warn('[resolveCalendarPermissions] Invalid role, using viewer:', {
+      provided: role,
+      fallback: validRole,
+    });
+  }
+  
   const basePermissions = clonePermissionMap(
-    CALENDAR_ROLE_PERMISSIONS[role] || CALENDAR_ROLE_PERMISSIONS.viewer
+    CALENDAR_ROLE_PERMISSIONS[validRole]
   );
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[resolveCalendarPermissions]', {
+      role,
+      validRole,
+      basePermissions,
+      hasOverrides: overrides.length > 0,
+    });
+  }
 
   if (!overrides.length) {
     return basePermissions;

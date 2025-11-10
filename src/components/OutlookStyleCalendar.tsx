@@ -36,6 +36,7 @@ import type {
   CalendarApprovalRequest,
   CalendarApprovalChangeSummary,
 } from '@/lib/actions/calendar-approval.actions';
+import { getCalendarApprovalById } from '@/lib/actions/calendar-approval.actions';
 import {
   CalendarApprovalStatus,
   CalendarSensitivity,
@@ -57,8 +58,8 @@ import {
   CalendarIcon,
   Calendar as CalendarIconLucide,
   Plus,
+  CalendarPlus,
   Pencil,
-  Clock,
   Users,
   FileText,
   ChevronLeft,
@@ -84,6 +85,17 @@ import {
   FileSliders,
   X,
   RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  FileCheck,
+  ClipboardClock,
+  Glasses,
+  Ban,
+  ThumbsUp,
 } from 'lucide-react';
 import {
   format,
@@ -97,13 +109,14 @@ import {
   eachDayOfInterval,
   isToday,
   isSameMonth,
+  formatDistanceToNow,
 } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import {
   hasMicrosoftCalendarIntegration,
-  updateCalendarEvent,
   syncMicrosoftCalendar,
 } from '@/lib/actions/calendar.actions';
+import { updateCalendarEvent } from '@/lib/actions/calendar.client';
 
 // Event attachments are stored as file IDs (references to files collection)
 // Full file details are fetched when needed
@@ -187,6 +200,22 @@ interface OutlookStyleCalendarProps {
   user?: CalendarUser | null;
 }
 
+// Map sensitivity level to badge color classes
+const getSensitivityBadgeClasses = (
+  sensitivityLevel: CalendarSensitivity
+): string => {
+  switch (sensitivityLevel) {
+    case 'standard':
+      return 'bg-[#d4fcee] text-[#10b981] border-[#10b981]';
+    case 'restricted':
+      return 'bg-[#f5f2f9] text-[#a06ce2] border-[#a06ce2]';
+    case 'confidential':
+      return 'bg-[#d9e3f9] text-[#0033A0] border-[#0033A0]';
+    default:
+      return 'bg-slate-50 text-slate-700 border-slate-200';
+  }
+};
+
 const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   events = [],
   onDateSelect,
@@ -204,6 +233,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
+
+  // Pending approvals collapse state
+  const [isApprovalsExpanded, setIsApprovalsExpanded] = useState(true);
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
@@ -271,6 +303,16 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const { role, userId, accountId } = useUserRole();
   const { permissions: basePermissions } = useCalendarPermissions({ userId });
   const canCreateEvent = basePermissions.createEvent;
+
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[OutlookStyleCalendar] Permission check:', {
+      role,
+      userId,
+      canCreateEvent,
+      basePermissions,
+    });
+  }
   const isApprover = role === 'approver' || role === 'admin';
   const {
     approvals,
@@ -280,6 +322,51 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     status: 'pending',
     enabled: isApprover,
   });
+
+  // Approval dialog state
+  const [selectedApproval, setSelectedApproval] =
+    useState<CalendarApprovalRequest | null>(null);
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [isProcessingApproval, setIsProcessingApproval] = useState(false);
+  const [reviewerNotes, setReviewerNotes] = useState('');
+  const [eventApprovalRequest, setEventApprovalRequest] =
+    useState<CalendarApprovalRequest | null>(null);
+  const [loadingApprovalRequest, setLoadingApprovalRequest] = useState(false);
+
+  // Fetch approval request when event review dialog opens for events with changes_requested or rejected status
+  useEffect(() => {
+    const fetchApprovalRequest = async () => {
+      if (
+        !isEditEventOpen ||
+        !selectedEvent ||
+        !selectedEvent.pendingApprovalId ||
+        (selectedEvent.approvalStatus !== 'changes_requested' &&
+          selectedEvent.approvalStatus !== 'rejected')
+      ) {
+        setEventApprovalRequest(null);
+        return;
+      }
+
+      setLoadingApprovalRequest(true);
+      try {
+        const approval = await getCalendarApprovalById(
+          selectedEvent.pendingApprovalId
+        );
+        setEventApprovalRequest(approval);
+      } catch (error) {
+        console.error('Failed to fetch approval request:', error);
+        setEventApprovalRequest(null);
+      } finally {
+        setLoadingApprovalRequest(false);
+      }
+    };
+
+    fetchApprovalRequest();
+  }, [
+    isEditEventOpen,
+    selectedEvent?.pendingApprovalId,
+    selectedEvent?.approvalStatus,
+  ]);
 
   const selectedEventWithDetails = useMemo(() => {
     if (!selectedEvent) return null;
@@ -304,8 +391,27 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     if (!selectedEvent) {
       return null;
     }
-    const overrides = (selectedEvent.overrides ||
-      []) as PermissionOverrideRecord[];
+
+    // Parse overrides from JSON string if needed (defensive parsing)
+    let overrides: PermissionOverrideRecord[] = [];
+    if (selectedEvent.overrides) {
+      if (typeof selectedEvent.overrides === 'string') {
+        try {
+          overrides = JSON.parse(
+            selectedEvent.overrides
+          ) as PermissionOverrideRecord[];
+        } catch (error) {
+          console.error(
+            '[OutlookStyleCalendar] Error parsing overrides:',
+            error
+          );
+          overrides = [];
+        }
+      } else if (Array.isArray(selectedEvent.overrides)) {
+        overrides = selectedEvent.overrides;
+      }
+    }
+
     return resolveCalendarPermissions({
       role,
       overrides,
@@ -1264,8 +1370,40 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create event');
+        let errorData: { message?: string; reason?: string; error?: string } =
+          {};
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response isn't JSON, use status text
+          errorData = { message: response.statusText || 'Unknown error' };
+        }
+
+        console.error('Failed to create event:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+        });
+
+        // Provide clearer error messages based on status code
+        let errorMessage = 'Failed to create event';
+        if (response.status === 404) {
+          errorMessage =
+            'API route not found. Please restart the development server.';
+        } else if (response.status === 403) {
+          errorMessage =
+            errorData.message || errorData.reason || 'Permission denied';
+        } else if (response.status === 401) {
+          errorMessage = 'Authentication required. Please sign in again.';
+        } else {
+          errorMessage =
+            errorData.message ||
+            errorData.reason ||
+            errorData.error ||
+            'Failed to create event';
+        }
+
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -1329,11 +1467,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         },
         user: user,
       });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       toast({
-        title: 'Error',
-        description: `Failed to create event: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
+        title:
+          errorMessage === 'Permission denied' ? 'Permission Denied' : 'Error',
+        description:
+          errorMessage === 'Permission denied'
+            ? 'You do not have permission to create calendar events. Please contact your administrator.'
+            : `Failed to create event: ${errorMessage}`,
         variant: 'destructive',
       });
     } finally {
@@ -1446,7 +1588,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       return;
     }
 
-    if (selectedEventPermissions && !selectedEventPermissions.cancelEvent) {
+    // Check if user has cancelEvent permission OR is the event creator
+    const hasCancelPermission = selectedEventPermissions?.cancelEvent ?? false;
+    const isEventCreator =
+      (userId && selectedEvent.createdByUserId === userId) ||
+      (accountId &&
+        (selectedEvent.createdByAccountId === accountId ||
+          selectedEvent.createdBy === accountId));
+
+    if (!hasCancelPermission && !isEventCreator) {
       toast({
         title: 'Permission denied',
         description: 'You do not have permission to cancel this event.',
@@ -1463,7 +1613,26 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       return;
     }
 
+    // Debug logging for permission check
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[confirmDeleteEvent] Permission check:', {
+        selectedEventPermissions,
+        cancelEvent: selectedEventPermissions?.cancelEvent,
+        role,
+        userId,
+        eventId: selectedEvent.$id || selectedEvent.id,
+        eventCreatedBy: selectedEvent.createdBy,
+        eventCreatedByAccountId: selectedEvent.createdByAccountId,
+        overrides: selectedEvent.overrides,
+      });
+    }
+
     if (selectedEventPermissions && !selectedEventPermissions.cancelEvent) {
+      console.warn('[confirmDeleteEvent] Permission denied:', {
+        permissions: selectedEventPermissions,
+        role,
+        userId,
+      });
       toast({
         title: 'Permission denied',
         description: 'You do not have permission to cancel this event.',
@@ -1493,6 +1662,30 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       if (!response.ok) {
         const errorData = await response.json();
         console.log('Delete error data:', errorData);
+
+        // Handle different error cases with appropriate messages
+        if (
+          response.status === 409 &&
+          errorData.reason === 'pending_approval'
+        ) {
+          // Event requires approval - cancellation request was created
+          if (errorData.requiredApproval) {
+            toast({
+              title: 'Cancellation pending approval',
+              description:
+                'Your cancellation request has been submitted and is pending approval.',
+              variant: 'default',
+            });
+            // Close dialogs and refresh
+            setIsEditEventOpen(false);
+            setIsDeleteModalOpen(false);
+            setSelectedEvent(null);
+            setDeleteReason('');
+            await forceRefresh();
+            return;
+          }
+        }
+
         throw new Error(errorData.message || 'Failed to delete event');
       }
 
@@ -1508,11 +1701,20 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       // Immediately force refresh to update the UI
       await forceRefresh();
 
-      // Show success toast after UI is updated
-      toast({
-        title: 'Success',
-        description: 'Event deleted successfully',
-      });
+      // Show appropriate success message
+      if (result.requiresApproval || result.approvalId) {
+        toast({
+          title: 'Cancellation request submitted',
+          description:
+            result.message || 'Your cancellation request is pending approval.',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Event deleted successfully',
+        });
+      }
     } catch (error) {
       console.error('Error deleting event:', error);
 
@@ -1539,6 +1741,73 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const openEditDialog = (event: LocalCalendarEvent) => {
     setSelectedEvent(event);
     setIsEditEventOpen(true);
+  };
+
+  const handleApprovalDecision = async (
+    decision: 'approved' | 'rejected' | 'changes_requested'
+  ) => {
+    if (!selectedApproval) return;
+
+    setIsProcessingApproval(true);
+
+    try {
+      const response = await fetch('/api/approvals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          approvalId: selectedApproval.$id,
+          action: decision,
+          reviewerNotes: reviewerNotes.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process approval');
+      }
+
+      const result = await response.json();
+
+      // Show success toast
+      const decisionLabels: Record<string, string> = {
+        approved: 'Approved',
+        rejected: 'Denied',
+        changes_requested: 'Changes Requested',
+      };
+
+      toast({
+        title: `Request ${decisionLabels[decision]}`,
+        description: `The approval request has been ${decisionLabels[
+          decision
+        ].toLowerCase()}.`,
+        variant: 'default',
+      });
+
+      // Refresh approvals list and calendar events
+      if (refreshApprovals) {
+        await refreshApprovals();
+      }
+      await forceRefresh();
+
+      // Close dialog and reset state
+      setIsApprovalDialogOpen(false);
+      setSelectedApproval(null);
+      setReviewerNotes('');
+    } catch (error) {
+      console.error('Error processing approval:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to process approval request',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingApproval(false);
+    }
   };
 
   const handleShare = async () => {
@@ -1726,7 +1995,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                           {status && (
                             <Badge
                               variant="outline"
-                              className="ml-auto uppercase text-[9px]"
+                              className="ml-auto uppercase text-[9px] text-amber-600 bg-[#fcddc7]"
                             >
                               {status.replace('_', ' ')}
                             </Badge>
@@ -2219,9 +2488,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
               {/* Professional Header */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between ml-6">
                   <div className="flex items-center">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm"></div>
                     <div>
                       <div className="flex items-center gap-2">
                         {selectedEvent ? (
@@ -2948,78 +3216,212 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       </div>
 
       {isApprover && (
-        <div className="border-b bg-slate-50 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-700">
-                Pending approvals
-              </h3>
-              <p className="text-xs text-slate-500">
-                {approvalsLoading
-                  ? 'Loading approvals...'
-                  : approvals.length
-                  ? `${approvals.length} awaiting review`
-                  : 'No pending approvals'}
-              </p>
+        <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-5 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
+                <ClipboardClock className="h-6 w-6 text-[#0f5384]" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold sidebar-gradient-text">
+                  Pending Approvals
+                </h3>
+                <p className="text-xs font-medium text-slate-600 mt-0.5">
+                  {approvalsLoading ? (
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading approvals...
+                    </span>
+                  ) : approvals.length > 0 ? (
+                    <span className="flex items-center gap-1.5">
+                      <AlertCircle className="h-3 w-3 text-amber-500" />
+                      {approvals.length}{' '}
+                      {approvals.length === 1 ? 'request' : 'requests'} awaiting
+                      your review
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-green-600">
+                      <CheckCircle2 className="h-3 w-3 text-green" />
+                      All caught up
+                    </span>
+                  )}
+                </p>
+              </div>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => refreshApprovals()}
-              className="primary-btn px-3 sm:px-4 bg-white text-slate-700 hover:bg-slate-100"
+            <button
+              onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
+              className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
+              aria-expanded={isApprovalsExpanded}
+              aria-label={
+                isApprovalsExpanded ? 'Collapse approvals' : 'Expand approvals'
+              }
             >
-              <RefreshCw className="h-3 w-3 mr-2" />
-              Refresh
-            </Button>
+              {isApprovalsExpanded ? (
+                <ChevronUp className="h-5 w-5 text-slate-600 group-hover:text-slate-900 transition-colors" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-slate-600 group-hover:text-slate-900 transition-colors" />
+              )}
+            </button>
           </div>
-          <div className="mt-3 max-h-32 space-y-2 overflow-auto">
-            {!approvalsLoading &&
-              approvals.map((approval: CalendarApprovalRequest) => {
-                const summary =
-                  (approval.changeSummary as CalendarApprovalChangeSummary) ||
-                  {};
-                const after = (summary.after || {}) as Record<string, unknown>;
-                const before = (summary.before || {}) as Record<
-                  string,
-                  unknown
-                >;
-                const title =
-                  (after.title as string) ||
-                  (before.title as string) ||
-                  'Untitled';
-                return (
-                  <div
-                    key={approval.$id}
-                    className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-700">
-                        {title}
-                      </span>
-                      <Badge variant="outline" className="uppercase">
-                        {approval.changeType}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 capitalize text-slate-500">
-                      Submitted{' '}
-                      {approval.submittedAt
-                        ? new Date(approval.submittedAt).toLocaleString()
-                        : 'recently'}
-                    </p>
+          {isApprovalsExpanded && (
+            <div className="mt-4 space-y-2.5 max-h-64 overflow-y-auto pr-1">
+              {!approvalsLoading && approvals.length > 0 && (
+                <>
+                  {approvals.map((approval: CalendarApprovalRequest) => {
+                    const summary =
+                      (approval.changeSummary as CalendarApprovalChangeSummary) ||
+                      {};
+                    const after = (summary.after || {}) as Record<
+                      string,
+                      unknown
+                    >;
+                    const before = (summary.before || {}) as Record<
+                      string,
+                      unknown
+                    >;
+                    const title =
+                      (after.title as string) ||
+                      (before.title as string) ||
+                      'Untitled Event';
+                    const sensitivityLevel =
+                      (after.sensitivityLevel as CalendarSensitivity) ||
+                      approval.sensitivityLevel ||
+                      'standard';
+                    const submittedTime = approval.submittedAt
+                      ? new Date(approval.submittedAt)
+                      : null;
+                    const timeAgo = submittedTime
+                      ? formatDistanceToNow(submittedTime, { addSuffix: true })
+                      : 'recently';
+
+                    // Icon and color based on change type
+                    const getChangeTypeConfig = (
+                      type: string
+                    ): {
+                      icon: React.ReactNode;
+                      color: string;
+                      bgColor: string;
+                    } => {
+                      switch (type) {
+                        case 'create':
+                          return {
+                            icon: <CalendarPlus className="h-4 w-4" />,
+                            color: 'text-green-600',
+                            bgColor: 'bg-green-50',
+                          };
+                        case 'update':
+                          return {
+                            icon: <Edit className="h-4 w-4" />,
+                            color: 'text-blue-600',
+                            bgColor: 'bg-blue-50',
+                          };
+                        case 'cancel':
+                          return {
+                            icon: <Trash2 className="h-4 w-4" />,
+                            color: 'text-red-600',
+                            bgColor: 'bg-red-50',
+                          };
+                        default:
+                          return {
+                            icon: <FileCheck className="h-4 w-4" />,
+                            color: 'text-slate-600',
+                            bgColor: 'bg-slate-50',
+                          };
+                      }
+                    };
+
+                    const changeTypeConfig = getChangeTypeConfig(
+                      approval.changeType
+                    );
+
+                    return (
+                      <div
+                        key={approval.$id}
+                        className="group relative rounded-lg border border-slate-200 bg-white px-4 py-3.5 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer"
+                        onClick={() => {
+                          setSelectedApproval(approval);
+                          setIsApprovalDialogOpen(true);
+                          setReviewerNotes('');
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={cn(
+                              'flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0',
+                              changeTypeConfig.bgColor
+                            )}
+                          >
+                            <div className={changeTypeConfig.color}>
+                              {changeTypeConfig.icon}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <h4 className="text-sm font-semibold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                                {title}
+                              </h4>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] font-medium px-2 py-0.5 uppercase tracking-wide border-slate-300 text-slate-700"
+                                >
+                                  {approval.changeType}
+                                </Badge>
+                                {sensitivityLevel !== 'standard' && (
+                                  <Badge
+                                    className={cn(
+                                      'text-[10px] font-medium px-2 py-0.5 border pointer-events-none',
+                                      getSensitivityBadgeClasses(
+                                        sensitivityLevel
+                                      )
+                                    )}
+                                  >
+                                    {SENSITIVITY_LABELS[sensitivityLevel]}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-slate-500">
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="h-3 w-3" />
+                                {timeAgo}
+                              </span>
+                              {submittedTime && (
+                                <span className="text-slate-400">
+                                  {format(submittedTime, 'MMM d, h:mm a')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+              {!approvalsLoading && approvals.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-3">
+                    <CheckCircle2 className="h-12 w-12 text-green" />
                   </div>
-                );
-              })}
-            {!approvalsLoading && approvals.length === 0 && (
-              <div className="text-xs text-slate-500">
-                You&apos;re all caught up.
-              </div>
-            )}
-            {approvalsLoading && (
-              <div className="text-xs text-slate-500">
-                Gathering latest requests...
-              </div>
-            )}
-          </div>
+                  <p className="text-lg font-medium text-slate-700 mb-1">
+                    All caught up
+                  </p>
+                  <p className="text-md text-slate-500">
+                    No pending approval requests at this time
+                  </p>
+                </div>
+              )}
+              {approvalsLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Loading approval requests...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -3029,6 +3431,338 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           {viewMode === 'month' ? renderMonthView() : renderWeekView()}
         </CardContent>
       </Card>
+
+      {/* Approval Review Dialog */}
+      <Dialog
+        open={isApprovalDialogOpen}
+        onOpenChange={setIsApprovalDialogOpen}
+      >
+        <DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
+          <VisuallyHiddenPrimitive.Root>
+            <DialogTitle>
+              {selectedApproval
+                ? 'Review Approval Request'
+                : 'Approval Details'}
+            </DialogTitle>
+          </VisuallyHiddenPrimitive.Root>
+          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+          {selectedApproval && (
+            <>
+              {/* Header */}
+              <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 px-6 border-b border-slate-200">
+                <div className="flex items-center justify-between mt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100">
+                      {selectedApproval.changeType === 'create' ? (
+                        <Glasses className="h-8 w-8 text-[#0f5384]" />
+                      ) : selectedApproval.changeType === 'update' ? (
+                        <Edit className="h-5 w-5 text-blue-600" />
+                      ) : (
+                        <Glasses className="h-8 w-8 text-[#0f5384]" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold sidebar-gradient-text">
+                        Review Approval Request
+                      </h2>
+                      <p className="text-sm text-slate-600 mt-0.5">
+                        {selectedApproval.changeType === 'create'
+                          ? 'New Event Creation'
+                          : selectedApproval.changeType === 'update'
+                          ? 'Event Update'
+                          : 'Event Cancellation'}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="text-xs font-medium px-3 py-1 uppercase tracking-wide border-amber-300 text-amber-700 bg-amber-50"
+                  >
+                    Pending Review
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-6 space-y-6">
+                  {/* Event Summary */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 text-sm font-semibold mb-4 text-slate-700">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      Event Information
+                    </div>
+
+                    {(() => {
+                      const summary = selectedApproval.changeSummary || {};
+                      const after = (summary.after || {}) as Record<
+                        string,
+                        unknown
+                      >;
+                      const before = (summary.before || {}) as Record<
+                        string,
+                        unknown
+                      >;
+                      const eventTitle =
+                        (after.title as string) ||
+                        (before.title as string) ||
+                        'Untitled Event';
+                      const eventDate = after.startDate
+                        ? new Date(after.startDate as string)
+                        : before.startDate
+                        ? new Date(before.startDate as string)
+                        : null;
+                      const eventDescription =
+                        (after.description as string) ||
+                        (before.description as string) ||
+                        'No description provided';
+
+                      return (
+                        <div className="space-y-4">
+                          {/* Title and Sensitivity */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-base font-semibold text-slate-900">
+                              {eventTitle}
+                            </h3>
+                            {selectedApproval.sensitivityLevel !==
+                              'standard' && (
+                              <Badge
+                                className={cn(
+                                  'text-xs font-medium px-2 py-0.5 border',
+                                  getSensitivityBadgeClasses(
+                                    selectedApproval.sensitivityLevel
+                                  )
+                                )}
+                              >
+                                {
+                                  SENSITIVITY_LABELS[
+                                    selectedApproval.sensitivityLevel
+                                  ]
+                                }
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Date & Time */}
+                          {eventDate && (
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                              <div className="w-8 h-8 bg-[#E6FAF9] rounded-full flex items-center justify-center mt-0.5">
+                                <Clock className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-slate-900">
+                                  {format(eventDate, 'EEEE, MMMM d, yyyy')}
+                                </div>
+                                {(() => {
+                                  const startTimeStr =
+                                    after.startTime != null
+                                      ? String(after.startTime)
+                                      : '';
+                                  const endTimeStr =
+                                    after.endTime != null
+                                      ? String(after.endTime)
+                                      : '';
+                                  if (startTimeStr || endTimeStr) {
+                                    return (
+                                      <div className="text-sm text-slate-600 mt-1">
+                                        {startTimeStr}
+                                        {startTimeStr && endTimeStr
+                                          ? ' - '
+                                          : ''}
+                                        {endTimeStr}
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Description */}
+                          {eventDescription &&
+                            eventDescription !== 'No description provided' && (
+                              <div className="p-3 bg-white rounded-lg border border-slate-200">
+                                <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                                  {eventDescription}
+                                </p>
+                              </div>
+                            )}
+
+                          {/* Change Summary for Updates */}
+                          {selectedApproval.changeType === 'update' && (
+                            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                              <div className="flex items-center gap-2 text-sm font-semibold mb-2 text-amber-900">
+                                <AlertCircle className="w-4 h-4" />
+                                Changes Made
+                              </div>
+                              <div className="space-y-2 text-sm text-amber-800">
+                                {Object.keys(after).map((key) => {
+                                  const beforeValue = before[key];
+                                  const afterValue = after[key];
+                                  if (
+                                    beforeValue !== afterValue &&
+                                    !['$id', 'updatedAt', 'createdAt'].includes(
+                                      key
+                                    )
+                                  ) {
+                                    return (
+                                      <div
+                                        key={key}
+                                        className="flex items-start gap-2"
+                                      >
+                                        <span className="font-medium capitalize">
+                                          {key
+                                            .replace(/([A-Z])/g, ' $1')
+                                            .trim()}
+                                          :
+                                        </span>
+                                        <span className="flex-1">
+                                          {beforeValue ? (
+                                            <>
+                                              <span className="line-through text-amber-600">
+                                                {String(beforeValue)}
+                                              </span>
+                                              {' → '}
+                                              <span className="font-semibold">
+                                                {String(afterValue)}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <span className="font-semibold">
+                                              {String(afterValue)}
+                                            </span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Request Details */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 text-sm font-semibold mb-4 text-slate-700">
+                      <Clock className="w-4 h-4 text-blue-600" />
+                      Request Details
+                    </div>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Submitted:</span>
+                        <span className="font-medium text-slate-900">
+                          {selectedApproval.submittedAt
+                            ? format(
+                                new Date(selectedApproval.submittedAt),
+                                'MMM d, yyyy h:mm a'
+                              )
+                            : 'Unknown'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Request Type:</span>
+                        <Badge
+                          variant="outline"
+                          className="text-xs font-medium px-2 py-0.5 uppercase"
+                        >
+                          {selectedApproval.changeType}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reviewer Notes */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="reviewer-notes"
+                      className="text-sm font-semibold text-slate-700"
+                    >
+                      Reviewer Notes (Optional)
+                    </Label>
+                    <Textarea
+                      id="reviewer-notes"
+                      placeholder="Add any notes or feedback for the requester..."
+                      value={reviewerNotes}
+                      onChange={(e) => setReviewerNotes(e.target.value)}
+                      className="min-h-[100px] resize-none bg-white border-slate-300 focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
+                      disabled={isProcessingApproval}
+                    />
+                    <p className="text-xs text-slate-500">
+                      These notes will be visible to the event creator and
+                      included in the audit log.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="sticky bottom-0 border-t border-slate-200 bg-white px-6 py-4 flex items-center gap-3">
+                <Button
+                  onClick={async () => {
+                    if (!selectedApproval) return;
+                    await handleApprovalDecision('changes_requested');
+                  }}
+                  disabled={isProcessingApproval}
+                  className="primary-btn px-3 sm:px-4 flex-1"
+                >
+                  {isProcessingApproval ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <MessageSquare className="w-4 h-4" />
+                  )}
+                  Request Changes
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!selectedApproval) return;
+                    await handleApprovalDecision('rejected');
+                  }}
+                  disabled={isProcessingApproval}
+                  className="primary-btn px-3 sm:px-4 flex-1"
+                >
+                  {isProcessingApproval ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Ban className="w-4 h-4" />
+                  )}
+                  Deny
+                </Button>
+
+                <Button
+                  onClick={async () => {
+                    if (!selectedApproval) return;
+                    await handleApprovalDecision('approved');
+                  }}
+                  disabled={isProcessingApproval}
+                  className="primary-btn px-3 sm:px-4 flex-1"
+                >
+                  {isProcessingApproval ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ThumbsUp className="w-4 h-4" />
+                  )}
+                  Approve
+                </Button>
+                <Button
+                  onClick={() => setIsApprovalDialogOpen(false)}
+                  disabled={isProcessingApproval}
+                  className="primary-btn px-3 sm:px-4 flex-1"
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Event Review Dialog */}
       <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
@@ -3076,7 +3810,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               <div className="p-6 space-y-6">
                 {/* Event Details Section */}
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold mb-4 text-slate-700">
                     <FileText className="w-4 h-4 text-blue-600" />
                     Event Information
                   </div>
@@ -3084,7 +3818,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   <div className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
                       {selectedEvent.sensitivityLevel && (
-                        <Badge variant="outline">
+                        <Badge
+                          variant="outline"
+                          className={getSensitivityBadgeClasses(
+                            selectedEvent.sensitivityLevel || 'standard'
+                          )}
+                        >
                           {
                             SENSITIVITY_LABELS[
                               selectedEvent.sensitivityLevel || 'standard'
@@ -3100,7 +3839,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                 ? 'secondary'
                                 : 'outline'
                             }
-                            className="uppercase"
+                            className="uppercase sidebar-gradient-text"
                           >
                             {selectedEvent.approvalStatus.replace('_', ' ')}
                           </Badge>
@@ -3112,6 +3851,69 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                         <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
                           You can view scheduling details, but sensitive content
                           is hidden until an approver grants access.
+                        </div>
+                      )}
+
+                    {/* Reviewer Notes Section */}
+                    {(selectedEvent.approvalStatus === 'changes_requested' ||
+                      selectedEvent.approvalStatus === 'rejected') &&
+                      eventApprovalRequest?.reviewerNotes && (
+                        <div
+                          className={cn(
+                            'rounded-lg p-4 border mt-4',
+                            selectedEvent.approvalStatus === 'changes_requested'
+                              ? 'bg-amber-50 border-amber-200'
+                              : 'bg-red-50 border-red-200'
+                          )}
+                        >
+                          <div className="flex items-center gap-2 text-sm font-semibold mb-3">
+                            {selectedEvent.approvalStatus ===
+                            'changes_requested' ? (
+                              <>
+                                <MessageSquare className="w-4 h-4 text-amber-700" />
+                                <span className="text-amber-900">
+                                  Requested Changes
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertCircle className="w-4 h-4 text-red-700" />
+                                <span className="text-red-900">
+                                  Denial Reason
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <p
+                              className={cn(
+                                'text-sm whitespace-pre-wrap',
+                                selectedEvent.approvalStatus ===
+                                  'changes_requested'
+                                  ? 'text-amber-800'
+                                  : 'text-red-800'
+                              )}
+                            >
+                              {eventApprovalRequest.reviewerNotes}
+                            </p>
+                            {eventApprovalRequest.decidedAt && (
+                              <p
+                                className={cn(
+                                  'text-xs',
+                                  selectedEvent.approvalStatus ===
+                                    'changes_requested'
+                                    ? 'text-amber-600'
+                                    : 'text-red-600'
+                                )}
+                              >
+                                Reviewed on{' '}
+                                {format(
+                                  new Date(eventApprovalRequest.decidedAt),
+                                  'MMM d, yyyy h:mm a'
+                                )}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       )}
 

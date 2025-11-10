@@ -5,7 +5,7 @@ import { ID, Query } from 'node-appwrite';
 export interface AuditLogEntry {
   event_id: string;
   event_title: string;
-  action: 'delete' | 'sync_delete' | 'restore';
+  action: 'delete' | 'sync_delete' | 'restore' | 'approval_decided';
   source: 'caalm' | 'outlook';
   user_id: string;
   user_name: string;
@@ -34,13 +34,10 @@ export interface AuditFilters {
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
   try {
-    if (!appwriteConfig.databaseId) {
+    if (!appwriteConfig.databaseId || !appwriteConfig.auditLogsCollectionId) {
       console.error('Missing required Appwrite configuration for audit logs');
       return;
     }
-
-    // Use the audit_logs collection ID directly since it exists in the database
-    const auditLogsCollectionId = 'audit_logs';
 
     const adminClient = await createAdminClient();
 
@@ -60,12 +57,12 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
       metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
     };
 
-    await adminClient.tablesDB.createRow(
-      appwriteConfig.databaseId,
-      auditLogsCollectionId,
-      ID.unique(),
-      auditData
-    );
+    await adminClient.tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.auditLogsCollectionId,
+      rowId: ID.unique(),
+      data: auditData,
+    });
 
     console.log(
       'Audit event logged successfully:',
@@ -85,12 +82,9 @@ export async function getAuditLogs(
   filters?: AuditFilters
 ): Promise<AuditLogEntry[]> {
   try {
-    if (!appwriteConfig.databaseId) {
+    if (!appwriteConfig.databaseId || !appwriteConfig.auditLogsCollectionId) {
       throw new Error('Missing required Appwrite configuration for audit logs');
     }
-
-    // Use the audit_logs collection ID directly since it exists in the database
-    const auditLogsCollectionId = 'audit_logs';
 
     const adminClient = await createAdminClient();
     const queries = [];
@@ -126,11 +120,11 @@ export async function getAuditLogs(
     // Order by creation date (newest first)
     queries.push(Query.orderDesc('$createdAt'));
 
-    const response = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      auditLogsCollectionId,
-      queries
-    );
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.auditLogsCollectionId,
+      queries,
+    });
 
     return response.rows.map((row: any) => ({
       event_id: row.event_id,
@@ -166,21 +160,18 @@ export async function getAuditStats(): Promise<{
   deletionsByDate: Array<{ date: string; count: number }>;
 }> {
   try {
-    if (!appwriteConfig.databaseId) {
+    if (!appwriteConfig.databaseId || !appwriteConfig.auditLogsCollectionId) {
       throw new Error('Missing required Appwrite configuration for audit logs');
     }
-
-    // Use the audit_logs collection ID directly since it exists in the database
-    const auditLogsCollectionId = 'audit_logs';
 
     const adminClient = await createAdminClient();
 
     // Get all audit logs for statistics
-    const response = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      auditLogsCollectionId,
-      [Query.orderDesc('$createdAt')]
-    );
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.auditLogsCollectionId,
+      queries: [Query.orderDesc('$createdAt')],
+    });
 
     const logs = response.rows;
     const totalDeletions = logs.filter(
