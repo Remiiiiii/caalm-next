@@ -1,30 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
-import { Query } from 'node-appwrite';
+import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
+import { getUserByAccountId } from '@/lib/actions/user.actions';
+import {
+  decideCalendarApprovalRequest,
+  listCalendarApprovalRequests,
+} from '@/lib/actions/calendar-approval.actions';
+import { CalendarApprovalStatus, UserRole } from '@/constants/rbac';
+
+const APPROVER_ROLES: UserRole[] = ['admin', 'approver'];
+
+const ensureApproverRole = (role: UserRole) => APPROVER_ROLES.includes(role);
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const status = searchParams.get('status') || 'pending';
+    const accountId = await getCurrentUserId();
 
-    if (!userId) {
+    if (!accountId) {
       return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
 
-    const { tablesDB } = await createAdminClient();
+    const user = await getUserByAccountId(accountId);
 
-    // For now, return empty approvals array since we don't have an approvals collection
-    // This prevents 404 errors and provides a foundation for future implementation
-    const approvals = [];
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    if (!ensureApproverRole(user.role)) {
+      return NextResponse.json(
+        { error: 'Permission denied' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const statusParam = searchParams.get('status') as CalendarApprovalStatus;
+
+    const approvals = await listCalendarApprovalRequests({
+      status: statusParam || 'pending',
+    });
 
     return NextResponse.json({
       data: approvals,
-      total: 0,
+      total: approvals.length,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -47,23 +70,59 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { approvalId, action, userId } = body;
+    const accountId = await getCurrentUserId();
 
-    if (!approvalId || !action || !userId) {
+    if (!accountId) {
       return NextResponse.json(
-        { error: 'Missing required fields: approvalId, action, userId' },
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const user = await getUserByAccountId(accountId);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    if (!ensureApproverRole(user.role)) {
+      return NextResponse.json(
+        { error: 'Permission denied' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { approvalId, action, reviewerNotes } = body;
+
+    if (!approvalId || !action) {
+      return NextResponse.json(
+        { error: 'Missing required fields: approvalId, action' },
         { status: 400 }
       );
     }
 
-    // For now, return success since we don't have an approvals collection
-    // This prevents 404 errors and provides a foundation for future implementation
+    if (!['approved', 'rejected', 'changes_requested'].includes(action)) {
+      return NextResponse.json(
+        { error: 'Invalid action' },
+        { status: 400 }
+      );
+    }
+
+    const updatedApproval = await decideCalendarApprovalRequest({
+      approvalId,
+      decision: action,
+      approverAccountId: accountId,
+      approverUserId: user.$id,
+      reviewerNotes,
+    });
+
     return NextResponse.json({
       success: true,
-      message: 'Approval action processed',
-      approvalId,
-      action,
+      approval: updatedApproval,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -83,3 +142,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

@@ -17,6 +17,13 @@ import {
   notifyInvitationSent,
   notifyInvitationAccepted,
 } from '../utils/smsNotifications';
+import {
+  UserRole,
+  normalizeUserRole,
+  USER_ROLES,
+  isUserRole,
+  isLegacyRole,
+} from '@/constants/rbac';
 
 export type AppUser = {
   $id: string;
@@ -24,7 +31,7 @@ export type AppUser = {
   email: string;
   avatar: string;
   accountId: string;
-  role: string;
+  role: UserRole;
   division?: UserDivision;
   status?: 'active' | 'inactive';
 };
@@ -65,6 +72,38 @@ export const getUserById = async (userId: string) => {
     return result;
   } catch (error) {
     console.error('Failed to get user by ID:', error);
+    return null;
+  }
+};
+
+export const getUserByAccountId = async (
+  accountId: string
+): Promise<AppUser | null> => {
+  const { tablesDB } = await createAdminClient();
+  try {
+    const result = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
+      queries: [Query.equal('accountId', accountId)],
+    });
+
+    if (!result.rows.length) {
+      return null;
+    }
+
+    const user = result.rows[0];
+    return {
+      $id: user.$id,
+      fullName: user.fullName,
+      email: user.email,
+      avatar: user.avatar,
+      accountId: user.accountId,
+      role: normalizeUserRole(user.role),
+      division: user.division,
+      status: user.status,
+    };
+  } catch (error) {
+    console.error('Failed to get user by accountId:', error);
     return null;
   }
 };
@@ -273,7 +312,7 @@ export const finalizeAccountAfterEmailVerification = async ({
           email: email,
           avatar: avatarPlaceholderUrl,
           accountId: accountId,
-          role: '', // Empty role initially - will be set when user is invited
+          role: 'viewer', // Default role until invitation assigns a higher permission
         },
       });
       console.log(
@@ -565,7 +604,7 @@ export const getCurrentUser = async () => {
       email: userData.email,
       avatar: userData.avatar,
       accountId: userData.accountId,
-      role: userData.role,
+      role: normalizeUserRole(userData.role),
       division: userData.division,
       status: userData.status,
       $createdAt: userData.$createdAt,
@@ -629,7 +668,7 @@ export const getCurrentUserFrom2FA = async () => {
         email: user.email,
         avatar: user.avatar,
         accountId: user.accountId,
-        role: user.role,
+        role: normalizeUserRole(user.role),
         division: user.division,
         status: user.status,
         $createdAt: user.$createdAt,
@@ -712,7 +751,7 @@ export const signInUser = async ({ email }: { email: string }) => {
           email: authUser.email,
           avatar: avatarPlaceholderUrl,
           accountId: authUser.$id,
-          role: '',
+          role: 'viewer',
         },
       });
       await sendEmailOTP({ email });
@@ -805,9 +844,7 @@ interface ListPendingInvitationsParams {
   orgId: string;
 }
 
-const allowedRoles = ['executive', 'admin', 'manager'] as const;
-
-type AllowedRole = (typeof allowedRoles)[number];
+const allowedRoles = USER_ROLES;
 
 export const createInvitation = async ({
   email,
@@ -839,16 +876,23 @@ export const createInvitation = async ({
     const status = 'pending';
     const revoked = false;
 
-    const normalizedRole = role.toLowerCase();
+    const normalizedInput = role.trim().toLowerCase();
+    const isRecognizedRole =
+      isUserRole(normalizedInput) || isLegacyRole(normalizedInput);
+    const canonicalRole = normalizeUserRole(normalizedInput);
+
     console.log('createInvitation: Role validation:', {
       originalRole: role,
-      normalizedRole,
+      normalizedInput,
+      canonicalRole,
       allowedRoles,
+      isRecognizedRole,
     });
-    if (!allowedRoles.includes(normalizedRole as AllowedRole)) {
+
+    if (!isRecognizedRole) {
       console.error('createInvitation: Invalid role:', {
         role,
-        normalizedRole,
+        normalizedInput,
         allowedRoles,
       });
       throw new Error(
@@ -910,7 +954,7 @@ export const createInvitation = async ({
       data: {
         email,
         orgId,
-        role: normalizedRole,
+        role: canonicalRole,
         department: department?.trim(),
         division: division?.trim(),
         name,
@@ -928,7 +972,7 @@ export const createInvitation = async ({
       await notifyInvitationSent(
         email,
         name,
-        normalizedRole,
+        canonicalRole,
         department || 'N/A'
       );
     } catch (error) {
@@ -948,7 +992,7 @@ export const createInvitation = async ({
         email,
         name,
         inviteLink,
-        normalizedRole,
+        canonicalRole,
         department
       );
       console.log('Invitation email sent via Mailgun to:', email);
@@ -1035,7 +1079,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   // 2. Create users collection document with role if not exists
   let user = await getUserByEmail(invite.email);
   if (!user) {
-    const normalizedRole = invite.role.toLowerCase();
+    const canonicalInviteRole = normalizeUserRole(invite.role);
 
     // Validate division against expected enum values
     const validDivisions = [
@@ -1054,7 +1098,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     console.log('acceptInvitation: Creating user with data:', {
       fullName: invite.name,
       email: invite.email,
-      role: normalizedRole,
+      role: canonicalInviteRole,
       department: invite.department,
       division: invite.division,
       divisionType: typeof invite.division,
@@ -1087,7 +1131,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
         email: invite.email,
         avatar: avatarPlaceholderUrl,
         accountId,
-        role: normalizedRole,
+        role: canonicalInviteRole,
         department: invite.department,
         division: invite.division,
       },
@@ -1109,7 +1153,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     await notifyInvitationAccepted(
       invite.email,
       invite.name,
-      invite.role,
+      normalizeUserRole(invite.role),
       invite.department || 'N/A'
     );
   } catch (error) {

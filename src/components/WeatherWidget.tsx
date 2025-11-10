@@ -42,7 +42,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   location,
   latitude,
   longitude,
-  apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY,
+  apiKey = process.env.OPENWEATHER_API_KEY,
 }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);

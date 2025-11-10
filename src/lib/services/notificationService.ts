@@ -13,10 +13,11 @@ import {
   UpsertNotificationSettingsRequest,
 } from '@/types/notifications';
 import { Query } from 'appwrite';
-import { tablesDB } from '../appwrite/client';
+import type { appwriteMessagingService as AppwriteMessagingServiceInstance } from './appwriteMessagingService';
 
 // Lazy import to avoid initialization errors when messaging service is not configured
-let appwriteMessagingService: any = null;
+type AppwriteMessagingServiceType = typeof AppwriteMessagingServiceInstance;
+let appwriteMessagingService: AppwriteMessagingServiceType | null = null;
 
 async function getAppwriteMessagingService() {
   if (!appwriteMessagingService) {
@@ -38,10 +39,15 @@ class NotificationService {
     return await createAdminClient();
   }
 
+  private async getTablesDB() {
+    const { tablesDB } = await this.getClient();
+    return tablesDB;
+  }
+
   // Notification Types Management
   async getNotificationTypes(): Promise<NotificationType[]> {
     try {
-      const { tablesDB } = await this.getClient();
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId:
@@ -57,7 +63,7 @@ class NotificationService {
 
   async getNotificationType(typeKey: string): Promise<NotificationType | null> {
     try {
-      const { tablesDB } = await this.getClient();
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId:
@@ -78,6 +84,7 @@ class NotificationService {
     type: Omit<NotificationType, '$id' | '$createdAt' | '$updatedAt'>
   ): Promise<NotificationType> {
     try {
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.createRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId:
@@ -99,6 +106,7 @@ class NotificationService {
     >
   ): Promise<NotificationType> {
     try {
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.updateRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
         collectionId:
@@ -115,6 +123,7 @@ class NotificationService {
 
   async deleteNotificationType(id: string): Promise<void> {
     try {
+      const tablesDB = await this.getTablesDB();
       await tablesDB.deleteRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId:
@@ -136,6 +145,7 @@ class NotificationService {
     limit: number = 20
   ): Promise<NotificationsResponse> {
     try {
+      const tablesDB = await this.getTablesDB();
       const queries = [Query.equal('userId', userId)];
 
       // Apply filters
@@ -223,6 +233,7 @@ class NotificationService {
 
   async getNotification(id: string): Promise<Notification> {
     try {
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.getRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
@@ -239,6 +250,7 @@ class NotificationService {
     notification: CreateNotificationRequest
   ): Promise<Notification> {
     try {
+      const tablesDB = await this.getTablesDB();
       // Validate notification type exists and is enabled
       const notificationType = await this.getNotificationType(
         notification.type
@@ -285,6 +297,7 @@ class NotificationService {
     updates: UpdateNotificationRequest
   ): Promise<Notification> {
     try {
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.updateRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
@@ -300,6 +313,7 @@ class NotificationService {
 
   async markAsRead(id: string): Promise<Notification> {
     try {
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.updateRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
@@ -315,6 +329,7 @@ class NotificationService {
 
   async markAsUnread(id: string): Promise<Notification> {
     try {
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.updateRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
@@ -330,6 +345,7 @@ class NotificationService {
 
   async markAllAsRead(userId: string): Promise<void> {
     try {
+      const tablesDB = await this.getTablesDB();
       // Get all unread notifications for the user
       const unreadNotifications = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
@@ -338,7 +354,10 @@ class NotificationService {
       });
 
       // Update each notification
-      const updatePromises = unreadNotifications.rows.map((notification: any) =>
+      const unreadRows = unreadNotifications.rows as Array<
+        Notification & { $id: string }
+      >;
+      const updatePromises = unreadRows.map((notification) =>
         tablesDB.updateRow({
           databaseId: appwriteConfig.databaseId || 'default-db',
           tableId: appwriteConfig.notificationsCollectionId || 'notifications',
@@ -356,6 +375,7 @@ class NotificationService {
 
   async deleteNotification(id: string): Promise<void> {
     try {
+      const tablesDB = await this.getTablesDB();
       await tablesDB.deleteRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
@@ -369,6 +389,7 @@ class NotificationService {
 
   async deleteMultipleNotifications(ids: string[]): Promise<void> {
     try {
+      const tablesDB = await this.getTablesDB();
       const deletePromises = ids.map((id) =>
         tablesDB.deleteRow({
           databaseId: appwriteConfig.databaseId || 'default-db',
@@ -387,6 +408,7 @@ class NotificationService {
   // Statistics
   async getNotificationStats(userId: string): Promise<NotificationStats> {
     try {
+      const tablesDB = await this.getTablesDB();
       // Get all notifications for the user
       const allNotifications = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
@@ -474,6 +496,7 @@ class NotificationService {
   // Utility Methods
   async getUnreadCount(userId: string): Promise<number> {
     try {
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
@@ -491,6 +514,7 @@ class NotificationService {
     limit: number = 5
   ): Promise<Notification[]> {
     try {
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
@@ -512,6 +536,7 @@ class NotificationService {
     userId: string
   ): Promise<NotificationSettingsDoc | null> {
     try {
+      const tablesDB = await this.getTablesDB();
       const response = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId:
@@ -530,6 +555,7 @@ class NotificationService {
     payload: UpsertNotificationSettingsRequest
   ): Promise<NotificationSettingsDoc> {
     try {
+      const tablesDB = await this.getTablesDB();
       const existing = await this.getNotificationSettings(payload.userId);
 
       const doc = {

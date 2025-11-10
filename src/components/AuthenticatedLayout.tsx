@@ -12,10 +12,11 @@ import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { Toaster } from '@/components/ui/toaster';
 import { avatarPlaceholderUrl } from '../../constants';
 import { Models } from 'appwrite';
+import { normalizeUserRole, ROLE_LABELS, UserRole } from '@/constants/rbac';
 
 type ExtendedUser = Models.User<Models.Preferences> & {
   name?: string;
-  role?: 'executive' | 'admin' | 'manager';
+  role?: UserRole;
   accountId?: string;
   fullName?: string;
   division?: string;
@@ -36,6 +37,7 @@ const AuthenticatedLayout = ({
   // For now, just use the server user to avoid hydration issues
   const currentUser = serverUser;
   const user = currentUser as ExtendedUser;
+  const normalizedRole = normalizeUserRole(user.role || '');
 
   // Initialize inactivity timer
   const { showDialog, handleContinue, handleLogout, handleClose } =
@@ -48,7 +50,7 @@ const AuthenticatedLayout = ({
           name={user.name || 'Unknown User'}
           avatar={user.prefs?.avatar || avatarPlaceholderUrl}
           email={currentUser.email}
-          role={user.role || 'manager'}
+          role={normalizedRole}
           division={user.division}
         />
         <section className="flex h-full w-full flex-1 flex-col">
@@ -58,7 +60,7 @@ const AuthenticatedLayout = ({
             fullName={user.fullName || user.name || 'Unknown User'}
             avatar={user.prefs?.avatar || avatarPlaceholderUrl}
             email={currentUser.email}
-            role={user.role || 'manager'}
+            role={normalizedRole}
           />
           <div className="flex justify-between items-center px-4">
             <QuickActions user={currentUser} />

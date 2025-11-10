@@ -20,7 +20,7 @@ MICROSOFT_CLIENT_SECRET=your_actual_secret_value
 MICROSOFT_TENANT_ID=e2975cee-a30e-41db-982e-80ba44a89c59
 
 # Appwrite Configuration
-NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION=calendar_integrations
+NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION=6912da7c00567cdef123
 `;
 
 const prodEnvContent = `# Production Environment Configuration
@@ -35,7 +35,7 @@ MICROSOFT_CLIENT_SECRET=your_production_secret_value
 MICROSOFT_TENANT_ID=e2975cee-a30e-41db-982e-80ba44a89c59
 
 # Appwrite Configuration
-NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION=calendar_integrations
+NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION=6912da7c00567cdef123
 `;
 
 function setupEnvironment() {

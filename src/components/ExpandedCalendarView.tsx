@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -75,6 +75,20 @@ import {
   hasMicrosoftCalendarIntegration,
   syncMicrosoftCalendar,
 } from '@/lib/actions/calendar.actions';
+import type {
+  CalendarApprovalRequest,
+  CalendarApprovalChangeSummary,
+} from '@/lib/actions/calendar-approval.actions';
+import {
+  CalendarApprovalStatus,
+  CalendarSensitivity,
+  PermissionOverrideRecord,
+  SENSITIVITY_LABELS,
+} from '@/constants/rbac';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useCalendarPermissions } from '@/hooks/useCalendarPermissions';
+import { useCalendarApprovals } from '@/hooks/useCalendarApprovals';
+import { resolveCalendarPermissions } from '@/lib/auth/permissions';
 
 // Local event interface for component use
 interface LocalCalendarEvent {
@@ -88,7 +102,20 @@ interface LocalCalendarEvent {
   amount?: string;
   startTime?: string;
   endTime?: string;
+  sensitivityLevel?: CalendarSensitivity;
+  requiresApproval?: boolean;
+  approvalStatus?: CalendarApprovalStatus;
+  pendingApprovalId?: string | null;
+  overrides?: PermissionOverrideRecord[];
 }
+
+type EventWithExtras = LocalCalendarEvent & {
+  sensitivityLevel?: CalendarSensitivity;
+  approvalStatus?: CalendarApprovalStatus;
+  requiresApproval?: boolean;
+  pendingApprovalId?: string | null;
+  overrides?: PermissionOverrideRecord[];
+};
 
 // Internal state interface for new event form
 interface NewEventForm {
@@ -98,6 +125,7 @@ interface NewEventForm {
   description: string;
   startTime: string;
   endTime: string;
+  sensitivityLevel: CalendarSensitivity;
 }
 
 // Sharing interface
@@ -157,12 +185,53 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     description: '',
     startTime: '',
     endTime: '',
+    sensitivityLevel: 'standard',
   });
 
   const { events: calendarEvents, refresh } = useCalendarEvents();
+  const { role, userId, accountId } = useUserRole();
+  const { permissions: basePermissions } = useCalendarPermissions({
+    userId,
+  });
+  const canCreateEvent = basePermissions.createEvent;
+  const isApprover = role === 'approver' || role === 'admin';
+  const {
+    approvals,
+    isLoading: approvalsLoading,
+    refresh: refreshApprovals,
+  } = useCalendarApprovals({ status: 'pending', enabled: isApprover });
+
+  const selectedEventPermissions = useMemo(() => {
+    if (!selectedEvent) {
+      return null;
+    }
+    const overrides = (selectedEvent as EventWithExtras)?.overrides || [];
+    return resolveCalendarPermissions({
+      role,
+      overrides,
+      context: {
+        userId: userId || '',
+        teamIds: [],
+      },
+    });
+  }, [selectedEvent, role, userId]);
 
   // Combine local events with calendar events
   const allEvents = [...events, ...(calendarEvents || [])];
+  const normalizedEvents: EventWithExtras[] = allEvents.map((event) => {
+    const extended = event as EventWithExtras;
+    return {
+      ...extended,
+      sensitivityLevel: extended.sensitivityLevel || 'standard',
+      approvalStatus: extended.approvalStatus || 'not_required',
+      requiresApproval: Boolean(extended.requiresApproval),
+      pendingApprovalId:
+        extended.pendingApprovalId !== undefined
+          ? extended.pendingApprovalId
+          : null,
+      overrides: extended.overrides || [],
+    };
+  });
 
   // Check Outlook connection status
   useEffect(() => {
@@ -265,6 +334,15 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
       return;
     }
 
+    if (!canCreateEvent) {
+      toast({
+        title: 'Permission denied',
+        description: 'You do not have permission to create events.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setCreatingEvent(true);
 
     try {
@@ -282,14 +360,18 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         description: newEvent.description,
         startTime: newEvent.startTime,
         endTime: newEvent.endTime,
-        createdBy: user?.fullName || user?.$id || 'Unknown',
+        createdBy: accountId || user?.$id || 'unknown',
+        createdByAccountId: accountId || user?.$id || 'unknown',
+        createdByUserId: userId,
+        sensitivityLevel: newEvent.sensitivityLevel,
+        requiresApproval: newEvent.sensitivityLevel !== 'standard',
         participants: '',
         contractName: '',
         amount: '',
       } as const;
 
       // Create event in database
-      await createCalendarEvent(eventData);
+      const result = await createCalendarEvent(eventData);
 
       // Call parent callback if provided
       if (onEventCreate) {
@@ -311,6 +393,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         description: '',
         startTime: '',
         endTime: '',
+        sensitivityLevel: 'standard',
       });
 
       // Close modal
@@ -320,10 +403,17 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
       if (refresh) {
         refresh();
       }
+      if (result?.approval && isApprover && refreshApprovals) {
+        refreshApprovals();
+      }
 
       toast({
-        title: 'Success',
-        description: 'Event created successfully',
+        title: result?.approval
+          ? 'Submitted for approval'
+          : 'Event created successfully',
+        description: result?.approval
+          ? 'Your event is awaiting approval before it appears on the shared calendar.'
+          : 'Event created successfully.',
       });
     } catch (error) {
       console.error('Failed to create event:', error);
@@ -395,7 +485,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
         {/* Calendar days */}
         {days.map((day) => {
-          const dayEvents = allEvents.filter(
+        const dayEvents = normalizedEvents.filter(
             (event) => event.date && isSameDay(new Date(event.date), day)
           );
           const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -473,7 +563,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
         {/* Day content */}
         {days.map((day) => {
-          const dayEvents = allEvents.filter(
+        const dayEvents = normalizedEvents.filter(
             (event) => event.date && isSameDay(new Date(event.date), day)
           );
           const isSelected = selectedDate && isSameDay(day, selectedDate);
@@ -514,6 +604,14 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                         <div className="text-xs opacity-75">
                           {event.startTime}
                         </div>
+                      )}
+                      {event.approvalStatus === 'pending' && (
+                        <Badge
+                          variant="outline"
+                          className="mt-1 text-[10px] uppercase"
+                        >
+                          Pending
+                        </Badge>
                       )}
                     </div>
                   );
@@ -694,14 +792,96 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                 </Dialog>
 
                 <Button
-                  onClick={() => setIsAddEventOpen(true)}
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                  onClick={() => canCreateEvent && setIsAddEventOpen(true)}
+                  disabled={!canCreateEvent}
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   New Event
                 </Button>
               </div>
             </div>
+
+            {isApprover && (
+              <div className="border-b bg-slate-50 px-6 py-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700">
+                      Pending approvals
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      {approvalsLoading
+                        ? 'Loading approvals...'
+                        : approvals.length
+                        ? `${approvals.length} awaiting review`
+                        : 'No pending approvals'}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => refreshApprovals()}
+                    className="bg-white text-slate-700 hover:bg-slate-100"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+                <div className="mt-3 max-h-32 space-y-2 overflow-auto">
+                  {!approvalsLoading &&
+                    approvals.map((approval: CalendarApprovalRequest) => {
+                      const summary =
+                        (approval.changeSummary as CalendarApprovalChangeSummary) ||
+                        {};
+                      const after = (summary.after || {}) as Record<
+                        string,
+                        unknown
+                      >;
+                      const before = (summary.before || {}) as Record<
+                        string,
+                        unknown
+                      >;
+                      const title =
+                        (after.title as string) ||
+                        (before.title as string) ||
+                        'Untitled';
+                      return (
+                        <div
+                          key={approval.$id}
+                          className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-slate-700">
+                              {title}
+                            </span>
+                            <Badge variant="outline">
+                              {approval.changeType}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 capitalize text-slate-500">
+                            Submitted{' '}
+                            {approval.submittedAt
+                              ? new Date(
+                                  approval.submittedAt
+                                ).toLocaleString()
+                              : 'recently'}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  {!approvalsLoading && approvals.length === 0 && (
+                    <div className="text-xs text-slate-500">
+                      You're all caught up.
+                    </div>
+                  )}
+                  {approvalsLoading && (
+                    <div className="text-xs text-slate-500">
+                      Gathering latest requests...
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Calendar Content */}
             <div className="flex-1 p-2 overflow-auto">
@@ -857,6 +1037,57 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
               />
             </div>
 
+            <div>
+              <Label className="block text-sm font-medium text-slate-700 mb-1">
+                Sensitivity
+              </Label>
+              <Select
+                value={newEvent.sensitivityLevel}
+                onValueChange={(value: string) =>
+                  setNewEvent({
+                    ...newEvent,
+                    sensitivityLevel: value as CalendarSensitivity,
+                  })
+                }
+              >
+                <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">Standard</span>
+                      <span className="text-xs text-slate-500">
+                        Visible immediately, no approval needed.
+                      </span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="restricted">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">Restricted</span>
+                      <span className="text-xs text-slate-500">
+                        Requires approval before publishing.
+                      </span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="confidential">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">Confidential</span>
+                      <span className="text-xs text-slate-500">
+                        Approval required, sensitive details hidden until
+                        approved.
+                      </span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {newEvent.sensitivityLevel !== 'standard' && (
+                <p className="mt-2 text-xs text-slate-500">
+                  This event will remain hidden until an approver approves it.
+                </p>
+              )}
+            </div>
+
             <div className="flex justify-end space-x-2">
               <Button
                 variant="outline"
@@ -867,8 +1098,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
               </Button>
               <Button
                 onClick={handleAddEvent}
-                disabled={!newEvent.title.trim() || creatingEvent}
-                className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                disabled={
+                  !newEvent.title.trim() || creatingEvent || !canCreateEvent
+                }
+                className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 disabled:opacity-50"
               >
                 {creatingEvent ? 'Creating...' : 'Create Event'}
               </Button>
@@ -891,21 +1124,54 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={() => setIsShareOpen(true)}
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                  disabled={
+                    selectedEventPermissions
+                      ? !selectedEventPermissions.manageParticipants
+                      : false
+                  }
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 disabled:opacity-50"
+                  title={
+                    selectedEventPermissions &&
+                    !selectedEventPermissions.manageParticipants
+                      ? 'You do not have permission to manage participants'
+                      : undefined
+                  }
                 >
                   <Share2 className="h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                  disabled={
+                    selectedEventPermissions
+                      ? !selectedEventPermissions.updateEvent
+                      : false
+                  }
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 disabled:opacity-50"
+                  title={
+                    selectedEventPermissions &&
+                    !selectedEventPermissions.updateEvent
+                      ? 'You do not have permission to edit this event'
+                      : undefined
+                  }
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                  disabled={
+                    selectedEventPermissions
+                      ? !selectedEventPermissions.cancelEvent
+                      : false
+                  }
+                  className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 disabled:opacity-50"
+                  title={
+                    selectedEventPermissions &&
+                    !selectedEventPermissions.cancelEvent
+                      ? 'You do not have permission to cancel this event'
+                      : undefined
+                  }
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -924,6 +1190,30 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                 >
                   {selectedEvent.type}
                 </Badge>
+                {selectedEvent.sensitivityLevel && (
+                  <Badge variant="outline" className="ml-2">
+                    {SENSITIVITY_LABELS[selectedEvent.sensitivityLevel]}
+                  </Badge>
+                )}
+                {selectedEvent.approvalStatus &&
+                  selectedEvent.approvalStatus !== 'not_required' && (
+                    <Badge
+                      variant={
+                        selectedEvent.approvalStatus === 'approved'
+                          ? 'secondary'
+                          : 'outline'
+                      }
+                      className="ml-2 uppercase"
+                    >
+                      {selectedEvent.approvalStatus.replace('_', ' ')}
+                    </Badge>
+                  )}
+                {selectedEvent.approvalStatus === 'pending' && (
+                  <p className="mt-2 text-xs text-amber-600">
+                    Awaiting approval; editing is limited until a decision is
+                    made.
+                  </p>
+                )}
               </div>
 
               {selectedEvent.date && (

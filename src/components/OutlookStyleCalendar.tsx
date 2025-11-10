@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -19,12 +19,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import CalendarAIChat from '@/components/CalendarAIChat';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -37,6 +32,20 @@ import CalendarSettings from '@/components/CalendarSettings';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { cn, getFileType, convertFileSize } from '@/lib/utils';
+import type {
+  CalendarApprovalRequest,
+  CalendarApprovalChangeSummary,
+} from '@/lib/actions/calendar-approval.actions';
+import {
+  CalendarApprovalStatus,
+  CalendarSensitivity,
+  PermissionOverrideRecord,
+  SENSITIVITY_LABELS,
+} from '@/constants/rbac';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useCalendarPermissions } from '@/hooks/useCalendarPermissions';
+import { useCalendarApprovals } from '@/hooks/useCalendarApprovals';
+import { resolveCalendarPermissions } from '@/lib/auth/permissions';
 import {
   Select,
   SelectContent,
@@ -58,9 +67,7 @@ import {
   Trash2,
   MessageSquare,
   Paperclip,
-  Minimize2,
   CheckCircle,
-  AlertCircle,
   AlertTriangle,
   CalendarDays,
   Grid3X3,
@@ -72,7 +79,6 @@ import {
   UserPlus,
   Link,
   Eye,
-  Search,
   MapPin,
   Tag,
   FileSliders,
@@ -84,9 +90,6 @@ import {
   isSameDay,
   startOfWeek,
   endOfWeek,
-  addDays,
-  addWeeks,
-  subWeeks,
   addMonths,
   subMonths,
   startOfMonth,
@@ -99,17 +102,8 @@ import { useToast } from '@/hooks/use-toast';
 import {
   hasMicrosoftCalendarIntegration,
   updateCalendarEvent,
-  deleteCalendarEvent,
   syncMicrosoftCalendar,
 } from '@/lib/actions/calendar.actions';
-
-interface OutlookStyleCalendarProps {
-  events?: any[];
-  onEventClick?: (event: any) => void;
-  onDateSelect?: (date: Date) => void;
-  onEventCreate?: (event: any) => void;
-  user?: any;
-}
 
 // Event attachments are stored as file IDs (references to files collection)
 // Full file details are fetched when needed
@@ -142,8 +136,15 @@ interface LocalCalendarEvent {
   participants?: string;
   location?: string;
   createdBy?: string;
+  createdByAccountId?: string;
+  createdByUserId?: string;
   outlook_id?: string;
-  attachments?: EventAttachment[];
+  attachments?: Array<EventAttachment | string>;
+  sensitivityLevel?: CalendarSensitivity;
+  approvalStatus?: CalendarApprovalStatus;
+  requiresApproval?: boolean;
+  pendingApprovalId?: string | null;
+  overrides?: PermissionOverrideRecord[];
 }
 
 interface NewEventForm {
@@ -163,13 +164,32 @@ interface NewEventForm {
   participants: string;
   location: string;
   attachments?: EventAttachment[];
+  sensitivityLevel: CalendarSensitivity;
+}
+
+interface ParticipantOption {
+  $id: string;
+  fullName?: string;
+  name?: string;
+  email: string;
+}
+
+interface CalendarUser {
+  $id: string;
+  fullName?: string;
+  role?: string;
+  department?: string;
+}
+
+interface OutlookStyleCalendarProps {
+  events?: LocalCalendarEvent[];
+  onDateSelect?: (date: Date) => void;
+  user?: CalendarUser | null;
 }
 
 const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   events = [],
-  onEventClick,
   onDateSelect,
-  onEventCreate,
   user,
 }) => {
   const { toast } = useToast();
@@ -208,7 +228,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [showSettings, setShowSettings] = useState(false);
 
   // Enable automatic sync with Outlook (polls every 5 minutes)
-  const { triggerSync } = useAutoSync(user?.$id, outlookConnected);
+  useAutoSync(user?.$id, outlookConnected);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [shareSettings, setShareSettings] = useState({
     users: [],
@@ -218,8 +238,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
   // Participant search state
   const [participantSearch, setParticipantSearch] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [selectedParticipants, setSelectedParticipants] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<ParticipantOption[]>([]);
+  const [selectedParticipants, setSelectedParticipants] = useState<
+    ParticipantOption[]
+  >([]);
   const [isSearching, setIsSearching] = useState(false);
 
   // Contracts state for dropdown
@@ -246,27 +268,77 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   } | null>(null);
   const [loadingContract, setLoadingContract] = useState(false);
 
+  const { role, userId, accountId } = useUserRole();
+  const { permissions: basePermissions } = useCalendarPermissions({ userId });
+  const canCreateEvent = basePermissions.createEvent;
+  const isApprover = role === 'approver' || role === 'admin';
+  const {
+    approvals,
+    isLoading: approvalsLoading,
+    refresh: refreshApprovals,
+  } = useCalendarApprovals({
+    status: 'pending',
+    enabled: isApprover,
+  });
+
   const selectedEventWithDetails = useMemo(() => {
     if (!selectedEvent) return null;
     if (!selectedEvent.attachments || selectedEvent.attachments.length === 0) {
       return selectedEvent;
     }
 
-    const enrichedAttachments = selectedEvent.attachments.map(
-      (attachment: any) => {
-        if (!attachment) return attachment;
-        const fileId =
-          typeof attachment === 'string' ? attachment : attachment.$id;
-        const detail = attachmentDetails[fileId];
-        return detail ? detail : attachment;
-      }
-    );
+    const enrichedAttachments = selectedEvent.attachments.map((attachment) => {
+      const fileId =
+        typeof attachment === 'string' ? attachment : attachment.$id;
+      const detail = attachmentDetails[fileId];
+      return detail ?? attachment;
+    });
 
     return {
       ...selectedEvent,
       attachments: enrichedAttachments,
     } as LocalCalendarEvent;
   }, [selectedEvent, attachmentDetails]);
+
+  const selectedEventPermissions = useMemo(() => {
+    if (!selectedEvent) {
+      return null;
+    }
+    const overrides = (selectedEvent.overrides ||
+      []) as PermissionOverrideRecord[];
+    return resolveCalendarPermissions({
+      role,
+      overrides,
+      context: {
+        userId: userId || '',
+        teamIds: [],
+      },
+    });
+  }, [selectedEvent, role, userId]);
+
+  const canViewSelectedEventSensitiveDetails =
+    !selectedEvent ||
+    (selectedEvent.sensitivityLevel || 'standard') === 'standard' ||
+    (selectedEventPermissions?.viewSensitiveDetails ?? false);
+
+  const resolvePermissionsForEvent = (event: LocalCalendarEvent) =>
+    resolveCalendarPermissions({
+      role,
+      overrides: (event.overrides || []) as PermissionOverrideRecord[],
+      context: {
+        userId: userId || '',
+        teamIds: [],
+      },
+    });
+
+  const canViewEventSensitiveDetails = (event: LocalCalendarEvent) => {
+    const sensitivity = event.sensitivityLevel || 'standard';
+    if (sensitivity === 'standard') {
+      return true;
+    }
+    const permissions = resolvePermissionsForEvent(event);
+    return permissions.viewSensitiveDetails;
+  };
 
   // Fetch contract data for event
   const fetchContractForEvent = async (event: LocalCalendarEvent) => {
@@ -292,19 +364,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           if (response.ok) {
             const result = await response.json();
             if (result.success && result.data) {
-              setContractData({
-                title: result.data.title || event.contractName,
-                description: result.data.description || '',
-                noticeId: result.data.noticeId || event.contractName,
-                content: result.data.description || '',
-              });
-              setLoadingContract(false);
-              return {
+              const contractResult = {
                 title: result.data.title || event.contractName,
                 description: result.data.description || '',
                 noticeId: result.data.noticeId || event.contractName,
                 content: result.data.description || '',
               };
+              setContractData(contractResult);
+              return contractResult;
             }
           }
         } catch (error) {
@@ -380,7 +447,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     };
 
                     setContractData(contractDataResult);
-                    setLoadingContract(false);
                     return contractDataResult;
                   }
                 }
@@ -396,7 +462,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 content: '',
               };
               setContractData(fallbackResult);
-              setLoadingContract(false);
               return fallbackResult;
             }
           }
@@ -406,23 +471,19 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       }
 
       // Fallback: use contractName as title
-      setContractData({
-        title: event.contractName,
-        description: '',
-        noticeId: '',
-        content: '',
-      });
-      setLoadingContract(false);
-      return {
+      const fallbackContract = {
         title: event.contractName,
         description: '',
         noticeId: '',
         content: '',
       };
+      setContractData(fallbackContract);
+      return fallbackContract;
     } catch (error) {
       console.error('Error fetching contract:', error);
-      setLoadingContract(false);
       return null;
+    } finally {
+      setLoadingContract(false);
     }
   };
 
@@ -431,6 +492,16 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     mode: 'pre-reads' | 'chat',
     event: LocalCalendarEvent | null
   ) => {
+    if (!canViewSelectedEventSensitiveDetails) {
+      toast({
+        title: 'Permission denied',
+        description:
+          'You do not have permission to access AI insights for this event.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setAiPanelMode(mode);
     setShowAiPanel(true);
 
@@ -581,8 +652,23 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         `/api/users/search?q=${encodeURIComponent(query)}`
       );
       if (response.ok) {
-        const users = await response.json();
-        setSearchResults(users);
+        const rawUsers: Array<ParticipantOption & { displayName?: string }> =
+          await response.json();
+        const normalized = rawUsers
+          .filter((userOption) => Boolean(userOption?.$id))
+          .map<ParticipantOption>((userOption) => ({
+            $id: userOption.$id,
+            fullName:
+              userOption.fullName ||
+              userOption.displayName ||
+              userOption.name ||
+              '',
+            name: userOption.name,
+            email: userOption.email || '',
+          }))
+          .filter((userOption) => userOption.email.length > 0);
+
+        setSearchResults(normalized);
       }
     } catch (error) {
       console.error('Error searching users:', error);
@@ -619,9 +705,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   };
 
   // Function to add participant
-  const addParticipant = (user: any) => {
-    if (!selectedParticipants.find((p) => p.$id === user.$id)) {
-      setSelectedParticipants([...selectedParticipants, user]);
+  const addParticipant = (participant: ParticipantOption) => {
+    if (!selectedParticipants.find((p) => p.$id === participant.$id)) {
+      setSelectedParticipants([...selectedParticipants, participant]);
     }
     setParticipantSearch('');
     setSearchResults([]);
@@ -648,6 +734,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       contractName: '',
       participants: '',
       location: '',
+      sensitivityLevel: 'standard',
     });
     // Reset participant state
     setSelectedParticipants([]);
@@ -675,13 +762,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     participants: '',
     location: '',
     attachments: [],
+    sensitivityLevel: 'standard',
   });
 
   // State for file uploads
   const [uploadingFiles, setUploadingFiles] = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>(
-    {}
-  );
 
   // Handle file upload for event attachments
   const handleFileUpload = async (files: FileList | null) => {
@@ -835,10 +920,22 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         contractName: selectedEvent.contractName || '',
         participants: selectedEvent.participants || '',
         location: selectedEvent.location || '',
-        attachments: selectedEvent.attachments || [],
+        attachments: Array.isArray(selectedEvent.attachments)
+          ? selectedEvent.attachments
+              .map((attachment) => {
+                if (!attachment) return null;
+                if (typeof attachment !== 'string') return attachment;
+                return attachmentDetails[attachment] ?? null;
+              })
+              .filter(
+                (attachment): attachment is EventAttachment =>
+                  attachment !== null
+              )
+          : [],
+        sensitivityLevel: selectedEvent.sensitivityLevel || 'standard',
       });
     }
-  }, [selectedEvent, isAddEventOpen]);
+  }, [selectedEvent, isAddEventOpen, attachmentDetails]);
 
   // Fetch contracts when Contract Name becomes visible (when type is contract)
   useEffect(() => {
@@ -853,22 +950,33 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   }, [newEvent.type]);
 
   // Use proper data fetching hook with current month
-  const {
-    events: calendarEvents,
-    refresh,
-    forceRefresh,
-  } = useCalendarEvents({
+  const { events: calendarEvents, forceRefresh } = useCalendarEvents({
     month: currentMonth,
     enableRealTime: true,
     pollingInterval: 10000,
   });
 
-  // Combine local events with calendar events
-  const allEvents = [...events, ...(calendarEvents || [])];
+  const normalizedEvents = useMemo(() => {
+    const combined = [...events, ...(calendarEvents || [])];
+    return combined.map((event) => {
+      const extended = event as LocalCalendarEvent;
+      return {
+        ...extended,
+        sensitivityLevel: extended.sensitivityLevel || 'standard',
+        approvalStatus: extended.approvalStatus || 'not_required',
+        requiresApproval: Boolean(extended.requiresApproval),
+        pendingApprovalId:
+          extended.pendingApprovalId !== undefined
+            ? extended.pendingApprovalId
+            : null,
+        overrides: extended.overrides || [],
+      };
+    });
+  }, [events, calendarEvents]);
 
   // Debug logging
   console.log('Calendar events from hook:', calendarEvents);
-  console.log('All events (combined):', allEvents);
+  console.log('All events (normalized):', normalizedEvents);
   console.log('Current month:', currentMonth);
   console.log(
     'API key should be:',
@@ -925,7 +1033,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   useEffect(() => {
     const fetchAttachmentDetails = async () => {
       if (selectedEvent?.attachments && selectedEvent.attachments.length > 0) {
-        const fileIds = selectedEvent.attachments.map((att: any) =>
+        const fileIds = selectedEvent.attachments.map((att) =>
           typeof att === 'string' ? att : att.$id
         );
 
@@ -1042,10 +1150,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     }
   };
 
-  const handleMonthChange = (month: Date) => {
-    setCurrentMonth(month);
-  };
-
   const getEventTypeConfig = (type: LocalCalendarEvent['type']) => {
     const configs = {
       'contract review': {
@@ -1072,37 +1176,20 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     return configs[type] || configs.meeting;
   };
 
-  const getEventsForDate = (date: Date) => {
-    return allEvents.filter((event) => {
-      // event.startDate is already a Date object from useCalendarEvents
-      if (!event.startDate) return false;
-
-      // Extract just the date part for comparison (avoid timezone issues)
-      const eventDate =
-        event.startDate instanceof Date
-          ? event.startDate
-          : new Date(event.startDate);
-
-      // Compare dates directly using isSameDay which handles timezone-safe date comparison
-      return isSameDay(eventDate, date);
-    });
-  };
-
-  const getEventsForWeek = (startDate: Date) => {
-    const weekEvents = [];
-    for (let i = 0; i < 7; i++) {
-      const date = addDays(startDate, i);
-      const dayEvents = getEventsForDate(date);
-      weekEvents.push({ date, events: dayEvents });
-    }
-    return weekEvents;
-  };
-
   const handleCreateEvent = async () => {
     if (!newEvent.title.trim()) {
       toast({
         title: 'Error',
         description: 'Event title is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!canCreateEvent) {
+      toast({
+        title: 'Permission denied',
+        description: 'You do not have permission to create events.',
         variant: 'destructive',
       });
       return;
@@ -1141,8 +1228,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           .map((p) => `${p.fullName || p.name} <${p.email}>`)
           .join(', '),
         location: newEvent.location || undefined,
-        createdBy: user?.$id || 'user',
+        createdBy: accountId || user?.$id || 'user',
+        createdByAccountId: accountId || user?.$id || 'user',
+        createdByUserId: userId,
         attachments: attachmentFileIds, // Store array of file IDs (references to files collection)
+        sensitivityLevel: newEvent.sensitivityLevel,
+        requiresApproval: newEvent.sensitivityLevel !== 'standard',
       };
 
       console.log('Creating event with data:', {
@@ -1198,6 +1289,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         participants: '',
         location: '',
         attachments: [],
+        sensitivityLevel: 'standard',
       });
       // Reset participant state
       setSelectedParticipants([]);
@@ -1249,71 +1341,19 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     }
   };
 
-  const handleEditEvent = async () => {
-    if (!selectedEvent || !selectedEvent.$id) return;
-
-    setCreatingEvent(true);
-    try {
-      const normalizeEventType = (
-        t: string
-      ): 'contract' | 'deadline' | 'meeting' | 'review' | 'audit' => {
-        const v = (t || '').toLowerCase().trim();
-        if (v === 'contract review' || v === 'contract') return 'contract';
-        if (v === 'deadline discussion' || v === 'deadline') return 'deadline';
-        if (v === 'internal review' || v === 'review') return 'review';
-        if (v === 'meeting') return 'meeting';
-        return 'audit';
-      };
-      const eventData = {
-        title: selectedEvent.title,
-        startDate:
-          typeof selectedEvent.startDate === 'string'
-            ? selectedEvent.startDate
-            : selectedEvent.startDate.toISOString(),
-        type: normalizeEventType(selectedEvent.type as unknown as string),
-        description: selectedEvent.description || '',
-        startTime: selectedEvent.startTime || '',
-        endTime: selectedEvent.endTime || '',
-        contractName: selectedEvent.contractName || '',
-        participants:
-          selectedParticipants.length > 0
-            ? selectedParticipants
-                .map((p) => `${p.fullName || p.name} <${p.email}>`)
-                .join(', ')
-            : selectedEvent.participants || '',
-        location: selectedEvent.location || undefined,
-        attachments: Array.isArray(selectedEvent.attachments)
-          ? selectedEvent.attachments.map((att: any) =>
-              typeof att === 'string' ? att : att.$id
-            )
-          : [],
-      };
-
-      await updateCalendarEvent(selectedEvent.$id, eventData);
-
-      toast({
-        title: 'Success',
-        description: 'Event updated successfully',
-      });
-
-      setIsEditEventOpen(false);
-      setSelectedEvent(null);
-      await forceRefresh();
-    } catch (error) {
-      console.error('Error updating event:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update event',
-        variant: 'destructive',
-      });
-    } finally {
-      setCreatingEvent(false);
-    }
-  };
-
   // Update handler when using the Create/Update dialog in update mode
   const handleUpdateEventFromDialog = async () => {
     if (!selectedEvent || !selectedEvent.$id) return;
+
+    if (selectedEventPermissions && !selectedEventPermissions.updateEvent) {
+      toast({
+        title: 'Permission denied',
+        description: 'You do not have permission to update this event.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setCreatingEvent(true);
     try {
       const normalizeType = (
@@ -1333,10 +1373,16 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       const month = String(eventDate.getMonth() + 1).padStart(2, '0');
       const day = String(eventDate.getDate()).padStart(2, '0');
       const dateString = `${year}-${month}-${day}`;
+      const endEventDate = newEvent.endDate || eventDate;
+      const endYear = endEventDate.getFullYear();
+      const endMonth = String(endEventDate.getMonth() + 1).padStart(2, '0');
+      const endDay = String(endEventDate.getDate()).padStart(2, '0');
+      const endDateString = `${endYear}-${endMonth}-${endDay}`;
 
       const eventData = {
         title: newEvent.title,
         startDate: dateString,
+        endDate: endDateString,
         type: normalizeType(newEvent.type as unknown as string),
         description: newEvent.description || '',
         startTime: newEvent.startTime || '',
@@ -1348,8 +1394,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 .map((p) => `${p.fullName || p.name} <${p.email}>`)
                 .join(', ')
             : '',
-        location: (newEvent as any).location || undefined,
+        location: newEvent.location || undefined,
         attachments: (newEvent.attachments || []).map((att) => att.$id), // Store only file IDs
+        sensitivityLevel: newEvent.sensitivityLevel,
+        requiresApproval: newEvent.sensitivityLevel !== 'standard',
+        updatedByAccountId: accountId || user?.$id || 'user',
+        updatedByUserId: userId,
       };
 
       await updateCalendarEvent(selectedEvent.$id, eventData);
@@ -1396,11 +1446,30 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       return;
     }
 
+    if (selectedEventPermissions && !selectedEventPermissions.cancelEvent) {
+      toast({
+        title: 'Permission denied',
+        description: 'You do not have permission to cancel this event.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsDeleteModalOpen(true);
   };
 
   const confirmDeleteEvent = async () => {
     if (!selectedEvent || (!selectedEvent.$id && !selectedEvent.id)) {
+      return;
+    }
+
+    if (selectedEventPermissions && !selectedEventPermissions.cancelEvent) {
+      toast({
+        title: 'Permission denied',
+        description: 'You do not have permission to cancel this event.',
+        variant: 'destructive',
+      });
+      setIsDeleteModalOpen(false);
       return;
     }
 
@@ -1473,6 +1542,18 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   };
 
   const handleShare = async () => {
+    if (
+      selectedEventPermissions &&
+      !selectedEventPermissions.manageParticipants
+    ) {
+      toast({
+        title: 'Permission denied',
+        description: 'You do not have permission to manage participants.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       // Generate shareable link
       const shareLink = `${window.location.origin}/calendar?shared=true&id=${selectedEvent?.$id}`;
@@ -1524,7 +1605,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         {/* Calendar days */}
         {days.map((day) => {
           // Use isSameDay for proper date comparison (handles timezone safely)
-          const dayEvents = allEvents.filter((event) => {
+          const dayEvents = normalizedEvents.filter((event) => {
             // event.startDate is already a Date object from useCalendarEvents
             if (!event.startDate) return false;
 
@@ -1545,10 +1626,26 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               `Events for ${format(day, 'yyyy-MM-dd')}:`,
               dayEvents.map((e) => ({
                 title: e.title,
-                startDate: e.startDate?.toISOString(),
-                startDateLocal: e.startDate
-                  ? format(e.startDate, 'yyyy-MM-dd')
-                  : 'N/A',
+                startDate: (() => {
+                  if (!e.startDate) return 'N/A';
+                  const dateObj =
+                    e.startDate instanceof Date
+                      ? e.startDate
+                      : new Date(e.startDate);
+                  return Number.isNaN(dateObj.getTime())
+                    ? 'Invalid Date'
+                    : dateObj.toISOString();
+                })(),
+                startDateLocal: (() => {
+                  if (!e.startDate) return 'N/A';
+                  const dateObj =
+                    e.startDate instanceof Date
+                      ? e.startDate
+                      : new Date(e.startDate);
+                  return Number.isNaN(dateObj.getTime())
+                    ? 'Invalid Date'
+                    : format(dateObj, 'yyyy-MM-dd');
+                })(),
                 startTime: e.startTime,
               }))
             );
@@ -1590,7 +1687,16 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               <div className="flex flex-col flex-1 min-h-0">
                 <div className="space-y-1">
                   {dayEvents.slice(0, 2).map((event, index) => {
-                    const config = getEventTypeConfig(event.type);
+                    const canViewSensitive =
+                      canViewEventSensitiveDetails(event);
+                    const displayTitle = canViewSensitive
+                      ? event.title
+                      : 'Restricted event';
+                    const status =
+                      event.approvalStatus &&
+                      event.approvalStatus !== 'not_required'
+                        ? event.approvalStatus
+                        : null;
                     return (
                       <div
                         key={event.$id || `event-${index}-${event.title}`}
@@ -1607,10 +1713,25 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                               : 'All Day'}
                           </span>
 
-                          <span className="text-xs text-gray-800 truncate">
-                            {event.title}
+                          <span
+                            className={cn(
+                              'text-xs truncate',
+                              canViewSensitive
+                                ? 'text-gray-800'
+                                : 'text-slate-500 italic'
+                            )}
+                          >
+                            {displayTitle}
                           </span>
-                          {event.outlook_id && (
+                          {status && (
+                            <Badge
+                              variant="outline"
+                              className="ml-auto uppercase text-[9px]"
+                            >
+                              {status.replace('_', ' ')}
+                            </Badge>
+                          )}
+                          {!status && event.outlook_id && (
                             <CheckCircle className="h-3 w-3 text-green flex-shrink-0 ml-auto" />
                           )}
                         </div>
@@ -1684,6 +1805,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               .map((event) => {
                 const config = getEventTypeConfig(event.type);
                 const IconComp = config.icon;
+                const canViewSensitive = canViewEventSensitiveDetails(event);
+                const displayTitle = canViewSensitive
+                  ? event.title
+                  : 'Restricted event';
+                const status =
+                  event.approvalStatus &&
+                  event.approvalStatus !== 'not_required'
+                    ? event.approvalStatus
+                    : null;
                 return (
                   <button
                     key={
@@ -1710,10 +1840,25 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       {/* Event Details */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-semibold text-slate-900">
-                            {event.title}
+                          <span
+                            className={cn(
+                              'text-sm font-semibold truncate',
+                              canViewSensitive
+                                ? 'text-slate-900'
+                                : 'text-slate-500 italic'
+                            )}
+                          >
+                            {displayTitle}
                           </span>
-                          {event.outlook_id && (
+                          {status && (
+                            <Badge
+                              variant="outline"
+                              className="uppercase text-[10px]"
+                            >
+                              {status.replace('_', ' ')}
+                            </Badge>
+                          )}
+                          {!status && event.outlook_id && (
                             <CheckCircle className="h-4 w-4 text-green flex-shrink-0" />
                           )}
                         </div>
@@ -1790,7 +1935,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
         {/* Day content */}
         {days.map((day) => {
-          const dayEvents = allEvents.filter((event) => {
+          const dayEvents = normalizedEvents.filter((event) => {
             // event.startDate is already a Date object from useCalendarEvents
             if (!event.startDate) return false;
 
@@ -1819,6 +1964,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               <div className="space-y-1">
                 {dayEvents.map((event, index) => {
                   const config = getEventTypeConfig(event.type);
+                  const canViewSensitive = canViewEventSensitiveDetails(event);
+                  const displayTitle = canViewSensitive
+                    ? event.title
+                    : 'Restricted event';
+                  const status =
+                    event.approvalStatus &&
+                    event.approvalStatus !== 'not_required'
+                      ? event.approvalStatus
+                      : null;
                   return (
                     <div
                       key={event.$id || `event-${index}-${event.title}`}
@@ -1838,10 +1992,25 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             : 'All Day'}
                         </span>
                         <span className="text-slate-500 text-[11px]">•</span>
-                        <span className="text-[12px] font-medium text-gray-900 truncate">
-                          {event.title}
+                        <span
+                          className={cn(
+                            'text-[12px] font-medium truncate',
+                            canViewSensitive
+                              ? 'text-gray-900'
+                              : 'text-slate-500 italic'
+                          )}
+                        >
+                          {displayTitle}
                         </span>
-                        {event.outlook_id && (
+                        {status && (
+                          <Badge
+                            variant="outline"
+                            className="uppercase text-[9px] ml-auto"
+                          >
+                            {status.replace('_', ' ')}
+                          </Badge>
+                        )}
+                        {!status && event.outlook_id && (
                           <CheckCircle className="h-3.5 w-3.5 text-blue-600 flex-shrink-0 ml-auto" />
                         )}
                       </div>
@@ -1999,12 +2168,26 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+          <Dialog
+            open={isAddEventOpen}
+            onOpenChange={(open) => {
+              if (open && !canCreateEvent) {
+                toast({
+                  title: 'Permission denied',
+                  description: 'You do not have permission to create events.',
+                  variant: 'destructive',
+                });
+                return;
+              }
+              setIsAddEventOpen(open);
+            }}
+          >
             <DialogTrigger asChild>
               <Button
                 size="sm"
                 variant="outline"
                 className="primary-btn px-3 sm:px-4"
+                disabled={!canCreateEvent}
                 onClick={() => {
                   // Ensure this dialog opens in create mode
                   setSelectedEvent(null);
@@ -2019,6 +2202,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     contractName: '',
                     participants: '',
                     location: '',
+                    sensitivityLevel: 'standard',
                   });
                 }}
               >
@@ -2157,7 +2341,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                               >
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-sm font-medium">
-                                    {(user.fullName || user.name)
+                                    {(user.fullName || user.name || '?')
                                       .charAt(0)
                                       .toUpperCase()}
                                   </div>
@@ -2361,8 +2545,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   </Label>
                   <Select
                     value={newEvent.type}
-                    onValueChange={(value: any) =>
-                      setNewEvent({ ...newEvent, type: value })
+                    onValueChange={(value) =>
+                      setNewEvent({
+                        ...newEvent,
+                        type: value as NewEventForm['type'],
+                      })
                     }
                   >
                     <SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
@@ -2402,6 +2589,54 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Sensitivity Section */}
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                    <AlertTriangle className="w-4 h-4 text-blue-600" />
+                    Sensitivity Level
+                  </Label>
+                  <Select
+                    value={newEvent.sensitivityLevel}
+                    onValueChange={(value: CalendarSensitivity) =>
+                      setNewEvent({
+                        ...newEvent,
+                        sensitivityLevel: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+                      <SelectValue placeholder="Select sensitivity level" />
+                    </SelectTrigger>
+                    <SelectContent className="shadow-lg border-slate-200">
+                      {(
+                        ['standard', 'restricted', 'confidential'] as const
+                      ).map((level) => (
+                        <SelectItem key={level} value={level}>
+                          <div className="flex flex-col text-left">
+                            <span className="text-sm font-medium">
+                              {SENSITIVITY_LABELS[level]}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {level === 'standard'
+                                ? 'Visible to users with calendar access.'
+                                : level === 'restricted'
+                                ? 'Requires approver review before publishing.'
+                                : 'Visible only to approvers until approved.'}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {newEvent.sensitivityLevel !== 'standard' && (
+                    <p className="mt-2 text-xs text-slate-500">
+                      This event will remain hidden until an approver approves
+                      it.
+                    </p>
+                  )}
+                </div>
+
                 {/* Contract Selection (conditional) */}
                 {['contract', 'contract review'].includes(
                   (newEvent.type as unknown as string).toLowerCase()
@@ -2682,7 +2917,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                           ? handleUpdateEventFromDialog
                           : handleCreateEvent
                       }
-                      disabled={creatingEvent || !newEvent.title.trim()}
+                      disabled={
+                        creatingEvent ||
+                        !newEvent.title.trim() ||
+                        !canCreateEvent
+                      }
                     >
                       {creatingEvent ? (
                         <>
@@ -2707,6 +2946,82 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           </Dialog>
         </div>
       </div>
+
+      {isApprover && (
+        <div className="border-b bg-slate-50 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700">
+                Pending approvals
+              </h3>
+              <p className="text-xs text-slate-500">
+                {approvalsLoading
+                  ? 'Loading approvals...'
+                  : approvals.length
+                  ? `${approvals.length} awaiting review`
+                  : 'No pending approvals'}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => refreshApprovals()}
+              className="primary-btn px-3 sm:px-4 bg-white text-slate-700 hover:bg-slate-100"
+            >
+              <RefreshCw className="h-3 w-3 mr-2" />
+              Refresh
+            </Button>
+          </div>
+          <div className="mt-3 max-h-32 space-y-2 overflow-auto">
+            {!approvalsLoading &&
+              approvals.map((approval: CalendarApprovalRequest) => {
+                const summary =
+                  (approval.changeSummary as CalendarApprovalChangeSummary) ||
+                  {};
+                const after = (summary.after || {}) as Record<string, unknown>;
+                const before = (summary.before || {}) as Record<
+                  string,
+                  unknown
+                >;
+                const title =
+                  (after.title as string) ||
+                  (before.title as string) ||
+                  'Untitled';
+                return (
+                  <div
+                    key={approval.$id}
+                    className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-slate-700">
+                        {title}
+                      </span>
+                      <Badge variant="outline" className="uppercase">
+                        {approval.changeType}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 capitalize text-slate-500">
+                      Submitted{' '}
+                      {approval.submittedAt
+                        ? new Date(approval.submittedAt).toLocaleString()
+                        : 'recently'}
+                    </p>
+                  </div>
+                );
+              })}
+            {!approvalsLoading && approvals.length === 0 && (
+              <div className="text-xs text-slate-500">
+                You&apos;re all caught up.
+              </div>
+            )}
+            {approvalsLoading && (
+              <div className="text-xs text-slate-500">
+                Gathering latest requests...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Calendar View */}
       <Card>
@@ -2767,6 +3082,39 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   </div>
 
                   <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selectedEvent.sensitivityLevel && (
+                        <Badge variant="outline">
+                          {
+                            SENSITIVITY_LABELS[
+                              selectedEvent.sensitivityLevel || 'standard'
+                            ]
+                          }
+                        </Badge>
+                      )}
+                      {selectedEvent.approvalStatus &&
+                        selectedEvent.approvalStatus !== 'not_required' && (
+                          <Badge
+                            variant={
+                              selectedEvent.approvalStatus === 'approved'
+                                ? 'secondary'
+                                : 'outline'
+                            }
+                            className="uppercase"
+                          >
+                            {selectedEvent.approvalStatus.replace('_', ' ')}
+                          </Badge>
+                        )}
+                    </div>
+                    {!canViewSelectedEventSensitiveDetails &&
+                      selectedEvent.sensitivityLevel &&
+                      selectedEvent.sensitivityLevel !== 'standard' && (
+                        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                          You can view scheduling details, but sensitive content
+                          is hidden until an approver grants access.
+                        </div>
+                      )}
+
                     {/* Date & Time */}
                     <div className="grid grid-cols-[1fr_.8fr] gap-4">
                       <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
@@ -2814,141 +3162,156 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     </div>
 
                     {/* Participants */}
-                    <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                      <div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
-                        <Users className="w-4 h-4 text-[#5558F9]" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-slate-900 mb-1">
-                          Participants
+                    {canViewSelectedEventSensitiveDetails ? (
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                        <div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
+                          <Users className="w-4 h-4 text-[#5558F9]" />
                         </div>
-                        <div className="text-sm text-slate-600">
-                          {(() => {
-                            // Check if participants exist (handle both string and array formats)
-                            const hasParticipants =
-                              selectedEvent.participants &&
-                              (Array.isArray(selectedEvent.participants)
-                                ? selectedEvent.participants.length > 0
-                                : typeof selectedEvent.participants ===
-                                    'string' &&
-                                  selectedEvent.participants.trim().length > 0);
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-slate-900 mb-1">
+                            Participants
+                          </div>
+                          <div className="text-sm text-slate-600">
+                            {(() => {
+                              // Check if participants exist (handle both string and array formats)
+                              const hasParticipants =
+                                selectedEvent.participants &&
+                                (Array.isArray(selectedEvent.participants)
+                                  ? selectedEvent.participants.length > 0
+                                  : typeof selectedEvent.participants ===
+                                      'string' &&
+                                    selectedEvent.participants.trim().length >
+                                      0);
 
-                            if (!hasParticipants) {
-                              return (
+                              if (!hasParticipants) {
+                                return (
+                                  <span className="text-slate-400 italic">
+                                    No participants
+                                  </span>
+                                );
+                              }
+
+                              return loadingNames ? (
+                                <span className="text-slate-400 flex items-center gap-2">
+                                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                  Loading participants...
+                                </span>
+                              ) : participantNames.length > 0 ? (
+                                <div className="space-y-1">
+                                  {participantNames.map((name, index) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
+                                        {name.charAt(0).toUpperCase()}
+                                      </div>
+                                      <span>{name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : Array.isArray(selectedEvent.participants) ? (
+                                <div className="space-y-1">
+                                  {selectedEvent.participants.map(
+                                    (participant, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center gap-2"
+                                      >
+                                        <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
+                                          {participant.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span>{participant}</span>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              ) : selectedEvent.participants ? (
+                                <div className="space-y-1">
+                                  {selectedEvent.participants
+                                    .split(', ')
+                                    .map((participant, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center gap-2"
+                                      >
+                                        <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
+                                          {participant.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span>{participant}</span>
+                                      </div>
+                                    ))}
+                                </div>
+                              ) : (
                                 <span className="text-slate-400 italic">
                                   No participants
                                 </span>
                               );
-                            }
-
-                            return loadingNames ? (
-                              <span className="text-slate-400 flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                Loading participants...
-                              </span>
-                            ) : participantNames.length > 0 ? (
-                              <div className="space-y-1">
-                                {participantNames.map((name, index) => (
-                                  <div
-                                    key={index}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
-                                      {name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <span>{name}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : Array.isArray(selectedEvent.participants) ? (
-                              <div className="space-y-1">
-                                {selectedEvent.participants.map(
-                                  (participant, index) => (
-                                    <div
-                                      key={index}
-                                      className="flex items-center gap-2"
-                                    >
-                                      <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
-                                        {participant.charAt(0).toUpperCase()}
-                                      </div>
-                                      <span>{participant}</span>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            ) : selectedEvent.participants ? (
-                              <div className="space-y-1">
-                                {selectedEvent.participants
-                                  .split(', ')
-                                  .map((participant, index) => (
-                                    <div
-                                      key={index}
-                                      className="flex items-center gap-2"
-                                    >
-                                      <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
-                                        {participant.charAt(0).toUpperCase()}
-                                      </div>
-                                      <span>{participant}</span>
-                                    </div>
-                                  ))}
-                              </div>
-                            ) : (
-                              <span className="text-slate-400 italic">
-                                No participants
-                              </span>
-                            );
-                          })()}
+                            })()}
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Contract */}
-                    {(() => {
-                      if (!selectedEvent) return null;
-                      const eventType = String(
-                        selectedEvent.type || ''
-                      ).toLowerCase();
-                      const isContractType =
-                        eventType === 'contract review' ||
-                        eventType === 'contract';
-                      if (!isContractType || !selectedEvent.contractName)
-                        return null;
-                      return (
-                        <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                          <div className="w-8 h-8 bg-[#f0ecec] rounded-full flex items-center justify-center mt-0.5">
-                            <FileText className="w-4 h-4 text-[#838181]" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-slate-900 mb-1">
-                              Contract
-                            </div>
-                            <div className="text-sm text-slate-600 break-words">
-                              {selectedEvent.contractName}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Location */}
-                    {selectedEvent.location && (
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="w-8 h-8 bg-[#fae3d3] rounded-full flex items-center justify-center mt-0.5">
-                          <MapPin className="w-4 h-4 text-orange" />
+                    ) : (
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200 text-sm text-slate-500">
+                        <div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
+                          <Users className="w-4 h-4 text-[#5558F9]" />
                         </div>
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-slate-900 mb-1">
-                            Location
-                          </div>
-                          <div className="text-sm text-slate-600 break-words">
-                            {selectedEvent.location}
-                          </div>
+                          Participant details are restricted for this event.
                         </div>
                       </div>
                     )}
 
+                    {/* Contract */}
+                    {canViewSelectedEventSensitiveDetails &&
+                      (() => {
+                        if (!selectedEvent) return null;
+                        const eventType = String(
+                          selectedEvent.type || ''
+                        ).toLowerCase();
+                        const isContractType =
+                          eventType === 'contract review' ||
+                          eventType === 'contract';
+                        if (!isContractType || !selectedEvent.contractName)
+                          return null;
+                        return (
+                          <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                            <div className="w-8 h-8 bg-[#f0ecec] rounded-full flex items-center justify-center mt-0.5">
+                              <FileText className="w-4 h-4 text-[#838181]" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-slate-900 mb-1">
+                                Contract
+                              </div>
+                              <div className="text-sm text-slate-600 break-words">
+                                {selectedEvent.contractName}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                    {/* Location */}
+                    {canViewSelectedEventSensitiveDetails &&
+                      selectedEvent.location && (
+                        <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                          <div className="w-8 h-8 bg-[#fae3d3] rounded-full flex items-center justify-center mt-0.5">
+                            <MapPin className="w-4 h-4 text-orange" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-slate-900 mb-1">
+                              Location
+                            </div>
+                            <div className="text-sm text-slate-600 break-words">
+                              {selectedEvent.location}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                     {/* Description */}
-                    {selectedEvent.description &&
+                    {canViewSelectedEventSensitiveDetails &&
+                      selectedEvent.description &&
                       selectedEvent.description.trim() && (
                         <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
                           <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mt-0.5">
@@ -2968,87 +3331,89 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       )}
 
                     {/* Attachments */}
-                    {(() => {
-                      const attachmentFileIds = (
-                        selectedEvent.attachments || []
-                      ).map((att: any) =>
-                        typeof att === 'string' ? att : att.$id
-                      );
+                    {canViewSelectedEventSensitiveDetails &&
+                      (() => {
+                        const attachmentFileIds = (
+                          selectedEvent.attachments || []
+                        ).map((att) =>
+                          typeof att === 'string' ? att : att.$id
+                        );
 
-                      if (attachmentFileIds.length === 0) return null;
+                        if (attachmentFileIds.length === 0) return null;
 
-                      return (
-                        <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
-                            <Paperclip className="w-4 h-4 text-blue-600" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-slate-900 mb-2">
-                              Attachments ({attachmentFileIds.length})
+                        return (
+                          <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                              <Paperclip className="w-4 h-4 text-blue-600" />
                             </div>
-                            <div className="space-y-2">
-                              {attachmentFileIds.map((fileId: string) => {
-                                const attachment = attachmentDetails[fileId];
-                                if (!attachment) {
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-slate-900 mb-2">
+                                Attachments ({attachmentFileIds.length})
+                              </div>
+                              <div className="space-y-2">
+                                {attachmentFileIds.map((fileId: string) => {
+                                  const attachment = attachmentDetails[fileId];
+                                  if (!attachment) {
+                                    return (
+                                      <div
+                                        key={fileId}
+                                        className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200"
+                                      >
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                          <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-slate-900 truncate">
+                                              Loading...
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
                                   return (
                                     <div
-                                      key={fileId}
-                                      className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200"
+                                      key={attachment.$id}
+                                      className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
                                     >
                                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                                        <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium text-slate-900 truncate">
-                                            Loading...
+                                          <a
+                                            href={attachment.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline truncate block"
+                                          >
+                                            {attachment.name}
+                                          </a>
+                                          <p className="text-xs text-slate-500">
+                                            {convertFileSize({
+                                              sizeInBytes: attachment.size,
+                                            })}{' '}
+                                            •{' '}
+                                            {attachment.extension.toUpperCase()}
                                           </p>
                                         </div>
                                       </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => {
+                                          window.open(attachment.url, '_blank');
+                                        }}
+                                      >
+                                        <Eye className="w-4 h-4 text-blue-600" />
+                                      </Button>
                                     </div>
                                   );
-                                }
-
-                                return (
-                                  <div
-                                    key={attachment.$id}
-                                    className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
-                                  >
-                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                      <div className="flex-1 min-w-0">
-                                        <a
-                                          href={attachment.url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline truncate block"
-                                        >
-                                          {attachment.name}
-                                        </a>
-                                        <p className="text-xs text-slate-500">
-                                          {convertFileSize({
-                                            sizeInBytes: attachment.size,
-                                          })}{' '}
-                                          • {attachment.extension.toUpperCase()}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0"
-                                      onClick={() => {
-                                        window.open(attachment.url, '_blank');
-                                      }}
-                                    >
-                                      <Eye className="w-4 h-4 text-blue-600" />
-                                    </Button>
-                                  </div>
-                                );
-                              })}
+                                })}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })()}
+                        );
+                      })()}
                   </div>
                 </div>
 
@@ -3063,6 +3428,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     <Button
                       variant="outline"
                       className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
+                      disabled={!canViewSelectedEventSensitiveDetails}
+                      title={
+                        !canViewSelectedEventSensitiveDetails
+                          ? 'You do not have permission to view sensitive AI recommendations'
+                          : undefined
+                      }
                       onClick={() =>
                         handleOpenAiPanel('pre-reads', selectedEvent)
                       }
@@ -3081,6 +3452,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     <Button
                       variant="outline"
                       className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
+                      disabled={!canViewSelectedEventSensitiveDetails}
+                      title={
+                        !canViewSelectedEventSensitiveDetails
+                          ? 'You do not have permission to view sensitive AI recommendations'
+                          : undefined
+                      }
                       onClick={() => handleOpenAiPanel('chat', selectedEvent)}
                     >
                       <MessageSquare className="w-4 h-4 mr-3 text-slate-500" />
@@ -3125,6 +3502,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                         contractName: selectedEvent.contractName || '',
                         participants: selectedEvent.participants || '',
                         location: selectedEvent.location || '',
+                        sensitivityLevel:
+                          selectedEvent.sensitivityLevel || 'standard',
                       });
                       setLocationSearch(selectedEvent.location || '');
 
@@ -3279,8 +3658,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   Delete Event
                 </h2>
                 <DialogDescription className="text-sm text-slate-600 mt-1">
-                  Are you sure you want to delete "{selectedEvent?.title}"? This
-                  action cannot be undone.
+                  Are you sure you want to delete &quot;{selectedEvent?.title}
+                  &quot;? This action cannot be undone.
                 </DialogDescription>
               </div>
             </div>
@@ -3344,6 +3723,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             mode={aiPanelMode}
             event={selectedEventWithDetails || selectedEvent}
             contractData={contractData}
+            isContractLoading={loadingContract}
             onClose={() => setShowAiPanel(false)}
           />
         </SheetContent>

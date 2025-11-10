@@ -1,19 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Bot,
   Loader2,
   FileText,
-  Paperclip,
   MessageSquare,
-  Calendar,
-  Users,
-  Clock,
   Minimize2,
   Copy,
   Check,
@@ -25,7 +20,6 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { getFileType } from '@/lib/utils';
 
 interface ChatMessage {
   id: string;
@@ -44,6 +38,13 @@ interface EventAttachment {
   bucketFileId?: string;
 }
 
+type AttachmentLike = (EventAttachment & { fileId?: string; id?: string }) | string;
+
+const isAttachmentObject = (
+  attachment: AttachmentLike
+): attachment is EventAttachment & { fileId?: string; id?: string } =>
+  typeof attachment !== 'string';
+
 interface CalendarAIChatProps {
   mode: 'pre-reads' | 'chat';
   event: {
@@ -57,7 +58,7 @@ interface CalendarAIChatProps {
     type?: string;
     contractName?: string;
     createdBy?: string;
-    attachments?: EventAttachment[];
+    attachments?: Array<EventAttachment | string>;
   } | null;
   contractData?: {
     title?: string;
@@ -65,6 +66,7 @@ interface CalendarAIChatProps {
     noticeId?: string;
     content?: string;
   } | null;
+  isContractLoading?: boolean;
   onClose?: () => void;
 }
 
@@ -120,6 +122,7 @@ const CalendarAIChat: React.FC<CalendarAIChatProps> = ({
   mode,
   event,
   contractData,
+  isContractLoading = false,
   onClose,
 }) => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -381,10 +384,11 @@ Contract: ${contractTitle}`;
     preReadsPromptSent,
     contractData?.title,
     contractData?.noticeId,
+    handleSendMessage,
   ]);
 
   // Build context for AI requests
-  const buildContext = (): string => {
+const buildContext = useCallback((): string => {
     let context = '';
 
     if (event) {
@@ -448,7 +452,7 @@ Contract: ${contractTitle}`;
     // Include event attachments information
     // Note: attachments may be file IDs or full objects
     const attachmentFileIds = event?.attachments
-      ? event.attachments.map((att: any) =>
+      ? event.attachments.map((att) =>
           typeof att === 'string' ? att : att.$id
         )
       : [];
@@ -459,10 +463,11 @@ Contract: ${contractTitle}`;
     }
 
     return context;
-  };
+}, [event, contractData, organizerInfo]);
 
   // Send message to AI
-  const handleSendMessage = async (messageText?: string, autoSend = false) => {
+const handleSendMessage = useCallback(
+  async (messageText?: string, autoSend = false) => {
     const textToSend = messageText || aiInput.trim();
     if (!textToSend) return;
 
@@ -483,31 +488,28 @@ Contract: ${contractTitle}`;
     try {
       const context = buildContext();
 
-      const rawAttachments = Array.isArray(event?.attachments)
+      const rawAttachments: AttachmentLike[] = Array.isArray(event?.attachments)
         ? event.attachments
         : [];
 
-      let attachmentsForProcessing = rawAttachments;
+      let attachmentsForProcessing: AttachmentLike[] = rawAttachments;
 
       if (rawAttachments.length > 0) {
         const attachmentsMissingDetails = rawAttachments.filter(
-          (attachment: any) => {
-            if (!attachment) return false;
-            if (typeof attachment === 'string') return true;
-            return !attachment.url || !attachment.extension || !attachment.name;
-          }
+          (attachment) =>
+            isAttachmentObject(attachment) &&
+            (!attachment.url || !attachment.extension || !attachment.name)
         );
 
         if (attachmentsMissingDetails.length > 0) {
           const fileIdsToFetch = Array.from(
             new Set(
               rawAttachments
-                .map((attachment: any) => {
-                  if (typeof attachment === 'string') {
-                    return attachment;
-                  }
-                  return attachment.$id || attachment.fileId || attachment.id;
-                })
+                .map((attachment) =>
+                  typeof attachment === 'string'
+                    ? attachment
+                    : attachment.$id || attachment.fileId || attachment.id
+                )
                 .filter(
                   (id): id is string => typeof id === 'string' && id.length > 0
                 )
@@ -525,17 +527,21 @@ Contract: ${contractTitle}`;
               });
 
               if (detailsResponse.ok) {
-                const fetchedDetails = await detailsResponse.json();
+                const fetchedDetails: EventAttachment[] =
+                  await detailsResponse.json();
                 const detailMap = new Map(
-                  fetchedDetails.map((detail: any) => [detail.$id, detail])
+                  fetchedDetails.map((detail) => [detail.$id, detail])
                 );
 
                 attachmentsForProcessing = rawAttachments.map(
-                  (attachment: any) => {
+                  (attachment) => {
                     const fileId =
                       typeof attachment === 'string'
                         ? attachment
-                        : attachment.$id || attachment.fileId || attachment.id;
+                        : attachment.$id ||
+                          attachment.fileId ||
+                          attachment.id ||
+                          '';
 
                     const detail = fileId ? detailMap.get(fileId) : null;
 
@@ -570,13 +576,20 @@ Contract: ${contractTitle}`;
       if (attachmentsForProcessing.length > 0) {
         try {
           const extractionPromises = attachmentsForProcessing.map(
-            async (attachment: any) => {
+            async (attachment) => {
               try {
                 const fileId =
                   typeof attachment === 'string'
                     ? attachment
-                    : attachment.$id || attachment.fileId || attachment.id;
-                const displayName = attachment.name || fileId || 'Attachment';
+                    : attachment.$id || attachment.fileId || attachment.id || '';
+                const displayName =
+                  isAttachmentObject(attachment)
+                    ? attachment.name || fileId || 'Attachment'
+                    : fileId || 'Attachment';
+
+                if (!isAttachmentObject(attachment)) {
+                  return `\n\n--- ${displayName} ---\n(Attachment metadata unavailable; content cannot be retrieved.)\n`;
+                }
 
                 if (!attachment.url) {
                   return `\n\n--- ${displayName} ---\n(Attachment metadata available but file URL is missing; content cannot be retrieved.)\n`;
@@ -739,7 +752,9 @@ Contract: ${contractTitle}`;
     } finally {
       setIsAiLoading(false);
     }
-  };
+  },
+  [aiInput, buildContext, contractData, event, mode, organizerInfo]
+);
 
   // Handle suggested actions for chat mode
   const handleSuggestedAction = (action: string) => {
@@ -794,6 +809,13 @@ Contract: ${contractTitle}`;
           </Button>
         )}
       </div>
+
+      {isContractLoading && (
+        <div className="mx-4 mb-3 flex items-center gap-2 text-xs text-slate-500">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-[#078FAB]" />
+          <span>Fetching contract details...</span>
+        </div>
+      )}
 
       {/* Chat Messages */}
       <ScrollArea className="flex-1 p-4">

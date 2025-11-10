@@ -11,12 +11,13 @@ import {
   NAVIGATION_CONFIG,
   mapDatabaseToRouteDivision,
 } from '@/constants/navigation';
+import { mapUserRoleToLegacy, UserRole } from '@/constants/rbac';
 
 interface Props {
   name?: string;
   avatar?: string;
   email: string;
-  role?: 'executive' | 'admin' | 'manager';
+  role?: UserRole;
   division?: string;
 }
 
@@ -73,6 +74,8 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
 
   // Use static navigation configuration to prevent hydration mismatches
 
+  const legacyRole = mapUserRoleToLegacy(role);
+
   const groupedNav = [
     {
       header: 'Dashboard',
@@ -112,7 +115,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       header: 'Contracts',
       items: [
         // Only Executive and Admin can see All Contracts
-        ...(role === 'executive' || role === 'admin'
+        ...(legacyRole === 'executive' || legacyRole === 'admin'
           ? [
               {
                 name: 'All Contracts',
@@ -130,7 +133,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
           roles: ['executive', 'manager', 'admin'],
         },
         // Only Executive and Admin can see Proposals & Approvals
-        ...(role === 'executive' || role === 'admin'
+        ...(legacyRole === 'executive' || legacyRole === 'admin'
           ? [
               {
                 name: 'Proposals & Approvals',
@@ -141,7 +144,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
             ]
           : []),
         // Only Executive and Admin can see Advanced Resources
-        ...(role === 'executive' || role === 'admin'
+        ...(legacyRole === 'executive' || legacyRole === 'admin'
           ? [
               {
                 name: 'Advanced Resources',
@@ -249,7 +252,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       header: 'Reports & Analytics',
       items: [
         // Use static configuration to prevent hydration mismatches
-        ...(role === 'admin'
+        ...(legacyRole === 'admin'
           ? [
               {
                 name: NAVIGATION_CONFIG.admin.analytics.name,
@@ -259,7 +262,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
               },
             ]
           : []),
-        ...(role === 'executive'
+        ...(legacyRole === 'executive'
           ? [
               {
                 name: NAVIGATION_CONFIG.executive.analytics.name,
@@ -275,7 +278,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
               },
             ]
           : []),
-        ...(role === 'manager' && division
+        ...(legacyRole === 'manager' && division
           ? [
               {
                 name: NAVIGATION_CONFIG.manager.analytics(
@@ -347,24 +350,24 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
             // Custom dashboard logic: Executives see all dashboards, others see only their own
             let sectionItems;
             if (section.header === 'Dashboard') {
-              if (role === 'executive') {
+              if (legacyRole === 'executive') {
                 // Executives see all dashboard links
                 sectionItems = section.items;
               } else {
                 // Other roles see only their own dashboard
                 sectionItems = section.items.filter((item) =>
-                  role ? item.roles.includes(role) : false
+                  legacyRole ? item.roles.includes(legacyRole) : false
                 );
               }
             } else {
               // For non-dashboard sections, filter by role
               sectionItems = section.items.filter((item) =>
-                role ? item.roles.includes(role) : false
+                legacyRole ? item.roles.includes(legacyRole) : false
               );
 
               // For managers, filter subitems based on their department
               if (
-                role === 'manager' &&
+                legacyRole === 'manager' &&
                 section.header === 'Reports & Analytics'
               ) {
                 sectionItems = sectionItems.map((item) => {

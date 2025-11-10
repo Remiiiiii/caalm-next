@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import FileUploader from './FileUploader';
 import { signOutUser } from '@/lib/actions/user.actions';
+import { ROLE_LABELS, UserRole } from '@/constants/rbac';
 
 interface Props {
   $id: string;
@@ -23,7 +24,7 @@ interface Props {
   fullName: string;
   avatar: string;
   email: string;
-  role: 'executive' | 'admin' | 'manager';
+  role: UserRole;
 }
 
 const MobileNavigation = ({
@@ -68,7 +69,7 @@ const MobileNavigation = ({
               )}
               <div className="sm:hidden lg:block">
                 <p className="subtitle-2 capitalize">
-                  {fullName} | {role}
+                  {fullName} | {ROLE_LABELS[role]}
                 </p>
                 {/* <p className="subtitle-2 capitalize">{role}</p> */}
                 <p className="caption">{email}</p>

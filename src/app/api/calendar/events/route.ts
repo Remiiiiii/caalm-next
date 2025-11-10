@@ -3,12 +3,32 @@ import {
   createCalendarEvent,
   getCalendarEventsByMonth,
   deleteCalendarEvent,
+  getCalendarEventById,
+  updateCalendarEvent,
+  type CreateCalendarEventData,
 } from '@/lib/actions/calendar.actions';
 import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
 import { logAuditEvent } from '@/lib/services/audit-logger';
 import { syncDeletionToOutlook } from '@/lib/services/deletion-sync';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
+import { evaluateCalendarPermission } from '@/lib/auth/guards';
+import { createCalendarApprovalRequest } from '@/lib/actions/calendar-approval.actions';
+
+const buildPermissionErrorResponse = (
+  reason: string,
+  requiredApproval?: boolean
+) => {
+  return NextResponse.json(
+    {
+      success: false,
+      message: 'Permission denied',
+      reason,
+      requiredApproval: Boolean(requiredApproval),
+    },
+    { status: reason === 'user_not_found' ? 404 : reason === 'pending_approval' ? 409 : 403 }
+  );
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +41,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let eventData;
+    const permissionCheck = await evaluateCalendarPermission({
+      userAccountId: userId,
+      action: 'create',
+    });
+
+    if (!permissionCheck.allowed) {
+      return buildPermissionErrorResponse(
+        permissionCheck.reason || 'permission_denied',
+        permissionCheck.requiredApproval
+      );
+    }
+
+    let eventData: Partial<CreateCalendarEventData> & Record<string, unknown>;
     try {
       eventData = await request.json();
     } catch (jsonError) {
@@ -33,14 +65,55 @@ export async function POST(request: NextRequest) {
     }
 
     // Add the user ID to the event data
-    const eventWithUser = {
+    const eventWithUser: Partial<CreateCalendarEventData> & {
+      createdBy: string;
+      createdByAccountId: string;
+      createdByUserId?: string;
+      sensitivityLevel?: string;
+      requiresApproval?: boolean;
+      approvalStatus?: string;
+    } = {
       ...eventData,
       createdBy: userId,
+      createdByAccountId: userId,
+      createdByUserId: permissionCheck.userId || undefined,
     };
+
+    const sensitivityLevel =
+      eventWithUser.sensitivityLevel || eventData.sensitivityLevel || 'standard';
+    const requiresApproval =
+      Boolean(eventWithUser.requiresApproval) || sensitivityLevel !== 'standard';
+
+    if (requiresApproval) {
+      eventWithUser.requiresApproval = true;
+      eventWithUser.approvalStatus = 'pending';
+      eventWithUser.sensitivityLevel = sensitivityLevel;
+    }
 
     console.log('Creating calendar event via API:', eventWithUser);
 
     const createdEvent = await createCalendarEvent(eventWithUser);
+
+    let pendingApprovalId: string | null = null;
+
+    if (requiresApproval && createdEvent.$id) {
+      const approval = await createCalendarApprovalRequest({
+        eventId: createdEvent.$id,
+        changeType: 'create',
+        requestedByAccountId: userId,
+        requestedByUserId: permissionCheck.userId || undefined,
+        changeSummary: {
+          before: null,
+          after: eventWithUser,
+        },
+        sensitivityLevel,
+      });
+
+      pendingApprovalId = approval.$id;
+      await updateCalendarEvent(createdEvent.$id, {
+        pendingApprovalId,
+      });
+    }
 
     // Invalidate calendar cache for the month
     // Parse date string safely to avoid timezone shifts
@@ -54,7 +127,21 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      event: createdEvent,
+      event: pendingApprovalId
+        ? {
+            ...createdEvent,
+            pendingApprovalId,
+            approvalStatus: 'pending',
+            requiresApproval: true,
+          }
+        : createdEvent,
+      approval:
+        pendingApprovalId !== null
+          ? {
+              id: pendingApprovalId,
+              status: 'pending',
+            }
+          : null,
     });
   } catch (error) {
     console.error('Error creating calendar event via API:', error);
@@ -164,6 +251,59 @@ export async function DELETE(request: NextRequest) {
       userId,
       reason,
     });
+
+    const event = await getCalendarEventById(eventId);
+
+    if (!event) {
+      return NextResponse.json(
+        { success: false, message: 'Event not found' },
+        { status: 404 }
+      );
+    }
+
+    const permissionCheck = await evaluateCalendarPermission({
+      userAccountId: userId,
+      action: 'cancel',
+      event,
+    });
+
+    if (!permissionCheck.allowed) {
+      return buildPermissionErrorResponse(
+        permissionCheck.reason || 'permission_denied',
+        permissionCheck.requiredApproval
+      );
+    }
+
+    const sensitivityLevel = event.sensitivityLevel || 'standard';
+    const requiresApproval =
+      Boolean(event.requiresApproval) ||
+      sensitivityLevel === 'restricted' ||
+      sensitivityLevel === 'confidential';
+
+    if (requiresApproval) {
+      const approval = await createCalendarApprovalRequest({
+        eventId,
+        changeType: 'cancel',
+        requestedByAccountId: userId,
+        requestedByUserId: permissionCheck.userId || undefined,
+        changeSummary: {
+          before: event as unknown as Record<string, unknown>,
+          after: null,
+        },
+        sensitivityLevel,
+      });
+
+      await updateCalendarEvent(eventId, {
+        approvalStatus: 'pending',
+        pendingApprovalId: approval.$id,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Cancellation pending approval',
+        approvalId: approval.$id,
+      });
+    }
 
     // Get event details before deletion for audit logging
     let eventTitle = 'Unknown Event';

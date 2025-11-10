@@ -1,6 +1,11 @@
 import useSWR from 'swr';
 import { CalendarEvent as DBCalendarEvent } from '@/lib/actions/calendar.actions';
 import { swrConfig, swrKeys } from '@/lib/swr-config';
+import {
+  CalendarApprovalStatus,
+  CalendarSensitivity,
+  PermissionOverrideRecord,
+} from '@/constants/rbac';
 
 interface LocalCalendarEvent {
   id: string;
@@ -18,7 +23,14 @@ interface LocalCalendarEvent {
   location?: string;
   outlook_id?: string;
   createdBy?: string;
+  createdByAccountId?: string;
+  createdByUserId?: string;
   attachments?: Array<{ $id: string }>; // File ID references (array of file IDs from files collection)
+  sensitivityLevel: CalendarSensitivity;
+  requiresApproval: boolean;
+  approvalStatus: CalendarApprovalStatus;
+  pendingApprovalId?: string | null;
+  overrides: PermissionOverrideRecord[];
 }
 
 interface UseCalendarEventsOptions {
@@ -139,6 +151,8 @@ const convertDBEventToLocal = (
     location: dbEvent.location,
     outlook_id: dbEvent.outlook_id,
     createdBy: dbEvent.createdBy,
+    createdByAccountId: dbEvent.createdByAccountId,
+    createdByUserId: dbEvent.createdByUserId,
     // Attachments are stored as file IDs (array of strings)
     // We'll fetch full file details when needed for display
     attachments: Array.isArray((dbEvent as any).attachments)
@@ -146,6 +160,11 @@ const convertDBEventToLocal = (
           $id: fileId, // File ID reference
         }))
       : [],
+    sensitivityLevel: dbEvent.sensitivityLevel || 'standard',
+    requiresApproval: Boolean(dbEvent.requiresApproval),
+    approvalStatus: dbEvent.approvalStatus || 'not_required',
+    pendingApprovalId: dbEvent.pendingApprovalId || null,
+    overrides: Array.isArray(dbEvent.overrides) ? dbEvent.overrides : [],
   };
 };
 
@@ -183,15 +202,19 @@ export const useCalendarEvents = ({
 
   // Convert database events to local format
   // Handle both direct array response and API wrapper response
-  let eventsArray = [];
+  let eventsArray: DBCalendarEvent[] = [];
   if (Array.isArray(dbEvents)) {
-    eventsArray = dbEvents;
+    eventsArray = dbEvents as DBCalendarEvent[];
   } else if (
     dbEvents &&
     typeof dbEvents === 'object' &&
-    Array.isArray(dbEvents.events)
+    Array.isArray((dbEvents as { events?: DBCalendarEvent[] }).events)
   ) {
-    eventsArray = dbEvents.events;
+    eventsArray = (
+      dbEvents as {
+        events: DBCalendarEvent[];
+      }
+    ).events;
   }
 
   const events = eventsArray.map(convertDBEventToLocal);

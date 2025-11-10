@@ -70,7 +70,7 @@ async function getDepartmentManagers(department: string) {
     databaseId: appwriteConfig.databaseId!,
     tableId: appwriteConfig.usersCollectionId!,
     queries: [
-      Query.equal('role', 'manager'),
+      Query.equal('role', 'reviewer'),
       Query.equal('department', department),
       Query.equal('status', 'active'),
     ],
@@ -128,8 +128,8 @@ export async function notifyInvitationSent(
     department,
   });
 
-  const adminAndExecUsers = await getUsersByRoles(['admin', 'executive']);
-  console.log('SMS: Found admin/exec users:', adminAndExecUsers.length);
+  const adminAndExecUsers = await getUsersByRoles(['admin', 'approver']);
+  console.log('SMS: Found admin/approver users:', adminAndExecUsers.length);
 
   const deptManagerUsers = await getDepartmentManagers(department);
   console.log('SMS: Found department managers:', deptManagerUsers.length);
@@ -162,8 +162,8 @@ export async function notifyInvitationAccepted(
     department,
   });
 
-  const adminAndExecUsers = await getUsersByRoles(['admin', 'executive']);
-  console.log('SMS: Found admin/exec users:', adminAndExecUsers.length);
+  const adminAndExecUsers = await getUsersByRoles(['admin', 'approver']);
+  console.log('SMS: Found admin/approver users:', adminAndExecUsers.length);
 
   const deptManagerUsers = await getDepartmentManagers(department);
   console.log('SMS: Found department managers:', deptManagerUsers.length);
@@ -194,8 +194,8 @@ export async function notify2FACompleted(
     department,
   });
 
-  const adminAndExecUsers = await getUsersByRoles(['admin', 'executive']);
-  console.log('SMS: Found admin/exec users:', adminAndExecUsers.length);
+  const adminAndExecUsers = await getUsersByRoles(['admin', 'approver']);
+  console.log('SMS: Found admin/approver users:', adminAndExecUsers.length);
 
   const deptManagerUsers = await getDepartmentManagers(department);
   console.log('SMS: Found department managers:', deptManagerUsers.length);

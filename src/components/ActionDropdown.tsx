@@ -47,6 +47,7 @@ import { useContractStatusEnums } from '@/hooks/useContractStatusEnums';
 import { useUpdateContractStatus } from '@/hooks/useUpdateContractStatus';
 import { useDepartmentAssignment } from '@/hooks/useDepartmentAssignment';
 import DocumentViewer from './DocumentViewer';
+import { mapUserRoleToLegacy, UserRole } from '@/constants/rbac';
 
 const ActionDropdown = ({
   file,
@@ -57,7 +58,7 @@ const ActionDropdown = ({
   file: UIFileDoc;
   onStatusChange?: () => void;
   onRefresh?: () => void;
-  userRole?: 'executive' | 'admin' | 'manager';
+  userRole?: UserRole;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -84,6 +85,7 @@ const ActionDropdown = ({
   const { enums: statusOptions, error: statusError } = useContractStatusEnums();
   const { updateStatus } = useUpdateContractStatus({ onStatusChange });
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const legacyRole = mapUserRoleToLegacy(userRole);
 
   // Fetch department data when Assign dialog is opened
   useEffect(() => {
@@ -666,14 +668,14 @@ const ActionDropdown = ({
   // Role-based action filtering
   let filteredActions = actionsDropdownItems;
 
-  if (userRole === 'manager') {
+  if (legacyRole === 'manager') {
     // Managers can only see: Details, Download, Review, Rename, Share, Status
     filteredActions = actionsDropdownItems.filter((action) =>
       ['details', 'download', 'review', 'rename', 'share', 'status'].includes(
         action.value
       )
     );
-  } else if (userRole === 'executive' || userRole === 'admin') {
+  } else if (legacyRole === 'executive' || legacyRole === 'admin') {
     // Executive and Admin can see all actions
     filteredActions = actionsDropdownItems;
   }

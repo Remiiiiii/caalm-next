@@ -37,6 +37,12 @@ export const appwriteConfig = {
 
   notesCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NOTES_COLLECTION,
 
+  calendarApprovalRequestsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_APPROVALS_COLLECTION,
+
+  calendarPermissionOverridesCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_PERMISSION_OVERRIDES_COLLECTION,
+
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET,
 
   profilePicturesBucketId:

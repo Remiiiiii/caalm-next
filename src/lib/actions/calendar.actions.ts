@@ -6,6 +6,11 @@ import {
   getValidIntegration,
   hasActiveCalendarIntegration,
 } from './calendar-integration.actions';
+import {
+  CalendarApprovalStatus,
+  CalendarSensitivity,
+  PermissionOverrideRecord,
+} from '@/constants/rbac';
 
 // Event attachments are stored as file ID references (same pattern as contracts use fileId)
 // Full file details are fetched from files collection when needed
@@ -33,6 +38,8 @@ export interface CalendarEvent {
   participants?: string;
   location?: string;
   createdBy: string;
+  createdByUserId?: string;
+  createdByAccountId?: string;
   outlook_id?: string;
   attachments?: string[]; // Array of file IDs (references to files collection, same pattern as contracts use fileId)
   deleted_at?: string;
@@ -42,6 +49,11 @@ export interface CalendarEvent {
     | 'deleted_from_outlook'
     | 'deletion_failed';
   deletion_synced?: boolean;
+  sensitivityLevel?: CalendarSensitivity;
+  requiresApproval?: boolean;
+  approvalStatus?: CalendarApprovalStatus;
+  pendingApprovalId?: string | null;
+  overrides?: PermissionOverrideRecord[];
   $createdAt?: string;
   $updatedAt?: string;
 }
@@ -59,8 +71,15 @@ export interface CreateCalendarEventData {
   participants?: string;
   location?: string;
   createdBy: string;
+  createdByUserId?: string;
+  createdByAccountId?: string;
   outlook_id?: string;
   attachments?: string[]; // Array of file IDs (references to files collection, same pattern as contracts use fileId)
+  sensitivityLevel?: CalendarSensitivity;
+  requiresApproval?: boolean;
+  approvalStatus?: CalendarApprovalStatus;
+  pendingApprovalId?: string | null;
+  overrides?: PermissionOverrideRecord[];
 }
 
 // Get all calendar events
@@ -86,6 +105,31 @@ export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
   } catch (error) {
     console.error('Error fetching calendar events:', error);
     throw error;
+  }
+};
+
+export const getCalendarEventById = async (
+  eventId: string
+): Promise<CalendarEvent | null> => {
+  try {
+    if (
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.calendarEventsCollectionId
+    ) {
+      throw new Error('Missing required Appwrite configuration');
+    }
+
+    const adminClient = await createAdminClient();
+    const response = await adminClient.tablesDB.getRow(
+      appwriteConfig.databaseId,
+      appwriteConfig.calendarEventsCollectionId,
+      eventId
+    );
+
+    return (response as unknown as CalendarEvent) || null;
+  } catch (error) {
+    console.error('Error fetching calendar event by ID:', error);
+    return null;
   }
 };
 
@@ -233,9 +277,29 @@ export const createCalendarEvent = async (
     console.log('Admin client created successfully');
 
     // Filter out attachments if empty to avoid sending empty arrays
-    const dataToCreate = { ...eventData };
+    const dataToCreate: Record<string, unknown> = {
+      ...eventData,
+    };
     if (!dataToCreate.attachments || dataToCreate.attachments.length === 0) {
       delete dataToCreate.attachments;
+    }
+
+    if (!dataToCreate.sensitivityLevel) {
+      dataToCreate.sensitivityLevel = 'standard';
+    }
+    if (typeof dataToCreate.requiresApproval === 'undefined') {
+      dataToCreate.requiresApproval = false;
+    }
+    if (!dataToCreate.approvalStatus) {
+      dataToCreate.approvalStatus = dataToCreate.requiresApproval
+        ? 'pending'
+        : 'not_required';
+    }
+    if (!dataToCreate.pendingApprovalId) {
+      dataToCreate.pendingApprovalId = null;
+    }
+    if (!Array.isArray(dataToCreate.overrides)) {
+      dataToCreate.overrides = [];
     }
 
     const response = await adminClient.tablesDB.createRow(
@@ -292,9 +356,24 @@ export const updateCalendarEvent = async (
     const adminClient = await createAdminClient();
 
     // Filter out attachments if empty or undefined to avoid schema errors
-    const dataToUpdate = { ...eventData };
+    const dataToUpdate: Record<string, unknown> = { ...eventData };
     if (dataToUpdate.attachments && dataToUpdate.attachments.length === 0) {
       delete dataToUpdate.attachments;
+    }
+    if (dataToUpdate.sensitivityLevel === undefined) {
+      delete dataToUpdate.sensitivityLevel;
+    }
+    if (dataToUpdate.requiresApproval === undefined) {
+      delete dataToUpdate.requiresApproval;
+    }
+    if (dataToUpdate.approvalStatus === undefined) {
+      delete dataToUpdate.approvalStatus;
+    }
+    if (dataToUpdate.pendingApprovalId === undefined) {
+      delete dataToUpdate.pendingApprovalId;
+    }
+    if (!Array.isArray(dataToUpdate.overrides)) {
+      delete dataToUpdate.overrides;
     }
 
     const response = await adminClient.tablesDB.updateRow(

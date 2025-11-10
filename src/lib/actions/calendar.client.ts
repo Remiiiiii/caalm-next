@@ -13,6 +13,17 @@ export interface CalendarEvent {
   endTime?: string;
   participants?: string;
   createdBy: string;
+  createdByUserId?: string;
+  createdByAccountId?: string;
+  sensitivityLevel?: 'standard' | 'restricted' | 'confidential';
+  requiresApproval?: boolean;
+  approvalStatus?:
+    | 'not_required'
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'changes_requested';
+  pendingApprovalId?: string | null;
   $createdAt?: string;
   $updatedAt?: string;
 }
@@ -29,7 +40,11 @@ export interface CreateCalendarEventData {
   endTime?: string;
   participants?: string;
   createdBy: string;
+  createdByUserId?: string;
+  createdByAccountId?: string;
   outlook_id?: string;
+  sensitivityLevel?: 'standard' | 'restricted' | 'confidential';
+  requiresApproval?: boolean;
 }
 
 // Client-side API calls for calendar events

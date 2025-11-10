@@ -11,6 +11,18 @@ import { Models } from 'appwrite';
 import { getSessionUser } from '@/lib/actions/auth.actions';
 import { getCurrentUserFrom2FA } from '@/lib/actions/user.actions';
 import { usePathname } from 'next/navigation';
+import { normalizeUserRole } from '@/constants/rbac';
+
+type AuthenticatedUser = Models.User<Models.Preferences> & {
+  role?: string;
+  division?: string;
+  accountId?: string;
+  avatar?: string;
+  prefs?: Models.Preferences & {
+    profileImage?: string | null;
+    profileImageId?: string | null;
+  };
+};
 
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null;
@@ -46,9 +58,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           sessionUser ? 'Found' : 'Not found'
         );
 
-        if (sessionUser) {
+          if (sessionUser) {
           console.log('AuthContext: Using session-based user');
-          setUser(sessionUser);
+            const typedSessionUser = sessionUser as AuthenticatedUser;
+            if (typeof typedSessionUser.role === 'string') {
+              typedSessionUser.role = normalizeUserRole(typedSessionUser.role);
+            }
+            setUser(typedSessionUser);
           setIsSessionValid(true);
         } else {
           // Check for 2FA-based authentication only if we're on a dashboard route
@@ -123,11 +139,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
 
               // Convert the custom user object to match the expected format
-              const convertedUser = {
+              const convertedUser: AuthenticatedUser = {
                 $id: twoFAUser.$id,
                 name: twoFAUser.fullName,
                 email: twoFAUser.email,
-                role: twoFAUser.role,
+                role: normalizeUserRole(twoFAUser.role),
+                accountId: twoFAUser.accountId,
                 division: twoFAUser.division,
                 avatar: twoFAUser.avatar,
                 emailVerification: true,
@@ -138,10 +155,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 },
                 registration: new Date().toISOString(),
                 status: true,
-              } as Models.User<Models.Preferences> & {
-                role?: string;
-                division?: string;
-                avatar?: string;
               };
 
               setUser(convertedUser);
@@ -200,11 +213,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
 
-          const convertedUser = {
+          const convertedUser: AuthenticatedUser = {
             $id: twoFAUser.$id,
             name: twoFAUser.fullName,
             email: twoFAUser.email,
-            role: twoFAUser.role,
+            role: normalizeUserRole(twoFAUser.role),
+            accountId: twoFAUser.accountId,
             division: twoFAUser.division,
             avatar: twoFAUser.avatar,
             emailVerification: true,
@@ -215,10 +229,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             },
             registration: new Date().toISOString(),
             status: true,
-          } as Models.User<Models.Preferences> & {
-            role?: string;
-            division?: string;
-            avatar?: string;
           };
           setUser(convertedUser);
         }
@@ -293,14 +303,16 @@ export const useAuth = () => {
   const context = useContext(AuthContext);
 
   // Always return the same structure, but conditionally show data
-  return (
-    context || {
-      user: null,
-      setUser: () => {},
-      loading: true,
-      logout: async () => {},
-      isSessionValid: false,
-      refreshUser: async () => {},
-    }
-  );
+  if (context) {
+    return context;
+  }
+
+  return {
+    user: null,
+    setUser: () => undefined,
+    loading: true,
+    logout: async () => undefined,
+    isSessionValid: false,
+    refreshUser: async () => undefined,
+  };
 };
