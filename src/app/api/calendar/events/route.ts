@@ -15,8 +15,6 @@ import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 import { evaluateCalendarPermission } from '@/lib/auth/guards';
 import {
   createCalendarApprovalRequest,
-  updateCalendarApprovalRequest,
-  getCalendarApprovalById,
 } from '@/lib/actions/calendar-approval.actions';
 
 const buildPermissionErrorResponse = (
@@ -351,94 +349,30 @@ export async function PUT(request: NextRequest) {
     let updatedEvent: CalendarEvent;
     let pendingApprovalId: string | null = null;
 
-    // Check if this is a resubmission after changes were requested
-    const isResubmission =
-      event.approvalStatus === 'changes_requested' &&
-      event.pendingApprovalId !== null &&
-      event.pendingApprovalId !== undefined;
-
+    // Simplified flow: Always create new approval request if approval is required
+    // This creates a clear history of all submission attempts
     if (requiresApproval && event.approvalStatus !== 'approved') {
-      if (isResubmission) {
-        // Update existing approval request instead of creating a new one
-        const existingApproval = await getCalendarApprovalById(event.pendingApprovalId!);
-        
-        if (existingApproval && existingApproval.status === 'pending') {
-          // Update the existing approval request with new changeSummary
-          console.log(
-            `[PUT /api/calendar/events] Updating existing approval ${event.pendingApprovalId} for resubmission`
-          );
-          await updateCalendarApprovalRequest({
-            approvalId: event.pendingApprovalId!,
-            changeSummary: {
-              before: event as unknown as Record<string, unknown>,
-              after: { ...event, ...eventData } as unknown as Record<string, unknown>,
-            },
-            clearReviewerNotes: true, // Clear previous reviewer notes since this is a resubmission
-          });
+      // Create new approval request (even for resubmissions after changes_requested)
+      const approval = await createCalendarApprovalRequest({
+        eventId,
+        changeType: 'update',
+        requestedByAccountId: userId,
+        requestedByUserId: permissionCheck.userId || undefined,
+        changeSummary: {
+          before: event as unknown as Record<string, unknown>,
+          after: { ...event, ...eventData } as unknown as Record<string, unknown>,
+        },
+        sensitivityLevel,
+      });
 
-          pendingApprovalId = event.pendingApprovalId!;
+      pendingApprovalId = approval.$id;
 
-          // Update event with pending approval status (back in review queue)
-          updatedEvent = await updateCalendarEvent(eventId, {
-            ...eventData,
-            approvalStatus: 'pending',
-            pendingApprovalId,
-          });
-        } else {
-          // Existing approval not found or not pending, create new one
-          if (existingApproval && existingApproval.status !== 'pending') {
-            console.warn(
-              `[PUT /api/calendar/events] Approval ${event.pendingApprovalId} exists but status is ${existingApproval.status}, creating new approval`
-            );
-          } else if (!existingApproval) {
-            console.warn(
-              `[PUT /api/calendar/events] Approval ${event.pendingApprovalId} not found, creating new approval`
-            );
-          }
-          
-          const approval = await createCalendarApprovalRequest({
-            eventId,
-            changeType: 'update',
-            requestedByAccountId: userId,
-            requestedByUserId: permissionCheck.userId || undefined,
-            changeSummary: {
-              before: event as unknown as Record<string, unknown>,
-              after: { ...event, ...eventData } as unknown as Record<string, unknown>,
-            },
-            sensitivityLevel,
-          });
-
-          pendingApprovalId = approval.$id;
-
-          updatedEvent = await updateCalendarEvent(eventId, {
-            ...eventData,
-            approvalStatus: 'pending',
-            pendingApprovalId,
-          });
-        }
-      } else {
-        // Create new approval request for update
-        const approval = await createCalendarApprovalRequest({
-          eventId,
-          changeType: 'update',
-          requestedByAccountId: userId,
-          requestedByUserId: permissionCheck.userId || undefined,
-          changeSummary: {
-            before: event as unknown as Record<string, unknown>,
-            after: { ...event, ...eventData } as unknown as Record<string, unknown>,
-          },
-          sensitivityLevel,
-        });
-
-        pendingApprovalId = approval.$id;
-
-        // Update event with pending approval status
-        updatedEvent = await updateCalendarEvent(eventId, {
-          ...eventData,
-          approvalStatus: 'pending',
-          pendingApprovalId,
-        });
-      }
+      // Update event with pending approval status
+      updatedEvent = await updateCalendarEvent(eventId, {
+        ...eventData,
+        approvalStatus: 'pending',
+        pendingApprovalId,
+      });
     } else {
       // Update event directly (no approval required)
       updatedEvent = await updateCalendarEvent(eventId, eventData);

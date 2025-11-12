@@ -79,6 +79,7 @@ import {
 import { cn } from '@/lib/utils';
 import { createCalendarEvent } from '@/lib/actions/calendar.client';
 import { useToast } from '@/hooks/use-toast';
+import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import CalendarSettings from '@/components/CalendarSettings';
 import {
@@ -89,7 +90,10 @@ import type {
   CalendarApprovalRequest,
   CalendarApprovalChangeSummary,
 } from '@/lib/actions/calendar-approval.actions';
-import { getCalendarApprovalById } from '@/lib/actions/calendar-approval.actions';
+import {
+  getCalendarApprovalById,
+  getLatestApprovalRequestByEventId,
+} from '@/lib/actions/calendar-approval.actions';
 import {
   CalendarApprovalStatus,
   CalendarSensitivity,
@@ -237,16 +241,98 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
   const [reviewerNotes, setReviewerNotes] = useState('');
+  const [userNamesMap, setUserNamesMap] = useState<Record<string, string>>({});
+  const [loadingUserNames, setLoadingUserNames] = useState(false);
   const [eventApprovalRequest, setEventApprovalRequest] =
     useState<CalendarApprovalRequest | null>(null);
   const [loadingApprovalRequest, setLoadingApprovalRequest] = useState(false);
+
+  // Fetch user names for account/user IDs in approval change summary
+  useEffect(() => {
+    const fetchUserNames = async () => {
+      if (!selectedApproval || selectedApproval.changeType !== 'update') {
+        setUserNamesMap({});
+        return;
+      }
+
+      const summary = selectedApproval.changeSummary || {};
+      const after = (summary.after || {}) as Record<string, unknown>;
+      const before = (summary.before || {}) as Record<string, unknown>;
+
+      const userIds: string[] = [];
+      const accountIds: string[] = [];
+
+      // Collect all user IDs and account IDs from change summary
+      // Also check consolidated fields
+      const updatedByBefore =
+        (before.updatedByAccountId || before.updatedByUserId) as string | undefined;
+      const updatedByAfter =
+        (after.updatedByAccountId || after.updatedByUserId) as string | undefined;
+      const createdByBefore =
+        (before.createdByAccountId || before.createdByUserId) as string | undefined;
+      const createdByAfter =
+        (after.createdByAccountId || after.createdByUserId) as string | undefined;
+
+      // Add consolidated Updated By and Created By values
+      if (updatedByBefore && typeof updatedByBefore === 'string') {
+        accountIds.push(updatedByBefore);
+      }
+      if (updatedByAfter && typeof updatedByAfter === 'string') {
+        accountIds.push(updatedByAfter);
+      }
+      if (createdByBefore && typeof createdByBefore === 'string') {
+        accountIds.push(createdByBefore);
+      }
+      if (createdByAfter && typeof createdByAfter === 'string') {
+        accountIds.push(createdByAfter);
+      }
+
+      // Also collect from individual fields
+      Object.keys(after).forEach((key) => {
+        if (key.includes('UserId') || key.includes('userId')) {
+          const value = after[key] || before[key];
+          if (value && typeof value === 'string') {
+            userIds.push(value);
+          }
+        }
+        if (key.includes('AccountId') || key.includes('accountId')) {
+          const value = after[key] || before[key];
+          if (value && typeof value === 'string') {
+            accountIds.push(value);
+          }
+        }
+      });
+
+      if (userIds.length === 0 && accountIds.length === 0) {
+        setUserNamesMap({});
+        return;
+      }
+
+      setLoadingUserNames(true);
+      try {
+        const users = await fetchUserNamesByIds([...userIds, ...accountIds]);
+        const namesMap: Record<string, string> = {};
+        users.forEach((user) => {
+          if (user.$id) namesMap[user.$id] = user.fullName || 'Unknown User';
+          if (user.accountId) namesMap[user.accountId] = user.fullName || 'Unknown User';
+        });
+        setUserNamesMap(namesMap);
+      } catch (error) {
+        console.error('Failed to fetch user names:', error);
+        setUserNamesMap({});
+      } finally {
+        setLoadingUserNames(false);
+      }
+    };
+
+    fetchUserNames();
+  }, [selectedApproval]);
 
   // Fetch approval request when event detail dialog opens for events with changes_requested or rejected status
   useEffect(() => {
     const fetchApprovalRequest = async () => {
       if (
         !selectedEvent ||
-        !selectedEvent.pendingApprovalId ||
         (selectedEvent.approvalStatus !== 'changes_requested' &&
           selectedEvent.approvalStatus !== 'rejected')
       ) {
@@ -256,9 +342,39 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
       setLoadingApprovalRequest(true);
       try {
-        const approval = await getCalendarApprovalById(
-          selectedEvent.pendingApprovalId
-        );
+        let approval: CalendarApprovalRequest | null = null;
+
+        // First try to get by pendingApprovalId if it exists
+        if (selectedEvent.pendingApprovalId) {
+          approval = await getCalendarApprovalById(
+            selectedEvent.pendingApprovalId
+          );
+        }
+
+        // If not found and status is changes_requested, get the most recent one
+        if (
+          !approval &&
+          selectedEvent.approvalStatus === 'changes_requested' &&
+          selectedEvent.$id
+        ) {
+          approval = await getLatestApprovalRequestByEventId(
+            selectedEvent.$id,
+            'changes_requested'
+          );
+        }
+
+        // If still not found and status is rejected, try to get rejected one
+        if (
+          !approval &&
+          selectedEvent.approvalStatus === 'rejected' &&
+          selectedEvent.$id
+        ) {
+          approval = await getLatestApprovalRequestByEventId(
+            selectedEvent.$id,
+            'rejected'
+          );
+        }
+
         setEventApprovalRequest(approval);
       } catch (error) {
         console.error('Failed to fetch approval request:', error);
@@ -269,7 +385,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     };
 
     fetchApprovalRequest();
-  }, [selectedEvent?.pendingApprovalId, selectedEvent?.approvalStatus]);
+  }, [selectedEvent?.$id, selectedEvent?.pendingApprovalId, selectedEvent?.approvalStatus]);
 
   const selectedEventPermissions = useMemo(() => {
     if (!selectedEvent) {
@@ -440,8 +556,33 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         amount: '',
       } as const;
 
-      // Create event in database
-      const result = await createCalendarEvent(eventData);
+      // Create event via API to ensure approval is created if needed
+      const response = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      });
+
+      if (!response.ok) {
+        let errorData: { message?: string; reason?: string; error?: string } = {};
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          errorData = { message: response.statusText || 'Unknown error' };
+        }
+
+        const errorMessage =
+          errorData.message ||
+          errorData.reason ||
+          errorData.error ||
+          'Failed to create event';
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      console.log('Event created successfully:', result);
 
       // Call parent callback if provided
       if (onEventCreate) {
@@ -473,8 +614,17 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
       if (refresh) {
         refresh();
       }
-      if (result?.approval && isApprover && refreshApprovals) {
-        refreshApprovals();
+
+      // If an approval was created or updated, refresh the approvals list immediately
+      // This ensures resubmissions after changes_requested show updated changes
+      if (result.approval && isApprover) {
+        console.log('Approval involved in update, refreshing approvals list...');
+        // Use both local refresh and SWR global mutate for immediate update
+        await refreshApprovals();
+        // Also trigger global refresh for other components using the same hook
+        const { mutate } = await import('swr');
+        mutate(['/api/approvals', 'pending']);
+        console.log('Approvals list refreshed');
       }
 
       toast({
@@ -544,10 +694,13 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         variant: 'default',
       });
 
-      // Refresh approvals list and calendar events
+      // Refresh approvals list and calendar events immediately
       if (refreshApprovals) {
         await refreshApprovals();
       }
+      // Also trigger global refresh for other components using the same hook
+      const { mutate } = await import('swr');
+      mutate(['/api/approvals', 'pending']);
       if (refresh) {
         await refresh();
       }
@@ -1366,50 +1519,278 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                           )}
 
                           {/* Change Summary for Updates */}
-                          {selectedApproval.changeType === 'update' && (
-                            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                              <div className="flex items-center gap-2 text-sm font-semibold mb-2 text-amber-900">
-                                <AlertCircle className="w-4 h-4" />
-                                Changes Made
-                              </div>
-                              <div className="space-y-2 text-sm text-amber-800">
-                                {Object.keys(after).map((key) => {
-                                  const beforeValue = before[key];
-                                  const afterValue = after[key];
-                                  if (
-                                    beforeValue !== afterValue &&
-                                    !['$id', 'updatedAt', 'createdAt'].includes(key)
-                                  ) {
+                          {selectedApproval.changeType === 'update' && (() => {
+                            // Helper function to format field values
+                            const formatFieldValue = (
+                              key: string,
+                              value: unknown
+                            ): string => {
+                              if (value === null || value === undefined) {
+                                return '—';
+                              }
+
+                              // Format dates
+                              if (
+                                key.toLowerCase().includes('date') &&
+                                typeof value === 'string'
+                              ) {
+                                try {
+                                  const date = new Date(value);
+                                  if (!isNaN(date.getTime())) {
+                                    return format(date, 'MMM d, yyyy');
+                                  }
+                                } catch {
+                                  // Fall through to string conversion
+                                }
+                              }
+
+                              // Format user IDs to names
+                              if (
+                                (key.includes('UserId') ||
+                                  key.includes('userId') ||
+                                  key.includes('AccountId') ||
+                                  key.includes('accountId') ||
+                                  key === 'updatedBy' ||
+                                  key === 'createdBy') &&
+                                typeof value === 'string'
+                              ) {
+                                return (
+                                  userNamesMap[value] ||
+                                  (loadingUserNames ? 'Loading...' : value)
+                                );
+                              }
+
+                              // Format boolean values
+                              if (typeof value === 'boolean') {
+                                return value ? 'Yes' : 'No';
+                              }
+
+                              // Format arrays
+                              if (Array.isArray(value)) {
+                                return value.length > 0
+                                  ? `${value.length} item${value.length !== 1 ? 's' : ''}`
+                                  : 'None';
+                              }
+
+                              return String(value);
+                            };
+
+                            // Helper function to get field label
+                            const getFieldLabel = (key: string): string => {
+                              const labelMap: Record<string, string> = {
+                                startDate: 'Start Date',
+                                endDate: 'End Date',
+                                title: 'Title',
+                                description: 'Description',
+                                startTime: 'Start Time',
+                                endTime: 'End Time',
+                                location: 'Location',
+                                type: 'Event Type',
+                                sensitivityLevel: 'Sensitivity Level',
+                                updatedByAccountId: 'Updated By',
+                                updatedByUserId: 'Updated By',
+                                createdByAccountId: 'Created By',
+                                createdByUserId: 'Created By',
+                                attachments: 'Attachments',
+                                overrides: 'Permission Overrides',
+                                participants: 'Participants',
+                              };
+
+                              return (
+                                labelMap[key] ||
+                                key
+                                  .replace(/([A-Z])/g, ' $1')
+                                  .replace(/^./, (str) => str.toUpperCase())
+                                  .trim()
+                              );
+                            };
+
+                            // Filter and sort changes
+                            const rawChanges = Object.keys(after)
+                              .filter(
+                                (key) =>
+                                  before[key] !== after[key] &&
+                                  ![
+                                    '$id',
+                                    'updatedAt',
+                                    'createdAt',
+                                    '$createdAt',
+                                    '$updatedAt',
+                                    '$permissions',
+                                  ].includes(key) &&
+                                  after[key] !== undefined
+                              )
+                              .map((key) => ({
+                                key,
+                                label: getFieldLabel(key),
+                                beforeValue: before[key],
+                                afterValue: after[key],
+                              }));
+
+                            // Consolidate duplicate "Updated By" entries
+                            const changesMap = new Map<string, typeof rawChanges[0]>();
+
+                            // Check if Updated By fields actually changed
+                            const updatedByBefore =
+                              before.updatedByAccountId ||
+                              before.updatedByUserId;
+                            const updatedByAfter =
+                              after.updatedByAccountId ||
+                              after.updatedByUserId;
+
+                            if (
+                              updatedByBefore !== updatedByAfter &&
+                              (updatedByBefore || updatedByAfter)
+                            ) {
+                              changesMap.set('updatedBy', {
+                                key: 'updatedBy',
+                                label: 'Updated By',
+                                beforeValue: updatedByBefore,
+                                afterValue: updatedByAfter,
+                              });
+                            }
+
+                            // Check if Created By fields actually changed
+                            const createdByBefore =
+                              before.createdByAccountId ||
+                              before.createdByUserId;
+                            const createdByAfter =
+                              after.createdByAccountId ||
+                              after.createdByUserId;
+
+                            if (
+                              createdByBefore !== createdByAfter &&
+                              (createdByBefore || createdByAfter)
+                            ) {
+                              changesMap.set('createdBy', {
+                                key: 'createdBy',
+                                label: 'Created By',
+                                beforeValue: createdByBefore,
+                                afterValue: createdByAfter,
+                              });
+                            }
+
+                            // Add other changes (excluding the individual ID fields we consolidated)
+                            rawChanges.forEach((change) => {
+                              if (
+                                change.key !== 'updatedByAccountId' &&
+                                change.key !== 'updatedByUserId' &&
+                                change.key !== 'createdByAccountId' &&
+                                change.key !== 'createdByUserId'
+                              ) {
+                                changesMap.set(change.key, change);
+                              }
+                            });
+
+                            const changes = Array.from(changesMap.values()).sort(
+                              (a, b) => {
+                                // Sort: dates first, then user fields, then others
+                                const aIsDate = a.key.toLowerCase().includes('date');
+                                const bIsDate = b.key.toLowerCase().includes('date');
+                                if (aIsDate && !bIsDate) return -1;
+                                if (!aIsDate && bIsDate) return 1;
+
+                                const aIsUser =
+                                  a.key.includes('UserId') ||
+                                  a.key.includes('AccountId') ||
+                                  a.key === 'updatedBy' ||
+                                  a.key === 'createdBy';
+                                const bIsUser =
+                                  b.key.includes('UserId') ||
+                                  b.key.includes('AccountId') ||
+                                  b.key === 'updatedBy' ||
+                                  b.key === 'createdBy';
+                                if (aIsUser && !bIsUser) return -1;
+                                if (!aIsUser && bIsUser) return 1;
+
+                                return a.label.localeCompare(b.label);
+                              }
+                            );
+
+                            if (changes.length === 0) {
+                              return null;
+                            }
+
+                            return (
+                              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-200/60 shadow-sm">
+                                <div className="px-4 py-3 border-b border-amber-200/60">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100">
+                                      <FileCheck className="w-4 h-4 text-amber-700" />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-amber-900">
+                                        Changes Made
+                                      </h4>
+                                      <p className="text-xs text-amber-700/80 mt-0.5">
+                                        {changes.length}{' '}
+                                        {changes.length === 1
+                                          ? 'field modified'
+                                          : 'fields modified'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                  {changes.map((change) => {
+                                    const formattedBefore = formatFieldValue(
+                                      change.key,
+                                      change.beforeValue
+                                    );
+                                    const formattedAfter = formatFieldValue(
+                                      change.key,
+                                      change.afterValue
+                                    );
+                                    const hasChange = change.beforeValue !== null;
+
                                     return (
-                                      <div key={key} className="flex items-start gap-2">
-                                        <span className="font-medium capitalize">
-                                          {key.replace(/([A-Z])/g, ' $1').trim()}:
-                                        </span>
-                                        <span className="flex-1">
-                                          {beforeValue ? (
-                                            <>
-                                              <span className="line-through text-amber-600">
-                                                {String(beforeValue)}
-                                              </span>
-                                              {' → '}
-                                              <span className="font-semibold">
-                                                {String(afterValue)}
-                                              </span>
-                                            </>
-                                          ) : (
-                                            <span className="font-semibold">
-                                              {String(afterValue)}
-                                            </span>
-                                          )}
-                                        </span>
+                                      <div
+                                        key={change.key}
+                                        className="flex items-start gap-4 pb-3 last:pb-0 border-b border-amber-100/60 last:border-0"
+                                      >
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-xs font-medium text-amber-800/90 mb-1.5 uppercase tracking-wide">
+                                            {change.label}
+                                          </div>
+                                          <div className="space-y-1.5">
+                                            {hasChange ? (
+                                              <>
+                                                <div className="flex items-center gap-2">
+                                                  <div className="flex-1 px-2.5 py-1.5 bg-white/60 rounded border border-amber-200/40">
+                                                    <span className="text-xs text-amber-700/80 line-through">
+                                                      {formattedBefore}
+                                                    </span>
+                                                  </div>
+                                                  <div className="flex-shrink-0">
+                                                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                                                      <span className="text-[10px] text-blue-600 font-semibold">
+                                                        →
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  <div className="flex-1 px-2.5 py-1.5 bg-white rounded border border-amber-300/60 shadow-sm">
+                                                    <span className="text-xs font-semibold text-amber-900">
+                                                      {formattedAfter}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              </>
+                                            ) : (
+                                              <div className="px-2.5 py-1.5 bg-white rounded border border-amber-300/60 shadow-sm">
+                                                <span className="text-xs font-semibold text-amber-900">
+                                                  {formattedAfter}
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
                                       </div>
                                     );
-                                  }
-                                  return null;
-                                })}
+                                  })}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       );
                     })()}
@@ -1851,61 +2232,114 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                 )}
               </div>
 
-              {/* Reviewer Notes Section */}
+              {/* Enhanced Reviewer Notes Section */}
               {(selectedEvent.approvalStatus === 'changes_requested' ||
-                selectedEvent.approvalStatus === 'rejected') &&
-                eventApprovalRequest?.reviewerNotes && (
-                  <div
-                    className={cn(
-                      'rounded-lg p-4 border mt-4',
-                      selectedEvent.approvalStatus === 'changes_requested'
-                        ? 'bg-amber-50 border-amber-200'
-                        : 'bg-red-50 border-red-200'
-                    )}
-                  >
-                    <div className="flex items-center gap-2 text-sm font-semibold mb-3">
-                      {selectedEvent.approvalStatus === 'changes_requested' ? (
-                        <>
-                          <MessageSquare className="w-4 h-4 text-amber-700" />
-                          <span className="text-amber-900">Requested Changes</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="w-4 h-4 text-red-700" />
-                          <span className="text-red-900">Denial Reason</span>
-                        </>
-                      )}
+                selectedEvent.approvalStatus === 'rejected') && (
+                <div className="mt-4">
+                  {loadingApprovalRequest ? (
+                    <div className="rounded-lg p-4 border bg-slate-50 border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                        <span className="text-sm text-slate-600">
+                          Loading reviewer feedback...
+                        </span>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <p
-                        className={cn(
-                          'text-sm whitespace-pre-wrap',
-                          selectedEvent.approvalStatus === 'changes_requested'
-                            ? 'text-amber-800'
-                            : 'text-red-800'
-                        )}
-                      >
-                        {eventApprovalRequest.reviewerNotes}
-                      </p>
-                      {eventApprovalRequest.decidedAt && (
-                        <p
+                  ) : eventApprovalRequest?.reviewerNotes ? (
+                    <div
+                      className={cn(
+                        'rounded-lg p-4 border shadow-sm',
+                        selectedEvent.approvalStatus === 'changes_requested'
+                          ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300'
+                          : 'bg-gradient-to-br from-red-50 to-pink-50 border-red-300'
+                      )}
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div
                           className={cn(
-                            'text-xs',
+                            'flex items-center justify-center w-10 h-10 rounded-lg',
                             selectedEvent.approvalStatus === 'changes_requested'
-                              ? 'text-amber-600'
-                              : 'text-red-600'
+                              ? 'bg-amber-100'
+                              : 'bg-red-100'
                           )}
                         >
-                          Reviewed on{' '}
-                          {format(
-                            new Date(eventApprovalRequest.decidedAt),
-                            'MMM d, yyyy h:mm a'
+                          {selectedEvent.approvalStatus === 'changes_requested' ? (
+                            <MessageSquare className="w-5 h-5 text-amber-700" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-red-700" />
                           )}
+                        </div>
+                        <div className="flex-1">
+                          <h4
+                            className={cn(
+                              'text-sm font-semibold mb-1',
+                              selectedEvent.approvalStatus === 'changes_requested'
+                                ? 'text-amber-900'
+                                : 'text-red-900'
+                            )}
+                          >
+                            {selectedEvent.approvalStatus === 'changes_requested'
+                              ? 'Reviewer Feedback - Changes Requested'
+                              : 'Reviewer Feedback - Request Denied'}
+                          </h4>
+                          {eventApprovalRequest.decidedAt && (
+                            <p
+                              className={cn(
+                                'text-xs',
+                                selectedEvent.approvalStatus === 'changes_requested'
+                                  ? 'text-amber-600'
+                                  : 'text-red-600'
+                              )}
+                            >
+                              Reviewed on{' '}
+                              {format(
+                                new Date(eventApprovalRequest.decidedAt),
+                                'MMM d, yyyy h:mm a'
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div
+                        className={cn(
+                          'rounded-md p-3 bg-white border',
+                          selectedEvent.approvalStatus === 'changes_requested'
+                            ? 'border-amber-200'
+                            : 'border-red-200'
+                        )}
+                      >
+                        <p
+                          className={cn(
+                            'text-sm whitespace-pre-wrap leading-relaxed',
+                            selectedEvent.approvalStatus === 'changes_requested'
+                              ? 'text-amber-900'
+                              : 'text-red-900'
+                          )}
+                        >
+                          {eventApprovalRequest.reviewerNotes}
                         </p>
+                      </div>
+                      {selectedEvent.approvalStatus === 'changes_requested' && (
+                        <div className="mt-3 pt-3 border-t border-amber-200">
+                          <p className="text-xs text-amber-700">
+                            <strong>Next steps:</strong> Please review the feedback above
+                            and make the requested changes. Once updated, your event will
+                            be resubmitted for approval.
+                          </p>
+                        </div>
                       )}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="rounded-lg p-4 border bg-slate-50 border-slate-200">
+                      <p className="text-sm text-slate-600">
+                        {selectedEvent.approvalStatus === 'changes_requested'
+                          ? 'No specific feedback provided. Please review your event details and resubmit.'
+                          : 'No denial reason provided.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {selectedEvent.date && (
                 <div className="flex items-center space-x-2 text-sm text-slate-600">

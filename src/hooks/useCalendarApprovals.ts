@@ -58,6 +58,10 @@ export const useCalendarApprovals = ({
     {
       ...swrConfig,
       revalidateOnFocus: true,
+      // Automatically refresh every 10 seconds to catch new pending approvals
+      refreshInterval: enabled && status === 'pending' ? 10000 : 0,
+      // Dedupe requests within 5 seconds to avoid excessive polling
+      dedupingInterval: 5000,
     }
   );
 

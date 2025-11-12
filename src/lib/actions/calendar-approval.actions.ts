@@ -102,6 +102,9 @@ export const createCalendarApprovalRequest = async ({
 };
 
 /**
+ * @deprecated This function is deprecated. Use createCalendarApprovalRequest instead.
+ * The simplified flow always creates new approval requests for resubmissions.
+ * 
  * Update an existing calendar approval request
  * Used when an event creator resubmits an event after changes were requested
  */
@@ -208,21 +211,30 @@ export const getCalendarApprovalById = async (
     // Convert to plain object to ensure serialization
     const raw = response as unknown as Record<string, unknown>;
     
-    // Parse changeSummary from JSON string to object
+    // Parse changeSummary from JSON string to object and deeply serialize to remove any client instances
     let changeSummary: CalendarApprovalChangeSummary = { before: null, after: null };
     if (typeof raw.changeSummary === 'string') {
       try {
-        changeSummary = JSON.parse(raw.changeSummary);
+        const parsed = JSON.parse(raw.changeSummary);
+        // Deep serialize to ensure no client instances remain
+        changeSummary = JSON.parse(JSON.stringify(parsed));
       } catch (error) {
         console.error('Error parsing changeSummary:', error);
         changeSummary = { before: null, after: null };
       }
     } else if (raw.changeSummary && typeof raw.changeSummary === 'object') {
-      changeSummary = raw.changeSummary as CalendarApprovalChangeSummary;
+      // Deep serialize to ensure no client instances remain
+      try {
+        changeSummary = JSON.parse(JSON.stringify(raw.changeSummary));
+      } catch (error) {
+        console.error('Error serializing changeSummary:', error);
+        changeSummary = { before: null, after: null };
+      }
     }
 
     // Return plain object with only serializable fields
-    return {
+    // Deep serialize the entire object to ensure no nested client instances
+    const result = {
       $id: String(raw.$id || ''),
       eventId: String(raw.eventId || ''),
       changeType: raw.changeType as CalendarApprovalChangeType,
@@ -237,8 +249,84 @@ export const getCalendarApprovalById = async (
       changeSummary,
       sensitivityLevel: raw.sensitivityLevel as CalendarSensitivity,
     };
+
+    // Final deep serialization to ensure no client instances
+    return JSON.parse(JSON.stringify(result)) as CalendarApprovalRequest;
   } catch (error) {
     console.error('Failed to get calendar approval by ID:', error);
+    return null;
+  }
+};
+
+/**
+ * Get the most recent approval request for an event by eventId and status
+ * Useful for finding reviewer notes when pendingApprovalId is null
+ */
+export const getLatestApprovalRequestByEventId = async (
+  eventId: string,
+  status?: CalendarApprovalStatus
+): Promise<CalendarApprovalRequest | null> => {
+  const { tablesDB } = await createAdminClient();
+  const collectionId = getApprovalsCollectionId();
+
+  try {
+    const queries = [
+      Query.equal('eventId', eventId),
+      ...(status ? [Query.equal('status', status)] : []),
+    ];
+
+    const response = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId!,
+      tableId: collectionId,
+      queries,
+      orderBy: ['submittedAt'],
+      orderDesc: true,
+      limit: 1,
+    });
+
+    if (response.rows.length === 0) {
+      return null;
+    }
+
+    const raw = response.rows[0] as unknown as Record<string, unknown>;
+    
+    // Parse changeSummary and serialize
+    let changeSummary: CalendarApprovalChangeSummary = { before: null, after: null };
+    if (typeof raw.changeSummary === 'string') {
+      try {
+        changeSummary = JSON.parse(JSON.stringify(JSON.parse(raw.changeSummary)));
+      } catch (error) {
+        console.error('Error parsing changeSummary:', error);
+      }
+    } else if (raw.changeSummary && typeof raw.changeSummary === 'object') {
+      try {
+        changeSummary = JSON.parse(JSON.stringify(raw.changeSummary));
+      } catch (error) {
+        console.error('Error serializing changeSummary:', error);
+      }
+    }
+
+    // Return serialized object
+    const result = {
+      $id: String(raw.$id || ''),
+      eventId: String(raw.eventId || ''),
+      changeType: raw.changeType as CalendarApprovalChangeType,
+      requestedByAccountId: String(raw.requestedByAccountId || ''),
+      requestedByUserId: raw.requestedByUserId ? String(raw.requestedByUserId) : undefined,
+      status: raw.status as CalendarApprovalStatus,
+      submittedAt: String(raw.submittedAt || ''),
+      decidedAt: raw.decidedAt ? String(raw.decidedAt) : undefined,
+      approverAccountId: raw.approverAccountId ? String(raw.approverAccountId) : undefined,
+      approverUserId: raw.approverUserId ? String(raw.approverUserId) : undefined,
+      reviewerNotes: raw.reviewerNotes ? String(raw.reviewerNotes) : undefined,
+      changeSummary,
+      sensitivityLevel: raw.sensitivityLevel as CalendarSensitivity,
+    };
+
+    // Final deep serialization to ensure no client instances
+    return JSON.parse(JSON.stringify(result)) as CalendarApprovalRequest;
+  } catch (error) {
+    console.error('Failed to get latest approval request by event ID:', error);
     return null;
   }
 };
@@ -406,23 +494,17 @@ export const decideCalendarApprovalRequest = async ({
     throw new Error('Approval request not found');
   }
 
-  // For 'changes_requested', keep status as 'pending' so it remains in the queue
-  // The event's approvalStatus will be set to 'changes_requested' separately
-  const approvalStatusToSet = decision === 'changes_requested' ? 'pending' : decision;
-
-  // Build update data - only include fields that should be updated
+  // Simplified flow: All decisions are final states
+  // 'changes_requested' is now a final state (not pending)
   const updateData: Record<string, unknown> = {
-    status: approvalStatusToSet,
+    status: decision,
     reviewerNotes,
+    decidedAt: new Date().toISOString(),
+    approverAccountId,
   };
 
-  // Only set decision-related fields if it's a final decision (approved/rejected)
-  if (decision !== 'changes_requested') {
-    updateData.decidedAt = new Date().toISOString();
-    updateData.approverAccountId = approverAccountId;
-    if (approverUserId) {
-      updateData.approverUserId = approverUserId;
-    }
+  if (approverUserId) {
+    updateData.approverUserId = approverUserId;
   }
 
   const updated = await tablesDB.updateRow({
@@ -473,14 +555,12 @@ export const decideCalendarApprovalRequest = async ({
       approverName
     );
   } else if (decision === 'changes_requested') {
-    // Keep approval request status as 'pending' so it remains in the queue
-    // Only update the event's approvalStatus to indicate changes are needed
+    // Set event status to 'changes_requested' and clear pendingApprovalId
+    // When user resubmits, a new approval request will be created
     await updateCalendarEvent(approval.eventId, {
       approvalStatus: 'changes_requested',
+      pendingApprovalId: null, // Clear so new approval can be created on resubmission
     });
-
-    // Note: We don't update the approval request status here - it stays 'pending'
-    // so it remains visible in the pending approvals queue until approved or denied
 
     // Send notification to event creator
     const event = await getCalendarEventById(approval.eventId);
