@@ -58,47 +58,45 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  CalendarIcon,
-  Calendar as CalendarIconLucide,
-  Plus,
+  AlertCircle,
+  AlertTriangle,
+  Ban,
+  Calendar as CalendarIcon,
+  CalendarDays,
   CalendarPlus,
-  Pencil,
-  Users,
-  FileText,
+  CheckCircle,
+  CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ClipboardClock,
+  Clock,
   Edit,
-  Trash2,
+  Eye,
+  FileCheck,
+  FileSliders,
+  FileText,
+  Filter,
+  Glasses,
+  Grid3X3,
+  Link,
+  Loader2,
+  MapPin,
   MessageSquare,
   Paperclip,
-  CheckCircle,
-  AlertTriangle,
-  CalendarDays,
-  Grid3X3,
-  Share2,
-  Filter,
+  Pencil,
+  Plus,
   Printer,
-  Settings,
-  Loader2,
-  UserPlus,
-  Link,
-  Eye,
-  MapPin,
-  Tag,
-  FileSliders,
-  X,
   RefreshCw,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-  FileCheck,
-  ClipboardClock,
-  Glasses,
-  Ban,
+  Settings,
+  Share2,
+  Tag,
   ThumbsUp,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
 } from 'lucide-react';
 import {
   format,
@@ -124,11 +122,11 @@ import {
 // Full file details are fetched when needed
 interface EventAttachment {
   $id: string; // File ID from files collection
-  name: string;
-  url: string;
-  type: string;
-  extension: string;
-  size: number;
+  name?: string;
+  url?: string;
+  type?: string;
+  extension?: string;
+  size?: number;
   bucketFileId?: string;
 }
 
@@ -201,6 +199,22 @@ interface OutlookStyleCalendarProps {
   onDateSelect?: (date: Date) => void;
   user?: CalendarUser | null;
 }
+
+// Map approval status to display text
+const getApprovalStatusText = (status: string | null | undefined): string => {
+  if (!status) return '';
+
+  // Map status values to display text
+  const statusMap: Record<string, string> = {
+    pending: 'PENDING',
+    approved: 'APPROVED',
+    rejected: 'REJECTED',
+    changes_requested: 'CHG REQ',
+    not_required: 'NOT REQUIRED',
+  };
+
+  return statusMap[status] || status.replace('_', ' ').toUpperCase();
+};
 
 // Map sensitivity level to badge color classes
 const getSensitivityBadgeClasses = (
@@ -336,6 +350,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [eventApprovalRequest, setEventApprovalRequest] =
     useState<CalendarApprovalRequest | null>(null);
   const [loadingApprovalRequest, setLoadingApprovalRequest] = useState(false);
+  const [attachmentNamesMap, setAttachmentNamesMap] = useState<
+    Record<string, string>
+  >({});
+  const [loadingAttachmentNames, setLoadingAttachmentNames] = useState(false);
 
   // Fetch user names for account/user IDs in approval change summary
   useEffect(() => {
@@ -419,15 +437,112 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     fetchUserNames();
   }, [selectedApproval]);
 
+  // Fetch attachment file names for attachment IDs in approval change summary
+  useEffect(() => {
+    const fetchAttachmentNames = async () => {
+      if (!selectedApproval || selectedApproval.changeType !== 'update') {
+        setAttachmentNamesMap({});
+        return;
+      }
+
+      const summary = selectedApproval.changeSummary || {};
+      const after = (summary.after || {}) as Record<string, unknown>;
+      const before = (summary.before || {}) as Record<string, unknown>;
+
+      // Collect all attachment file IDs from change summary
+      const attachmentFileIds: string[] = [];
+
+      // Extract attachments from before and after
+      const beforeAttachments = before.attachments;
+      const afterAttachments = after.attachments;
+
+      if (Array.isArray(beforeAttachments)) {
+        beforeAttachments.forEach((att) => {
+          if (typeof att === 'string') {
+            attachmentFileIds.push(att);
+          } else if (att && typeof att === 'object' && '$id' in att) {
+            attachmentFileIds.push(String(att.$id));
+          }
+        });
+      }
+
+      if (Array.isArray(afterAttachments)) {
+        afterAttachments.forEach((att) => {
+          if (typeof att === 'string') {
+            if (!attachmentFileIds.includes(att)) {
+              attachmentFileIds.push(att);
+            }
+          } else if (att && typeof att === 'object' && '$id' in att) {
+            const fileId = String(att.$id);
+            if (!attachmentFileIds.includes(fileId)) {
+              attachmentFileIds.push(fileId);
+            }
+          }
+        });
+      }
+
+      if (attachmentFileIds.length === 0) {
+        setAttachmentNamesMap({});
+        return;
+      }
+
+      setLoadingAttachmentNames(true);
+      try {
+        const response = await fetch('/api/files/get-by-ids', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ fileIds: attachmentFileIds }),
+        });
+
+        if (response.ok) {
+          const files: EventAttachment[] = await response.json();
+          const namesMap: Record<string, string> = {};
+          files.forEach((file) => {
+            if (file.$id && file.name) {
+              namesMap[file.$id] = file.name;
+            }
+          });
+          setAttachmentNamesMap(namesMap);
+        } else {
+          console.error(
+            'Failed to fetch attachment names:',
+            response.statusText
+          );
+          setAttachmentNamesMap({});
+        }
+      } catch (error) {
+        console.error('Failed to fetch attachment names:', error);
+        setAttachmentNamesMap({});
+      } finally {
+        setLoadingAttachmentNames(false);
+      }
+    };
+
+    fetchAttachmentNames();
+  }, [selectedApproval]);
+
   // Fetch approval request when event review dialog opens for events with changes_requested or rejected status
   useEffect(() => {
     const fetchApprovalRequest = async () => {
+      console.log('[OutlookStyleCalendar] fetchApprovalRequest triggered:', {
+        isEditEventOpen,
+        hasSelectedEvent: !!selectedEvent,
+        approvalStatus: selectedEvent?.approvalStatus,
+        pendingApprovalId: selectedEvent?.pendingApprovalId,
+        eventId: selectedEvent?.$id,
+      });
+
       if (
         !isEditEventOpen ||
         !selectedEvent ||
         (selectedEvent.approvalStatus !== 'changes_requested' &&
           selectedEvent.approvalStatus !== 'rejected')
       ) {
+        console.log(
+          '[OutlookStyleCalendar] Skipping fetch - conditions not met'
+        );
         setEventApprovalRequest(null);
         return;
       }
@@ -438,8 +553,20 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
         // First try to get by pendingApprovalId if it exists
         if (selectedEvent.pendingApprovalId) {
+          console.log(
+            '[OutlookStyleCalendar] Trying to fetch by pendingApprovalId:',
+            selectedEvent.pendingApprovalId
+          );
           approval = await getCalendarApprovalById(
             selectedEvent.pendingApprovalId
+          );
+          console.log(
+            '[OutlookStyleCalendar] Result from getCalendarApprovalById:',
+            {
+              found: !!approval,
+              status: approval?.status,
+              reviewerNotes: approval?.reviewerNotes,
+            }
           );
         }
 
@@ -449,10 +576,35 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           selectedEvent.approvalStatus === 'changes_requested' &&
           selectedEvent.$id
         ) {
-          approval = await getLatestApprovalRequestByEventId(
-            selectedEvent.$id,
-            'changes_requested'
+          console.log(
+            '[OutlookStyleCalendar] Calling getLatestApprovalRequestByEventId for changes_requested',
+            {
+              eventId: selectedEvent.$id,
+              status: 'changes_requested',
+            }
           );
+          try {
+            approval = await getLatestApprovalRequestByEventId(
+              selectedEvent.$id,
+              'changes_requested'
+            );
+            console.log(
+              '[OutlookStyleCalendar] getLatestApprovalRequestByEventId returned:',
+              {
+                found: !!approval,
+                approvalId: approval?.$id,
+                status: approval?.status,
+                reviewerNotes: approval?.reviewerNotes,
+                reviewerNotesType: typeof approval?.reviewerNotes,
+                reviewerNotesLength: approval?.reviewerNotes?.length,
+              }
+            );
+          } catch (error) {
+            console.error(
+              '[OutlookStyleCalendar] Error calling getLatestApprovalRequestByEventId:',
+              error
+            );
+          }
         }
 
         // If still not found and status is rejected, try to get rejected one
@@ -461,12 +613,23 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           selectedEvent.approvalStatus === 'rejected' &&
           selectedEvent.$id
         ) {
+          console.log(
+            '[OutlookStyleCalendar] Calling getLatestApprovalRequestByEventId for rejected'
+          );
           approval = await getLatestApprovalRequestByEventId(
             selectedEvent.$id,
             'rejected'
           );
         }
 
+        console.log('[OutlookStyleCalendar] Fetched approval request:', {
+          approval,
+          hasApproval: !!approval,
+          reviewerNotes: approval?.reviewerNotes,
+          reviewerNotesType: typeof approval?.reviewerNotes,
+          reviewerNotesLength: approval?.reviewerNotes?.length,
+          reviewerNotesTruthy: !!approval?.reviewerNotes,
+        });
         setEventApprovalRequest(approval);
       } catch (error) {
         console.error('Failed to fetch approval request:', error);
@@ -1146,12 +1309,38 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           ? selectedEvent.attachments
               .map((attachment) => {
                 if (!attachment) return null;
-                if (typeof attachment !== 'string') return attachment;
-                return attachmentDetails[attachment] ?? null;
+                // If it's already an object, return it as-is
+                if (typeof attachment !== 'string') {
+                  // If it has all the required fields, return it
+                  if (attachment.name && attachment.size !== undefined) {
+                    return attachment;
+                  }
+                  // Otherwise, try to get details
+                  const detail = attachmentDetails[attachment.$id];
+                  if (detail) {
+                    // Merge detail with existing attachment (detail takes precedence)
+                    return { ...attachment, ...detail };
+                  }
+                  // If no details yet, return the attachment as-is (might be missing some fields)
+                  return attachment;
+                }
+                // If it's a string (file ID), look up the details
+                const detail = attachmentDetails[attachment];
+                if (detail && detail.$id) {
+                  // Return the detail even if some fields are missing
+                  // The display will handle showing "Unknown file" etc.
+                  return detail;
+                }
+                // If details not loaded yet, return the string ID as-is
+                // The useEffect will re-run when attachmentDetails updates
+                // For now, return a minimal object with just the ID
+                return {
+                  $id: attachment,
+                } as EventAttachment;
               })
               .filter(
                 (attachment): attachment is EventAttachment =>
-                  attachment !== null
+                  attachment !== null && attachment.$id !== undefined
               )
           : [],
         sensitivityLevel: selectedEvent.sensitivityLevel || 'standard',
@@ -1273,10 +1462,111 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
           if (response.ok) {
             const files = await response.json();
+            console.log(
+              '[OutlookStyleCalendar] Fetched files from API:',
+              files
+            );
             const detailsMap: Record<string, EventAttachment> = {};
-            files.forEach((file: EventAttachment) => {
-              detailsMap[file.$id] = file;
+            files.forEach((file: any) => {
+              // Only store files that have at least an $id
+              if (file && file.$id) {
+                console.log('[OutlookStyleCalendar] Processing file:', {
+                  $id: file.$id,
+                  name: file.name,
+                  size: file.size,
+                  sizeType: typeof file.size,
+                  extension: file.extension,
+                  url: file.url,
+                  type: file.type,
+                  allKeys: Object.keys(file),
+                });
+
+                // Preserve actual values from API
+                // Only convert null to undefined if the value is truly missing
+                // Don't use defaults here - let the display layer handle missing values
+                const attachment: EventAttachment = {
+                  $id: file.$id,
+                  // Only set name if it exists and is not null/empty
+                  name:
+                    file.name != null &&
+                    file.name !== '' &&
+                    file.name !== null &&
+                    file.name !== 'null'
+                      ? String(file.name).trim() || undefined
+                      : undefined,
+                  // Only set url if it exists and is not null/empty
+                  url:
+                    file.url != null && file.url !== '' && file.url !== null
+                      ? String(file.url).trim() || undefined
+                      : undefined,
+                  // Only set type if it exists and is not null/empty
+                  type:
+                    file.type != null && file.type !== '' && file.type !== null
+                      ? String(file.type).trim() || undefined
+                      : undefined,
+                  // Only set extension if it exists and is not null/empty
+                  extension:
+                    file.extension != null &&
+                    file.extension !== '' &&
+                    file.extension !== null
+                      ? String(file.extension).trim() || undefined
+                      : undefined,
+                  // Only set size if it's a valid number
+                  size: (() => {
+                    // Check if size is null, undefined, empty string, or the string "null"
+                    if (
+                      file.size == null ||
+                      file.size === '' ||
+                      file.size === null ||
+                      file.size === 'null'
+                    ) {
+                      return undefined;
+                    }
+                    const sizeNum = Number(file.size);
+                    // Only return a number if it's valid and non-negative
+                    if (isNaN(sizeNum) || sizeNum < 0) {
+                      return undefined;
+                    }
+                    return sizeNum;
+                  })(),
+                  // Only set bucketFileId if it exists and is not null/empty
+                  bucketFileId:
+                    file.bucketFileId != null &&
+                    file.bucketFileId !== '' &&
+                    file.bucketFileId !== null
+                      ? String(file.bucketFileId).trim() || undefined
+                      : undefined,
+                };
+
+                console.log(
+                  '[OutlookStyleCalendar] Created attachment object:',
+                  {
+                    $id: attachment.$id,
+                    name: attachment.name,
+                    nameFromAPI: file.name,
+                    size: attachment.size,
+                    sizeFromAPI: file.size,
+                    sizeTypeFromAPI: typeof file.size,
+                    extension: attachment.extension,
+                    extensionFromAPI: file.extension,
+                    url: attachment.url,
+                    urlFromAPI: file.url,
+                    hasName: !!attachment.name,
+                    hasSize: attachment.size !== undefined,
+                    allFileKeys: Object.keys(file),
+                  }
+                );
+
+                // Only store if we have at least an $id
+                if (attachment.$id) {
+                  detailsMap[file.$id] = attachment;
+                }
+              }
             });
+            console.log(
+              '[OutlookStyleCalendar] Final attachment details map:',
+              detailsMap
+            );
             setAttachmentDetails(detailsMap);
           } else {
             // Try to get the actual error message from the response
@@ -1614,7 +1904,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const handleUpdateEventFromDialog = async () => {
     if (!selectedEvent || !selectedEvent.$id) return;
 
-    if (selectedEventPermissions && !selectedEventPermissions.updateEvent) {
+    // Check if user has permission to update this event
+    if (!selectedEventPermissions?.updateEvent) {
       toast({
         title: 'Permission denied',
         description: 'You do not have permission to update this event.',
@@ -1682,26 +1973,75 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       );
 
       if (!response.ok) {
-        let errorData: { message?: string; reason?: string; error?: string } =
-          {};
+        let errorData: {
+          message?: string;
+          reason?: string;
+          error?: string;
+          requiredApproval?: boolean;
+        } = {};
         try {
           errorData = await response.json();
         } catch (parseError) {
           errorData = { message: response.statusText || 'Unknown error' };
         }
 
+        // Handle pending approval error gracefully
+        if (errorData.reason === 'pending_approval') {
+          toast({
+            title: 'Cannot update event',
+            description:
+              errorData.message ||
+              'Events with pending approval status cannot be updated. Please wait for the approval decision before making changes.',
+            variant: 'default',
+          });
+          return;
+        }
+
+        // Handle other permission errors
+        if (errorData.reason === 'permission_denied') {
+          toast({
+            title: 'Permission denied',
+            description:
+              errorData.message ||
+              'You do not have permission to update this event.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Handle other errors
         const errorMessage =
           errorData.message ||
           errorData.reason ||
           errorData.error ||
           'Failed to update event';
-        throw new Error(errorMessage);
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return;
       }
 
       const result = await response.json();
       console.log('Event updated successfully:', result);
 
-      toast({ title: 'Success', description: 'Event updated successfully' });
+      // Check if the update created a new approval request
+      if (result.requiresApproval || result.pendingApprovalId) {
+        toast({
+          title: 'Update submitted for approval',
+          description:
+            result.message ||
+            'Your event update has been submitted and is pending approval.',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Event updated successfully',
+        });
+      }
+
       setIsAddEventOpen(false);
       setSelectedEvent(null);
       await forceRefresh();
@@ -1720,12 +2060,24 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         console.log('Approvals list refreshed');
       }
     } catch (error) {
+      // Error handling is already done in the response.ok check above
+      // This catch block handles unexpected errors (network errors, etc.)
       console.error('Error updating event from dialog:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update event',
-        variant: 'destructive',
-      });
+
+      // Only show error if it wasn't already handled above
+      // (The error handling above returns early, so this should rarely execute)
+      if (
+        error instanceof Error &&
+        !error.message.includes('pending_approval') &&
+        !error.message.includes('permission_denied')
+      ) {
+        toast({
+          title: 'Error',
+          description:
+            error.message || 'Failed to update event. Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setCreatingEvent(false);
     }
@@ -2169,7 +2521,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                               variant="outline"
                               className="ml-auto uppercase text-[9px] text-amber-600 bg-[#fcddc7]"
                             >
-                              {status.replace('_', ' ')}
+                              {getApprovalStatusText(status)}
                             </Badge>
                           )}
                           {!status && event.outlook_id && (
@@ -2218,7 +2570,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
           <div className="flex items-center px-6">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <CalendarIconLucide className="w-5 h-5 text-[#0f5384]" />
+              <CalendarIcon className="w-5 h-5 text-[#0f5384]" />
             </div>
             <div>
               <h2 className="text-xl font-semibold sidebar-gradient-text mt-6">
@@ -2296,7 +2648,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                               variant="outline"
                               className="uppercase text-[10px]"
                             >
-                              {status.replace('_', ' ')}
+                              {getApprovalStatusText(status)}
                             </Badge>
                           )}
                           {!status && event.outlook_id && (
@@ -2448,7 +2800,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             variant="outline"
                             className="uppercase text-[9px] ml-auto"
                           >
-                            {status.replace('_', ' ')}
+                            {getApprovalStatusText(status)}
                           </Badge>
                         )}
                         {!status && event.outlook_id && (
@@ -3303,13 +3655,18 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                   <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-slate-900 truncate">
-                                      {attachment.name}
+                                      {attachment.name || 'Unknown file'}
                                     </p>
                                     <p className="text-xs text-slate-500">
                                       {convertFileSize({
                                         sizeInBytes: attachment.size,
-                                      })}{' '}
-                                      • {attachment.extension.toUpperCase()}
+                                      })}
+                                      {attachment.extension && (
+                                        <>
+                                          {' '}
+                                          • {attachment.extension.toUpperCase()}
+                                        </>
+                                      )}
                                     </p>
                                   </div>
                                 </div>
@@ -3810,7 +4167,94 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                   return value ? 'Yes' : 'No';
                                 }
 
-                                // Format arrays
+                                // Format attachments with file names
+                                if (
+                                  key === 'attachments' &&
+                                  Array.isArray(value)
+                                ) {
+                                  if (value.length === 0) {
+                                    return 'None';
+                                  }
+
+                                  // Try to get file names from the attachment names map
+                                  const fileNames = value
+                                    .map((att) => {
+                                      const fileId =
+                                        typeof att === 'string'
+                                          ? att
+                                          : att?.$id;
+                                      if (!fileId) return null;
+                                      return attachmentNamesMap[fileId] || null;
+                                    })
+                                    .filter(
+                                      (name): name is string => name !== null
+                                    );
+
+                                  if (fileNames.length > 0) {
+                                    // Show count and file names
+                                    if (fileNames.length === value.length) {
+                                      // All files have names - show all names
+                                      const maxDisplayNames = 3;
+                                      if (fileNames.length <= maxDisplayNames) {
+                                        // Show all names if 3 or fewer
+                                        return `${value.length} file${
+                                          value.length !== 1 ? 's' : ''
+                                        }: ${fileNames.join(', ')}`;
+                                      } else {
+                                        // Show first few names and count of remaining
+                                        const displayedNames = fileNames
+                                          .slice(0, maxDisplayNames)
+                                          .join(', ');
+                                        const remainingCount =
+                                          fileNames.length - maxDisplayNames;
+                                        return `${value.length} file${
+                                          value.length !== 1 ? 's' : ''
+                                        }: ${displayedNames}, and ${remainingCount} more`;
+                                      }
+                                    } else {
+                                      // Some files have names, some don't
+                                      const namedCount = fileNames.length;
+                                      const unnamedCount =
+                                        value.length - namedCount;
+                                      const maxDisplayNames = 3;
+
+                                      if (namedCount <= maxDisplayNames) {
+                                        // Show all named files
+                                        const namesList = fileNames.join(', ');
+                                        const unnamedText =
+                                          unnamedCount > 0
+                                            ? `, ${unnamedCount} unnamed`
+                                            : '';
+                                        return `${value.length} file${
+                                          value.length !== 1 ? 's' : ''
+                                        }: ${namesList}${unnamedText}`;
+                                      } else {
+                                        // Show first few names
+                                        const displayedNames = fileNames
+                                          .slice(0, maxDisplayNames)
+                                          .join(', ');
+                                        const remainingNamed =
+                                          namedCount - maxDisplayNames;
+                                        const totalRemaining =
+                                          remainingNamed + unnamedCount;
+                                        return `${value.length} file${
+                                          value.length !== 1 ? 's' : ''
+                                        }: ${displayedNames}, and ${totalRemaining} more`;
+                                      }
+                                    }
+                                  }
+
+                                  // Fallback to count if names not available yet
+                                  return loadingAttachmentNames
+                                    ? `Loading... (${value.length} file${
+                                        value.length !== 1 ? 's' : ''
+                                      })`
+                                    : `${value.length} file${
+                                        value.length !== 1 ? 's' : ''
+                                      }`;
+                                }
+
+                                // Format arrays (non-attachments)
                                 if (Array.isArray(value)) {
                                   return value.length > 0
                                     ? `${value.length} item${
@@ -3824,6 +4268,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
                               // Helper function to get field label
                               const getFieldLabel = (key: string): string => {
+                                if (!key || typeof key !== 'string') {
+                                  return 'Unknown Field';
+                                }
+
                                 const labelMap: Record<string, string> = {
                                   startDate: 'Start Date',
                                   endDate: 'End Date',
@@ -3843,19 +4291,35 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                   participants: 'Participants',
                                 };
 
-                                return (
-                                  labelMap[key] ||
-                                  key
+                                if (labelMap[key]) {
+                                  return labelMap[key];
+                                }
+
+                                // Safely format the key
+                                try {
+                                  const formatted = key
                                     .replace(/([A-Z])/g, ' $1')
-                                    .replace(/^./, (str) => str.toUpperCase())
-                                    .trim()
-                                );
+                                    .replace(/^./, (str) =>
+                                      (str || '').toUpperCase()
+                                    )
+                                    .trim();
+                                  return formatted || key || 'Unknown Field';
+                                } catch (error) {
+                                  console.error(
+                                    'Error formatting field label:',
+                                    error,
+                                    { key }
+                                  );
+                                  return key || 'Unknown Field';
+                                }
                               };
 
                               // Filter and sort changes
                               const rawChanges = Object.keys(after)
                                 .filter(
                                   (key) =>
+                                    key &&
+                                    typeof key === 'string' &&
                                     before[key] !== after[key] &&
                                     ![
                                       '$id',
@@ -3867,12 +4331,16 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                     ].includes(key) &&
                                     after[key] !== undefined
                                 )
-                                .map((key) => ({
-                                  key,
-                                  label: getFieldLabel(key),
-                                  beforeValue: before[key],
-                                  afterValue: after[key],
-                                }));
+                                .map((key) => {
+                                  const label = getFieldLabel(key);
+                                  return {
+                                    key: key || 'unknown',
+                                    label: label || 'Unknown Field',
+                                    beforeValue: before[key],
+                                    afterValue: after[key],
+                                  };
+                                })
+                                .filter((change) => change.label && change.key);
 
                               // Consolidate duplicate "Updated By" entries
                               const changesMap = new Map<
@@ -3998,6 +4466,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                       const hasChange =
                                         change.beforeValue !== null;
 
+                                      // Safety check: ensure change has valid label
+                                      if (
+                                        !change ||
+                                        !change.label ||
+                                        !change.key
+                                      ) {
+                                        return null;
+                                      }
+
                                       return (
                                         <div
                                           key={change.key}
@@ -4005,7 +4482,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                         >
                                           <div className="flex-1 min-w-0">
                                             <div className="text-xs font-medium text-amber-800/90 mb-1.5 uppercase tracking-wide">
-                                              {change.label}
+                                              {change.label || 'Unknown Field'}
                                             </div>
                                             <div className="space-y-1.5">
                                               {hasChange ? (
@@ -4244,7 +4721,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             }
                             className="uppercase sidebar-gradient-text"
                           >
-                            {selectedEvent.approvalStatus.replace('_', ' ')}
+                            {getApprovalStatusText(
+                              selectedEvent.approvalStatus
+                            )}
                           </Badge>
                         )}
                     </div>
@@ -4605,8 +5084,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
                         return (
                           <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
-                              <Paperclip className="w-4 h-4 text-blue-600" />
+                            <div className="w-8 h-8 bg-[#e0dede] rounded-full flex items-center justify-center mt-0.5">
+                              <Paperclip className="w-4 h-4 text-[#808080]" />
                             </div>
                             <div className="flex-1">
                               <div className="text-sm font-medium text-slate-900 mb-2">
@@ -4633,6 +5112,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                     );
                                   }
 
+                                  // Only render if attachment has at least a name or $id
+                                  if (!attachment.name && !attachment.$id) {
+                                    return null;
+                                  }
+
                                   return (
                                     <div
                                       key={attachment.$id}
@@ -4641,20 +5125,33 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                       <div className="flex items-center gap-2 flex-1 min-w-0">
                                         <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
                                         <div className="flex-1 min-w-0">
-                                          <a
-                                            href={attachment.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline truncate block"
-                                          >
-                                            {attachment.name}
-                                          </a>
+                                          {attachment.url ? (
+                                            <a
+                                              href={attachment.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline truncate block"
+                                            >
+                                              {attachment.name ||
+                                                'Unknown file'}
+                                            </a>
+                                          ) : (
+                                            <p className="text-sm font-medium text-slate-900 truncate">
+                                              {attachment.name ||
+                                                'Unknown file'}
+                                            </p>
+                                          )}
                                           <p className="text-xs text-slate-500">
                                             {convertFileSize({
                                               sizeInBytes: attachment.size,
-                                            })}{' '}
-                                            •{' '}
-                                            {attachment.extension.toUpperCase()}
+                                            })}
+                                            {attachment.extension && (
+                                              <>
+                                                {' '}
+                                                •{' '}
+                                                {attachment.extension.toUpperCase()}
+                                              </>
+                                            )}
                                           </p>
                                         </div>
                                       </div>

@@ -30,11 +30,11 @@ interface ChatMessage {
 
 interface EventAttachment {
   $id: string;
-  name: string;
-  url: string;
-  type: string;
-  extension: string;
-  size: number;
+  name?: string;
+  url?: string;
+  type?: string;
+  extension?: string;
+  size?: number;
   bucketFileId?: string;
 }
 

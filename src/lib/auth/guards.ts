@@ -39,7 +39,10 @@ export const evaluateCalendarPermission = async ({
   const user = await getUserByAccountId(userAccountId);
 
   if (!user) {
-    console.error('[evaluateCalendarPermission] User not found for accountId:', userAccountId);
+    console.error(
+      '[evaluateCalendarPermission] User not found for accountId:',
+      userAccountId
+    );
     return {
       allowed: false,
       userRole: null,
@@ -61,12 +64,18 @@ export const evaluateCalendarPermission = async ({
     try {
       overrides = JSON.parse(overrides);
     } catch (error) {
-      console.error('[evaluateCalendarPermission] Error parsing overrides:', error);
+      console.error(
+        '[evaluateCalendarPermission] Error parsing overrides:',
+        error
+      );
       overrides = [];
     }
   }
   if (!Array.isArray(overrides)) {
-    console.warn('[evaluateCalendarPermission] overrides is not an array:', overrides);
+    console.warn(
+      '[evaluateCalendarPermission] overrides is not an array:',
+      overrides
+    );
     overrides = [];
   }
 
@@ -84,22 +93,24 @@ export const evaluateCalendarPermission = async ({
 
   // Special case: allow event creators to cancel their own events even without cancelEvent permission
   if (!allowed && action === 'cancel' && event) {
-    const isEventCreator = 
+    const isEventCreator =
       (user.$id && event.createdByUserId === user.$id) ||
-      (userAccountId && (
-        event.createdByAccountId === userAccountId ||
-        event.createdBy === userAccountId
-      ));
-    
+      (userAccountId &&
+        (event.createdByAccountId === userAccountId ||
+          event.createdBy === userAccountId));
+
     if (isEventCreator) {
-      console.log('[evaluateCalendarPermission] Allowing event creator to cancel their own event:', {
-        userId: user.$id,
-        userAccountId,
-        eventId: event.$id,
-        eventCreatedBy: event.createdBy,
-        eventCreatedByAccountId: event.createdByAccountId,
-        eventCreatedByUserId: event.createdByUserId,
-      });
+      console.log(
+        '[evaluateCalendarPermission] Allowing event creator to cancel their own event:',
+        {
+          userId: user.$id,
+          userAccountId,
+          eventId: event.$id,
+          eventCreatedBy: event.createdBy,
+          eventCreatedByAccountId: event.createdByAccountId,
+          eventCreatedByUserId: event.createdByUserId,
+        }
+      );
       allowed = true;
     }
   }
@@ -108,13 +119,13 @@ export const evaluateCalendarPermission = async ({
     permissionKey,
     allowed,
     permissions,
-    isEventCreator: event && action === 'cancel' && (
-      (user.$id && event.createdByUserId === user.$id) ||
-      (userAccountId && (
-        event.createdByAccountId === userAccountId ||
-        event.createdBy === userAccountId
-      ))
-    ),
+    isEventCreator:
+      event &&
+      action === 'cancel' &&
+      ((user.$id && event.createdByUserId === user.$id) ||
+        (userAccountId &&
+          (event.createdByAccountId === userAccountId ||
+            event.createdBy === userAccountId))),
   });
 
   if (!allowed) {
@@ -153,7 +164,7 @@ export const evaluateCalendarPermission = async ({
       requiredApproval: true,
     };
   }
-  
+
   // Allow cancellation even if there's a pending approval for creation
   // The cancellation will create its own approval request if needed
 
@@ -164,4 +175,3 @@ export const evaluateCalendarPermission = async ({
     userId: user.$id,
   };
 };
-

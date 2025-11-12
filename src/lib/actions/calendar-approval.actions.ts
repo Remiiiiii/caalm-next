@@ -1,6 +1,9 @@
+'use server';
+
 import { ID, Query } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
+import { parseStringify } from '@/lib/utils';
 import {
   CalendarApprovalStatus,
   CalendarSensitivity,
@@ -104,7 +107,7 @@ export const createCalendarApprovalRequest = async ({
 /**
  * @deprecated This function is deprecated. Use createCalendarApprovalRequest instead.
  * The simplified flow always creates new approval requests for resubmissions.
- * 
+ *
  * Update an existing calendar approval request
  * Used when an event creator resubmits an event after changes were requested
  */
@@ -210,9 +213,12 @@ export const getCalendarApprovalById = async (
 
     // Convert to plain object to ensure serialization
     const raw = response as unknown as Record<string, unknown>;
-    
+
     // Parse changeSummary from JSON string to object and deeply serialize to remove any client instances
-    let changeSummary: CalendarApprovalChangeSummary = { before: null, after: null };
+    let changeSummary: CalendarApprovalChangeSummary = {
+      before: null,
+      after: null,
+    };
     if (typeof raw.changeSummary === 'string') {
       try {
         const parsed = JSON.parse(raw.changeSummary);
@@ -239,13 +245,26 @@ export const getCalendarApprovalById = async (
       eventId: String(raw.eventId || ''),
       changeType: raw.changeType as CalendarApprovalChangeType,
       requestedByAccountId: String(raw.requestedByAccountId || ''),
-      requestedByUserId: raw.requestedByUserId ? String(raw.requestedByUserId) : undefined,
+      requestedByUserId: raw.requestedByUserId
+        ? String(raw.requestedByUserId)
+        : undefined,
       status: raw.status as CalendarApprovalStatus,
       submittedAt: String(raw.submittedAt || ''),
       decidedAt: raw.decidedAt ? String(raw.decidedAt) : undefined,
-      approverAccountId: raw.approverAccountId ? String(raw.approverAccountId) : undefined,
-      approverUserId: raw.approverUserId ? String(raw.approverUserId) : undefined,
-      reviewerNotes: raw.reviewerNotes ? String(raw.reviewerNotes) : undefined,
+      approverAccountId: raw.approverAccountId
+        ? String(raw.approverAccountId)
+        : undefined,
+      approverUserId: raw.approverUserId
+        ? String(raw.approverUserId)
+        : undefined,
+      reviewerNotes: (() => {
+        // Handle reviewerNotes: check for null, undefined, or empty string
+        if (raw.reviewerNotes === null || raw.reviewerNotes === undefined) {
+          return undefined;
+        }
+        const notesStr = String(raw.reviewerNotes).trim();
+        return notesStr || undefined;
+      })(),
       changeSummary,
       sensitivityLevel: raw.sensitivityLevel as CalendarSensitivity,
     };
@@ -273,58 +292,228 @@ export const getLatestApprovalRequestByEventId = async (
     const queries = [
       Query.equal('eventId', eventId),
       ...(status ? [Query.equal('status', status)] : []),
+      // Order by decidedAt (when decision was made) to get the most recent decision
+      // For approval requests with changes_requested status, decidedAt should always be set
+      Query.orderDesc('decidedAt'),
+      Query.limit(1),
     ];
+
+    console.log('[getLatestApprovalRequestByEventId] Querying for approval:', {
+      eventId,
+      status,
+      queries: queries.length,
+    });
 
     const response = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId!,
       tableId: collectionId,
       queries,
-      orderBy: ['submittedAt'],
-      orderDesc: true,
-      limit: 1,
     });
 
-    if (response.rows.length === 0) {
+    // CRITICAL: Extract only primitive values immediately to break ALL client references
+    // We must NOT access response.rows directly - instead extract values one by one
+    const total = Number(response.total) || 0;
+    const rows: Array<Record<string, unknown>> = [];
+
+    // Extract each row individually, converting all values to primitives
+    for (let i = 0; i < response.rows.length; i++) {
+      const row = response.rows[i] as any;
+      // Create a completely new plain object with only primitive values
+      const plainRow: Record<string, unknown> = {
+        $id: String(row?.$id || ''),
+        eventId: String(row?.eventId || ''),
+        changeType: String(row?.changeType || 'create'),
+        requestedByAccountId: String(row?.requestedByAccountId || ''),
+        requestedByUserId: row?.requestedByUserId
+          ? String(row.requestedByUserId)
+          : undefined,
+        status: String(row?.status || 'pending'),
+        submittedAt: String(row?.submittedAt || ''),
+        decidedAt: row?.decidedAt ? String(row.decidedAt) : undefined,
+        approverAccountId: row?.approverAccountId
+          ? String(row.approverAccountId)
+          : undefined,
+        approverUserId: row?.approverUserId
+          ? String(row.approverUserId)
+          : undefined,
+        reviewerNotes:
+          row?.reviewerNotes !== null && row?.reviewerNotes !== undefined
+            ? String(row.reviewerNotes)
+            : undefined,
+        changeSummary: (() => {
+          // Aggressively serialize changeSummary to remove any client references
+          if (row?.changeSummary === null || row?.changeSummary === undefined) {
+            return undefined;
+          }
+          try {
+            // If it's a string, parse and re-serialize
+            if (typeof row.changeSummary === 'string') {
+              const parsed = JSON.parse(row.changeSummary);
+              return JSON.parse(JSON.stringify(parsed));
+            }
+            // If it's an object, serialize it
+            if (typeof row.changeSummary === 'object') {
+              return JSON.parse(JSON.stringify(row.changeSummary));
+            }
+            return undefined;
+          } catch (error) {
+            console.error(
+              '[getLatestApprovalRequestByEventId] Error serializing changeSummary:',
+              error
+            );
+            return undefined;
+          }
+        })(),
+        sensitivityLevel: String(row?.sensitivityLevel || 'normal'),
+      };
+      rows.push(plainRow);
+    }
+
+    const plainResponse = { total, rows };
+
+    console.log('[getLatestApprovalRequestByEventId] Query result:', {
+      total: plainResponse.total,
+      rowsFound: plainResponse.rows.length,
+    });
+
+    if (plainResponse.rows.length === 0) {
+      console.log(
+        '[getLatestApprovalRequestByEventId] No approval requests found'
+      );
       return null;
     }
 
-    const raw = response.rows[0] as unknown as Record<string, unknown>;
-    
-    // Parse changeSummary and serialize
-    let changeSummary: CalendarApprovalChangeSummary = { before: null, after: null };
+    // Now we can safely access the row - it's already a plain object with no client references
+    const raw = plainResponse.rows[0] as Record<string, unknown>;
+
+    // Debug: Log the raw reviewerNotes value and full approval data
+    console.log('[getLatestApprovalRequestByEventId] Raw approval data:', {
+      $id: raw.$id,
+      eventId: raw.eventId,
+      status: raw.status,
+      decidedAt: raw.decidedAt,
+      reviewerNotes: raw.reviewerNotes,
+      reviewerNotesType: typeof raw.reviewerNotes,
+      reviewerNotesIsNull: raw.reviewerNotes === null,
+      reviewerNotesIsUndefined: raw.reviewerNotes === undefined,
+      reviewerNotesIsEmptyString: raw.reviewerNotes === '',
+      reviewerNotesTruthy: !!raw.reviewerNotes,
+      reviewerNotesLength:
+        typeof raw.reviewerNotes === 'string'
+          ? raw.reviewerNotes.length
+          : 'N/A',
+    });
+
+    // Parse changeSummary from JSON string to object and deeply serialize to remove any client instances
+    let changeSummary: CalendarApprovalChangeSummary = {
+      before: null,
+      after: null,
+    };
     if (typeof raw.changeSummary === 'string') {
       try {
-        changeSummary = JSON.parse(JSON.stringify(JSON.parse(raw.changeSummary)));
+        const parsed = JSON.parse(raw.changeSummary);
+        // Deep serialize to ensure no client instances remain
+        changeSummary = JSON.parse(JSON.stringify(parsed));
       } catch (error) {
         console.error('Error parsing changeSummary:', error);
+        changeSummary = { before: null, after: null };
       }
     } else if (raw.changeSummary && typeof raw.changeSummary === 'object') {
+      // Deep serialize to ensure no client instances remain
       try {
         changeSummary = JSON.parse(JSON.stringify(raw.changeSummary));
       } catch (error) {
         console.error('Error serializing changeSummary:', error);
+        changeSummary = { before: null, after: null };
       }
     }
 
-    // Return serialized object
+    // Return plain object with only serializable fields
+    // Deep serialize the entire object to ensure no nested client instances
     const result = {
       $id: String(raw.$id || ''),
       eventId: String(raw.eventId || ''),
       changeType: raw.changeType as CalendarApprovalChangeType,
       requestedByAccountId: String(raw.requestedByAccountId || ''),
-      requestedByUserId: raw.requestedByUserId ? String(raw.requestedByUserId) : undefined,
+      requestedByUserId: raw.requestedByUserId
+        ? String(raw.requestedByUserId)
+        : undefined,
       status: raw.status as CalendarApprovalStatus,
       submittedAt: String(raw.submittedAt || ''),
       decidedAt: raw.decidedAt ? String(raw.decidedAt) : undefined,
-      approverAccountId: raw.approverAccountId ? String(raw.approverAccountId) : undefined,
-      approverUserId: raw.approverUserId ? String(raw.approverUserId) : undefined,
-      reviewerNotes: raw.reviewerNotes ? String(raw.reviewerNotes) : undefined,
+      approverAccountId: raw.approverAccountId
+        ? String(raw.approverAccountId)
+        : undefined,
+      approverUserId: raw.approverUserId
+        ? String(raw.approverUserId)
+        : undefined,
+      reviewerNotes: (() => {
+        // Handle reviewerNotes: check for null, undefined, or empty string
+        if (raw.reviewerNotes === null || raw.reviewerNotes === undefined) {
+          return undefined;
+        }
+        const notesStr = String(raw.reviewerNotes).trim();
+        return notesStr || undefined;
+      })(),
       changeSummary,
       sensitivityLevel: raw.sensitivityLevel as CalendarSensitivity,
     };
 
-    // Final deep serialization to ensure no client instances
-    return JSON.parse(JSON.stringify(result)) as CalendarApprovalRequest;
+    // CRITICAL: Create a completely new object with only primitives - no object references
+    // This ensures no client instances can leak through
+    const plainResult: CalendarApprovalRequest = {
+      $id: String(result.$id || ''),
+      eventId: String(result.eventId || ''),
+      changeType: result.changeType,
+      requestedByAccountId: String(result.requestedByAccountId || ''),
+      requestedByUserId: result.requestedByUserId
+        ? String(result.requestedByUserId)
+        : undefined,
+      status: result.status,
+      submittedAt: String(result.submittedAt || ''),
+      decidedAt: result.decidedAt ? String(result.decidedAt) : undefined,
+      approverAccountId: result.approverAccountId
+        ? String(result.approverAccountId)
+        : undefined,
+      approverUserId: result.approverUserId
+        ? String(result.approverUserId)
+        : undefined,
+      reviewerNotes: result.reviewerNotes
+        ? String(result.reviewerNotes)
+        : undefined,
+      changeSummary: result.changeSummary
+        ? JSON.parse(JSON.stringify(result.changeSummary))
+        : undefined,
+      sensitivityLevel: result.sensitivityLevel,
+    };
+
+    // Final serialization pass to ensure complete isolation
+    let serialized: CalendarApprovalRequest;
+    try {
+      serialized = JSON.parse(
+        JSON.stringify(plainResult)
+      ) as CalendarApprovalRequest;
+    } catch (error) {
+      console.error(
+        '[getLatestApprovalRequestByEventId] Final serialization error:',
+        error
+      );
+      // If serialization fails, return the plain result (shouldn't happen but safety net)
+      serialized = plainResult;
+    }
+
+    console.log(
+      '[getLatestApprovalRequestByEventId] Final serialized result:',
+      {
+        $id: serialized.$id,
+        eventId: serialized.eventId,
+        status: serialized.status,
+        reviewerNotes: serialized.reviewerNotes,
+        hasReviewerNotes: !!serialized.reviewerNotes,
+      }
+    );
+
+    return serialized;
   } catch (error) {
     console.error('Failed to get latest approval request by event ID:', error);
     return null;
@@ -416,14 +605,20 @@ const sendApprovalDecisionNotification = async (
     const priority = decision === 'rejected' ? 'high' : 'medium';
 
     // Build notification message
-    let message = `Your event "${eventTitle}" has been ${decisionLabels[decision].toLowerCase()}.`;
+    let message = `Your event "${eventTitle}" has been ${decisionLabels[
+      decision
+    ].toLowerCase()}.`;
 
     if (approverName) {
       message += `\n\nReviewed by: ${approverName}`;
     }
 
     if (reviewerNotes && reviewerNotes.trim()) {
-      message += `\n\n${decision === 'changes_requested' ? 'Requested Changes' : 'Reason for Denial'}:`;
+      message += `\n\n${
+        decision === 'changes_requested'
+          ? 'Requested Changes'
+          : 'Reason for Denial'
+      }:`;
       message += `\n${reviewerNotes.trim()}`;
     }
 
@@ -498,10 +693,37 @@ export const decideCalendarApprovalRequest = async ({
   // 'changes_requested' is now a final state (not pending)
   const updateData: Record<string, unknown> = {
     status: decision,
-    reviewerNotes,
     decidedAt: new Date().toISOString(),
     approverAccountId,
   };
+
+  // Handle reviewerNotes: save trimmed value if provided, otherwise set to null
+  // Appwrite requires explicit null for clearing fields, undefined is ignored
+  if (
+    reviewerNotes !== undefined &&
+    reviewerNotes !== null &&
+    reviewerNotes.trim()
+  ) {
+    const trimmedNotes = reviewerNotes.trim();
+    updateData.reviewerNotes = trimmedNotes;
+    console.log('[decideCalendarApprovalRequest] Saving reviewerNotes:', {
+      original: reviewerNotes,
+      trimmed: trimmedNotes,
+      length: trimmedNotes.length,
+    });
+  } else {
+    // Explicitly set to null if not provided or empty
+    updateData.reviewerNotes = null;
+    console.log(
+      '[decideCalendarApprovalRequest] Setting reviewerNotes to null:',
+      {
+        reviewerNotes,
+        isUndefined: reviewerNotes === undefined,
+        isNull: reviewerNotes === null,
+        trimmed: reviewerNotes?.trim(),
+      }
+    );
+  }
 
   if (approverUserId) {
     updateData.approverUserId = approverUserId;
@@ -513,6 +735,76 @@ export const decideCalendarApprovalRequest = async ({
     rowId: approvalId,
     data: updateData,
   });
+
+  // Convert to plain object to ensure serialization (remove Appwrite client instances)
+  const raw = updated as unknown as Record<string, unknown>;
+
+  // Parse changeSummary from JSON string to object and deeply serialize
+  let changeSummary: CalendarApprovalChangeSummary = {
+    before: null,
+    after: null,
+  };
+  if (typeof raw.changeSummary === 'string') {
+    try {
+      const parsed = JSON.parse(raw.changeSummary);
+      changeSummary = JSON.parse(JSON.stringify(parsed));
+    } catch (error) {
+      console.error('Error parsing changeSummary:', error);
+      changeSummary = { before: null, after: null };
+    }
+  } else if (raw.changeSummary && typeof raw.changeSummary === 'object') {
+    try {
+      changeSummary = JSON.parse(JSON.stringify(raw.changeSummary));
+    } catch (error) {
+      console.error('Error serializing changeSummary:', error);
+      changeSummary = { before: null, after: null };
+    }
+  }
+
+  // Build serialized result object
+  const serializedResult = {
+    $id: String(raw.$id || ''),
+    eventId: String(raw.eventId || ''),
+    changeType: raw.changeType as CalendarApprovalChangeType,
+    requestedByAccountId: String(raw.requestedByAccountId || ''),
+    requestedByUserId: raw.requestedByUserId
+      ? String(raw.requestedByUserId)
+      : undefined,
+    status: raw.status as CalendarApprovalStatus,
+    submittedAt: String(raw.submittedAt || ''),
+    decidedAt: raw.decidedAt ? String(raw.decidedAt) : undefined,
+    approverAccountId: raw.approverAccountId
+      ? String(raw.approverAccountId)
+      : undefined,
+    approverUserId: raw.approverUserId ? String(raw.approverUserId) : undefined,
+    reviewerNotes: (() => {
+      if (raw.reviewerNotes === null || raw.reviewerNotes === undefined) {
+        console.log(
+          '[getLatestApprovalRequestByEventId] reviewerNotes is null/undefined'
+        );
+        return undefined;
+      }
+      const notesStr = String(raw.reviewerNotes).trim();
+      const result = notesStr || undefined;
+      console.log(
+        '[getLatestApprovalRequestByEventId] Processed reviewerNotes:',
+        {
+          original: raw.reviewerNotes,
+          trimmed: notesStr,
+          result,
+          hasValue: !!result,
+        }
+      );
+      return result;
+    })(),
+    changeSummary,
+    sensitivityLevel: raw.sensitivityLevel as CalendarSensitivity,
+  };
+
+  // Final deep serialization to ensure no client instances
+  const result = JSON.parse(
+    JSON.stringify(serializedResult)
+  ) as CalendarApprovalRequest;
 
   if (decision === 'approved') {
     if (approval.changeType === 'create') {
@@ -543,7 +835,7 @@ export const decideCalendarApprovalRequest = async ({
     let approverName: string | undefined;
     try {
       const approver = await getUserByAccountId(approverAccountId);
-      approverName = approver?.fullName || approver?.name;
+      approverName = approver?.fullName;
     } catch (error) {
       // Ignore error - approver name is optional
     }
@@ -568,7 +860,7 @@ export const decideCalendarApprovalRequest = async ({
     let approverName: string | undefined;
     try {
       const approver = await getUserByAccountId(approverAccountId);
-      approverName = approver?.fullName || approver?.name;
+      approverName = approver?.fullName;
     } catch (error) {
       // Ignore error - approver name is optional
     }
@@ -581,5 +873,5 @@ export const decideCalendarApprovalRequest = async ({
     );
   }
 
-  return updated as unknown as CalendarApprovalRequest;
+  return result;
 };

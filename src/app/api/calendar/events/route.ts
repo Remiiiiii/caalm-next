@@ -6,6 +6,7 @@ import {
   getCalendarEventById,
   updateCalendarEvent,
   type CreateCalendarEventData,
+  type CalendarEvent,
 } from '@/lib/actions/calendar.actions';
 import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
 import { logAuditEvent } from '@/lib/services/audit-logger';
@@ -13,18 +14,27 @@ import { syncDeletionToOutlook } from '@/lib/services/deletion-sync';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 import { evaluateCalendarPermission } from '@/lib/auth/guards';
-import {
-  createCalendarApprovalRequest,
-} from '@/lib/actions/calendar-approval.actions';
+import { createCalendarApprovalRequest } from '@/lib/actions/calendar-approval.actions';
 
 const buildPermissionErrorResponse = (
   reason: string,
   requiredApproval?: boolean
 ) => {
+  // Provide user-friendly messages based on the reason
+  let message = 'Permission denied';
+  if (reason === 'pending_approval') {
+    message =
+      'Events with pending approval status cannot be updated. Please wait for the approval decision before making changes.';
+  } else if (reason === 'permission_denied') {
+    message = 'You do not have permission to perform this action.';
+  } else if (reason === 'user_not_found') {
+    message = 'User not found.';
+  }
+
   return NextResponse.json(
     {
       success: false,
-      message: 'Permission denied',
+      message,
       reason,
       requiredApproval: Boolean(requiredApproval),
     },
@@ -50,21 +60,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      '[POST /api/calendar/events] Checking permissions for userId:',
-      userId
-    );
+    // console.log(
+    //   '[POST /api/calendar/events] Checking permissions for userId:',
+    //   userId
+    // );
     const permissionCheck = await evaluateCalendarPermission({
       userAccountId: userId,
       action: 'create',
     });
 
-    console.log('[POST /api/calendar/events] Permission check result:', {
-      allowed: permissionCheck.allowed,
-      reason: permissionCheck.reason,
-      userRole: permissionCheck.userRole,
-      userId: permissionCheck.userId,
-    });
+    // console.log('[POST /api/calendar/events] Permission check result:', {
+    //   allowed: permissionCheck.allowed,
+    //   reason: permissionCheck.reason,
+    //   userRole: permissionCheck.userRole,
+    //   userId: permissionCheck.userId,
+    // });
 
     if (!permissionCheck.allowed) {
       console.error('[POST /api/calendar/events] Permission denied:', {
@@ -98,11 +108,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Add the user ID to the event data
-    const requestedSensitivityLevel = (eventData.sensitivityLevel as
-      | 'standard'
-      | 'restricted'
-      | 'confidential') || 'standard';
-    
+    const requestedSensitivityLevel =
+      (eventData.sensitivityLevel as
+        | 'standard'
+        | 'restricted'
+        | 'confidential') || 'standard';
+
     const eventWithUser: CreateCalendarEventData = {
       title: eventData.title as string,
       startDate: eventData.startDate as string,
@@ -128,7 +139,8 @@ export async function POST(request: NextRequest) {
         : undefined,
       sensitivityLevel: requestedSensitivityLevel,
       requiresApproval: requestedSensitivityLevel !== 'standard',
-      approvalStatus: requestedSensitivityLevel !== 'standard' ? 'pending' : 'not_required',
+      approvalStatus:
+        requestedSensitivityLevel !== 'standard' ? 'pending' : 'not_required',
       overrides: Array.isArray(eventData.overrides)
         ? eventData.overrides
         : undefined,
@@ -239,7 +251,7 @@ export async function GET(request: NextRequest) {
       searchParams.get('month') || (new Date().getMonth() + 1).toString()
     );
 
-    console.log('Fetching calendar events for:', { year, month, userId });
+    //console.log('Fetching calendar events for:', { year, month, userId });
 
     const noCacheHeader = request.headers.get('x-no-cache') === '1';
     const noCacheQuery =
@@ -340,7 +352,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check if event requires approval for updates
-    const sensitivityLevel = eventData.sensitivityLevel || event.sensitivityLevel || 'standard';
+    const sensitivityLevel =
+      eventData.sensitivityLevel || event.sensitivityLevel || 'standard';
     const requiresApproval =
       Boolean(eventData.requiresApproval) ||
       sensitivityLevel === 'restricted' ||
@@ -360,7 +373,10 @@ export async function PUT(request: NextRequest) {
         requestedByUserId: permissionCheck.userId || undefined,
         changeSummary: {
           before: event as unknown as Record<string, unknown>,
-          after: { ...event, ...eventData } as unknown as Record<string, unknown>,
+          after: { ...event, ...eventData } as unknown as Record<
+            string,
+            unknown
+          >,
         },
         sensitivityLevel,
       });
@@ -458,20 +474,28 @@ export async function DELETE(request: NextRequest) {
       // If permission is denied due to pending approval, check if we can create a cancellation approval
       if (permissionCheck.reason === 'pending_approval') {
         // Check if there's already a pending cancellation approval
-        const { listCalendarApprovalRequests } = await import('@/lib/actions/calendar-approval.actions');
-        const pendingApprovals = await listCalendarApprovalRequests({ status: 'pending' });
+        const { listCalendarApprovalRequests } = await import(
+          '@/lib/actions/calendar-approval.actions'
+        );
+        const pendingApprovals = await listCalendarApprovalRequests({
+          status: 'pending',
+        });
         const existingCancelApproval = pendingApprovals.find(
-          (approval) => approval.eventId === eventId && approval.changeType === 'cancel'
+          (approval) =>
+            approval.eventId === eventId && approval.changeType === 'cancel'
         );
 
         if (existingCancelApproval) {
           // Already has a pending cancellation approval
-          return NextResponse.json({
-            success: false,
-            message: 'A cancellation request is already pending approval',
-            reason: 'pending_approval',
-            approvalId: existingCancelApproval.$id,
-          }, { status: 409 });
+          return NextResponse.json(
+            {
+              success: false,
+              message: 'A cancellation request is already pending approval',
+              reason: 'pending_approval',
+              approvalId: existingCancelApproval.$id,
+            },
+            { status: 409 }
+          );
         }
 
         // Allow creating a cancellation approval even if there's a pending creation approval
@@ -492,19 +516,27 @@ export async function DELETE(request: NextRequest) {
       sensitivityLevel === 'confidential';
 
     // Check if there's already a pending cancellation approval
-    const { listCalendarApprovalRequests } = await import('@/lib/actions/calendar-approval.actions');
-    const pendingApprovals = await listCalendarApprovalRequests({ status: 'pending' });
+    const { listCalendarApprovalRequests } = await import(
+      '@/lib/actions/calendar-approval.actions'
+    );
+    const pendingApprovals = await listCalendarApprovalRequests({
+      status: 'pending',
+    });
     const existingCancelApproval = pendingApprovals.find(
-      (approval) => approval.eventId === eventId && approval.changeType === 'cancel'
+      (approval) =>
+        approval.eventId === eventId && approval.changeType === 'cancel'
     );
 
     if (existingCancelApproval) {
-      return NextResponse.json({
-        success: false,
-        message: 'A cancellation request is already pending approval',
-        reason: 'pending_approval',
-        approvalId: existingCancelApproval.$id,
-      }, { status: 409 });
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'A cancellation request is already pending approval',
+          reason: 'pending_approval',
+          approvalId: existingCancelApproval.$id,
+        },
+        { status: 409 }
+      );
     }
 
     if (requiresApproval) {

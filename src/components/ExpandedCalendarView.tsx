@@ -243,6 +243,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [userNamesMap, setUserNamesMap] = useState<Record<string, string>>({});
   const [loadingUserNames, setLoadingUserNames] = useState(false);
+  const [attachmentNamesMap, setAttachmentNamesMap] = useState<
+    Record<string, string>
+  >({});
+  const [loadingAttachmentNames, setLoadingAttachmentNames] = useState(false);
   const [eventApprovalRequest, setEventApprovalRequest] =
     useState<CalendarApprovalRequest | null>(null);
   const [loadingApprovalRequest, setLoadingApprovalRequest] = useState(false);
@@ -326,6 +330,89 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     };
 
     fetchUserNames();
+  }, [selectedApproval]);
+
+  // Fetch attachment file names for attachment IDs in approval change summary
+  useEffect(() => {
+    const fetchAttachmentNames = async () => {
+      if (!selectedApproval || selectedApproval.changeType !== 'update') {
+        setAttachmentNamesMap({});
+        return;
+      }
+
+      const summary = selectedApproval.changeSummary || {};
+      const after = (summary.after || {}) as Record<string, unknown>;
+      const before = (summary.before || {}) as Record<string, unknown>;
+
+      // Collect all attachment file IDs from change summary
+      const attachmentFileIds: string[] = [];
+      
+      // Extract attachments from before and after
+      const beforeAttachments = before.attachments;
+      const afterAttachments = after.attachments;
+      
+      if (Array.isArray(beforeAttachments)) {
+        beforeAttachments.forEach((att) => {
+          if (typeof att === 'string') {
+            attachmentFileIds.push(att);
+          } else if (att && typeof att === 'object' && '$id' in att) {
+            attachmentFileIds.push(String(att.$id));
+          }
+        });
+      }
+      
+      if (Array.isArray(afterAttachments)) {
+        afterAttachments.forEach((att) => {
+          if (typeof att === 'string') {
+            if (!attachmentFileIds.includes(att)) {
+              attachmentFileIds.push(att);
+            }
+          } else if (att && typeof att === 'object' && '$id' in att) {
+            const fileId = String(att.$id);
+            if (!attachmentFileIds.includes(fileId)) {
+              attachmentFileIds.push(fileId);
+            }
+          }
+        });
+      }
+
+      if (attachmentFileIds.length === 0) {
+        setAttachmentNamesMap({});
+        return;
+      }
+
+      setLoadingAttachmentNames(true);
+      try {
+        const response = await fetch('/api/files/get-by-ids', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ fileIds: attachmentFileIds }),
+        });
+
+        if (response.ok) {
+          const files = await response.json();
+          const namesMap: Record<string, string> = {};
+          files.forEach((file: any) => {
+            if (file.$id && file.name) {
+              namesMap[file.$id] = file.name;
+            }
+          });
+          setAttachmentNamesMap(namesMap);
+        } else {
+          console.error('Failed to fetch attachment names:', response.statusText);
+          setAttachmentNamesMap({});
+        }
+      } catch (error) {
+        console.error('Failed to fetch attachment names:', error);
+        setAttachmentNamesMap({});
+      } finally {
+        setLoadingAttachmentNames(false);
+      }
+    };
+
+    fetchAttachmentNames();
   }, [selectedApproval]);
 
   // Fetch approval request when event detail dialog opens for events with changes_requested or rejected status
@@ -1565,7 +1652,63 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                                 return value ? 'Yes' : 'No';
                               }
 
-                              // Format arrays
+                              // Format attachments with file names
+                              if (key === 'attachments' && Array.isArray(value)) {
+                                if (value.length === 0) {
+                                  return 'None';
+                                }
+                                
+                                // Try to get file names from the attachment names map
+                                const fileNames = value
+                                  .map((att) => {
+                                    const fileId = typeof att === 'string' ? att : att?.$id;
+                                    if (!fileId) return null;
+                                    return attachmentNamesMap[fileId] || null;
+                                  })
+                                  .filter((name): name is string => name !== null);
+                                
+                                if (fileNames.length > 0) {
+                                  // Show count and file names
+                                  if (fileNames.length === value.length) {
+                                    // All files have names - show all names
+                                    const maxDisplayNames = 3;
+                                    if (fileNames.length <= maxDisplayNames) {
+                                      // Show all names if 3 or fewer
+                                      return `${value.length} file${value.length !== 1 ? 's' : ''}: ${fileNames.join(', ')}`;
+                                    } else {
+                                      // Show first few names and count of remaining
+                                      const displayedNames = fileNames.slice(0, maxDisplayNames).join(', ');
+                                      const remainingCount = fileNames.length - maxDisplayNames;
+                                      return `${value.length} file${value.length !== 1 ? 's' : ''}: ${displayedNames}, and ${remainingCount} more`;
+                                    }
+                                  } else {
+                                    // Some files have names, some don't
+                                    const namedCount = fileNames.length;
+                                    const unnamedCount = value.length - namedCount;
+                                    const maxDisplayNames = 3;
+                                    
+                                    if (namedCount <= maxDisplayNames) {
+                                      // Show all named files
+                                      const namesList = fileNames.join(', ');
+                                      const unnamedText = unnamedCount > 0 ? `, ${unnamedCount} unnamed` : '';
+                                      return `${value.length} file${value.length !== 1 ? 's' : ''}: ${namesList}${unnamedText}`;
+                                    } else {
+                                      // Show first few names
+                                      const displayedNames = fileNames.slice(0, maxDisplayNames).join(', ');
+                                      const remainingNamed = namedCount - maxDisplayNames;
+                                      const totalRemaining = remainingNamed + unnamedCount;
+                                      return `${value.length} file${value.length !== 1 ? 's' : ''}: ${displayedNames}, and ${totalRemaining} more`;
+                                    }
+                                  }
+                                }
+                                
+                                // Fallback to count if names not available yet
+                                return loadingAttachmentNames
+                                  ? `Loading... (${value.length} file${value.length !== 1 ? 's' : ''})`
+                                  : `${value.length} file${value.length !== 1 ? 's' : ''}`;
+                              }
+
+                              // Format arrays (non-attachments)
                               if (Array.isArray(value)) {
                                 return value.length > 0
                                   ? `${value.length} item${value.length !== 1 ? 's' : ''}`

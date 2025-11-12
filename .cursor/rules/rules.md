@@ -99,6 +99,23 @@ globs: \*_/_.{ts,tsx}
 
 ---
 
+name: logging-best-practices.mdc
+description: Best practices for logging with clear prefixes to identify browser vs server logs
+globs: \*_/_.{ts,tsx,js,jsx}
+
+---
+
+- Always add clear prefixes to console.log, console.error, console.warn, and console.info statements to make logs easier to identify.
+- Use `[SERVER]` prefix for server-side logs (API routes, Server Actions, server components).
+- Use `[CLIENT]` prefix for client-side logs (React components, hooks, browser code).
+- Include function or component name in the prefix for better traceability (e.g., `[SERVER] getLatestApprovalRequestByEventId:`, `[CLIENT] OutlookStyleCalendar:`).
+- Server logs appear in the terminal/console where the dev server runs.
+- Browser logs appear in the browser DevTools Console (F12).
+- Example server log: `console.log('[SERVER] getLatestApprovalRequestByEventId] Querying for approval:', data);`
+- Example client log: `console.log('[CLIENT] OutlookStyleCalendar] Permission check:', data);`
+
+---
+
 name: dialog-best-practices.mdc
 description: Enterprise/professional UI standards for dialogs and modals
 globs: \*_/_.{ts,tsx,js,jsx}

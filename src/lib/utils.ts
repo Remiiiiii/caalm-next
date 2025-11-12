@@ -13,19 +13,31 @@ export const convertFileSize = ({
   sizeInBytes,
   digits = 1,
 }: {
-  sizeInBytes: number;
+  sizeInBytes: number | null | undefined;
   digits?: number;
 }) => {
-  if (sizeInBytes < 1024) {
-    return sizeInBytes + ' Bytes';
-  } else if (sizeInBytes < 1024 * 1024) {
-    const sizeInKB = sizeInBytes / 1024;
+  // Validate that sizeInBytes is a valid number
+  if (
+    sizeInBytes === null ||
+    sizeInBytes === undefined ||
+    isNaN(Number(sizeInBytes)) ||
+    sizeInBytes < 0
+  ) {
+    return 'Unknown size';
+  }
+
+  const size = Number(sizeInBytes);
+
+  if (size < 1024) {
+    return size + ' Bytes';
+  } else if (size < 1024 * 1024) {
+    const sizeInKB = size / 1024;
     return sizeInKB.toFixed(digits) + ' KB';
-  } else if (sizeInBytes < 1024 * 1024 * 1024) {
-    const sizeInMB = sizeInBytes / (1024 * 1024);
+  } else if (size < 1024 * 1024 * 1024) {
+    const sizeInMB = size / (1024 * 1024);
     return sizeInMB.toFixed(digits) + ' MB';
   } else {
-    const sizeInGB = sizeInBytes / (1024 * 1024 * 1024);
+    const sizeInGB = size / (1024 * 1024 * 1024);
     return sizeInGB.toFixed(digits) + ' GB';
   }
 };

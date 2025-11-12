@@ -60,19 +60,98 @@ export async function POST(request: NextRequest) {
       count: response.rows.length,
     });
 
-    const files = response.rows.map((file: any) => ({
-      $id: file.$id,
-      name: file.name,
-      url: file.url,
-      type: file.type,
-      extension: file.extension,
-      size: file.size,
-      bucketFileId: file.bucketFileId,
-      owner: file.owner,
-      accountId: file.accountId,
-      $createdAt: file.$createdAt,
-    }));
+    // Log the first file to see its structure
+    if (response.rows.length > 0) {
+      console.log('[get-by-ids] Sample file from database:', {
+        $id: response.rows[0].$id,
+        keys: Object.keys(response.rows[0]),
+        name: response.rows[0].name,
+        size: response.rows[0].size,
+        extension: response.rows[0].extension,
+        url: response.rows[0].url,
+        type: response.rows[0].type,
+        fullRow: response.rows[0],
+      });
+    }
 
+    const files = response.rows.map((file: any) => {
+      // Log each file's raw data to understand what we're getting
+      console.log('[get-by-ids] Processing file row:', {
+        $id: file.$id,
+        name: file.name,
+        nameType: typeof file.name,
+        nameValue: file.name,
+        size: file.size,
+        sizeType: typeof file.size,
+        sizeValue: file.size,
+        extension: file.extension,
+        extensionValue: file.extension,
+        url: file.url,
+        urlValue: file.url,
+        type: file.type,
+        typeValue: file.type,
+        allKeys: Object.keys(file),
+        fullFile: JSON.parse(JSON.stringify(file)), // Deep clone for logging
+      });
+
+      // Return all fields as they exist in the database
+      // Handle null, undefined, and empty string values
+      const result: {
+        $id: string;
+        name?: string | null;
+        url?: string | null;
+        type?: string | null;
+        extension?: string | null;
+        size?: number | null;
+        bucketFileId?: string | null;
+        owner?: string | null;
+        accountId?: string | null;
+        $createdAt?: string | null;
+      } = {
+        $id: file.$id || '',
+      };
+
+      // Always include all fields - set to actual value or null if missing/invalid
+      // The client will convert null to undefined as needed
+      result.name = file.name != null && file.name !== '' && file.name !== 'null' 
+        ? String(file.name).trim() 
+        : null;
+      result.url = file.url != null && file.url !== '' && file.url !== 'null' 
+        ? String(file.url).trim() 
+        : null;
+      result.type = file.type != null && file.type !== '' && file.type !== 'null' 
+        ? String(file.type).trim() 
+        : null;
+      result.extension = file.extension != null && file.extension !== '' && file.extension !== 'null' 
+        ? String(file.extension).trim() 
+        : null;
+      
+      // Handle size specially - convert to number if valid
+      if (file.size != null && file.size !== '' && file.size !== 'null' && file.size !== null) {
+        const sizeNum = Number(file.size);
+        result.size = !isNaN(sizeNum) && sizeNum >= 0 ? sizeNum : null;
+      } else {
+        result.size = null;
+      }
+      
+      result.bucketFileId = file.bucketFileId != null && file.bucketFileId !== '' && file.bucketFileId !== 'null' 
+        ? String(file.bucketFileId).trim() 
+        : null;
+      result.owner = file.owner != null && file.owner !== '' && file.owner !== 'null' 
+        ? String(file.owner).trim() 
+        : null;
+      result.accountId = file.accountId != null && file.accountId !== '' && file.accountId !== 'null' 
+        ? String(file.accountId).trim() 
+        : null;
+      result.$createdAt = file.$createdAt != null && file.$createdAt !== '' && file.$createdAt !== 'null' 
+        ? String(file.$createdAt).trim() 
+        : null;
+
+      console.log('[get-by-ids] Processed file result:', result);
+      return result;
+    });
+
+    console.log('[get-by-ids] Returning files:', files);
     return NextResponse.json(files);
   } catch (error: any) {
     console.error('[get-by-ids] Error fetching files by IDs:', {

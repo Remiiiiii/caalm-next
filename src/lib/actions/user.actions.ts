@@ -630,10 +630,10 @@ export const getCurrentUserFrom2FA = async () => {
     const hasCompleted2FA = cookieStore.get('2fa_completed');
     const userIdFromCookie = cookieStore.get('2fa_user_id');
 
-    console.log('getCurrentUserFrom2FA - Cookie check:', {
-      hasCompleted2FA: hasCompleted2FA?.value || 'Not found',
-      userIdFromCookie: userIdFromCookie?.value || 'Not found',
-    });
+    // console.log('getCurrentUserFrom2FA - Cookie check:', {
+    //   hasCompleted2FA: hasCompleted2FA?.value || 'Not found',
+    //   userIdFromCookie: userIdFromCookie?.value || 'Not found',
+    // });
 
     if (!hasCompleted2FA?.value || !userIdFromCookie?.value) {
       console.log(
@@ -657,9 +657,9 @@ export const getCurrentUserFrom2FA = async () => {
       }
 
       const user = userResponse.rows[0];
-      console.log(
-        'getCurrentUserFrom2FA - Returning actual user data for 2FA-authenticated user'
-      );
+      // console.log(
+      //   'getCurrentUserFrom2FA - Returning actual user data for 2FA-authenticated user'
+      // );
 
       // Return only the user data, not any client objects
       return parseStringify({

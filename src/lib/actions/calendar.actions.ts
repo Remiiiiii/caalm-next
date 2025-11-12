@@ -170,9 +170,9 @@ export const getCalendarEventsByMonth = async (
       throw new Error('Missing required Appwrite configuration');
     }
 
-    console.log('Server action called with year:', year, 'month:', month);
-    console.log('Database ID:', appwriteConfig.databaseId);
-    console.log('Collection ID:', appwriteConfig.calendarEventsCollectionId);
+    // console.log('Server action called with year:', year, 'month:', month);
+    // console.log('Database ID:', appwriteConfig.databaseId);
+    // console.log('Collection ID:', appwriteConfig.calendarEventsCollectionId);
 
     const adminClient = await createAdminClient();
 
@@ -188,17 +188,17 @@ export const getCalendarEventsByMonth = async (
 
     console.log('Date range:', startDate, 'to', endDate);
 
-    const response = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      [
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      queries: [
         Query.isNull('deleted_at'), // Exclude soft-deleted events
         Query.greaterThanEqual('startDate', startDate),
         Query.lessThanEqual('startDate', endDate),
         Query.orderAsc('startDate'),
-      ]
-    );
-    console.log('Database response:', response);
+      ],
+    });
+    //console.log('Database response:', response);
     return response.rows as unknown as CalendarEvent[];
   } catch (error) {
     console.error('Error fetching calendar events by month:', error);
@@ -419,10 +419,10 @@ export const updateCalendarEvent = async (
       rowId: eventId,
       data: dataToUpdate,
     });
-    
+
     // Convert to plain object to ensure serialization
     const raw = response as unknown as Record<string, unknown>;
-    
+
     // Return plain object with only serializable fields
     return {
       $id: String(raw.$id || eventId),
@@ -438,19 +438,34 @@ export const updateCalendarEvent = async (
       participants: raw.participants ? String(raw.participants) : undefined,
       location: raw.location ? String(raw.location) : undefined,
       createdBy: String(raw.createdBy || ''),
-      createdByUserId: raw.createdByUserId ? String(raw.createdByUserId) : undefined,
-      createdByAccountId: raw.createdByAccountId ? String(raw.createdByAccountId) : undefined,
+      createdByUserId: raw.createdByUserId
+        ? String(raw.createdByUserId)
+        : undefined,
+      createdByAccountId: raw.createdByAccountId
+        ? String(raw.createdByAccountId)
+        : undefined,
       outlook_id: raw.outlook_id ? String(raw.outlook_id) : undefined,
-      attachments: raw.attachments ? (Array.isArray(raw.attachments) ? raw.attachments.map(String) : [String(raw.attachments)]) : undefined,
+      attachments: raw.attachments
+        ? Array.isArray(raw.attachments)
+          ? raw.attachments.map(String)
+          : [String(raw.attachments)]
+        : undefined,
       deleted_at: raw.deleted_at ? String(raw.deleted_at) : undefined,
       deleted_by: raw.deleted_by ? String(raw.deleted_by) : undefined,
       deletion_status: raw.deletion_status as CalendarEvent['deletion_status'],
       deletion_synced: Boolean(raw.deletion_synced),
-      sensitivityLevel: raw.sensitivityLevel as CalendarEvent['sensitivityLevel'],
+      sensitivityLevel:
+        raw.sensitivityLevel as CalendarEvent['sensitivityLevel'],
       requiresApproval: Boolean(raw.requiresApproval),
       approvalStatus: raw.approvalStatus as CalendarEvent['approvalStatus'],
-      pendingApprovalId: raw.pendingApprovalId ? String(raw.pendingApprovalId) : null,
-      overrides: raw.overrides ? (typeof raw.overrides === 'string' ? raw.overrides : JSON.stringify(raw.overrides)) : undefined,
+      pendingApprovalId: raw.pendingApprovalId
+        ? String(raw.pendingApprovalId)
+        : null,
+      overrides: raw.overrides
+        ? typeof raw.overrides === 'string'
+          ? raw.overrides
+          : JSON.stringify(raw.overrides)
+        : undefined,
       $createdAt: raw.$createdAt ? String(raw.$createdAt) : undefined,
       $updatedAt: raw.$updatedAt ? String(raw.$updatedAt) : undefined,
     } as CalendarEvent;
