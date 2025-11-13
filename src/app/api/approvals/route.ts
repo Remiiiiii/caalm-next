@@ -5,14 +5,21 @@ import {
   decideCalendarApprovalRequest,
   listCalendarApprovalRequests,
 } from '@/lib/actions/calendar-approval.actions';
-import { CalendarApprovalStatus, UserRole } from '@/constants/rbac';
-
-const APPROVER_ROLES: UserRole[] = ['admin', 'approver'];
-
-const ensureApproverRole = (role: UserRole) => APPROVER_ROLES.includes(role);
+import { CalendarApprovalStatus } from '@/constants/rbac';
+import { requirePermission, getOrgIdFromRequest } from '@/lib/rbac/middleware';
+import { PERMISSIONS } from '@/constants/permissions';
 
 export async function GET(request: NextRequest) {
   try {
+    // Check permission
+    const permissionCheck = await requirePermission(request, {
+      permission: PERMISSIONS.EVENTS.APPROVE,
+    });
+
+    if (permissionCheck) {
+      return permissionCheck;
+    }
+
     const accountId = await getCurrentUserId();
 
     if (!accountId) {
@@ -28,13 +35,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
-      );
-    }
-
-    if (!ensureApproverRole(user.role)) {
-      return NextResponse.json(
-        { error: 'Permission denied' },
-        { status: 403 }
       );
     }
 
@@ -70,6 +70,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check permission
+    const permissionCheck = await requirePermission(request, {
+      permission: PERMISSIONS.EVENTS.APPROVE,
+    });
+
+    if (permissionCheck) {
+      return permissionCheck;
+    }
+
     const accountId = await getCurrentUserId();
 
     if (!accountId) {
@@ -85,13 +94,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
-      );
-    }
-
-    if (!ensureApproverRole(user.role)) {
-      return NextResponse.json(
-        { error: 'Permission denied' },
-        { status: 403 }
       );
     }
 

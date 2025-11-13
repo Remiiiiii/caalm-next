@@ -48,7 +48,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { capitalizeRole } from '@/lib/utils';
+import { UserRoleDisplay } from '@/components/UserRoleDisplay';
+import { getLegacyRoleDisplayName } from '@/lib/utils/role-display';
 import Avatar from '@/components/ui/avatar';
 import ClientTimestamp from '@/components/ClientTimestamp';
 import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
@@ -659,9 +660,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     }
   };
 
-  const getRoleDisplay = (role: string) => {
-    return capitalizeRole(role);
-  };
   // const getDepartmentDisplay = (department: string) => {
   //   switch (department) {
   //     case 'childwelfare':
@@ -703,7 +701,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         {/* Dashboard Header */}
         <div className="flex justify-between items-end mb-4">
           <div className="h2 font-bold sidebar-gradient-text">
-            {getRoleDisplay(user?.role || '')}
+            <UserRoleDisplay userId={user?.$id || ''} legacyRole={user?.role || ''} />
           </div>
           <h1 className="text-lg font-bold text-slate-700">
             {user?.fullName || ''}{' '}
@@ -1168,7 +1166,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                           >
                             <td className="pl-2 ">{inv.name}</td>
                             <td>{inv.email}</td>
-                            <td>{capitalizeRole(inv.role)}</td>
+                            <td>{getLegacyRoleDisplayName(inv.role as string)}</td>
                             <td>
                               <ClientDate dateString={inv.$createdAt} />
                             </td>

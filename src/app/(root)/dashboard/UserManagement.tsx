@@ -23,7 +23,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Trash, ListFilter, Pencil, Trash2 } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
-import { capitalizeRole } from '@/lib/utils';
+import { UserRoleDisplay } from '@/components/UserRoleDisplay';
+import { getLegacyRoleDisplayName } from '@/lib/utils/role-display';
 
 // Map user status to badge colors to mirror Executive Dashboard invitations table
 const getUserStatusBadgeClasses = (status: string): string => {
@@ -324,7 +325,7 @@ const UserManagement = () => {
                         handleFilterChange('roles', role, checked)
                       }
                     >
-                      {capitalizeRole(role)}
+                      {getLegacyRoleDisplayName(role)}
                     </DropdownMenuCheckboxItem>
                   ))}
 
@@ -462,7 +463,7 @@ const UserManagement = () => {
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {capitalizeRole(user.role)}
+                          <UserRoleDisplay userId={user.$id} legacyRole={user.role} />
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                           {user.department || 'N/A'}

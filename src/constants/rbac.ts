@@ -117,16 +117,21 @@ export const SENSITIVITY_LABELS: Record<CalendarSensitivity, string> = {
 };
 
 const LEGACY_ROLE_MAPPING: Record<string, UserRole> = {
+  // New RBAC roles
+  'super-admin': 'admin',
+  'organization-admin': 'admin',
+  'department-manager': 'approver',
+  scheduler: 'scheduler',
+  reviewer: 'reviewer',
+  viewer: 'viewer',
+  // Legacy roles (for backward compatibility)
   admin: 'admin',
   executive: 'approver',
   approver: 'approver',
-  reviewer: 'reviewer',
   manager: 'reviewer',
-  scheduler: 'scheduler',
   coordinator: 'scheduler',
   staff: 'scheduler',
   contributor: 'scheduler',
-  viewer: 'viewer',
 };
 
 export const isLegacyRole = (role?: string | null): boolean => {

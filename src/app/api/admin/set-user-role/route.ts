@@ -1,15 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
-import { Query } from 'node-appwrite';
+import { Query, ID } from 'node-appwrite';
+import { requirePermission, getOrgIdFromRequest } from '@/lib/rbac/middleware';
+import { PERMISSIONS } from '@/constants/permissions';
+import { getCurrentUser } from '@/lib/actions/user.actions';
+import { listRoles } from '@/lib/rbac/roles';
+import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, role } = await request.json();
+    // Check permission to assign roles
+    const permissionCheck = await requirePermission(request, {
+      permission: PERMISSIONS.USERS.ASSIGN_ROLES,
+    });
 
-    if (!email || !role) {
+    if (permissionCheck) {
+      return permissionCheck;
+    }
+
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
       return NextResponse.json(
-        { error: 'Email and role are required' },
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { email, roleName, orgId } = await request.json();
+
+    if (!email || !roleName) {
+      return NextResponse.json(
+        { error: 'Email and roleName are required' },
+        { status: 400 }
+      );
+    }
+
+    // Get organization context
+    const targetOrgId = orgId || (await getUserDefaultOrganization(currentUser.$id))?.orgId;
+    if (!targetOrgId) {
+      return NextResponse.json(
+        { error: 'Organization context required' },
         { status: 400 }
       );
     }
@@ -29,23 +60,65 @@ export async function POST(request: NextRequest) {
 
     const user = users.rows[0];
 
-    // Update user role
+    // Find role by name
+    const roles = await listRoles(targetOrgId);
+    const role = roles.find((r) => r.name === roleName);
+
+    if (!role) {
+      return NextResponse.json(
+        { error: `Role "${roleName}" not found` },
+        { status: 404 }
+      );
+    }
+
+    // Remove existing role assignments for this user in this org
+    const existingRoles = await tablesDB.listRows(
+      appwriteConfig.databaseId,
+      'user_roles',
+      [
+        Query.equal('userId', user.$id),
+        Query.equal('orgId', targetOrgId),
+      ]
+    );
+
+    for (const ur of existingRoles.rows) {
+      await tablesDB.deleteRow(
+        appwriteConfig.databaseId,
+        'user_roles',
+        ur.$id
+      );
+    }
+
+    // Assign new role
+    await tablesDB.createRow(
+      appwriteConfig.databaseId,
+      'user_roles',
+      ID.unique(),
+      {
+        userId: user.$id,
+        roleId: role.$id,
+        orgId: targetOrgId,
+        assignedBy: currentUser.$id,
+      }
+    );
+
+    // Also update legacy role field for backward compatibility
     await tablesDB.updateRow(
       appwriteConfig.databaseId,
       appwriteConfig.usersCollectionId,
       user.$id,
       {
-        role: role,
+        role: roleName.toLowerCase().replace(/\s+/g, '-'),
       }
     );
 
     return NextResponse.json(
       {
         success: true,
-        message: `User role updated to ${role}`,
+        message: `User role updated to ${roleName}`,
         user: {
           email: user.email,
-          role: role,
+          role: roleName,
           fullName: user.fullName,
         },
       },
