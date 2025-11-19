@@ -23,13 +23,16 @@ import {
 import { useUserRole } from '@/hooks/useUserRole';
 import { useUnifiedAnalyticsData } from '@/hooks/useUnifiedAnalyticsData';
 import { mapDatabaseToRouteDivision } from '@/constants/navigation';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
 import {
   DepartmentCardSkeleton,
   TabsSkeleton,
 } from '@/components/ui/skeletons';
 
 const AnalyticsPage = () => {
-  const { role, division: userDivision, loading } = useUserRole();
+  const { division: userDivision, loading } = useUserRole();
+  const { permissions } = usePermissions();
   const router = useRouter();
   const [selectedDepartment, setSelectedDepartment] = useState<string>('IT');
   const {
@@ -42,20 +45,25 @@ const AnalyticsPage = () => {
 
   // Using mapDatabaseToRouteDivision from constants/navigation.ts
 
+  const { permissions } = usePermissions();
+
   // Redirect managers and admins to their division page
   useEffect(() => {
-    if (!loading && role && userDivision) {
-      if (role === 'manager') {
+    if (!loading && userDivision) {
+      // Department Manager - redirect to their division
+      if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && !permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
         const routeDivision = mapDatabaseToRouteDivision(userDivision);
         router.replace(`/analytics/${routeDivision}`);
-      } else if (role === 'admin') {
+      } 
+      // Organization Admin or Super Admin - redirect to admin page
+      else if (permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
         router.replace('/analytics/admin');
       }
     }
-  }, [loading, role, userDivision, router]);
+  }, [loading, permissions, userDivision, router]);
 
   // Show loading while redirecting
-  if (loading || (role === 'manager' && userDivision) || role === 'admin') {
+  if (loading || (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && userDivision && !permissions.includes(PERMISSIONS.SETTINGS.VIEW)) || permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
     return (
       <div className="space-y-6">
         {/* Header Skeleton */}

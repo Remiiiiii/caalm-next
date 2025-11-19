@@ -3,6 +3,11 @@
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
+import {
+  getManagersByDivision,
+  getManagersByDepartment,
+  getAllManagers as getAllManagersRBAC,
+} from '@/lib/utils/get-users-by-role';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
@@ -38,61 +43,24 @@ export const getUserDivisionEnums = async () => {
 };
 
 export const getUsersByDivision = async (division: string) => {
-  const { tablesDB } = await createAdminClient();
   try {
-    const users = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
-      queries: [
-        Query.equal('division', division),
-        Query.equal('role', 'manager'),
-      ],
-    });
-    return users.rows;
+    return await getManagersByDivision(division);
   } catch (error) {
     handleError(error, 'Failed to fetch users by division');
   }
 };
 
 export const getUsersByDepartment = async (department: string) => {
-  const { tablesDB } = await createAdminClient();
   try {
-    // Import the division mapping
-    const { DIVISION_TO_DEPARTMENT } = await import('../../../constants');
-
-    // Find all divisions that belong to this department
-    const divisions = Object.entries(DIVISION_TO_DEPARTMENT)
-      .filter(([, dept]) => dept === department)
-      .map(([division]) => division);
-
-    if (divisions.length === 0) {
-      return [];
-    }
-
-    // Query users by division(s) that belong to this department
-    const users = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
-      queries: [
-        Query.equal('division', divisions),
-        Query.equal('role', 'manager'),
-      ],
-    });
-    return users.rows;
+    return await getManagersByDepartment(department);
   } catch (error) {
     handleError(error, 'Failed to fetch users by department');
   }
 };
 
 export const getAllManagers = async () => {
-  const { tablesDB } = await createAdminClient();
   try {
-    const users = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
-      queries: [Query.equal('role', 'manager')],
-    });
-    return users.rows;
+    return await getAllManagersRBAC();
   } catch (error) {
     handleError(error, 'Failed to fetch all managers');
   }

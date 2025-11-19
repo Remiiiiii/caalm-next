@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/rbac/middleware';
 import { PERMISSIONS } from '@/constants/permissions';
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { getOrgIdFromRequest } from '@/lib/rbac/middleware';
+import CacheManager from '@/lib/services/cache-manager';
 
 export async function GET(
   request: NextRequest,
@@ -146,6 +147,9 @@ export async function POST(
         assignedAt: new Date().toISOString(),
       },
     });
+
+    // Invalidate RBAC cache for this user
+    await CacheManager.invalidateRBAC(userId, targetOrgId);
 
     return NextResponse.json({
       success: true,

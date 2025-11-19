@@ -1,12 +1,15 @@
 /**
  * Permission Checking Utilities
  * Organization-aware permission checking functions
+ * Optimized with Redis caching and parallel queries
  */
 
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
 import type { PermissionKey } from '@/constants/permissions';
+import { getOrSet } from '@/lib/services/redis-cache';
+import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 
 /**
  * Check if user has a specific permission in an organization
@@ -74,6 +77,7 @@ export async function hasAllPermissions(
 /**
  * Get all effective permissions for a user in an organization
  * Returns array of permission keys
+ * Optimized with Redis caching and parallel queries
  */
 export async function getUserPermissions(
   userId: string,
@@ -83,68 +87,103 @@ export async function getUserPermissions(
     return [];
   }
 
-  try {
-    const { tablesDB } = await createAdminClient();
+  // Get target orgId (with caching)
+  let targetOrgId = orgId;
+  if (!targetOrgId) {
+    const defaultOrg = await getUserDefaultOrganization(userId);
+    if (!defaultOrg) {
+      return [];
+    }
+    targetOrgId = defaultOrg.orgId;
+  }
 
-    // If orgId not provided, get user's default organization
-    let targetOrgId = orgId;
-    if (!targetOrgId) {
-      const defaultOrg = await getUserDefaultOrganization(userId);
-      if (!defaultOrg) {
+  // Use Redis cache for permissions
+  const cacheKey = CACHE_KEYS.rbac.permissions(userId, targetOrgId);
+  const ttl = CACHE_TTLS.veryLong; // 15 minutes
+
+  return getOrSet<PermissionKey[]>(
+    cacheKey,
+    async () => {
+      try {
+        const { tablesDB } = await createAdminClient();
+
+        // Parallel: Validate access and get user roles
+        const [hasAccess, userRoles] = await Promise.all([
+          validateUserOrgAccess(userId, targetOrgId),
+          getUserRoles(userId, targetOrgId),
+        ]);
+
+        if (!hasAccess || !userRoles.length) {
+          return [];
+        }
+
+        const roleIds = userRoles.map((ur) => ur.roleId);
+
+        // Get all permissions for these roles
+        const rolePermissionQueries = [];
+        if (roleIds.length === 1) {
+          rolePermissionQueries.push(Query.equal('roleId', roleIds[0]));
+        } else if (roleIds.length > 1) {
+          rolePermissionQueries.push(
+            Query.or(roleIds.map((roleId) => Query.equal('roleId', roleId)))
+          );
+        }
+
+        if (rolePermissionQueries.length === 0) {
+          return [];
+        }
+
+        rolePermissionQueries.push(Query.limit(100));
+
+        const rolePermissions = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: 'role_permissions',
+          queries: rolePermissionQueries,
+        });
+
+        const permissionIds = [
+          ...new Set(rolePermissions.rows.map((rp: any) => rp.permissionId)),
+        ];
+
+        if (!permissionIds.length) {
+          return [];
+        }
+
+        // Get permission keys
+        const permissionQueries = [];
+        if (permissionIds.length === 1) {
+          permissionQueries.push(Query.equal('$id', permissionIds[0]));
+        } else if (permissionIds.length > 1) {
+          permissionQueries.push(
+            Query.or(permissionIds.map((permId) => Query.equal('$id', permId)))
+          );
+        }
+
+        if (permissionQueries.length === 0) {
+          return [];
+        }
+
+        permissionQueries.push(Query.limit(100));
+
+        const permissions = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: 'permissions',
+          queries: permissionQueries,
+        });
+
+        return permissions.rows.map((p: any) => p.key) as PermissionKey[];
+      } catch (error) {
+        console.error('[getUserPermissions] Error fetching permissions:', error);
         return [];
       }
-      targetOrgId = defaultOrg.orgId;
-    }
-
-    // Validate user belongs to organization
-    const hasAccess = await validateUserOrgAccess(userId, targetOrgId);
-    if (!hasAccess) {
-      return [];
-    }
-
-    // Get all roles assigned to user in this organization
-    const userRoles = await getUserRoles(userId, targetOrgId);
-    if (!userRoles.length) {
-      return [];
-    }
-
-    const roleIds = userRoles.map((ur) => ur.roleId);
-
-    // Get all permissions for these roles
-    const rolePermissions = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: 'role_permissions',
-      queries: [
-        Query.equal('roleId', roleIds),
-      ],
-    });
-
-    const permissionIds = [
-      ...new Set(rolePermissions.rows.map((rp: any) => rp.permissionId)),
-    ];
-
-    if (!permissionIds.length) {
-      return [];
-    }
-
-    // Get permission keys
-    const permissions = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: 'permissions',
-      queries: [
-        Query.equal('$id', permissionIds),
-      ],
-    });
-
-    return permissions.rows.map((p: any) => p.key) as PermissionKey[];
-  } catch (error) {
-    console.error('[getUserPermissions] Error fetching permissions:', error);
-    return [];
-  }
+    },
+    ttl
+  );
 }
 
 /**
  * Get all roles assigned to a user in an organization
+ * Optimized with Redis caching and parallel role name fetching
  */
 export async function getUserRoles(
   userId: string,
@@ -154,45 +193,59 @@ export async function getUserRoles(
     return [];
   }
 
-  try {
-    const { tablesDB } = await createAdminClient();
+  // Use Redis cache for user roles
+  const cacheKey = CACHE_KEYS.rbac.userRoles(userId, orgId);
+  const ttl = CACHE_TTLS.veryLong; // 15 minutes
 
-    const userRoles = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: 'user_roles',
-      queries: [
-        Query.equal('userId', userId),
-        Query.equal('orgId', orgId),
-      ],
-    });
+  return getOrSet<Array<{ roleId: string; roleName?: string }>>(
+    cacheKey,
+    async () => {
+      try {
+        const { tablesDB } = await createAdminClient();
 
-    // Fetch role names
-    const rolesWithNames = await Promise.all(
-      userRoles.rows.map(async (ur: any) => {
-        try {
-          const role = await tablesDB.getRow({
-            databaseId: appwriteConfig.databaseId || 'default-db',
-            tableId: 'roles',
-            rowId: ur.roleId,
-          });
-          return {
-            roleId: ur.roleId,
-            roleName: (role as any)?.name || null,
-          };
-        } catch {
-          return {
-            roleId: ur.roleId,
-            roleName: null,
-          };
+        const userRoles = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: 'user_roles',
+          queries: [
+            Query.equal('userId', userId),
+            Query.equal('orgId', orgId),
+          ],
+        });
+
+        if (!userRoles.rows.length) {
+          return [];
         }
-      })
-    );
 
-    return rolesWithNames;
-  } catch (error) {
-    console.error('[getUserRoles] Error fetching roles:', error);
-    return [];
-  }
+        // Fetch all role names in parallel
+        const rolesWithNames = await Promise.all(
+          userRoles.rows.map(async (ur: any) => {
+            try {
+              const role = await tablesDB.getRow({
+                databaseId: appwriteConfig.databaseId || 'default-db',
+                tableId: 'roles',
+                rowId: ur.roleId,
+              });
+              return {
+                roleId: ur.roleId,
+                roleName: (role as any)?.name || null,
+              };
+            } catch {
+              return {
+                roleId: ur.roleId,
+                roleName: null,
+              };
+            }
+          })
+        );
+
+        return rolesWithNames;
+      } catch (error) {
+        console.error('[getUserRoles] Error fetching roles:', error);
+        return [];
+      }
+    },
+    ttl
+  );
 }
 
 /**
@@ -227,6 +280,7 @@ export async function getUserOrganizations(
 
 /**
  * Get user's default organization
+ * Optimized with Redis caching
  */
 export async function getUserDefaultOrganization(
   userId: string
@@ -235,30 +289,40 @@ export async function getUserDefaultOrganization(
     return null;
   }
 
-  try {
-    const orgs = await getUserOrganizations(userId);
-    const defaultOrg = orgs.find((o) => o.isDefault);
-    
-    if (defaultOrg) {
-      return {
-        orgId: defaultOrg.orgId,
-        orgRole: defaultOrg.orgRole,
-      };
-    }
+  // Use Redis cache for default organization
+  const cacheKey = CACHE_KEYS.rbac.defaultOrg(userId);
+  const ttl = CACHE_TTLS.static; // 1 hour (rarely changes)
 
-    // If no default, return first organization
-    if (orgs.length > 0) {
-      return {
-        orgId: orgs[0].orgId,
-        orgRole: orgs[0].orgRole,
-      };
-    }
+  return getOrSet<{ orgId: string; orgRole: string } | null>(
+    cacheKey,
+    async () => {
+      try {
+        const orgs = await getUserOrganizations(userId);
+        const defaultOrg = orgs.find((o) => o.isDefault);
+        
+        if (defaultOrg) {
+          return {
+            orgId: defaultOrg.orgId,
+            orgRole: defaultOrg.orgRole,
+          };
+        }
 
-    return null;
-  } catch (error) {
-    console.error('[getUserDefaultOrganization] Error:', error);
-    return null;
-  }
+        // If no default, return first organization
+        if (orgs.length > 0) {
+          return {
+            orgId: orgs[0].orgId,
+            orgRole: orgs[0].orgRole,
+          };
+        }
+
+        return null;
+      } catch (error) {
+        console.error('[getUserDefaultOrganization] Error:', error);
+        return null;
+      }
+    },
+    ttl
+  );
 }
 
 /**

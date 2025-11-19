@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import PermissionGate from '@/components/PermissionGate';
+import { PermissionGate } from '@/components/PermissionGate';
 import { PERMISSIONS } from '@/constants/permissions';
 
 interface Role {

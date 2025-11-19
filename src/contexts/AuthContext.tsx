@@ -53,13 +53,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // First try to get session-based user
         const sessionUser = await getSessionUser();
-        console.log(
-          'AuthContext: Session user check result:',
-          sessionUser ? 'Found' : 'Not found'
-        );
+        
+        // Only log in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            'AuthContext: Session user check result:',
+            sessionUser ? 'Found' : 'Not found'
+          );
+        }
 
           if (sessionUser) {
-          console.log('AuthContext: Using session-based user');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('AuthContext: Using session-based user');
+          }
             const typedSessionUser = sessionUser as AuthenticatedUser;
             if (typeof typedSessionUser.role === 'string') {
               typedSessionUser.role = normalizeUserRole(typedSessionUser.role);
@@ -90,35 +96,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             (pathname.startsWith('/sign-in') ||
               pathname.startsWith('/sign-up'));
 
-          console.log(
-            'AuthContext: Current pathname:',
-            pathname,
-            'isDashboardRoute:',
-            isDashboardRoute,
-            'isAuthRoute:',
-            isAuthRoute
-          );
+          if (process.env.NODE_ENV === 'development') {
+            console.log(
+              'AuthContext: Current pathname:',
+              pathname,
+              'isDashboardRoute:',
+              isDashboardRoute,
+              'isAuthRoute:',
+              isAuthRoute
+            );
+          }
 
           if (isAuthRoute) {
             // Explicitly set to null on auth routes to prevent any 2FA interference
-            console.log(
-              'AuthContext: On auth route, explicitly setting user to null'
-            );
+            if (process.env.NODE_ENV === 'development') {
+              console.log(
+                'AuthContext: On auth route, explicitly setting user to null'
+              );
+            }
             setUser(null);
             setIsSessionValid(false);
           } else if (isDashboardRoute) {
-            console.log(
-              'AuthContext: On protected route, checking 2FA-based user for path:',
-              pathname
-            );
+            if (process.env.NODE_ENV === 'development') {
+              console.log(
+                'AuthContext: On protected route, checking 2FA-based user for path:',
+                pathname
+              );
+            }
             const twoFAUser = await getCurrentUserFrom2FA();
-            console.log(
-              'AuthContext: 2FA user check result:',
-              twoFAUser ? 'Found' : 'Not found'
-            );
+            if (process.env.NODE_ENV === 'development') {
+              console.log(
+                'AuthContext: 2FA user check result:',
+                twoFAUser ? 'Found' : 'Not found'
+              );
+            }
 
             if (twoFAUser) {
-              console.log('AuthContext: Using 2FA-based user for dashboard');
+              if (process.env.NODE_ENV === 'development') {
+                console.log('AuthContext: Using 2FA-based user for dashboard');
+              }
 
               // Generate profile image URL from fileId
               let profileImageUrl = null;
@@ -160,14 +176,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setUser(convertedUser);
               setIsSessionValid(true);
             } else {
-              console.log('AuthContext: No 2FA user found, setting to null');
+              if (process.env.NODE_ENV === 'development') {
+                console.log('AuthContext: No 2FA user found, setting to null');
+              }
               setUser(null);
               setIsSessionValid(false);
             }
           } else {
-            console.log(
-              'AuthContext: Not on dashboard or auth route, setting to null'
-            );
+            if (process.env.NODE_ENV === 'development') {
+              console.log(
+                'AuthContext: Not on dashboard or auth route, setting to null'
+              );
+            }
             setUser(null);
             setIsSessionValid(false);
           }

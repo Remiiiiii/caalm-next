@@ -66,6 +66,16 @@ export const CACHE_KEYS = {
     global: (query: string) => `search:global:${query}`,
     suggestions: (query: string) => `search:suggestions:${query}`,
   },
+
+  // RBAC - Permissions and Roles
+  rbac: {
+    permissions: (userId: string, orgId?: string) =>
+      `rbac:permissions:${userId}${orgId ? `:${orgId}` : ''}`,
+    userRoles: (userId: string, orgId?: string) =>
+      `rbac:userRoles:${userId}${orgId ? `:${orgId}` : ''}`,
+    defaultOrg: (userId: string) => `rbac:defaultOrg:${userId}`,
+    userWithRoles: (userId: string) => `rbac:userWithRoles:${userId}`,
+  },
 } as const;
 
 /**
@@ -99,6 +109,9 @@ export const getTTLForRoute = (route: string): number => {
     'recent-activities': CACHE_TTLS.short,
     'audits/logs': CACHE_TTLS.medium,
     'audits/stats': CACHE_TTLS.long,
+    'rbac/permissions': CACHE_TTLS.veryLong, // Permissions rarely change
+    'rbac/userRoles': CACHE_TTLS.veryLong, // Roles rarely change
+    'rbac/defaultOrg': CACHE_TTLS.static, // Default org rarely changes
   };
 
   return ttlMap[route] || CACHE_TTLS.medium;

@@ -10,7 +10,6 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 import { Models } from 'appwrite';
 import { signOutUser } from '@/lib/actions/user.actions';
 import { UserRoleDisplay } from '@/components/UserRoleDisplay';
-import { getLegacyRoleDisplayName } from '@/lib/utils/role-display';
 
 interface DashboardHeaderProps {
   user?: Models.User<Models.Preferences> | null;
@@ -78,7 +77,6 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
                   <p className="text-xs text-slate-dark">
                     <UserRoleDisplay 
                       userId={user.$id} 
-                      legacyRole={user.prefs?.role as string || ''} 
                     /> -{' '}
                     {user.prefs?.division || 'Unknown Division'}
                   </p>

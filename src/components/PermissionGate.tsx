@@ -60,3 +60,5 @@ export function PermissionGate({
   return <>{hasAccess ? children : fallback}</>;
 }
 
+export default PermissionGate;
+

@@ -17,13 +17,11 @@ import {
   notifyInvitationSent,
   notifyInvitationAccepted,
 } from '../utils/smsNotifications';
-import {
-  UserRole,
-  normalizeUserRole,
-  USER_ROLES,
-  isUserRole,
-  isLegacyRole,
-} from '@/constants/rbac';
+import { getUserRoles, getUserDefaultOrganization } from '@/lib/rbac/permissions';
+import CacheManager from '@/lib/services/cache-manager';
+
+// Calendar role type for compatibility with calendar permissions
+export type CalendarRole = 'admin' | 'approver' | 'reviewer' | 'scheduler' | 'viewer';
 
 export type AppUser = {
   $id: string;
@@ -31,7 +29,7 @@ export type AppUser = {
   email: string;
   avatar: string;
   accountId: string;
-  role: UserRole;
+  role: CalendarRole; // For calendar permissions compatibility only
   division?: UserDivision;
   status?: 'active' | 'inactive';
 };
@@ -92,13 +90,30 @@ export const getUserByAccountId = async (
     }
 
     const user = result.rows[0];
+    
+    // Get user's role from database (for calendar permissions compatibility)
+    // Both functions are now cached, so this is fast
+    const defaultOrg = await getUserDefaultOrganization(user.$id);
+    const userRoles = defaultOrg ? await getUserRoles(user.$id, defaultOrg.orgId) : [];
+    const roleName = userRoles[0]?.roleName || '';
+    
+    // Map new RBAC roles to calendar roles for compatibility
+    let calendarRole: CalendarRole = 'viewer';
+    if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
+      calendarRole = 'admin';
+    } else if (roleName === 'Department Manager') {
+      calendarRole = 'approver';
+    } else if (roleName === 'Viewer') {
+      calendarRole = 'viewer';
+    }
+    
     return {
       $id: user.$id,
       fullName: user.fullName,
       email: user.email,
       avatar: user.avatar,
       accountId: user.accountId,
-      role: normalizeUserRole(user.role),
+      role: calendarRole,
       division: user.division,
       status: user.status,
     };
@@ -312,7 +327,6 @@ export const finalizeAccountAfterEmailVerification = async ({
           email: email,
           avatar: avatarPlaceholderUrl,
           accountId: accountId,
-          role: 'viewer', // Default role until invitation assigns a higher permission
         },
       });
       console.log(
@@ -580,7 +594,10 @@ export const getCurrentUser = async () => {
     const { tablesDB, account } = await createSessionClient();
     const result = await account.get();
 
-    console.log('getCurrentUser - Account ID:', result.$id);
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('getCurrentUser - Account ID:', result.$id);
+    }
 
     const user = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
@@ -588,23 +605,42 @@ export const getCurrentUser = async () => {
       queries: [Query.equal('accountId', result.$id)],
     });
 
-    console.log('getCurrentUser - Database query result:', {
-      total: user.total,
-      rows: user.rows,
-      firstRow: user.rows[0] || null,
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('getCurrentUser - Database query result:', {
+        total: user.total,
+        rows: user.rows,
+        firstRow: user.rows[0] || null,
+      });
+    }
 
     if (user.total === 0) return null;
 
     // Return only the user data, not the client objects
     const userData = user.rows[0];
+    
+    // Parallel: Get user's role from database (for calendar permissions compatibility)
+    // Both functions are now cached, so this is fast
+    const defaultOrg = await getUserDefaultOrganization(userData.$id);
+    const userRoles = defaultOrg ? await getUserRoles(userData.$id, defaultOrg.orgId) : [];
+    const roleName = userRoles[0]?.roleName || '';
+    
+    // Map new RBAC roles to calendar roles for compatibility
+    let calendarRole: CalendarRole = 'viewer';
+    if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
+      calendarRole = 'admin';
+    } else if (roleName === 'Department Manager') {
+      calendarRole = 'approver';
+    } else if (roleName === 'Viewer') {
+      calendarRole = 'viewer';
+    }
+    
     return parseStringify({
       $id: userData.$id,
       fullName: userData.fullName,
       email: userData.email,
       avatar: userData.avatar,
       accountId: userData.accountId,
-      role: normalizeUserRole(userData.role),
+      role: calendarRole,
       division: userData.division,
       status: userData.status,
       $createdAt: userData.$createdAt,
@@ -657,9 +693,22 @@ export const getCurrentUserFrom2FA = async () => {
       }
 
       const user = userResponse.rows[0];
-      // console.log(
-      //   'getCurrentUserFrom2FA - Returning actual user data for 2FA-authenticated user'
-      // );
+      
+      // Get user's role from database (for calendar permissions compatibility)
+      // Both functions are now cached, so this is fast
+      const defaultOrg = await getUserDefaultOrganization(user.$id);
+      const userRoles = defaultOrg ? await getUserRoles(user.$id, defaultOrg.orgId) : [];
+      const roleName = userRoles[0]?.roleName || '';
+      
+      // Map new RBAC roles to calendar roles for compatibility
+      let calendarRole: CalendarRole = 'viewer';
+      if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
+        calendarRole = 'admin';
+      } else if (roleName === 'Department Manager') {
+        calendarRole = 'approver';
+      } else if (roleName === 'Viewer') {
+        calendarRole = 'viewer';
+      }
 
       // Return only the user data, not any client objects
       return parseStringify({
@@ -668,7 +717,7 @@ export const getCurrentUserFrom2FA = async () => {
         email: user.email,
         avatar: user.avatar,
         accountId: user.accountId,
-        role: normalizeUserRole(user.role),
+        role: calendarRole,
         division: user.division,
         status: user.status,
         $createdAt: user.$createdAt,
@@ -751,7 +800,6 @@ export const signInUser = async ({ email }: { email: string }) => {
           email: authUser.email,
           avatar: avatarPlaceholderUrl,
           accountId: authUser.$id,
-          role: 'viewer',
         },
       });
       await sendEmailOTP({ email });
@@ -844,7 +892,13 @@ interface ListPendingInvitationsParams {
   orgId: string;
 }
 
-const allowedRoles = USER_ROLES;
+// Valid RBAC role names for invitations
+const VALID_RBAC_ROLES = [
+  'Super Admin',
+  'Organization Admin',
+  'Department Manager',
+  'Viewer',
+];
 
 export const createInvitation = async ({
   email,
@@ -876,27 +930,25 @@ export const createInvitation = async ({
     const status = 'pending';
     const revoked = false;
 
-    const normalizedInput = role.trim().toLowerCase();
-    const isRecognizedRole =
-      isUserRole(normalizedInput) || isLegacyRole(normalizedInput);
-    const canonicalRole = normalizeUserRole(normalizedInput);
+    // Validate role against new RBAC roles
+    const normalizedRole = role.trim();
+    const isRecognizedRole = VALID_RBAC_ROLES.includes(normalizedRole);
 
     console.log('createInvitation: Role validation:', {
       originalRole: role,
-      normalizedInput,
-      canonicalRole,
-      allowedRoles,
+      normalizedRole,
       isRecognizedRole,
+      validRoles: VALID_RBAC_ROLES,
     });
 
     if (!isRecognizedRole) {
       console.error('createInvitation: Invalid role:', {
         role,
-        normalizedInput,
-        allowedRoles,
+        normalizedRole,
+        validRoles: VALID_RBAC_ROLES,
       });
       throw new Error(
-        `Invalid role: ${role}. Must be one of ${allowedRoles.join(', ')}`
+        `Invalid role: ${role}. Must be one of ${VALID_RBAC_ROLES.join(', ')}`
       );
     }
     console.log('createInvitation: Role validation passed');
@@ -954,7 +1006,7 @@ export const createInvitation = async ({
       data: {
         email,
         orgId,
-        role: canonicalRole,
+        role: normalizedRole,
         department: department?.trim(),
         division: division?.trim(),
         name,
@@ -972,7 +1024,7 @@ export const createInvitation = async ({
       await notifyInvitationSent(
         email,
         name,
-        canonicalRole,
+        normalizedRole,
         department || 'N/A'
       );
     } catch (error) {
@@ -992,7 +1044,7 @@ export const createInvitation = async ({
         email,
         name,
         inviteLink,
-        canonicalRole,
+        normalizedRole,
         department
       );
       console.log('Invitation email sent via Mailgun to:', email);
@@ -1076,11 +1128,9 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   if (!authUser) throw new Error('User not found in Auth');
   const accountId = authUser.$id;
 
-  // 2. Create users collection document with role if not exists
+  // 2. Create users collection document if not exists (role is assigned via user_roles table)
   let user = await getUserByEmail(invite.email);
   if (!user) {
-    const canonicalInviteRole = normalizeUserRole(invite.role);
-
     // Validate division against expected enum values
     const validDivisions = [
       'c-suite',
@@ -1098,7 +1148,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     console.log('acceptInvitation: Creating user with data:', {
       fullName: invite.name,
       email: invite.email,
-      role: canonicalInviteRole,
+      role: invite.role,
       department: invite.department,
       division: invite.division,
       divisionType: typeof invite.division,
@@ -1131,7 +1181,6 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
         email: invite.email,
         avatar: avatarPlaceholderUrl,
         accountId,
-        role: canonicalInviteRole,
         department: invite.department,
         division: invite.division,
       },
@@ -1140,7 +1189,50 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   }
   if (!user) throw new Error('User creation failed');
 
-  // 3. Mark invitation as accepted
+  // 3. Assign role to user via user_roles table
+  // Get role ID from roles table
+  const rolesResult = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId || 'default-db',
+    tableId: 'roles',
+    queries: [Query.equal('name', invite.role)],
+  });
+  
+  if (rolesResult.total > 0) {
+    const roleId = rolesResult.rows[0].$id;
+    // Get default organization
+    const defaultOrg = await getUserDefaultOrganization(user.$id);
+    if (defaultOrg) {
+      // Check if user_role already exists
+      const existingUserRoles = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: 'user_roles',
+        queries: [
+          Query.equal('userId', user.$id),
+          Query.equal('orgId', defaultOrg.orgId),
+          Query.equal('roleId', roleId),
+        ],
+      });
+      
+      if (existingUserRoles.total === 0) {
+        await tablesDB.createRow({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: 'user_roles',
+          rowId: ID.unique(),
+          data: {
+            userId: user.$id,
+            orgId: defaultOrg.orgId,
+            roleId: roleId,
+            assignedBy: invite.invitedBy || user.$id,
+          },
+        });
+        
+        // Invalidate RBAC cache for this user
+        await CacheManager.invalidateRBAC(user.$id, defaultOrg.orgId);
+      }
+    }
+  }
+
+  // 4. Mark invitation as accepted
   await tablesDB.updateRow({
     databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
@@ -1153,7 +1245,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     await notifyInvitationAccepted(
       invite.email,
       invite.name,
-      normalizeUserRole(invite.role),
+      invite.role,
       invite.department || 'N/A'
     );
   } catch (error) {
@@ -1161,12 +1253,12 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     // Don't throw - SMS failure shouldn't block invitation acceptance
   }
 
-  // 4. Return info for frontend to redirect to dashboard
+  // 5. Return info for frontend to redirect to dashboard
   return {
     success: true,
     email: invite.email,
     accountId: user.accountId,
-    role: user.role,
+    role: invite.role,
     department: user.department,
   };
 };
@@ -1387,13 +1479,13 @@ export const resendInvitation = async ({ token }: { token: string }) => {
 
     // Send the invite email via Mailgun
     const { mailgunService } = await import('../services/mailgun');
-    await mailgunService.sendInvitationEmail(
-      invitation.email,
-      invitation.name,
-      inviteLink,
-      invitation.role,
-      invitation.department
-    );
+      await mailgunService.sendInvitationEmail(
+        invitation.email,
+        invitation.name,
+        inviteLink,
+        invitation.role || 'Viewer',
+        invitation.department
+      );
 
     console.log(
       'resendInvitation: Email resent successfully to:',
@@ -1442,9 +1534,9 @@ export const updateUserProfile = async ({
     if (userList.total === 0) throw new Error('User not found');
     const userDoc = userList.rows[0];
     // Prepare update payload
+    // Note: role updates should be done via user_roles table, not directly on user
     const updatePayload: Record<string, unknown> = {};
     if (fullName !== undefined) updatePayload.fullName = fullName;
-    if (role !== undefined) updatePayload.role = role;
     if (division !== undefined) updatePayload.division = division;
     // Update the user document
     const updatedUser = await tablesDB.updateRow({

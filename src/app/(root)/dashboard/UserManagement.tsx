@@ -24,7 +24,6 @@ import {
 import { Trash, ListFilter, Pencil, Trash2 } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { UserRoleDisplay } from '@/components/UserRoleDisplay';
-import { getLegacyRoleDisplayName } from '@/lib/utils/role-display';
 
 // Map user status to badge colors to mirror Executive Dashboard invitations table
 const getUserStatusBadgeClasses = (status: string): string => {
@@ -48,7 +47,6 @@ const UserManagement = () => {
   const [editForm, setEditForm] = useState({
     fullName: '',
     department: '',
-    role: '',
   });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -91,10 +89,8 @@ const UserManagement = () => {
       );
     }
 
-    // Apply role filter
-    if (filters.roles.length > 0) {
-      filtered = filtered.filter((user) => filters.roles.includes(user.role));
-    }
+    // Role filtering removed - roles are now managed via RBAC system
+    // Use the role management UI to view and assign roles
 
     // Apply department filter
     if (filters.departments.length > 0) {
@@ -114,11 +110,9 @@ const UserManagement = () => {
     return filtered;
   }, [typedUsers, searchTerm, filters]);
 
-  // Get unique values for filter options
-  const uniqueRoles = useMemo(
-    () => [...new Set(typedUsers.map((user) => user.role))].filter(Boolean),
-    [typedUsers]
-  );
+  // Role filter removed - roles are now managed via RBAC system
+  // Use the role management UI to view and assign roles
+  const uniqueRoles: string[] = [];
 
   const uniqueDepartments = useMemo(
     () =>
@@ -157,14 +151,13 @@ const UserManagement = () => {
 
   const hasActiveFilters =
     searchTerm ||
-    filters.roles.length > 0 ||
     filters.departments.length > 0 ||
     filters.statuses.length > 0;
 
   // User edit handlers
   const closeEditModal = () => {
     setEditUser(null);
-    setEditForm({ fullName: '', department: '', role: '' });
+    setEditForm({ fullName: '', department: '' });
     setEditError(null);
   };
 
@@ -309,26 +302,13 @@ const UserManagement = () => {
                     Filter{' '}
                     {hasActiveFilters &&
                       `(${
-                        filters.roles.length +
                         filters.departments.length +
                         filters.statuses.length
                       })`}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
-                  <DropdownMenuLabel>Filter by Role</DropdownMenuLabel>
-                  {uniqueRoles.map((role) => (
-                    <DropdownMenuCheckboxItem
-                      key={role}
-                      checked={filters.roles.includes(role)}
-                      onCheckedChange={(checked) =>
-                        handleFilterChange('roles', role, checked)
-                      }
-                    >
-                      {getLegacyRoleDisplayName(role)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-
+                  {/* Role filtering removed - roles are now managed via RBAC system */}
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Filter by Department</DropdownMenuLabel>
                   {uniqueDepartments.map((dept) => (
@@ -463,7 +443,7 @@ const UserManagement = () => {
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <UserRoleDisplay userId={user.$id} legacyRole={user.role} />
+                          <UserRoleDisplay userId={user.$id} />
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                           {user.department || 'N/A'}
@@ -487,7 +467,6 @@ const UserManagement = () => {
                                 setEditForm({
                                   fullName: user.fullName,
                                   department: user.department || '',
-                                  role: user.role,
                                 });
                               }}
                               className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"

@@ -36,36 +36,4 @@ function capitalizeRoleId(roleId: string): string {
     .join(' ');
 }
 
-/**
- * Get role name from legacy role string
- * This is a client-side fallback for legacy role values
- */
-export function getLegacyRoleDisplayName(role: string | null | undefined): string {
-  if (!role) {
-    return '';
-  }
-
-  // Handle legacy role mappings
-  const roleMap: Record<string, string> = {
-    'super-admin': 'Super Admin',
-    'organization-admin': 'Organization Admin',
-    'department-manager': 'Department Manager',
-    scheduler: 'Scheduler',
-    reviewer: 'Reviewer',
-    viewer: 'Viewer',
-    executive: 'Executive',
-    manager: 'Manager',
-    admin: 'Admin',
-    'head_admin': 'Executive',
-    'hr_admin': 'Admin',
-  };
-
-  const normalized = role.toLowerCase().trim();
-  if (roleMap[normalized]) {
-    return roleMap[normalized];
-  }
-
-  // Fallback: capitalize first letter
-  return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
-}
 

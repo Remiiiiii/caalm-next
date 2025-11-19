@@ -47,7 +47,8 @@ import { useContractStatusEnums } from '@/hooks/useContractStatusEnums';
 import { useUpdateContractStatus } from '@/hooks/useUpdateContractStatus';
 import { useDepartmentAssignment } from '@/hooks/useDepartmentAssignment';
 import DocumentViewer from './DocumentViewer';
-import { mapUserRoleToLegacy, UserRole } from '@/constants/rbac';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
 
 const ActionDropdown = ({
   file,
@@ -58,7 +59,7 @@ const ActionDropdown = ({
   file: UIFileDoc;
   onStatusChange?: () => void;
   onRefresh?: () => void;
-  userRole?: UserRole;
+  userRole?: string;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -85,7 +86,7 @@ const ActionDropdown = ({
   const { enums: statusOptions, error: statusError } = useContractStatusEnums();
   const { updateStatus } = useUpdateContractStatus({ onStatusChange });
   const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const legacyRole = mapUserRoleToLegacy(userRole);
+  const { permissions } = usePermissions();
 
   // Fetch department data when Assign dialog is opened
   useEffect(() => {
@@ -665,20 +666,36 @@ const ActionDropdown = ({
     file.contractType ||
     file.contractExpiryDate;
 
-  // Role-based action filtering
+  // Permission-based action filtering
   let filteredActions = actionsDropdownItems;
 
-  if (legacyRole === 'manager') {
-    // Managers can only see: Details, Download, Review, Rename, Share, Status
-    filteredActions = actionsDropdownItems.filter((action) =>
-      ['details', 'download', 'review', 'rename', 'share', 'status'].includes(
-        action.value
-      )
-    );
-  } else if (legacyRole === 'executive' || legacyRole === 'admin') {
-    // Executive and Admin can see all actions
-    filteredActions = actionsDropdownItems;
-  }
+  // Filter actions based on permissions
+  filteredActions = actionsDropdownItems.filter((action) => {
+    switch (action.value) {
+      case 'delete':
+        // Delete requires contracts.edit or contracts.approve
+        return permissions.includes(PERMISSIONS.CONTRACTS.EDIT) || permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
+      case 'rename':
+        // Rename requires contracts.edit
+        return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
+      case 'review':
+        // Review requires contracts.review
+        return permissions.includes(PERMISSIONS.CONTRACTS.REVIEW);
+      case 'status':
+        // Status requires contracts.approve
+        return permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
+      case 'assign':
+        // Assign requires contracts.edit
+        return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
+      case 'details':
+      case 'download':
+      case 'share':
+        // Basic actions require contracts.view
+        return permissions.includes(PERMISSIONS.CONTRACTS.VIEW);
+      default:
+        return true;
+    }
+  });
 
   // Additional filtering for contract files
   // Only show Assign and Status for actual contract files

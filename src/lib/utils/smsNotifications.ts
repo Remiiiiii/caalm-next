@@ -3,15 +3,10 @@ import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
 
-// Get users by roles from users collection
+// Get users by roles from users collection using new RBAC system
 async function getUsersByRoles(roles: string[]) {
-  const { tablesDB } = await createAdminClient();
-  const result = await tablesDB.listRows({
-    databaseId: appwriteConfig.databaseId!,
-    tableId: appwriteConfig.usersCollectionId!,
-    queries: [Query.equal('role', roles), Query.equal('status', 'active')],
-  });
-  return result.rows;
+  const { getUsersByRoleNames } = await import('./get-users-by-role');
+  return getUsersByRoleNames(roles, undefined, { status: 'active' });
 }
 
 // Get phone numbers from Appwrite Auth for users
@@ -63,19 +58,10 @@ async function getUsersWithPhoneNumbers(users: any[]) {
   return usersWithPhones;
 }
 
-// Get managers in a specific department
+// Get managers in a specific department using new RBAC system
 async function getDepartmentManagers(department: string) {
-  const { tablesDB } = await createAdminClient();
-  const result = await tablesDB.listRows({
-    databaseId: appwriteConfig.databaseId!,
-    tableId: appwriteConfig.usersCollectionId!,
-    queries: [
-      Query.equal('role', 'reviewer'),
-      Query.equal('department', department),
-      Query.equal('status', 'active'),
-    ],
-  });
-  return result.rows;
+  const { getManagersByDepartment } = await import('./get-users-by-role');
+  return getManagersByDepartment(department);
 }
 
 // Send SMS (awaitable for reliability in serverless environments)

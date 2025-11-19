@@ -29,6 +29,7 @@ import TwoFactorVerificationModal from '@/components/TwoFactorVerificationModal'
 import { useRouter } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
 import { getLogoutMessage } from '@/lib/auth-utils';
+import { getDashboardUrlForUser } from '@/lib/utils/dashboard-redirect';
 
 type FormType = 'sign-in' | 'sign-up';
 
@@ -518,17 +519,16 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
                 // Force a page reload to ensure session is properly established
                 // This helps with middleware and authentication state
-                if (user.role === 'executive') {
-                  console.log('Redirecting to executive dashboard');
-                  window.location.href = '/dashboard/executive';
-                } else if (user.role === 'manager') {
-                  console.log('Redirecting to manager dashboard');
-                  window.location.href = '/dashboard/manager';
-                } else if (user.role === 'admin') {
-                  console.log('Redirecting to admin dashboard');
-                  window.location.href = '/dashboard/admin';
-                } else {
-                  console.log('Redirecting to default dashboard');
+                // Fetch user's role from database and redirect to appropriate dashboard
+                try {
+                  const dashboardUrl = await getDashboardUrlForUser(
+                    user.$id,
+                    'default_organization'
+                  );
+                  console.log('Redirecting to dashboard:', dashboardUrl);
+                  window.location.href = dashboardUrl;
+                } catch (error) {
+                  console.error('Error fetching dashboard URL:', error);
                   window.location.href = '/dashboard';
                 }
               } catch (error) {
@@ -560,14 +560,16 @@ const AuthForm = ({ type }: { type: FormType }) => {
                   return;
                 }
 
-                // Use window.location.href for consistent behavior
-                if (user.role === 'executive') {
-                  window.location.href = '/dashboard/executive';
-                } else if (user.role === 'manager') {
-                  window.location.href = '/dashboard/manager';
-                } else if (user.role === 'admin') {
-                  window.location.href = '/dashboard/admin';
-                } else {
+                // Fetch user's role from database and redirect to appropriate dashboard
+                try {
+                  const dashboardUrl = await getDashboardUrlForUser(
+                    user.$id,
+                    'default_organization'
+                  );
+                  console.log('Redirecting to dashboard:', dashboardUrl);
+                  window.location.href = dashboardUrl;
+                } catch (error) {
+                  console.error('Error fetching dashboard URL:', error);
                   window.location.href = '/dashboard';
                 }
               } catch (error) {

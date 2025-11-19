@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRole } from '@/lib/rbac/roles';
-import { getLegacyRoleDisplayName } from '@/lib/utils/role-display';
 
 /**
  * Get role display name for a user
- * Accepts either roleId or legacy role string
+ * Accepts roleId parameter
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params;
     const { searchParams } = new URL(request.url);
     const roleId = searchParams.get('roleId');
-    const legacyRole = searchParams.get('role');
 
     if (roleId) {
       // Fetch role name from database
@@ -26,17 +25,8 @@ export async function GET(
       }
     }
 
-    if (legacyRole) {
-      // Use legacy role mapping
-      const roleName = getLegacyRoleDisplayName(legacyRole);
-      return NextResponse.json({
-        success: true,
-        roleName,
-      });
-    }
-
     return NextResponse.json(
-      { success: false, error: 'roleId or role parameter required' },
+      { success: false, error: 'roleId parameter required' },
       { status: 400 }
     );
   } catch (error) {

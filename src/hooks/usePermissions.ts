@@ -36,8 +36,18 @@ export function usePermissions(): UsePermissionsResult {
     const fetchPermissions = async () => {
       try {
         const url = `/api/permissions/check${orgId ? `?orgId=${orgId}` : ''}`;
-        const response = await fetch(url);
-        const data = await response.json();
+        
+        // Use request deduplication to prevent concurrent requests
+        const { deduplicateRequest } = await import('@/lib/utils/request-deduplication');
+        const cacheKey = `permissions:${user.$id}:${orgId || 'default'}`;
+        
+        const data = await deduplicateRequest(cacheKey, async () => {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error('Failed to fetch permissions');
+          }
+          return response.json();
+        });
 
         if (data.success) {
           setPermissions(data.permissions || []);

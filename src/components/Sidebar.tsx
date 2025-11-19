@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment, useEffect, useMemo } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import Avatar from '@/components/ui/avatar';
@@ -13,9 +13,20 @@ import {
 } from '@/constants/navigation';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useUserRoles } from '@/hooks/useUserRoles';
-import { PERMISSION_BASED_NAV, hasNavigationPermission } from '@/constants/navigation-permissions';
+import {
+  PERMISSION_BASED_NAV,
+  hasNavigationPermission,
+  type NavigationItem,
+} from '@/constants/navigation-permissions';
 import { PERMISSIONS } from '@/constants/permissions';
 import type { PermissionKey } from '@/constants/permissions';
+import { Crown, Building2, Building, Eye, Lock } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface Props {
   name?: string;
@@ -57,6 +68,36 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
   const { permissions, loading: permissionsLoading } = usePermissions();
   const { roles: userRoles, loading: rolesLoading } = useUserRoles();
 
+  // Memoize viewer check and primary role to avoid unnecessary recalculations
+  const { isViewer, primaryRole } = useMemo(() => {
+    if (userRoles.length === 0) {
+      return { isViewer: false, primaryRole: null };
+    }
+    const viewerRole = userRoles.find((r) => r.roleName === 'Viewer');
+    return {
+      isViewer: !!viewerRole,
+      primaryRole: userRoles[0]?.roleName || null,
+    };
+  }, [userRoles]);
+
+  // Get role badge icon component
+  // const getRoleBadgeIcon = (roleName: string | null) => {
+  //   if (!roleName) return null;
+  //   const iconProps = { className: 'h-4 w-4', 'aria-hidden': true };
+  //   switch (roleName) {
+  //     case 'Super Admin':
+  //       return <Crown {...iconProps} className="h-4 w-4 text-yellow-500" />;
+  //     case 'Organization Admin':
+  //       return <Building2 {...iconProps} className="h-4 w-4 text-blue-500" />;
+  //     case 'Department Manager':
+  //       return <Building {...iconProps} className="h-4 w-4 text-green-500" />;
+  //     case 'Viewer':
+  //       return <Eye {...iconProps} className="h-4 w-4 text-gray-500" />;
+  //     default:
+  //       return null;
+  //   }
+  // };
+
   // Map database division values to sidebar division values
   const mapDivisionToSidebar = (dbDivision?: string): string | undefined => {
     if (!dbDivision) return undefined;
@@ -79,6 +120,17 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
 
   const mappedDivision = mapDivisionToSidebar(division);
 
+  // Memoize lock check function to avoid recreating on every render
+  const shouldShowLock = useMemo(
+    () =>
+      (item: NavigationItem): boolean => {
+        if (!item.requiresElevated) return false;
+        // Show lock if requires elevated permission and user doesn't have it
+        return !hasNavigationPermission(permissions, item);
+      },
+    [permissions]
+  );
+
   // Build navigation based on permissions
   const groupedNav = useMemo(() => {
     if (permissionsLoading || rolesLoading) {
@@ -88,25 +140,39 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
     const nav: typeof PERMISSION_BASED_NAV = [];
 
     // Dashboard section - dynamically generate based on user's actual roles
-    const dashboardItems: Array<{ name: string; icon: string; url: string; permissions: PermissionKey[] }> = [];
-    
+    const dashboardItems: Array<{
+      name: string;
+      icon: string;
+      url: string;
+      permissions: PermissionKey[];
+    }> = [];
+
     // Map role names to dashboard URLs
-    const roleToDashboardMap: Record<string, { url: string; permissions: PermissionKey[] }> = {
+    const roleToDashboardMap: Record<
+      string,
+      { url: string; permissions: PermissionKey[] }
+    > = {
       'Super Admin': {
-        url: '/dashboard/admin',
+        url: '/dashboard/superadmin',
         permissions: [PERMISSIONS.USERS.VIEW, PERMISSIONS.SETTINGS.VIEW],
       },
       'Organization Admin': {
-        url: '/dashboard/admin',
+        url: '/dashboard/organizationadmin',
         permissions: [PERMISSIONS.USERS.VIEW, PERMISSIONS.SETTINGS.VIEW],
       },
       'Department Manager': {
-        url: '/dashboard/manager',
-        permissions: [PERMISSIONS.CALENDAR.VIEW_TEAM, PERMISSIONS.CONTRACTS.VIEW],
+        url: '/dashboard/departmentmanager',
+        permissions: [
+          PERMISSIONS.CALENDAR.VIEW_TEAM,
+          PERMISSIONS.CONTRACTS.VIEW,
+        ],
       },
-      'Viewer': {
-        url: '/dashboard/executive',
-        permissions: [PERMISSIONS.CALENDAR.VIEW_OWN, PERMISSIONS.CONTRACTS.VIEW],
+      Viewer: {
+        url: '/dashboard/viewer',
+        permissions: [
+          PERMISSIONS.CALENDAR.VIEW_OWN,
+          PERMISSIONS.CONTRACTS.VIEW,
+        ],
       },
     };
 
@@ -117,10 +183,10 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
         const dashboardConfig = roleToDashboardMap[userRole.roleName];
         if (dashboardConfig && !seenUrls.has(dashboardConfig.url)) {
           // Check if user has required permissions
-          const hasAccess = dashboardConfig.permissions.some(perm => 
+          const hasAccess = dashboardConfig.permissions.some((perm) =>
             permissions.includes(perm)
           );
-          
+
           if (hasAccess) {
             seenUrls.add(dashboardConfig.url);
             dashboardItems.push({
@@ -136,13 +202,14 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
 
     // Fallback: if no roles found, use permission-based access (for backward compatibility)
     if (dashboardItems.length === 0 && !rolesLoading) {
-      const fallbackDashboardItems = PERMISSION_BASED_NAV.find(s => s.header === 'Dashboard')?.items || [];
-      const accessibleDashboards = fallbackDashboardItems.filter(item =>
+      const fallbackDashboardItems =
+        PERMISSION_BASED_NAV.find((s) => s.header === 'Dashboard')?.items || [];
+      const accessibleDashboards = fallbackDashboardItems.filter((item) =>
         hasNavigationPermission(permissions, item)
       );
-      
+
       // Replace hardcoded names with generic "Dashboard" if needed
-      accessibleDashboards.forEach(item => {
+      accessibleDashboards.forEach((item) => {
         if (!seenUrls.has(item.url)) {
           seenUrls.add(item.url);
           dashboardItems.push(item);
@@ -157,10 +224,24 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       });
     }
 
+    // Helper function to filter items based on role visibility
+    const filterItemsByRole = (items: NavigationItem[]): NavigationItem[] => {
+      return items.filter((item) => {
+        // Check if item should be hidden for user's role
+        if (item.hiddenForRoles && primaryRole) {
+          if (item.hiddenForRoles.includes(primaryRole)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    };
+
     // Calendar section
-    const calendarItems = PERMISSION_BASED_NAV.find(s => s.header === 'Calendar')?.items || [];
-    const accessibleCalendar = calendarItems.filter(item =>
-      hasNavigationPermission(permissions, item)
+    const calendarItems =
+      PERMISSION_BASED_NAV.find((s) => s.header === 'Calendar')?.items || [];
+    const accessibleCalendar = filterItemsByRole(
+      calendarItems.filter((item) => hasNavigationPermission(permissions, item))
     );
 
     if (accessibleCalendar.length > 0) {
@@ -171,9 +252,10 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
     }
 
     // Contracts section
-    const contractItems = PERMISSION_BASED_NAV.find(s => s.header === 'Contracts')?.items || [];
-    const accessibleContracts = contractItems.filter(item =>
-      hasNavigationPermission(permissions, item)
+    const contractItems =
+      PERMISSION_BASED_NAV.find((s) => s.header === 'Contracts')?.items || [];
+    const accessibleContracts = filterItemsByRole(
+      contractItems.filter((item) => hasNavigationPermission(permissions, item))
     );
 
     if (accessibleContracts.length > 0) {
@@ -183,82 +265,39 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       });
     }
 
-    // Licenses section (using contract permissions for now)
-    const hasContractView = permissions.includes(PERMISSIONS.CONTRACTS.VIEW);
-    const hasContractApprove = permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
-    
-    if (hasContractView || hasContractApprove) {
-      const licenseItems = [];
-      
-      if (hasContractView) {
-        licenseItems.push({
-          name: 'All Licenses',
-          icon: '/assets/icons/documents.svg',
-          url: '/licenses',
-          permissions: [PERMISSIONS.CONTRACTS.VIEW],
-        });
-        licenseItems.push({
-          name: 'Department Licenses',
-          icon: '/assets/icons/department.svg',
-          url: '/licenses/department',
-          permissions: [PERMISSIONS.CONTRACTS.VIEW],
-        });
-      }
-      
-      if (hasContractApprove) {
-        licenseItems.push({
-          name: 'Proposals & Approvals',
-          icon: '/assets/icons/edit.svg',
-          url: '/licenses/approvals',
-          permissions: [PERMISSIONS.CONTRACTS.APPROVE],
-        });
-      }
+    // Licenses section
+    const licenseItems =
+      PERMISSION_BASED_NAV.find((s) => s.header === 'Licenses')?.items || [];
+    const accessibleLicenses = filterItemsByRole(
+      licenseItems.filter((item) => hasNavigationPermission(permissions, item))
+    );
 
-      if (licenseItems.length > 0) {
-        nav.push({
-          header: 'Licenses',
-          items: licenseItems,
-        });
-      }
+    if (accessibleLicenses.length > 0) {
+      nav.push({
+        header: 'Licenses',
+        items: accessibleLicenses,
+      });
     }
 
-    // Documents section (using file/contract permissions)
-    if (hasContractView) {
+    // Documents section
+    const documentItems =
+      PERMISSION_BASED_NAV.find((s) => s.header === 'Documents')?.items || [];
+    const accessibleDocuments = filterItemsByRole(
+      documentItems.filter((item) => hasNavigationPermission(permissions, item))
+    );
+
+    if (accessibleDocuments.length > 0) {
       nav.push({
         header: 'Documents',
-        items: [
-          {
-            name: 'Uploads',
-            icon: '/assets/icons/uploads.svg',
-            url: '/uploads',
-            permissions: [PERMISSIONS.CONTRACTS.VIEW],
-          },
-          {
-            name: 'Images',
-            icon: '/assets/icons/images.svg',
-            url: '/images',
-            permissions: [PERMISSIONS.CONTRACTS.VIEW],
-          },
-          {
-            name: 'Media',
-            icon: '/assets/icons/media.svg',
-            url: '/media',
-            permissions: [PERMISSIONS.CONTRACTS.VIEW],
-          },
-          {
-            name: 'Others',
-            icon: '/assets/icons/others.svg',
-            url: '/others',
-            permissions: [PERMISSIONS.CONTRACTS.VIEW],
-          },
-        ],
+        items: accessibleDocuments,
       });
     }
 
     // Audits section
-    const auditItems = PERMISSION_BASED_NAV.find(s => s.header === 'Audits')?.items || [];
-    const accessibleAudits = auditItems.filter(item =>
-      hasNavigationPermission(permissions, item)
+    const auditItems =
+      PERMISSION_BASED_NAV.find((s) => s.header === 'Audits')?.items || [];
+    const accessibleAudits = filterItemsByRole(
+      auditItems.filter((item) => hasNavigationPermission(permissions, item))
     );
 
     if (accessibleAudits.length > 0) {
@@ -269,9 +308,10 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
     }
 
     // Team section
-    const teamItems = PERMISSION_BASED_NAV.find(s => s.header === 'Team')?.items || [];
-    const accessibleTeam = teamItems.filter(item =>
-      hasNavigationPermission(permissions, item)
+    const teamItems =
+      PERMISSION_BASED_NAV.find((s) => s.header === 'Team')?.items || [];
+    const accessibleTeam = filterItemsByRole(
+      teamItems.filter((item) => hasNavigationPermission(permissions, item))
     );
 
     if (accessibleTeam.length > 0) {
@@ -282,81 +322,60 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
     }
 
     // Reports & Analytics section
-    const hasAnalyticsAccess = permissions.includes(PERMISSIONS.CONTRACTS.VIEW) || 
-                               permissions.includes(PERMISSIONS.AUDIT.VIEW);
-    
-    if (hasAnalyticsAccess) {
-      const analyticsItems: Array<{ name: string; icon: string; url: string; permissions: PermissionKey[] }> = [];
-      const seenUrls = new Set<string>();
-      
-      // Admin analytics
-      if (permissions.includes(PERMISSIONS.USERS.VIEW) || 
-          permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
-        const adminUrl = NAVIGATION_CONFIG.admin.analytics.url;
-        if (!seenUrls.has(adminUrl)) {
-          seenUrls.add(adminUrl);
-          analyticsItems.push({
-            name: NAVIGATION_CONFIG.admin.analytics.name,
-            icon: NAVIGATION_CONFIG.admin.analytics.icon,
-            url: adminUrl,
-            permissions: [PERMISSIONS.USERS.VIEW],
-          });
-        }
-      }
-      
-      // Executive analytics
-      if (permissions.includes(PERMISSIONS.CALENDAR.VIEW_ALL) ||
-          permissions.includes(PERMISSIONS.CONTRACTS.VIEW)) {
-        const execUrl = NAVIGATION_CONFIG.executive.analytics.url;
-        if (!seenUrls.has(execUrl)) {
-          seenUrls.add(execUrl);
-          analyticsItems.push({
-            name: NAVIGATION_CONFIG.executive.analytics.name,
-            icon: NAVIGATION_CONFIG.executive.analytics.icon,
-            url: execUrl,
-            permissions: [PERMISSIONS.CALENDAR.VIEW_ALL],
-          });
-        }
-        
-        const quickViewUrl = NAVIGATION_CONFIG.executive.quickView.url;
-        if (!seenUrls.has(quickViewUrl)) {
-          seenUrls.add(quickViewUrl);
-          analyticsItems.push({
-            name: NAVIGATION_CONFIG.executive.quickView.name,
-            icon: NAVIGATION_CONFIG.executive.quickView.icon,
-            url: quickViewUrl,
-            permissions: [PERMISSIONS.CALENDAR.VIEW_ALL],
-          });
-        }
-      }
-      
-      // Manager analytics (division-specific)
-      if (division && (permissions.includes(PERMISSIONS.CALENDAR.VIEW_TEAM) ||
-          permissions.includes(PERMISSIONS.CONTRACTS.VIEW))) {
-        const managerAnalytics = NAVIGATION_CONFIG.manager.analytics(
-          mapDatabaseToRouteDivision(division)
-        );
-        if (!seenUrls.has(managerAnalytics.url)) {
-          seenUrls.add(managerAnalytics.url);
-          analyticsItems.push({
-            name: managerAnalytics.name,
-            icon: managerAnalytics.icon,
-            url: managerAnalytics.url,
-            permissions: [PERMISSIONS.CALENDAR.VIEW_TEAM],
-          });
-        }
-      }
+    const analyticsItems =
+      PERMISSION_BASED_NAV.find((s) => s.header === 'Reports & Analytics')
+        ?.items || [];
+    const accessibleAnalytics = filterItemsByRole(
+      analyticsItems.filter((item) =>
+        hasNavigationPermission(permissions, item)
+      )
+    );
 
-      if (analyticsItems.length > 0) {
-        nav.push({
-          header: 'Reports & Analytics',
-          items: analyticsItems,
-        });
-      }
+    if (accessibleAnalytics.length > 0) {
+      nav.push({
+        header: 'Reports & Analytics',
+        items: accessibleAnalytics,
+      });
+    }
+
+    // Settings section
+    const settingsItems =
+      PERMISSION_BASED_NAV.find((s) => s.header === 'Settings')?.items || [];
+    const accessibleSettings = filterItemsByRole(
+      settingsItems.filter((item) => hasNavigationPermission(permissions, item))
+    );
+
+    if (accessibleSettings.length > 0) {
+      nav.push({
+        header: 'Settings',
+        items: accessibleSettings,
+      });
+    }
+
+    // My Roles & Permissions section
+    const permissionsItems =
+      PERMISSION_BASED_NAV.find((s) => s.header === 'My Roles & Permissions')
+        ?.items || [];
+    const accessiblePermissions = permissionsItems.filter((item) =>
+      hasNavigationPermission(permissions, item)
+    );
+
+    if (accessiblePermissions.length > 0) {
+      nav.push({
+        header: 'My Roles & Permissions',
+        items: accessiblePermissions,
+      });
     }
 
     return nav;
-  }, [permissions, permissionsLoading, division, userRoles, rolesLoading]);
+  }, [
+    permissions,
+    permissionsLoading,
+    division,
+    userRoles,
+    rolesLoading,
+    primaryRole,
+  ]);
 
   return (
     <aside className="sidebar">
@@ -406,40 +425,66 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       <nav className="sidebar-nav">
         <ul className="flex flex-1 flex-col">
           {permissionsLoading || rolesLoading ? (
-            <li className="text-center py-8 text-muted-foreground">Loading navigation...</li>
+            <li className="text-center py-8 text-muted-foreground">
+              <div className="flex flex-col items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"></div>
+                <span className="text-sm">Loading navigation...</span>
+              </div>
+            </li>
           ) : groupedNav.length === 0 ? (
-            <li className="text-center py-8 text-muted-foreground">No navigation items available</li>
+            <li className="text-center py-8 text-muted-foreground">
+              No navigation items available
+            </li>
           ) : (
             groupedNav.map((section) => {
               if (section.items.length === 0) return null;
-              
+
               return (
                 <div key={section.header} className="mb-4">
                   <li
                     className={cn(
-                      'sidebar-section-header mb-0 sidebar-gradient-text lg:mb-1 font-bold text-lg lg:text-xl'
+                      'sidebar-section-header mb-0 lg:mb-1 font-bold text-lg lg:text-xl'
                     )}
                   >
                     <span className="flex items-center gap-2">
                       {section.header === 'Dashboard' ? (
-                        <span className="text-[#03AFBF]">
-                          <svg
-                            width="24"
-                            height="24"
-                            viewBox="0 0 26 26"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M10.5167 2.16602H3.74582C2.87467 2.16602 2.16602 2.87467 2.16602 3.74582V7.80832C2.16602 8.67964 2.87467 9.38829 3.74582 9.38829H10.5167C11.388 9.38829 12.0966 8.67964 12.0966 7.80832V3.74582C12.0966 2.87467 11.388 2.16602 10.5167 2.16602ZM10.5167 11.1937H3.74582C2.87467 11.1937 2.16602 11.9024 2.16602 12.7737V22.2529C2.16602 23.124 2.87467 23.8327 3.74582 23.8327H10.5167C11.388 23.8327 12.0966 23.124 12.0966 22.2529V12.7737C12.0966 11.9024 11.388 11.1937 10.5167 11.1937ZM22.2529 16.6104H15.482C14.6107 16.6104 13.9021 17.3191 13.9021 18.1904V22.2529C13.9021 23.124 14.6107 23.8327 15.482 23.8327H22.2529C23.124 23.8327 23.8327 23.124 23.8327 22.2529V18.1904C23.8327 17.3191 23.124 16.6104 22.2529 16.6104ZM22.2529 2.16602H15.482C14.6107 2.16602 13.9021 2.87467 13.9021 3.74582V13.225C13.9021 14.0963 14.6107 14.805 15.482 14.805H22.2529C23.124 14.805 23.8327 14.0963 23.8327 13.225V3.74582C23.8327 2.87467 23.124 2.16602 22.2529 2.16602Z"
-                              fill="currentColor"
-                            />
-                          </svg>
+                        <span className="flex items-center gap-2">
+                          <span className="text-[#03AFBF]">
+                            <svg
+                              width="24"
+                              height="24"
+                              viewBox="0 0 26 26"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M10.5167 2.16602H3.74582C2.87467 2.16602 2.16602 2.87467 2.16602 3.74582V7.80832C2.16602 8.67964 2.87467 9.38829 3.74582 9.38829H10.5167C11.388 9.38829 12.0966 8.67964 12.0966 7.80832V3.74582C12.0966 2.87467 11.388 2.16602 10.5167 2.16602ZM10.5167 11.1937H3.74582C2.87467 11.1937 2.16602 11.9024 2.16602 12.7737V22.2529C2.16602 23.124 2.87467 23.8327 3.74582 23.8327H10.5167C11.388 23.8327 12.0966 23.124 12.0966 22.2529V12.7737C12.0966 11.9024 11.388 11.1937 10.5167 11.1937ZM22.2529 16.6104H15.482C14.6107 16.6104 13.9021 17.3191 13.9021 18.1904V22.2529C13.9021 23.124 14.6107 23.8327 15.482 23.8327H22.2529C23.124 23.8327 23.8327 23.124 23.8327 22.2529V18.1904C23.8327 17.3191 23.124 16.6104 22.2529 16.6104ZM22.2529 2.16602H15.482C14.6107 2.16602 13.9021 2.87467 13.9021 3.74582V13.225C13.9021 14.0963 14.6107 14.805 15.482 14.805H22.2529C23.124 14.805 23.8327 14.0963 23.8327 13.225V3.74582C23.8327 2.87467 23.124 2.16602 22.2529 2.16602Z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          </span>
+                          {primaryRole && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  {/* <span className="flex items-center">
+                                    {getRoleBadgeIcon(primaryRole)}
+                                  </span> */}
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    You have {permissions.length} permissions as{' '}
+                                    {primaryRole}. View details →
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </span>
                       ) : section.header === 'Calendar' ? (
                         <span className="text-[#03AFBF]">
                           <Image
-                            src="/assets/icons/calendar.svg"
+                            src="/assets/icons/calendar2.svg"
                             alt="calendar"
                             width={24}
                             height={24}
@@ -499,8 +544,26 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                             height={24}
                           />
                         </span>
+                      ) : section.header === 'Settings' ? (
+                        <span className="text-[#03AFBF]">
+                          <Image
+                            src="/assets/icons/settings.svg"
+                            alt="settings"
+                            width={24}
+                            height={24}
+                          />
+                        </span>
+                      ) : section.header === 'My Roles & Permissions' ? (
+                        <span className="text-[#03AFBF]">
+                          <Image
+                            src="/assets/icons/shield.svg"
+                            alt="permissions"
+                            width={22}
+                            height={22}
+                          />
+                        </span>
                       ) : null}
-                      <span className="font-bold text-base text-slate-700">
+                      <span className="font-bold text-base sidebar-gradient-text relative z-10">
                         {section.header}
                       </span>
                     </span>
@@ -508,7 +571,11 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                   <div className="relative ml-3">
                     <ul className="flex flex-col gap-1 relative z-10">
                       {section.items.map((item, index) => (
-                        <Fragment key={`${section.header}-${item.name}-${item.url || index}`}>
+                        <Fragment
+                          key={`${section.header}-${item.name}-${
+                            item.url || index
+                          }`}
+                        >
                           <li className="relative flex items-center">
                             {/* Main vertical line for all sections */}
                             {index < section.items.length + 1 && (
@@ -520,7 +587,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                             <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
                             <Link
                               href={item.url || ''}
-                              className="ml-4 lg:w-full flex items-start gap-3"
+                              className="ml-4 lg:w-full flex items-start"
                               onMouseEnter={() => {
                                 // Prefetch analytics data on hover for better performance
                                 if (item.url?.includes('/analytics')) {
@@ -537,18 +604,24 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                                 }
                               }}
                             >
-                              {/* Render icons based on item name */}
+                              {/* Render icons based on item name - Role badges for Dashboard items */}
                               {section.header === 'Dashboard' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/department.svg"
-                                    alt="department"
-                                    width={20}
-                                    height={20}
-                                  />
+                                <span className="gap-1s">
+                                  {item.name === 'Super Admin' && (
+                                    <Crown className="h-5 w-5 text-yellow-500" />
+                                  )}
+                                  {item.name === 'Organization Admin' && (
+                                    <Building2 className="h-5 w-5 text-blue-500" />
+                                  )}
+                                  {item.name === 'Department Manager' && (
+                                    <Building className="h-5 w-5 text-green-500" />
+                                  )}
+                                  {item.name === 'Viewer' && (
+                                    <Eye className="h-5 w-5 text-gray-500" />
+                                  )}
                                 </span>
                               )}
-                              {item.name === 'Quick View' && (
+                              {/* {item.name === 'Quick View' && (
                                 <span className="gap-1">
                                   <Image
                                     src="/assets/icons/analytics.svg"
@@ -557,7 +630,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                                     height={20}
                                   />
                                 </span>
-                              )}
+                              )} */}
                               {item.name === 'All Contracts' && (
                                 <span className="gap-1">
                                   <Image
@@ -691,7 +764,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                               {item.name === 'Role Management' && (
                                 <span className="gap-1">
                                   <Image
-                                    src="/assets/icons/users.svg"
+                                    src="/assets/icons/user-management2.svg"
                                     alt="roles"
                                     width={20}
                                     height={20}
@@ -701,7 +774,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                               {item.name === 'Calendar View' && (
                                 <span className="gap-1">
                                   <Image
-                                    src="/assets/icons/calendar.svg"
+                                    src="/assets/icons/calendar3.svg"
                                     alt="calendar"
                                     width={20}
                                     height={20}
@@ -729,26 +802,67 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                                 </span>
                               )}
                               {/* Reports & Analytics icons */}
-                              {(item.name === 'Overview' || 
-                                item.name === 'C-Suite' || 
-                                item.name === 'Management' ||
-                                item.name === 'Child Welfare' ||
-                                item.name === 'Behavioral Health' ||
-                                item.name === 'Residential' ||
-                                item.name === 'CFS' ||
-                                item.name === 'Clinic') && (
+                              {(item.name === 'Overview' ||
+                                item.name === 'Quick View' ||
+                                item.name === 'C Suite' ||
+                                item.name === 'C-Suite') && (
+                                // item.name === 'Management' ||
+                                // item.name === 'Child Welfare' ||
+                                // item.name === 'Behavioral Health' ||
+                                // item.name === 'Residential' ||
+                                // item.name === 'CFS' ||
+                                // item.name === 'Clinic') && (
                                 <span className="gap-1">
                                   <Image
-                                    src="/assets/icons/department.svg"
+                                    src="/assets/icons/analytics.svg"
                                     alt="reports-analytics"
                                     width={20}
                                     height={20}
                                   />
                                 </span>
                               )}
+                              {/* Settings icons */}
+                              {(item.name === 'System Settings' ||
+                                item.name === 'Organization Settings' ||
+                                item.name === 'Billing & Integrations') && (
+                                <span className="gap-1">
+                                  <Image
+                                    src="/assets/icons/settings2.svg"
+                                    alt="settings"
+                                    width={20}
+                                    height={20}
+                                  />
+                                </span>
+                              )}
+                              {/* My Roles & Permissions icons */}
+                              {item.name === 'View My Access' && (
+                                <span className="gap-1">
+                                  <Image
+                                    src="/assets/icons/key.svg"
+                                    alt="permissions"
+                                    width={20}
+                                    height={20}
+                                  />
+                                </span>
+                              )}
+                              {/* System Audit Logs icon */}
+                              {item.name === 'System Audit Logs' && (
+                                <span className="gap-1">
+                                  <Image
+                                    src="/assets/icons/audit-logs.svg"
+                                    alt="audit-logs"
+                                    width={20}
+                                    height={20}
+                                  />
+                                </span>
+                              )}
                               <p
-                                className={`text-sm text-slate-900 px-2 tabs-underline font-medium ${
+                                className={`text-sm text-slate-900 px-2 tabs-underline font-medium flex items-center gap-2 ${
                                   item.name === 'Admin' ? '-ml-[1px]' : ''
+                                } ${
+                                  isViewer && item.viewerReadOnly
+                                    ? 'opacity-75'
+                                    : ''
                                 }`}
                                 data-state={
                                   pathname &&
@@ -760,7 +874,46 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                                     : undefined
                                 }
                               >
-                                {item.name}
+                                <span>{item.name}</span>
+                                {shouldShowLock(item) && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="flex items-center">
+                                          <Lock className="h-3 w-3 text-gray-500" />
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>
+                                          This feature requires{' '}
+                                          {item.permissions
+                                            .map((p) => p.split('.').pop())
+                                            .join(' or ')}{' '}
+                                          permission. Contact your administrator
+                                          to request access.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                {isViewer && item.viewerReadOnly && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="flex items-center text-xs text-gray-500">
+                                          (read-only)
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>
+                                          You have read-only access as an
+                                          External Auditor. You cannot modify
+                                          this data.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                               </p>
                             </Link>
                           </li>
@@ -774,21 +927,24 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
           )}
         </ul>
       </nav>
-      <Link href="/settings">
-        <div className="flex items-center gap-2 mt-8">
-          <Image
-            src="/assets/icons/settings.svg"
-            alt="logo"
-            width={25}
-            height={25}
-            className="cursor-pointer"
-            priority
-          />
-          <span className="font-bold text-base sidebar-gradient-text">
-            Settings
-          </span>
-        </div>
-      </Link>
+      {/* Settings link - only show if Settings section is not in nav */}
+      {!groupedNav.some((s) => s.header === 'Settings') && (
+        <Link href="/settings">
+          <div className="flex items-center gap-2 mt-8">
+            <Image
+              src="/assets/icons/settings.svg"
+              alt="logo"
+              width={25}
+              height={25}
+              className="cursor-pointer"
+              priority
+            />
+            <span className="font-bold text-base sidebar-gradient-text">
+              Settings
+            </span>
+          </div>
+        </Link>
+      )}
       <div className="sidebar-user-info">
         {avatar ? (
           <Image

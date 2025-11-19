@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { getUserPermissions } from '@/lib/rbac/permissions';
 import { parseStringify } from '@/lib/utils';
+import { deduplicateRequest } from '@/lib/utils/request-deduplication';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId') || undefined;
 
-    const permissions = await getUserPermissions(user.$id, orgId);
+    // Deduplicate concurrent requests for the same user/org
+    const cacheKey = `permissions:${user.$id}:${orgId || 'default'}`;
+    
+    const permissions = await deduplicateRequest(cacheKey, async () => {
+      return getUserPermissions(user.$id, orgId);
+    });
 
     return NextResponse.json({
       success: true,

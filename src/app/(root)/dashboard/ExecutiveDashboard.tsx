@@ -49,7 +49,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useUnifiedDashboardData } from '@/hooks/useUnifiedDashboardData';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { UserRoleDisplay } from '@/components/UserRoleDisplay';
-import { getLegacyRoleDisplayName } from '@/lib/utils/role-display';
 import Avatar from '@/components/ui/avatar';
 import ClientTimestamp from '@/components/ClientTimestamp';
 import ContractExpiryNotifier from '@/components/ContractExpiryNotifier';
@@ -659,6 +658,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       setResendingToken(null);
     }
   };
+  const hours = new Date().getHours();
+  let greeting = '';
+  if (hours < 12) {
+    greeting = 'Good Morning';
+  } else if (hours < 18) {
+    greeting = 'Good Afternoon';
+  } else {
+    greeting = 'Good Evening';
+  }
 
   // const getDepartmentDisplay = (department: string) => {
   //   switch (department) {
@@ -699,17 +707,17 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       {/* Main Content Container */}
       <div className="max-w-4xl mx-auto px-4">
         {/* Dashboard Header */}
-        <div className="flex justify-between items-end mb-4">
+        <div className="flex items-center mb-4 gap-2">
           <div className="h2 font-bold sidebar-gradient-text">
-            <UserRoleDisplay userId={user?.$id || ''} legacyRole={user?.role || ''} />
+            <h2>{greeting}</h2>
           </div>
-          <h1 className="text-lg font-bold text-slate-700">
+          <h1 className="text-xl font-bold text-slate-700">
             {user?.fullName || ''}{' '}
-            <span className="text-lg text-slate-light">
+            <span className="text-xl text-slate-light">
               {`| ${user?.division || 'Unknown Division'}`}
             </span>
           </h1>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 ml-auto">
             Last updated: <ClientTimestamp />
           </div>
         </div>
@@ -971,7 +979,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
               <CardHeader>
                 <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-                  Invite New User to Caalm
+                  Send Invite Link to New Caalm User
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1166,7 +1174,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                           >
                             <td className="pl-2 ">{inv.name}</td>
                             <td>{inv.email}</td>
-                            <td>{getLegacyRoleDisplayName(inv.role as string)}</td>
+                            <td>
+                              {inv.role ? (inv.role as string).charAt(0).toUpperCase() + (inv.role as string).slice(1).toLowerCase() : ''}
+                            </td>
                             <td>
                               <ClientDate dateString={inv.$createdAt} />
                             </td>

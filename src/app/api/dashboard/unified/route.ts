@@ -11,8 +11,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId') || 'default_organization';
     const userId = searchParams.get('userId');
+    
+    // Pagination parameters
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const offset = (page - 1) * limit;
 
-    console.log('Unified dashboard API called with:', { orgId, userId });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Unified dashboard API called with:', { orgId, userId, page, limit });
+    }
 
     if (!userId) {
       console.error('Unified dashboard API: Missing userId parameter');
@@ -22,8 +29,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check cache first
-    const cacheKey = CACHE_KEYS.dashboard.unified(orgId, userId);
+    // Check cache first (include pagination in cache key)
+    const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:page:${page}:limit:${limit}`;
     const cachedData = await CacheManager.withCache(
       'dashboard/unified',
       cacheKey,
@@ -45,18 +52,26 @@ export async function GET(request: NextRequest) {
           calendarEventsResult,
           uninvitedUsersResult,
         ] = await Promise.allSettled([
-          // Contracts data
+          // Contracts data - Paginated for performance
           tablesDB.listRows({
             databaseId: appwriteConfig.databaseId || 'default-db',
             tableId: appwriteConfig.contractsCollectionId || 'contracts',
-            queries: [Query.limit(1000)],
+            queries: [
+              Query.orderDesc('$createdAt'),
+              Query.limit(limit),
+              Query.offset(offset),
+            ],
           }),
 
-          // Users data
+          // Users data - Paginated for performance
           tablesDB.listRows({
             databaseId: appwriteConfig.databaseId || 'default-db',
             tableId: appwriteConfig.usersCollectionId || 'users',
-            queries: [Query.limit(1000)],
+            queries: [
+              Query.orderDesc('$createdAt'),
+              Query.limit(limit),
+              Query.offset(offset),
+            ],
           }),
 
           // Invitations data
@@ -211,6 +226,21 @@ export async function GET(request: NextRequest) {
           },
           recentActivities: recentActivities.documents,
           calendarEvents: calendarEvents.documents,
+          // Pagination metadata
+          pagination: {
+            contracts: {
+              page,
+              limit,
+              total: contracts.total,
+              hasMore: offset + limit < contracts.total,
+            },
+            users: {
+              page,
+              limit,
+              total: users.total,
+              hasMore: offset + limit < users.total,
+            },
+          },
         };
 
         return {

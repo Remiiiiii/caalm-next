@@ -8,7 +8,7 @@ import { getRole, updateRole, deleteRole, getRolePermissions } from '@/lib/rbac/
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { roleId: string } }
+  { params }: { params: Promise<{ roleId: string }> }
 ) {
   try {
     const permissionCheck = await requirePermission(request, {
@@ -19,7 +19,8 @@ export async function GET(
       return permissionCheck;
     }
 
-    const role = await getRole(params.roleId);
+    const { roleId } = await params;
+    const role = await getRole(roleId);
     if (!role) {
       return NextResponse.json(
         { success: false, error: 'Role not found' },
@@ -27,7 +28,7 @@ export async function GET(
       );
     }
 
-    const permissions = await getRolePermissions(params.roleId);
+    const permissions = await getRolePermissions(roleId);
 
     return NextResponse.json({
       success: true,
@@ -47,7 +48,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { roleId: string } }
+  { params }: { params: Promise<{ roleId: string }> }
 ) {
   try {
     const permissionCheck = await requirePermission(request, {
@@ -58,10 +59,11 @@ export async function PUT(
       return permissionCheck;
     }
 
+    const { roleId } = await params;
     const { name, description, permissionKeys } = await request.json();
 
     const role = await updateRole(
-      params.roleId,
+      roleId,
       name,
       description || '',
       permissionKeys || []
@@ -82,7 +84,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { roleId: string } }
+  { params }: { params: Promise<{ roleId: string }> }
 ) {
   try {
     const permissionCheck = await requirePermission(request, {
@@ -93,7 +95,8 @@ export async function DELETE(
       return permissionCheck;
     }
 
-    await deleteRole(params.roleId);
+    const { roleId } = await params;
+    await deleteRole(roleId);
 
     return NextResponse.json({
       success: true,

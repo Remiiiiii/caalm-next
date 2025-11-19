@@ -1,18 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getLegacyRoleDisplayName } from '@/lib/utils/role-display';
 
 interface UseRoleNameOptions {
   userId?: string | null;
-  legacyRole?: string | null;
 }
 
 /**
  * Hook to get role display name for a user
- * Fetches from API using userId, falls back to legacy role mapping
+ * Fetches from API using userId
  */
-export function useRoleName({ userId, legacyRole }: UseRoleNameOptions): {
+export function useRoleName({ userId }: UseRoleNameOptions): {
   roleName: string;
   loading: boolean;
 } {
@@ -25,24 +23,19 @@ export function useRoleName({ userId, legacyRole }: UseRoleNameOptions): {
       
       if (userId) {
         try {
-          const url = `/api/users/${userId}/role${legacyRole ? `?legacyRole=${encodeURIComponent(legacyRole)}` : ''}`;
+          const url = `/api/users/${userId}/role`;
           const response = await fetch(url);
           const data = await response.json();
           
           if (data.success && data.roleName) {
             setRoleName(data.roleName);
           } else {
-            // Fallback to legacy mapping
-            setRoleName(getLegacyRoleDisplayName(legacyRole || ''));
+            setRoleName('');
           }
         } catch (error) {
           console.error('[useRoleName] Error fetching role name:', error);
-          // Fallback to legacy mapping
-          setRoleName(getLegacyRoleDisplayName(legacyRole || ''));
+          setRoleName('');
         }
-      } else if (legacyRole) {
-        // Use legacy role mapping directly
-        setRoleName(getLegacyRoleDisplayName(legacyRole));
       } else {
         setRoleName('');
       }
@@ -51,7 +44,7 @@ export function useRoleName({ userId, legacyRole }: UseRoleNameOptions): {
     };
 
     fetchRoleName();
-  }, [userId, legacyRole]);
+  }, [userId]);
 
   return { roleName, loading };
 }

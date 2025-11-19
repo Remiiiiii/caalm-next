@@ -48,6 +48,8 @@ import {
 } from '@/constants/rbac';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCalendarPermissions } from '@/hooks/useCalendarPermissions';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
 import { useCalendarApprovals } from '@/hooks/useCalendarApprovals';
 import { resolveCalendarPermissions } from '@/lib/auth/permissions';
 import {
@@ -316,20 +318,21 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   } | null>(null);
   const [loadingContract, setLoadingContract] = useState(false);
 
-  const { role, userId, accountId } = useUserRole();
+  const { userId, accountId } = useUserRole();
   const { permissions: basePermissions } = useCalendarPermissions({ userId });
   const canCreateEvent = basePermissions.createEvent;
+  const { permissions } = usePermissions();
+  const isApprover = permissions.includes(PERMISSIONS.EVENTS.APPROVE);
 
   // Debug logging
   if (process.env.NODE_ENV === 'development') {
     console.log('[OutlookStyleCalendar] Permission check:', {
-      role,
       userId,
       canCreateEvent,
       basePermissions,
+      isApprover,
     });
   }
-  const isApprover = role === 'approver' || role === 'admin';
   const {
     approvals,
     isLoading: approvalsLoading,

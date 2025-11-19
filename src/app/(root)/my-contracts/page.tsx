@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
 import {
   Card as UICard,
   CardContent,
@@ -27,7 +29,8 @@ import { convertFileSize } from '@/lib/utils';
 import FileCard from '@/components/Card';
 
 const MyContractsPage = () => {
-  const { role, division, loading, error } = useUserRole();
+  const { division, loading, error } = useUserRole();
+  const { permissions } = usePermissions();
   const [contracts, setContracts] = useState<UIFileDoc[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<UIFileDoc[]>([]);
   const [selectedDepartment, setSelectedDepartment] =
@@ -38,8 +41,8 @@ const MyContractsPage = () => {
   // Function to refresh contracts data
   const refreshContracts = async () => {
     try {
-      if (role === 'manager' && division) {
-        // For managers, get contracts filtered by their division
+      // Department Manager - get contracts filtered by their division
+      if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && !permissions.includes(PERMISSIONS.SETTINGS.VIEW) && division) {
         const divisionContracts = await getContractsByUserDivision(division);
 
         // Get the corresponding file documents for these contracts
@@ -66,8 +69,8 @@ const MyContractsPage = () => {
 
         setContracts(contractFiles);
         setFilteredContracts(contractFiles);
-      } else {
-        // For executives/admins, get all contracts
+      } else if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW)) {
+        // Super Admin/Organization Admin - get all contracts
         const filesResponse = await getFiles({
           types: ['document'],
           searchText: '',
@@ -85,34 +88,34 @@ const MyContractsPage = () => {
 
   // Fetch contracts on component mount
   useEffect(() => {
-    if (role && !loading) {
+    if (permissions.length > 0 && !loading) {
       refreshContracts();
     }
-  }, [role, loading, sortBy, division]);
+  }, [permissions, loading, sortBy, division]);
 
-  // Filter contracts based on user role and selected department/division
+  // Filter contracts based on permissions and selected department/division
   useEffect(() => {
     if (!contracts.length) return;
 
     let filtered = [...contracts];
 
-    if (role === 'manager' && division) {
-      // Manager contracts are already filtered by division in fetchContracts
-      // No additional filtering needed
+    // Department Manager - contracts already filtered by division
+    if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && !permissions.includes(PERMISSIONS.SETTINGS.VIEW) && division) {
       filtered = contracts;
-    } else if (role === 'executive' || role === 'admin') {
-      // Executive/Admin can see contracts filtered by selected department
+    } else if (permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
+      // Super Admin/Organization Admin - filter by selected department
       filtered = contracts.filter(
         (contract) => contract.department === selectedDepartment
       );
     }
 
     setFilteredContracts(filtered);
-  }, [contracts, role, division, selectedDepartment, selectedDivision]);
+  }, [contracts, permissions, division, selectedDepartment, selectedDivision]);
 
   // Get accessible departments for the user
   const getAccessibleDepartments = (): ContractDepartment[] => {
-    if (role === 'executive' || role === 'admin') {
+    // Super Admin/Organization Admin can see all departments
+    if (permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
       return [
         'IT',
         'Finance',
@@ -124,7 +127,8 @@ const MyContractsPage = () => {
         'Executive',
         'Engineering',
       ];
-    } else if (role === 'manager' && division) {
+    } else if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && division) {
+      // Department Manager - only their department
       const userDepartment =
         DIVISION_TO_DEPARTMENT[division as keyof typeof DIVISION_TO_DEPARTMENT];
       return userDepartment ? [userDepartment as ContractDepartment] : [];
@@ -214,8 +218,8 @@ const MyContractsPage = () => {
         </h1>
       </div>
 
-      {/* Role-based content rendering */}
-      {role === 'executive' || role === 'admin' ? (
+      {/* Permission-based content rendering */}
+      {permissions.includes(PERMISSIONS.SETTINGS.VIEW) ? (
         <div className="space-y-6">
           {/* Executive/Admin Layout with Tabs */}
           <UICard className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
@@ -333,7 +337,7 @@ const MyContractsPage = () => {
             </CardContent>
           </UICard>
         </div>
-      ) : role === 'manager' ? (
+      ) : permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && !permissions.includes(PERMISSIONS.SETTINGS.VIEW) ? (
         <div className="space-y-6">
           {/* Manager Layout - Direct Display */}
           <UICard className="bg-blue-50/60 backdrop-blur border border-blue-200/40 shadow-lg">

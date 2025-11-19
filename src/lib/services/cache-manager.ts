@@ -136,6 +136,28 @@ export class CacheManager {
   }
 
   /**
+   * Invalidate RBAC cache (permissions, roles, default org)
+   */
+  static async invalidateRBAC(userId?: string, orgId?: string): Promise<void> {
+    if (userId) {
+      // Invalidate all RBAC caches for this user
+      await cache.del(CACHE_KEYS.rbac.defaultOrg(userId));
+      if (orgId) {
+        await cache.del(CACHE_KEYS.rbac.permissions(userId, orgId));
+        await cache.del(CACHE_KEYS.rbac.userRoles(userId, orgId));
+      } else {
+        // Invalidate all orgs for this user
+        await cache.clear(`^rbac:permissions:${userId}:`);
+        await cache.clear(`^rbac:userRoles:${userId}:`);
+      }
+      await cache.del(CACHE_KEYS.rbac.userWithRoles(userId));
+    } else {
+      // Invalidate all RBAC caches
+      await cache.clear('^rbac:');
+    }
+  }
+
+  /**
    * Warm up cache with common data
    */
   static async warmUp(orgId: string, userId: string): Promise<void> {

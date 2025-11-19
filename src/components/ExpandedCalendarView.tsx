@@ -102,6 +102,8 @@ import {
 } from '@/constants/rbac';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCalendarPermissions } from '@/hooks/useCalendarPermissions';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
 import { useCalendarApprovals } from '@/hooks/useCalendarApprovals';
 import { resolveCalendarPermissions } from '@/lib/auth/permissions';
 
@@ -220,12 +222,13 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
   });
 
   const { events: calendarEvents, refresh } = useCalendarEvents();
-  const { role, userId, accountId } = useUserRole();
+  const { userId, accountId, role } = useUserRole();
   const { permissions: basePermissions } = useCalendarPermissions({
     userId,
   });
   const canCreateEvent = basePermissions.createEvent;
-  const isApprover = role === 'approver' || role === 'admin';
+  const { permissions } = usePermissions();
+  const isApprover = permissions.includes(PERMISSIONS.EVENTS.APPROVE);
   const {
     approvals,
     isLoading: approvalsLoading,
@@ -268,14 +271,14 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
       // Collect all user IDs and account IDs from change summary
       // Also check consolidated fields
-      const updatedByBefore =
-        (before.updatedByAccountId || before.updatedByUserId) as string | undefined;
-      const updatedByAfter =
-        (after.updatedByAccountId || after.updatedByUserId) as string | undefined;
-      const createdByBefore =
-        (before.createdByAccountId || before.createdByUserId) as string | undefined;
-      const createdByAfter =
-        (after.createdByAccountId || after.createdByUserId) as string | undefined;
+      const updatedByBefore = (before.updatedByAccountId ||
+        before.updatedByUserId) as string | undefined;
+      const updatedByAfter = (after.updatedByAccountId ||
+        after.updatedByUserId) as string | undefined;
+      const createdByBefore = (before.createdByAccountId ||
+        before.createdByUserId) as string | undefined;
+      const createdByAfter = (after.createdByAccountId ||
+        after.createdByUserId) as string | undefined;
 
       // Add consolidated Updated By and Created By values
       if (updatedByBefore && typeof updatedByBefore === 'string') {
@@ -318,7 +321,8 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         const namesMap: Record<string, string> = {};
         users.forEach((user) => {
           if (user.$id) namesMap[user.$id] = user.fullName || 'Unknown User';
-          if (user.accountId) namesMap[user.accountId] = user.fullName || 'Unknown User';
+          if (user.accountId)
+            namesMap[user.accountId] = user.fullName || 'Unknown User';
         });
         setUserNamesMap(namesMap);
       } catch (error) {
@@ -346,11 +350,11 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
       // Collect all attachment file IDs from change summary
       const attachmentFileIds: string[] = [];
-      
+
       // Extract attachments from before and after
       const beforeAttachments = before.attachments;
       const afterAttachments = after.attachments;
-      
+
       if (Array.isArray(beforeAttachments)) {
         beforeAttachments.forEach((att) => {
           if (typeof att === 'string') {
@@ -360,7 +364,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
           }
         });
       }
-      
+
       if (Array.isArray(afterAttachments)) {
         afterAttachments.forEach((att) => {
           if (typeof att === 'string') {
@@ -401,7 +405,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
           });
           setAttachmentNamesMap(namesMap);
         } else {
-          console.error('Failed to fetch attachment names:', response.statusText);
+          console.error(
+            'Failed to fetch attachment names:',
+            response.statusText
+          );
           setAttachmentNamesMap({});
         }
       } catch (error) {
@@ -442,10 +449,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         if (
           !approval &&
           selectedEvent.approvalStatus === 'changes_requested' &&
-          selectedEvent.$id
+          ((selectedEvent as any).$id || selectedEvent.id)
         ) {
           approval = await getLatestApprovalRequestByEventId(
-            selectedEvent.$id,
+            (selectedEvent as any).$id || selectedEvent.id,
             'changes_requested'
           );
         }
@@ -454,10 +461,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         if (
           !approval &&
           selectedEvent.approvalStatus === 'rejected' &&
-          selectedEvent.$id
+          ((selectedEvent as any).$id || selectedEvent.id)
         ) {
           approval = await getLatestApprovalRequestByEventId(
-            selectedEvent.$id,
+            (selectedEvent as any).$id || selectedEvent.id,
             'rejected'
           );
         }
@@ -472,7 +479,11 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
     };
 
     fetchApprovalRequest();
-  }, [selectedEvent?.$id, selectedEvent?.pendingApprovalId, selectedEvent?.approvalStatus]);
+  }, [
+    (selectedEvent as any)?.$id || selectedEvent?.id,
+    selectedEvent?.pendingApprovalId,
+    selectedEvent?.approvalStatus,
+  ]);
 
   const selectedEventPermissions = useMemo(() => {
     if (!selectedEvent) {
@@ -653,7 +664,8 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
       });
 
       if (!response.ok) {
-        let errorData: { message?: string; reason?: string; error?: string } = {};
+        let errorData: { message?: string; reason?: string; error?: string } =
+          {};
         try {
           errorData = await response.json();
         } catch (parseError) {
@@ -705,7 +717,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
       // If an approval was created or updated, refresh the approvals list immediately
       // This ensures resubmissions after changes_requested show updated changes
       if (result.approval && isApprover) {
-        console.log('Approval involved in update, refreshing approvals list...');
+        console.log(
+          'Approval involved in update, refreshing approvals list...'
+        );
         // Use both local refresh and SWR global mutate for immediate update
         await refreshApprovals();
         // Also trigger global refresh for other components using the same hook
@@ -777,7 +791,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
       toast({
         title: `Request ${decisionLabels[decision]}`,
-        description: `The approval request has been ${decisionLabels[decision].toLowerCase()}.`,
+        description: `The approval request has been ${decisionLabels[
+          decision
+        ].toLowerCase()}.`,
         variant: 'default',
       });
 
@@ -978,7 +994,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
             (event) => event.date && isSameDay(new Date(event.date), day)
           );
           const isCurrentMonth = isSameMonth(day, currentMonth);
-          const isSelected = selectedDate && isSameDay(day, selectedDate);
+          const isSelected = Boolean(
+            selectedDate && isSameDay(day, selectedDate)
+          );
           const isCurrentDay = isToday(day);
 
           return (
@@ -1016,7 +1034,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
         {/* Day content */}
         {days.map((day) => {
-        const dayEvents = normalizedEvents.filter(
+          const dayEvents = normalizedEvents.filter(
             (event) => event.date && isSameDay(new Date(event.date), day)
           );
           const isSelected = selectedDate && isSameDay(day, selectedDate);
@@ -1275,7 +1293,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                         ) : approvals.length > 0 ? (
                           <span className="flex items-center gap-1.5">
                             <AlertCircle className="h-3 w-3 text-amber-500" />
-                            {approvals.length} {approvals.length === 1 ? 'request' : 'requests'} awaiting your review
+                            {approvals.length}{' '}
+                            {approvals.length === 1 ? 'request' : 'requests'}{' '}
+                            awaiting your review
                           </span>
                         ) : (
                           <span className="flex items-center gap-1.5 text-green-600">
@@ -1290,7 +1310,11 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                     onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
                     aria-expanded={isApprovalsExpanded}
-                    aria-label={isApprovalsExpanded ? 'Collapse approvals' : 'Expand approvals'}
+                    aria-label={
+                      isApprovalsExpanded
+                        ? 'Collapse approvals'
+                        : 'Expand approvals'
+                    }
                   >
                     {isApprovalsExpanded ? (
                       <ChevronUp className="h-5 w-5 text-slate-600 group-hover:text-slate-900 transition-colors" />
@@ -1327,13 +1351,19 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                             ? new Date(approval.submittedAt)
                             : null;
                           const timeAgo = submittedTime
-                            ? formatDistanceToNow(submittedTime, { addSuffix: true })
+                            ? formatDistanceToNow(submittedTime, {
+                                addSuffix: true,
+                              })
                             : 'recently';
 
                           // Icon and color based on change type
                           const getChangeTypeConfig = (
                             type: string
-                          ): { icon: React.ReactNode; color: string; bgColor: string } => {
+                          ): {
+                            icon: React.ReactNode;
+                            color: string;
+                            bgColor: string;
+                          } => {
                             switch (type) {
                               case 'create':
                                 return {
@@ -1403,7 +1433,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                                         <Badge
                                           className={cn(
                                             'text-[10px] font-medium px-2 py-0.5 border hover:opacity-100',
-                                            getSensitivityBadgeClasses(sensitivityLevel)
+                                            getSensitivityBadgeClasses(
+                                              sensitivityLevel
+                                            )
                                           )}
                                         >
                                           {SENSITIVITY_LABELS[sensitivityLevel]}
@@ -1471,11 +1503,13 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         <DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader className="sr-only">
             <DialogTitle>
-              {selectedApproval ? 'Review Approval Request' : 'Approval Details'}
+              {selectedApproval
+                ? 'Review Approval Request'
+                : 'Approval Details'}
             </DialogTitle>
           </DialogHeader>
           <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-          
+
           {selectedApproval && (
             <>
               {/* Header */}
@@ -1525,8 +1559,14 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
                     {(() => {
                       const summary = selectedApproval.changeSummary || {};
-                      const after = (summary.after || {}) as Record<string, unknown>;
-                      const before = (summary.before || {}) as Record<string, unknown>;
+                      const after = (summary.after || {}) as Record<
+                        string,
+                        unknown
+                      >;
+                      const before = (summary.before || {}) as Record<
+                        string,
+                        unknown
+                      >;
                       const eventTitle =
                         (after.title as string) ||
                         (before.title as string) ||
@@ -1548,7 +1588,8 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                             <h3 className="text-base font-semibold text-slate-900">
                               {eventTitle}
                             </h3>
-                            {selectedApproval.sensitivityLevel !== 'standard' && (
+                            {selectedApproval.sensitivityLevel !==
+                              'standard' && (
                               <Badge
                                 className={cn(
                                   'text-xs font-medium px-2 py-0.5 border',
@@ -1557,7 +1598,11 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                                   )
                                 )}
                               >
-                                {SENSITIVITY_LABELS[selectedApproval.sensitivityLevel]}
+                                {
+                                  SENSITIVITY_LABELS[
+                                    selectedApproval.sensitivityLevel
+                                  ]
+                                }
                               </Badge>
                             )}
                           </div>
@@ -1585,7 +1630,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                                     return (
                                       <div className="text-sm text-slate-600 mt-1">
                                         {startTimeStr}
-                                        {startTimeStr && endTimeStr ? ' - ' : ''}
+                                        {startTimeStr && endTimeStr
+                                          ? ' - '
+                                          : ''}
                                         {endTimeStr}
                                       </div>
                                     );
@@ -1597,239 +1644,282 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                           )}
 
                           {/* Description */}
-                          {eventDescription && eventDescription !== 'No description provided' && (
-                            <div className="p-3 bg-white rounded-lg border border-slate-200">
-                              <p className="text-sm text-slate-700 whitespace-pre-wrap">
-                                {eventDescription}
-                              </p>
-                            </div>
-                          )}
+                          {eventDescription &&
+                            eventDescription !== 'No description provided' && (
+                              <div className="p-3 bg-white rounded-lg border border-slate-200">
+                                <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                                  {eventDescription}
+                                </p>
+                              </div>
+                            )}
 
                           {/* Change Summary for Updates */}
-                          {selectedApproval.changeType === 'update' && (() => {
-                            // Helper function to format field values
-                            const formatFieldValue = (
-                              key: string,
-                              value: unknown
-                            ): string => {
-                              if (value === null || value === undefined) {
-                                return '—';
-                              }
-
-                              // Format dates
-                              if (
-                                key.toLowerCase().includes('date') &&
-                                typeof value === 'string'
-                              ) {
-                                try {
-                                  const date = new Date(value);
-                                  if (!isNaN(date.getTime())) {
-                                    return format(date, 'MMM d, yyyy');
-                                  }
-                                } catch {
-                                  // Fall through to string conversion
+                          {selectedApproval.changeType === 'update' &&
+                            (() => {
+                              // Helper function to format field values
+                              const formatFieldValue = (
+                                key: string,
+                                value: unknown
+                              ): string => {
+                                if (value === null || value === undefined) {
+                                  return '—';
                                 }
-                              }
 
-                              // Format user IDs to names
-                              if (
-                                (key.includes('UserId') ||
-                                  key.includes('userId') ||
-                                  key.includes('AccountId') ||
-                                  key.includes('accountId') ||
-                                  key === 'updatedBy' ||
-                                  key === 'createdBy') &&
-                                typeof value === 'string'
-                              ) {
-                                return (
-                                  userNamesMap[value] ||
-                                  (loadingUserNames ? 'Loading...' : value)
-                                );
-                              }
-
-                              // Format boolean values
-                              if (typeof value === 'boolean') {
-                                return value ? 'Yes' : 'No';
-                              }
-
-                              // Format attachments with file names
-                              if (key === 'attachments' && Array.isArray(value)) {
-                                if (value.length === 0) {
-                                  return 'None';
-                                }
-                                
-                                // Try to get file names from the attachment names map
-                                const fileNames = value
-                                  .map((att) => {
-                                    const fileId = typeof att === 'string' ? att : att?.$id;
-                                    if (!fileId) return null;
-                                    return attachmentNamesMap[fileId] || null;
-                                  })
-                                  .filter((name): name is string => name !== null);
-                                
-                                if (fileNames.length > 0) {
-                                  // Show count and file names
-                                  if (fileNames.length === value.length) {
-                                    // All files have names - show all names
-                                    const maxDisplayNames = 3;
-                                    if (fileNames.length <= maxDisplayNames) {
-                                      // Show all names if 3 or fewer
-                                      return `${value.length} file${value.length !== 1 ? 's' : ''}: ${fileNames.join(', ')}`;
-                                    } else {
-                                      // Show first few names and count of remaining
-                                      const displayedNames = fileNames.slice(0, maxDisplayNames).join(', ');
-                                      const remainingCount = fileNames.length - maxDisplayNames;
-                                      return `${value.length} file${value.length !== 1 ? 's' : ''}: ${displayedNames}, and ${remainingCount} more`;
+                                // Format dates
+                                if (
+                                  key.toLowerCase().includes('date') &&
+                                  typeof value === 'string'
+                                ) {
+                                  try {
+                                    const date = new Date(value);
+                                    if (!isNaN(date.getTime())) {
+                                      return format(date, 'MMM d, yyyy');
                                     }
-                                  } else {
-                                    // Some files have names, some don't
-                                    const namedCount = fileNames.length;
-                                    const unnamedCount = value.length - namedCount;
-                                    const maxDisplayNames = 3;
-                                    
-                                    if (namedCount <= maxDisplayNames) {
-                                      // Show all named files
-                                      const namesList = fileNames.join(', ');
-                                      const unnamedText = unnamedCount > 0 ? `, ${unnamedCount} unnamed` : '';
-                                      return `${value.length} file${value.length !== 1 ? 's' : ''}: ${namesList}${unnamedText}`;
-                                    } else {
-                                      // Show first few names
-                                      const displayedNames = fileNames.slice(0, maxDisplayNames).join(', ');
-                                      const remainingNamed = namedCount - maxDisplayNames;
-                                      const totalRemaining = remainingNamed + unnamedCount;
-                                      return `${value.length} file${value.length !== 1 ? 's' : ''}: ${displayedNames}, and ${totalRemaining} more`;
-                                    }
+                                  } catch {
+                                    // Fall through to string conversion
                                   }
                                 }
-                                
-                                // Fallback to count if names not available yet
-                                return loadingAttachmentNames
-                                  ? `Loading... (${value.length} file${value.length !== 1 ? 's' : ''})`
-                                  : `${value.length} file${value.length !== 1 ? 's' : ''}`;
-                              }
 
-                              // Format arrays (non-attachments)
-                              if (Array.isArray(value)) {
-                                return value.length > 0
-                                  ? `${value.length} item${value.length !== 1 ? 's' : ''}`
-                                  : 'None';
-                              }
+                                // Format user IDs to names
+                                if (
+                                  (key.includes('UserId') ||
+                                    key.includes('userId') ||
+                                    key.includes('AccountId') ||
+                                    key.includes('accountId') ||
+                                    key === 'updatedBy' ||
+                                    key === 'createdBy') &&
+                                  typeof value === 'string'
+                                ) {
+                                  return (
+                                    userNamesMap[value] ||
+                                    (loadingUserNames ? 'Loading...' : value)
+                                  );
+                                }
 
-                              return String(value);
-                            };
+                                // Format boolean values
+                                if (typeof value === 'boolean') {
+                                  return value ? 'Yes' : 'No';
+                                }
 
-                            // Helper function to get field label
-                            const getFieldLabel = (key: string): string => {
-                              const labelMap: Record<string, string> = {
-                                startDate: 'Start Date',
-                                endDate: 'End Date',
-                                title: 'Title',
-                                description: 'Description',
-                                startTime: 'Start Time',
-                                endTime: 'End Time',
-                                location: 'Location',
-                                type: 'Event Type',
-                                sensitivityLevel: 'Sensitivity Level',
-                                updatedByAccountId: 'Updated By',
-                                updatedByUserId: 'Updated By',
-                                createdByAccountId: 'Created By',
-                                createdByUserId: 'Created By',
-                                attachments: 'Attachments',
-                                overrides: 'Permission Overrides',
-                                participants: 'Participants',
+                                // Format attachments with file names
+                                if (
+                                  key === 'attachments' &&
+                                  Array.isArray(value)
+                                ) {
+                                  if (value.length === 0) {
+                                    return 'None';
+                                  }
+
+                                  // Try to get file names from the attachment names map
+                                  const fileNames = value
+                                    .map((att) => {
+                                      const fileId =
+                                        typeof att === 'string'
+                                          ? att
+                                          : att?.$id;
+                                      if (!fileId) return null;
+                                      return attachmentNamesMap[fileId] || null;
+                                    })
+                                    .filter(
+                                      (name): name is string => name !== null
+                                    );
+
+                                  if (fileNames.length > 0) {
+                                    // Show count and file names
+                                    if (fileNames.length === value.length) {
+                                      // All files have names - show all names
+                                      const maxDisplayNames = 3;
+                                      if (fileNames.length <= maxDisplayNames) {
+                                        // Show all names if 3 or fewer
+                                        return `${value.length} file${
+                                          value.length !== 1 ? 's' : ''
+                                        }: ${fileNames.join(', ')}`;
+                                      } else {
+                                        // Show first few names and count of remaining
+                                        const displayedNames = fileNames
+                                          .slice(0, maxDisplayNames)
+                                          .join(', ');
+                                        const remainingCount =
+                                          fileNames.length - maxDisplayNames;
+                                        return `${value.length} file${
+                                          value.length !== 1 ? 's' : ''
+                                        }: ${displayedNames}, and ${remainingCount} more`;
+                                      }
+                                    } else {
+                                      // Some files have names, some don't
+                                      const namedCount = fileNames.length;
+                                      const unnamedCount =
+                                        value.length - namedCount;
+                                      const maxDisplayNames = 3;
+
+                                      if (namedCount <= maxDisplayNames) {
+                                        // Show all named files
+                                        const namesList = fileNames.join(', ');
+                                        const unnamedText =
+                                          unnamedCount > 0
+                                            ? `, ${unnamedCount} unnamed`
+                                            : '';
+                                        return `${value.length} file${
+                                          value.length !== 1 ? 's' : ''
+                                        }: ${namesList}${unnamedText}`;
+                                      } else {
+                                        // Show first few names
+                                        const displayedNames = fileNames
+                                          .slice(0, maxDisplayNames)
+                                          .join(', ');
+                                        const remainingNamed =
+                                          namedCount - maxDisplayNames;
+                                        const totalRemaining =
+                                          remainingNamed + unnamedCount;
+                                        return `${value.length} file${
+                                          value.length !== 1 ? 's' : ''
+                                        }: ${displayedNames}, and ${totalRemaining} more`;
+                                      }
+                                    }
+                                  }
+
+                                  // Fallback to count if names not available yet
+                                  return loadingAttachmentNames
+                                    ? `Loading... (${value.length} file${
+                                        value.length !== 1 ? 's' : ''
+                                      })`
+                                    : `${value.length} file${
+                                        value.length !== 1 ? 's' : ''
+                                      }`;
+                                }
+
+                                // Format arrays (non-attachments)
+                                if (Array.isArray(value)) {
+                                  return value.length > 0
+                                    ? `${value.length} item${
+                                        value.length !== 1 ? 's' : ''
+                                      }`
+                                    : 'None';
+                                }
+
+                                return String(value);
                               };
 
-                              return (
-                                labelMap[key] ||
-                                key
-                                  .replace(/([A-Z])/g, ' $1')
-                                  .replace(/^./, (str) => str.toUpperCase())
-                                  .trim()
-                              );
-                            };
+                              // Helper function to get field label
+                              const getFieldLabel = (key: string): string => {
+                                const labelMap: Record<string, string> = {
+                                  startDate: 'Start Date',
+                                  endDate: 'End Date',
+                                  title: 'Title',
+                                  description: 'Description',
+                                  startTime: 'Start Time',
+                                  endTime: 'End Time',
+                                  location: 'Location',
+                                  type: 'Event Type',
+                                  sensitivityLevel: 'Sensitivity Level',
+                                  updatedByAccountId: 'Updated By',
+                                  updatedByUserId: 'Updated By',
+                                  createdByAccountId: 'Created By',
+                                  createdByUserId: 'Created By',
+                                  attachments: 'Attachments',
+                                  overrides: 'Permission Overrides',
+                                  participants: 'Participants',
+                                };
 
-                            // Filter and sort changes
-                            const rawChanges = Object.keys(after)
-                              .filter(
-                                (key) =>
-                                  before[key] !== after[key] &&
-                                  ![
-                                    '$id',
-                                    'updatedAt',
-                                    'createdAt',
-                                    '$createdAt',
-                                    '$updatedAt',
-                                    '$permissions',
-                                  ].includes(key) &&
-                                  after[key] !== undefined
-                              )
-                              .map((key) => ({
-                                key,
-                                label: getFieldLabel(key),
-                                beforeValue: before[key],
-                                afterValue: after[key],
-                              }));
+                                return (
+                                  labelMap[key] ||
+                                  key
+                                    .replace(/([A-Z])/g, ' $1')
+                                    .replace(/^./, (str) => str.toUpperCase())
+                                    .trim()
+                                );
+                              };
 
-                            // Consolidate duplicate "Updated By" entries
-                            const changesMap = new Map<string, typeof rawChanges[0]>();
+                              // Filter and sort changes
+                              const rawChanges = Object.keys(after)
+                                .filter(
+                                  (key) =>
+                                    before[key] !== after[key] &&
+                                    ![
+                                      '$id',
+                                      'updatedAt',
+                                      'createdAt',
+                                      '$createdAt',
+                                      '$updatedAt',
+                                      '$permissions',
+                                    ].includes(key) &&
+                                    after[key] !== undefined
+                                )
+                                .map((key) => ({
+                                  key,
+                                  label: getFieldLabel(key),
+                                  beforeValue: before[key],
+                                  afterValue: after[key],
+                                }));
 
-                            // Check if Updated By fields actually changed
-                            const updatedByBefore =
-                              before.updatedByAccountId ||
-                              before.updatedByUserId;
-                            const updatedByAfter =
-                              after.updatedByAccountId ||
-                              after.updatedByUserId;
+                              // Consolidate duplicate "Updated By" entries
+                              const changesMap = new Map<
+                                string,
+                                (typeof rawChanges)[0]
+                              >();
 
-                            if (
-                              updatedByBefore !== updatedByAfter &&
-                              (updatedByBefore || updatedByAfter)
-                            ) {
-                              changesMap.set('updatedBy', {
-                                key: 'updatedBy',
-                                label: 'Updated By',
-                                beforeValue: updatedByBefore,
-                                afterValue: updatedByAfter,
-                              });
-                            }
+                              // Check if Updated By fields actually changed
+                              const updatedByBefore =
+                                before.updatedByAccountId ||
+                                before.updatedByUserId;
+                              const updatedByAfter =
+                                after.updatedByAccountId ||
+                                after.updatedByUserId;
 
-                            // Check if Created By fields actually changed
-                            const createdByBefore =
-                              before.createdByAccountId ||
-                              before.createdByUserId;
-                            const createdByAfter =
-                              after.createdByAccountId ||
-                              after.createdByUserId;
-
-                            if (
-                              createdByBefore !== createdByAfter &&
-                              (createdByBefore || createdByAfter)
-                            ) {
-                              changesMap.set('createdBy', {
-                                key: 'createdBy',
-                                label: 'Created By',
-                                beforeValue: createdByBefore,
-                                afterValue: createdByAfter,
-                              });
-                            }
-
-                            // Add other changes (excluding the individual ID fields we consolidated)
-                            rawChanges.forEach((change) => {
                               if (
-                                change.key !== 'updatedByAccountId' &&
-                                change.key !== 'updatedByUserId' &&
-                                change.key !== 'createdByAccountId' &&
-                                change.key !== 'createdByUserId'
+                                updatedByBefore !== updatedByAfter &&
+                                (updatedByBefore || updatedByAfter)
                               ) {
-                                changesMap.set(change.key, change);
+                                changesMap.set('updatedBy', {
+                                  key: 'updatedBy',
+                                  label: 'Updated By',
+                                  beforeValue: updatedByBefore,
+                                  afterValue: updatedByAfter,
+                                });
                               }
-                            });
 
-                            const changes = Array.from(changesMap.values()).sort(
-                              (a, b) => {
+                              // Check if Created By fields actually changed
+                              const createdByBefore =
+                                before.createdByAccountId ||
+                                before.createdByUserId;
+                              const createdByAfter =
+                                after.createdByAccountId ||
+                                after.createdByUserId;
+
+                              if (
+                                createdByBefore !== createdByAfter &&
+                                (createdByBefore || createdByAfter)
+                              ) {
+                                changesMap.set('createdBy', {
+                                  key: 'createdBy',
+                                  label: 'Created By',
+                                  beforeValue: createdByBefore,
+                                  afterValue: createdByAfter,
+                                });
+                              }
+
+                              // Add other changes (excluding the individual ID fields we consolidated)
+                              rawChanges.forEach((change) => {
+                                if (
+                                  change.key !== 'updatedByAccountId' &&
+                                  change.key !== 'updatedByUserId' &&
+                                  change.key !== 'createdByAccountId' &&
+                                  change.key !== 'createdByUserId'
+                                ) {
+                                  changesMap.set(change.key, change);
+                                }
+                              });
+
+                              const changes = Array.from(
+                                changesMap.values()
+                              ).sort((a, b) => {
                                 // Sort: dates first, then user fields, then others
-                                const aIsDate = a.key.toLowerCase().includes('date');
-                                const bIsDate = b.key.toLowerCase().includes('date');
+                                const aIsDate = a.key
+                                  .toLowerCase()
+                                  .includes('date');
+                                const bIsDate = b.key
+                                  .toLowerCase()
+                                  .includes('date');
                                 if (aIsDate && !bIsDate) return -1;
                                 if (!aIsDate && bIsDate) return 1;
 
@@ -1847,93 +1937,93 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                                 if (!aIsUser && bIsUser) return 1;
 
                                 return a.label.localeCompare(b.label);
+                              });
+
+                              if (changes.length === 0) {
+                                return null;
                               }
-                            );
 
-                            if (changes.length === 0) {
-                              return null;
-                            }
-
-                            return (
-                              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-200/60 shadow-sm">
-                                <div className="px-4 py-3 border-b border-amber-200/60">
-                                  <div className="flex items-center gap-2.5">
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100">
-                                      <FileCheck className="w-4 h-4 text-amber-700" />
-                                    </div>
-                                    <div>
-                                      <h4 className="text-sm font-semibold text-amber-900">
-                                        Changes Made
-                                      </h4>
-                                      <p className="text-xs text-amber-700/80 mt-0.5">
-                                        {changes.length}{' '}
-                                        {changes.length === 1
-                                          ? 'field modified'
-                                          : 'fields modified'}
-                                      </p>
+                              return (
+                                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-200/60 shadow-sm">
+                                  <div className="px-4 py-3 border-b border-amber-200/60">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100">
+                                        <FileCheck className="w-4 h-4 text-amber-700" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-amber-900">
+                                          Changes Made
+                                        </h4>
+                                        <p className="text-xs text-amber-700/80 mt-0.5">
+                                          {changes.length}{' '}
+                                          {changes.length === 1
+                                            ? 'field modified'
+                                            : 'fields modified'}
+                                        </p>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                                <div className="p-4 space-y-3">
-                                  {changes.map((change) => {
-                                    const formattedBefore = formatFieldValue(
-                                      change.key,
-                                      change.beforeValue
-                                    );
-                                    const formattedAfter = formatFieldValue(
-                                      change.key,
-                                      change.afterValue
-                                    );
-                                    const hasChange = change.beforeValue !== null;
+                                  <div className="p-4 space-y-3">
+                                    {changes.map((change) => {
+                                      const formattedBefore = formatFieldValue(
+                                        change.key,
+                                        change.beforeValue
+                                      );
+                                      const formattedAfter = formatFieldValue(
+                                        change.key,
+                                        change.afterValue
+                                      );
+                                      const hasChange =
+                                        change.beforeValue !== null;
 
-                                    return (
-                                      <div
-                                        key={change.key}
-                                        className="flex items-start gap-4 pb-3 last:pb-0 border-b border-amber-100/60 last:border-0"
-                                      >
-                                        <div className="flex-1 min-w-0">
-                                          <div className="text-xs font-medium text-amber-800/90 mb-1.5 uppercase tracking-wide">
-                                            {change.label}
-                                          </div>
-                                          <div className="space-y-1.5">
-                                            {hasChange ? (
-                                              <>
-                                                <div className="flex items-center gap-2">
-                                                  <div className="flex-1 px-2.5 py-1.5 bg-white/60 rounded border border-amber-200/40">
-                                                    <span className="text-xs text-amber-700/80 line-through">
-                                                      {formattedBefore}
-                                                    </span>
-                                                  </div>
-                                                  <div className="flex-shrink-0">
-                                                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                                                      <span className="text-[10px] text-blue-600 font-semibold">
-                                                        →
+                                      return (
+                                        <div
+                                          key={change.key}
+                                          className="flex items-start gap-4 pb-3 last:pb-0 border-b border-amber-100/60 last:border-0"
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <div className="text-xs font-medium text-amber-800/90 mb-1.5 uppercase tracking-wide">
+                                              {change.label}
+                                            </div>
+                                            <div className="space-y-1.5">
+                                              {hasChange ? (
+                                                <>
+                                                  <div className="flex items-center gap-2">
+                                                    <div className="flex-1 px-2.5 py-1.5 bg-white/60 rounded border border-amber-200/40">
+                                                      <span className="text-xs text-amber-700/80 line-through">
+                                                        {formattedBefore}
+                                                      </span>
+                                                    </div>
+                                                    <div className="flex-shrink-0">
+                                                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                                                        <span className="text-[10px] text-blue-600 font-semibold">
+                                                          →
+                                                        </span>
+                                                      </div>
+                                                    </div>
+                                                    <div className="flex-1 px-2.5 py-1.5 bg-white rounded border border-amber-300/60 shadow-sm">
+                                                      <span className="text-xs font-semibold text-amber-900">
+                                                        {formattedAfter}
                                                       </span>
                                                     </div>
                                                   </div>
-                                                  <div className="flex-1 px-2.5 py-1.5 bg-white rounded border border-amber-300/60 shadow-sm">
-                                                    <span className="text-xs font-semibold text-amber-900">
-                                                      {formattedAfter}
-                                                    </span>
-                                                  </div>
+                                                </>
+                                              ) : (
+                                                <div className="px-2.5 py-1.5 bg-white rounded border border-amber-300/60 shadow-sm">
+                                                  <span className="text-xs font-semibold text-amber-900">
+                                                    {formattedAfter}
+                                                  </span>
                                                 </div>
-                                              </>
-                                            ) : (
-                                              <div className="px-2.5 py-1.5 bg-white rounded border border-amber-300/60 shadow-sm">
-                                                <span className="text-xs font-semibold text-amber-900">
-                                                  {formattedAfter}
-                                                </span>
-                                              </div>
-                                            )}
+                                              )}
+                                            </div>
                                           </div>
                                         </div>
-                                      </div>
-                                    );
-                                  })}
+                                      );
+                                    })}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })()}
+                              );
+                            })()}
                         </div>
                       );
                     })()}
@@ -1971,7 +2061,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
                   {/* Reviewer Notes */}
                   <div className="space-y-2">
-                    <Label htmlFor="reviewer-notes-expanded" className="text-sm font-semibold text-slate-700">
+                    <Label
+                      htmlFor="reviewer-notes-expanded"
+                      className="text-sm font-semibold text-slate-700"
+                    >
                       Reviewer Notes (Optional)
                     </Label>
                     <Textarea
@@ -1983,7 +2076,8 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                       disabled={isProcessingApproval}
                     />
                     <p className="text-xs text-slate-500">
-                      These notes will be visible to the event creator and included in the audit log.
+                      These notes will be visible to the event creator and
+                      included in the audit log.
                     </p>
                   </div>
                 </div>
@@ -2406,7 +2500,8 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                               : 'bg-red-100'
                           )}
                         >
-                          {selectedEvent.approvalStatus === 'changes_requested' ? (
+                          {selectedEvent.approvalStatus ===
+                          'changes_requested' ? (
                             <MessageSquare className="w-5 h-5 text-amber-700" />
                           ) : (
                             <AlertCircle className="w-5 h-5 text-red-700" />
@@ -2416,12 +2511,14 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                           <h4
                             className={cn(
                               'text-sm font-semibold mb-1',
-                              selectedEvent.approvalStatus === 'changes_requested'
+                              selectedEvent.approvalStatus ===
+                                'changes_requested'
                                 ? 'text-amber-900'
                                 : 'text-red-900'
                             )}
                           >
-                            {selectedEvent.approvalStatus === 'changes_requested'
+                            {selectedEvent.approvalStatus ===
+                            'changes_requested'
                               ? 'Reviewer Feedback - Changes Requested'
                               : 'Reviewer Feedback - Request Denied'}
                           </h4>
@@ -2429,7 +2526,8 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                             <p
                               className={cn(
                                 'text-xs',
-                                selectedEvent.approvalStatus === 'changes_requested'
+                                selectedEvent.approvalStatus ===
+                                  'changes_requested'
                                   ? 'text-amber-600'
                                   : 'text-red-600'
                               )}
@@ -2465,9 +2563,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                       {selectedEvent.approvalStatus === 'changes_requested' && (
                         <div className="mt-3 pt-3 border-t border-amber-200">
                           <p className="text-xs text-amber-700">
-                            <strong>Next steps:</strong> Please review the feedback above
-                            and make the requested changes. Once updated, your event will
-                            be resubmitted for approval.
+                            <strong>Next steps:</strong> Please review the
+                            feedback above and make the requested changes. Once
+                            updated, your event will be resubmitted for
+                            approval.
                           </p>
                         </div>
                       )}

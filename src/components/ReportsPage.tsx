@@ -69,9 +69,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
   // Fetch accessible departments when user changes
   useEffect(() => {
     const fetchDepartments = async () => {
-      if (user) {
+      if (user?.$id) {
         const departments = await getUserAccessibleDepartments(
-          (user as ExtendedUser)?.role || 'user',
+          user.$id,
           (user as ExtendedUser)?.department
         );
         setAccessibleDepartments(departments);

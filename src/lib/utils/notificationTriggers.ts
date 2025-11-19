@@ -305,17 +305,13 @@ export async function triggerNewUserRequestNotification(
   try {
     const { tablesDB } = await createAdminClient();
 
-    // Get all executives and admins
-    const executives = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
-      queries: [
-        Query.or([
-          Query.equal('role', 'executive'),
-          Query.equal('role', 'admin'),
-        ]),
-      ],
-    });
+    // Get all executives and admins using new RBAC system
+    const { getAllExecutives, getAllAdmins } = await import('./get-users-by-role');
+    const executivesList = await Promise.all([
+      getAllExecutives(),
+      getAllAdmins(),
+    ]);
+    const executives = { rows: executivesList.flat() };
 
     // Send notification to each executive
     for (const executive of executives.rows) {

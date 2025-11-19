@@ -45,6 +45,17 @@ export const isUserRole = (value: string): value is UserRole => {
   return USER_ROLES.includes(value as UserRole);
 };
 
+/**
+ * Normalize a role string to a valid calendar role.
+ * Used for calendar permissions compatibility.
+ * Returns 'viewer' as default if role is invalid or null.
+ */
+export const normalizeUserRole = (role: string | null | undefined): UserRole => {
+  if (!role) return 'viewer';
+  const normalized = role.trim().toLowerCase();
+  return isUserRole(normalized) ? normalized : 'viewer';
+};
+
 export const ROLE_HIERARCHY: UserRole[] = [
   'admin',
   'approver',
@@ -114,67 +125,5 @@ export const SENSITIVITY_LABELS: Record<CalendarSensitivity, string> = {
   standard: 'Standard',
   restricted: 'Restricted',
   confidential: 'Confidential',
-};
-
-const LEGACY_ROLE_MAPPING: Record<string, UserRole> = {
-  // New RBAC roles
-  'super-admin': 'admin',
-  'organization-admin': 'admin',
-  'department-manager': 'approver',
-  scheduler: 'scheduler',
-  reviewer: 'reviewer',
-  viewer: 'viewer',
-  // Legacy roles (for backward compatibility)
-  admin: 'admin',
-  executive: 'approver',
-  approver: 'approver',
-  manager: 'reviewer',
-  coordinator: 'scheduler',
-  staff: 'scheduler',
-  contributor: 'scheduler',
-};
-
-export const isLegacyRole = (role?: string | null): boolean => {
-  if (!role) {
-    return false;
-  }
-  return Boolean(LEGACY_ROLE_MAPPING[role.toLowerCase()]);
-};
-
-export const normalizeUserRole = (role?: string | null): UserRole => {
-  if (!role) {
-    return 'viewer';
-  }
-  // Trim whitespace and convert to lowercase for consistent matching
-  const normalizedKey = role.trim().toLowerCase();
-  const mappedRole = LEGACY_ROLE_MAPPING[normalizedKey] || 'viewer';
-  
-  // Log normalization for debugging (only in development)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[normalizeUserRole]', {
-      input: role,
-      normalized: normalizedKey,
-      mapped: mappedRole,
-    });
-  }
-  
-  return mappedRole;
-};
-
-export type LegacyRole = 'executive' | 'manager' | 'admin' | 'viewer';
-
-export const mapUserRoleToLegacy = (role?: UserRole): LegacyRole => {
-  switch (role) {
-    case 'admin':
-      return 'admin';
-    case 'approver':
-      return 'executive';
-    case 'reviewer':
-      return 'manager';
-    case 'scheduler':
-      return 'manager';
-    default:
-      return 'viewer';
-  }
 };
 

@@ -5,23 +5,24 @@ import {
 } from '@/lib/actions/report.actions';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
+import { getCurrentUser } from '@/lib/actions/user.actions';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const department = searchParams.get('department');
-    const userRole = searchParams.get('userRole');
-    const userDivision = searchParams.get('userDivision');
-
-    if (!userRole) {
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
-        { error: 'User role is required' },
-        { status: 400 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const department = searchParams.get('department');
+    const userDivision = searchParams.get('userDivision');
+
     // Build cache key
-    const cacheKey = `${CACHE_KEYS.reports.templates()}:${userRole}:${userDivision}:${department}`;
+    const cacheKey = `${CACHE_KEYS.reports.templates()}:${user.$id}:${userDivision}:${department}`;
 
     // Cache reports with long TTL (reports don't change frequently)
     const { reports } = await CacheManager.withCache(
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       async () => {
         // Get accessible departments for the user
         const accessibleDepartments = await getUserAccessibleDepartments(
-          userRole,
+          user.$id,
           userDivision || undefined
         );
 
@@ -95,9 +96,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, userRole, department, userName } = body;
+    const { userId, department, userName } = body;
 
-    if (!userId || !userRole || !department || !userName) {
+    if (!userId || !department || !userName) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -107,7 +108,6 @@ export async function POST(request: NextRequest) {
     // Generate the report
     const report = await generateReport({
       userId,
-      userRole,
       department,
       userName,
     });

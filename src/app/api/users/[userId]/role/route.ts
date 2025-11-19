@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserRoles } from '@/lib/rbac/permissions';
 import { getOrgIdFromRequest } from '@/lib/rbac/middleware';
-import { getLegacyRoleDisplayName } from '@/lib/utils/role-display';
 
 /**
  * Get role display name(s) for a user
@@ -28,19 +27,6 @@ export async function GET(
           roles: userRoles.map(ur => ur.roleName).filter(Boolean),
         });
       }
-    }
-
-    // Fallback: try to get legacy role from user document
-    const { searchParams } = new URL(request.url);
-    const legacyRole = searchParams.get('legacyRole');
-    
-    if (legacyRole) {
-      const roleName = getLegacyRoleDisplayName(legacyRole);
-      return NextResponse.json({
-        success: true,
-        roleName,
-        roles: [roleName],
-      });
     }
 
     return NextResponse.json({

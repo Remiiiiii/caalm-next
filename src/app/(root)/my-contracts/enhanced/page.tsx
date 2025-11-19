@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
 import {
   Card as UICard,
   CardContent,
@@ -28,7 +30,8 @@ import EnhancedSearch from '@/components/EnhancedSearch';
 import SearchResultHighlight from '@/components/SearchResultHighlight';
 
 const EnhancedMyContractsPage = () => {
-  const { role, division, loading, error } = useUserRole();
+  const { division, loading, error } = useUserRole();
+  const { permissions } = usePermissions();
   const [contracts, setContracts] = useState<UIFileDoc[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<UIFileDoc[]>([]);
   const [selectedDepartment, setSelectedDepartment] =
@@ -42,7 +45,7 @@ const EnhancedMyContractsPage = () => {
   // Function to refresh contracts data
   const refreshContracts = async () => {
     try {
-      if (role === 'manager' && division) {
+      if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && !permissions.includes(PERMISSIONS.SETTINGS.VIEW) && division) {
         // For managers, get contracts filtered by their division
         const divisionContracts = await getContractsByUserDivision(division);
 
@@ -249,10 +252,10 @@ const EnhancedMyContractsPage = () => {
       )}
 
       {/* Main Content */}
-      {role && (
+      {permissions.length > 0 && (
         <div className="space-y-6">
-          {/* Role-based Access */}
-          {role === 'manager' && division ? (
+          {/* Permission-based Access */}
+          {permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && !permissions.includes(PERMISSIONS.SETTINGS.VIEW) && division ? (
             <div className="space-y-6">
               <UICard>
                 <CardHeader>
@@ -297,7 +300,7 @@ const EnhancedMyContractsPage = () => {
                 </CardContent>
               </UICard>
             </div>
-          ) : role === 'executive' || role === 'admin' ? (
+          ) : permissions.includes(PERMISSIONS.SETTINGS.VIEW) ? (
             <div className="space-y-6">
               <UICard>
                 <CardHeader>

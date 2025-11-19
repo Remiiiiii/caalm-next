@@ -9,14 +9,5 @@ export async function signInHandler(email: string) {
 
   // All users must complete 2FA setup before accessing the application
   // Redirect to settings to complete mandatory 2FA setup
-  switch (user.role) {
-    case 'executive':
-      redirect('/settings');
-    case 'manager':
-      redirect('/settings');
-    case 'admin':
-      redirect('/settings');
-    default:
-      redirect('/settings');
-  }
+  redirect('/settings');
 }

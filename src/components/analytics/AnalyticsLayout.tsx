@@ -16,6 +16,8 @@ import Link from 'next/link';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
 import { mapDatabaseToRouteDivision } from '@/constants/navigation';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
 
 interface AnalyticsLayoutProps {
   division: string;
@@ -92,55 +94,48 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
   children,
   divisionData,
 }) => {
-  const { role, division: userDivision, loading } = useUserRole();
+  const { division: userDivision, loading } = useUserRole();
+  const { permissions } = usePermissions();
   const { stats: analyticsStats, isLoading: analyticsLoading } =
     useAnalyticsData(division);
   const config = divisionConfig[division as keyof typeof divisionConfig];
 
-  // Check if user has access to this specific division
+  // Check if user has access to this specific division based on permissions
   const hasAccessToDivision = () => {
     if (loading) return false;
 
-    const hasAccess = (() => {
-      switch (role) {
-        case 'executive':
-          return true; // Executive can access all departments
-        case 'admin':
-          // Admin can access administration department
-          return division === 'administration';
-        case 'manager':
-          // Manager can only access their specific department
-          if (!userDivision) return false;
-          const userRouteDivision = mapDatabaseToRouteDivision(userDivision);
-          return division === userRouteDivision;
-        default:
-          return false;
-      }
-    })();
+    // Super Admin and Organization Admin can access all departments (have settings.view)
+    if (permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
+      return true;
+    }
 
-    return hasAccess;
+    // Department Manager can only access their specific department (have contracts.view)
+    if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && userDivision) {
+      const userRouteDivision = mapDatabaseToRouteDivision(userDivision);
+      return division === userRouteDivision;
+    }
+
+    return false;
   };
 
-  // Get accessible divisions for navigation tabs based on user role
+  // Get accessible divisions for navigation tabs based on permissions
   const getAccessibleDivisions = () => {
     if (loading) return [];
 
-    switch (role) {
-      case 'executive':
-        return Object.entries(divisionConfig);
-      case 'admin':
-        // Admin can see all divisions but only access administration
-        return Object.entries(divisionConfig);
-      case 'manager':
-        // Manager can only see their specific department
-        if (!userDivision) return [];
-        const userRouteDivision = mapDatabaseToRouteDivision(userDivision);
-        return Object.entries(divisionConfig).filter(
-          ([key]) => key === userRouteDivision
-        );
-      default:
-        return [];
+    // Super Admin and Organization Admin can see all divisions
+    if (permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
+      return Object.entries(divisionConfig);
     }
+
+    // Department Manager can only see their specific department
+    if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && userDivision) {
+      const userRouteDivision = mapDatabaseToRouteDivision(userDivision);
+      return Object.entries(divisionConfig).filter(
+        ([key]) => key === userRouteDivision
+      );
+    }
+
+    return [];
   };
 
   const accessibleDivisions = getAccessibleDivisions();

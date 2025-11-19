@@ -813,15 +813,12 @@ export const getContractsByUserDivision = async (userDivision: string) => {
       ) {
         // Check if any assigned manager belongs to the user's division
         for (const managerName of contract.assignedManagers) {
-          // Get manager by name to check their division
-          const managers = await tablesDB.listRows(
-            appwriteConfig.databaseId,
-            appwriteConfig.usersCollectionId,
-            [
-              Query.equal('fullName', managerName),
-              Query.equal('role', 'manager'),
-            ]
-          );
+          // Get manager by name to check their division using new RBAC system
+          const { getUsersByRoleNames } = await import('@/lib/utils/get-users-by-role');
+          const allManagers = await getUsersByRoleNames(['Department Manager', 'manager']);
+          const managers = {
+            rows: allManagers.filter((m: any) => m.fullName === managerName),
+          };
 
           if (managers.rows.length > 0) {
             const manager = managers.rows[0];
