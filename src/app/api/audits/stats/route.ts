@@ -14,8 +14,6 @@ export async function GET(request: NextRequest) {
       return permissionCheck;
     }
 
-    console.log('Fetching audit statistics for user:', user.$id);
-
     const stats = await getAuditStats();
 
     return NextResponse.json({

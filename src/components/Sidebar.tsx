@@ -684,7 +684,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                               {item.name === 'Department Licenses' && (
                                 <span className="gap-1">
                                   <Image
-                                    src="/assets/icons/department.svg"
+                                    src="/assets/icons/dept-license.svg"
                                     alt="all-licenses"
                                     width={20}
                                     height={20}

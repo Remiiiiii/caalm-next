@@ -1,0 +1,842 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import {
+  Calendar as CalendarIcon,
+  Plus,
+  Edit,
+  Trash2,
+  Users,
+  Globe,
+  Lock,
+  Palette,
+  Check,
+  Ban,
+  Share2,
+  X,
+  UserPlus,
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
+import { cn } from '@/lib/utils';
+
+interface SharedCalendar {
+  $id: string;
+  name: string;
+  description?: string;
+  ownerId: string;
+  ownerAccountId: string;
+  organizationId: string;
+  isTeamCalendar: boolean;
+  teamId?: string;
+  color?: string;
+  isPublic: boolean;
+  sharedWith?: string[]; // Array of user IDs who have access
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SharedCalendarManagerProps {
+  onCalendarCreated?: (calendar: SharedCalendar) => void;
+  onCalendarUpdated?: (calendar: SharedCalendar) => void;
+}
+
+export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
+  onCalendarCreated,
+  onCalendarUpdated,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [calendars, setCalendars] = useState<SharedCalendar[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [selectedCalendar, setSelectedCalendar] =
+    useState<SharedCalendar | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [sharedUsers, setSharedUsers] = useState<
+    Array<{ $id: string; fullName?: string; name?: string; email: string }>
+  >([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<
+    Array<{ $id: string; fullName?: string; name?: string; email: string }>
+  >([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    isTeamCalendar: false,
+    teamId: '',
+    color: '#3b82f6',
+    isPublic: false,
+    isCustomColor: false,
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCalendars();
+    }
+  }, [isOpen]);
+
+  // Load shared users when share dialog opens or selectedCalendar changes
+  useEffect(() => {
+    if (isShareDialogOpen && selectedCalendar) {
+      loadSharedUsers();
+    }
+  }, [isShareDialogOpen, selectedCalendar?.$id, selectedCalendar?.sharedWith]);
+
+  // Search for users
+  useEffect(() => {
+    if (userSearch.length >= 2) {
+      searchUsers(userSearch);
+    } else {
+      setSearchResults([]);
+    }
+  }, [userSearch]);
+
+  const fetchCalendars = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/calendar/shared');
+      if (response.ok) {
+        const data = await response.json();
+        setCalendars(data.calendars || []);
+      }
+    } catch (error) {
+      console.error(
+        '[CLIENT] SharedCalendarManager] Error fetching calendars:',
+        error
+      );
+      toast({
+        title: 'Error',
+        description: 'Failed to load shared calendars',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!formData.name.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Calendar name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setCreating(true);
+      const response = await fetch('/api/calendar/shared', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: 'Success',
+          description: 'Shared calendar created successfully',
+        });
+        setFormData({
+          name: '',
+          description: '',
+          isTeamCalendar: false,
+          teamId: '',
+          color: '#3b82f6',
+          isPublic: false,
+          isCustomColor: false,
+        });
+        await fetchCalendars();
+        onCalendarCreated?.(data.calendar);
+        setIsOpen(false);
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to create shared calendar',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error(
+        '[CLIENT] SharedCalendarManager] Error creating calendar:',
+        error
+      );
+      toast({
+        title: 'Error',
+        description: 'Failed to create shared calendar',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const loadSharedUsers = async (calendar?: SharedCalendar | null) => {
+    // Use provided calendar or fall back to selectedCalendar
+    const calendarToUse = calendar || selectedCalendar;
+
+    if (!calendarToUse?.sharedWith || calendarToUse.sharedWith.length === 0) {
+      setSharedUsers([]);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/users/get-by-ids', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: calendarToUse.sharedWith }),
+      });
+
+      if (response.ok) {
+        const users = await response.json();
+        setSharedUsers(Array.isArray(users) ? users : []);
+      }
+    } catch (error) {
+      console.error(
+        '[CLIENT] SharedCalendarManager] Error loading shared users:',
+        error
+      );
+    }
+  };
+
+  const searchUsers = async (query: string) => {
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `/api/users/search?q=${encodeURIComponent(query)}`
+      );
+      if (response.ok) {
+        const users = await response.json();
+        // Filter out users already shared with
+        const alreadySharedIds = selectedCalendar?.sharedWith || [];
+        setSearchResults(
+          users.filter(
+            (u: { $id: string }) => !alreadySharedIds.includes(u.$id)
+          )
+        );
+      }
+    } catch (error) {
+      console.error(
+        '[CLIENT] SharedCalendarManager] Error searching users:',
+        error
+      );
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddUser = async (userId: string) => {
+    if (!selectedCalendar) return;
+
+    // Find the user in search results to immediately add to UI
+    const userToAdd = searchResults.find(
+      (u: { $id: string }) => u.$id === userId
+    );
+
+    try {
+      const response = await fetch(
+        `/api/calendar/shared/${selectedCalendar.$id}/users`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'add', userId }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Update the selected calendar immediately
+        const updatedCalendar = data.calendar;
+        setSelectedCalendar(updatedCalendar);
+
+        // Immediately reload shared users with the updated calendar data
+        await loadSharedUsers(updatedCalendar);
+
+        toast({
+          title: 'Success',
+          description: 'User added to shared calendar',
+        });
+
+        await fetchCalendars();
+        setUserSearch('');
+        setSearchResults([]);
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to add user',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error(
+        '[CLIENT] SharedCalendarManager] Error adding user:',
+        error
+      );
+      toast({
+        title: 'Error',
+        description: 'Failed to add user',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRemoveUser = async (userId: string) => {
+    if (!selectedCalendar) return;
+
+    try {
+      const response = await fetch(
+        `/api/calendar/shared/${selectedCalendar.$id}/users`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'remove', userId }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Update the selected calendar immediately
+        const updatedCalendar = data.calendar;
+        setSelectedCalendar(updatedCalendar);
+
+        // Immediately reload shared users with the updated calendar data
+        await loadSharedUsers(updatedCalendar);
+
+        toast({
+          title: 'Success',
+          description: 'User removed from shared calendar',
+        });
+
+        await fetchCalendars();
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to remove user',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error(
+        '[CLIENT] SharedCalendarManager] Error removing user:',
+        error
+      );
+      toast({
+        title: 'Error',
+        description: 'Failed to remove user',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="primary-btn px-3 sm:px-4"
+          >
+            <CalendarIcon className="w-4 h-4" />
+            Manage Shared Calendars
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col">
+          <VisuallyHiddenPrimitive.Root>
+            <DialogTitle>Manage Shared Calendars</DialogTitle>
+            <DialogDescription>
+              Create and manage shared calendars for your team
+            </DialogDescription>
+          </VisuallyHiddenPrimitive.Root>
+          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+          {/* Professional Header */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+            <div className="flex items-center justify-between ml-6">
+              <div className="flex items-center">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="h-5 w-5 text-[#0f5384]" />
+                    <h2 className="text-xl font-semibold sidebar-gradient-text">
+                      Shared Calendars
+                    </h2>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1 ml-7">
+                    Create calendars that your team can access and collaborate
+                    on
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+            {/* Create New Calendar Form */}
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                <Plus className="w-4 h-4 text-blue-600" />
+                Create New Shared Calendar
+              </Label>
+
+              <div className="space-y-4">
+                <div>
+                  <Label
+                    htmlFor="calendar-name"
+                    className="text-sm text-slate-700 mb-1 block"
+                  >
+                    Calendar Name *
+                  </Label>
+                  <Input
+                    id="calendar-name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    placeholder="e.g., Team Calendar, Project Alpha"
+                    className="bg-white border-slate-300"
+                  />
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="calendar-description"
+                    className="text-sm text-slate-700 mb-1 block"
+                  >
+                    Description
+                  </Label>
+                  <Textarea
+                    id="calendar-description"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    placeholder="Optional description for this calendar"
+                    rows={3}
+                    className="bg-white border-slate-300"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-slate-700 mb-2 block">
+                      Color
+                    </Label>
+                    {/* Color Swatches Row */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        {/* Predefined Colors */}
+                        {[
+                          '#ec4899', // Pink
+                          '#f97316', // Orange
+                          '#eab308', // Yellow
+                          '#22c55e', // Green
+                          '#3b82f6', // Blue
+                          '#a855f7', // Purple
+                          '#d97706', // Beige/Amber
+                        ].map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                color,
+                                isCustomColor: false,
+                              });
+                            }}
+                            className={cn(
+                              'w-8 h-8 rounded-full border-2 transition-all hover:scale-110',
+                              formData.color === color &&
+                                !formData.isCustomColor
+                                ? 'border-slate-900 ring-2 ring-slate-300'
+                                : 'border-slate-300 hover:border-slate-400'
+                            )}
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Custom Color Option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, isCustomColor: true });
+                          // Open color picker
+                          const colorInput =
+                            document.getElementById('custom-color-input');
+                          colorInput?.click();
+                        }}
+                        className={cn(
+                          'flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900 transition-colors',
+                          formData.isCustomColor && 'text-slate-900 font-medium'
+                        )}
+                      >
+                        {formData.isCustomColor && (
+                          <Check className="w-4 h-4 text-slate-900" />
+                        )}
+                        <span>Custom Color...</span>
+                        {formData.isCustomColor && formData.color && (
+                          <div
+                            className="w-4 h-4 rounded border border-slate-300 ml-auto"
+                            style={{ backgroundColor: formData.color }}
+                          />
+                        )}
+                      </button>
+
+                      {/* Hidden color input for custom color */}
+                      <input
+                        id="custom-color-input"
+                        type="color"
+                        value={formData.color || '#3b82f6'}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            color: e.target.value,
+                            isCustomColor: true,
+                          })
+                        }
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm text-slate-700 mb-2 block">
+                      Visibility
+                    </Label>
+                    <Select
+                      value={formData.isPublic ? 'public' : 'private'}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          isPublic: value === 'public',
+                        })
+                      }
+                    >
+                      <SelectTrigger className="bg-white border-slate-300">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="private">
+                          <div className="flex items-center gap-2">
+                            <Lock className="w-4 h-4" />
+                            Private
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="public">
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4" />
+                            Public
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="team-calendar"
+                    checked={formData.isTeamCalendar}
+                    onCheckedChange={(checked) =>
+                      setFormData({
+                        ...formData,
+                        isTeamCalendar: checked as boolean,
+                      })
+                    }
+                  />
+                  <Label
+                    htmlFor="team-calendar"
+                    className="text-sm text-slate-700 cursor-pointer"
+                  >
+                    This is a team calendar
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            {/* Existing Calendars List */}
+            {loading ? (
+              <div className="text-center py-8 text-slate-500">
+                Loading calendars...
+              </div>
+            ) : calendars.length > 0 ? (
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold text-slate-700">
+                  Your Shared Calendars
+                </Label>
+                {calendars.map((calendar) => (
+                  <div
+                    key={calendar.$id}
+                    className="bg-white border border-slate-200 rounded-lg p-4 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <div
+                        className="w-4 h-4 rounded"
+                        style={{ backgroundColor: calendar.color || '#3b82f6' }}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-900">
+                            {calendar.name}
+                          </span>
+                          {calendar.isPublic && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Globe className="w-3 h-3 mr-1" />
+                              Public
+                            </Badge>
+                          )}
+                          {calendar.isTeamCalendar && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Users className="w-3 h-3 mr-1" />
+                              Team
+                            </Badge>
+                          )}
+                        </div>
+                        {calendar.description && (
+                          <p className="text-sm text-slate-500 mt-1">
+                            {calendar.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        title="Share with users"
+                        onClick={() => {
+                          // Open share dialog for this calendar
+                          setSelectedCalendar(calendar);
+                          setIsShareDialogOpen(true);
+                        }}
+                      >
+                        <Share2 className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-500">
+                No shared calendars yet. Create one to get started.
+              </div>
+            )}
+          </div>
+
+          {/* Professional Footer */}
+          <div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                className="primary-btn px-3 sm:px-4"
+                onClick={() => setIsOpen(false)}
+              >
+                <Ban className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button
+                className="primary-btn"
+                onClick={handleCreate}
+                disabled={creating || !formData.name.trim()}
+              >
+                {creating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Calendar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Share Calendar Dialog */}
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col">
+          <VisuallyHiddenPrimitive.Root>
+            <DialogTitle>Share Calendar with Users</DialogTitle>
+            <DialogDescription>
+              Add or remove users who can access this shared calendar
+            </DialogDescription>
+          </VisuallyHiddenPrimitive.Root>
+          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+          {/* Professional Header */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+            <div className="flex items-center justify-between ml-6">
+              <div className="flex items-center gap-2">
+                <Share2 className="h-5 w-5 text-[#0f5384]" />
+                <h2 className="text-xl font-semibold sidebar-gradient-text">
+                  Share: {selectedCalendar?.name}
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {/* Add User Section */}
+            <div>
+              <Label className="text-sm font-semibold text-slate-700 mb-2 block">
+                Add Users
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search by name or email..."
+                  className="flex-1 bg-white border-slate-300"
+                />
+              </div>
+
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <div className="mt-2 border border-slate-200 rounded-lg bg-white max-h-40 overflow-y-auto">
+                  {searchResults.map((user) => (
+                    <button
+                      key={user.$id}
+                      onClick={() => handleAddUser(user.$id)}
+                      className="w-full p-3 text-left hover:bg-slate-50 border-b border-slate-100 last:border-b-0 flex items-center gap-3"
+                    >
+                      <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-sm font-medium">
+                        {(user.fullName || user.name || '?')
+                          .charAt(0)
+                          .toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm text-slate-900">
+                          {user.fullName || user.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {user.email}
+                        </div>
+                      </div>
+                      <UserPlus className="w-4 h-4 text-blue-600" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {isSearching && (
+                <div className="mt-2 text-sm text-slate-500 text-center py-2">
+                  Searching...
+                </div>
+              )}
+            </div>
+
+            {/* Shared Users List */}
+            <div>
+              <Label className="text-sm font-semibold text-slate-700 mb-2 block">
+                Shared With ({sharedUsers.length})
+              </Label>
+              {sharedUsers.length > 0 ? (
+                <div className="space-y-2">
+                  {sharedUsers.map((user) => (
+                    <div
+                      key={user.$id}
+                      className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-sm font-medium">
+                          {(user.fullName || user.name || '?')
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm text-slate-900">
+                            {user.fullName || user.name}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {user.email}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-red-50"
+                        onClick={() => handleRemoveUser(user.$id)}
+                      >
+                        <X className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500 text-sm">
+                  No users shared yet. Search and add users above.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Professional Footer */}
+          <div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                className="primary-btn"
+                onClick={() => {
+                  setIsShareDialogOpen(false);
+                  setSelectedCalendar(null);
+                  setUserSearch('');
+                  setSearchResults([]);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};

@@ -29,6 +29,9 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import CalendarSettings from '@/components/CalendarSettings';
+import { SharedCalendarManager } from '@/components/SharedCalendarManager';
+import { ResourceManager } from '@/components/ResourceManager';
+import { CalendarDelegationManager } from '@/components/CalendarDelegationManager';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { cn, getFileType, convertFileSize } from '@/lib/utils';
@@ -53,6 +56,10 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { useCalendarApprovals } from '@/hooks/useCalendarApprovals';
 import { resolveCalendarPermissions } from '@/lib/auth/permissions';
 import {
+  EventReminderConfig as EventReminderConfigComponent,
+  type EventReminderConfig as EventReminderConfigType,
+} from '@/components/EventReminderConfig';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -60,6 +67,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Activity,
   AlertCircle,
   AlertTriangle,
   Ban,
@@ -162,6 +170,12 @@ interface LocalCalendarEvent {
   overrides?: PermissionOverrideRecord[];
 }
 
+interface EventReminderConfigData {
+  type: 'before_start' | 'before_end' | 'custom';
+  minutes: number;
+  channels: Array<'in_app' | 'email' | 'sms' | 'push'>;
+}
+
 interface NewEventForm {
   title: string;
   date: Date;
@@ -180,6 +194,7 @@ interface NewEventForm {
   location: string;
   attachments?: EventAttachment[];
   sensitivityLevel: CalendarSensitivity;
+  reminders?: EventReminderConfigData[]; // Priority 2: Advanced notifications
 }
 
 interface ParticipantOption {
@@ -252,8 +267,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
 
-  // Pending approvals collapse state
-  const [isApprovalsExpanded, setIsApprovalsExpanded] = useState(true);
+  // Pending approvals collapse state - default to collapsed
+  const [isApprovalsExpanded, setIsApprovalsExpanded] = useState(false);
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
@@ -276,6 +291,23 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [outlookConnected, setOutlookConnected] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Conflict dialog state
+  const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
+  const [conflictData, setConflictData] = useState<{
+    conflicts: Array<{
+      type: 'participant' | 'resource';
+      conflictingEvent: any;
+      conflictReason: string;
+    }>;
+    alternateSlots: Array<{
+      startDate: string;
+      startTime: string;
+      endDate: string;
+      endTime: string;
+    }>;
+    pendingEventData: any;
+  } | null>(null);
 
   // Enable automatic sync with Outlook (polls every 5 minutes)
   useAutoSync(user?.$id, outlookConnected);
@@ -318,7 +350,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   } | null>(null);
   const [loadingContract, setLoadingContract] = useState(false);
 
-  const { userId, accountId } = useUserRole();
+  const { userId, accountId, role } = useUserRole();
   const { permissions: basePermissions } = useCalendarPermissions({ userId });
   const canCreateEvent = basePermissions.createEvent;
   const { permissions } = usePermissions();
@@ -342,11 +374,21 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     enabled: isApprover,
   });
 
+  // Auto-expand approvals section when there are pending approvals
+  useEffect(() => {
+    if (!approvalsLoading && approvals.length > 0) {
+      setIsApprovalsExpanded(true);
+    } else if (!approvalsLoading && approvals.length === 0) {
+      setIsApprovalsExpanded(false);
+    }
+  }, [approvals, approvalsLoading]);
+
   // Approval dialog state
   const [selectedApproval, setSelectedApproval] =
     useState<CalendarApprovalRequest | null>(null);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
+
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [userNamesMap, setUserNamesMap] = useState<Record<string, string>>({});
   const [loadingUserNames, setLoadingUserNames] = useState(false);
@@ -932,12 +974,29 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   };
 
   // Function to generate time options for dropdowns (30-minute intervals, 12-hour format)
-  const generateTimeOptions = () => {
+  // Filters out past times when the selected date is today
+  const generateTimeOptions = (selectedDate?: Date) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const isToday =
+      selectedDate &&
+      new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate()
+      ).getTime() === today.getTime();
+
     const times = [];
     for (let hour = 0; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        const time = new Date();
-        time.setHours(hour, minute, 0, 0);
+        // Check if this time is in the past (only if date is today)
+        let isPast = false;
+        if (isToday) {
+          const timeInMinutes = hour * 60 + minute;
+          const nowInMinutes = now.getHours() * 60 + now.getMinutes();
+          // Add a small buffer (5 minutes) to allow times very close to now
+          isPast = timeInMinutes < nowInMinutes - 5;
+        }
 
         // Format as 12-hour time
         const hours12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
@@ -952,6 +1011,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         times.push({
           value: time24, // Store as 24-hour format
           label: displayTime, // Display as 12-hour format
+          disabled: isPast, // Disable past times
         });
       }
     }
@@ -1710,6 +1770,59 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       return;
     }
 
+    // Validate that event is not in the past
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventDate = new Date(
+      newEvent.date.getFullYear(),
+      newEvent.date.getMonth(),
+      newEvent.date.getDate()
+    );
+
+    // Check if the date is in the past
+    if (eventDate < today) {
+      toast({
+        title: 'Invalid Date',
+        description:
+          'Cannot create events in the past. Please select a current or future date.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // If date is today, check if the time is in the past
+    if (eventDate.getTime() === today.getTime() && newEvent.startTime) {
+      const [hours, minutes] = newEvent.startTime.includes(':')
+        ? newEvent.startTime.split(':').map(Number)
+        : [0, 0];
+
+      // Handle 12-hour format (e.g., "2:00 PM")
+      let hour24 = hours;
+      if (newEvent.startTime.includes('PM') && hours !== 12) {
+        hour24 = hours + 12;
+      } else if (newEvent.startTime.includes('AM') && hours === 12) {
+        hour24 = 0;
+      }
+
+      const eventDateTime = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        hour24,
+        minutes
+      );
+
+      if (eventDateTime < now) {
+        toast({
+          title: 'Invalid Time',
+          description:
+            'Cannot create events in the past. Please select a current or future time.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setCreatingEvent(true);
     try {
       // Create date string in YYYY-MM-DD format to avoid timezone issues
@@ -1779,8 +1892,21 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       });
 
       if (!response.ok) {
-        let errorData: { message?: string; reason?: string; error?: string } =
-          {};
+        let errorData: {
+          message?: string;
+          reason?: string;
+          conflicts?: any[];
+          alternateSlots?: any[];
+          requiresConfirmation?: boolean;
+          error?:
+            | string
+            | {
+                details?: string;
+                message?: string;
+                code?: string;
+                type?: string;
+              };
+        } = {};
         try {
           errorData = await response.json();
         } catch (parseError) {
@@ -1788,28 +1914,62 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           errorData = { message: response.statusText || 'Unknown error' };
         }
 
+        // Handle conflict detection (409 status)
+        if (
+          response.status === 409 &&
+          errorData.requiresConfirmation &&
+          errorData.conflicts
+        ) {
+          // Store conflict data and show dialog
+          setConflictData({
+            conflicts: errorData.conflicts || [],
+            alternateSlots: errorData.alternateSlots || [],
+            pendingEventData: eventData,
+          });
+          setIsConflictDialogOpen(true);
+          setCreatingEvent(false);
+          return; // Don't throw error, user will confirm in dialog
+        }
+
+        // Extract error message from response
+        const errorObj =
+          errorData?.error &&
+          typeof errorData.error === 'object' &&
+          !Array.isArray(errorData.error)
+            ? errorData.error
+            : null;
+        const errorMessage =
+          errorData?.message ||
+          (errorObj && 'details' in errorObj ? errorObj.details : null) ||
+          (errorObj && 'message' in errorObj ? errorObj.message : null) ||
+          errorData?.reason ||
+          (typeof errorData?.error === 'string' ? errorData.error : null) ||
+          response.statusText ||
+          'Failed to create event';
+
         console.error('Failed to create event:', {
           status: response.status,
           statusText: response.statusText,
-          error: errorData,
+          errorData,
+          errorMessage,
+          errorCode: errorObj && 'code' in errorObj ? errorObj.code : undefined,
+          errorType: errorObj && 'type' in errorObj ? errorObj.type : undefined,
         });
 
         // Provide clearer error messages based on status code
-        let errorMessage = 'Failed to create event';
+        let userFriendlyMessage = errorMessage;
         if (response.status === 404) {
-          errorMessage =
+          userFriendlyMessage =
             'API route not found. Please restart the development server.';
         } else if (response.status === 403) {
-          errorMessage =
-            errorData.message || errorData.reason || 'Permission denied';
+          userFriendlyMessage = errorMessage || 'Permission denied';
         } else if (response.status === 401) {
-          errorMessage = 'Authentication required. Please sign in again.';
-        } else {
-          errorMessage =
-            errorData.message ||
-            errorData.reason ||
-            errorData.error ||
-            'Failed to create event';
+          userFriendlyMessage =
+            'Authentication required. Please sign in again.';
+        } else if (response.status === 500) {
+          userFriendlyMessage =
+            errorMessage ||
+            'Server error. Please try again or contact support.';
         }
 
         throw new Error(errorMessage);
@@ -1870,7 +2030,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('Error creating event:', {
+        error,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       console.error('Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
@@ -2084,6 +2248,84 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     } finally {
       setCreatingEvent(false);
     }
+  };
+
+  // Handle conflict confirmation
+  const handleConfirmConflict = async () => {
+    if (!conflictData) return;
+
+    setCreatingEvent(true);
+    setIsConflictDialogOpen(false);
+
+    try {
+      // Retry creation with forceCreate flag
+      const eventDataWithForce = {
+        ...conflictData.pendingEventData,
+        forceCreate: true,
+      };
+
+      const response = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventDataWithForce),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create event');
+      }
+
+      const result = await response.json();
+      console.log(
+        'Event created successfully after conflict confirmation:',
+        result
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Event created successfully despite conflicts',
+      });
+
+      setIsAddEventOpen(false);
+      setNewEvent({
+        title: '',
+        date: new Date(),
+        endDate: new Date(),
+        type: 'meeting',
+        description: '',
+        startTime: '',
+        endTime: '',
+        contractName: '',
+        participants: '',
+        location: '',
+        attachments: [],
+        sensitivityLevel: 'standard',
+      });
+      setSelectedParticipants([]);
+      setParticipantSearch('');
+      setSearchResults([]);
+      setConflictData(null);
+
+      await forceRefresh();
+    } catch (error) {
+      console.error('Error creating event after conflict confirmation:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Failed to create event',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingEvent(false);
+    }
+  };
+
+  const handleCancelConflict = () => {
+    setIsConflictDialogOpen(false);
+    setConflictData(null);
+    setCreatingEvent(false);
   };
   // Display-friendly label for event type (keeps full text like "Deadline Discussion")
   const getEventTypeLabel = (
@@ -3205,6 +3447,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             <Calendar
                               mode="single"
                               selected={newEvent.date}
+                              disabled={(date) => {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const checkDate = new Date(date);
+                                checkDate.setHours(0, 0, 0, 0);
+                                return checkDate < today;
+                              }}
                               onSelect={(date) => {
                                 const selectedDate = date || new Date();
                                 const smartTimes =
@@ -3254,6 +3503,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             <Calendar
                               mode="single"
                               selected={newEvent.endDate}
+                              disabled={(date) => {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const checkDate = new Date(date);
+                                checkDate.setHours(0, 0, 0, 0);
+                                return checkDate < today;
+                              }}
                               onSelect={(date) => {
                                 const selectedEndDate = date || new Date();
                                 setNewEvent({
@@ -3289,8 +3545,17 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             <SelectValue placeholder="Select start time" />
                           </SelectTrigger>
                           <SelectContent className="shadow-lg border-slate-200">
-                            {generateTimeOptions().map((time) => (
-                              <SelectItem key={time.value} value={time.value}>
+                            {generateTimeOptions(newEvent.date).map((time) => (
+                              <SelectItem
+                                key={time.value}
+                                value={time.value}
+                                disabled={time.disabled}
+                                className={
+                                  time.disabled
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : ''
+                                }
+                              >
                                 {time.label}
                               </SelectItem>
                             ))}
@@ -3317,8 +3582,17 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             <SelectValue placeholder="Select end time" />
                           </SelectTrigger>
                           <SelectContent className="shadow-lg border-slate-200">
-                            {generateTimeOptions().map((time) => (
-                              <SelectItem key={time.value} value={time.value}>
+                            {generateTimeOptions(newEvent.date).map((time) => (
+                              <SelectItem
+                                key={time.value}
+                                value={time.value}
+                                disabled={time.disabled}
+                                className={
+                                  time.disabled
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : ''
+                                }
+                              >
                                 {time.label}
                               </SelectItem>
                             ))}
@@ -3577,6 +3851,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       )}
                   </div>
                 </div>
+
+                {/* Priority 2: Reminders Section */}
+                <EventReminderConfigComponent
+                  reminders={newEvent.reminders || []}
+                  onChange={(reminders) =>
+                    setNewEvent({ ...newEvent, reminders })
+                  }
+                />
 
                 {/* Description Section */}
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
@@ -3956,7 +4238,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           )}
         </div>
       )}
-
+      <div className="flex justify-end gap-4">
+        <SharedCalendarManager />
+        <ResourceManager />
+        <CalendarDelegationManager />
+      </div>
       {/* Calendar View */}
       <Card>
         <CardContent className="p-0">
@@ -5490,6 +5776,183 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           />
         </SheetContent>
       </Sheet>
+
+      {/* Conflict Confirmation Dialog */}
+      <Dialog
+        open={isConflictDialogOpen}
+        onOpenChange={setIsConflictDialogOpen}
+      >
+        <DialogContent className="sm:max-w-2xl p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+          <VisuallyHiddenPrimitive.Root>
+            <DialogTitle>Scheduling Conflicts Detected</DialogTitle>
+          </VisuallyHiddenPrimitive.Root>
+
+          {/* Professional Cap */}
+          <div className="h-4 w-full bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+          {/* Header with gradient background */}
+          <div className="sticky top-0 z-10 bg-gradient-to-r from-red-50 to-orange-50 py-4 border-b border-slate-200">
+            <div className="flex items-center gap-3 px-6">
+              {/* Icon with circular background */}
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+
+              {/* Title */}
+              <div>
+                <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+                  Scheduling Conflicts Detected
+                </DialogTitle>
+                <DialogDescription className="text-sm text-slate-600 mt-1">
+                  The following conflicts were detected. Please review and
+                  confirm if you want to proceed with creating this event.
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-6 bg-white">
+            {conflictData && (
+              <div className="space-y-6">
+                {/* Conflicts List */}
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                    Conflicts:
+                  </h3>
+                  <div className="space-y-3">
+                    {conflictData.conflicts.map((conflict, index) => (
+                      <div
+                        key={index}
+                        className="bg-red-50 border border-red-200 rounded-lg p-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge
+                                variant={
+                                  conflict.type === 'participant'
+                                    ? 'destructive'
+                                    : 'secondary'
+                                }
+                              >
+                                {conflict.type === 'participant'
+                                  ? 'Participant Conflict'
+                                  : 'Resource Conflict'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-slate-700 mb-2">
+                              {conflict.conflictReason}
+                            </p>
+                            <div className="text-xs text-slate-600 space-y-1">
+                              <div>
+                                <strong>Event:</strong>{' '}
+                                {conflict.conflictingEvent.title}
+                              </div>
+                              <div>
+                                <strong>Time:</strong>{' '}
+                                {formatTimeForDisplay(
+                                  conflict.conflictingEvent.startTime || ''
+                                )}{' '}
+                                -{' '}
+                                {formatTimeForDisplay(
+                                  conflict.conflictingEvent.endTime || ''
+                                )}
+                              </div>
+                              {conflict.conflictingEvent.location && (
+                                <div>
+                                  <strong>Location:</strong>{' '}
+                                  {conflict.conflictingEvent.location}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Alternate Slots */}
+                {conflictData.alternateSlots.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                      Suggested Alternate Times:
+                    </h3>
+                    <div className="space-y-2">
+                      {conflictData.alternateSlots
+                        .slice(0, 5)
+                        .map((slot, index) => (
+                          <div
+                            key={index}
+                            className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-blue-600" />
+                              <span className="text-slate-700">
+                                {slot.startDate} at{' '}
+                                {formatTimeForDisplay(slot.startTime)} -{' '}
+                                {formatTimeForDisplay(slot.endTime)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warning Message */}
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-amber-800">
+                      <strong>Warning:</strong> Creating this event will result
+                      in scheduling conflicts. Participants may be double-booked
+                      or resources may be over-allocated.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Professional Footer */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="text-xs text-slate-500">
+              Review conflicts before proceeding.
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={handleCancelConflict}
+                disabled={creatingEvent}
+                className="primary-btn px-3 sm:px-4"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmConflict}
+                disabled={creatingEvent}
+                className="primary-btn px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white"
+              >
+                {creatingEvent ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Create Anyway
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { Query } from 'node-appwrite';
 import { logAuditEvent } from './audit-logger';
 import { getValidIntegration } from '@/lib/actions/calendar-integration.actions';
 import { createGraphClient } from '@/lib/microsoft/graph-client';
+import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
 
 interface DeletionSyncResult {
   success: boolean;
@@ -33,6 +34,7 @@ export async function syncDeletionToOutlook(
 
       if (!event.outlook_id) {
         // No Outlook ID means it was never synced, mark as successfully deleted
+        // No need to log audit event - the main deletion already logged it
         await adminClient.tablesDB.updateRow(
           appwriteConfig.databaseId!,
           appwriteConfig.calendarEventsCollectionId!,
@@ -42,18 +44,6 @@ export async function syncDeletionToOutlook(
             deletion_synced: true,
           }
         );
-
-        await logAuditEvent({
-          event_id: eventId,
-          event_title: event.title,
-          action: 'sync_delete',
-          source: 'caalm',
-          user_id: event.deleted_by || 'system',
-          user_name: 'System',
-          user_email: 'system@caalm.com',
-          status: 'success',
-          metadata: { reason: 'No Outlook ID - event was never synced' },
-        });
 
         return { success: true, retryCount };
       }
@@ -66,6 +56,7 @@ export async function syncDeletionToOutlook(
 
       if (!integration) {
         // No Microsoft integration, mark as successfully deleted
+        // No need to log audit event - the main deletion already logged it
         await adminClient.tablesDB.updateRow(
           appwriteConfig.databaseId!,
           appwriteConfig.calendarEventsCollectionId!,
@@ -75,20 +66,6 @@ export async function syncDeletionToOutlook(
             deletion_synced: true,
           }
         );
-
-        await logAuditEvent({
-          event_id: eventId,
-          event_title: event.title,
-          action: 'sync_delete',
-          source: 'caalm',
-          user_id: event.deleted_by || 'system',
-          user_name: 'System',
-          user_email: 'system@caalm.com',
-          status: 'success',
-          metadata: {
-            reason: 'No Microsoft integration - event was never synced',
-          },
-        });
 
         return { success: true, retryCount };
       }
@@ -113,6 +90,21 @@ export async function syncDeletionToOutlook(
         }
       );
 
+      // Get orgId for audit logging
+      let orgId: string | undefined;
+      try {
+        if (event.deleted_by) {
+          const { getUserByAccountId } = await import('@/lib/actions/user.actions');
+          const user = await getUserByAccountId(event.deleted_by);
+          if (user?.$id) {
+            const defaultOrg = await getUserDefaultOrganization(user.$id);
+            orgId = defaultOrg?.orgId;
+          }
+        }
+      } catch (error) {
+        console.warn('Could not get orgId for sync_delete audit:', error);
+      }
+
       await logAuditEvent({
         event_id: eventId,
         event_title: event.title,
@@ -121,6 +113,7 @@ export async function syncDeletionToOutlook(
         user_id: event.deleted_by || 'system',
         user_name: 'System',
         user_email: 'system@caalm.com',
+        orgId: orgId || 'default_organization',
         status: 'success',
         metadata: { retryCount },
       });
@@ -129,6 +122,21 @@ export async function syncDeletionToOutlook(
     } catch (error) {
       lastError = error instanceof Error ? error.message : 'Unknown error';
       retryCount++;
+
+      // Get orgId for audit logging
+      let orgId: string | undefined;
+      try {
+        if (event.deleted_by) {
+          const { getUserByAccountId } = await import('@/lib/actions/user.actions');
+          const user = await getUserByAccountId(event.deleted_by);
+          if (user?.$id) {
+            const defaultOrg = await getUserDefaultOrganization(user.$id);
+            orgId = defaultOrg?.orgId;
+          }
+        }
+      } catch (error) {
+        console.warn('Could not get orgId for sync_delete audit:', error);
+      }
 
       // Log the error
       await logAuditEvent({
@@ -139,6 +147,7 @@ export async function syncDeletionToOutlook(
         user_id: event.deleted_by || 'system',
         user_name: 'System',
         user_email: 'system@caalm.com',
+        orgId: orgId || 'default_organization',
         status: 'failed',
         error_message: lastError,
         metadata: { retryCount, attempt: retryCount },

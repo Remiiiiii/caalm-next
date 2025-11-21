@@ -58,6 +58,12 @@ export interface CalendarEvent {
   $updatedAt?: string;
 }
 
+export interface EventReminderConfig {
+  type?: 'before_start' | 'before_end' | 'custom';
+  minutes?: number;
+  channels?: Array<'in_app' | 'email' | 'sms' | 'push'>;
+}
+
 export interface CreateCalendarEventData {
   title: string;
   startDate: string;
@@ -80,6 +86,8 @@ export interface CreateCalendarEventData {
   approvalStatus?: CalendarApprovalStatus;
   pendingApprovalId?: string | null;
   overrides?: PermissionOverrideRecord[];
+  reminders?: EventReminderConfig[]; // Priority 2: Advanced notifications
+  resourceId?: string; // Priority 2: Resource management
 }
 
 // Get all calendar events
@@ -337,12 +345,97 @@ export const createCalendarEvent = async (
       delete dataToCreate.attachments;
     }
 
-    const response = await adminClient.tablesDB.createRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      ID.unique(),
-      dataToCreate
-    );
+    // Get orgId for the event
+    let orgId: string = 'default_organization';
+    try {
+      if (eventData.createdByUserId) {
+        const { getUserDefaultOrganization } = await import(
+          '@/lib/rbac/permissions'
+        );
+        const defaultOrg = await getUserDefaultOrganization(
+          eventData.createdByUserId
+        );
+        if (defaultOrg?.orgId) {
+          orgId = defaultOrg.orgId;
+        }
+      } else if (eventData.createdBy) {
+        // Fallback: try to get user by account ID and then get org
+        const { getUserByAccountId } = await import('./user.actions');
+        const { getUserDefaultOrganization } = await import(
+          '@/lib/rbac/permissions'
+        );
+        const user = await getUserByAccountId(eventData.createdBy);
+        if (user?.$id) {
+          const defaultOrg = await getUserDefaultOrganization(user.$id);
+          if (defaultOrg?.orgId) {
+            orgId = defaultOrg.orgId;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(
+        'Could not get orgId for event creation, using default:',
+        error
+      );
+    }
+
+    // Ensure orgId is a valid string (not null or undefined)
+    if (!orgId || typeof orgId !== 'string') {
+      orgId = 'default_organization';
+    }
+
+    // Add orgId to the data
+    dataToCreate.orgId = orgId;
+
+    // Ensure all required fields are present and valid
+    if (!dataToCreate.title || typeof dataToCreate.title !== 'string') {
+      throw new Error('Event title is required');
+    }
+    if (!dataToCreate.startDate || typeof dataToCreate.startDate !== 'string') {
+      throw new Error('Event startDate is required');
+    }
+    if (!dataToCreate.createdBy || typeof dataToCreate.createdBy !== 'string') {
+      throw new Error('Event createdBy is required');
+    }
+
+    // Log the data being sent for debugging
+    console.log('Creating event with data:', {
+      ...dataToCreate,
+      attachments: Array.isArray(dataToCreate.attachments)
+        ? `${dataToCreate.attachments.length} attachments`
+        : 'none',
+      overrides:
+        typeof dataToCreate.overrides === 'string' ? 'JSON string' : 'array',
+    });
+
+    let response;
+    try {
+      response = await adminClient.tablesDB.createRow(
+        appwriteConfig.databaseId,
+        appwriteConfig.calendarEventsCollectionId,
+        ID.unique(),
+        dataToCreate
+      );
+    } catch (createError: any) {
+      console.error('Error creating calendar event row:', {
+        error: createError,
+        errorMessage: createError?.message,
+        errorCode: createError?.code,
+        errorType: createError?.type,
+        errorResponse: createError?.response,
+        dataBeingSent: {
+          ...dataToCreate,
+          attachments: Array.isArray(dataToCreate.attachments)
+            ? `${dataToCreate.attachments.length} attachments`
+            : 'none',
+          overrides:
+            typeof dataToCreate.overrides === 'string'
+              ? 'JSON string'
+              : 'array',
+        },
+      });
+      throw createError;
+    }
 
     console.log('Event created successfully:', response);
 
@@ -353,7 +446,8 @@ export const createCalendarEvent = async (
         eventData.title,
         response.$id,
         eventData.createdBy,
-        eventData.createdBy
+        eventData.createdBy,
+        orgId
       );
       console.log('Recent activity created successfully');
     } catch (activityError) {
@@ -490,18 +584,90 @@ export const deleteCalendarEvent = async (
 
     const adminClient = await createAdminClient();
 
-    // Perform soft delete by setting deleted_at timestamp
-    await adminClient.tablesDB.updateRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      eventId,
-      {
-        deleted_at: new Date().toISOString(),
-        deleted_by: deletedBy || null,
-        deletion_status: 'pending_outlook_deletion',
-        deletion_synced: false,
+    // Get the existing event to retrieve orgId and ensure we have all required fields
+    let orgId: string | undefined;
+    let existingEvent: any = null;
+    try {
+      existingEvent = await adminClient.tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.calendarEventsCollectionId,
+        rowId: eventId,
+      });
+      orgId = (existingEvent as any).orgId;
+    } catch (error) {
+      console.warn('Could not fetch existing event for orgId:', error);
+    }
+
+    // If event doesn't have orgId and we have deletedBy, try to get user's org
+    if (!orgId && deletedBy) {
+      try {
+        const { getUserByAccountId } = await import('./user.actions');
+        const { getUserDefaultOrganization } = await import(
+          '@/lib/rbac/permissions'
+        );
+        const user = await getUserByAccountId(deletedBy);
+        if (user?.$id) {
+          const defaultOrg = await getUserDefaultOrganization(user.$id);
+          orgId = defaultOrg?.orgId;
+        }
+      } catch (error) {
+        console.warn('Could not get user org for deletedBy:', error);
       }
-    );
+    }
+
+    // Use default organization if still no orgId
+    if (!orgId) {
+      orgId = 'default_organization';
+    }
+
+    // Prepare update data - only include fields we're updating
+    // Appwrite partial updates should only include changed fields
+    const updateData: Record<string, any> = {
+      deleted_at: new Date().toISOString(),
+      deleted_by: deletedBy || null,
+      deletion_status: 'pending_outlook_deletion',
+      deletion_synced: false,
+    };
+
+    // Only include orgId if it's not already set or if we need to update it
+    if (orgId && (!existingEvent || (existingEvent as any).orgId !== orgId)) {
+      updateData.orgId = orgId;
+    }
+
+    // Log the data being sent for debugging
+    console.log('Soft deleting event with data:', {
+      eventId,
+      updateData,
+      existingOrgId: existingEvent ? (existingEvent as any).orgId : 'not found',
+      newOrgId: orgId,
+    });
+
+    try {
+      await adminClient.tablesDB.updateRow(
+        appwriteConfig.databaseId,
+        appwriteConfig.calendarEventsCollectionId,
+        eventId,
+        updateData
+      );
+    } catch (updateError: any) {
+      console.error('Error updating event for soft delete:', {
+        error: updateError,
+        errorMessage: updateError?.message,
+        errorCode: updateError?.code,
+        errorType: updateError?.type,
+        errorResponse: updateError?.response,
+        eventId,
+        updateData,
+        existingEvent: existingEvent
+          ? {
+              $id: (existingEvent as any).$id,
+              title: (existingEvent as any).title,
+              orgId: (existingEvent as any).orgId,
+            }
+          : null,
+      });
+      throw updateError;
+    }
   } catch (error) {
     console.error('Error soft deleting calendar event:', error);
     throw error;

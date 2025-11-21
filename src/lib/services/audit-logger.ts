@@ -5,11 +5,12 @@ import { ID, Query } from 'node-appwrite';
 export interface AuditLogEntry {
   event_id: string;
   event_title: string;
-  action: 'delete' | 'sync_delete' | 'restore' | 'approval_decided';
+  action: 'create' | 'update' | 'delete' | 'sync_delete' | 'restore' | 'approval_decided';
   source: 'caalm' | 'outlook';
   user_id: string;
   user_name: string;
   user_email: string;
+  orgId?: string;
   ip_address?: string;
   user_agent?: string;
   reason?: string;
@@ -41,6 +42,9 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
 
     const adminClient = await createAdminClient();
 
+    // Use default organization if orgId is not provided
+    const orgId = entry.orgId || 'default_organization';
+
     const auditData = {
       event_id: entry.event_id,
       event_title: entry.event_title,
@@ -49,6 +53,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
       user_id: entry.user_id,
       user_name: entry.user_name,
       user_email: entry.user_email,
+      orgId: orgId,
       ip_address: entry.ip_address || null,
       user_agent: entry.user_agent || null,
       reason: entry.reason || null,
@@ -57,12 +62,35 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
       metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
     };
 
-    await adminClient.tablesDB.createRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.auditLogsCollectionId,
-      rowId: ID.unique(),
-      data: auditData,
+    // Log the data being sent for debugging
+    console.log('Creating audit log entry:', {
+      action: entry.action,
+      event_id: entry.event_id,
+      orgId: orgId,
+      status: entry.status,
     });
+
+    try {
+      await adminClient.tablesDB.createRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.auditLogsCollectionId,
+        rowId: ID.unique(),
+        data: auditData,
+      });
+    } catch (createError: any) {
+      console.error('Error creating audit log row:', {
+        error: createError,
+        errorMessage: createError?.message,
+        errorCode: createError?.code,
+        errorType: createError?.type,
+        errorResponse: createError?.response,
+        auditData: {
+          ...auditData,
+          metadata: typeof auditData.metadata === 'string' ? 'JSON string' : auditData.metadata,
+        },
+      });
+      throw createError;
+    }
 
     console.log(
       'Audit event logged successfully:',

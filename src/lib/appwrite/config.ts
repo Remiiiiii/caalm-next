@@ -68,4 +68,22 @@ export const appwriteConfig = {
   // Calendar Integrations Collection
   calendarIntegrationsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION,
+
+  // Priority 2: Shared Calendars and Delegation
+  sharedCalendarsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_SHARED_CALENDARS_COLLECTION,
+  calendarDelegationsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_DELEGATIONS_COLLECTION,
+
+  // Priority 2: Resource Management
+  calendarResourcesCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_RESOURCES_COLLECTION,
+  resourceBookingsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_RESOURCE_BOOKINGS_COLLECTION,
+
+  // Priority 2: Advanced Notifications
+  calendarRemindersCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_REMINDERS_COLLECTION,
+  escalationRulesCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_ESCALATION_RULES_COLLECTION,
 };

@@ -26,8 +26,18 @@ const nextConfig: NextConfig = {
 
   // Webpack configuration for bundle optimization
   webpack: (config, { isServer }) => {
-    // Optimize chunk splitting
+    // Exclude Node.js modules from client bundle
     if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        dns: false,
+        net: false,
+        tls: false,
+        fs: false,
+        child_process: false,
+      };
+
+      // Optimize chunk splitting
       config.optimization = {
         ...config.optimization,
         moduleIds: 'deterministic',
@@ -74,12 +84,7 @@ const nextConfig: NextConfig = {
 
     return config;
   },
-  // Hide error details in production
-  ...(process.env.NODE_ENV === 'production' && {
-    experimental: {
-      serverComponentsExternalPackages: [],
-    },
-  }),
+  serverExternalPackages: ['ioredis'],
   experimental: {
     serverActions: {
       bodySizeLimit: '100MB',

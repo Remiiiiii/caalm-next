@@ -596,7 +596,7 @@ class NotificationService {
   /**
    * Send SMS notification to user if SMS is enabled
    */
-  private async sendSMSNotification(
+  async sendSMSNotification(
     userId: string,
     notificationData: {
       title: string;
@@ -676,3 +676,6 @@ class NotificationService {
 // Export singleton instance
 export const notificationService = new NotificationService();
 export default notificationService;
+
+// Export the class for cases where a new instance is needed
+export { NotificationService };
