@@ -11,7 +11,7 @@ export interface Organization {
   $id: string;
   name: string;
   domain?: string;
-  subscriptionTier: 'starter' | 'pro' | 'enterprise';
+  subscriptionTier: 'starter' | 'growth' | 'enterprise';
   status: 'active' | 'suspended' | 'trial';
   settings: {
     maxUsers: number;
@@ -40,7 +40,7 @@ export async function createOrganization({
 }: {
   name: string;
   domain?: string;
-  subscriptionTier?: 'starter' | 'pro' | 'enterprise';
+  subscriptionTier?: 'starter' | 'growth' | 'enterprise';
   status?: 'active' | 'suspended' | 'trial';
   settings?: {
     maxUsers: number;
@@ -67,14 +67,19 @@ export async function createOrganization({
 
   return {
     ...org,
-    settings: typeof org.settings === 'string' ? JSON.parse(org.settings) : org.settings,
+    settings:
+      typeof org.settings === 'string'
+        ? JSON.parse(org.settings)
+        : org.settings,
   } as unknown as Organization;
 }
 
 /**
  * Get organization by ID
  */
-export async function getOrganization(orgId: string): Promise<Organization | null> {
+export async function getOrganization(
+  orgId: string
+): Promise<Organization | null> {
   try {
     const { tablesDB } = await createAdminClient();
 
@@ -86,7 +91,10 @@ export async function getOrganization(orgId: string): Promise<Organization | nul
 
     return {
       ...org,
-      settings: typeof org.settings === 'string' ? JSON.parse(org.settings) : org.settings,
+      settings:
+        typeof org.settings === 'string'
+          ? JSON.parse(org.settings)
+          : org.settings,
     } as unknown as Organization;
   } catch (error) {
     console.error('[getOrganization] Error:', error);
@@ -108,7 +116,10 @@ export async function listOrganizations(): Promise<Organization[]> {
 
   return result.rows.map((org: any) => ({
     ...org,
-    settings: typeof org.settings === 'string' ? JSON.parse(org.settings) : org.settings,
+    settings:
+      typeof org.settings === 'string'
+        ? JSON.parse(org.settings)
+        : org.settings,
   })) as unknown as Organization[];
 }
 
@@ -120,7 +131,7 @@ export async function updateOrganization(
   updates: {
     name?: string;
     domain?: string;
-    subscriptionTier?: 'starter' | 'pro' | 'enterprise';
+    subscriptionTier?: 'starter' | 'growth' | 'enterprise';
     status?: 'active' | 'suspended' | 'trial';
     settings?: {
       maxUsers: number;
@@ -135,9 +146,11 @@ export async function updateOrganization(
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.domain !== undefined) updateData.domain = updates.domain;
-    if (updates.subscriptionTier !== undefined) updateData.subscriptionTier = updates.subscriptionTier;
+    if (updates.subscriptionTier !== undefined)
+      updateData.subscriptionTier = updates.subscriptionTier;
     if (updates.status !== undefined) updateData.status = updates.status;
-    if (updates.settings !== undefined) updateData.settings = JSON.stringify(updates.settings);
+    if (updates.settings !== undefined)
+      updateData.settings = JSON.stringify(updates.settings);
 
     const org = await tablesDB.updateRow({
       databaseId: appwriteConfig.databaseId || 'default-db',
@@ -148,7 +161,10 @@ export async function updateOrganization(
 
     return {
       ...org,
-      settings: typeof org.settings === 'string' ? JSON.parse(org.settings) : org.settings,
+      settings:
+        typeof org.settings === 'string'
+          ? JSON.parse(org.settings)
+          : org.settings,
     } as unknown as Organization;
   } catch (error) {
     console.error('[updateOrganization] Error:', error);
@@ -179,10 +195,7 @@ export async function addUserToOrganization({
     const existing = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: 'user_organizations',
-      queries: [
-        Query.equal('userId', userId),
-        Query.equal('orgId', orgId),
-      ],
+      queries: [Query.equal('userId', userId), Query.equal('orgId', orgId)],
     });
 
     if (existing.total > 0) {
@@ -254,10 +267,7 @@ export async function removeUserFromOrganization(
     const userOrgs = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: 'user_organizations',
-      queries: [
-        Query.equal('userId', userId),
-        Query.equal('orgId', orgId),
-      ],
+      queries: [Query.equal('userId', userId), Query.equal('orgId', orgId)],
     });
 
     for (const uo of userOrgs.rows) {
@@ -272,10 +282,7 @@ export async function removeUserFromOrganization(
     const userRoles = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: 'user_roles',
-      queries: [
-        Query.equal('userId', userId),
-        Query.equal('orgId', orgId),
-      ],
+      queries: [Query.equal('userId', userId), Query.equal('orgId', orgId)],
     });
 
     for (const ur of userRoles.rows) {
@@ -292,4 +299,3 @@ export async function removeUserFromOrganization(
     return false;
   }
 }
-

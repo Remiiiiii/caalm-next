@@ -26,7 +26,11 @@ export interface EscalationRule {
   $id: string;
   organizationId: string;
   name: string;
-  triggerEvent: 'reminder_not_sent' | 'event_created' | 'event_updated' | 'event_cancelled';
+  triggerEvent:
+    | 'reminder_not_sent'
+    | 'event_created'
+    | 'event_updated'
+    | 'event_cancelled';
   delayMinutes: number; // Delay before escalation
   escalationChannels: NotificationChannel[];
   escalateToUserIds: string[]; // User IDs to escalate to
@@ -105,7 +109,10 @@ export const createEventReminder = async (
     try {
       result.channels = JSON.parse(result.channels);
     } catch (error) {
-      console.error('[SERVER] createEventReminder] Error parsing channels:', error);
+      console.error(
+        '[SERVER] createEventReminder] Error parsing channels:',
+        error
+      );
       result.channels = [];
     }
   }
@@ -164,9 +171,14 @@ export const sendReminderNotification = async (
         eventStartTime,
       },
     });
-    console.log('[SERVER] sendReminderNotification] Created in-app notification');
+    console.log(
+      '[SERVER] sendReminderNotification] Created in-app notification'
+    );
   } catch (error) {
-    console.error('[SERVER] sendReminderNotification] Error creating in-app notification:', error);
+    console.error(
+      '[SERVER] sendReminderNotification] Error creating in-app notification:',
+      error
+    );
   }
 
   // Send through additional configured channels
@@ -180,13 +192,15 @@ export const sendReminderNotification = async (
         case 'email':
           if (userEmail) {
             // Use mailgun service for email
-            const { sendEmail } = await import('./mailgun');
-            await sendEmail({
+            const { mailgunService } = await import('./mailgun');
+            await mailgunService.sendEmail({
               to: userEmail,
               subject: `[CAALM] Event Reminder: ${eventTitle}`,
               text: message,
             });
-            console.log('[SERVER] sendReminderNotification] Sent email notification');
+            console.log(
+              '[SERVER] sendReminderNotification] Sent email notification'
+            );
           }
           break;
 
@@ -200,18 +214,25 @@ export const sendReminderNotification = async (
               actionUrl: `/calendar?eventId=${reminder.eventId}`,
               type: 'event_reminder',
             });
-            console.log('[SERVER] sendReminderNotification] Sent SMS notification');
+            console.log(
+              '[SERVER] sendReminderNotification] Sent SMS notification'
+            );
           }
           break;
 
         case 'push':
           // Push notifications would be implemented here
           // This would typically use a push notification service
-          console.log('[SERVER] sendReminderNotification] Push notification not yet implemented');
+          console.log(
+            '[SERVER] sendReminderNotification] Push notification not yet implemented'
+          );
           break;
       }
     } catch (error) {
-      console.error(`[SERVER] sendReminderNotification] Error sending ${channel} notification:`, error);
+      console.error(
+        `[SERVER] sendReminderNotification] Error sending ${channel} notification:`,
+        error
+      );
       // Continue with other channels even if one fails
     }
   }
@@ -264,7 +285,10 @@ export const createEscalationRule = async (
     try {
       result.escalationChannels = JSON.parse(result.escalationChannels);
     } catch (error) {
-      console.error('[SERVER] createEscalationRule] Error parsing escalationChannels:', error);
+      console.error(
+        '[SERVER] createEscalationRule] Error parsing escalationChannels:',
+        error
+      );
       result.escalationChannels = [];
     }
   }
@@ -272,7 +296,10 @@ export const createEscalationRule = async (
     try {
       result.escalateToUserIds = JSON.parse(result.escalateToUserIds);
     } catch (error) {
-      console.error('[SERVER] createEscalationRule] Error parsing escalateToUserIds:', error);
+      console.error(
+        '[SERVER] createEscalationRule] Error parsing escalateToUserIds:',
+        error
+      );
       result.escalateToUserIds = [];
     }
   }
@@ -312,7 +339,10 @@ export const getActiveEscalationRules = async (
       try {
         rule.escalationChannels = JSON.parse(rule.escalationChannels);
       } catch (error) {
-        console.error('[SERVER] getActiveEscalationRules] Error parsing escalationChannels:', error);
+        console.error(
+          '[SERVER] getActiveEscalationRules] Error parsing escalationChannels:',
+          error
+        );
         rule.escalationChannels = [];
       }
     }
@@ -320,7 +350,10 @@ export const getActiveEscalationRules = async (
       try {
         rule.escalateToUserIds = JSON.parse(rule.escalateToUserIds);
       } catch (error) {
-        console.error('[SERVER] getActiveEscalationRules] Error parsing escalateToUserIds:', error);
+        console.error(
+          '[SERVER] getActiveEscalationRules] Error parsing escalateToUserIds:',
+          error
+        );
         rule.escalateToUserIds = [];
       }
     }
@@ -330,3 +363,187 @@ export const getActiveEscalationRules = async (
   return rules as unknown as EscalationRule[];
 };
 
+/**
+ * Send calendar shared notification to recipient
+ * Creates in-app notification, sends email, and SMS (if enabled)
+ */
+export const sendCalendarSharedNotification = async (
+  recipientUserId: string,
+  calendarName: string,
+  ownerName: string,
+  calendarId: string,
+  recipientEmail?: string
+): Promise<void> => {
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || 'https://www.caalmsolutions.com';
+    const calendarUrl = `${baseUrl}/calendar?sharedCalendarId=${calendarId}`;
+
+    const message = `${ownerName} shared the calendar "${calendarName}" with you.`;
+    const emailSubject = `[CAALM] Calendar Shared: ${calendarName}`;
+
+    // Create in-app notification
+    // Try calendar_shared type first, fall back to generic types if it doesn't exist
+    try {
+      let notificationType = 'calendar_shared';
+      let typeExists = await notificationService.getNotificationType(
+        notificationType
+      );
+
+      if (!typeExists) {
+        // If calendar_shared doesn't exist, try to initialize it
+        try {
+          const { initializeCalendarNotificationTypes } = await import(
+            '@/lib/actions/calendar-notification-types'
+          );
+          await initializeCalendarNotificationTypes();
+          // Try again after initialization
+          typeExists = await notificationService.getNotificationType(
+            notificationType
+          );
+        } catch (initError) {
+          console.warn(
+            '[SERVER] sendCalendarSharedNotification] Failed to initialize calendar notification types:',
+            initError
+          );
+        }
+
+        // If still doesn't exist after initialization, try fallback types
+        if (!typeExists) {
+          console.warn(
+            '[SERVER] sendCalendarSharedNotification] calendar_shared type not found, trying fallback types'
+          );
+          const calendarType = await notificationService.getNotificationType(
+            'calendar'
+          );
+          if (calendarType) {
+            notificationType = 'calendar';
+            typeExists = calendarType;
+          } else {
+            const systemType = await notificationService.getNotificationType(
+              'system'
+            );
+            if (systemType) {
+              notificationType = 'system';
+              typeExists = systemType;
+            }
+          }
+        }
+      }
+
+      // Only create notification if we have a valid type
+      if (!typeExists) {
+        console.error(
+          '[SERVER] sendCalendarSharedNotification] No valid notification type found, skipping in-app notification'
+        );
+        throw new Error('No valid notification type available');
+      }
+
+      console.log(
+        '[SERVER] sendCalendarSharedNotification] Attempting to create notification with type:',
+        notificationType
+      );
+      const createdNotification = await notificationService.createNotification({
+        userId: recipientUserId,
+        title: 'Calendar Shared',
+        message,
+        type: notificationType,
+        priority: 'medium',
+        actionUrl: calendarUrl,
+        actionText: 'View Calendar',
+        metadata: {
+          calendarId,
+          calendarName,
+          ownerName,
+        },
+      });
+      console.log(
+        '[SERVER] sendCalendarSharedNotification] Successfully created in-app notification:',
+        createdNotification.$id
+      );
+    } catch (error) {
+      console.error(
+        '[SERVER] sendCalendarSharedNotification] Error creating in-app notification:',
+        error
+      );
+      if (error instanceof Error) {
+        console.error(
+          '[SERVER] sendCalendarSharedNotification] Error message:',
+          error.message
+        );
+        console.error(
+          '[SERVER] sendCalendarSharedNotification] Error stack:',
+          error.stack
+        );
+      }
+      // Continue with other channels even if in-app fails
+    }
+
+    // Send email notification
+    if (recipientEmail) {
+      try {
+        const { mailgunService } = await import('./mailgun');
+        const firstName = ownerName.split(' ')[0] || 'User';
+
+        const emailText = `Hello,\n\n${ownerName} shared the calendar "${calendarName}" with you.\n\nYou can now view and manage events in this shared calendar.\n\nView Calendar: ${calendarUrl}\n\nBest regards,\nCAALM Solutions Team`;
+
+        const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #078FAB; text-align: center;">CAALM Solutions</h2>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #333; margin-top: 0;">I'd like to share my calendar with you</h3>
+          <p style="color: #666; font-size: 16px;">${ownerName} (${recipientEmail}) shared the <strong>"${calendarName}"</strong> calendar with you in Caalm.</p>
+          <p style="color: #666; font-size: 16px;">You can now view events and their details in this calendar.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${calendarUrl}" style="background-color: #078FAB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">View Calendar</a>
+          </div>
+        </div>
+        <p style="color: #999; font-size: 12px; text-align: center;">Best regards,<br>CAALM Solutions Team</p>
+      </div>
+    `;
+
+        await mailgunService.sendEmail({
+          to: recipientEmail,
+          subject: emailSubject,
+          text: emailText,
+          html: emailHtml,
+        });
+        console.log(
+          '[SERVER] sendCalendarSharedNotification] Sent email notification'
+        );
+      } catch (error) {
+        console.error(
+          '[SERVER] sendCalendarSharedNotification] Error sending email notification:',
+          error
+        );
+        // Continue with SMS even if email fails
+      }
+    }
+
+    // Send SMS notification (if enabled)
+    try {
+      await notificationService.sendSMSNotification(recipientUserId, {
+        title: 'Calendar Shared',
+        message: `${ownerName} shared the calendar "${calendarName}" with you. View it in CAALM.`,
+        priority: 'medium',
+        actionUrl: calendarUrl,
+        type: 'calendar_shared',
+      });
+      console.log(
+        '[SERVER] sendCalendarSharedNotification] Sent SMS notification'
+      );
+    } catch (error) {
+      console.error(
+        '[SERVER] sendCalendarSharedNotification] Error sending SMS notification:',
+        error
+      );
+      // Don't throw - SMS failure shouldn't break the operation
+    }
+  } catch (error) {
+    console.error(
+      '[SERVER] sendCalendarSharedNotification] Unexpected error:',
+      error
+    );
+    // Don't throw - notification failures shouldn't break calendar sharing
+  }
+};

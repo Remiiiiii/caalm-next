@@ -15,7 +15,7 @@ const DEFAULT_ORG_NAME = 'Default Organization';
 export async function getOrCreateDefaultOrganization(createdBy: string) {
   // Try to get existing default organization
   const existing = await getOrganization(DEFAULT_ORG_ID);
-  
+
   if (existing) {
     console.log('Default organization already exists');
     return existing;
@@ -25,7 +25,7 @@ export async function getOrCreateDefaultOrganization(createdBy: string) {
   console.log('Creating default organization...');
   const org = await createOrganization({
     name: DEFAULT_ORG_NAME,
-    subscriptionTier: 'pro',
+    subscriptionTier: 'growth',
     status: 'active',
     settings: {
       maxUsers: 1000,
@@ -38,4 +38,3 @@ export async function getOrCreateDefaultOrganization(createdBy: string) {
   console.log(`✓ Created default organization: ${org.$id}`);
   return org;
 }
-

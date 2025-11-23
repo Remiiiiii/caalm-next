@@ -80,6 +80,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "date-holidays": "^3.26.5",
     "dotenv": "^17.2.2",
     "embla-carousel-react": "^8.6.0",
     "fluentreports": "^1.4.4",

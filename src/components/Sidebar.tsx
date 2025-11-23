@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { memo } from 'react';
 
 interface Props {
   name?: string;
@@ -36,7 +37,140 @@ interface Props {
   division?: string;
 }
 
+// Memoized icon component for fast rendering
+const SidebarIcon = memo(
+  ({
+    src,
+    alt,
+    width,
+    height,
+    priority = false,
+  }: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+    priority?: boolean;
+  }) => (
+    <Image
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      priority={priority}
+      fetchPriority={priority ? 'high' : 'auto'}
+      loading={priority ? undefined : 'lazy'}
+      className="flex-shrink-0"
+    />
+  )
+);
+SidebarIcon.displayName = 'SidebarIcon';
+
+// Icon mapping for faster lookups
+const SECTION_ICONS: Record<string, { src: string; width: number; height: number }> = {
+  Calendar: { src: '/assets/icons/calendar2.svg', width: 24, height: 24 },
+  Contracts: { src: '/assets/icons/contracts.svg', width: 24, height: 24 },
+  Licenses: { src: '/assets/icons/license.svg', width: 24, height: 24 },
+  Documents: { src: '/assets/icons/documents.svg', width: 20, height: 20 },
+  Audits: { src: '/assets/icons/audit.svg', width: 24, height: 24 },
+  Team: { src: '/assets/icons/team.svg', width: 24, height: 24 },
+  'Reports & Analytics': {
+    src: '/assets/icons/reports-analytics.svg',
+    width: 24,
+    height: 24,
+  },
+  Settings: { src: '/assets/icons/settings.svg', width: 24, height: 24 },
+  'My Roles & Permissions': {
+    src: '/assets/icons/shield.svg',
+    width: 22,
+    height: 22,
+  },
+};
+
+const ITEM_ICONS: Record<string, { src: string; width: number; height: number }> = {
+  'All Contracts': { src: '/assets/icons/all-contracts.svg', width: 20, height: 20 },
+  'My Contracts': { src: '/assets/icons/my-contracts.svg', width: 20, height: 18 },
+  'Advanced Resources': { src: '/assets/icons/resources.svg', width: 20, height: 20 },
+  'Proposals & Approvals': {
+    src: '/assets/icons/proposal-approval.svg',
+    width: 20,
+    height: 20,
+  },
+  'All Licenses': { src: '/assets/icons/licenses.svg', width: 25, height: 25 },
+  'Department Licenses': {
+    src: '/assets/icons/dept-license.svg',
+    width: 20,
+    height: 20,
+  },
+  Uploads: { src: '/assets/icons/uploads.svg', width: 20, height: 20 },
+  Images: { src: '/assets/icons/images.svg', width: 20, height: 20 },
+  Media: { src: '/assets/icons/media.svg', width: 20, height: 20 },
+  Others: { src: '/assets/icons/others.svg', width: 20, height: 20 },
+  'Compliance Status': {
+    src: '/assets/icons/compliance-status.svg',
+    width: 20,
+    height: 20,
+  },
+  'Audit Logs': { src: '/assets/icons/audit-logs.svg', width: 20, height: 20 },
+  'User Management': {
+    src: '/assets/icons/user-management.svg',
+    width: 20,
+    height: 20,
+  },
+  'Role Management': {
+    src: '/assets/icons/user-management2.svg',
+    width: 20,
+    height: 20,
+  },
+  'Calendar View': { src: '/assets/icons/calendar3.svg', width: 20, height: 20 },
+  'Training & Certifications': {
+    src: '/assets/icons/training-cert.svg',
+    width: 20,
+    height: 20,
+  },
+  'Assign Tasks': { src: '/assets/icons/task.svg', width: 20, height: 20 },
+  Overview: { src: '/assets/icons/analytics.svg', width: 20, height: 20 },
+  'Quick View': { src: '/assets/icons/analytics.svg', width: 20, height: 20 },
+  'C Suite': { src: '/assets/icons/analytics.svg', width: 20, height: 20 },
+  'C-Suite': { src: '/assets/icons/analytics.svg', width: 20, height: 20 },
+  'System Settings': { src: '/assets/icons/settings2.svg', width: 20, height: 20 },
+  'Organization Settings': {
+    src: '/assets/icons/settings2.svg',
+    width: 20,
+    height: 20,
+  },
+  'Billing & Integrations': {
+    src: '/assets/icons/settings2.svg',
+    width: 20,
+    height: 20,
+  },
+  'View My Access': { src: '/assets/icons/key.svg', width: 20, height: 20 },
+  'System Audit Logs': {
+    src: '/assets/icons/audit-logs.svg',
+    width: 20,
+    height: 20,
+  },
+};
+
 const Sidebar = ({ name, avatar, email, role, division }: Props) => {
+  // Preload critical icons on mount
+  useEffect(() => {
+    const criticalIcons = [
+      '/assets/icons/calendar2.svg',
+      '/assets/icons/contracts.svg',
+      '/assets/icons/documents.svg',
+      '/assets/icons/settings.svg',
+    ];
+    
+    criticalIcons.forEach((icon) => {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = icon;
+      document.head.appendChild(link);
+    });
+  }, []);
+
   const performHardRefresh = () => {
     window.location.href = window.location.href;
   };
@@ -132,8 +266,14 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
   );
 
   // Build navigation based on permissions
+  // Show navigation immediately if we have any data (cached or fresh)
+  // Only return empty array if we're truly loading with no data
   const groupedNav = useMemo(() => {
-    if (permissionsLoading || rolesLoading) {
+    // If we have permissions or roles data, build nav even if still loading in background
+    const hasData = permissions.length > 0 || userRoles.length > 0;
+    const isInitialLoad = permissionsLoading && rolesLoading && !hasData;
+    
+    if (isInitialLoad) {
       return [];
     }
 
@@ -387,6 +527,8 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
             width={50}
             height={50}
             className="hidden h-auto lg:block"
+            priority
+            fetchPriority="high"
           />
           <Image
             src="/assets/images/logo.svg"
@@ -394,6 +536,8 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
             width={50}
             height={50}
             className="lg:hidden"
+            priority
+            fetchPriority="high"
           />
         </Link>
 
@@ -424,7 +568,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       </div>
       <nav className="sidebar-nav">
         <ul className="flex flex-1 flex-col">
-          {permissionsLoading || rolesLoading ? (
+          {groupedNav.length === 0 && permissionsLoading && rolesLoading ? (
             <li className="text-center py-8 text-muted-foreground">
               <div className="flex flex-col items-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"></div>
@@ -481,88 +625,21 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                             </TooltipProvider>
                           )}
                         </span>
-                      ) : section.header === 'Calendar' ? (
-                        <span className="text-[#03AFBF]">
-                          <Image
-                            src="/assets/icons/calendar2.svg"
-                            alt="calendar"
-                            width={24}
-                            height={24}
-                          />
-                        </span>
-                      ) : section.header === 'Contracts' ? (
-                        <span className="text-[#03AFBF]">
-                          <Image
-                            src="/assets/icons/contracts.svg"
-                            alt="contracts"
-                            width={24}
-                            height={24}
-                          />
-                        </span>
-                      ) : section.header === 'Licenses' ? (
-                        <span className="text-[#03AFBF]">
-                          <Image
-                            src="/assets/icons/license.svg"
-                            alt="license"
-                            width={24}
-                            height={24}
-                          />
-                        </span>
-                      ) : section.header === 'Documents' ? (
-                        <span className="text-[#03AFBF]">
-                          <Image
-                            src="/assets/icons/documents.svg"
-                            alt="documents"
-                            width={20}
-                            height={20}
-                          />
-                        </span>
-                      ) : section.header === 'Audits' ? (
-                        <span className="text-[#03AFBF]">
-                          <Image
-                            src="/assets/icons/audit.svg"
-                            alt="audits"
-                            width={24}
-                            height={24}
-                          />
-                        </span>
-                      ) : section.header === 'Team' ? (
-                        <span className="text-[#03AFBF]">
-                          <Image
-                            src="/assets/icons/team.svg"
-                            alt="team"
-                            width={24}
-                            height={24}
-                          />
-                        </span>
-                      ) : section.header === 'Reports & Analytics' ? (
-                        <span className="text-[#03AFBF]">
-                          <Image
-                            src="/assets/icons/reports-analytics.svg"
-                            alt="reports-analytics"
-                            width={24}
-                            height={24}
-                          />
-                        </span>
-                      ) : section.header === 'Settings' ? (
-                        <span className="text-[#03AFBF]">
-                          <Image
-                            src="/assets/icons/settings.svg"
-                            alt="settings"
-                            width={24}
-                            height={24}
-                          />
-                        </span>
-                      ) : section.header === 'My Roles & Permissions' ? (
-                        <span className="text-[#03AFBF]">
-                          <Image
-                            src="/assets/icons/shield.svg"
-                            alt="permissions"
-                            width={22}
-                            height={22}
-                          />
-                        </span>
-                      ) : null}
+                      ) : (() => {
+                        const iconConfig = SECTION_ICONS[section.header];
+                        if (!iconConfig) return null;
+                        return (
+                          <span className="text-[#03AFBF]">
+                            <SidebarIcon
+                              src={iconConfig.src}
+                              alt={section.header.toLowerCase()}
+                              width={iconConfig.width}
+                              height={iconConfig.height}
+                              priority={section.header === 'Dashboard' || section.header === 'Calendar'}
+                            />
+                          </span>
+                        );
+                      })()}
                       <span className="font-bold text-base sidebar-gradient-text relative z-10">
                         {section.header}
                       </span>
@@ -631,231 +708,23 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                                   />
                                 </span>
                               )} */}
-                              {item.name === 'All Contracts' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/all-contracts.svg"
-                                    alt="all-contracts"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'My Contracts' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/my-contracts.svg"
-                                    alt="all-contracts"
-                                    width={20}
-                                    height={18}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Advanced Resources' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/resources.svg"
-                                    alt="resources"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Proposals & Approvals' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/proposal-approval.svg"
-                                    alt="proposal-approval"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'All Licenses' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/licenses.svg"
-                                    alt="all-licenses"
-                                    width={25}
-                                    height={25}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Department Licenses' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/dept-license.svg"
-                                    alt="all-licenses"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Uploads' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/uploads.svg"
-                                    alt="upload"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Images' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/images.svg"
-                                    alt="images"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Media' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/media.svg"
-                                    alt="video"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Others' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/others.svg"
-                                    alt="others"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Compliance Status' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/compliance-status.svg"
-                                    alt="compliance-status"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Audit Logs' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/audit-logs.svg"
-                                    alt="audit-logs"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'User Management' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/user-management.svg"
-                                    alt="team"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Role Management' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/user-management2.svg"
-                                    alt="roles"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Calendar View' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/calendar3.svg"
-                                    alt="calendar"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Training & Certifications' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/training-cert.svg"
-                                    alt="training-cert"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {item.name === 'Assign Tasks' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/task.svg"
-                                    alt="tasks"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {/* Reports & Analytics icons */}
-                              {(item.name === 'Overview' ||
-                                item.name === 'Quick View' ||
-                                item.name === 'C Suite' ||
-                                item.name === 'C-Suite') && (
-                                // item.name === 'Management' ||
-                                // item.name === 'Child Welfare' ||
-                                // item.name === 'Behavioral Health' ||
-                                // item.name === 'Residential' ||
-                                // item.name === 'CFS' ||
-                                // item.name === 'Clinic') && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/analytics.svg"
-                                    alt="reports-analytics"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {/* Settings icons */}
-                              {(item.name === 'System Settings' ||
-                                item.name === 'Organization Settings' ||
-                                item.name === 'Billing & Integrations') && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/settings2.svg"
-                                    alt="settings"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {/* My Roles & Permissions icons */}
-                              {item.name === 'View My Access' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/key.svg"
-                                    alt="permissions"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
-                              {/* System Audit Logs icon */}
-                              {item.name === 'System Audit Logs' && (
-                                <span className="gap-1">
-                                  <Image
-                                    src="/assets/icons/audit-logs.svg"
-                                    alt="audit-logs"
-                                    width={20}
-                                    height={20}
-                                  />
-                                </span>
-                              )}
+                              {(() => {
+                                const iconConfig = ITEM_ICONS[item.name];
+                                if (!iconConfig) return null;
+                                // Priority for first few items in each section
+                                const isPriority = index < 3;
+                                return (
+                                  <span className="gap-1">
+                                    <SidebarIcon
+                                      src={iconConfig.src}
+                                      alt={item.name.toLowerCase()}
+                                      width={iconConfig.width}
+                                      height={iconConfig.height}
+                                      priority={isPriority}
+                                    />
+                                  </span>
+                                );
+                              })()}
                               <p
                                 className={`text-sm text-slate-900 px-2 tabs-underline font-medium flex items-center gap-2 ${
                                   item.name === 'Admin' ? '-ml-[1px]' : ''
@@ -931,12 +800,11 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       {!groupedNav.some((s) => s.header === 'Settings') && (
         <Link href="/settings">
           <div className="flex items-center gap-2 mt-8">
-            <Image
+            <SidebarIcon
               src="/assets/icons/settings.svg"
-              alt="logo"
+              alt="settings"
               width={25}
               height={25}
-              className="cursor-pointer"
               priority
             />
             <span className="font-bold text-base sidebar-gradient-text">

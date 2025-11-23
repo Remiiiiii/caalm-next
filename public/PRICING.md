@@ -1,4 +1,4 @@
-## CAALM Pricing (Starter • Pro • Enterprise)
+## CAALM Pricing (Starter • Growth • Enterprise)
 
 This document proposes a 3‑tier pricing model tailored to the current product surface area, code structure, and the operational costs implied by the stack (Next.js + Appwrite + analytics, dashboards, reporting, and document/contract workflows).
 
@@ -31,7 +31,7 @@ All prices shown are Monthly and Yearly (Yearly saves 20%).
 
 ---
 
-### Pro
+### Growth
 
 - **Monthly**: $299
 - **Yearly (20% off)**: $2,870 ($299 × 12 × 0.8)
@@ -56,7 +56,8 @@ All prices shown are Monthly and Yearly (Yearly saves 20%).
 - **Yearly (20% off)**: $9,590 ($999 × 12 × 0.8)
 - **Effective per user (at 1,000 users)**: ~$1.00/mo • $9.59/yr
 - **Best for**: Organizations with advanced security, scale, and compliance/audit needs.
-- **Includes everything in Pro, plus**:
+- **Includes everything in Growth, plus**:
+  - **Dedicated account manager**
   - **Unlimited departments**
   - **Up to 1,000 staff users** (higher limits upon request)
   - **25,000 active contracts** (higher upon request)
@@ -75,7 +76,7 @@ All prices shown are Monthly and Yearly (Yearly saves 20%).
 - **Additional contracts**: $0.08/active contract/month beyond plan limit
 - **Extra storage**: $10 per additional 100 GB/month
 - **Priority support** (for Starter): +$199/month
-- **Dedicated environment** (Pro+): from $499/month
+- **Dedicated environment** (Growth+): from $499/month
 
 ---
 
@@ -96,7 +97,7 @@ All prices shown are Monthly and Yearly (Yearly saves 20%).
 ```
 const plans = {
   starter: { monthly: 79, yearly: 79 * 12 * 0.8 },
-  pro: { monthly: 299, yearly: 299 * 12 * 0.8 },
+  growth: { monthly: 299, yearly: 299 * 12 * 0.8 },
   enterprise: { monthly: 999, yearly: 999 * 12 * 0.8 },
 };
 ```
@@ -109,4 +110,4 @@ const plans = {
 
 - **What happens at overage?** We meter add‑ons monthly (users/contracts/storage). You can upgrade mid‑cycle; charges are prorated.
 - **Can I mix monthly and yearly?** Per workspace, choose one billing cadence; you can switch at renewal.
-- **Trials?** 14‑day Pro trial with reduced caps (e.g., 3 departments, 250 contracts, 10 users) is reasonable given current scaffolding.
+- **Trials?** 14‑day Growth trial with reduced caps (e.g., 3 departments, 250 contracts, 10 users) is reasonable given current scaffolding.

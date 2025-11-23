@@ -7,7 +7,7 @@ export interface Organization {
   $id: string;
   name: string;
   domain?: string; // Email domain for auto-assignment
-  subscriptionTier: 'starter' | 'pro' | 'enterprise';
+  subscriptionTier: 'starter' | 'growth' | 'enterprise';
   status: 'active' | 'suspended' | 'trial';
   settings: {
     maxUsers: number;
@@ -35,7 +35,7 @@ export const ORGANIZATION_ATTRIBUTES = [
   {
     key: 'subscriptionTier',
     type: 'enum' as const,
-    elements: ['starter', 'pro', 'enterprise'],
+    elements: ['starter', 'growth', 'enterprise'],
     required: true,
   },
   {
@@ -57,4 +57,3 @@ export const ORGANIZATION_ATTRIBUTES = [
     required: true,
   },
 ] as const;
-

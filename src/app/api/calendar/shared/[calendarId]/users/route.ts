@@ -5,7 +5,8 @@ import {
   removeUserFromSharedCalendar,
   getSharedCalendarById,
 } from '@/lib/actions/shared-calendar.actions';
-import { getUserByAccountId } from '@/lib/actions/user.actions';
+import { getUserByAccountId, getUserById } from '@/lib/actions/user.actions';
+import { sendCalendarSharedNotification } from '@/lib/services/calendar-notifications.service';
 
 /**
  * PUT /api/calendar/shared/[calendarId]/users
@@ -67,6 +68,33 @@ export async function PUT(
 
     if (action === 'add') {
       updatedCalendar = await addUserToSharedCalendar(calendarId, targetUserId);
+
+      // Send notification to recipient (don't let notification failures break calendar sharing)
+      try {
+        const recipientUser = await getUserById(targetUserId);
+        const ownerName = user.fullName || user.name || 'A user';
+        const calendarName = calendar.name || 'Shared Calendar';
+        const recipientEmail = recipientUser?.email;
+
+        if (recipientUser) {
+          await sendCalendarSharedNotification(
+            targetUserId,
+            calendarName,
+            ownerName,
+            calendarId,
+            recipientEmail
+          );
+          console.log(
+            '[SERVER] PUT /api/calendar/shared/[calendarId]/users] Sent calendar sharing notification'
+          );
+        }
+      } catch (notificationError) {
+        console.error(
+          '[SERVER] PUT /api/calendar/shared/[calendarId]/users] Error sending notification:',
+          notificationError
+        );
+        // Continue - notification failure shouldn't break calendar sharing
+      }
     } else if (action === 'remove') {
       updatedCalendar = await removeUserFromSharedCalendar(
         calendarId,

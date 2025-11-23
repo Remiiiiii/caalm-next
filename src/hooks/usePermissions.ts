@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import type { PermissionKey } from '@/constants/permissions';
 import { useState, useEffect } from 'react';
+import { getCachedData, setCachedData } from '@/lib/utils/client-cache';
 
 interface UsePermissionsResult {
   permissions: PermissionKey[];
@@ -32,16 +33,29 @@ export function usePermissions(): UsePermissionsResult {
       return;
     }
 
-    setLoading(true);
+    // Check client-side cache first (stale-while-revalidate pattern)
+    const cacheKey = `permissions:${user.$id}:${orgId || 'default'}`;
+    const cachedPermissions = getCachedData<PermissionKey[]>(cacheKey);
+    
+    if (cachedPermissions) {
+      setPermissions(cachedPermissions);
+      setLoading(false);
+      // Continue fetching in background to update cache
+    } else {
+      setLoading(true);
+    }
+
     const fetchPermissions = async () => {
+      let hasCachedData = !!cachedPermissions;
+      
       try {
         const url = `/api/permissions/check${orgId ? `?orgId=${orgId}` : ''}`;
         
         // Use request deduplication to prevent concurrent requests
         const { deduplicateRequest } = await import('@/lib/utils/request-deduplication');
-        const cacheKey = `permissions:${user.$id}:${orgId || 'default'}`;
+        const requestKey = `permissions:${user.$id}:${orgId || 'default'}`;
         
-        const data = await deduplicateRequest(cacheKey, async () => {
+        const data = await deduplicateRequest(requestKey, async () => {
           const response = await fetch(url);
           if (!response.ok) {
             throw new Error('Failed to fetch permissions');
@@ -50,7 +64,12 @@ export function usePermissions(): UsePermissionsResult {
         });
 
         if (data.success) {
-          setPermissions(data.permissions || []);
+          const fetchedPermissions = data.permissions || [];
+          
+          // Cache for 5 minutes
+          setCachedData(cacheKey, fetchedPermissions, 300000);
+          
+          setPermissions(fetchedPermissions);
           setError(null);
         } else {
           throw new Error(data.error || 'Failed to fetch permissions');
@@ -58,7 +77,10 @@ export function usePermissions(): UsePermissionsResult {
       } catch (err) {
         console.error('[usePermissions] Error:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
-        setPermissions([]);
+        // Don't clear permissions if we have cached data
+        if (!hasCachedData) {
+          setPermissions([]);
+        }
       } finally {
         setLoading(false);
       }

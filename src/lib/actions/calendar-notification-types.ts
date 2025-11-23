@@ -80,6 +80,16 @@ export async function initializeCalendarNotificationTypes(): Promise<void> {
       enabled: true,
       description: 'Notification when calendar delegation is granted',
     },
+    {
+      type_key: 'calendar_shared',
+      label: 'Calendar Shared',
+      icon: 'share-2',
+      color_classes: 'text-blue-600',
+      bg_color_classes: 'bg-blue-50',
+      priority: 'medium' as const,
+      enabled: true,
+      description: 'Notification when a calendar is shared with you',
+    },
   ];
 
   for (const type of calendarNotificationTypes) {

@@ -32,7 +32,9 @@ import CalendarSettings from '@/components/CalendarSettings';
 import { SharedCalendarManager } from '@/components/SharedCalendarManager';
 import { ResourceManager } from '@/components/ResourceManager';
 import { CalendarDelegationManager } from '@/components/CalendarDelegationManager';
+import { CalendarSidebar } from '@/components/CalendarSidebar';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import type { SharedCalendar } from '@/lib/actions/shared-calendar.actions';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { cn, getFileType, convertFileSize } from '@/lib/utils';
 import type {
@@ -291,6 +293,22 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [outlookConnected, setOutlookConnected] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Calendar selection state
+  const [selectedMyCalendars, setSelectedMyCalendars] = useState({
+    calendar: true, // Default checked
+    usHolidays: false,
+  });
+  const [selectedSharedCalendars, setSelectedSharedCalendars] = useState<
+    string[]
+  >([]);
+  const [sharedCalendars, setSharedCalendars] = useState<SharedCalendar[]>([]);
+  const [loadingSharedCalendars, setLoadingSharedCalendars] = useState(false);
+  const [sharedCalendarOwnerNames, setSharedCalendarOwnerNames] = useState<
+    Record<string, string>
+  >({});
+  const calendarContainerRef = React.useRef<HTMLDivElement>(null);
+  const [calendarWidth, setCalendarWidth] = useState<string>('100%');
 
   // Conflict dialog state
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
@@ -1448,6 +1466,89 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     });
   }, [events, calendarEvents]);
 
+  // Get US holidays as events
+  const [usHolidaysEvents, setUsHolidaysEvents] = useState<
+    LocalCalendarEvent[]
+  >([]);
+
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      if (!selectedMyCalendars.usHolidays) {
+        setUsHolidaysEvents([]);
+        return;
+      }
+      try {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1;
+        const response = await fetch(
+          `/api/calendar/holidays?year=${year}&month=${month}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const holidays = data.holidays || [];
+          const holidayEvents: LocalCalendarEvent[] = holidays.map(
+            (holiday: { date: string; name: string }): LocalCalendarEvent => ({
+              $id: `holiday-${holiday.date}`,
+              id: `holiday-${holiday.date}`,
+              title: holiday.name,
+              startDate: new Date(holiday.date),
+              endDate: new Date(holiday.date),
+              type: 'meeting',
+              startTime: undefined,
+              endTime: undefined,
+              sensitivityLevel: 'standard',
+              approvalStatus: 'not_required',
+              requiresApproval: false,
+              pendingApprovalId: null,
+              overrides: [],
+            })
+          );
+          setUsHolidaysEvents(holidayEvents);
+        }
+      } catch (error) {
+        console.error(
+          '[CLIENT] OutlookStyleCalendar] Error fetching holidays:',
+          error
+        );
+        setUsHolidaysEvents([]);
+      }
+    };
+
+    fetchHolidays();
+  }, [currentMonth, selectedMyCalendars.usHolidays]);
+
+  // Handlers for calendar selection
+  const handleMyCalendarChange = (
+    calendar: 'calendar' | 'usHolidays',
+    checked: boolean
+  ) => {
+    setSelectedMyCalendars((prev) => ({
+      ...prev,
+      [calendar]: checked,
+    }));
+  };
+
+  const handleSharedCalendarChange = (calendarId: string, checked: boolean) => {
+    setSelectedSharedCalendars((prev) => {
+      if (checked) {
+        return [...prev, calendarId];
+      } else {
+        return prev.filter((id) => id !== calendarId);
+      }
+    });
+  };
+
+  const handleCloseCalendar = (
+    calendarType: 'calendar' | 'usHolidays' | string
+  ) => {
+    if (calendarType === 'calendar' || calendarType === 'usHolidays') {
+      handleMyCalendarChange(calendarType, false);
+    } else {
+      // It's a shared calendar ID
+      handleSharedCalendarChange(calendarType, false);
+    }
+  };
+
   // Debug logging
   console.log('Calendar events from hook:', calendarEvents);
   console.log('All events (normalized):', normalizedEvents);
@@ -1458,6 +1559,89 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       currentMonth.getMonth() + 1
     }`
   );
+
+  // Fetch shared calendars
+  useEffect(() => {
+    const fetchSharedCalendars = async () => {
+      try {
+        setLoadingSharedCalendars(true);
+        const response = await fetch('/api/calendar/shared');
+        if (response.ok) {
+          const data = await response.json();
+          const calendars = data.calendars || [];
+          setSharedCalendars(calendars);
+
+          // Fetch owner names
+          const ownerIds = calendars
+            .map((cal: SharedCalendar) => cal.ownerId)
+            .filter((id: string) => id);
+          if (ownerIds.length > 0) {
+            const ownerNames = await fetchUserNamesByIds(ownerIds);
+            const namesMap: Record<string, string> = {};
+            ownerNames.forEach((user) => {
+              calendars.forEach((cal: SharedCalendar) => {
+                if (cal.ownerId === user.$id) {
+                  namesMap[cal.$id] = user.fullName || 'Unknown';
+                }
+              });
+            });
+            setSharedCalendarOwnerNames(namesMap);
+          }
+        }
+      } catch (error) {
+        console.error(
+          '[CLIENT] OutlookStyleCalendar] Error fetching shared calendars:',
+          error
+        );
+      } finally {
+        setLoadingSharedCalendars(false);
+      }
+    };
+
+    fetchSharedCalendars();
+  }, []);
+
+  // Calculate calendar width based on container and number of calendars
+  useEffect(() => {
+    const calculateWidth = () => {
+      const visibleCalendarsCount =
+        (selectedMyCalendars.calendar ? 1 : 0) +
+        (selectedMyCalendars.usHolidays ? 1 : 0) +
+        selectedSharedCalendars.length;
+
+      if (visibleCalendarsCount === 1) {
+        setCalendarWidth('100%');
+      } else if (calendarContainerRef.current && visibleCalendarsCount > 1) {
+        // When multiple calendars, use the container's width as fixed width for each
+        // This ensures each calendar is the same size as when only one is displayed
+        const containerWidth = calendarContainerRef.current.offsetWidth;
+        if (containerWidth > 0) {
+          // Account for padding (32px total: 16px on each side)
+          // Each calendar should be the full container width minus padding
+          const singleCalendarWidth = containerWidth - 32;
+          setCalendarWidth(`${singleCalendarWidth}px`);
+        } else {
+          // If container width is 0, retry after a short delay
+          setTimeout(calculateWidth, 100);
+        }
+      }
+    };
+
+    // Use setTimeout to ensure DOM is fully rendered
+    const timeoutId = setTimeout(() => {
+      calculateWidth();
+    }, 0);
+
+    window.addEventListener('resize', calculateWidth);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', calculateWidth);
+    };
+  }, [
+    selectedMyCalendars.calendar,
+    selectedMyCalendars.usHolidays,
+    selectedSharedCalendars.length,
+  ]);
 
   // Check Outlook connection status
   useEffect(() => {
@@ -2621,7 +2805,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     }
   };
 
-  const renderMonthView = () => {
+  const renderMonthView = (
+    eventsToRender: LocalCalendarEvent[] = normalizedEvents
+  ) => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const startDate = startOfWeek(monthStart);
@@ -2643,7 +2829,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         {/* Calendar days */}
         {days.map((day) => {
           // Use isSameDay for proper date comparison (handles timezone safely)
-          const dayEvents = normalizedEvents.filter((event) => {
+          const dayEvents = eventsToRender.filter((event) => {
             // event.startDate is already a Date object from useCalendarEvents
             if (!event.startDate) return false;
 
@@ -2697,7 +2883,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             <div
               key={day.toISOString()}
               className={cn(
-                'min-h-[120px] max-h-[120px] overflow-hidden p-2 bg-white border border-gray-200 cursor-pointer transition-colors flex flex-col',
+                'min-h-[105px] max-h-[105px] overflow-hidden p-2 bg-white border border-gray-200 cursor-pointer transition-colors flex flex-col',
                 !isCurrentMonth && 'bg-gray-50 text-gray-400',
                 isSelected && 'bg-gray-50 border-blue-300'
               )}
@@ -3077,7 +3263,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       </div>
 
       {/* Header */}
-      <div className="flex rounded-t-lg items-center justify-between p-6 border-b bg-white">
+      <div className="flex rounded-t-lg items-center justify-between p-4 border-b bg-white">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <Button
@@ -4030,7 +4216,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       </div>
 
       {isApprover && (
-        <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-5 shadow-sm">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
@@ -4238,17 +4424,167 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           )}
         </div>
       )}
+      {/* Management Buttons */}
       <div className="flex justify-end gap-4">
         <SharedCalendarManager />
         <ResourceManager />
         <CalendarDelegationManager />
       </div>
-      {/* Calendar View */}
-      <Card>
-        <CardContent className="p-0">
-          {viewMode === 'month' ? renderMonthView() : renderWeekView()}
-        </CardContent>
-      </Card>
+
+      {/* Calendar View with Sidebar */}
+      <div className="flex gap-0 border border-slate-200 rounded-lg overflow-hidden">
+        {/* Left Sidebar */}
+        <CalendarSidebar
+          selectedMyCalendars={selectedMyCalendars}
+          selectedSharedCalendars={selectedSharedCalendars}
+          onMyCalendarChange={handleMyCalendarChange}
+          onSharedCalendarChange={handleSharedCalendarChange}
+          sharedCalendars={sharedCalendars.map((cal) => ({
+            ...cal,
+            ownerName: sharedCalendarOwnerNames[cal.$id] || cal.name,
+          }))}
+          loadingSharedCalendars={loadingSharedCalendars}
+        />
+
+        {/* Calendar Display Area */}
+        <div
+          ref={calendarContainerRef}
+          className={`flex-1 bg-white ${
+            (selectedMyCalendars.calendar ? 1 : 0) +
+              (selectedMyCalendars.usHolidays ? 1 : 0) +
+              selectedSharedCalendars.length >
+            1
+              ? 'overflow-x-auto'
+              : 'overflow-x-hidden'
+          }`}
+        >
+          <div
+            className="flex gap-4 p-4"
+            style={{
+              minWidth:
+                (selectedMyCalendars.calendar ? 1 : 0) +
+                  (selectedMyCalendars.usHolidays ? 1 : 0) +
+                  selectedSharedCalendars.length >
+                1
+                  ? 'max-content'
+                  : 'auto',
+            }}
+          >
+            {(() => {
+              // Calculate number of visible calendars
+              const visibleCalendarsCount =
+                (selectedMyCalendars.calendar ? 1 : 0) +
+                (selectedMyCalendars.usHolidays ? 1 : 0) +
+                selectedSharedCalendars.length;
+
+              // Use the calculated calendarWidth from state
+
+              return (
+                <>
+                  {/* Main Calendar */}
+                  {selectedMyCalendars.calendar && (
+                    <div
+                      className="flex-shrink-0"
+                      style={{ width: calendarWidth }}
+                    >
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <h3 className="text-lg font-semibold text-slate-700">
+                          Calendar
+                        </h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCloseCalendar('calendar')}
+                          className="h-6 w-6 p-0 hover:bg-slate-100"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Card>
+                        <CardContent className="p-0">
+                          {viewMode === 'month'
+                            ? renderMonthView()
+                            : renderWeekView()}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {/* US Holidays Calendar */}
+                  {selectedMyCalendars.usHolidays && (
+                    <div
+                      className="flex-shrink-0"
+                      style={{ width: calendarWidth }}
+                    >
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <h3 className="text-lg font-semibold text-slate-700">
+                          United States holidays
+                        </h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCloseCalendar('usHolidays')}
+                          className="h-6 w-6 p-0 hover:bg-slate-100"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Card>
+                        <CardContent className="p-0">
+                          {viewMode === 'month'
+                            ? renderMonthView(usHolidaysEvents)
+                            : renderWeekView()}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {/* Shared Calendars */}
+                  {selectedSharedCalendars.map((calendarId) => {
+                    const calendar = sharedCalendars.find(
+                      (cal) => cal.$id === calendarId
+                    );
+                    if (!calendar) return null;
+
+                    // TODO: Fetch events for this shared calendar
+                    const sharedCalendarEvents: LocalCalendarEvent[] = [];
+
+                    return (
+                      <div
+                        key={calendarId}
+                        className="flex-shrink-0"
+                        style={{ width: calendarWidth }}
+                      >
+                        <div className="flex items-center justify-between mb-2 px-1">
+                          <h3 className="text-lg font-semibold text-slate-700">
+                            {sharedCalendarOwnerNames[calendarId] ||
+                              calendar.name}
+                          </h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCloseCalendar(calendarId)}
+                            className="h-6 w-6 p-0 hover:bg-slate-100"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <Card>
+                          <CardContent className="p-0">
+                            {viewMode === 'month'
+                              ? renderMonthView(sharedCalendarEvents)
+                              : renderWeekView()}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      </div>
 
       {/* Approval Review Dialog */}
       <Dialog

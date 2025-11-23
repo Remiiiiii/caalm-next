@@ -150,8 +150,10 @@ export default function Pricing({ plans }: Props) {
                 {idx === 0
                   ? 'Everything in starter plan'
                   : idx === 1
-                  ? 'Everything in Pro plan'
-                  : 'Dedicated account manager'}
+                  ? 'Everything in Starter plan plus'
+                  : idx === 2
+                  ? 'Everything in Growth plan plus'
+                  : ''}
               </h4>
               <ul className="space-y-2 text-slate-600 text-sm">
                 {plan.features.slice(0, 8).map((feature) => (
