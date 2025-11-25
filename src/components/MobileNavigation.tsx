@@ -15,7 +15,7 @@ import { navItems } from '../../constants';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import FileUploader from './FileUploader';
-import { signOutUser } from '@/lib/actions/user.actions';
+import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_LABELS, UserRole } from '@/constants/rbac';
 
 interface Props {
@@ -35,6 +35,7 @@ const MobileNavigation = ({
   email,
   role,
 }: Props) => {
+  const { logout } = useAuth();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   return (
@@ -118,8 +119,8 @@ const MobileNavigation = ({
             <Button
               type="submit"
               className="mobile-sign-out-button"
-              onClick={async () => {
-                await signOutUser();
+              onClick={() => {
+                logout('manual');
               }}
             >
               <Image

@@ -62,15 +62,20 @@ export class CacheManager {
 
   /**
    * Invalidate calendar cache
+   * When year and month are provided, invalidates all user-specific caches for that month
+   * When no parameters, invalidates all calendar event caches
    */
   static async invalidateCalendar(
     year?: number,
     month?: number
   ): Promise<void> {
     if (year && month) {
-      await cache.del(CACHE_KEYS.calendar.events(year, month));
+      // Invalidate all user-specific caches for this month
+      // Pattern matches: calendar:events:*:year:month and calendar:events:year:month (legacy)
+      await cache.clear(`^calendar:events:.*:${year}:${month}$`);
+      await cache.clear(`^calendar:events:${year}:${month}$`);
     } else {
-      // Invalidate all calendar events
+      // Invalidate all calendar events (all users, all months)
       await cache.clear('^calendar:events:');
     }
   }

@@ -109,9 +109,9 @@ class NotificationService {
       const tablesDB = await this.getTablesDB();
       const response = await tablesDB.updateRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
-        collectionId:
+        tableId:
           appwriteConfig.notificationTypesCollectionId || 'notification-types',
-        documentId: id,
+        rowId: id,
         data: updates,
       });
       return response as unknown as NotificationType;
@@ -255,7 +255,7 @@ class NotificationService {
         '[SERVER] NotificationService.createNotification] Creating notification with type:',
         notification.type
       );
-      
+
       // Validate notification type exists and is enabled
       const notificationType = await this.getNotificationType(
         notification.type
@@ -268,14 +268,16 @@ class NotificationService {
         );
         throw new Error(errorMsg);
       }
-      
+
       console.log(
         '[SERVER] NotificationService.createNotification] Notification type validated:',
         notificationType.type_key
       );
 
       // Get user's organization ID (required field)
-      const { getUserDefaultOrganization } = await import('@/lib/rbac/permissions');
+      const { getUserDefaultOrganization } = await import(
+        '@/lib/rbac/permissions'
+      );
       const defaultOrg = await getUserDefaultOrganization(notification.userId);
       if (!defaultOrg) {
         const errorMsg = `User ${notification.userId} has no default organization`;
@@ -331,7 +333,13 @@ class NotificationService {
 
       // Send SMS notification if user has SMS enabled
       try {
-        await this.sendSMSNotification(notification.userId, notificationData);
+        await this.sendSMSNotification(notification.userId, {
+          title: notificationData.title,
+          message: notificationData.message,
+          priority: notificationData.priority,
+          actionUrl: notificationData.actionUrl,
+          type: notificationData.type,
+        });
       } catch (smsError) {
         console.warn(
           '[SERVER] NotificationService.createNotification] SMS notification failed (non-critical):',
@@ -342,12 +350,18 @@ class NotificationService {
 
       return response as unknown as Notification;
     } catch (error) {
-      console.error('[SERVER] NotificationService.createNotification] Failed to create notification:', error);
+      console.error(
+        '[SERVER] NotificationService.createNotification] Failed to create notification:',
+        error
+      );
       if (error instanceof Error) {
-        console.error('[SERVER] NotificationService.createNotification] Error details:', {
-          message: error.message,
-          stack: error.stack,
-        });
+        console.error(
+          '[SERVER] NotificationService.createNotification] Error details:',
+          {
+            message: error.message,
+            stack: error.stack,
+          }
+        );
       }
       throw error; // Re-throw the original error instead of wrapping it
     }
@@ -415,7 +429,7 @@ class NotificationService {
       });
 
       // Update each notification
-      const unreadRows = unreadNotifications.rows as Array<
+      const unreadRows = unreadNotifications.rows as unknown as Array<
         Notification & { $id: string }
       >;
       const updatePromises = unreadRows.map((notification) =>

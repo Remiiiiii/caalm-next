@@ -265,44 +265,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async (reason: 'manual' | 'inactivity' = 'manual') => {
-    try {
-      // Call the server action to logout
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reason }),
-      });
+    // Clear client-side state immediately for instant logout
+    setUser(null);
+    setIsSessionValid(false);
 
-      if (response.ok) {
-        setUser(null);
-        setIsSessionValid(false);
+    // Clear any client-side storage immediately
+    localStorage.removeItem('session');
+    sessionStorage.clear();
 
-        // Clear any client-side storage
-        localStorage.removeItem('session');
-        sessionStorage.clear();
-
-        // Redirect based on reason using window.location to avoid router conflicts
-        if (reason === 'inactivity') {
-          window.location.href = '/sign-in?reason=inactivity';
-        } else {
-          window.location.href = '/sign-in';
-        }
-      } else {
-        console.error('Logout failed');
-        // Force logout even if API fails
-        setUser(null);
-        setIsSessionValid(false);
-        window.location.href = '/sign-in';
+    // Redirect immediately without waiting for API call
+    const redirectUrl = reason === 'inactivity' 
+      ? '/sign-in?reason=inactivity' 
+      : '/sign-in';
+    
+    // Fire and forget - don't wait for API response
+    fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reason }),
+      keepalive: true, // Ensure request completes even after navigation
+    }).catch((error) => {
+      // Silently handle errors - logout should succeed even if API fails
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Logout API call failed (non-critical):', error);
       }
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Force logout even if API fails
-      setUser(null);
-      setIsSessionValid(false);
-      window.location.href = '/sign-in';
-    }
+    });
+
+    // Redirect immediately
+    window.location.href = redirectUrl;
   };
 
   // Always render the same structure, but conditionally show content

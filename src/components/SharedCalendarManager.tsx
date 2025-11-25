@@ -73,6 +73,11 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
   const [selectedCalendar, setSelectedCalendar] =
     useState<SharedCalendar | null>(null);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [calendarToEdit, setCalendarToEdit] = useState<SharedCalendar | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
   const [sharedUsers, setSharedUsers] = useState<
     Array<{ $id: string; fullName?: string; name?: string; email: string }>
   >([]);
@@ -81,6 +86,14 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
     Array<{ $id: string; fullName?: string; name?: string; email: string }>
   >([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    description: '',
+    isTeamCalendar: false,
+    color: '#3b82f6',
+    isPublic: false,
+    isCustomColor: false,
+  });
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -258,6 +271,12 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
       (u: { $id: string }) => u.$id === userId
     );
 
+    // Optimistic update: immediately add user to UI
+    if (userToAdd) {
+      setSharedUsers((prev) => [...prev, userToAdd]);
+      setSearchResults((prev) => prev.filter((u) => u.$id !== userId));
+    }
+
     try {
       const response = await fetch(
         `/api/calendar/shared/${selectedCalendar.$id}/users`,
@@ -275,7 +294,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
         const updatedCalendar = data.calendar;
         setSelectedCalendar(updatedCalendar);
 
-        // Immediately reload shared users with the updated calendar data
+        // Reload shared users to ensure consistency
         await loadSharedUsers(updatedCalendar);
 
         toast({
@@ -287,6 +306,11 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
         setUserSearch('');
         setSearchResults([]);
       } else {
+        // Rollback optimistic update on error
+        if (userToAdd) {
+          setSharedUsers((prev) => prev.filter((u) => u.$id !== userId));
+          setSearchResults((prev) => [...prev, userToAdd]);
+        }
         const error = await response.json();
         toast({
           title: 'Error',
@@ -295,6 +319,11 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
         });
       }
     } catch (error) {
+      // Rollback optimistic update on error
+      if (userToAdd) {
+        setSharedUsers((prev) => prev.filter((u) => u.$id !== userId));
+        setSearchResults((prev) => [...prev, userToAdd]);
+      }
       console.error(
         '[CLIENT] SharedCalendarManager] Error adding user:',
         error
@@ -309,6 +338,10 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 
   const handleRemoveUser = async (userId: string) => {
     if (!selectedCalendar) return;
+
+    // Optimistic update: immediately remove user from UI
+    const userToRemove = sharedUsers.find((u) => u.$id === userId);
+    setSharedUsers((prev) => prev.filter((u) => u.$id !== userId));
 
     try {
       const response = await fetch(
@@ -327,7 +360,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
         const updatedCalendar = data.calendar;
         setSelectedCalendar(updatedCalendar);
 
-        // Immediately reload shared users with the updated calendar data
+        // Reload shared users to ensure consistency
         await loadSharedUsers(updatedCalendar);
 
         toast({
@@ -337,6 +370,10 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 
         await fetchCalendars();
       } else {
+        // Rollback optimistic update on error
+        if (userToRemove) {
+          setSharedUsers((prev) => [...prev, userToRemove]);
+        }
         const error = await response.json();
         toast({
           title: 'Error',
@@ -345,6 +382,10 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
         });
       }
     } catch (error) {
+      // Rollback optimistic update on error
+      if (userToRemove) {
+        setSharedUsers((prev) => [...prev, userToRemove]);
+      }
       console.error(
         '[CLIENT] SharedCalendarManager] Error removing user:',
         error
@@ -354,6 +395,114 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
         description: 'Failed to remove user',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleEditCalendar = (calendar: SharedCalendar) => {
+    setCalendarToEdit(calendar);
+    setEditFormData({
+      name: calendar.name,
+      description: calendar.description || '',
+      isTeamCalendar: calendar.isTeamCalendar,
+      color: calendar.color || '#3b82f6',
+      isPublic: calendar.isPublic,
+      isCustomColor: false,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateCalendar = async () => {
+    if (!calendarToEdit || !editFormData.name.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Calendar name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/calendar/shared/${calendarToEdit.$id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(editFormData),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: 'Success',
+          description: 'Shared calendar updated successfully',
+        });
+        await fetchCalendars();
+        setIsEditDialogOpen(false);
+        setCalendarToEdit(null);
+        onCalendarUpdated?.(data.calendar);
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to update shared calendar',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error(
+        '[CLIENT] SharedCalendarManager] Error updating calendar:',
+        error
+      );
+      toast({
+        title: 'Error',
+        description: 'Failed to update shared calendar',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteCalendar = async (calendar: SharedCalendar) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${calendar.name}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/calendar/shared/${calendar.$id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Shared calendar deleted successfully',
+        });
+        await fetchCalendars();
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to delete shared calendar',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error(
+        '[CLIENT] SharedCalendarManager] Error deleting calendar:',
+        error
+      );
+      toast({
+        title: 'Error',
+        description: 'Failed to delete shared calendar',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -645,13 +794,22 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
                       >
                         <Share2 className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        title="Edit calendar"
+                        onClick={() => handleEditCalendar(calendar)}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0 hover:bg-red-50"
+                        title="Delete calendar"
+                        onClick={() => handleDeleteCalendar(calendar)}
+                        disabled={isDeleting}
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
@@ -832,6 +990,232 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
                 }}
               >
                 Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Calendar Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col">
+          <VisuallyHiddenPrimitive.Root>
+            <DialogTitle>Edit Shared Calendar</DialogTitle>
+            <DialogDescription>
+              Update the details of your shared calendar
+            </DialogDescription>
+          </VisuallyHiddenPrimitive.Root>
+          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+          {/* Professional Header */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+            <div className="flex items-center justify-between ml-6">
+              <div className="flex items-center gap-2">
+                <Edit className="h-5 w-5 text-[#0f5384]" />
+                <h2 className="text-xl font-semibold sidebar-gradient-text">
+                  Edit: {calendarToEdit?.name}
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            <div>
+              <Label
+                htmlFor="edit-calendar-name"
+                className="text-sm text-slate-700 mb-1 block"
+              >
+                Calendar Name *
+              </Label>
+              <Input
+                id="edit-calendar-name"
+                value={editFormData.name}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, name: e.target.value })
+                }
+                placeholder="e.g., Team Calendar, Project Alpha"
+                className="bg-white border-slate-300"
+              />
+            </div>
+
+            <div>
+              <Label
+                htmlFor="edit-calendar-description"
+                className="text-sm text-slate-700 mb-1 block"
+              >
+                Description
+              </Label>
+              <Textarea
+                id="edit-calendar-description"
+                value={editFormData.description}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    description: e.target.value,
+                  })
+                }
+                placeholder="Optional description for this calendar"
+                rows={3}
+                className="bg-white border-slate-300"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm text-slate-700 mb-2 block">
+                  Color
+                </Label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    {[
+                      '#ec4899', // Pink
+                      '#f97316', // Orange
+                      '#eab308', // Yellow
+                      '#22c55e', // Green
+                      '#3b82f6', // Blue
+                      '#a855f7', // Purple
+                      '#d97706', // Beige/Amber
+                    ].map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => {
+                          setEditFormData({
+                            ...editFormData,
+                            color,
+                            isCustomColor: false,
+                          });
+                        }}
+                        className={cn(
+                          'w-8 h-8 rounded-full border-2 transition-all hover:scale-110',
+                          editFormData.color === color &&
+                            !editFormData.isCustomColor
+                            ? 'border-slate-900 ring-2 ring-slate-300'
+                            : 'border-slate-300 hover:border-slate-400'
+                        )}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditFormData({ ...editFormData, isCustomColor: true });
+                      const colorInput = document.getElementById(
+                        'edit-custom-color-input'
+                      );
+                      colorInput?.click();
+                    }}
+                    className={cn(
+                      'flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900 transition-colors',
+                      editFormData.isCustomColor && 'text-slate-900 font-medium'
+                    )}
+                  >
+                    {editFormData.isCustomColor && (
+                      <Check className="w-4 h-4 text-slate-900" />
+                    )}
+                    <span>Custom Color...</span>
+                    {editFormData.isCustomColor && editFormData.color && (
+                      <div
+                        className="w-4 h-4 rounded border border-slate-300 ml-auto"
+                        style={{ backgroundColor: editFormData.color }}
+                      />
+                    )}
+                  </button>
+
+                  <input
+                    id="edit-custom-color-input"
+                    type="color"
+                    value={editFormData.color || '#3b82f6'}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        color: e.target.value,
+                        isCustomColor: true,
+                      })
+                    }
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm text-slate-700 mb-2 block">
+                  Visibility
+                </Label>
+                <Select
+                  value={editFormData.isPublic ? 'public' : 'private'}
+                  onValueChange={(value) =>
+                    setEditFormData({
+                      ...editFormData,
+                      isPublic: value === 'public',
+                    })
+                  }
+                >
+                  <SelectTrigger className="bg-white border-slate-300">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="private">
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-4 h-4" />
+                        Private
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="public">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        Public
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="edit-team-calendar"
+                checked={editFormData.isTeamCalendar}
+                onCheckedChange={(checked) =>
+                  setEditFormData({
+                    ...editFormData,
+                    isTeamCalendar: checked as boolean,
+                  })
+                }
+              />
+              <Label
+                htmlFor="edit-team-calendar"
+                className="text-sm text-slate-700 cursor-pointer"
+              >
+                This is a team calendar
+              </Label>
+            </div>
+          </div>
+
+          {/* Professional Footer */}
+          <div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                className="primary-btn"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setCalendarToEdit(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="primary-btn"
+                onClick={handleUpdateCalendar}
+                disabled={!editFormData.name.trim()}
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Update Calendar
               </Button>
             </div>
           </div>

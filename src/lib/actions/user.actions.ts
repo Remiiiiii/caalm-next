@@ -737,20 +737,21 @@ export const getCurrentUserFrom2FA = async () => {
 };
 
 export const signOutUser = async () => {
-  try {
-    // Try to get session client, but don't fail if no session exists
-    const { account } = await createSessionClient();
-    await account.deleteSession('current');
-  } catch (error) {
-    console.log('No active session to delete:', error);
-  } finally {
-    // Always delete the session cookie and 2FA cookies, then redirect
-    const cookieStore = await cookies();
-    cookieStore.delete('appwrite-session');
-    cookieStore.delete('2fa_completed');
-    cookieStore.delete('2fa_user_id');
-    redirect('/sign-in');
-  }
+  // Clear cookies immediately and redirect - don't wait for Appwrite session deletion
+  const cookieStore = await cookies();
+  cookieStore.delete('appwrite-session');
+  cookieStore.delete('2fa_completed');
+  cookieStore.delete('2fa_user_id');
+  
+  // Fire and forget - delete session in background (non-blocking)
+  createSessionClient()
+    .then(({ account }) => account.deleteSession('current'))
+    .catch(() => {
+      // Silently ignore - session might already be invalid
+    });
+  
+  // Redirect immediately
+  redirect('/sign-in');
 };
 
 export const signInUser = async ({ email }: { email: string }) => {

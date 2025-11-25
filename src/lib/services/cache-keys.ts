@@ -20,7 +20,10 @@ export const CACHE_KEYS = {
 
   // Calendar
   calendar: {
-    events: (year: number, month: number) => `calendar:events:${year}:${month}`,
+    events: (year: number, month: number, userId?: string) =>
+      userId
+        ? `calendar:events:${userId}:${year}:${month}`
+        : `calendar:events:${year}:${month}`,
     event: (eventId: string) => `calendar:event:${eventId}`,
   },
 

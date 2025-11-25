@@ -480,14 +480,25 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId();
+    const accountId = await getCurrentUserId();
 
-    if (!userId) {
+    if (!accountId) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
         { status: 401 }
       );
     }
+
+    // Get user by account ID to get the user's $id (userId)
+    const user = await getUserByAccountId(accountId);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = user.$id;
 
     const { searchParams } = new URL(request.url);
     const year = parseInt(
@@ -506,16 +517,16 @@ export async function GET(request: NextRequest) {
     let payload: any;
     if (noCacheHeader || noCacheQuery) {
       // Bypass server cache entirely
-      const events = await getCalendarEventsByMonth(year, month);
+      const events = await getCalendarEventsByMonth(year, month, userId);
       payload = { success: true, events };
     } else {
-      // Use server cache
-      const cacheKey = CACHE_KEYS.calendar.events(year, month);
+      // Use server cache with user-specific cache key
+      const cacheKey = CACHE_KEYS.calendar.events(year, month, userId);
       payload = await CacheManager.withCache(
         'calendar/events',
         cacheKey,
         async () => {
-          const events = await getCalendarEventsByMonth(year, month);
+          const events = await getCalendarEventsByMonth(year, month, userId);
           return { success: true, events };
         },
         CACHE_TTLS.medium

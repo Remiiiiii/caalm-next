@@ -69,32 +69,35 @@ export async function PUT(
     if (action === 'add') {
       updatedCalendar = await addUserToSharedCalendar(calendarId, targetUserId);
 
-      // Send notification to recipient (don't let notification failures break calendar sharing)
-      try {
-        const recipientUser = await getUserById(targetUserId);
-        const ownerName = user.fullName || user.name || 'A user';
-        const calendarName = calendar.name || 'Shared Calendar';
-        const recipientEmail = recipientUser?.email;
+      // Send notification asynchronously (fire-and-forget) for instant response
+      Promise.resolve().then(async () => {
+        try {
+          const recipientUser = await getUserById(targetUserId);
+          const ownerName = user.fullName || 'A user';
+          const calendarName = calendar.name || 'Shared Calendar';
+          const recipientEmail = recipientUser?.email;
+          const ownerEmail = user.email || 'user@caalmsolutions.com';
 
-        if (recipientUser) {
-          await sendCalendarSharedNotification(
-            targetUserId,
-            calendarName,
-            ownerName,
-            calendarId,
-            recipientEmail
-          );
-          console.log(
-            '[SERVER] PUT /api/calendar/shared/[calendarId]/users] Sent calendar sharing notification'
+          if (recipientUser) {
+            await sendCalendarSharedNotification(
+              targetUserId,
+              calendarName,
+              ownerName,
+              ownerEmail,
+              calendarId,
+              recipientEmail
+            );
+            console.log(
+              '[SERVER] PUT /api/calendar/shared/[calendarId]/users] Sent calendar sharing notification'
+            );
+          }
+        } catch (notificationError) {
+          console.error(
+            '[SERVER] PUT /api/calendar/shared/[calendarId]/users] Error sending notification:',
+            notificationError
           );
         }
-      } catch (notificationError) {
-        console.error(
-          '[SERVER] PUT /api/calendar/shared/[calendarId]/users] Error sending notification:',
-          notificationError
-        );
-        // Continue - notification failure shouldn't break calendar sharing
-      }
+      });
     } else if (action === 'remove') {
       updatedCalendar = await removeUserFromSharedCalendar(
         calendarId,

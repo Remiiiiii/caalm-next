@@ -432,6 +432,22 @@ export const removeUserFromSharedCalendar = async (
 };
 
 /**
+ * Delete a shared calendar
+ */
+export const deleteSharedCalendar = async (
+  calendarId: string
+): Promise<void> => {
+  const { tablesDB } = await createAdminClient();
+  const collectionId = getSharedCalendarsCollectionId();
+
+  await tablesDB.deleteRow({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    rowId: calendarId,
+  });
+};
+
+/**
  * Create a calendar delegation
  */
 export const createCalendarDelegation = async (

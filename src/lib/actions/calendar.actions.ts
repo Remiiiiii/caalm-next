@@ -168,7 +168,8 @@ export const getCalendarEventById = async (
 // Get calendar events for a specific month
 export const getCalendarEventsByMonth = async (
   year: number,
-  month: number
+  month: number,
+  userId?: string
 ): Promise<CalendarEvent[]> => {
   try {
     if (
@@ -177,10 +178,6 @@ export const getCalendarEventsByMonth = async (
     ) {
       throw new Error('Missing required Appwrite configuration');
     }
-
-    // console.log('Server action called with year:', year, 'month:', month);
-    // console.log('Database ID:', appwriteConfig.databaseId);
-    // console.log('Collection ID:', appwriteConfig.calendarEventsCollectionId);
 
     const adminClient = await createAdminClient();
 
@@ -196,6 +193,7 @@ export const getCalendarEventsByMonth = async (
 
     console.log('Date range:', startDate, 'to', endDate);
 
+    // Fetch all events for the month
     const response = await adminClient.tablesDB.listRows({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.calendarEventsCollectionId,
@@ -206,8 +204,93 @@ export const getCalendarEventsByMonth = async (
         Query.orderAsc('startDate'),
       ],
     });
-    //console.log('Database response:', response);
-    return response.rows as unknown as CalendarEvent[];
+
+    let events = response.rows as unknown as CalendarEvent[];
+
+    // If userId is provided, filter events based on user access
+    if (userId) {
+      // Get user information for filtering
+      const { getUserById } = await import('./user.actions');
+      const { getUserDefaultOrganization } = await import(
+        '@/lib/rbac/permissions'
+      );
+      const { getSharedCalendarsForUser } = await import(
+        './shared-calendar.actions'
+      );
+
+      const user = await getUserById(userId);
+      if (!user) {
+        console.warn(
+          `User ${userId} not found, returning empty events array`
+        );
+        return [];
+      }
+
+      const defaultOrg = await getUserDefaultOrganization(userId);
+      if (!defaultOrg) {
+        console.warn(
+          `No organization found for user ${userId}, returning empty events array`
+        );
+        return [];
+      }
+
+      // Get shared calendars user has access to
+      const sharedCalendars = await getSharedCalendarsForUser(
+        userId,
+        defaultOrg.orgId
+      );
+
+      // Extract owner IDs from shared calendars (users whose calendars are shared with this user)
+      const sharedCalendarOwnerIds = new Set(
+        sharedCalendars.map((cal) => cal.ownerId)
+      );
+
+      // Prepare user identifiers for participant matching
+      const userEmail = user.email?.toLowerCase() || '';
+      const userAccountId = user.accountId || '';
+
+      // Filter events based on:
+      // 1. Events created by the user
+      // 2. Events where the user is a participant
+      // 3. Events created by owners of shared calendars the user has access to
+      events = events.filter((event) => {
+        // Check if event was created by this user
+        if (event.createdByUserId === userId) {
+          return true;
+        }
+
+        // Check if user is a participant in this event
+        if (event.participants) {
+          const participantsStr = String(event.participants).toLowerCase();
+          const participantsList = participantsStr
+            .split(',')
+            .map((p) => p.trim())
+            .filter((p) => p.length > 0);
+
+          // Check if user's ID, email, or accountId is in participants
+          if (
+            participantsList.includes(userId.toLowerCase()) ||
+            (userEmail && participantsList.includes(userEmail)) ||
+            (userAccountId &&
+              participantsList.includes(userAccountId.toLowerCase()))
+          ) {
+            return true;
+          }
+        }
+
+        // Check if event was created by an owner of a shared calendar the user has access to
+        if (
+          event.createdByUserId &&
+          sharedCalendarOwnerIds.has(event.createdByUserId)
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+    }
+
+    return events;
   } catch (error) {
     console.error('Error fetching calendar events by month:', error);
     throw error;
@@ -221,8 +304,8 @@ export const getCalendarEventsWithSync = async (
   userId: string
 ): Promise<CalendarEvent[]> => {
   try {
-    // First, get local CAALM events
-    const localEvents = await getCalendarEventsByMonth(year, month);
+    // First, get local CAALM events (with user filtering)
+    const localEvents = await getCalendarEventsByMonth(year, month, userId);
 
     // Check if user has Microsoft integration
     const hasIntegration = await hasMicrosoftCalendarIntegration(userId);
@@ -233,8 +316,8 @@ export const getCalendarEventsWithSync = async (
         const syncResult = await syncMicrosoftCalendar(userId);
         console.log('Microsoft sync result:', syncResult);
 
-        // After sync, get updated events (including synced Outlook events)
-        const syncedEvents = await getCalendarEventsByMonth(year, month);
+        // After sync, get updated events (including synced Outlook events, with user filtering)
+        const syncedEvents = await getCalendarEventsByMonth(year, month, userId);
         return syncedEvents;
       } catch (syncError) {
         console.error('Error syncing Microsoft calendar:', syncError);
@@ -593,7 +676,7 @@ export const deleteCalendarEvent = async (
         tableId: appwriteConfig.calendarEventsCollectionId,
         rowId: eventId,
       });
-      orgId = (existingEvent as any).orgId;
+      orgId = (existingEvent as any)?.orgId;
     } catch (error) {
       console.warn('Could not fetch existing event for orgId:', error);
     }
@@ -615,8 +698,8 @@ export const deleteCalendarEvent = async (
       }
     }
 
-    // Use default organization if still no orgId
-    if (!orgId) {
+    // Use default organization if still no orgId (required field)
+    if (!orgId || typeof orgId !== 'string') {
       orgId = 'default_organization';
     }
 
@@ -629,8 +712,11 @@ export const deleteCalendarEvent = async (
       deletion_synced: false,
     };
 
-    // Only include orgId if it's not already set or if we need to update it
-    if (orgId && (!existingEvent || (existingEvent as any).orgId !== orgId)) {
+    // Always include orgId to ensure the required field is present
+    // If the event doesn't have orgId (null/undefined) or it's different, we need to set it
+    const existingOrgId = existingEvent ? (existingEvent as any)?.orgId : null;
+    // Include orgId if event doesn't have it or if it's different from what we want to set
+    if (!existingOrgId || existingOrgId !== orgId) {
       updateData.orgId = orgId;
     }
 
