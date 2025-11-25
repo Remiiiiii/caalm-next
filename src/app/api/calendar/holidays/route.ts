@@ -13,10 +13,19 @@ export async function GET(request: NextRequest) {
 
     const holidays = getUSHolidaysForMonth(year, month);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       holidays,
     });
+    
+    // Cache holidays for 1 year (they don't change)
+    // Use public cache with long max-age for CDN caching
+    response.headers.set(
+      'Cache-Control',
+      'public, max-age=31536000, stale-while-revalidate=86400'
+    );
+    
+    return response;
   } catch (error) {
     console.error('[SERVER] /api/calendar/holidays] Error:', error);
     return NextResponse.json(

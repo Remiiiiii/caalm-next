@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar, TrendingUp } from 'lucide-react';
 import ContractUploadForm from '@/components/ContractUploadForm';
@@ -17,16 +17,6 @@ interface QuickActionsProps {
 
 const QuickActions = ({ user }: QuickActionsProps) => {
   const [reportOpen, setReportOpen] = useState(false);
-
-  useEffect(() => {
-    // Auto refresh every 30 minutes (30 * 60 * 1000 = 1,800,000 ms)
-    const interval = setInterval(() => {
-      window.location.reload();
-    }, 30 * 60 * 1000);
-
-    // Cleanup interval on component unmount
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <div className="flex items-center space-x-2">
