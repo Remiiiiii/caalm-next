@@ -5,7 +5,13 @@ import { ID, Query } from 'node-appwrite';
 export interface AuditLogEntry {
   event_id: string;
   event_title: string;
-  action: 'create' | 'update' | 'delete' | 'sync_delete' | 'restore' | 'approval_decided';
+  action:
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'sync_delete'
+    | 'restore'
+    | 'approval_decided';
   source: 'caalm' | 'outlook';
   user_id: string;
   user_name: string;
@@ -86,7 +92,10 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
         errorResponse: createError?.response,
         auditData: {
           ...auditData,
-          metadata: typeof auditData.metadata === 'string' ? 'JSON string' : auditData.metadata,
+          metadata:
+            typeof auditData.metadata === 'string'
+              ? 'JSON string'
+              : auditData.metadata,
         },
       });
       throw createError;

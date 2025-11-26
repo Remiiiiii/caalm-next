@@ -5,20 +5,52 @@ import { appwriteConfig } from '../appwrite/config';
 /**
  * Shared Calendar and Delegation Actions
  * Priority 2: Shared calendars and delegation so assistants and teams can manage events collaboratively
+ * 
+ * Outlook-style calendar sharing: Users share their primary calendar with others,
+ * with granular permission levels controlling what others can see and do.
  */
 
+/**
+ * Permission levels for calendar sharing (mimics Outlook)
+ */
+export type CalendarPermissionLevel =
+  | 'view_busy' // Can view when I'm busy (free/busy only)
+  | 'view_titles' // Can view titles and locations
+  | 'view_all' // Can view all details
+  | 'edit' // Can edit events
+  | 'delegate'; // Can manage calendar and respond on behalf of owner
+
+/**
+ * Mapping of users to their permission levels on a calendar
+ */
+export interface CalendarSharePermission {
+  userId: string;
+  permissionLevel: CalendarPermissionLevel;
+  grantedAt: string;
+  grantedBy: string; // User ID who granted the permission
+}
+
+/**
+ * Shared Calendar - represents a user's primary calendar that can be shared with others
+ * Each user has one primary calendar (their events), which can be shared with multiple users
+ * at different permission levels, similar to Outlook's calendar sharing.
+ */
 export interface SharedCalendar {
   $id: string;
   name: string;
   description?: string;
-  ownerId: string; // User ID of the calendar owner
+  ownerId: string; // User ID of the calendar owner (the primary calendar owner)
   ownerAccountId: string; // Account ID of the calendar owner
   organizationId: string;
-  isTeamCalendar: boolean;
+  isPrimaryCalendar: boolean; // True for user's primary calendar (defaults to true)
+  isTeamCalendar: boolean; // Legacy: For team calendars
   teamId?: string; // Optional team ID if this is a team calendar
   color?: string; // Calendar color for UI display
   isPublic: boolean; // Whether calendar is visible to all organization members
-  sharedWith?: string[]; // Array of user IDs who have access to this calendar
+  // New: Per-user permissions (replaces simple sharedWith array)
+  sharePermissions?: CalendarSharePermission[]; // Array of users with their permission levels
+  // Legacy: Keep for backward compatibility during migration
+  sharedWith?: string[]; // Array of user IDs (deprecated - use sharePermissions instead)
   createdAt: string;
   updatedAt: string;
 }
@@ -231,11 +263,31 @@ export const getSharedCalendarsForUser = async (
       }),
     ]);
 
-  // Filter calendars shared with this user
+  // Filter calendars shared with this user (both new permission-based and legacy)
   const sharedCalendars = allOrgCalendars.rows.filter((cal: any) => {
     if (cal.ownerId === userId) return false; // Already in ownedCalendars
 
-    // Handle both array format (new) and JSON string format (legacy)
+    // Check new permission-based sharing first
+    let sharePermissions: CalendarSharePermission[] = [];
+    if (cal.sharePermissions) {
+      if (Array.isArray(cal.sharePermissions)) {
+        sharePermissions = cal.sharePermissions;
+      } else if (typeof cal.sharePermissions === 'string') {
+        try {
+          sharePermissions = JSON.parse(cal.sharePermissions);
+        } catch {
+          sharePermissions = [];
+        }
+      }
+    }
+
+    // Check if user has a permission entry (new model)
+    const hasPermission = sharePermissions.some(
+      (p: CalendarSharePermission) => p.userId === userId
+    );
+    if (hasPermission) return true;
+
+    // Fall back to legacy sharedWith array for backward compatibility
     let sharedWith: string[] = [];
     if (cal.sharedWith) {
       if (Array.isArray(cal.sharedWith)) {
@@ -263,27 +315,8 @@ export const getSharedCalendarsForUser = async (
     new Map(allCalendars.map((cal) => [cal.$id, cal])).values()
   );
 
-  // Ensure sharedWith is an array for each calendar (handle both array and JSON string formats)
-  return uniqueCalendars.map((cal: any) => {
-    if (cal.sharedWith) {
-      if (Array.isArray(cal.sharedWith)) {
-        // Already an array, use it as is
-        cal.sharedWith = cal.sharedWith;
-      } else if (typeof cal.sharedWith === 'string') {
-        // Legacy JSON string format, parse it
-        try {
-          cal.sharedWith = JSON.parse(cal.sharedWith);
-        } catch {
-          cal.sharedWith = [];
-        }
-      } else {
-        cal.sharedWith = [];
-      }
-    } else {
-      cal.sharedWith = [];
-    }
-    return cal;
-  }) as unknown as SharedCalendar[];
+  // Normalize all calendars (handle both array and JSON string formats for both fields)
+  return uniqueCalendars.map((cal: any) => normalizeCalendar(cal));
 };
 
 /**
@@ -296,11 +329,11 @@ export const getSharedCalendarById = async (
     const { tablesDB } = await createAdminClient();
     const collectionId = getSharedCalendarsCollectionId();
 
-    const response = await tablesDB.getRow(
-      appwriteConfig.databaseId!,
-      collectionId,
-      calendarId
-    );
+    const response = await tablesDB.getRow({
+      databaseId: appwriteConfig.databaseId!,
+      tableId: collectionId,
+      rowId: calendarId,
+    });
 
     // Ensure sharedWith is an array (handle both array and JSON string formats)
     const calendar = response as any;
@@ -554,3 +587,295 @@ export const checkDelegationPermissions = async (
   const delegations = await getActiveDelegationsForUser(userId);
   return delegations.find((d) => d.calendarId === calendarId) || null;
 };
+
+/**
+ * Get or create a user's primary calendar
+ * Each user has one primary calendar that represents their main calendar
+ */
+export const getOrCreatePrimaryCalendar = async (
+  userId: string,
+  userAccountId: string,
+  organizationId: string,
+  userName?: string
+): Promise<SharedCalendar> => {
+  const { tablesDB } = await createAdminClient();
+  const collectionId = getSharedCalendarsCollectionId();
+
+  // Check if primary calendar already exists
+  const existingCalendars = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    queries: [
+      Query.equal('ownerId', userId),
+      Query.equal('isPrimaryCalendar', true),
+      Query.equal('organizationId', organizationId),
+    ],
+  });
+
+  if (existingCalendars.rows.length > 0) {
+    const calendar = existingCalendars.rows[0] as any;
+    // Normalize sharePermissions
+    return normalizeCalendar(calendar);
+  }
+
+  // Create primary calendar if it doesn't exist
+  const calendarId = ID.unique();
+  const calendarName = userName ? `${userName}'s Calendar` : 'My Calendar';
+
+  const response = await tablesDB.createRow({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    rowId: calendarId,
+    data: {
+      name: calendarName,
+      description: null,
+      ownerId: userId,
+      ownerAccountId: userAccountId,
+      organizationId: organizationId,
+      isPrimaryCalendar: true,
+      isTeamCalendar: false,
+      teamId: null,
+      color: '#3b82f6', // Default blue color
+      isPublic: false,
+      sharePermissions: [], // Start with no shares
+      sharedWith: [], // Legacy field
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  return normalizeCalendar(response);
+};
+
+/**
+ * Share a primary calendar with a user at a specific permission level
+ */
+export const sharePrimaryCalendarWithUser = async (
+  calendarOwnerId: string,
+  sharedWithUserId: string,
+  permissionLevel: CalendarPermissionLevel,
+  grantedByUserId: string
+): Promise<SharedCalendar> => {
+  const { tablesDB } = await createAdminClient();
+  const collectionId = getSharedCalendarsCollectionId();
+
+  // Get the owner's primary calendar
+  const existingCalendars = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    queries: [
+      Query.equal('ownerId', calendarOwnerId),
+      Query.equal('isPrimaryCalendar', true),
+    ],
+  });
+
+  if (existingCalendars.rows.length === 0) {
+    throw new Error('Primary calendar not found for user');
+  }
+
+  const calendar = existingCalendars.rows[0] as any;
+  const currentPermissions = calendar.sharePermissions || [];
+  
+  // Check if permission already exists
+  const existingPermissionIndex = currentPermissions.findIndex(
+    (p: CalendarSharePermission) => p.userId === sharedWithUserId
+  );
+
+  const newPermission: CalendarSharePermission = {
+    userId: sharedWithUserId,
+    permissionLevel,
+    grantedAt: new Date().toISOString(),
+    grantedBy: grantedByUserId,
+  };
+
+  let updatedPermissions: CalendarSharePermission[];
+  if (existingPermissionIndex >= 0) {
+    // Update existing permission
+    updatedPermissions = [...currentPermissions];
+    updatedPermissions[existingPermissionIndex] = newPermission;
+  } else {
+    // Add new permission
+    updatedPermissions = [...currentPermissions, newPermission];
+  }
+
+  // Also update legacy sharedWith array for backward compatibility
+  const currentSharedWith = calendar.sharedWith || [];
+  const updatedSharedWith = currentSharedWith.includes(sharedWithUserId)
+    ? currentSharedWith
+    : [...currentSharedWith, sharedWithUserId];
+
+  const updatedCalendar = await tablesDB.updateRow({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    rowId: calendar.$id,
+    data: {
+      sharePermissions: updatedPermissions,
+      sharedWith: updatedSharedWith,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  return normalizeCalendar(updatedCalendar);
+};
+
+/**
+ * Remove a user's access to a primary calendar
+ */
+export const removeCalendarShare = async (
+  calendarOwnerId: string,
+  sharedWithUserId: string
+): Promise<SharedCalendar> => {
+  const { tablesDB } = await createAdminClient();
+  const collectionId = getSharedCalendarsCollectionId();
+
+  // Get the owner's primary calendar
+  const existingCalendars = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    queries: [
+      Query.equal('ownerId', calendarOwnerId),
+      Query.equal('isPrimaryCalendar', true),
+    ],
+  });
+
+  if (existingCalendars.rows.length === 0) {
+    throw new Error('Primary calendar not found for user');
+  }
+
+  const calendar = existingCalendars.rows[0] as any;
+  const currentPermissions = calendar.sharePermissions || [];
+  
+  // Remove user from permissions
+  const updatedPermissions = currentPermissions.filter(
+    (p: CalendarSharePermission) => p.userId !== sharedWithUserId
+  );
+
+  // Also update legacy sharedWith array
+  const currentSharedWith = calendar.sharedWith || [];
+  const updatedSharedWith = currentSharedWith.filter(
+    (id: string) => id !== sharedWithUserId
+  );
+
+  const updatedCalendar = await tablesDB.updateRow({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    rowId: calendar.$id,
+    data: {
+      sharePermissions: updatedPermissions,
+      sharedWith: updatedSharedWith,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  return normalizeCalendar(updatedCalendar);
+};
+
+/**
+ * Get permission level for a user on a calendar
+ */
+export const getCalendarPermissionForUser = async (
+  calendarOwnerId: string,
+  userId: string
+): Promise<CalendarPermissionLevel | null> => {
+  const { tablesDB } = await createAdminClient();
+  const collectionId = getSharedCalendarsCollectionId();
+
+  const calendars = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    queries: [
+      Query.equal('ownerId', calendarOwnerId),
+      Query.equal('isPrimaryCalendar', true),
+    ],
+  });
+
+  if (calendars.rows.length === 0) {
+    return null;
+  }
+
+  const calendar = normalizeCalendar(calendars.rows[0]);
+  const permission = calendar.sharePermissions?.find(
+    (p) => p.userId === userId
+  );
+
+  return permission?.permissionLevel || null;
+};
+
+/**
+ * Get all calendars shared with a user (including primary calendars shared by others)
+ */
+export const getCalendarsSharedWithUser = async (
+  userId: string,
+  organizationId: string
+): Promise<Array<SharedCalendar & { userPermission: CalendarPermissionLevel }>> => {
+  const { tablesDB } = await createAdminClient();
+  const collectionId = getSharedCalendarsCollectionId();
+
+  // Get all primary calendars in the organization
+  const allCalendars = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    queries: [
+      Query.equal('organizationId', organizationId),
+      Query.equal('isPrimaryCalendar', true),
+    ],
+  });
+
+  // Filter calendars where user has a permission entry
+  const sharedCalendars = allCalendars.rows
+    .map(normalizeCalendar)
+    .filter((cal) => {
+      if (cal.ownerId === userId) return false; // User's own calendar
+      const permission = cal.sharePermissions?.find((p) => p.userId === userId);
+      return permission !== undefined;
+    })
+    .map((cal) => {
+      const permission = cal.sharePermissions?.find((p) => p.userId === userId);
+      return {
+        ...cal,
+        userPermission: permission!.permissionLevel,
+      };
+    });
+
+  return sharedCalendars;
+};
+
+/**
+ * Normalize calendar data - handles both new and legacy formats
+ */
+function normalizeCalendar(calendar: any): SharedCalendar {
+  // Parse sharePermissions
+  let sharePermissions: CalendarSharePermission[] = [];
+  if (calendar.sharePermissions) {
+    if (Array.isArray(calendar.sharePermissions)) {
+      sharePermissions = calendar.sharePermissions;
+    } else if (typeof calendar.sharePermissions === 'string') {
+      try {
+        sharePermissions = JSON.parse(calendar.sharePermissions);
+      } catch {
+        sharePermissions = [];
+      }
+    }
+  }
+
+  // Parse sharedWith (legacy)
+  let sharedWith: string[] = [];
+  if (calendar.sharedWith) {
+    if (Array.isArray(calendar.sharedWith)) {
+      sharedWith = calendar.sharedWith;
+    } else if (typeof calendar.sharedWith === 'string') {
+      try {
+        sharedWith = JSON.parse(calendar.sharedWith);
+      } catch {
+        sharedWith = [];
+      }
+    }
+  }
+
+  return {
+    ...calendar,
+    sharePermissions,
+    sharedWith,
+    isPrimaryCalendar: calendar.isPrimaryCalendar ?? false,
+  };
+}

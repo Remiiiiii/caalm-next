@@ -24,18 +24,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import {
   Calendar as CalendarIcon,
-  Plus,
   Edit,
   Trash2,
   Users,
   Globe,
   Lock,
-  Palette,
   Check,
   Ban,
   Share2,
   X,
   UserPlus,
+  AlertTriangle,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
@@ -60,16 +59,17 @@ interface SharedCalendar {
 interface SharedCalendarManagerProps {
   onCalendarCreated?: (calendar: SharedCalendar) => void;
   onCalendarUpdated?: (calendar: SharedCalendar) => void;
+  onCalendarDeleted?: () => void;
 }
 
 export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
   onCalendarCreated,
   onCalendarUpdated,
+  onCalendarDeleted,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [calendars, setCalendars] = useState<SharedCalendar[]>([]);
   const [loading, setLoading] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [selectedCalendar, setSelectedCalendar] =
     useState<SharedCalendar | null>(null);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
@@ -78,6 +78,10 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
     null
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteCalendarDialogOpen, setIsDeleteCalendarDialogOpen] =
+    useState(false);
+  const [calendarToDelete, setCalendarToDelete] =
+    useState<SharedCalendar | null>(null);
   const [sharedUsers, setSharedUsers] = useState<
     Array<{ $id: string; fullName?: string; name?: string; email: string }>
   >([]);
@@ -90,15 +94,6 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
     name: '',
     description: '',
     isTeamCalendar: false,
-    color: '#3b82f6',
-    isPublic: false,
-    isCustomColor: false,
-  });
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    isTeamCalendar: false,
-    teamId: '',
     color: '#3b82f6',
     isPublic: false,
     isCustomColor: false,
@@ -147,65 +142,6 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCreate = async () => {
-    if (!formData.name.trim()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Calendar name is required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      setCreating(true);
-      const response = await fetch('/api/calendar/shared', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast({
-          title: 'Success',
-          description: 'Shared calendar created successfully',
-        });
-        setFormData({
-          name: '',
-          description: '',
-          isTeamCalendar: false,
-          teamId: '',
-          color: '#3b82f6',
-          isPublic: false,
-          isCustomColor: false,
-        });
-        await fetchCalendars();
-        onCalendarCreated?.(data.calendar);
-        setIsOpen(false);
-      } else {
-        const error = await response.json();
-        toast({
-          title: 'Error',
-          description: error.message || 'Failed to create shared calendar',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error(
-        '[CLIENT] SharedCalendarManager] Error creating calendar:',
-        error
-      );
-      toast({
-        title: 'Error',
-        description: 'Failed to create shared calendar',
-        variant: 'destructive',
-      });
-    } finally {
-      setCreating(false);
     }
   };
 
@@ -441,6 +377,10 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
         setIsEditDialogOpen(false);
         setCalendarToEdit(null);
         onCalendarUpdated?.(data.calendar);
+        // Refresh calendars list
+        if (isOpen) {
+          await fetchCalendars();
+        }
       } else {
         const error = await response.json();
         toast({
@@ -462,20 +402,24 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
     }
   };
 
-  const handleDeleteCalendar = async (calendar: SharedCalendar) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${calendar.name}"? This action cannot be undone.`
-      )
-    ) {
+  const handleDeleteCalendar = (calendar: SharedCalendar) => {
+    setCalendarToDelete(calendar);
+    setIsDeleteCalendarDialogOpen(true);
+  };
+
+  const confirmDeleteCalendar = async () => {
+    if (!calendarToDelete) {
       return;
     }
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/calendar/shared/${calendar.$id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/calendar/shared/${calendarToDelete.$id}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       if (response.ok) {
         toast({
@@ -483,6 +427,9 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
           description: 'Shared calendar deleted successfully',
         });
         await fetchCalendars();
+        setIsDeleteCalendarDialogOpen(false);
+        setCalendarToDelete(null);
+        onCalendarDeleted?.();
       } else {
         const error = await response.json();
         toast({
@@ -506,6 +453,11 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
     }
   };
 
+  const cancelDeleteCalendar = () => {
+    setIsDeleteCalendarDialogOpen(false);
+    setCalendarToDelete(null);
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -523,7 +475,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
           <VisuallyHiddenPrimitive.Root>
             <DialogTitle>Manage Shared Calendars</DialogTitle>
             <DialogDescription>
-              Create and manage shared calendars for your team
+              View and manage your shared calendars
             </DialogDescription>
           </VisuallyHiddenPrimitive.Root>
           <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
@@ -540,8 +492,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
                     </h2>
                   </div>
                   <p className="text-sm text-slate-600 mt-1 ml-7">
-                    Create calendars that your team can access and collaborate
-                    on
+                    View and manage your shared calendars
                   </p>
                 </div>
               </div>
@@ -550,192 +501,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-            {/* Create New Calendar Form */}
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
-                <Plus className="w-4 h-4 text-blue-600" />
-                Create New Shared Calendar
-              </Label>
-
-              <div className="space-y-4">
-                <div>
-                  <Label
-                    htmlFor="calendar-name"
-                    className="text-sm text-slate-700 mb-1 block"
-                  >
-                    Calendar Name *
-                  </Label>
-                  <Input
-                    id="calendar-name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="e.g., Team Calendar, Project Alpha"
-                    className="bg-white border-slate-300"
-                  />
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="calendar-description"
-                    className="text-sm text-slate-700 mb-1 block"
-                  >
-                    Description
-                  </Label>
-                  <Textarea
-                    id="calendar-description"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    placeholder="Optional description for this calendar"
-                    rows={3}
-                    className="bg-white border-slate-300"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm text-slate-700 mb-2 block">
-                      Color
-                    </Label>
-                    {/* Color Swatches Row */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        {/* Predefined Colors */}
-                        {[
-                          '#ec4899', // Pink
-                          '#f97316', // Orange
-                          '#eab308', // Yellow
-                          '#22c55e', // Green
-                          '#3b82f6', // Blue
-                          '#a855f7', // Purple
-                          '#d97706', // Beige/Amber
-                        ].map((color) => (
-                          <button
-                            key={color}
-                            type="button"
-                            onClick={() => {
-                              setFormData({
-                                ...formData,
-                                color,
-                                isCustomColor: false,
-                              });
-                            }}
-                            className={cn(
-                              'w-8 h-8 rounded-full border-2 transition-all hover:scale-110',
-                              formData.color === color &&
-                                !formData.isCustomColor
-                                ? 'border-slate-900 ring-2 ring-slate-300'
-                                : 'border-slate-300 hover:border-slate-400'
-                            )}
-                            style={{ backgroundColor: color }}
-                            title={color}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Custom Color Option */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData({ ...formData, isCustomColor: true });
-                          // Open color picker
-                          const colorInput =
-                            document.getElementById('custom-color-input');
-                          colorInput?.click();
-                        }}
-                        className={cn(
-                          'flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900 transition-colors',
-                          formData.isCustomColor && 'text-slate-900 font-medium'
-                        )}
-                      >
-                        {formData.isCustomColor && (
-                          <Check className="w-4 h-4 text-slate-900" />
-                        )}
-                        <span>Custom Color...</span>
-                        {formData.isCustomColor && formData.color && (
-                          <div
-                            className="w-4 h-4 rounded border border-slate-300 ml-auto"
-                            style={{ backgroundColor: formData.color }}
-                          />
-                        )}
-                      </button>
-
-                      {/* Hidden color input for custom color */}
-                      <input
-                        id="custom-color-input"
-                        type="color"
-                        value={formData.color || '#3b82f6'}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            color: e.target.value,
-                            isCustomColor: true,
-                          })
-                        }
-                        className="hidden"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm text-slate-700 mb-2 block">
-                      Visibility
-                    </Label>
-                    <Select
-                      value={formData.isPublic ? 'public' : 'private'}
-                      onValueChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          isPublic: value === 'public',
-                        })
-                      }
-                    >
-                      <SelectTrigger className="bg-white border-slate-300">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="private">
-                          <div className="flex items-center gap-2">
-                            <Lock className="w-4 h-4" />
-                            Private
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="public">
-                          <div className="flex items-center gap-2">
-                            <Globe className="w-4 h-4" />
-                            Public
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="team-calendar"
-                    checked={formData.isTeamCalendar}
-                    onCheckedChange={(checked) =>
-                      setFormData({
-                        ...formData,
-                        isTeamCalendar: checked as boolean,
-                      })
-                    }
-                  />
-                  <Label
-                    htmlFor="team-calendar"
-                    className="text-sm text-slate-700 cursor-pointer"
-                  >
-                    This is a team calendar
-                  </Label>
-                </div>
-              </div>
-            </div>
-
-            {/* Existing Calendars List */}
+            {/* Calendars List */}
             {loading ? (
               <div className="text-center py-8 text-slate-500">
                 Loading calendars...
@@ -743,7 +509,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
             ) : calendars.length > 0 ? (
               <div className="space-y-3">
                 <Label className="text-sm font-semibold text-slate-700">
-                  Your Shared Calendars
+                  Shared Calendars ({calendars.length})
                 </Label>
                 {calendars.map((calendar) => (
                   <div
@@ -819,7 +585,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
               </div>
             ) : (
               <div className="text-center py-8 text-slate-500">
-                No shared calendars yet. Create one to get started.
+                No shared calendars yet. Use the Share button to create one.
               </div>
             )}
           </div>
@@ -833,24 +599,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
                 onClick={() => setIsOpen(false)}
               >
                 <Ban className="w-4 h-4" />
-                Cancel
-              </Button>
-              <Button
-                className="primary-btn"
-                onClick={handleCreate}
-                disabled={creating || !formData.name.trim()}
-              >
-                {creating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Calendar
-                  </>
-                )}
+                Close
               </Button>
             </div>
           </div>
@@ -1216,6 +965,85 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
               >
                 <Check className="w-4 h-4 mr-2" />
                 Update Calendar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Calendar Confirmation Dialog */}
+      <Dialog
+        open={isDeleteCalendarDialogOpen}
+        onOpenChange={setIsDeleteCalendarDialogOpen}
+      >
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+          <VisuallyHiddenPrimitive.Root>
+            <DialogTitle>Delete Shared Calendar</DialogTitle>
+          </VisuallyHiddenPrimitive.Root>
+          {/* Professional Cap */}
+          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+          {/* Header */}
+          <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 mt-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold sidebar-gradient-text">
+                  Delete Shared Calendar
+                </h2>
+                <DialogDescription className="text-sm text-slate-600 mt-1">
+                  Are you sure you want to delete &quot;{calendarToDelete?.name}
+                  &quot;? This action cannot be undone and will remove the
+                  calendar for all shared users.
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="px-6 py-5 space-y-3 bg-white">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <p className="text-sm text-slate-700">
+                <strong>Warning:</strong> Deleting this calendar will
+                permanently remove it and all associated events. All users who
+                have access to this calendar will lose access immediately.
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="text-xs text-slate-500">
+              This action is permanent.
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={cancelDeleteCalendar}
+                className="primary-btn px-3 sm:px-4"
+                disabled={isDeleting}
+              >
+                <Ban className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDeleteCalendar}
+                className="primary-btn px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Calendar
+                  </>
+                )}
               </Button>
             </div>
           </div>

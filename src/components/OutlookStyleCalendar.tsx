@@ -30,6 +30,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import CalendarSettings from '@/components/CalendarSettings';
 import { SharedCalendarManager } from '@/components/SharedCalendarManager';
+import { CreateSharedCalendarDialog } from '@/components/CreateSharedCalendarDialog';
 import { ResourceManager } from '@/components/ResourceManager';
 import { CalendarDelegationManager } from '@/components/CalendarDelegationManager';
 import { CalendarSidebar } from '@/components/CalendarSidebar';
@@ -417,6 +418,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Enable automatic sync with Outlook (polls every 5 minutes)
   useAutoSync(user?.$id, outlookConnected);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isCreateSharedCalendarOpen, setIsCreateSharedCalendarOpen] =
+    useState(false);
   const [shareSettings, setShareSettings] = useState({
     users: [],
     permissions: 'view' as 'view' | 'edit',
@@ -3464,10 +3467,35 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             Filter
           </Button>
 
+          <CreateSharedCalendarDialog
+            open={isCreateSharedCalendarOpen}
+            onOpenChange={setIsCreateSharedCalendarOpen}
+            onCalendarCreated={async (calendar) => {
+              // Refresh shared calendars if needed
+              if (!loadingSharedCalendars) {
+                setLoadingSharedCalendars(true);
+                try {
+                  const response = await fetch('/api/calendar/shared');
+                  if (response.ok) {
+                    const data = await response.json();
+                    setSharedCalendars(data.calendars || []);
+                  }
+                } catch (error) {
+                  console.error(
+                    '[CLIENT] OutlookStyleCalendar] Error refreshing shared calendars:',
+                    error
+                  );
+                } finally {
+                  setLoadingSharedCalendars(false);
+                }
+              }
+            }}
+          />
           <Button
             size="sm"
             variant="outline"
             className="primary-btn px-3 sm:px-4"
+            onClick={() => setIsCreateSharedCalendarOpen(true)}
           >
             <Share2 className="h-4 w-4" />
             Share

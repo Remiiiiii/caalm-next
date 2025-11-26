@@ -46,11 +46,11 @@ export async function GET(
     const roles = await Promise.all(
       roleIds.map(async (roleId: string) => {
         try {
-          const role = await tablesDB.getRow(
-            appwriteConfig.databaseId || 'default-db',
-            'roles',
-            roleId
-          );
+          const role = await tablesDB.getRow({
+            databaseId: appwriteConfig.databaseId || 'default-db',
+            tableId: 'roles',
+            rowId: roleId,
+          });
           return role;
         } catch {
           return null;
@@ -127,11 +127,11 @@ export async function POST(
     });
 
     for (const ur of existingRoles.rows) {
-      await tablesDB.deleteRow(
-        appwriteConfig.databaseId || 'default-db',
-        'user_roles',
-        ur.$id
-      );
+      await tablesDB.deleteRow({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: 'user_roles',
+        rowId: ur.$id,
+      });
     }
 
     // Assign new role

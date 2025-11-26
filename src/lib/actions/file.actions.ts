@@ -223,12 +223,12 @@ export const uploadFile = async ({
         fileRef: newFile.$id,
       };
 
-      const contract = await tablesDB.createRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.contractsCollectionId,
-        ID.unique(),
-        contractDocument
-      );
+      const contract = await tablesDB.createRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.contractsCollectionId,
+        rowId: ID.unique(),
+        data: contractDocument,
+      });
 
       // Save all contract metadata in the file document for easy access
       const fileUpdateData = {
@@ -366,11 +366,11 @@ export const getFiles = async ({
 
     const queries = createQueries(currentUser, types, searchText, sort, limit);
 
-    const files = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
-      queries
-    );
+    const files = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.filesCollectionId,
+      queries: queries,
+    });
 
     // Defensive: always return a plain object with a documents array
     const plain = parseStringify(files);
@@ -564,11 +564,11 @@ export const assignContract = async ({
     // Fetch the contract document from the contracts collection
     let contractDoc;
     try {
-      contractDoc = await tablesDB.getRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.contractsCollectionId,
-        fileId
-      );
+      contractDoc = await tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.contractsCollectionId,
+        rowId: fileId,
+      });
     } catch (error) {
       console.error('Contract document not found with ID:', fileId, error);
       console.error('Available collections:', {
@@ -724,10 +724,10 @@ export const getContracts = async () => {
     }
     // Fetch contracts where file owner matches current user
     // (Assumes you want contracts for the user's files)
-    const contracts = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId
-    );
+    const contracts = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+    });
     return parseStringify(contracts);
   } catch (error) {
     handleError(error, 'Failed to get contracts');
@@ -739,11 +739,11 @@ export const getContractsForManager = async (managerAccountId: string) => {
   const { tablesDB } = await createAdminClient();
   try {
     // Fetch contracts where the manager's accountId is in the assignedManagers array
-    const contracts = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      [Query.search('assignedManagers', managerAccountId)]
-    );
+    const contracts = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      queries: [Query.search('assignedManagers', managerAccountId)],
+    });
     return parseStringify(contracts.rows);
   } catch (error) {
     handleError(error, 'Failed to get contracts for manager');
@@ -753,11 +753,10 @@ export const getContractsForManager = async (managerAccountId: string) => {
 export const getTotalContractsCount = async () => {
   const { tablesDB } = await createAdminClient();
   try {
-    const contracts = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      []
-    );
+    const contracts = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+    });
     return contracts.total;
   } catch (error) {
     console.error('Failed to fetch total contracts count:', error);
@@ -771,10 +770,10 @@ export const getExpiringContractsCount = async () => {
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-    const contracts = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      [
+    const contracts = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+      queries: [
         Query.lessThanEqual(
           'contractExpiryDate',
           thirtyDaysFromNow.toISOString().split('T')[0]
@@ -783,8 +782,8 @@ export const getExpiringContractsCount = async () => {
           'contractExpiryDate',
           new Date().toISOString().split('T')[0]
         ),
-      ]
-    );
+      ],
+    });
     return contracts.total;
   } catch (error) {
     console.error('Failed to fetch expiring contracts count:', error);
@@ -797,11 +796,10 @@ export const getContractsByUserDivision = async (userDivision: string) => {
   const { tablesDB } = await createAdminClient();
   try {
     // Get all contracts
-    const contracts = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      []
-    );
+    const contracts = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId,
+    });
 
     // Filter contracts where assigned managers belong to the user's division
     const filteredContracts = [];

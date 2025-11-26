@@ -26,24 +26,24 @@ export async function syncDeletionToOutlook(
     try {
       // Get the event details
       const adminClient = await createAdminClient();
-      const event = await adminClient.tablesDB.getRow(
-        appwriteConfig.databaseId!,
-        appwriteConfig.calendarEventsCollectionId!,
-        eventId
-      );
+      const event = await adminClient.tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.calendarEventsCollectionId!,
+        rowId: eventId,
+      });
 
       if (!event.outlook_id) {
         // No Outlook ID means it was never synced, mark as successfully deleted
         // No need to log audit event - the main deletion already logged it
-        await adminClient.tablesDB.updateRow(
-          appwriteConfig.databaseId!,
-          appwriteConfig.calendarEventsCollectionId!,
-          eventId,
-          {
+        await adminClient.tablesDB.updateRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.calendarEventsCollectionId!,
+          rowId: eventId,
+          data: {
             deletion_status: 'deleted_from_outlook',
             deletion_synced: true,
-          }
-        );
+          },
+        });
 
         return { success: true, retryCount };
       }
@@ -57,15 +57,15 @@ export async function syncDeletionToOutlook(
       if (!integration) {
         // No Microsoft integration, mark as successfully deleted
         // No need to log audit event - the main deletion already logged it
-        await adminClient.tablesDB.updateRow(
-          appwriteConfig.databaseId!,
-          appwriteConfig.calendarEventsCollectionId!,
-          eventId,
-          {
+        await adminClient.tablesDB.updateRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.calendarEventsCollectionId!,
+          rowId: eventId,
+          data: {
             deletion_status: 'deleted_from_outlook',
             deletion_synced: true,
-          }
-        );
+          },
+        });
 
         return { success: true, retryCount };
       }
@@ -80,15 +80,15 @@ export async function syncDeletionToOutlook(
       await graphClient.deleteEvent(event.outlook_id);
 
       // Successfully deleted from Outlook
-      await adminClient.tablesDB.updateRow(
-        appwriteConfig.databaseId!,
-        appwriteConfig.calendarEventsCollectionId!,
-        eventId,
-        {
+      await adminClient.tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.calendarEventsCollectionId!,
+        rowId: eventId,
+        data: {
           deletion_status: 'deleted_from_outlook',
           deletion_synced: true,
-        }
-      );
+        },
+      });
 
       // Get orgId for audit logging
       let orgId: string | undefined;
@@ -167,15 +167,15 @@ export async function syncDeletionToOutlook(
 
   // All retries failed
   const adminClient = await createAdminClient();
-  await adminClient.tablesDB.updateRow(
-    appwriteConfig.databaseId!,
-    appwriteConfig.calendarEventsCollectionId!,
-    eventId,
-    {
+  await adminClient.tablesDB.updateRow({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: appwriteConfig.calendarEventsCollectionId!,
+    rowId: eventId,
+    data: {
       deletion_status: 'deletion_failed',
       deletion_synced: false,
-    }
-  );
+    },
+  });
 
   return { success: false, error: lastError, retryCount };
 }
@@ -199,15 +199,15 @@ export async function retryFailedDeletions(): Promise<{
     const adminClient = await createAdminClient();
 
     // Find all events with failed deletion status
-    const response = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      [
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      queries: [
         Query.equal('deletion_status', 'deletion_failed'),
         Query.isNotNull('deleted_at'),
         Query.limit(50), // Process in batches
-      ]
-    );
+      ],
+    });
 
     const failedEvents = response.rows;
     let successful = 0;
@@ -250,16 +250,16 @@ export async function getPendingDeletionSyncs(): Promise<any[]> {
 
     const adminClient = await createAdminClient();
 
-    const response = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      [
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      queries: [
         Query.equal('deletion_status', 'pending_outlook_deletion'),
         Query.isNotNull('deleted_at'),
         Query.orderAsc('deleted_at'),
         Query.limit(100),
-      ]
-    );
+      ],
+    });
 
     return response.rows;
   } catch (error) {
