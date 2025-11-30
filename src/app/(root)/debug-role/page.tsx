@@ -41,10 +41,10 @@ export default function DebugRolePage() {
               After updating your role to &quot;admin&quot;, refresh the page
               and try accessing
               <Link
-                href="/analytics/admin"
+                href="/analytics?tab=organization"
                 className="text-blue-600 hover:underline ml-1"
               >
-                /analytics/admin
+                /analytics?tab=organization
               </Link>
             </p>
           </div>

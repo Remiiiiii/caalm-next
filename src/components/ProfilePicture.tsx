@@ -291,7 +291,7 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem onClick={handleFileSelect} disabled={isUploading}>
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4" />
             {profileImageUrl ? 'Change picture' : 'Upload picture'}
           </DropdownMenuItem>
           {profileImageUrl && (
@@ -300,7 +300,7 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
               disabled={isUploading}
               className="text-red-600 hover:text-red-700"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <Trash2 className="w-4 h-4" />
               Remove picture
             </DropdownMenuItem>
           )}

@@ -307,12 +307,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
             >
               {generatingDepartment ? (
                 <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="h-4 w-4 animate-spin" />
                   Generating...
                 </>
               ) : (
                 <>
-                  <FileText className="h-4 w-4 mr-2" />
+                  <FileText className="h-4 w-4" />
                   Generate New Report
                 </>
               )}
@@ -535,7 +535,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
                       }
                       className="primary-btn  col-span-2"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4" />
                       Delete Report
                     </Button>
                   </div>

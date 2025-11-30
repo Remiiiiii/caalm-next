@@ -144,7 +144,59 @@ export async function DELETE(
       );
     }
 
+    // Get all users who have access to this calendar before deleting
+    const recipientUserIds: string[] = [];
+    
+    // Collect user IDs from sharePermissions (new model)
+    if (calendar.sharePermissions) {
+      let sharePermissions: any[] = [];
+      if (Array.isArray(calendar.sharePermissions)) {
+        sharePermissions = calendar.sharePermissions;
+      } else if (typeof calendar.sharePermissions === 'string') {
+        try {
+          sharePermissions = JSON.parse(calendar.sharePermissions);
+        } catch {
+          sharePermissions = [];
+        }
+      }
+      recipientUserIds.push(...sharePermissions.map((p: any) => p.userId));
+    }
+    
+    // Collect user IDs from sharedWith (legacy model)
+    if (calendar.sharedWith) {
+      let sharedWith: string[] = [];
+      if (Array.isArray(calendar.sharedWith)) {
+        sharedWith = calendar.sharedWith;
+      } else if (typeof calendar.sharedWith === 'string') {
+        try {
+          sharedWith = JSON.parse(calendar.sharedWith);
+        } catch {
+          sharedWith = [];
+        }
+      }
+      recipientUserIds.push(...sharedWith);
+    }
+    
+    // Delete the calendar
     await deleteSharedCalendar(calendarId);
+    
+    // Invalidate cache for all recipients and the owner
+    const { CacheManager } = await import('@/lib/services/cache-manager');
+    const { getUserDefaultOrganization } = await import('@/lib/rbac/permissions');
+    
+    // Invalidate cache for owner
+    const ownerOrg = await getUserDefaultOrganization(calendar.ownerId);
+    if (ownerOrg) {
+      await CacheManager.invalidateCalendar(undefined, undefined, calendar.ownerId, ownerOrg.orgId);
+    }
+    
+    // Invalidate cache for all recipients
+    for (const recipientId of recipientUserIds) {
+      const recipientOrg = await getUserDefaultOrganization(recipientId);
+      if (recipientOrg) {
+        await CacheManager.invalidateCalendar(undefined, undefined, recipientId, recipientOrg.orgId);
+      }
+    }
 
     return NextResponse.json({
       success: true,

@@ -67,7 +67,9 @@ export class CacheManager {
    */
   static async invalidateCalendar(
     year?: number,
-    month?: number
+    month?: number,
+    userId?: string,
+    orgId?: string
   ): Promise<void> {
     if (year && month) {
       // Invalidate all user-specific caches for this month
@@ -77,6 +79,17 @@ export class CacheManager {
     } else {
       // Invalidate all calendar events (all users, all months)
       await cache.clear('^calendar:events:');
+    }
+    
+    // Invalidate shared calendars cache if userId and orgId provided
+    if (userId && orgId) {
+      await cache.del(CACHE_KEYS.calendar.shared(userId, orgId));
+    } else if (userId) {
+      // Invalidate all shared calendar caches for this user
+      await cache.clear(`^calendar:shared:${userId}:`);
+    } else {
+      // Invalidate all shared calendar caches
+      await cache.clear('^calendar:shared:');
     }
   }
 
@@ -111,11 +124,15 @@ export class CacheManager {
   /**
    * Invalidate users cache
    */
-  static async invalidateUsers(): Promise<void> {
+  static async invalidateUsers(email?: string): Promise<void> {
     await cache.del(CACHE_KEYS.users.all());
     await cache.del(CACHE_KEYS.users.uninvited());
     // Clear search cache
     await cache.clear('^users:search:');
+    // Invalidate specific user by email if provided
+    if (email) {
+      await cache.del(`user:email:${email.toLowerCase()}`);
+    }
   }
 
   /**
@@ -164,14 +181,37 @@ export class CacheManager {
 
   /**
    * Warm up cache with common data
+   * This pre-fetches critical data to ensure fast initial page loads
    */
   static async warmUp(orgId: string, userId: string): Promise<void> {
-    // This can be called on application startup or periodically
-    // to pre-cache commonly accessed data
-    console.log(`Warming up cache for org: ${orgId}, user: ${userId}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Warming up cache for org: ${orgId}, user: ${userId}`);
+    }
 
-    // Add your warming logic here
-    // Example: Pre-fetch dashboard stats, recent activities, etc.
+    try {
+      // Pre-fetch unified dashboard data in background
+      // This ensures cache is populated before first user request
+      const dashboardKey = CACHE_KEYS.dashboard.unified(orgId, userId);
+      const existingCache = await import('./redis-cache').then(m => m.get(dashboardKey));
+      
+      // Only warm up if cache is empty or stale (older than 10 minutes)
+      if (!existingCache || (existingCache.timestamp && (Date.now() - existingCache.timestamp) > 600000)) {
+        // Fire and forget - don't block
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/dashboard/unified?orgId=${orgId}&userId=${userId}`, {
+          method: 'GET',
+          headers: {
+            'X-Warm-Up': 'true', // Special header to identify warm-up requests
+          },
+        }).catch(() => {
+          // Silently fail - warm-up is non-critical
+        });
+      }
+    } catch (error) {
+      // Silently fail - warm-up should not break the app
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Cache warm-up failed:', error);
+      }
+    }
   }
 }
 

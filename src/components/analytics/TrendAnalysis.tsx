@@ -341,7 +341,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
             size="sm"
             className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30"
           >
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="h-4 w-4" />
             Export
           </Button>
         </div>
@@ -405,28 +405,28 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
                 value="contracts"
                 className="data-[state=active]:bg-white/30"
               >
-                <BarChart3 className="h-4 w-4 mr-2" />
+                <BarChart3 className="h-4 w-4" />
                 Contracts
               </TabsTrigger>
               <TabsTrigger
                 value="budget"
                 className="data-[state=active]:bg-white/30"
               >
-                <TrendingUp className="h-4 w-4 mr-2" />
+                <TrendingUp className="h-4 w-4" />
                 Budget
               </TabsTrigger>
               <TabsTrigger
                 value="compliance"
                 className="data-[state=active]:bg-white/30"
               >
-                <PieChart className="h-4 w-4 mr-2" />
+                <PieChart className="h-4 w-4" />
                 Compliance
               </TabsTrigger>
               <TabsTrigger
                 value="renewals"
                 className="data-[state=active]:bg-white/30"
               >
-                <Calendar className="h-4 w-4 mr-2" />
+                <Calendar className="h-4 w-4" />
                 Renewals
               </TabsTrigger>
             </TabsList>

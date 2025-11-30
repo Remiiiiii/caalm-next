@@ -369,7 +369,7 @@ export const CreateSharedCalendarDialog: React.FC<
               Cancel
             </Button>
             <Button
-              className="primary-btn"
+              className="primary-btn px-3 sm:px-4"
               onClick={handleCreate}
               disabled={creating || !formData.name.trim()}
             >
@@ -380,7 +380,7 @@ export const CreateSharedCalendarDialog: React.FC<
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4" />
                   Create Calendar
                 </>
               )}

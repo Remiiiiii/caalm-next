@@ -132,7 +132,7 @@ const Insights = () => {
                 size="sm"
                 className="bg-white/60 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="h-4 w-4" />
                 Back
               </Button>
               <h3 className="absolute left-1/2 transform -translate-x-1/2 font-bold sm:text-3xl py-2 md:text-[2em] leading-tight sidebar-gradient-text">

@@ -25,6 +25,8 @@ export const CACHE_KEYS = {
         ? `calendar:events:${userId}:${year}:${month}`
         : `calendar:events:${year}:${month}`,
     event: (eventId: string) => `calendar:event:${eventId}`,
+    shared: (userId: string, orgId: string) =>
+      `calendar:shared:${userId}:${orgId}`,
   },
 
   // Notifications
@@ -102,6 +104,7 @@ export const getTTLForRoute = (route: string): number => {
     'analytics/unified': CACHE_TTLS.veryLong,
     'analytics/admin': CACHE_TTLS.veryLong,
     'calendar/events': CACHE_TTLS.medium,
+    'calendar/shared': CACHE_TTLS.medium,
     notifications: CACHE_TTLS.short,
     'notifications/stats': CACHE_TTLS.medium,
     contracts: CACHE_TTLS.long,

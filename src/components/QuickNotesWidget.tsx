@@ -28,6 +28,7 @@ import {
   Strikethrough,
   List,
   ListOrdered,
+  Ban,
 } from 'lucide-react';
 import {
   Dialog,
@@ -621,7 +622,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
                     onClick={() => openDeleteDialog(selectedNote!)}
                     className="text-slate-700 hover:text-red focus:text-red"
                   >
-                    <Trash2 className="h-4 w-4 mr-2 text-red" />
+                    <Trash2 className="h-4 w-4 text-red" />
                     Delete Note
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -756,12 +757,12 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
           <div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
             <AlertDialogCancel className="primary-btn px-3 sm:px-4">
-              <Trash2 className="w-4 h-4" />
+              <Ban className="w-4 h-4" />
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteNote}
-              className="primary-btn"
+              className="primary-btn px-3 sm:px-4"
             >
               Delete Note
             </AlertDialogAction>

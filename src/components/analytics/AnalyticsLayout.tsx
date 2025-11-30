@@ -38,7 +38,7 @@ const divisionConfig = {
     description: 'Admin operations and performance metrics',
     icon: Building,
     color: 'bg-blue-500',
-    route: '/analytics/admin',
+    route: '/analytics?tab=organization',
   },
   'child-welfare': {
     name: 'Child Welfare',
@@ -169,7 +169,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
           </p>
           <Link href="/analytics">
             <Button className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <ArrowLeft className="h-4 w-4" />
               Back to Analytics
             </Button>
           </Link>
@@ -191,7 +191,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
 
           <Link href="/analytics">
             <Button className="bg-white/20 backdrop-blur border text-slate-700 border-white/40 hover:bg-white/30 transition-all duration-300">
-              <ArrowLeft className="h-4 w-4 mr-2 text-slate-700" />
+              <ArrowLeft className="h-4 w-4 text-slate-700" />
               Back to Analytics
             </Button>
           </Link>
@@ -210,7 +210,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
             size="sm"
             className="bg-white/60 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
         </Link>

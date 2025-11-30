@@ -26,6 +26,7 @@ import { createEventReminder } from '@/lib/services/calendar-notifications.servi
 import {
   createResourceBooking,
   checkResourceAvailability,
+  getResourceById,
 } from '@/lib/actions/resource-management.actions';
 
 const buildPermissionErrorResponse = (
@@ -333,51 +334,63 @@ export async function POST(request: NextRequest) {
     // Note: Audit logging for 'create' action is not supported by the current schema
     // The audit logs collection only supports: delete, sync_delete, restore, cleanup
 
-    // Priority 2: Handle resource booking if location is specified
+    // Priority 2: Handle resource booking if resourceId is provided or location matches a resource
     let resourceBookingId: string | null = null;
-    if (eventData.location && createdEvent.$id) {
+    if (createdEvent.$id && (eventData.resourceId || eventData.location)) {
       try {
-        // Check if location matches a resource
-        const { getResources } = await import('@/lib/actions/resource-management.actions');
-        const defaultOrg = await getUserDefaultOrganization(permissionCheck.userId || userId);
-        if (defaultOrg) {
-          const resources = await getResources(defaultOrg.orgId);
-          const matchingResource = resources.find(
-            (r) => r.name.toLowerCase() === (eventData.location as string).toLowerCase() ||
-                   (r.location && r.location.toLowerCase() === (eventData.location as string).toLowerCase())
+        let resource = null;
+
+        // First, try to get resource by ID if provided directly
+        if (eventData.resourceId) {
+          resource = await getResourceById(eventData.resourceId as string);
+          if (!resource) {
+            console.warn('[SERVER] POST /api/calendar/events] Resource not found by ID:', eventData.resourceId);
+          }
+        }
+
+        // If no resource found by ID, try matching by location name
+        if (!resource && eventData.location) {
+          const { getResources } = await import('@/lib/actions/resource-management.actions');
+          const defaultOrg = await getUserDefaultOrganization(permissionCheck.userId || userId);
+          if (defaultOrg) {
+            const resources = await getResources(defaultOrg.orgId);
+            resource = resources.find(
+              (r) => r.name.toLowerCase() === (eventData.location as string).toLowerCase() ||
+                     (r.location && r.location.toLowerCase() === (eventData.location as string).toLowerCase())
+            ) || null;
+          }
+        }
+
+        if (resource) {
+          // Check availability
+          const availability = await checkResourceAvailability(
+            resource.$id,
+            eventData.startDate as string,
+            eventData.endDate || eventData.startDate,
+            eventData.startTime || '00:00',
+            eventData.endTime || '23:59'
           );
 
-          if (matchingResource) {
-            // Check availability
-            const availability = await checkResourceAvailability(
-              matchingResource.$id,
-              eventData.startDate as string,
-              eventData.endDate || eventData.startDate,
-              eventData.startTime || '00:00',
-              eventData.endTime || '23:59'
-            );
+          if (availability.available) {
+            // Create resource booking
+            const booking = await createResourceBooking({
+              resourceId: resource.$id,
+              eventId: createdEvent.$id,
+              startDate: eventData.startDate as string,
+              endDate: eventData.endDate || eventData.startDate,
+              startTime: eventData.startTime || '00:00',
+              endTime: eventData.endTime || '23:59',
+              requestedBy: permissionCheck.userId || userId,
+              requestedByAccountId: userId,
+            });
+            resourceBookingId = booking.$id;
 
-            if (availability.available) {
-              // Create resource booking
-              const booking = await createResourceBooking({
-                resourceId: matchingResource.$id,
-                eventId: createdEvent.$id,
-                startDate: eventData.startDate as string,
-                endDate: eventData.endDate || eventData.startDate,
-                startTime: eventData.startTime || '00:00',
-                endTime: eventData.endTime || '23:59',
-                requestedBy: permissionCheck.userId || userId,
-                requestedByAccountId: userId,
-              });
-              resourceBookingId = booking.$id;
-
-              // If booking requires approval, add to response
-              if (booking.status === 'pending') {
-                console.log('[SERVER] POST /api/calendar/events] Resource booking requires approval');
-              }
-            } else {
-              console.warn('[SERVER] POST /api/calendar/events] Resource not available:', availability.reason);
+            // If booking requires approval, add to response
+            if (booking.status === 'pending') {
+              console.log('[SERVER] POST /api/calendar/events] Resource booking requires approval');
             }
+          } else {
+            console.warn('[SERVER] POST /api/calendar/events] Resource not available:', availability.reason);
           }
         }
       } catch (resourceError) {

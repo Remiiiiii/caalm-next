@@ -32,6 +32,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Minimize2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
@@ -453,14 +454,14 @@ export const ResourceManager: React.FC<ResourceManagerProps> = ({
                     </div>
                     <div className="flex items-center gap-2 ml-4">
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 text-[#0f5384]" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0 hover:bg-red-50"
                       >
-                        <Trash2 className="w-4 h-4 text-red-600" />
+                        <Trash2 className="w-4 h-4 text-red" />
                       </Button>
                     </div>
                   </div>
@@ -479,13 +480,14 @@ export const ResourceManager: React.FC<ResourceManagerProps> = ({
           <div className="flex items-center justify-end gap-3">
             <Button
               variant="outline"
-              className="primary-btn"
+              className="primary-btn px-3 sm:px-4"
               onClick={() => setIsOpen(false)}
             >
+              <Minimize2 className="w-4 h-4" />
               Close
             </Button>
             <Button
-              className="primary-btn"
+              className="primary-btn px-3 sm:px-4"
               onClick={handleCreate}
               disabled={creating || !formData.name.trim()}
             >
@@ -496,7 +498,7 @@ export const ResourceManager: React.FC<ResourceManagerProps> = ({
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4" />
                   Create Resource
                 </>
               )}

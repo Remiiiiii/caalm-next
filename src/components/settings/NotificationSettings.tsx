@@ -132,7 +132,7 @@ const NotificationSettings = () => {
         disabled={isLoading}
         className="w-full bg-blue-500 hover:bg-blue-600"
       >
-        <Save className="h-4 w-4 mr-2" />
+        <Save className="h-4 w-4" />
         {isLoading ? 'Saving...' : 'Save Preferences'}
       </Button>
     </div>

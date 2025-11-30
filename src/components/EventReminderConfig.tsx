@@ -263,7 +263,7 @@ export const EventReminderConfig: React.FC<EventReminderConfigProps> = ({
           onClick={() => setShowAddReminder(true)}
           className="w-full h-9 border-slate-300 hover:border-blue-500"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4" />
           Add Reminder
         </Button>
       )}

@@ -198,7 +198,7 @@ const TwoFactorSetup = () => {
             onClick={enableTwoFactor}
             className="w-full bg-blue-500 hover:bg-blue-600"
           >
-            <Smartphone className="h-4 w-4 mr-2" />
+            <Smartphone className="h-4 w-4" />
             Enable 2FA
           </Button>
         </div>
@@ -285,7 +285,7 @@ const TwoFactorSetup = () => {
               size="sm"
               className="w-full"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4" />
               Regenerate QR Code
             </Button>
           </div>

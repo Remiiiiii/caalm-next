@@ -185,7 +185,7 @@ export default function ContractOpportunitiesWidget({
                     variant="outline"
                     className="bg-white/30 backdrop-blur border border-white/40"
                   >
-                    <Search className="h-4 w-4 mr-2" />
+                    <Search className="h-4 w-4" />
                     View All {totalRecords.toLocaleString()} Opportunities
                   </Button>
                 </Link>
@@ -204,7 +204,7 @@ export default function ContractOpportunitiesWidget({
                 variant="outline"
                 className="bg-white/30 backdrop-blur border border-white/40"
               >
-                <Search className="h-4 w-4 mr-2" />
+                <Search className="h-4 w-4" />
                 Search All Opportunities
               </Button>
             </Link>

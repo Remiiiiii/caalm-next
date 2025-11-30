@@ -884,7 +884,7 @@ ${contractDetails.attachments
                                 size="sm"
                                 className="shadow-drop-1 border-cyan-500 hover:border-cyan-600 focus:border-cyan-600"
                               >
-                                <Bot className="h-4 w-4 mr-2" />
+                                <Bot className="h-4 w-4" />
                                 Summarize
                               </Button>
                               <Button
@@ -892,7 +892,7 @@ ${contractDetails.attachments
                                 size="sm"
                                 className="shadow-drop-1 border-cyan-500 hover:border-cyan-600 focus:border-cyan-600"
                               >
-                                <Download className="h-4 w-4 mr-2" />
+                                <Download className="h-4 w-4" />
                                 Download
                               </Button>
                             </div>
@@ -937,12 +937,12 @@ ${contractDetails.attachments
                   >
                     {isAnalyzing ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         Analyzing...
                       </>
                     ) : (
                       <>
-                        <Lightbulb className="h-4 w-4 mr-2" />
+                        <Lightbulb className="h-4 w-4" />
                         Analyze Document
                       </>
                     )}
@@ -956,7 +956,7 @@ ${contractDetails.attachments
                   >
                     {isAnalyzing ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         Re-analyzing...
                       </>
                     ) : (
@@ -1318,7 +1318,7 @@ ${contractDetails.attachments
                         >
                           {isAiLoading ? (
                             <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <Loader2 className="h-4 w-4 animate-spin" />
                               Thinking...
                             </>
                           ) : (

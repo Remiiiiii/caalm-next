@@ -35,10 +35,18 @@ import {
   X,
   UserPlus,
   AlertTriangle,
+  Minimize2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
 import { cn } from '@/lib/utils';
+import { useSharedCalendars } from '@/hooks/useSharedCalendars';
+
+import type {
+  CalendarPermissionLevel,
+  CalendarSharePermission,
+} from '@/lib/actions/shared-calendar.actions';
+import { CALENDAR_PERMISSION_LABELS } from '@/lib/actions/shared-calendar.actions';
 
 interface SharedCalendar {
   $id: string;
@@ -47,11 +55,13 @@ interface SharedCalendar {
   ownerId: string;
   ownerAccountId: string;
   organizationId: string;
+  isPrimaryCalendar?: boolean;
   isTeamCalendar: boolean;
   teamId?: string;
   color?: string;
   isPublic: boolean;
-  sharedWith?: string[]; // Array of user IDs who have access
+  sharePermissions?: CalendarSharePermission[]; // New: Per-user permissions
+  sharedWith?: string[]; // Legacy: Array of user IDs who have access
   createdAt: string;
   updatedAt: string;
 }
@@ -83,7 +93,13 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
   const [calendarToDelete, setCalendarToDelete] =
     useState<SharedCalendar | null>(null);
   const [sharedUsers, setSharedUsers] = useState<
-    Array<{ $id: string; fullName?: string; name?: string; email: string }>
+    Array<{
+      $id: string;
+      fullName?: string;
+      name?: string;
+      email: string;
+      permissionLevel?: CalendarPermissionLevel;
+    }>
   >([]);
   const [userSearch, setUserSearch] = useState('');
   const [searchResults, setSearchResults] = useState<
@@ -100,11 +116,20 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
   });
   const { toast } = useToast();
 
+  // Use optimized SWR hook for shared calendars
+  const {
+    calendars: swrCalendars,
+    isLoading: swrLoading,
+    refresh,
+  } = useSharedCalendars();
+
   useEffect(() => {
     if (isOpen) {
-      fetchCalendars();
+      // Update local state from SWR data (cast to match component's type)
+      setCalendars(swrCalendars as SharedCalendar[]);
+      setLoading(swrLoading);
     }
-  }, [isOpen]);
+  }, [isOpen, swrCalendars, swrLoading]);
 
   // Load shared users when share dialog opens or selectedCalendar changes
   useEffect(() => {
@@ -123,33 +148,31 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
   }, [userSearch]);
 
   const fetchCalendars = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/calendar/shared');
-      if (response.ok) {
-        const data = await response.json();
-        setCalendars(data.calendars || []);
-      }
-    } catch (error) {
-      console.error(
-        '[CLIENT] SharedCalendarManager] Error fetching calendars:',
-        error
-      );
-      toast({
-        title: 'Error',
-        description: 'Failed to load shared calendars',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Use SWR's mutate to refresh data
+    await refresh();
+    // Type assertion needed due to slight type differences between hook and component
+    setCalendars(swrCalendars as any);
   };
 
   const loadSharedUsers = async (calendar?: SharedCalendar | null) => {
     // Use provided calendar or fall back to selectedCalendar
     const calendarToUse = calendar || selectedCalendar;
 
-    if (!calendarToUse?.sharedWith || calendarToUse.sharedWith.length === 0) {
+    // Get user IDs from sharePermissions (new) or sharedWith (legacy)
+    const userIds: string[] = [];
+    if (
+      calendarToUse?.sharePermissions &&
+      calendarToUse.sharePermissions.length > 0
+    ) {
+      userIds.push(...calendarToUse.sharePermissions.map((p) => p.userId));
+    } else if (
+      calendarToUse?.sharedWith &&
+      calendarToUse.sharedWith.length > 0
+    ) {
+      userIds.push(...calendarToUse.sharedWith);
+    }
+
+    if (userIds.length === 0) {
       setSharedUsers([]);
       return;
     }
@@ -158,12 +181,24 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
       const response = await fetch('/api/users/get-by-ids', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userIds: calendarToUse.sharedWith }),
+        body: JSON.stringify({ userIds }),
       });
 
       if (response.ok) {
         const users = await response.json();
-        setSharedUsers(Array.isArray(users) ? users : []);
+        // Enrich users with permission levels
+        const enrichedUsers = (Array.isArray(users) ? users : []).map(
+          (user: any) => {
+            const permission = calendarToUse?.sharePermissions?.find(
+              (p) => p.userId === user.$id
+            );
+            return {
+              ...user,
+              permissionLevel: permission?.permissionLevel || 'view_all', // Default for legacy
+            };
+          }
+        );
+        setSharedUsers(enrichedUsers);
       }
     } catch (error) {
       console.error(
@@ -238,6 +273,8 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
           description: 'User added to shared calendar',
         });
 
+        // Refresh shared calendars immediately for both sender and recipient
+        await refresh();
         await fetchCalendars();
         setUserSearch('');
         setSearchResults([]);
@@ -272,6 +309,62 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
     }
   };
 
+  const handleUpdatePermission = async (
+    userId: string,
+    permissionLevel: CalendarPermissionLevel
+  ) => {
+    if (!selectedCalendar) return;
+
+    // For primary calendars, use the new API endpoint
+    if (selectedCalendar.isPrimaryCalendar) {
+      try {
+        const response = await fetch('/api/calendar/primary/share', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sharedWithUserId: userId,
+            permissionLevel,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Refresh shared calendars immediately
+          await refresh();
+          await fetchCalendars();
+          await loadSharedUsers(data.calendar);
+          toast({
+            title: 'Success',
+            description: 'Permission level updated',
+          });
+        } else {
+          const error = await response.json();
+          toast({
+            title: 'Error',
+            description: error.message || 'Failed to update permission',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        console.error(
+          '[CLIENT] SharedCalendarManager] Error updating permission:',
+          error
+        );
+        toast({
+          title: 'Error',
+          description: 'Failed to update permission',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      // For legacy shared calendars, use existing endpoint
+      toast({
+        title: 'Info',
+        description: 'Permission updates for legacy calendars coming soon',
+      });
+    }
+  };
+
   const handleRemoveUser = async (userId: string) => {
     if (!selectedCalendar) return;
 
@@ -279,6 +372,55 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
     const userToRemove = sharedUsers.find((u) => u.$id === userId);
     setSharedUsers((prev) => prev.filter((u) => u.$id !== userId));
 
+    // For primary calendars, use the new API endpoint
+    if (selectedCalendar.isPrimaryCalendar) {
+      try {
+        const response = await fetch(
+          `/api/calendar/primary/share?userId=${encodeURIComponent(userId)}`,
+          {
+            method: 'DELETE',
+          }
+        );
+
+        if (response.ok) {
+          // Refresh shared calendars immediately
+          await refresh();
+          await fetchCalendars();
+          toast({
+            title: 'Success',
+            description: 'User removed from calendar',
+          });
+        } else {
+          // Rollback optimistic update
+          if (userToRemove) {
+            setSharedUsers((prev) => [...prev, userToRemove]);
+          }
+          const error = await response.json();
+          toast({
+            title: 'Error',
+            description: error.message || 'Failed to remove user',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        // Rollback optimistic update
+        if (userToRemove) {
+          setSharedUsers((prev) => [...prev, userToRemove]);
+        }
+        console.error(
+          '[CLIENT] SharedCalendarManager] Error removing user:',
+          error
+        );
+        toast({
+          title: 'Error',
+          description: 'Failed to remove user',
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
+
+    // Legacy shared calendar removal
     try {
       const response = await fetch(
         `/api/calendar/shared/${selectedCalendar.$id}/users`,
@@ -295,6 +437,9 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
         // Update the selected calendar immediately
         const updatedCalendar = data.calendar;
         setSelectedCalendar(updatedCalendar);
+
+        // Refresh shared calendars immediately
+        await refresh();
 
         // Reload shared users to ensure consistency
         await loadSharedUsers(updatedCalendar);
@@ -417,7 +562,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
       const response = await fetch(
         `/api/calendar/shared/${calendarToDelete.$id}`,
         {
-          method: 'DELETE',
+        method: 'DELETE',
         }
       );
 
@@ -598,7 +743,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
                 className="primary-btn px-3 sm:px-4"
                 onClick={() => setIsOpen(false)}
               >
-                <Ban className="w-4 h-4" />
+                <Minimize2 className="w-4 h-4" />
                 Close
               </Button>
             </div>
@@ -686,18 +831,24 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
               </Label>
               {sharedUsers.length > 0 ? (
                 <div className="space-y-2">
-                  {sharedUsers.map((user) => (
+                  {sharedUsers.map((user: any) => {
+                    const permissionLevel =
+                      (user.permissionLevel as CalendarPermissionLevel) ||
+                      'view_all';
+                    const permissionLabel =
+                      CALENDAR_PERMISSION_LABELS[permissionLevel];
+                    return (
                     <div
                       key={user.$id}
                       className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center justify-between"
                     >
-                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                         <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-sm font-medium">
                           {(user.fullName || user.name || '?')
                             .charAt(0)
                             .toUpperCase()}
                         </div>
-                        <div>
+                          <div className="flex-1">
                           <div className="font-medium text-sm text-slate-900">
                             {user.fullName || user.name}
                           </div>
@@ -705,7 +856,35 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
                             {user.email}
                           </div>
                         </div>
+                          <Badge variant="outline" className="text-xs">
+                            {permissionLabel.label}
+                          </Badge>
                       </div>
+                        <div className="flex items-center gap-2">
+                          {selectedCalendar?.isPrimaryCalendar && (
+                            <Select
+                              value={permissionLevel}
+                              onValueChange={(value) =>
+                                handleUpdatePermission(
+                                  user.$id,
+                                  value as CalendarPermissionLevel
+                                )
+                              }
+                            >
+                              <SelectTrigger className="w-32 h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(CALENDAR_PERMISSION_LABELS).map(
+                                  ([level, { label }]) => (
+                                    <SelectItem key={level} value={level}>
+                                      {label}
+                                    </SelectItem>
+                                  )
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -715,7 +894,9 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
                         <X className="w-4 h-4 text-red-600" />
                       </Button>
                     </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-slate-500 text-sm">
@@ -730,7 +911,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
             <div className="flex items-center justify-end gap-3">
               <Button
                 variant="outline"
-                className="primary-btn"
+                className="primary-btn px-3 sm:px-4"
                 onClick={() => {
                   setIsShareDialogOpen(false);
                   setSelectedCalendar(null);
@@ -738,6 +919,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
                   setSearchResults([]);
                 }}
               >
+                <Minimize2 className="w-4 h-4" />
                 Close
               </Button>
             </div>
@@ -950,20 +1132,21 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
             <div className="flex items-center justify-end gap-3">
               <Button
                 variant="outline"
-                className="primary-btn"
+                className="primary-btn px-3 sm:px-4"
                 onClick={() => {
                   setIsEditDialogOpen(false);
                   setCalendarToEdit(null);
                 }}
               >
+                <Ban className="w-4 h-4" />
                 Cancel
               </Button>
               <Button
-                className="primary-btn"
+                className="primary-btn px-3 sm:px-4"
                 onClick={handleUpdateCalendar}
                 disabled={!editFormData.name.trim()}
               >
-                <Check className="w-4 h-4 mr-2" />
+                <Check className="w-4 h-4" />
                 Update Calendar
               </Button>
             </div>

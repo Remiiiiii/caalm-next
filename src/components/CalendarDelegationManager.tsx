@@ -29,6 +29,7 @@ import {
   User,
   CheckCircle,
   XCircle,
+  Minimize2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
@@ -409,13 +410,14 @@ export const CalendarDelegationManager: React.FC<
           <div className="flex items-center justify-end gap-3">
             <Button
               variant="outline"
-              className="primary-btn"
+              className="primary-btn px-3 sm:px-4"
               onClick={() => setIsOpen(false)}
             >
+              <Minimize2 className="w-4 h-4" />
               Close
             </Button>
             <Button
-              className="primary-btn"
+              className="primary-btn px-3 sm:px-4"
               onClick={handleCreate}
               disabled={creating || !formData.delegateId}
             >
@@ -426,7 +428,7 @@ export const CalendarDelegationManager: React.FC<
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4" />
                   Create Delegation
                 </>
               )}

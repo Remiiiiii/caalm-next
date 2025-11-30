@@ -233,19 +233,7 @@ export const getCalendarEventsByMonth = async (
 
     console.log('Date range:', startDate, 'to', endDate);
 
-    // Fetch all events for the month
-    const response = await adminClient.tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.calendarEventsCollectionId,
-      queries: [
-        Query.isNull('deleted_at'), // Exclude soft-deleted events
-        Query.greaterThanEqual('startDate', startDate),
-        Query.lessThanEqual('startDate', endDate),
-        Query.orderAsc('startDate'),
-      ],
-    });
-
-    let events = response.rows as unknown as CalendarEvent[];
+    let events: CalendarEvent[] = [];
 
     // CRITICAL: Always filter events by user access - never return all events
     // If userId is not provided, return empty array to prevent cross-user data leaks
@@ -279,53 +267,87 @@ export const getCalendarEventsByMonth = async (
         return [];
       }
 
+      // Extract user identifiers for participant matching
+      const userEmail = user.email?.toLowerCase() || '';
+      const userAccountId = user.accountId || '';
+
       // Get shared calendars user has access to
       const sharedCalendars = await getSharedCalendarsForUser(
         userId,
         defaultOrg.orgId
       );
 
+      // Build base queries scoped to org + date range
+      const baseQueries = [
+        Query.isNull('deleted_at'),
+        Query.greaterThanEqual('startDate', startDate),
+        Query.lessThanEqual('startDate', endDate),
+        Query.equal('orgId', defaultOrg.orgId),
+        Query.orderAsc('startDate'),
+      ];
+
+      // Fetch all events in the date range for the organization
+      // We'll filter in-memory to ensure proper access control:
+      // - Events created by the user
+      // - Events where the user is a participant
+      // - Events from explicitly shared calendars
+      // Note: We can't use Query.search() for participants without a fulltext index,
+      // so we fetch all events and filter in-memory
+      const allEventsResponse = await adminClient.tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.calendarEventsCollectionId,
+        queries: baseQueries,
+      });
+
+      events = allEventsResponse.rows as unknown as CalendarEvent[];
+
       // Extract owner IDs and their permission levels from shared calendars
-      // Create a map of calendar owner ID -> permission level
+      // CRITICAL: Only include calendars that are EXPLICITLY shared with this user
+      // Do NOT include public/team calendars unless they're also explicitly shared
+      // This ensures users only see events from calendars they have explicit access to
       type CalendarPermissionLevel = 'view_busy' | 'view_titles' | 'view_all' | 'edit' | 'delegate';
       const sharedCalendarPermissions = new Map<string, CalendarPermissionLevel>();
       
       sharedCalendars
         .filter((cal) => {
-          // Only include calendars that are explicitly shared with this user
-          // Exclude public/team calendars unless they're also explicitly shared
-          if (cal.isPublic || cal.isTeamCalendar) {
-            // For public/team calendars, only include if user is explicitly in sharedWith or has permission
-            const hasPermission = cal.sharePermissions?.some(
-              (p) => p.userId === userId
-            );
-            if (hasPermission) return true;
-            
-            const sharedWith = Array.isArray(cal.sharedWith) 
-              ? cal.sharedWith 
-              : typeof cal.sharedWith === 'string' 
-                ? JSON.parse(cal.sharedWith || '[]') 
-                : [];
-            return sharedWith.includes(userId);
+          // CRITICAL FILTER: Only include calendars that are explicitly shared with this user
+          // Exclude public/team calendars that aren't explicitly shared
+          
+          // Check if user has explicit permission (new model)
+          const hasExplicitPermission = cal.sharePermissions?.some(
+            (p) => p.userId === userId
+          );
+          if (hasExplicitPermission) return true;
+          
+          // Check if user is in sharedWith (legacy model)
+          let sharedWith: string[] = [];
+          if (cal.sharedWith) {
+            if (Array.isArray(cal.sharedWith)) {
+              sharedWith = cal.sharedWith;
+            } else if (typeof cal.sharedWith === 'string') {
+              try {
+                sharedWith = JSON.parse(cal.sharedWith || '[]');
+              } catch {
+                sharedWith = [];
+              }
+            }
           }
-          // For non-public calendars, include if they're in the sharedCalendars list
-          return true;
+          const isInSharedWith = Array.isArray(sharedWith) && sharedWith.includes(userId);
+          
+          // Only include if explicitly shared (via permission or sharedWith)
+          // Do NOT include public/team calendars just because they're public/team
+          return isInSharedWith;
         })
         .forEach((cal) => {
           // Get permission level for this user (from new sharePermissions or default to 'view_all' for legacy)
           const permission = cal.sharePermissions?.find(
             (p) => p.userId === userId
           );
-          const permissionLevel: CalendarPermissionLevel = permission?.permissionLevel || 
-            (cal.sharedWith?.includes(userId) ? 'view_all' : 'view_busy');
+          const permissionLevel: CalendarPermissionLevel = permission?.permissionLevel || 'view_all';
           sharedCalendarPermissions.set(cal.ownerId, permissionLevel);
         });
 
       const sharedCalendarOwnerIds = new Set(sharedCalendarPermissions.keys());
-
-      // Prepare user identifiers for participant matching
-      const userEmail = user.email?.toLowerCase() || '';
-      const userAccountId = user.accountId || '';
 
       if (!userAccountId) {
         console.warn(`[getCalendarEventsByMonth] User ${userId} has no accountId - filtering may not work correctly`);

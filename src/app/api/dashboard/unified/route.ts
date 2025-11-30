@@ -16,8 +16,12 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = (page - 1) * limit;
+    
+    // Check ETag for conditional requests (304 Not Modified)
+    const ifNoneMatch = request.headers.get('if-none-match');
+    const isWarmUp = request.headers.get('X-Warm-Up') === 'true';
 
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && !isWarmUp) {
       console.log('Unified dashboard API called with:', { orgId, userId, page, limit });
     }
 
@@ -31,6 +35,32 @@ export async function GET(request: NextRequest) {
 
     // Check cache first (include pagination in cache key)
     const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:page:${page}:limit:${limit}`;
+    
+    // Try to get cached data first to check ETag
+    const existingCache = await import('@/lib/services/redis-cache').then(m => m.get(cacheKey));
+    if (existingCache && ifNoneMatch && existingCache.timestamp) {
+      const etag = `"${existingCache.timestamp}"`;
+      if (ifNoneMatch === etag) {
+        return new Response(null, {
+          status: 304,
+          headers: {
+            'ETag': etag,
+            'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+          },
+        });
+      }
+    }
+    
+    // For warm-up requests with existing cache, return immediately
+    if (isWarmUp && existingCache) {
+      return new Response(JSON.stringify({ warmed: true, cached: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      });
+    }
+    
     const cachedData = await CacheManager.withCache(
       'dashboard/unified',
       cacheKey,
@@ -74,28 +104,28 @@ export async function GET(request: NextRequest) {
             ],
           }),
 
-          // Invitations data
+          // Invitations data - reduced limit for faster initial load
           tablesDB.listRows({
             databaseId: appwriteConfig.databaseId || 'default-db',
             tableId: appwriteConfig.invitationsCollectionId || 'invitations',
-            queries: [Query.equal('orgId', orgId), Query.limit(100)],
+            queries: [Query.equal('orgId', orgId), Query.limit(50)],
           }),
 
-          // Files data
+          // Files data - reduced limit
           tablesDB.listRows({
             databaseId: appwriteConfig.databaseId || 'default-db',
             tableId: appwriteConfig.filesCollectionId || 'files',
-            queries: [Query.orderDesc('$createdAt'), Query.limit(10)],
+            queries: [Query.orderDesc('$createdAt'), Query.limit(5)],
           }),
 
-          // Reports data
+          // Reports data - reduced limit
           tablesDB.listRows({
             databaseId: appwriteConfig.databaseId || 'default-db',
             tableId: appwriteConfig.reportsCollectionId || 'reports',
             queries: [
               Query.equal('userId', userId),
               Query.orderDesc('$createdAt'),
-              Query.limit(20),
+              Query.limit(10),
             ],
           }),
 
@@ -105,7 +135,7 @@ export async function GET(request: NextRequest) {
           // Report templates data (static)
           Promise.resolve({ documents: [] }), // Placeholder for report templates
 
-          // Notifications data
+          // Notifications data - reduced limit
           tablesDB.listRows({
             databaseId: appwriteConfig.databaseId || 'default-db',
             tableId:
@@ -113,32 +143,35 @@ export async function GET(request: NextRequest) {
             queries: [
               Query.equal('userId', userId),
               Query.orderDesc('$createdAt'),
-              Query.limit(50),
+              Query.limit(20),
             ],
           }),
 
-          // Notifications stats
+          // Notifications stats - use count query instead of full list
           tablesDB.listRows({
             databaseId: appwriteConfig.databaseId || 'default-db',
             tableId:
               appwriteConfig.notificationsCollectionId || 'notifications',
-            queries: [Query.equal('userId', userId)],
+            queries: [
+              Query.equal('userId', userId),
+              Query.limit(1), // Just need count, not full data
+            ],
           }),
 
-          // Recent activities
+          // Recent activities - reduced limit
           tablesDB.listRows({
             databaseId: appwriteConfig.databaseId || 'default-db',
             tableId:
               appwriteConfig.recentActivityCollectionId || 'recent-activity',
-            queries: [Query.orderDesc('$createdAt'), Query.limit(15)],
+            queries: [Query.orderDesc('$createdAt'), Query.limit(10)],
           }),
 
-          // Calendar events
+          // Calendar events - reduced limit
           tablesDB.listRows({
             databaseId: appwriteConfig.databaseId || 'default-db',
             tableId:
               appwriteConfig.calendarEventsCollectionId || 'calendar-events',
-            queries: [Query.orderDesc('$createdAt'), Query.limit(50)],
+            queries: [Query.orderDesc('$createdAt'), Query.limit(20)],
           }),
 
           // Uninvited users from Auth database
@@ -251,11 +284,28 @@ export async function GET(request: NextRequest) {
       CACHE_TTLS.veryLong
     );
 
+    // For warm-up requests, return immediately after triggering cache
+    if (isWarmUp) {
+      return new Response(JSON.stringify({ warmed: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      });
+    }
+
+    // Determine if this is a cache hit or miss
+    const isCacheHit = cachedData.timestamp && (Date.now() - cachedData.timestamp) < 1000;
+    
     return new Response(JSON.stringify(cachedData), {
       status: 200,
       headers: {
         'content-type': 'application/json',
-        'X-Cache': 'HIT',
+        'X-Cache': isCacheHit ? 'HIT' : 'MISS',
+        // Cache response for 5 minutes in browser/CDN
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        // ETag for conditional requests
+        'ETag': `"${cachedData.timestamp}"`,
       },
     });
   } catch (error: unknown) {

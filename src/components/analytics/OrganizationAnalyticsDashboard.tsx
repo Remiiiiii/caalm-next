@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import useSWR from 'swr';
 import {
   Card,
   CardContent,
@@ -63,7 +64,7 @@ interface DepartmentAnalytics {
   totalStats: ContractStats;
 }
 
-interface AdminAnalyticsData {
+interface OrganizationAnalyticsData {
   departments: DepartmentAnalytics[];
   totalStats: {
     totalContracts: number;
@@ -120,47 +121,42 @@ const mockData = {
   ],
 };
 
-const AdminAnalyticsDashboard = () => {
-  const [analyticsData, setAnalyticsData] = useState<AdminAnalyticsData | null>(
-    null
-  );
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const OrganizationAnalyticsDashboard = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedDepartmentTab, setSelectedDepartmentTab] =
     useState<string>('all');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch('/api/analytics/admin');
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch admin analytics: ${response.statusText}`
-          );
-        }
-
-        const result = await response.json();
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to fetch analytics data');
-        }
-
-        setAnalyticsData(result.data);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to fetch analytics data'
+  // Use SWR for lightning-fast cached responses
+  const { data, error, isLoading } = useSWR<{
+    success: boolean;
+    data: OrganizationAnalyticsData;
+  }>(
+    '/api/analytics/organization',
+    async (url) => {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch organization analytics: ${response.statusText}`
         );
-        console.error('Error fetching admin analytics:', err);
-      } finally {
-        setIsLoading(false);
       }
-    };
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch analytics data');
+      }
+      return result;
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 30000, // Dedupe requests within 30 seconds
+      refreshInterval: 300000, // Refresh every 5 minutes
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+      keepPreviousData: true, // Keep previous data while fetching new data
+    }
+  );
 
-    fetchData();
-  }, []);
+  const analyticsData = data?.data || null;
 
   const handleExport = () => {
     console.log('Exporting analytics data...');
@@ -302,7 +298,14 @@ const AdminAnalyticsDashboard = () => {
       <div className="space-y-6">
         <div className="text-center py-12">
           <div className="text-red-600 mb-4">⚠️ Error Loading Analytics</div>
-          <p className="text-red-700 mb-4">{error}</p>
+          <p className="text-red-700 mb-4">
+            {error instanceof Error
+              ? error.message
+              : typeof error === 'string'
+              ? error
+              : String(error) ||
+                'Failed to load analytics data. Please try again later.'}
+          </p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
@@ -327,92 +330,31 @@ const AdminAnalyticsDashboard = () => {
           </p>
         </div>
       </div>
-      <div className="flex space-x-3 justify-end">
-        <Button
-          onClick={handleExport}
-          className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export
-        </Button>
-        <Button
-          variant="outline"
-          className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
-        >
-          <Eye className="h-4 w-4 mr-2" />
-          View
-        </Button>
-      </div>
-
-      {/* Global Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="body-2 text-slate-700">
-              Total Contracts
-            </CardTitle>
-            <FileText className="h-4 w-4" style={{ color: '#524E4E' }} />
-          </CardHeader>
-          <CardContent>
-            <div className="h2 text-navy font-bold">
-              {analyticsData.totalStats.totalContracts.toLocaleString()}
-            </div>
-            <p className="text-xs text-[#10B981]">+12.5% vs last month</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="body-2 text-slate-700">
-              Total Budget
-            </CardTitle>
-            <DollarSign className="h-4 w-4" style={{ color: '#03AFBF' }} />
-          </CardHeader>
-          <CardContent>
-            <div className="h2 text-navy font-bold">
-              ${(analyticsData.totalStats.totalBudget / 1000000).toFixed(1)}M
-            </div>
-            <p className="text-xs text-[#10B981]">+8.2% vs last month</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="body-2 text-slate-700">
-              Active Staff
-            </CardTitle>
-            <Users className="h-4 w-4" style={{ color: '#56B8FF' }} />
-          </CardHeader>
-          <CardContent>
-            <div className="h2 text-navy font-bold">
-              {analyticsData.totalStats.totalActiveStaff.toLocaleString()}
-            </div>
-            <p className="text-xs text-[#10B981]">+5.1% vs last month</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="body-2 text-slate-700">
-              Compliance Rate
-            </CardTitle>
-            <ClipboardCheck className="h-4 w-4" style={{ color: '#8B5CF6' }} />
-          </CardHeader>
-          <CardContent>
-            <div className="h2 text-navy font-bold">
-              {analyticsData.totalStats.complianceRate}%
-            </div>
-            <p className="text-xs text-[#10B981]">+2.1% vs last month</p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Department Navigation */}
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardHeader>
-          <CardTitle className="h2 sidebar-gradient-text">
-            Departmental Performance Breakdown
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="h2 sidebar-gradient-text">
+              Departmental Performance Breakdown
+            </CardTitle>
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={handleExport}
+                className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+              >
+                <Eye className="h-4 w-4" />
+                View
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs
@@ -440,98 +382,270 @@ const AdminAnalyticsDashboard = () => {
 
             <TabsContent value="all" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {analyticsData.departments.map((dept) => (
-                  <Card
-                    key={dept.name}
-                    className="bg-white/60 backdrop-blur border border-white/40 shadow-lg"
-                  >
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="body-1 text-navy">
-                          {dept.name}
-                        </CardTitle>
-                        <Building
-                          className="h-5 w-5"
-                          style={{ color: '#03AFBF' }}
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-slate-600">
-                            Contracts:
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className="bg-white/20 backdrop-blur"
-                          >
-                            {dept.totalStats.totalContracts}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-slate-600">Staff:</span>
-                          <Badge
-                            variant="secondary"
-                            className="bg-white/20 backdrop-blur"
-                          >
-                            {dept.totalStats.staffCount}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-slate-600">
-                            Budget:
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className="bg-white/20 backdrop-blur"
-                          >
-                            $
-                            {(dept.totalStats.totalBudget / 1000000).toFixed(1)}
-                            M
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-slate-600">
-                            Compliance:
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className="bg-white/20 backdrop-blur"
-                          >
-                            {dept.totalStats.complianceRate}%
-                          </Badge>
-                        </div>
-                        {dept.divisions.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-white/20">
-                            <span className="text-xs text-slate-500">
-                              Divisions: {dept.divisions.length}
-                            </span>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {dept.divisions.slice(0, 3).map((division) => (
-                                <Badge
-                                  key={division.id}
-                                  variant="outline"
-                                  className="text-xs bg-white/10 backdrop-blur sidebar-gradient-text"
-                                >
-                                  {division.name}
-                                </Badge>
-                              ))}
-                              {dept.divisions.length > 3 && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs bg-white/10 backdrop-blur sidebar-gradient-text"
-                                >
-                                  +{dept.divisions.length - 3} more
-                                </Badge>
-                              )}
+                {analyticsData.departments.map((dept) => {
+                  // Enterprise-level IT card
+                  if (dept.name === 'IT') {
+                    return (
+                      <Card
+                        key={dept.name}
+                        className="group relative bg-gray-50 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
+                      >
+                        {/* Accent gradient bar */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#03AFBF] via-[#56B8FF] to-[#03AFBF]" />
+
+                        <CardHeader className="pb-4 pt-5 px-5 bg-white">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-3">
+                              <div className="relative">
+                                <div className="absolute inset-0 bg-gradient-to-br from-[#03AFBF]/20 to-[#56B8FF]/20 rounded-lg blur-sm" />
+                                <div className="relative bg-gradient-to-br from-[#03AFBF]/10 to-[#56B8FF]/10 p-2.5 rounded-lg border border-[#03AFBF]/20">
+                                  <Activity
+                                    className="h-5 w-5"
+                                    style={{ color: '#03AFBF' }}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <CardTitle className="text-lg font-bold sidebar-gradient-text">
+                                  {dept.name}
+                                </CardTitle>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                  Information Technology
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </CardHeader>
+                        <CardContent className="px-5 pb-5 bg-gray-50">
+                          <div className="space-y-3">
+                            {/* Contracts Metric */}
+                            <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-1.5 bg-blue-100 rounded-md">
+                                  <FileText className="h-3.5 w-3.5 text-blue-600" />
+                                </div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  Contracts
+                                </span>
+                              </div>
+                              <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
+                                {dept.totalStats.totalContracts}
+                              </Badge>
+                            </div>
+
+                            {/* Staff Metric */}
+                            <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-1.5 bg-purple-100 rounded-md">
+                                  <Users className="h-3.5 w-3.5 text-purple-600" />
+                                </div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  Staff
+                                </span>
+                              </div>
+                              <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
+                                {dept.totalStats.staffCount}
+                              </Badge>
+                            </div>
+
+                            {/* Budget Metric */}
+                            <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-1.5 bg-green-100 rounded-md">
+                                  <DollarSign className="h-3.5 w-3.5 text-green-600" />
+                                </div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  Budget
+                                </span>
+                              </div>
+                              <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
+                                $
+                                {(
+                                  dept.totalStats.totalBudget / 1000000
+                                ).toFixed(1)}
+                                M
+                              </Badge>
+                            </div>
+
+                            {/* Compliance Metric */}
+                            <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-1.5 bg-emerald-100 rounded-md">
+                                  <Shield className="h-3.5 w-3.5 text-emerald-600" />
+                                </div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  Compliance
+                                </span>
+                              </div>
+                              <Badge className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
+                                {dept.totalStats.complianceRate}%
+                              </Badge>
+                            </div>
+
+                            {/* Divisions Section */}
+                            {dept.divisions.length > 0 && (
+                              <div className="mt-4 pt-4 border-t border-gray-200">
+                                <div className="flex items-center justify-between mb-2.5">
+                                  <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                                    Divisions
+                                  </span>
+                                  <span className="text-xs text-slate-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                    {dept.divisions.length}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {dept.divisions
+                                    .slice(0, 3)
+                                    .map((division) => (
+                                      <Badge
+                                        key={division.id}
+                                        className="text-xs font-medium bg-white text-slate-700 border border-gray-200 hover:border-[#03AFBF] hover:bg-[#03AFBF]/5 transition-all px-2.5 py-1 shadow-sm"
+                                      >
+                                        {division.name}
+                                      </Badge>
+                                    ))}
+                                  {dept.divisions.length > 3 && (
+                                    <Badge className="text-xs font-medium bg-gray-100 text-slate-600 border border-gray-200 px-2.5 py-1 shadow-sm">
+                                      +{dept.divisions.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  // Enterprise-level card for other departments
+                  return (
+                    <Card
+                      key={dept.name}
+                      className="group relative bg-gray-50 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
+                    >
+                      {/* Accent gradient bar */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#03AFBF] via-[#56B8FF] to-[#03AFBF]" />
+
+                      <CardHeader className="pb-4 pt-5 px-5 bg-white">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <div className="absolute inset-0 bg-gradient-to-br from-[#03AFBF]/20 to-[#56B8FF]/20 rounded-lg blur-sm" />
+                              <div className="relative bg-gradient-to-br from-[#03AFBF]/10 to-[#56B8FF]/10 p-2.5 rounded-lg border border-[#03AFBF]/20">
+                                <Building
+                                  className="h-5 w-5"
+                                  style={{ color: '#03AFBF' }}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <CardTitle className="text-lg font-bold sidebar-gradient-text">
+                                {dept.name}
+                              </CardTitle>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="px-5 pb-5 bg-gray-50">
+                        <div className="space-y-3">
+                          {/* Contracts Metric */}
+                          <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-1.5 bg-blue-100 rounded-md">
+                                <FileText className="h-3.5 w-3.5 text-blue-600" />
+                              </div>
+                              <span className="text-sm font-medium text-slate-700">
+                                Contracts
+                              </span>
+                            </div>
+                            <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
+                              {dept.totalStats.totalContracts}
+                            </Badge>
+                          </div>
+
+                          {/* Staff Metric */}
+                          <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-1.5 bg-purple-100 rounded-md">
+                                <Users className="h-3.5 w-3.5 text-purple-600" />
+                              </div>
+                              <span className="text-sm font-medium text-slate-700">
+                                Staff
+                              </span>
+                            </div>
+                            <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
+                              {dept.totalStats.staffCount}
+                            </Badge>
+                          </div>
+
+                          {/* Budget Metric */}
+                          <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-1.5 bg-green-100 rounded-md">
+                                <DollarSign className="h-3.5 w-3.5 text-green-600" />
+                              </div>
+                              <span className="text-sm font-medium text-slate-700">
+                                Budget
+                              </span>
+                            </div>
+                            <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
+                              $
+                              {(dept.totalStats.totalBudget / 1000000).toFixed(
+                                1
+                              )}
+                              M
+                            </Badge>
+                          </div>
+
+                          {/* Compliance Metric */}
+                          <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-1.5 bg-emerald-100 rounded-md">
+                                <Shield className="h-3.5 w-3.5 text-emerald-600" />
+                              </div>
+                              <span className="text-sm font-medium text-slate-700">
+                                Compliance
+                              </span>
+                            </div>
+                            <Badge className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
+                              {dept.totalStats.complianceRate}%
+                            </Badge>
+                          </div>
+
+                          {/* Divisions Section */}
+                          {dept.divisions.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              <div className="flex items-center justify-between mb-2.5">
+                                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                                  Divisions
+                                </span>
+                                <span className="text-xs text-slate-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                  {dept.divisions.length}
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {dept.divisions.slice(0, 3).map((division) => (
+                                  <Badge
+                                    key={division.id}
+                                    className="text-xs font-medium bg-white text-slate-700 border border-gray-200 hover:border-[#03AFBF] hover:bg-[#03AFBF]/5 transition-all px-2.5 py-1 shadow-sm"
+                                  >
+                                    {division.name}
+                                  </Badge>
+                                ))}
+                                {dept.divisions.length > 3 && (
+                                  <Badge className="text-xs font-medium bg-gray-100 text-slate-600 border border-gray-200 px-2.5 py-1 shadow-sm">
+                                    +{dept.divisions.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </TabsContent>
 
@@ -997,4 +1111,4 @@ const AdminAnalyticsDashboard = () => {
   );
 };
 
-export default AdminAnalyticsDashboard;
+export default OrganizationAnalyticsDashboard;

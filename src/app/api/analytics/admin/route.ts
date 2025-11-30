@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/appwrite/admin';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'appwrite';
 import { CONTRACT_DEPARTMENTS } from '@/constants';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 
 interface ContractStats {
   totalContracts: number;
@@ -27,200 +29,213 @@ interface DepartmentAnalytics {
 
 export async function GET(request: NextRequest) {
   try {
-    const { tablesDB } = await createAdminClient();
+    // Check cache first for lightning-fast response
+    const cacheKey = CACHE_KEYS.analytics.admin();
+    const cachedData = await CacheManager.withCache(
+      'analytics/admin',
+      cacheKey,
+      async () => {
+        const { tablesDB } = await createAdminClient();
 
-    // Get all contracts from the database
-    const allContracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
-      queries: [Query.limit(2000)], // Increased limit for comprehensive data
-    });
+        // Get all contracts from the database - only select needed fields for performance
+        const allContracts = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.contractsCollectionId,
+          queries: [
+            Query.limit(2000),
+            Query.select(['department', 'division', 'amount', 'status', 'compliance']),
+          ],
+        });
 
-    // Get all users to calculate staff counts
-    const allUsers = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
-      queries: [Query.limit(2000), Query.equal('status', 'active')], // Only active users
-    });
+        // Get all users to calculate staff counts - only select needed fields
+        const allUsers = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.usersCollectionId,
+          queries: [
+            Query.limit(2000),
+            Query.equal('status', 'active'),
+            Query.select(['division']),
+          ],
+        });
 
-    // Group contracts by department and division
-    const contractsByDepartment: Record<string, any[]> = {};
-    const contractsByDivision: Record<string, any[]> = {};
+        // Group contracts by department and division
+        const contractsByDepartment: Record<string, any[]> = {};
+        const contractsByDivision: Record<string, any[]> = {};
 
-    allContracts.rows.forEach((contract: any) => {
-      const department = contract.department as string;
-      const division = contract.division as string;
+        allContracts.rows.forEach((contract: any) => {
+          const department = contract.department as string;
+          const division = contract.division as string;
 
-      if (department) {
-        if (!contractsByDepartment[department]) {
-          contractsByDepartment[department] = [];
-        }
-        contractsByDepartment[department].push(contract);
-      }
+          if (department) {
+            if (!contractsByDepartment[department]) {
+              contractsByDepartment[department] = [];
+            }
+            contractsByDepartment[department].push(contract);
+          }
 
-      if (division) {
-        if (!contractsByDivision[division]) {
-          contractsByDivision[division] = [];
-        }
-        contractsByDivision[division].push(contract);
-      }
-    });
+          if (division) {
+            if (!contractsByDivision[division]) {
+              contractsByDivision[division] = [];
+            }
+            contractsByDivision[division].push(contract);
+          }
+        });
 
-    // Group users by division
-    const usersByDivision: Record<string, any[]> = {};
-    allUsers.rows.forEach((user: any) => {
-      const division = user.division as string;
-      if (division) {
-        if (!usersByDivision[division]) {
-          usersByDivision[division] = [];
-        }
-        usersByDivision[division].push(user);
-      }
-    });
+        // Group users by division
+        const usersByDivision: Record<string, any[]> = {};
+        allUsers.rows.forEach((user: any) => {
+          const division = user.division as string;
+          if (division) {
+            if (!usersByDivision[division]) {
+              usersByDivision[division] = [];
+            }
+            usersByDivision[division].push(user);
+          }
+        });
 
-    // Calculate stats for a given contracts array
-    const calculateStats = (contracts: any[]): ContractStats => {
-      const totalContracts = contracts.length;
-      const totalBudget = contracts.reduce((sum, contract) => {
-        const amount =
-          typeof contract.amount === 'number' ? contract.amount : 0;
-        return sum + amount;
-      }, 0);
+        // Calculate stats for a given contracts array
+        const calculateStats = (contracts: any[]): ContractStats => {
+          const totalContracts = contracts.length;
+          const totalBudget = contracts.reduce((sum, contract) => {
+            const amount =
+              typeof contract.amount === 'number' ? contract.amount : 0;
+            return sum + amount;
+          }, 0);
 
-      const activeContracts = contracts.filter(
-        (c) => c.status === 'active' || c.status === 'Active'
-      ).length;
-      const expiredContracts = contracts.filter(
-        (c) => c.status === 'expired' || c.status === 'Expired'
-      ).length;
-      const pendingContracts = contracts.filter(
-        (c) => c.status === 'pending' || c.status === 'Pending'
-      ).length;
+          const activeContracts = contracts.filter(
+            (c) => c.status === 'active' || c.status === 'Active'
+          ).length;
+          const expiredContracts = contracts.filter(
+            (c) => c.status === 'expired' || c.status === 'Expired'
+          ).length;
+          const pendingContracts = contracts.filter(
+            (c) => c.status === 'pending' || c.status === 'Pending'
+          ).length;
 
-      const compliantContracts = contracts.filter(
-        (c) => c.compliance === 'compliant' || c.compliance === 'up-to-date'
-      ).length;
-      const complianceRate =
-        totalContracts > 0
-          ? Math.round((compliantContracts / totalContracts) * 100)
-          : 0;
+          const compliantContracts = contracts.filter(
+            (c) => c.compliance === 'compliant' || c.compliance === 'up-to-date'
+          ).length;
+          const complianceRate =
+            totalContracts > 0
+              ? Math.round((compliantContracts / totalContracts) * 100)
+              : 0;
 
-      return {
-        totalContracts,
-        totalBudget,
-        activeContracts,
-        expiredContracts,
-        pendingContracts,
-        complianceRate,
-        staffCount: 0, // Will be set separately
-      };
-    };
+          return {
+            totalContracts,
+            totalBudget,
+            activeContracts,
+            expiredContracts,
+            pendingContracts,
+            complianceRate,
+            staffCount: 0, // Will be set separately
+          };
+        };
 
-    // Department configuration with divisions
-    const departmentConfig: Record<
-      string,
-      {
-        name: string;
-        divisions: { id: string; name: string; description: string }[];
-      }
-    > = {
-      IT: {
-        name: 'IT',
-        divisions: [
+        // Department configuration with divisions
+        const departmentConfig: Record<
+          string,
           {
-            id: 'support',
-            name: 'Support',
-            description: 'Technical support and network services',
+            name: string;
+            divisions: { id: string; name: string; description: string }[];
+          }
+        > = {
+          IT: {
+            name: 'IT',
+            divisions: [
+              {
+                id: 'support',
+                name: 'Support',
+                description: 'Technical support and network services',
+              },
+              {
+                id: 'help-desk',
+                name: 'Help Desk',
+                description: 'IT support and help desk services',
+              },
+            ],
           },
-          {
-            id: 'help-desk',
-            name: 'Help Desk',
-            description: 'IT support and help desk services',
+          Finance: {
+            name: 'Finance',
+            divisions: [
+              {
+                id: 'accounting',
+                name: 'Accounting',
+                description: 'Financial accounting and reporting',
+              },
+            ],
           },
-        ],
-      },
-      Finance: {
-        name: 'Finance',
-        divisions: [
-          {
-            id: 'accounting',
-            name: 'Accounting',
-            description: 'Financial accounting and reporting',
+          Administration: {
+            name: 'Administration',
+            divisions: [
+              {
+                id: 'hr',
+                name: 'Human Resources',
+                description: 'Human resources administration',
+              },
+            ],
           },
-        ],
-      },
-      Administration: {
-        name: 'Administration',
-        divisions: [
-          {
-            id: 'hr',
-            name: 'Human Resources',
-            description: 'Human resources administration',
+          Legal: {
+            name: 'Legal',
+            divisions: [],
           },
-        ],
-      },
-      Legal: {
-        name: 'Legal',
-        divisions: [],
-      },
-      Operations: {
-        name: 'Operations',
-        divisions: [
-          {
-            id: 'behavioral-health',
-            name: 'Behavioral Health',
-            description: 'Behavioral health services and outcomes',
+          Operations: {
+            name: 'Operations',
+            divisions: [
+              {
+                id: 'behavioral-health',
+                name: 'Behavioral Health',
+                description: 'Behavioral health services and outcomes',
+              },
+              {
+                id: 'child-welfare',
+                name: 'Child Welfare',
+                description: 'Child welfare services and program metrics',
+              },
+              {
+                id: 'clinic',
+                name: 'Clinic',
+                description: 'Clinical services and patient outcomes',
+              },
+              {
+                id: 'cfs',
+                name: 'CFS',
+                description: 'CFS program analytics and performance',
+              },
+              {
+                id: 'residential',
+                name: 'Residential',
+                description: 'Residential services and facility metrics',
+              },
+            ],
           },
-          {
-            id: 'child-welfare',
-            name: 'Child Welfare',
-            description: 'Child welfare services and program metrics',
+          Sales: {
+            name: 'Sales',
+            divisions: [],
           },
-          {
-            id: 'clinic',
-            name: 'Clinic',
-            description: 'Clinical services and patient outcomes',
+          Marketing: {
+            name: 'Marketing',
+            divisions: [],
           },
-          {
-            id: 'cfs',
-            name: 'CFS',
-            description: 'CFS program analytics and performance',
+          Executive: {
+            name: 'Executive',
+            divisions: [
+              {
+                id: 'c-suite',
+                name: 'C-Suite',
+                description: 'Executive leadership and management',
+              },
+            ],
           },
-          {
-            id: 'residential',
-            name: 'Residential',
-            description: 'Residential services and facility metrics',
+          Engineering: {
+            name: 'Engineering',
+            divisions: [],
           },
-        ],
-      },
-      Sales: {
-        name: 'Sales',
-        divisions: [],
-      },
-      Marketing: {
-        name: 'Marketing',
-        divisions: [],
-      },
-      Executive: {
-        name: 'Executive',
-        divisions: [
-          {
-            id: 'c-suite',
-            name: 'C-Suite',
-            description: 'Executive leadership and management',
-          },
-        ],
-      },
-      Engineering: {
-        name: 'Engineering',
-        divisions: [],
-      },
-    };
+        };
 
-    // Process each department
-    const departmentsData: DepartmentAnalytics[] = [];
+        // Process each department
+        const departmentsData: DepartmentAnalytics[] = [];
 
-    Object.entries(departmentConfig).forEach(([deptKey, deptConfig]) => {
+        Object.entries(departmentConfig).forEach(([deptKey, deptConfig]) => {
       const departmentContracts = contractsByDepartment[deptKey] || [];
       const departmentStats = calculateStats(departmentContracts);
 
@@ -265,32 +280,47 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // Calculate overall totals across all departments
-    const totalContracts = allContracts.total;
-    const totalBudget = allContracts.rows.reduce(
-      (sum: number, contract: any) => {
-        const amount =
-          typeof contract.amount === 'number' ? contract.amount : 0;
-        return sum + amount;
+        // Calculate overall totals across all departments
+        const totalContracts = allContracts.total;
+        const totalBudget = allContracts.rows.reduce(
+          (sum: number, contract: any) => {
+            const amount =
+              typeof contract.amount === 'number' ? contract.amount : 0;
+            return sum + amount;
+          },
+          0
+        );
+        const totalActiveStaff = allUsers.total;
+
+        const totalStats = {
+          totalContracts,
+          totalBudget,
+          totalActiveStaff,
+          complianceRate: calculateStats(allContracts.rows).complianceRate,
+        };
+
+        return {
+          departments: departmentsData,
+          totalStats,
+        };
       },
-      0
+      CACHE_TTLS.veryLong
     );
-    const totalActiveStaff = allUsers.total;
 
-    const totalStats = {
-      totalContracts,
-      totalBudget,
-      totalActiveStaff,
-      complianceRate: calculateStats(allContracts.rows).complianceRate,
-    };
-
-    return Response.json({
-      success: true,
-      data: {
-        departments: departmentsData,
-        totalStats,
+    // Return cached or fresh data with cache headers
+    return Response.json(
+      {
+        success: true,
+        data: cachedData,
       },
-    });
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=1800',
+          'X-Cache': 'HIT',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Admin analytics error:', {
       error: error?.message || 'Unknown error',

@@ -43,8 +43,20 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') as 'room' | 'equipment' | undefined;
+    const search = searchParams.get('search');
 
-    const resources = await getResources(defaultOrg.orgId, type);
+    let resources = await getResources(defaultOrg.orgId, type);
+
+    // Filter by search query if provided
+    if (search && search.length >= 2) {
+      const searchLower = search.toLowerCase();
+      resources = resources.filter(
+        (resource) =>
+          resource.name.toLowerCase().includes(searchLower) ||
+          (resource.location && resource.location.toLowerCase().includes(searchLower)) ||
+          (resource.description && resource.description.toLowerCase().includes(searchLower))
+      );
+    }
 
     return NextResponse.json({
       success: true,

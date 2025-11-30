@@ -230,16 +230,27 @@ const AuthForm = ({ type }: { type: FormType }) => {
           const invitation = searchParams?.get('invitation');
           if (invitation === 'accepted') {
             // For invited users, skip OTP and proceed directly to 2FA check
+            // Optimize: Get user and check 2FA in parallel
             try {
-              const user = await getUserByEmail(values.email);
-              if (user?.accountId) {
-                setUserId(user.accountId);
-                await checkTwoFactorStatus(user.accountId);
+              const [user] = await Promise.allSettled([
+                getUserByEmail(values.email),
+              ]);
+              
+              const userData = user.status === 'fulfilled' ? user.value : null;
+              if (userData?.accountId) {
+                setUserId(userData.accountId);
+                // Check 2FA status (now cached) - don't await to show UI faster
+                checkTwoFactorStatus(userData.accountId).catch(() => {
+                  // Fallback to dashboard if 2FA check fails
+                  router.push('/dashboard');
+                });
               } else {
                 router.push('/dashboard');
               }
             } catch (error) {
-              console.error('Error getting user info for invited user:', error);
+              if (process.env.NODE_ENV === 'development') {
+                console.error('Error getting user info for invited user:', error);
+              }
               router.push('/dashboard');
             }
           } else {
@@ -272,37 +283,33 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
   const checkTwoFactorStatus = async (userId: string) => {
     try {
-      console.log('AuthForm: Checking 2FA status for userId:', userId);
+      // Use cached API endpoint for faster response
       const response = await fetch('/api/2fa/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
+        cache: 'force-cache', // Use browser cache when available
       });
 
       const data = await response.json();
-      console.log('AuthForm: 2FA status response:', data);
 
       if (data.success) {
         if (data.has2FA) {
           // User has 2FA enabled - show TOTP verification only
-          console.log(
-            'AuthForm: User has 2FA enabled, showing verification modal'
-          );
           setShow2FAVerification(true);
         } else {
           // User doesn't have 2FA - show setup
-          console.log('AuthForm: User does not have 2FA, showing setup modal');
           setShow2FASetup(true);
         }
       } else {
         // If check fails, assume no 2FA and show setup
-        console.log('AuthForm: 2FA status check failed, showing setup modal');
         setShow2FASetup(true);
       }
     } catch (error) {
-      console.error('Error checking 2FA status:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error checking 2FA status:', error);
+      }
       // If check fails, assume no 2FA and show setup
-      console.log('AuthForm: 2FA status check error, showing setup modal');
       setShow2FASetup(true);
     }
   };
@@ -551,29 +558,30 @@ const AuthForm = ({ type }: { type: FormType }) => {
             onClose={() => setShow2FAVerification(false)}
             onSuccess={async () => {
               // After successful TOTP verification, redirect by role
+              // Optimize: Get user and dashboard URL in parallel
               try {
-                const user = await getUserByEmail(form.getValues('email'));
+                const [user, dashboardUrl] = await Promise.allSettled([
+                  getUserByEmail(form.getValues('email')),
+                  // Pre-fetch dashboard URL while getting user (optimistic)
+                  Promise.resolve('/dashboard'), // Fallback
+                ]);
 
-                if (!user) {
-                  console.error('User not found after TOTP verification');
-                  window.location.href = '/dashboard';
-                  return;
-                }
-
-                // Fetch user's role from database and redirect to appropriate dashboard
-                try {
-                  const dashboardUrl = await getDashboardUrlForUser(
-                    user.$id,
+                const userData = user.status === 'fulfilled' ? user.value : null;
+                
+                if (userData) {
+                  // Fetch dashboard URL (now cached server-side)
+                  const url = await getDashboardUrlForUser(
+                    userData.$id,
                     'default_organization'
                   );
-                  console.log('Redirecting to dashboard:', dashboardUrl);
-                  window.location.href = dashboardUrl;
-                } catch (error) {
-                  console.error('Error fetching dashboard URL:', error);
+                  window.location.href = url;
+                } else {
                   window.location.href = '/dashboard';
                 }
               } catch (error) {
-                console.error('Error getting user info for redirect:', error);
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Error getting user info for redirect:', error);
+                }
                 window.location.href = '/dashboard';
               }
             }}

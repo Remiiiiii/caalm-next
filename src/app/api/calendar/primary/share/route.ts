@@ -11,6 +11,7 @@ import { getUserByAccountId } from '@/lib/actions/user.actions';
 import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
 import { requirePermission } from '@/lib/rbac/middleware';
 import { PERMISSIONS } from '@/constants/permissions';
+import CacheManager from '@/lib/services/cache-manager';
 
 /**
  * POST /api/calendar/primary/share
@@ -103,6 +104,14 @@ export async function POST(request: NextRequest) {
       currentUser.$id
     );
 
+    // Invalidate cache for both sender and recipient to ensure immediate updates
+    const recipientOrg = await getUserDefaultOrganization(sharedWithUserId);
+    if (recipientOrg) {
+      await CacheManager.invalidateCalendar(undefined, undefined, sharedWithUserId, recipientOrg.orgId);
+    }
+    // Invalidate sender's cache
+    await CacheManager.invalidateCalendar(undefined, undefined, currentUser.$id, defaultOrg.orgId);
+
     return NextResponse.json({
       success: true,
       calendar: updatedCalendar,
@@ -170,6 +179,16 @@ export async function DELETE(request: NextRequest) {
       currentUser.$id,
       sharedWithUserId
     );
+
+    // Invalidate cache for both sender and recipient
+    const defaultOrg = await getUserDefaultOrganization(currentUser.$id);
+    const recipientOrg = await getUserDefaultOrganization(sharedWithUserId);
+    if (defaultOrg) {
+      await CacheManager.invalidateCalendar(undefined, undefined, currentUser.$id, defaultOrg.orgId);
+    }
+    if (recipientOrg) {
+      await CacheManager.invalidateCalendar(undefined, undefined, sharedWithUserId, recipientOrg.orgId);
+    }
 
     return NextResponse.json({
       success: true,

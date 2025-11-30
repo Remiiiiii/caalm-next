@@ -7,6 +7,8 @@ import {
 } from '@/lib/actions/shared-calendar.actions';
 import { getUserByAccountId, getUserById } from '@/lib/actions/user.actions';
 import { sendCalendarSharedNotification } from '@/lib/services/calendar-notifications.service';
+import CacheManager from '@/lib/services/cache-manager';
+import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
 
 /**
  * PUT /api/calendar/shared/[calendarId]/users
@@ -69,6 +71,16 @@ export async function PUT(
     if (action === 'add') {
       updatedCalendar = await addUserToSharedCalendar(calendarId, targetUserId);
 
+      // Invalidate cache for both sender and recipient to ensure immediate updates
+      const senderOrg = await getUserDefaultOrganization(user.$id);
+      const recipientOrg = await getUserDefaultOrganization(targetUserId);
+      if (senderOrg) {
+        await CacheManager.invalidateCalendar(undefined, undefined, user.$id, senderOrg.orgId);
+      }
+      if (recipientOrg) {
+        await CacheManager.invalidateCalendar(undefined, undefined, targetUserId, recipientOrg.orgId);
+      }
+
       // Send notification asynchronously (fire-and-forget) for instant response
       Promise.resolve().then(async () => {
         try {
@@ -103,6 +115,16 @@ export async function PUT(
         calendarId,
         targetUserId
       );
+
+      // Invalidate cache for both sender and recipient
+      const senderOrg = await getUserDefaultOrganization(user.$id);
+      const recipientOrg = await getUserDefaultOrganization(targetUserId);
+      if (senderOrg) {
+        await CacheManager.invalidateCalendar(undefined, undefined, user.$id, senderOrg.orgId);
+      }
+      if (recipientOrg) {
+        await CacheManager.invalidateCalendar(undefined, undefined, targetUserId, recipientOrg.orgId);
+      }
     } else {
       return NextResponse.json(
         { success: false, message: 'Invalid action. Use "add" or "remove"' },

@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Trash2,
   RefreshCw,
+  Ban,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -1386,7 +1387,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     onClick={cancelRevoke}
                     className="primary-btn px-3 sm:px-4 w-full sm:w-auto"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Ban className="w-4 h-4 mr-2" />
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction
@@ -1476,7 +1477,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                     onClick={cancelDelete}
                     className="primary-btn px-3 sm:px-4"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Ban className="w-4 h-4 mr-2" />
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction

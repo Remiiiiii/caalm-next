@@ -18,11 +18,18 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Upload, FileText, CheckCircle, Loader2, Trash2 } from 'lucide-react';
+import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  Loader2,
+  Trash2,
+  Ban,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -96,11 +103,11 @@ const contractSchema = z.object({
       return !isNaN(num) && num >= 0;
     }, 'Please enter a valid amount'),
   assignToDepartment: z.string().min(1, 'Department is required'),
+  contractNumber: z.string().min(1, 'Contract number is required'),
   description: z.string().optional(),
   priority: z.string().optional(),
   compliance: z.string().optional(),
   vendor: z.string().optional(),
-  contractNumber: z.string().optional(),
   assignedManagers: z.array(z.string()).optional(),
 });
 
@@ -540,322 +547,330 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-[26px] border border-light-300 shadow-drop-1">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="text-xl font-bold sidebar-gradient-text">
-            Upload Contract
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-4xl p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white rounded-[26px]">
+        <VisuallyHiddenPrimitive.Root>
+          <DialogTitle>Upload Contract</DialogTitle>
+        </VisuallyHiddenPrimitive.Root>
 
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-6"
-          >
-            {/* File Upload Section */}
-            <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold sidebar-gradient-text">
-                  1. Upload Contract File
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div
-                  {...getRootProps()}
-                  className={cn(
-                    'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
-                    isDragActive
-                      ? 'border-brand bg-brand/5'
-                      : 'border-light-200 hover:border-[#03B1C1] hover:bg-light-400'
-                  )}
-                >
-                  <input {...getInputProps()} />
-                  <Upload className="mx-auto h-12 w-12 text-light-200 mb-4" />
+        {/* Professional Cap */}
+        <div className="h-4 w-full bg-[#d6d7d8] opacity-70 rounded-t-[26px]" />
 
-                  {processedFileData ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center space-x-2">
-                        <FileText className="h-5 w-5 text-green" />
-                        <span className="font-medium text-navy">
-                          {processedFileData.name}
+        {/* Sticky Header with gradient background */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-cyan-50 py-4 border-b border-slate-200">
+          <div className="flex items-center gap-3 px-6">
+            {/* Icon with circular background */}
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <Upload className="w-5 h-5 text-[#0f5384]" />
+            </div>
+
+            {/* Title */}
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold sidebar-gradient-text">
+                Upload Contract
+              </h2>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 bg-white">
+          <Form {...form}>
+            <form
+              id="contract-upload-form"
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-6"
+            >
+              {/* File Upload Section */}
+              <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold sidebar-gradient-text">
+                    1. Upload Contract File
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    {...getRootProps()}
+                    className={cn(
+                      'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
+                      isDragActive
+                        ? 'border-brand bg-brand/5'
+                        : 'border-light-200 hover:border-[#03B1C1] hover:bg-light-400'
+                    )}
+                  >
+                    <input {...getInputProps()} />
+                    <Upload className="mx-auto h-12 w-12 text-light-200 mb-4" />
+
+                    {processedFileData ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center space-x-2">
+                          <FileText className="h-5 w-5 text-green" />
+                          <span className="font-medium text-navy">
+                            {processedFileData.name}
+                          </span>
+                        </div>
+                        <p className="text-sm text-light-200">
+                          {(processedFileData.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-lg font-medium text-navy">
+                          {isDragActive
+                            ? 'Drop the contract here'
+                            : 'Drag & drop contract file here'}
+                        </p>
+                        <p className="text-sm text-light-200 mt-2">
+                          Supports PDF, DOC, DOCX, TXT (Max 50MB)
+                        </p>
+                      </div>
+                    )}
+
+                    {isExtracting && (
+                      <div className="mt-4 flex items-center justify-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-brand" />
+                        <span className="text-sm text-light-200">
+                          Extracting contract data...
                         </span>
                       </div>
-                      <p className="text-sm text-light-200">
-                        {(processedFileData.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-lg font-medium text-navy">
-                        {isDragActive
-                          ? 'Drop the contract here'
-                          : 'Drag & drop contract file here'}
-                      </p>
-                      <p className="text-sm text-light-200 mt-2">
-                        Supports PDF, DOC, DOCX, TXT (Max 50MB)
-                      </p>
-                    </div>
-                  )}
-
-                  {isExtracting && (
-                    <div className="mt-4 flex items-center justify-center space-x-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-brand" />
-                      <span className="text-sm text-light-200">
-                        Extracting contract data...
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Contract Details Section */}
-            <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold sidebar-gradient-text">
-                    2. Contract Details
-                  </CardTitle>
-                  {extractedData && (
-                    <Badge className="bg-green/10 text-green border-green/20">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Data extracted automatically
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="contractName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Contract Name{' '}
-                          <span className="sidebar-gradient-text">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter contract name"
-                            {...field}
-                            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
                     )}
-                  />
+                  </div>
+                </CardContent>
+              </Card>
 
-                  <FormField
-                    control={form.control}
-                    name="contractType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Contract Type{' '}
-                          <span className="sidebar-gradient-text">*</span>
-                        </FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+              {/* Contract Details Section */}
+              <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold sidebar-gradient-text">
+                      2. Contract Details
+                    </CardTitle>
+                    {extractedData && (
+                      <Badge className="bg-green/10 text-green border-green/20">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Data extracted automatically
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contractName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Contract Name{' '}
+                            <span className="sidebar-gradient-text">*</span>
+                          </FormLabel>
                           <FormControl>
-                            <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
-                              <SelectValue placeholder="Select contract type" />
-                            </SelectTrigger>
+                            <Input
+                              placeholder="Enter contract name"
+                              {...field}
+                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400"
+                            />
                           </FormControl>
-                          <SelectContent>
-                            {CONTRACT_TYPES.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="contractNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Contract Number
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter contract number"
-                            {...field}
-                            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="contractType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Contract Type{' '}
+                            <span className="sidebar-gradient-text">*</span>
+                          </FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
+                                <SelectValue placeholder="Select contract type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {CONTRACT_TYPES.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="vendor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Vendor/Supplier
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter vendor name"
-                            {...field}
-                            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Contract Amount
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter amount (e.g., $50,000)"
-                            {...field}
-                            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="expiryDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Expiry Date{' '}
-                          <span className="sidebar-gradient-text">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            selected={field.value}
-                            onChange={(date) => field.onChange(date)}
-                            dateFormat="MM/dd/yyyy"
-                            showTimeSelect={false}
-                            timeInputLabel="Time:"
-                            wrapperClassName="date-picker"
-                            className="w-full px-3 py-2 bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 rounded-md"
-                            minDate={new Date()}
-                            placeholderText="Select expiry date"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="assignToDepartment"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Department
-                        </FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                    <FormField
+                      control={form.control}
+                      name="contractNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Contract Number{' '}
+                            <span className="sidebar-gradient-text">*</span>
+                          </FormLabel>
                           <FormControl>
-                            <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
-                              <SelectValue placeholder="Select department" />
-                            </SelectTrigger>
+                            <Input
+                              placeholder="Enter contract number"
+                              {...field}
+                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400"
+                            />
                           </FormControl>
-                          <SelectContent>
-                            {CONTRACT_DEPARTMENTS.map((dept) => (
-                              <SelectItem key={dept} value={dept}>
-                                {dept}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="priority"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Priority
-                        </FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                    <FormField
+                      control={form.control}
+                      name="vendor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Vendor/Supplier
+                          </FormLabel>
                           <FormControl>
-                            <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
-                              <SelectValue />
-                            </SelectTrigger>
+                            <Input
+                              placeholder="Enter vendor name"
+                              {...field}
+                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400"
+                            />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="urgent">Urgent</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="assignedManagers"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="shad-form-label">
-                          Assign To Managers
-                        </FormLabel>
-                        <div className="space-y-2">
-                          <div className="max-h-40 overflow-y-auto border border-white/40 rounded-md bg-white/30 backdrop-blur p-2">
-                            {filteredManagers.length > 0 ? (
-                              filteredManagers.map((manager) => (
-                                <div
-                                  key={manager.$id}
-                                  className="flex items-center space-x-2 p-2 hover:bg-white/20 rounded cursor-pointer"
-                                  onClick={() => {
-                                    const newSelection =
-                                      selectedManagers.includes(manager.$id)
-                                        ? selectedManagers.filter(
-                                            (id) => id !== manager.$id
-                                          )
-                                        : [...selectedManagers, manager.$id];
-                                    setSelectedManagers(newSelection);
-                                    field.onChange(newSelection);
-                                  }}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedManagers.includes(
-                                      manager.$id
-                                    )}
-                                    onChange={() => {
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Contract Amount{' '}
+                            <span className="sidebar-gradient-text">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter amount (e.g., $50,000)"
+                              {...field}
+                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="expiryDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Expiry Date{' '}
+                            <span className="sidebar-gradient-text">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <DatePicker
+                              selected={field.value}
+                              onChange={(date) => field.onChange(date)}
+                              dateFormat="MM/dd/yyyy"
+                              showTimeSelect={false}
+                              timeInputLabel="Time:"
+                              wrapperClassName="date-picker"
+                              className="w-full px-3 py-2 bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 rounded-md"
+                              minDate={new Date()}
+                              placeholderText="Select expiry date"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="assignToDepartment"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Department{' '}
+                            <span className="sidebar-gradient-text">*</span>
+                          </FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
+                                <SelectValue placeholder="Select department" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {CONTRACT_DEPARTMENTS.map((dept) => (
+                                <SelectItem key={dept} value={dept}>
+                                  {dept}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Priority
+                          </FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                              <SelectItem value="urgent">Urgent</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="assignedManagers"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Assign To Manager(s)
+                          </FormLabel>
+                          <div className="space-y-2">
+                            <div className="max-h-40 overflow-y-auto border border-white/40 rounded-md bg-white/30 backdrop-blur p-2">
+                              {filteredManagers.length > 0 ? (
+                                filteredManagers.map((manager) => (
+                                  <div
+                                    key={manager.$id}
+                                    className="flex items-center space-x-2 p-2 hover:bg-white/20 rounded cursor-pointer"
+                                    onClick={() => {
                                       const newSelection =
                                         selectedManagers.includes(manager.$id)
                                           ? selectedManagers.filter(
@@ -865,150 +880,176 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                       setSelectedManagers(newSelection);
                                       field.onChange(newSelection);
                                     }}
-                                    className="cursor-pointer"
-                                  />
-                                  <span className="text-sm text-slate-700">
-                                    {manager.fullName} ({manager.email})
-                                  </span>
-                                </div>
-                              ))
-                            ) : watchedAssignToDepartment ? (
-                              <p className="text-sm text-slate-500 p-2">
-                                No managers in this department
-                              </p>
-                            ) : (
-                              <p className="text-sm text-slate-500 p-2">
-                                Please select a department first
-                              </p>
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedManagers.includes(
+                                        manager.$id
+                                      )}
+                                      onChange={() => {
+                                        const newSelection =
+                                          selectedManagers.includes(manager.$id)
+                                            ? selectedManagers.filter(
+                                                (id) => id !== manager.$id
+                                              )
+                                            : [
+                                                ...selectedManagers,
+                                                manager.$id,
+                                              ];
+                                        setSelectedManagers(newSelection);
+                                        field.onChange(newSelection);
+                                      }}
+                                      className="cursor-pointer"
+                                    />
+                                    <span className="text-sm text-slate-700">
+                                      {manager.fullName} ({manager.email})
+                                    </span>
+                                  </div>
+                                ))
+                              ) : watchedAssignToDepartment ? (
+                                <p className="text-sm text-slate-500 p-2">
+                                  No managers in this department
+                                </p>
+                              ) : (
+                                <p className="text-sm text-slate-500 p-2">
+                                  Please select a department first
+                                </p>
+                              )}
+                            </div>
+                            {selectedManagers.length > 0 && (
+                              <div className="text-xs text-slate-600">
+                                Selected: {selectedManagers.length} manager(s)
+                              </div>
                             )}
                           </div>
-                          {selectedManagers.length > 0 && (
-                            <div className="text-xs text-slate-600">
-                              Selected: {selectedManagers.length} manager(s)
-                            </div>
-                          )}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="compliance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="shad-form-label">
+                            Compliance Level
+                          </FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
+                                <SelectValue placeholder="Select compliance level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {COMPLIANCE_LEVELS.map((level) => (
+                                <SelectItem key={level} value={level}>
+                                  {level}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
-                    name="compliance"
+                    name="description"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="shad-form-label">
-                          Compliance Level
+                          <span className="flex items-center gap-1">
+                            <Image
+                              src="/assets/icons/ai-icon.svg"
+                              alt="info"
+                              width={24}
+                              height={24}
+                            />
+                            Description
+                          </span>
                         </FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400">
-                              <SelectValue placeholder="Select compliance level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {COMPLIANCE_LEVELS.map((level) => (
-                              <SelectItem key={level} value={level}>
-                                {level}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter contract description"
+                            rows={3}
+                            {...field}
+                            className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400 resize-none"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="shad-form-label">
-                        <span className="flex items-center gap-1">
-                          <Image
-                            src="/assets/icons/ai-icon.svg"
-                            alt="info"
-                            width={24}
-                            height={24}
-                          />
-                          Description
-                        </span>
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter contract description"
-                          rows={3}
-                          {...field}
-                          className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400 resize-none"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Upload Progress */}
-            {isUploading && (
-              <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
-                <CardContent className="pt-6">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-navy">Uploading contract...</span>
-                      <span className="text-brand font-medium">
-                        {uploadProgress}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-light-300 rounded-full h-2">
-                      <div
-                        className="bg-gradient-to-r from-brand to-brand-100 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
-            )}
 
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsOpen(false);
-                  resetForm();
-                }}
-                disabled={isUploading}
-                className="primary-btn px-3 sm:px-4 shimmer-hover"
-              >
-                <Trash2 className="w-4 h-4" />
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isUploading || !processedFileData}
-                className="primary-btn min-w-[120px]"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  'Upload Contract'
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              {/* Upload Progress */}
+              {isUploading && (
+                <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-navy">Uploading contract...</span>
+                        <span className="text-brand font-medium">
+                          {uploadProgress}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-light-300 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-brand to-brand-100 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </form>
+          </Form>
+        </div>
+
+        {/* Sticky Footer with Action Buttons */}
+        <div className="sticky bottom-0 z-10 bg-white border-t border-slate-200 px-6 py-4">
+          <div className="flex justify-end space-x-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsOpen(false);
+                resetForm();
+              }}
+              disabled={isUploading}
+              className="primary-btn px-3 sm:px-4 shimmer-hover"
+            >
+              <Ban className="w-4 h-4" />
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="contract-upload-form"
+              disabled={isUploading || !processedFileData}
+              className="primary-btn min-w-[120px]"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Contract
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

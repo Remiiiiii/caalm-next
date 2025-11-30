@@ -80,12 +80,23 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
               appwriteConfig.filesCollectionId!,
               contract.fileId
             );
-          } catch (error) {
-            console.warn(
-              'Could not fetch file data for contract:',
-              contract.$id,
-              error
-            );
+          } catch (error: any) {
+            // Handle missing file documents gracefully (404 errors)
+            if (error?.code === 404 || error?.type === 'document_not_found') {
+              console.warn(
+                `File document not found for contract ${contract.$id} (fileId: ${contract.fileId}). Contract will be displayed without file metadata.`
+              );
+              // Set fileData to null to continue processing without file data
+              fileData = null;
+            } else {
+              // Log other errors but don't break the page
+              console.warn(
+                'Could not fetch file data for contract:',
+                contract.$id,
+                error?.message || error
+              );
+              fileData = null;
+            }
           }
         }
 

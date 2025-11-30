@@ -97,6 +97,19 @@ const nextConfig: NextConfig = {
       pagesBufferLength: 2,
     },
   }),
+  
+  // Enable static page generation for faster initial loads
+  output: 'standalone',
+  
+  // Optimize production builds
+  ...(process.env.NODE_ENV === 'production' && {
+    swcMinify: true,
+    compiler: {
+      removeConsole: {
+        exclude: ['error', 'warn'],
+      },
+    },
+  }),
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

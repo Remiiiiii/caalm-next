@@ -50,7 +50,6 @@ const OTPModal = ({
   // Show success message when modal opens (OTP already sent by signInUser)
   useEffect(() => {
     if (modalIsOpen && email && !hasAutoSentRef.current) {
-      console.log('OTP Modal opened for:', email);
       setHasAutoSent(true);
       hasAutoSentRef.current = true;
 
@@ -76,7 +75,6 @@ const OTPModal = ({
       const res = await verifyOTP({ email, otp, accountId });
       if (res?.success) {
         // Only call onSuccess if verification was successful
-        console.log('OTP verification successful, calling onSuccess');
         onSuccess();
         return; // Exit early on success
       } else {
@@ -92,8 +90,6 @@ const OTPModal = ({
         setLastError('Invalid OTP. Try again.');
       }
     } catch (error) {
-      console.error('Failed to verify OTP', error);
-
       // Use the user-friendly error message from the server action
       if (error instanceof Error) {
         setError(error.message);

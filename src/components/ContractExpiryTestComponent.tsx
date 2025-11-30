@@ -79,12 +79,12 @@ export default function ContractExpiryTestComponent() {
         >
           {isLoading ? (
             <>
-              <Clock className="w-4 h-4 mr-2 animate-spin" />
+              <Clock className="w-4 h-4 animate-spin" />
               Checking Contracts...
             </>
           ) : (
             <>
-              <Calendar className="w-4 h-4 mr-2" />
+              <Calendar className="w-4 h-4" />
               Check Contract Expiry
             </>
           )}

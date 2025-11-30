@@ -12,6 +12,8 @@ import { getUserByAccountId } from '@/lib/actions/user.actions';
 import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
 import { requirePermission } from '@/lib/rbac/middleware';
 import { PERMISSIONS } from '@/constants/permissions';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 
 /**
  * GET /api/calendar/shared
@@ -44,16 +46,53 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const calendars = await getSharedCalendarsForUser(
-      user.$id,
-      defaultOrg.orgId
+    // Check cache first
+    const cacheKey = `calendar:shared:${user.$id}:${defaultOrg.orgId}`;
+    const cachedData = await CacheManager.withCache(
+      'calendar/shared',
+      cacheKey,
+      async () => {
+        const calendars = await getSharedCalendarsForUser(
+          user.$id,
+          defaultOrg.orgId
+        );
+        return {
+          calendars,
+          total: calendars.length,
+          timestamp: Date.now(),
+        };
+      },
+      CACHE_TTLS.medium // 5 minutes
     );
 
-    return NextResponse.json({
-      success: true,
-      calendars,
-      total: calendars.length,
-    });
+    // Check ETag for conditional requests
+    const ifNoneMatch = request.headers.get('if-none-match');
+    if (ifNoneMatch && cachedData.timestamp) {
+      const etag = `"${cachedData.timestamp}"`;
+      if (ifNoneMatch === etag) {
+        return new NextResponse(null, {
+          status: 304,
+          headers: {
+            'ETag': etag,
+            'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+          },
+        });
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        calendars: cachedData.calendars,
+        total: cachedData.total,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+          'ETag': `"${cachedData.timestamp}"`,
+        },
+      }
+    );
   } catch (error) {
     console.error('[SERVER] GET /api/calendar/shared] Error:', error);
     return NextResponse.json(

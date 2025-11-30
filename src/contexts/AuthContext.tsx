@@ -51,6 +51,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         setLoading(true);
 
+        // Optimize: Check localStorage first for cached user data to show UI immediately
+        if (typeof window !== 'undefined') {
+          const cachedUser = localStorage.getItem('cached_user');
+          if (cachedUser) {
+            try {
+              const parsed = JSON.parse(cachedUser);
+              // Only use cache if it's less than 5 minutes old
+              if (parsed.timestamp && Date.now() - parsed.timestamp < 300000) {
+                setUser(parsed.user);
+                setIsSessionValid(true);
+                setLoading(false);
+                // Continue with fresh check in background
+              }
+            } catch {
+              // Invalid cache, continue with fresh check
+            }
+          }
+        }
+
         // First try to get session-based user
         const sessionUser = await getSessionUser();
         
@@ -72,6 +91,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
             setUser(typedSessionUser);
           setIsSessionValid(true);
+          
+          // Cache user data for faster subsequent loads
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('cached_user', JSON.stringify({
+                user: typedSessionUser,
+                timestamp: Date.now(),
+              }));
+              
+              // Trigger cache warm-up for dashboard data
+              const orgId = 'default_organization'; // You may want to get this from context
+              import('@/lib/services/cache-manager').then(({ default: CacheManager }) => {
+                CacheManager.warmUp(orgId, typedSessionUser.$id).catch(() => {
+                  // Silently fail - warm-up is non-critical
+                });
+              });
+            } catch {
+              // localStorage might be full, ignore
+            }
+          }
         } else {
           // Check for 2FA-based authentication only if we're on a dashboard route
           // This prevents automatic authentication on sign-in page
@@ -175,6 +214,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
               setUser(convertedUser);
               setIsSessionValid(true);
+              
+              // Cache user data for faster subsequent loads
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.setItem('cached_user', JSON.stringify({
+                    user: convertedUser,
+                    timestamp: Date.now(),
+                  }));
+                  
+                  // Trigger cache warm-up for dashboard data
+                  const orgId = 'default_organization'; // You may want to get this from context
+                  import('@/lib/services/cache-manager').then(({ default: CacheManager }) => {
+                    CacheManager.warmUp(orgId, convertedUser.$id).catch(() => {
+                      // Silently fail - warm-up is non-critical
+                    });
+                  });
+                } catch {
+                  // localStorage might be full, ignore
+                }
+              }
             } else {
               if (process.env.NODE_ENV === 'development') {
                 console.log('AuthContext: No 2FA user found, setting to null');
@@ -271,6 +330,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Clear any client-side storage immediately
     localStorage.removeItem('session');
+    localStorage.removeItem('cached_user');
     sessionStorage.clear();
 
     // Redirect immediately without waiting for API call

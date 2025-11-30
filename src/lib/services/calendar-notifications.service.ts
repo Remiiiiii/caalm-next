@@ -364,6 +364,88 @@ export const getActiveEscalationRules = async (
 };
 
 /**
+ * Update an escalation rule
+ */
+export const updateEscalationRule = async (
+  ruleId: string,
+  updates: Partial<CreateEscalationRuleData> & { isActive?: boolean }
+): Promise<EscalationRule> => {
+  const { tablesDB } = await createAdminClient();
+  const collectionId = getEscalationRulesCollectionId();
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (updates.name !== undefined) {
+    updateData.name = updates.name;
+  }
+  if (updates.triggerEvent !== undefined) {
+    updateData.triggerEvent = updates.triggerEvent;
+  }
+  if (updates.delayMinutes !== undefined) {
+    updateData.delayMinutes = updates.delayMinutes;
+  }
+  if (updates.escalationChannels !== undefined) {
+    updateData.escalationChannels = JSON.stringify(updates.escalationChannels);
+  }
+  if (updates.escalateToUserIds !== undefined) {
+    updateData.escalateToUserIds = JSON.stringify(updates.escalateToUserIds);
+  }
+  if (updates.isActive !== undefined) {
+    updateData.isActive = updates.isActive;
+  }
+
+  const response = await tablesDB.updateRow({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    rowId: ruleId,
+    data: updateData,
+  });
+
+  // Parse arrays back from JSON
+  const result = response as unknown as Record<string, unknown>;
+  if (typeof result.escalationChannels === 'string') {
+    try {
+      result.escalationChannels = JSON.parse(result.escalationChannels);
+    } catch (error) {
+      console.error(
+        '[SERVER] updateEscalationRule] Error parsing escalationChannels:',
+        error
+      );
+      result.escalationChannels = [];
+    }
+  }
+  if (typeof result.escalateToUserIds === 'string') {
+    try {
+      result.escalateToUserIds = JSON.parse(result.escalateToUserIds);
+    } catch (error) {
+      console.error(
+        '[SERVER] updateEscalationRule] Error parsing escalateToUserIds:',
+        error
+      );
+      result.escalateToUserIds = [];
+    }
+  }
+
+  return result as unknown as EscalationRule;
+};
+
+/**
+ * Delete an escalation rule
+ */
+export const deleteEscalationRule = async (ruleId: string): Promise<void> => {
+  const { tablesDB } = await createAdminClient();
+  const collectionId = getEscalationRulesCollectionId();
+
+  await tablesDB.deleteRow({
+    databaseId: appwriteConfig.databaseId!,
+    tableId: collectionId,
+    rowId: ruleId,
+  });
+};
+
+/**
  * Send calendar shared notification to recipient
  * Creates in-app notification, sends email, and SMS (if enabled)
  */

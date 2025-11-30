@@ -619,7 +619,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                       variant="outline"
                       className="flex-1 h-[42px] border-light-300 text-light-100 hover:bg-light-300/50 shadow-drop-1"
                     >
-                      <Share2 className="mr-2 h-4 w-4" />
+                      <Share2 className="h-4 w-4" />
                       Share Report
                     </Button>
                     <Button
@@ -627,7 +627,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                       variant="outline"
                       className="h-[42px] px-4 border-red-300 text-red-600 hover:bg-red-50 shadow-drop-1"
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                       Delete
                     </Button>
                   </div>

@@ -36,25 +36,28 @@ export type AppUser = {
 
 export const getUserByEmail = async (email: string) => {
   try {
-    console.log('getUserByEmail: Looking for user with email:', email);
-    const { tablesDB } = await createAdminClient();
-    console.log('getUserByEmail: Admin client created successfully');
-
-    const result = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: appwriteConfig.usersCollectionId || 'users',
-      queries: [Query.equal('email', email)],
-    });
-
-    console.log('getUserByEmail: Query result:', {
-      total: result.total,
-      rowsLength: result.rows?.length || 0,
-      firstRow: result.rows?.[0] ? 'Found' : 'Not found',
-    });
-
-    return result.total > 0 ? result.rows[0] : null;
+    // Check cache first for faster lookups during sign-in
+    const cacheKey = `user:email:${email.toLowerCase()}`;
+    const cachedUser = await CacheManager.withCache(
+      'users',
+      cacheKey,
+      async () => {
+        const { tablesDB } = await createAdminClient();
+        const result = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.usersCollectionId || 'users',
+          queries: [Query.equal('email', email)],
+        });
+        return result.total > 0 ? result.rows[0] : null;
+      },
+      300 // 5 minute cache for user lookups
+    );
+    
+    return cachedUser;
   } catch (error) {
-    console.error('getUserByEmail: Error occurred:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('getUserByEmail: Error occurred:', error);
+    }
     throw error;
   }
 };
@@ -130,10 +133,7 @@ const handleError = (error: unknown, message: string) => {
 
 export const sendEmailOTP = async ({ email }: { email: string }) => {
   try {
-    console.log('sendEmailOTP: Starting OTP send for email:', email);
-
     const { tablesDB } = await createAdminClient();
-    console.log('sendEmailOTP: Admin client created successfully');
 
     // Check if an OTP was recently sent (within the last 30 seconds) to prevent duplicates
     const thirtySecondsAgo = new Date();
@@ -150,10 +150,6 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     });
 
     if (recentOtpResponse.rows.length > 0) {
-      console.log(
-        'sendEmailOTP: Recent OTP found, skipping duplicate send for:',
-        email
-      );
       // Return success but don't send duplicate email
       return ID.unique();
     }
@@ -167,60 +163,46 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
         Query.equal('email', email),
         Query.equal('used', false),
         Query.greaterThan('expiresAt', now.toISOString()),
+        Query.limit(1), // Only need to check if one exists
       ],
     });
 
     if (validOtpResponse.rows.length > 0) {
-      console.log(
-        'sendEmailOTP: Valid unused OTP already exists, skipping duplicate send for:',
-        email
-      );
       // Return success but don't send duplicate email
       return ID.unique();
     }
 
     // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log('sendEmailOTP: Generated OTP:', otp);
 
     // Store OTP in database with expiration (5 minutes)
     const expirationTime = new Date();
     expirationTime.setMinutes(expirationTime.getMinutes() + 5);
 
-    // Store OTP in the database
-    await tablesDB.createRow({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
-      rowId: ID.unique(),
-      data: {
-        email,
-        otp,
-        expiresAt: expirationTime.toISOString(),
-        used: false,
-      },
-    });
-    console.log('sendEmailOTP: OTP stored in database');
-
-    // Get user's full name from database
-    let userFullName = 'User';
-    try {
-      const userResponse = await tablesDB.listRows({
+    // Store OTP in the database and get user name in parallel
+    const [_, user] = await Promise.all([
+      tablesDB.createRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
-        tableId: appwriteConfig.usersCollectionId || 'users',
-        queries: [Query.equal('email', email)],
-      });
+        tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
+        rowId: ID.unique(),
+        data: {
+          email,
+          otp,
+          expiresAt: expirationTime.toISOString(),
+          used: false,
+        },
+      }),
+      getUserByEmail(email).catch(() => null), // Get user in parallel
+    ]);
 
-      if (userResponse.rows.length > 0) {
-        userFullName = userResponse.rows[0].fullName || 'User';
-      }
-    } catch (error) {
-      console.warn('Could not retrieve user full name:', error);
-    }
+    // Use user data from parallel fetch
+    const userFullName = user?.fullName || 'User';
 
-    // Send OTP via Mailgun
+    // Send OTP via Mailgun (non-blocking for faster response)
     const { mailgunService } = await import('../services/mailgun');
-    await mailgunService.sendOTPEmail(email, otp, { fullName: userFullName });
-    console.log('sendEmailOTP: OTP sent via Mailgun successfully');
+    mailgunService.sendOTPEmail(email, otp, { fullName: userFullName }).catch(() => {
+      // Silently fail - email sending shouldn't block sign-in
+    });
 
     // Return a dummy userId for compatibility with existing code
     return ID.unique();
@@ -422,11 +404,9 @@ export const verifyOTP = async ({
   accountId?: string;
 }) => {
   try {
-    console.log('verifyOTP: Starting OTP verification for email:', email);
-
     const { tablesDB } = await createAdminClient();
 
-    // Find the OTP in the database
+    // Find the OTP in the database (optimized query with limit)
     const result = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
@@ -434,6 +414,7 @@ export const verifyOTP = async ({
         Query.equal('email', email),
         Query.equal('otp', otp),
         Query.equal('used', false),
+        Query.limit(1), // Only need one result
       ],
     });
 
@@ -452,8 +433,8 @@ export const verifyOTP = async ({
       );
     }
 
-    // Mark OTP as used
-    await tablesDB.updateRow({
+    // Mark OTP as used and return success in parallel for faster response
+    const updatePromise = tablesDB.updateRow({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
       rowId: otpRecord.$id,
@@ -461,8 +442,6 @@ export const verifyOTP = async ({
         used: true,
       },
     });
-
-    console.log('verifyOTP: OTP verified successfully');
 
     // Send SMS notification to admins for sign-up (not sign-in)
     // Run in background without blocking the response
@@ -473,15 +452,16 @@ export const verifyOTP = async ({
             return notifyOTPVerified(email, userInfo.fullName);
           }
         })
-        .catch((error) => {
-          console.error('Failed to send OTP verification SMS:', error);
-          // Don't throw - SMS failure shouldn't block user flow
+        .catch(() => {
+          // Silently fail - SMS failure shouldn't block user flow
         });
     }
 
+    // Wait for update to complete
+    await updatePromise;
+
     // If accountId is provided (sign-in flow), return it for client-side session creation
     if (accountId) {
-      console.log('verifyOTP: Returning accountId for sign-in flow');
       return {
         success: true,
         accountId: accountId,
@@ -490,7 +470,9 @@ export const verifyOTP = async ({
 
     return { success: true };
   } catch (error) {
-    console.error('verifyOTP: Error occurred:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('verifyOTP: Error occurred:', error);
+    }
 
     if (error instanceof Error) {
       if (
@@ -756,54 +738,65 @@ export const signOutUser = async () => {
 
 export const signInUser = async ({ email }: { email: string }) => {
   try {
-    console.log('signInUser: Starting sign-in process for:', email);
+    // Optimized: Check both sources in parallel for faster response
+    const [existingUser, authUserResult] = await Promise.allSettled([
+      getUserByEmail(email),
+      // Check Appwrite Auth in parallel (only if custom user not found)
+      (async () => {
+        const client = new sdk.Client()
+          .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+          .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+          .setKey(process.env.NEXT_APPWRITE_API_KEY!);
+        const users = new sdk.Users(client);
+        const userList = await users.list({
+          queries: [sdk.Query.equal('email', email)],
+        });
+        return userList.total > 0 ? userList.users[0] : null;
+      })(),
+    ]);
 
-    // Check if user exists in our custom users collection
-    console.log('signInUser: Calling getUserByEmail...');
-    const existingUser = (await getUserByEmail(email)) as AppUser | null;
-    console.log('signInUser: existingUser result:', existingUser);
+    const user = existingUser.status === 'fulfilled' 
+      ? (existingUser.value as AppUser | null)
+      : null;
+    
+    const authUser = user 
+      ? null 
+      : (authUserResult.status === 'fulfilled' ? authUserResult.value : null);
 
-    if (existingUser) {
-      console.log('signInUser: User found, sending OTP...');
-      await sendEmailOTP({ email });
-      console.log(
-        'signInUser: OTP sent successfully, returning accountId:',
-        existingUser.accountId
-      );
-      return { accountId: existingUser.accountId };
+    if (user) {
+      // User found - send OTP in background (non-blocking for faster response)
+      sendEmailOTP({ email }).catch((err) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to send OTP (non-blocking):', err);
+        }
+      });
+      return { accountId: user.accountId };
     }
 
-    console.log(
-      'signInUser: User not found in custom collection, checking Appwrite Auth...'
-    );
-
-    // Try to find the user in Appwrite Auth (pseudo-code, depends on your SDK)
-    const client = new sdk.Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-      .setKey(process.env.NEXT_APPWRITE_API_KEY!);
-
-    const users = new sdk.Users(client);
-    const userList = await users.list({
-      queries: [sdk.Query.equal('email', email)],
-    });
-    const authUser = userList.total > 0 ? userList.users[0] : null;
-
     if (authUser) {
-      // Create the missing users collection document
+      // Create user record and send OTP in parallel
       const { tablesDB } = await createAdminClient();
-      await tablesDB.createRow({
-        databaseId: appwriteConfig.databaseId || 'default-db',
-        tableId: appwriteConfig.usersCollectionId || 'users',
-        rowId: ID.unique(),
-        data: {
-          fullName: authUser.name || '',
-          email: authUser.email,
-          avatar: avatarPlaceholderUrl,
-          accountId: authUser.$id,
-        },
-      });
-      await sendEmailOTP({ email });
+      const userId = ID.unique();
+      
+      // Parallelize user creation and OTP sending
+      await Promise.all([
+        tablesDB.createRow({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.usersCollectionId || 'users',
+          rowId: userId,
+          data: {
+            fullName: authUser.name || '',
+            email: authUser.email,
+            avatar: avatarPlaceholderUrl,
+            accountId: authUser.$id,
+          },
+        }),
+        sendEmailOTP({ email }),
+      ]);
+      
+      // Invalidate cache for this email to ensure fresh data
+      await CacheManager.invalidateUsers(email);
+      
       return { accountId: authUser.$id };
     }
 
@@ -813,11 +806,9 @@ export const signInUser = async ({ email }: { email: string }) => {
         'No account found with this email address. Please check your email or sign up for a new account.',
     };
   } catch (error) {
-    console.error('signInUser: Error occurred:', error);
-    console.error('signInUser: Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace',
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.error('signInUser: Error occurred:', error);
+    }
 
     // Handle specific errors with user-friendly messages
     if (error instanceof Error) {

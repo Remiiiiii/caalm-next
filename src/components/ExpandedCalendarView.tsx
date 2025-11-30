@@ -60,6 +60,7 @@ import {
   CalendarPlus,
   MessageSquare,
   X,
+  Ban,
 } from 'lucide-react';
 import {
   format,
@@ -1102,7 +1103,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
         onClick={() => setIsExpanded(true)}
         className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
       >
-        <Expand className="h-4 w-4 mr-2" />
+        <Expand className="h-4 w-4" />
         Expand
       </Button>
 
@@ -1187,7 +1188,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                   variant="outline"
                   className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
-                  <Filter className="h-4 w-4 mr-2" />
+                  <Filter className="h-4 w-4" />
                   Filter
                 </Button>
 
@@ -1196,7 +1197,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                   variant="outline"
                   className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
-                  <Share2 className="h-4 w-4 mr-2" />
+                  <Share2 className="h-4 w-4" />
                   Share
                 </Button>
 
@@ -1205,7 +1206,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                   variant="outline"
                   className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                 >
-                  <Printer className="h-4 w-4 mr-2" />
+                  <Printer className="h-4 w-4" />
                   Print
                 </Button>
 
@@ -1225,12 +1226,12 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                     >
                       {syncing ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />{' '}
+                          <Loader2 className="h-4 w-4 animate-spin" />{' '}
                           Syncing...
                         </>
                       ) : (
                         <>
-                          <RefreshCw className="h-4 w-4 mr-2" /> Sync
+                          <RefreshCw className="h-4 w-4" /> Sync
                         </>
                       )}
                     </Button>
@@ -1245,7 +1246,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                       variant="outline"
                       className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
                     >
-                      <Settings className="h-4 w-4 mr-2" />
+                      <Settings className="h-4 w-4" />
                       Settings
                     </Button>
                   </DialogTrigger>
@@ -1267,7 +1268,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                   disabled={!canCreateEvent}
                   className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 disabled:opacity-50"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4" />
                   New Event
                 </Button>
               </div>
@@ -2090,7 +2091,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                   disabled={isProcessingApproval}
                   className="primary-btn px-3 sm:px-4 flex-1"
                 >
-                  <X className="w-4 h-4" />
+                  <Ban className="w-4 h-4" />
                   Cancel
                 </Button>
                 <Button
@@ -2699,7 +2700,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
                 onClick={handleShare}
                 className="flex-1 bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
               >
-                <Link className="h-4 w-4 mr-2" />
+                <Link className="h-4 w-4" />
                 Generate Link
               </Button>
             </div>

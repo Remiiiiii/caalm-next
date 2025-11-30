@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Trash, ListFilter, Pencil, Trash2 } from 'lucide-react';
+import { Trash, ListFilter, Pencil, Trash2, Ban } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { UserRoleDisplay } from '@/components/UserRoleDisplay';
 
@@ -572,7 +572,7 @@ const UserManagement = () => {
                 onClick={closeEditModal}
                 className="primary-btn px-3 sm:px-4"
               >
-                <Trash2 className="w-4 h-4" />
+                <Ban className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
               <Button type="submit" disabled={editLoading}>
@@ -602,7 +602,7 @@ const UserManagement = () => {
               onClick={() => setShowBulkDeleteDialog(false)}
               className="primary-btn px-3 sm:px-4"
             >
-              <Trash2 className="w-4 h-4" />
+              <Ban className="w-4 h-4 mr-2" />
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleBulkDelete}>

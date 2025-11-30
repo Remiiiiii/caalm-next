@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,12 +31,14 @@ import { Calendar } from '@/components/ui/calendar';
 import CalendarSettings from '@/components/CalendarSettings';
 import { SharedCalendarManager } from '@/components/SharedCalendarManager';
 import { CreateSharedCalendarDialog } from '@/components/CreateSharedCalendarDialog';
+import { SharePrimaryCalendarDialog } from '@/components/SharePrimaryCalendarDialog';
 import { ResourceManager } from '@/components/ResourceManager';
 import { CalendarDelegationManager } from '@/components/CalendarDelegationManager';
 import { CalendarSidebar } from '@/components/CalendarSidebar';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import type { SharedCalendar } from '@/lib/actions/shared-calendar.actions';
 import { useAutoSync } from '@/hooks/useAutoSync';
+import { useSharedCalendars } from '@/hooks/useSharedCalendars';
 import { cn, getFileType, convertFileSize } from '@/lib/utils';
 import type {
   CalendarApprovalRequest,
@@ -74,6 +76,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Ban,
+  Minimize2,
   Calendar as CalendarIcon,
   CalendarDays,
   CalendarPlus,
@@ -212,6 +215,8 @@ interface CalendarUser {
   fullName?: string;
   role?: string;
   department?: string;
+  accountId?: string;
+  email?: string;
 }
 
 interface OutlookStyleCalendarProps {
@@ -420,6 +425,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isCreateSharedCalendarOpen, setIsCreateSharedCalendarOpen] =
     useState(false);
+  const [isSharePrimaryCalendarOpen, setIsSharePrimaryCalendarOpen] =
+    useState(false);
   const [shareSettings, setShareSettings] = useState({
     users: [],
     permissions: 'view' as 'view' | 'edit',
@@ -443,9 +450,18 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Location search state
   const [locationSearch, setLocationSearch] = useState('');
   const [locationResults, setLocationResults] = useState<
-    Array<{ id: string; name: string; address: string }>
+    Array<{
+      id: string;
+      name: string;
+      address: string;
+      type?: 'external' | 'resource';
+      resourceId?: string;
+    }>
   >([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(
+    null
+  );
 
   // AI Panel state
   const [showAiPanel, setShowAiPanel] = useState(false);
@@ -1243,7 +1259,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     }
   };
 
-  // Function to search for locations
+  // Function to search for locations (both external and managed resources)
   const searchLocations = async (query: string) => {
     if (query.length < 2) {
       setLocationResults([]);
@@ -1252,15 +1268,61 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
     setIsSearchingLocation(true);
     try {
-      const response = await fetch(
-        `/api/locations/search?q=${encodeURIComponent(query)}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.locations) {
-          setLocationResults(data.locations);
+      // Search both external locations and managed resources in parallel
+      const [externalResponse, resourcesResponse] = await Promise.all([
+        fetch(`/api/locations/search?q=${encodeURIComponent(query)}`),
+        fetch(`/api/calendar/resources?search=${encodeURIComponent(query)}`),
+      ]);
+
+      const results: Array<{
+        id: string;
+        name: string;
+        address: string;
+        type?: 'external' | 'resource';
+        resourceId?: string;
+      }> = [];
+
+      // Add external locations
+      if (externalResponse.ok) {
+        const externalData = await externalResponse.json();
+        if (externalData.success && externalData.locations) {
+          externalData.locations.forEach(
+            (loc: { id: string; name: string; address: string }) => {
+              results.push({
+                ...loc,
+                type: 'external',
+              });
+            }
+          );
         }
       }
+
+      // Add managed resources
+      if (resourcesResponse.ok) {
+        const resourcesData = await resourcesResponse.json();
+        if (resourcesData.success && resourcesData.resources) {
+          resourcesData.resources.forEach(
+            (resource: {
+              $id: string;
+              name: string;
+              location?: string;
+              type: string;
+            }) => {
+              results.push({
+                id: resource.$id,
+                name: `${resource.name}${
+                  resource.type === 'room' ? ' (Room)' : ' (Equipment)'
+                }`,
+                address: resource.location || 'No location specified',
+                type: 'resource',
+                resourceId: resource.$id,
+              });
+            }
+          );
+        }
+      }
+
+      setLocationResults(results);
     } catch (error) {
       console.error('Error searching locations:', error);
       setLocationResults([]);
@@ -1308,6 +1370,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     // Reset location state
     setLocationSearch('');
     setLocationResults([]);
+    setSelectedResourceId(null);
   };
 
   // Initialize with smart placeholder times
@@ -1565,6 +1628,63 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     });
   }, [events, calendarEvents]);
 
+  // Filter events for default calendar (exclude events from shared calendars)
+  const defaultCalendarEvents = useMemo(() => {
+    if (!selectedMyCalendars.calendar) return [];
+
+    // Get owner IDs of all shared calendars
+    const sharedCalendarOwnerIds = new Set(
+      sharedCalendars.map((cal) => cal.ownerId).filter(Boolean)
+    );
+
+    // Filter out events created by shared calendar owners
+    return normalizedEvents.filter((event) => {
+      // Include events created by current user
+      if (
+        event.createdByUserId === user?.$id ||
+        event.createdByAccountId === user?.accountId
+      ) {
+        return true;
+      }
+      // Include participant events (user is invited)
+      if (event.participants) {
+        const participantsStr = String(event.participants).toLowerCase();
+        const userEmail = user?.email?.toLowerCase() || '';
+        const userAccountId = user?.accountId?.toLowerCase() || '';
+        if (
+          participantsStr.includes(userEmail) ||
+          participantsStr.includes(userAccountId) ||
+          (user?.$id && participantsStr.includes(user.$id.toLowerCase()))
+        ) {
+          return true;
+        }
+      }
+      // Exclude events from shared calendar owners (these belong in shared calendar views)
+      if (
+        event.createdByUserId &&
+        sharedCalendarOwnerIds.has(event.createdByUserId)
+      ) {
+        return false;
+      }
+      // Include other events (fallback)
+      return true;
+    });
+  }, [normalizedEvents, selectedMyCalendars.calendar, sharedCalendars, user]);
+
+  // Helper to get events for a specific shared calendar
+  const getSharedCalendarEvents = useCallback(
+    (calendar: SharedCalendar): LocalCalendarEvent[] => {
+      return normalizedEvents.filter((event) => {
+        // Only show events created by this calendar's owner
+        return (
+          event.createdByUserId === calendar.ownerId ||
+          event.createdByAccountId === calendar.ownerAccountId
+        );
+      });
+    },
+    [normalizedEvents]
+  );
+
   // Get US holidays as events with fast caching
   const [usHolidaysEvents, setUsHolidaysEvents] = useState<
     LocalCalendarEvent[]
@@ -1661,19 +1781,62 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     calendar: 'calendar' | 'usHolidays',
     checked: boolean
   ) => {
-    setSelectedMyCalendars((prev) => ({
-      ...prev,
-      [calendar]: checked,
-    }));
+    setSelectedMyCalendars((prev) => {
+      // Count how many calendars are currently checked (before this change)
+      const currentCheckedCount =
+        (prev.calendar ? 1 : 0) +
+        (prev.usHolidays ? 1 : 0) +
+        selectedSharedCalendars.length;
+
+      // If trying to uncheck Calendar and it's the only checked calendar, prevent it
+      if (calendar === 'calendar' && !checked && currentCheckedCount === 1) {
+        return prev; // Don't allow unchecking Calendar if it's the last one
+      }
+
+      const newState = {
+        ...prev,
+        [calendar]: checked,
+      };
+
+      // Count how many calendars will be checked after this change
+      const newCheckedCount =
+        (newState.calendar ? 1 : 0) +
+        (newState.usHolidays ? 1 : 0) +
+        selectedSharedCalendars.length;
+
+      // If no calendars will be checked, ensure Calendar is checked by default
+      if (newCheckedCount === 0) {
+        return {
+          ...newState,
+          calendar: true,
+        };
+      }
+
+      return newState;
+    });
   };
 
   const handleSharedCalendarChange = (calendarId: string, checked: boolean) => {
     setSelectedSharedCalendars((prev) => {
-      if (checked) {
-        return [...prev, calendarId];
-      } else {
-        return prev.filter((id) => id !== calendarId);
+      const newSharedCalendars = checked
+        ? [...prev, calendarId]
+        : prev.filter((id) => id !== calendarId);
+
+      // Count how many calendars will be checked after this change
+      const checkedCount =
+        (selectedMyCalendars.calendar ? 1 : 0) +
+        (selectedMyCalendars.usHolidays ? 1 : 0) +
+        newSharedCalendars.length;
+
+      // If no calendars will be checked, ensure Calendar is checked by default
+      if (checkedCount === 0) {
+        setSelectedMyCalendars((prevMy) => ({
+          ...prevMy,
+          calendar: true,
+        }));
       }
+
+      return newSharedCalendars;
     });
   };
 
@@ -1681,9 +1844,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     calendarType: 'calendar' | 'usHolidays' | string
   ) => {
     if (calendarType === 'calendar' || calendarType === 'usHolidays') {
+      // Use handleMyCalendarChange which already has the logic to prevent unchecking Calendar if it's the last one
       handleMyCalendarChange(calendarType, false);
     } else {
       // It's a shared calendar ID
+      // Use handleSharedCalendarChange which already has the logic to ensure Calendar is checked if all become unchecked
       handleSharedCalendarChange(calendarType, false);
     }
   };
@@ -1699,46 +1864,41 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     }`
   );
 
-  // Fetch shared calendars
+  // Use optimized SWR hook for shared calendars
+  const {
+    calendars: swrCalendars,
+    isLoading: swrLoading,
+    refresh: refreshSharedCalendars,
+  } = useSharedCalendars();
+
+  // Update shared calendars state from SWR
   useEffect(() => {
-    const fetchSharedCalendars = async () => {
-      try {
-        setLoadingSharedCalendars(true);
-        const response = await fetch('/api/calendar/shared');
-        if (response.ok) {
-          const data = await response.json();
-          const calendars = data.calendars || [];
-          setSharedCalendars(calendars);
+    if (swrCalendars.length > 0) {
+      setSharedCalendars(swrCalendars);
+      setLoadingSharedCalendars(swrLoading);
 
-          // Fetch owner names
-          const ownerIds = calendars
-            .map((cal: SharedCalendar) => cal.ownerId)
-            .filter((id: string) => id);
-          if (ownerIds.length > 0) {
-            const ownerNames = await fetchUserNamesByIds(ownerIds);
-            const namesMap: Record<string, string> = {};
-            ownerNames.forEach((user) => {
-              calendars.forEach((cal: SharedCalendar) => {
-                if (cal.ownerId === user.$id) {
-                  namesMap[cal.$id] = user.fullName || 'Unknown';
-                }
-              });
+      // Fetch owner names (cached by SWR hook)
+      const ownerIds = swrCalendars
+        .map((cal: SharedCalendar) => cal.ownerId)
+        .filter((id: string) => id);
+      if (ownerIds.length > 0) {
+        fetchUserNamesByIds(ownerIds).then((ownerNames) => {
+          const namesMap: Record<string, string> = {};
+          ownerNames.forEach((user) => {
+            swrCalendars.forEach((cal: SharedCalendar) => {
+              if (cal.ownerId === user.$id) {
+                namesMap[cal.$id] = user.fullName || 'Unknown';
+              }
             });
-            setSharedCalendarOwnerNames(namesMap);
-          }
-        }
-      } catch (error) {
-        console.error(
-          '[CLIENT] OutlookStyleCalendar] Error fetching shared calendars:',
-          error
-        );
-      } finally {
-        setLoadingSharedCalendars(false);
+          });
+          setSharedCalendarOwnerNames(namesMap);
+        });
       }
-    };
-
-    fetchSharedCalendars();
-  }, []);
+    } else if (!swrLoading) {
+      setSharedCalendars([]);
+      setLoadingSharedCalendars(false);
+    }
+  }, [swrCalendars, swrLoading]);
 
   // Calculate calendar width based on container and number of calendars
   useEffect(() => {
@@ -2051,27 +2211,56 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const getEventTypeConfig = (type: LocalCalendarEvent['type']) => {
     const configs = {
       'contract review': {
+        color: 'bg-blue text-blue border-blue',
+        icon: FileText,
+        borderColor: 'border-blue',
+      },
+      contract: {
         color: 'bg-blue-100 text-blue-800 border-blue-200',
         icon: FileText,
+        borderColor: 'border-blue',
       },
       'deadline discussion': {
         color: 'bg-red-100 text-red-800 border-red-200',
         icon: Clock,
+        borderColor: 'border-red',
+      },
+      deadline: {
+        color: 'bg-red-100 text-red-800 border-red-200',
+        icon: Clock,
+        borderColor: 'border-red',
       },
       meeting: {
         color: 'bg-green-100 text-green-800 border-green-200',
         icon: Users,
+        borderColor: 'border-green',
       },
       'internal review': {
         color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
         icon: FileText,
+        borderColor: 'border-orange',
+      },
+      review: {
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        icon: FileText,
+        borderColor: 'border-orange',
       },
       audit: {
         color: 'bg-purple-100 text-purple-800 border-purple-200',
         icon: FileText,
+        borderColor: 'border-purple-500',
       },
     };
     return configs[type] || configs.meeting;
+  };
+
+  const getEventTypeBorderColor = (type: string | undefined): string => {
+    if (!type) return 'border-gray-400';
+    const normalizedType = type.toLowerCase().trim();
+    const config = getEventTypeConfig(
+      normalizedType as LocalCalendarEvent['type']
+    );
+    return config.borderColor || 'border-gray-400';
   };
 
   const handleCreateEvent = async () => {
@@ -2179,6 +2368,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           .map((p) => `${p.fullName || p.name} <${p.email}>`)
           .join(', '),
         location: newEvent.location || undefined,
+        resourceId: selectedResourceId || undefined, // Priority 2: Resource booking
         createdBy: accountId || user?.$id || 'user',
         createdByAccountId: accountId || user?.$id || 'user',
         createdByUserId: userId,
@@ -3060,10 +3250,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       event.approvalStatus !== 'not_required'
                         ? event.approvalStatus
                         : null;
+                    const borderColor = getEventTypeBorderColor(event.type);
                     return (
                       <div
                         key={event.$id || `event-${index}-${event.title}`}
-                        className="bg-gray-100 border-l-4 border-gray-400 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-200 transition-colors"
+                        className={cn(
+                          'bg-gray-100 border-l-4 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-200 transition-colors',
+                          borderColor
+                        )}
                         onClick={(e) => {
                           e.stopPropagation();
                           openEditDialog(event);
@@ -3458,104 +3652,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             </TabsList>
           </Tabs>
 
-          <Button
-            size="sm"
-            variant="outline"
-            className="primary-btn px-3 sm:px-4"
-          >
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-
-          <CreateSharedCalendarDialog
-            open={isCreateSharedCalendarOpen}
-            onOpenChange={setIsCreateSharedCalendarOpen}
-            onCalendarCreated={async (calendar) => {
-              // Refresh shared calendars if needed
-              if (!loadingSharedCalendars) {
-                setLoadingSharedCalendars(true);
-                try {
-                  const response = await fetch('/api/calendar/shared');
-                  if (response.ok) {
-                    const data = await response.json();
-                    setSharedCalendars(data.calendars || []);
-                  }
-                } catch (error) {
-                  console.error(
-                    '[CLIENT] OutlookStyleCalendar] Error refreshing shared calendars:',
-                    error
-                  );
-                } finally {
-                  setLoadingSharedCalendars(false);
-                }
-              }
-            }}
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            className="primary-btn px-3 sm:px-4"
-            onClick={() => setIsCreateSharedCalendarOpen(true)}
-          >
-            <Share2 className="h-4 w-4" />
-            Share
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            className="primary-btn px-3 sm:px-4"
-          >
-            <Printer className="h-4 w-4" />
-            Print
-          </Button>
-
-          {/* Sync Button */}
-          {outlookConnected && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSync}
-              disabled={syncing}
-              className="primary-btn px-3 sm:px-4"
-            >
-              {syncing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Syncing...
-                </>
-              ) : (
-                <>
-                  <Loader2 className="h-4 w-4" /> Sync
-                </>
-              )}
-            </Button>
-          )}
-
-          {/* Settings Button */}
-          <Dialog open={showSettings} onOpenChange={setShowSettings}>
-            <DialogTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="primary-btn px-3 sm:px-4"
-              >
-                <Settings className="h-4 w-4 text-white" />
-                Settings
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
-              <DialogHeader>
-                <DialogTitle className="sidebar-gradient-text">
-                  Calendar Settings
-                </DialogTitle>
-              </DialogHeader>
-              <CalendarSettings
-                userId={user?.$id || ''}
-                onClose={() => setShowSettings(false)}
-              />
-            </DialogContent>
-          </Dialog>
-
+          {/* New Event Button - PRIMARY ACTION (Leftmost for maximum discoverability) */}
           <Dialog
             open={isAddEventOpen}
             onOpenChange={(open) => {
@@ -3983,25 +4080,25 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       </SelectItem>
                       <SelectItem value="contract">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div className="w-2 h-2 bg-blue rounded-full"></div>
                           Contract Review
                         </div>
                       </SelectItem>
                       <SelectItem value="meeting">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <div className="w-2 h-2 bg-green rounded-full"></div>
                           Meeting
                         </div>
                       </SelectItem>
                       <SelectItem value="deadline">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <div className="w-2 h-2 bg-red rounded-full"></div>
                           Deadline Discussion
                         </div>
                       </SelectItem>
                       <SelectItem value="review">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                          <div className="w-2 h-2 bg-orange rounded-full"></div>
                           Internal Review
                         </div>
                       </SelectItem>
@@ -4159,6 +4256,17 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                       });
                                       setLocationSearch(location.address);
                                       setLocationResults([]);
+                                      // If this is a resource, set the resourceId
+                                      if (
+                                        location.type === 'resource' &&
+                                        location.resourceId
+                                      ) {
+                                        setSelectedResourceId(
+                                          location.resourceId
+                                        );
+                                      } else {
+                                        setSelectedResourceId(null);
+                                      }
                                     }}
                                   >
                                     <div className="flex items-center gap-3">
@@ -4339,7 +4447,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       className="primary-btn px-3 sm:px-4"
                       onClick={handleCancelEvent}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Ban className="w-4 h-4" />
                       Cancel
                     </Button>
                     <Button
@@ -4376,6 +4484,83 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Filter Button - Viewing tools */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="primary-btn px-3 sm:px-4"
+          >
+            <Filter className="h-4 w-4" />
+            Filter
+          </Button>
+
+          {/* Share Button */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="primary-btn px-3 sm:px-4"
+            onClick={() => setIsSharePrimaryCalendarOpen(true)}
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+
+          {/* Print Button */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="primary-btn px-3 sm:px-4"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
+
+          {/* Settings Button - Configuration */}
+          <Dialog open={showSettings} onOpenChange={setShowSettings}>
+            <DialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="primary-btn px-3 sm:px-4"
+              >
+                <Settings className="h-4 w-4 text-white" />
+                Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
+              <DialogHeader>
+                <DialogTitle className="sidebar-gradient-text">
+                  Calendar Settings
+                </DialogTitle>
+              </DialogHeader>
+              <CalendarSettings
+                userId={user?.$id || ''}
+                onClose={() => setShowSettings(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* Sync Button - Utility action */}
+          {outlookConnected && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSync}
+              disabled={syncing}
+              className="primary-btn px-3 sm:px-4"
+            >
+              {syncing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Syncing...
+                </>
+              ) : (
+                <>
+                  <Loader2 className="h-4 w-4" /> Sync
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -4667,7 +4852,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       <Card>
                         <CardContent className="p-0">
                           {viewMode === 'month'
-                            ? renderMonthView()
+                            ? renderMonthView(defaultCalendarEvents)
                             : renderWeekView()}
                         </CardContent>
                       </Card>
@@ -4710,8 +4895,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                     );
                     if (!calendar) return null;
 
-                    // TODO: Fetch events for this shared calendar
-                    const sharedCalendarEvents: LocalCalendarEvent[] = [];
+                    // Get events for this specific shared calendar (filtered by owner)
+                    const sharedCalendarEvents =
+                      getSharedCalendarEvents(calendar);
 
                     return (
                       <div
@@ -5424,7 +5610,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   disabled={isProcessingApproval}
                   className="primary-btn px-3 sm:px-4 flex-1"
                 >
-                  <X className="w-4 h-4" />
+                  <Ban className="w-4 h-4" />
                   Cancel
                 </Button>
               </div>
@@ -6206,7 +6392,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 onClick={handleShare}
                 className="flex-1"
               >
-                <Link className="h-4 w-4 mr-2" />
+                <Link className="h-4 w-4" />
                 Generate Link
               </Button>
             </div>
@@ -6474,7 +6660,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 disabled={creatingEvent}
                 className="primary-btn px-3 sm:px-4"
               >
-                <X className="w-4 h-4 mr-2" />
+                <Ban className="w-4 h-4" />
                 Cancel
               </Button>
               <Button
@@ -6484,12 +6670,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               >
                 {creatingEvent ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Creating...
                   </>
                 ) : (
                   <>
-                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    <AlertTriangle className="w-4 h-4" />
                     Create Anyway
                   </>
                 )}
@@ -6498,6 +6684,44 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create Shared Calendar Dialog */}
+      <CreateSharedCalendarDialog
+        open={isCreateSharedCalendarOpen}
+        onOpenChange={setIsCreateSharedCalendarOpen}
+        onCalendarCreated={async (calendar) => {
+          // Refresh shared calendars if needed
+          if (!loadingSharedCalendars) {
+            setLoadingSharedCalendars(true);
+            try {
+              const response = await fetch('/api/calendar/shared');
+              if (response.ok) {
+                const data = await response.json();
+                setSharedCalendars(data.calendars || []);
+              }
+            } catch (error) {
+              console.error(
+                '[CLIENT] OutlookStyleCalendar] Error refreshing shared calendars:',
+                error
+              );
+            } finally {
+              setLoadingSharedCalendars(false);
+            }
+          }
+        }}
+      />
+
+      {/* Share Primary Calendar Dialog */}
+      <SharePrimaryCalendarDialog
+        open={isSharePrimaryCalendarOpen}
+        onOpenChange={setIsSharePrimaryCalendarOpen}
+        onShared={async () => {
+          // Refresh shared calendars immediately using SWR
+          if (refreshSharedCalendars) {
+            await refreshSharedCalendars();
+          }
+        }}
+      />
     </div>
   );
 };
