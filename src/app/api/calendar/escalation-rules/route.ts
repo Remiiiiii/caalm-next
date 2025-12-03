@@ -7,8 +7,8 @@ import {
 } from '@/lib/services/calendar-notifications.service';
 import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
 import { getUserByAccountId } from '@/lib/actions/user.actions';
-import { getUserDefaultOrganization } from '@/lib/actions/organization.actions';
-import { requirePermission } from '@/lib/auth/permissions';
+import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
+import { requirePermission } from '@/lib/rbac/middleware';
 import { PERMISSIONS } from '@/constants/permissions';
 import { createAdminClient } from '@/lib/appwrite';
 import { Query } from 'node-appwrite';

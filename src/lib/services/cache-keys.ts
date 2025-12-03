@@ -41,6 +41,7 @@ export const CACHE_KEYS = {
     all: () => `contracts:all`,
     user: (userId: string) => `contracts:user:${userId}`,
     expirations: () => `contracts:expirations`,
+    drafts: (ownerId: string) => `contracts:drafts:${ownerId}`,
   },
 
   // Reports
@@ -109,6 +110,7 @@ export const getTTLForRoute = (route: string): number => {
     'notifications/stats': CACHE_TTLS.medium,
     contracts: CACHE_TTLS.long,
     'contracts/check-expirations': CACHE_TTLS.static,
+    'contracts/drafts': CACHE_TTLS.medium, // Drafts change frequently but cache for quick loading
     reports: CACHE_TTLS.static,
     users: CACHE_TTLS.veryLong,
     'users/uninvited': CACHE_TTLS.static,

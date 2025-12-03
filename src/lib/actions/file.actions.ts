@@ -16,10 +16,50 @@ import {
   triggerContractExpiryNotification,
   triggerContractRenewalNotification,
 } from '@/lib/utils/notificationTriggers';
+import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
+import { ContractMetadataPayload } from '@/types/contracts';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
   throw error;
+};
+
+const sanitizePayload = <T extends Record<string, unknown>>(payload: T) =>
+  Object.fromEntries(
+    Object.entries(payload).filter(([_, value]) => {
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return value !== undefined && value !== null && value !== '';
+    })
+  );
+
+const mapRiskToPriority = (risk?: string) => {
+  if (!risk) return 'Medium';
+  switch (risk) {
+    case 'critical':
+      return 'Urgent';
+    case 'high':
+      return 'High';
+    case 'low':
+      return 'Low';
+    default:
+      return 'Medium';
+  }
+};
+
+const mapRiskToCompliance = (risk?: string) => {
+  if (!risk) return 'action-required';
+  switch (risk) {
+    case 'critical':
+      return 'non-compliant';
+    case 'high':
+      return 'action-required';
+    case 'low':
+      return 'up-to-date';
+    default:
+      return 'action-required';
+  }
 };
 
 export const uploadFile = async ({
@@ -28,7 +68,7 @@ export const uploadFile = async ({
   accountId,
   path: revalidatePathArg,
   contractMetadata,
-}: UploadFileProps & { contractMetadata?: Record<string, unknown> }) => {
+}: UploadFileProps & { contractMetadata?: ContractMetadataPayload }) => {
   const { storage, tablesDB } = await createAdminClient();
 
   try {
@@ -71,28 +111,23 @@ export const uploadFile = async ({
       throw new Error('File document creation failed');
     }
 
+    const metadata = contractMetadata;
     // Check if filename contains "contract" (case-insensitive) or if contractMetadata is provided
     if (
       bucketFile.name.toLowerCase().includes('contract') ||
-      contractMetadata
+      metadata
     ) {
       // Add to Contracts collection as well
-      let contractExpiryDate: string | undefined = undefined;
-      let status: string = 'pending-review'; // Default to pending-review
+      let contractExpiryDate: string | undefined;
+      let status = 'pending-review';
 
-      // Use provided metadata or extract from file
-      if (contractMetadata) {
-        console.log('📋 Contract metadata received:', contractMetadata);
-
-        // Use provided contract metadata
+      if (metadata?.contractExpiryDate || metadata?.expiryDate) {
         contractExpiryDate =
-          typeof contractMetadata.expiryDate === 'string'
-            ? contractMetadata.expiryDate
-            : undefined;
+          metadata.contractExpiryDate || metadata.expiryDate;
         status =
-          typeof contractMetadata.expiryDate === 'string'
-            ? 'active'
-            : 'action-required';
+          metadata.lifecycleStatus === 'terminated'
+            ? 'action-required'
+            : 'active';
       } else {
         // Fallback to extraction for files with "contract" in name
         try {
@@ -121,21 +156,59 @@ export const uploadFile = async ({
         }
       }
 
-      const contractDocument = {
-        contractName: contractMetadata?.contractName || bucketFile.name,
+      const defaultOrg = await getUserDefaultOrganization(ownerId);
+      const resolvedOrgId =
+        metadata?.orgId || defaultOrg?.orgId;
+
+      if (!resolvedOrgId) {
+        throw new Error(
+          'Unable to determine the organization for this contract upload.'
+        );
+      }
+
+      const assignedManagers = await (async () => {
+        const managerIds = metadata?.assignedManagers || [];
+        if (managerIds.length === 0) return [];
+
+        const managerNames: string[] = [];
+        for (const managerId of managerIds) {
+          try {
+            const user = await getUserById(managerId);
+            if (user && user.fullName) {
+              managerNames.push(user.fullName);
+            } else {
+              managerNames.push(managerId);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch manager ${managerId}:`, error);
+            managerNames.push(managerId);
+          }
+        }
+        return managerNames;
+      })();
+
+      const contractDocument = sanitizePayload({
+        contractName: metadata?.contractName || bucketFile.name,
         contractExpiryDate,
         status,
-        amount: contractMetadata?.amount
-          ? parseFloat(String(contractMetadata.amount))
-          : undefined,
+        startDate: metadata?.startDate,
+        executionDate: metadata?.executionDate,
+        autoRenew: metadata?.autoRenew,
+        renewalNoticeDays: metadata?.renewalNoticeDays,
+        amount: metadata?.amount,
+        currencyCode: metadata?.currencyCode || 'USD',
+        notToExceedAmount: metadata?.notToExceedAmount,
+        paymentTerms: metadata?.paymentTerms,
+        paymentSchedule: metadata?.paymentSchedule,
+        budgetCode: metadata?.budgetCode,
+        costCenter: metadata?.costCenter,
         daysUntilExpiry: (() => {
           if (contractExpiryDate) {
             try {
               const expiryDate = new Date(contractExpiryDate);
               const today = new Date();
               const timeDiff = expiryDate.getTime() - today.getTime();
-              const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-              return daysDiff;
+              return Math.ceil(timeDiff / (1000 * 3600 * 24));
             } catch (error) {
               console.error('Error calculating days until expiry:', error);
               return undefined;
@@ -143,85 +216,100 @@ export const uploadFile = async ({
           }
           return undefined;
         })(),
-        compliance: (() => {
-          const compliance = contractMetadata?.compliance;
-          if (typeof compliance === 'string') {
-            // Map frontend compliance levels to database enum values
-            const complianceMapping: Record<string, string> = {
-              'Low Risk': 'up-to-date',
-              'Medium Risk': 'action-required',
-              'High Risk': 'action-required',
-              'Critical Risk': 'non-compliant',
-            };
-            return complianceMapping[compliance] || 'action-required';
-          }
-          return 'action-required';
-        })(),
-        assignedManagers: await (async () => {
-          const managerIds =
-            (contractMetadata?.assignedManagers as string[]) || [];
-          if (managerIds.length === 0) return [];
-
-          // Fetch full names for each manager ID
-          const managerNames: string[] = [];
-          for (const managerId of managerIds) {
-            try {
-              const user = await getUserById(managerId);
-              if (user && user.fullName) {
-                managerNames.push(user.fullName);
-              } else {
-                // Fallback to ID if name not found
-                managerNames.push(managerId);
-              }
-            } catch (error) {
-              console.error(`Failed to fetch manager ${managerId}:`, error);
-              // Fallback to ID if fetch fails
-              managerNames.push(managerId);
-            }
-          }
-
-          return managerNames;
-        })(),
-        department: contractMetadata?.assignToDepartment || undefined,
+        compliance:
+          metadata?.compliance ?? mapRiskToCompliance(metadata?.riskLevel),
+        assignedManagers,
+        department: metadata?.assignToDepartment,
+        businessUnit: metadata?.businessUnit,
+        subDepartment: metadata?.subDepartment,
+        departmentOwner: metadata?.departmentOwner,
         contractType: (() => {
-          const contractType = contractMetadata?.contractType;
+          const contractType = metadata?.contractType;
           if (typeof contractType === 'string') {
-            // Map frontend values to database enum values
             const typeMapping: Record<string, string> = {
               'Service Agreement': 'Service_Agreement',
+              'Professional Services': 'Consulting_Agreement',
+              'Purchase Agreement': 'Purchase_Order',
               'Purchase Order': 'Purchase_Order',
               'License Agreement': 'License_Agreement',
+              'Confidentiality/NDA': 'NDA_',
               NDA: 'NDA_',
               'Employment Contract': 'Employment_Contract',
               'Vendor Contract': 'Vendor_Contract',
               'Lease Agreement': 'Lease_Agreement',
               'Consulting Agreement': 'Consulting_Agreement',
+              'Statement of Work (SOW)': 'Consulting_Agreement',
+              'Statement of Work': 'Consulting_Agreement',
+              'Master Agreement': 'Service_Agreement',
+              Amendment: 'Other',
               Other: 'Other',
             };
             return typeMapping[contractType] || 'Other';
           }
           return 'Other';
         })(),
-        vendor: contractMetadata?.vendor || undefined,
-        contractNumber: contractMetadata?.contractNumber || undefined,
-        priority: (() => {
-          const priority = contractMetadata?.priority;
-          if (typeof priority === 'string') {
-            // Map frontend priority values to database enum values
-            const priorityMapping: Record<string, string> = {
-              low: 'Low',
-              medium: 'Medium',
-              high: 'High',
-              urgent: 'Urgent',
-            };
-            return priorityMapping[priority.toLowerCase()] || 'Medium';
-          }
-          return 'Medium';
-        })(),
-        description: contractMetadata?.description || undefined,
+        contractCategory: metadata?.contractCategory,
+        vendor: metadata?.vendor ?? metadata?.counterpartyLegalName,
+        contractNumber: metadata?.contractNumber,
+        priority:
+          metadata?.priority ?? mapRiskToPriority(metadata?.riskLevel),
+        description: metadata?.description,
+        contractOwnerId: metadata?.contractOwnerId || ownerId,
+        lifecycleStatus: metadata?.lifecycleStatus || 'draft',
+        riskLevel: metadata?.riskLevel,
+        insuranceRequired: metadata?.insuranceRequired,
+        insuranceVerifiedDate: metadata?.insuranceVerifiedDate,
+        insuranceExpiryDate: metadata?.insuranceExpiryDate,
+        indemnificationIncluded: metadata?.indemnificationIncluded,
+        hipaaRequired: metadata?.hipaaRequired,
+        dataPrivacyRequirements: metadata?.dataPrivacyRequirements,
+        backgroundCheckRequired: metadata?.backgroundCheckRequired,
+        regulatoryRequirements: metadata?.regulatoryRequirements,
+        auditRightsGranted: metadata?.auditRightsGranted,
+        counterpartyLegalName: metadata?.counterpartyLegalName,
+        counterpartyContactEmail: metadata?.counterpartyContactEmail,
+        counterpartyContactPhone: metadata?.counterpartyContactPhone,
+        counterpartyAddress: metadata?.counterpartyAddress,
+        counterpartyType: metadata?.counterpartyType,
+        counterpartyTaxId: metadata?.counterpartyTaxId,
+        counterpartyDunsNumber: metadata?.counterpartyDunsNumber,
+        keyObligations:
+          metadata?.keyObligations && metadata.keyObligations.length > 0
+            ? metadata.keyObligations
+            : undefined,
+        serviceLevelAgreements: metadata?.serviceLevelAgreements,
+        performanceMetrics: metadata?.performanceMetrics,
+        reportingRequirements: metadata?.reportingRequirements,
+        postTerminationObligations: metadata?.postTerminationObligations,
+        terminationNoticeDays: metadata?.terminationNoticeDays,
+        terminationRights: metadata?.terminationRights,
+        curePeriodDays: metadata?.curePeriodDays,
+        attachmentReferences:
+          metadata?.attachmentReferences &&
+          metadata.attachmentReferences.length > 0
+            ? metadata.attachmentReferences
+            : undefined,
+        relatedDocumentIds:
+          metadata?.relatedDocumentIds &&
+          metadata.relatedDocumentIds.length > 0
+            ? metadata.relatedDocumentIds
+            : undefined,
+        versionNumber: metadata?.versionNumber,
+        parentContractId: metadata?.parentContractId,
+        templateUsed: metadata?.templateUsed,
+        approvalWorkflowTemplate: metadata?.approvalWorkflowTemplate,
+        internalApproverIds:
+          metadata?.internalApproverIds &&
+          metadata.internalApproverIds.length > 0
+            ? metadata.internalApproverIds
+            : undefined,
+        currentApprovalStage: metadata?.currentApprovalStage,
+        approvalHistoryLog: metadata?.approvalHistoryLog,
+        reviewerComments: metadata?.reviewerComments,
         fileId: newFile.$id,
         fileRef: newFile.$id,
-      };
+        orgId: resolvedOrgId,
+      });
 
       const contract = await tablesDB.createRow({
         databaseId: appwriteConfig.databaseId,
@@ -230,11 +318,31 @@ export const uploadFile = async ({
         data: contractDocument,
       });
 
+      const enterprisePayload = metadata?.enterpriseMetadata
+        ? sanitizePayload({
+            contractId: contract.$id,
+            orgId: resolvedOrgId,
+            ...metadata.enterpriseMetadata,
+          })
+        : null;
+
+      if (enterprisePayload && Object.keys(enterprisePayload).length > 2) {
+        await tablesDB.createRow({
+          databaseId: appwriteConfig.databaseId,
+          tableId:
+            appwriteConfig.contractsEnterpriseMetadataCollectionId ||
+            appwriteConfig.contractExtensionsCollectionId ||
+            'contractsEnterpriseMetadata',
+          rowId: ID.unique(),
+          data: enterprisePayload,
+        });
+      }
+
       // Save all contract metadata in the file document for easy access
-      const fileUpdateData = {
+      const fileUpdateData = sanitizePayload({
         contractId: contract.$id,
-        contractExpiryDate: contractExpiryDate,
-        status: status,
+        contractExpiryDate,
+        status,
         contractName: contractDocument.contractName,
         contractType: contractDocument.contractType,
         amount: contractDocument.amount,
@@ -244,7 +352,10 @@ export const uploadFile = async ({
         compliance: contractDocument.compliance,
         department: contractDocument.department,
         assignedManagers: contractDocument.assignedManagers,
-      };
+        riskLevel: contractDocument.riskLevel,
+        contractCategory: contractDocument.contractCategory,
+        currencyCode: contractDocument.currencyCode,
+      });
 
       console.log('📝 Updating file document with contract metadata:', {
         fileId: newFile.$id,
