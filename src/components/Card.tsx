@@ -8,6 +8,7 @@ import { convertFileSize } from '@/lib/utils';
 import FormattedDateTime from './FormattedDateTime';
 import { FormattedDate } from './FormattedDateTime';
 import ActionDropdown from './ActionDropdown';
+import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
 
 // Map contract status to badge color and label
 const statusBadge = (status: string) => {
@@ -77,6 +78,29 @@ const Card = ({
   const [assignedToDepartment, setAssignedToDepartment] = useState<
     string | undefined
   >(propAssignedToDepartment || file.department);
+  const [ownerName, setOwnerName] = useState<string | null>(
+    typeof file.owner === 'object' && file.owner?.fullName
+      ? file.owner.fullName
+      : null
+  );
+
+  // Fetch owner name if owner is a string (user ID)
+  useEffect(() => {
+    const fetchOwnerName = async () => {
+      if (typeof file.owner === 'string' && file.owner && !ownerName) {
+        try {
+          const users = await fetchUserNamesByIds([file.owner]);
+          if (users.length > 0 && users[0].fullName) {
+            setOwnerName(users[0].fullName);
+          }
+        } catch (error) {
+          console.error('Failed to fetch owner name:', error);
+        }
+      }
+    };
+
+    fetchOwnerName();
+  }, [file.owner, ownerName]);
 
   useEffect(() => {
     // If status is not present but contractId exists, fetch the contract status
@@ -173,7 +197,12 @@ const Card = ({
         </div>
         <p className="caption line-clamp-1 text-light-200">
           By:{' '}
-          {typeof file.owner === 'string' ? file.owner : file.owner.fullName}
+          {ownerName ||
+            (typeof file.owner === 'object' && file.owner?.fullName
+              ? file.owner.fullName
+              : typeof file.owner === 'string'
+              ? file.owner
+              : 'Unknown')}
         </p>
       </div>
     </div>

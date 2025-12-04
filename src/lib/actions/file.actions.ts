@@ -72,16 +72,31 @@ export const uploadFile = async ({
   const { storage, tablesDB } = await createAdminClient();
 
   try {
+    // Get user's organization
+    const defaultOrg = await getUserDefaultOrganization(ownerId);
+    if (!defaultOrg) {
+      throw new Error('User organization not found');
+    }
+
+    // Validate required config
+    if (
+      !appwriteConfig.bucketId ||
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.filesCollectionId
+    ) {
+      throw new Error('Appwrite configuration is missing required fields');
+    }
+
     // Convert File to ArrayBuffer for InputFile.fromBuffer
     const arrayBuffer = await file.arrayBuffer();
     const inputFile = InputFile.fromBuffer(Buffer.from(arrayBuffer), file.name);
 
     // Always upload to Appwrite storage
-    const bucketFile = await storage.createFile(
-      appwriteConfig.bucketId,
-      ID.unique(),
-      inputFile
-    );
+    const bucketFile = await storage.createFile({
+      bucketId: appwriteConfig.bucketId,
+      fileId: ID.unique(),
+      file: inputFile,
+    });
 
     const fileDocument = {
       type: getFileType(bucketFile.name).type,
@@ -93,17 +108,21 @@ export const uploadFile = async ({
       accountId,
       users: [],
       bucketFileId: bucketFile.$id,
+      orgId: defaultOrg.orgId,
     };
 
     const newFile = await tablesDB
-      .createRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.filesCollectionId,
-        ID.unique(),
-        fileDocument
-      )
+      .createRow({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.filesCollectionId!,
+        rowId: ID.unique(),
+        data: fileDocument,
+      })
       .catch(async (error: unknown) => {
-        await storage.deleteFile(appwriteConfig.bucketId, bucketFile.$id);
+        await storage.deleteFile({
+          bucketId: appwriteConfig.bucketId!,
+          fileId: bucketFile.$id,
+        });
         handleError(error, 'Failed to create file document');
       });
 
@@ -113,17 +132,13 @@ export const uploadFile = async ({
 
     const metadata = contractMetadata;
     // Check if filename contains "contract" (case-insensitive) or if contractMetadata is provided
-    if (
-      bucketFile.name.toLowerCase().includes('contract') ||
-      metadata
-    ) {
+    if (bucketFile.name.toLowerCase().includes('contract') || metadata) {
       // Add to Contracts collection as well
       let contractExpiryDate: string | undefined;
       let status = 'pending-review';
 
-      if (metadata?.contractExpiryDate || metadata?.expiryDate) {
-        contractExpiryDate =
-          metadata.contractExpiryDate || metadata.expiryDate;
+      if (metadata?.contractExpiryDate) {
+        contractExpiryDate = metadata.contractExpiryDate;
         status =
           metadata.lifecycleStatus === 'terminated'
             ? 'action-required'
@@ -157,8 +172,7 @@ export const uploadFile = async ({
       }
 
       const defaultOrg = await getUserDefaultOrganization(ownerId);
-      const resolvedOrgId =
-        metadata?.orgId || defaultOrg?.orgId;
+      const resolvedOrgId = metadata?.orgId || defaultOrg?.orgId;
 
       if (!resolvedOrgId) {
         throw new Error(
@@ -251,8 +265,7 @@ export const uploadFile = async ({
         contractCategory: metadata?.contractCategory,
         vendor: metadata?.vendor ?? metadata?.counterpartyLegalName,
         contractNumber: metadata?.contractNumber,
-        priority:
-          metadata?.priority ?? mapRiskToPriority(metadata?.riskLevel),
+        priority: metadata?.priority ?? mapRiskToPriority(metadata?.riskLevel),
         description: metadata?.description,
         contractOwnerId: metadata?.contractOwnerId || ownerId,
         lifecycleStatus: metadata?.lifecycleStatus || 'draft',
@@ -290,8 +303,7 @@ export const uploadFile = async ({
             ? metadata.attachmentReferences
             : undefined,
         relatedDocumentIds:
-          metadata?.relatedDocumentIds &&
-          metadata.relatedDocumentIds.length > 0
+          metadata?.relatedDocumentIds && metadata.relatedDocumentIds.length > 0
             ? metadata.relatedDocumentIds
             : undefined,
         versionNumber: metadata?.versionNumber,
@@ -311,8 +323,12 @@ export const uploadFile = async ({
         orgId: resolvedOrgId,
       });
 
+      if (!appwriteConfig.contractsCollectionId) {
+        throw new Error('Contracts collection ID is not configured');
+      }
+
       const contract = await tablesDB.createRow({
-        databaseId: appwriteConfig.databaseId,
+        databaseId: appwriteConfig.databaseId!,
         tableId: appwriteConfig.contractsCollectionId,
         rowId: ID.unique(),
         data: contractDocument,
@@ -320,15 +336,23 @@ export const uploadFile = async ({
 
       const enterprisePayload = metadata?.enterpriseMetadata
         ? sanitizePayload({
-            contractId: contract.$id,
+            contractId: contract.$id, // Required attribute
             orgId: resolvedOrgId,
-            ...metadata.enterpriseMetadata,
+            // Exclude fields that are not in the collection schema
+            // Include other enterprise metadata fields
+            ...Object.fromEntries(
+              Object.entries(metadata.enterpriseMetadata).filter(
+                ([key]) =>
+                  key !== 'digitalSignatureRequired' && key !== 'accessScope'
+                // contractId is required, so we set it explicitly above
+              )
+            ),
           })
         : null;
 
       if (enterprisePayload && Object.keys(enterprisePayload).length > 2) {
         await tablesDB.createRow({
-          databaseId: appwriteConfig.databaseId,
+          databaseId: appwriteConfig.databaseId!,
           tableId:
             appwriteConfig.contractsEnterpriseMetadataCollectionId ||
             appwriteConfig.contractExtensionsCollectionId ||
@@ -338,9 +362,9 @@ export const uploadFile = async ({
         });
       }
 
-      // Save all contract metadata in the file document for easy access
+      // Save contract metadata in the file document for easy access
+      // Note: Only include attributes that exist in the files collection schema
       const fileUpdateData = sanitizePayload({
-        contractId: contract.$id,
         contractExpiryDate,
         status,
         contractName: contractDocument.contractName,
@@ -352,9 +376,7 @@ export const uploadFile = async ({
         compliance: contractDocument.compliance,
         department: contractDocument.department,
         assignedManagers: contractDocument.assignedManagers,
-        riskLevel: contractDocument.riskLevel,
-        contractCategory: contractDocument.contractCategory,
-        currencyCode: contractDocument.currencyCode,
+        // Excluded: riskLevel, contractCategory, currencyCode (not in files collection schema)
       });
 
       console.log('📝 Updating file document with contract metadata:', {
@@ -363,8 +385,8 @@ export const uploadFile = async ({
       });
 
       await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.filesCollectionId,
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.filesCollectionId!,
         rowId: newFile.$id,
         data: fileUpdateData,
       });
@@ -478,8 +500,8 @@ export const getFiles = async ({
     const queries = createQueries(currentUser, types, searchText, sort, limit);
 
     const files = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.filesCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.filesCollectionId!,
       queries: queries,
     });
 
@@ -507,8 +529,8 @@ export const renameFile = async ({
   try {
     const newName = `${name}.${extension}`;
     const updatedFile = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.filesCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.filesCollectionId!,
       rowId: fileId,
       data: { name: newName },
     });
@@ -529,8 +551,8 @@ export const updateFileUsers = async ({
 
   try {
     const updatedFile = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.filesCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.filesCollectionId!,
       rowId: fileId,
       data: { users: emails },
     });
@@ -546,46 +568,221 @@ export const deleteFile = async ({
   fileId,
   bucketFileId,
   path,
-}: DeleteFileProps) => {
+  contractId,
+}: DeleteFileProps & { contractId?: string }) => {
   const { tablesDB, storage } = await createAdminClient();
 
   try {
-    console.log('Deleting fileId:', fileId);
+    console.log('Deleting fileId:', fileId, 'contractId:', contractId);
 
-    // Start all operations in parallel for better performance
-    const operations = [
-      // 1. Find and delete contract document (if exists)
-      tablesDB
-        .listRows({
-          databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.contractsCollectionId,
-          queries: [Query.equal('fileId', fileId)],
-        })
-        .then(async (contractDocs) => {
-          if (contractDocs.rows.length > 0) {
-            const contractId = contractDocs.rows[0].$id;
-            return tablesDB.deleteRow({
-              databaseId: appwriteConfig.databaseId,
-              tableId: appwriteConfig.contractsCollectionId,
-              rowId: contractId,
+    // Validate inputs
+    if (!fileId) {
+      throw new Error('File ID is required');
+    }
+
+    // Determine if this is a contract deletion
+    // If contractId is provided, fileId is the contract ID
+    const isContract = !!contractId;
+    let actualFileDocumentId: string | null = null;
+    let actualBucketFileId: string | null = bucketFileId || null;
+
+    if (isContract) {
+      // This is a contract - fileId is actually the contract ID
+      const contractIdToDelete = fileId;
+
+      // First, get the contract document to find the associated file document
+      try {
+        const contractDoc = await tablesDB.getRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
+          rowId: contractIdToDelete,
+        });
+
+        // Get the file document ID from the contract
+        actualFileDocumentId =
+          contractDoc.fileId || contractDoc.fileRef || null;
+        actualBucketFileId = bucketFileId || contractDoc.bucketFileId || null;
+
+        console.log('Contract document found:', {
+          contractId: contractIdToDelete,
+          fileDocumentId: actualFileDocumentId,
+          bucketFileId: actualBucketFileId,
+        });
+      } catch (error: any) {
+        console.log(
+          'Contract document not found, may have been deleted already'
+        );
+        // Continue with deletion attempt
+      }
+
+      // Start operations for contract deletion
+      // Delete in sequence to avoid constraint issues
+      try {
+        // 0. Delete related enterprise metadata documents first (if they exist)
+        try {
+          const enterpriseMetadataCollectionId =
+            appwriteConfig.contractsEnterpriseMetadataCollectionId ||
+            appwriteConfig.contractExtensionsCollectionId;
+
+          if (enterpriseMetadataCollectionId) {
+            const enterpriseDocs = await tablesDB.listRows({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: enterpriseMetadataCollectionId,
+              queries: [Query.equal('contractId', contractIdToDelete)],
             });
+
+            // Delete all related enterprise metadata documents
+            for (const doc of enterpriseDocs.rows) {
+              try {
+                await tablesDB.deleteRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: enterpriseMetadataCollectionId,
+                  rowId: doc.$id,
+                });
+                console.log('Enterprise metadata document deleted:', doc.$id);
+              } catch (error: any) {
+                console.log('Error deleting enterprise metadata:', error);
+                // Continue with other deletions
+              }
+            }
           }
-          return null;
-        }),
+        } catch (error: any) {
+          console.log('Error finding enterprise metadata:', error);
+          // Continue with contract deletion even if enterprise metadata lookup fails
+        }
 
-      // 2. Delete the file document
-      tablesDB.deleteRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.filesCollectionId,
-        rowId: fileId,
-      }),
+        // 1. Delete the contract document
+        try {
+          await tablesDB.deleteRow({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.contractsCollectionId!,
+            rowId: contractIdToDelete,
+          });
+          console.log('Contract document deleted successfully');
+        } catch (error: any) {
+          if (error?.code === 404 || error?.message?.includes('not found')) {
+            console.log('Contract document not found, skipping deletion');
+          } else {
+            console.error('Error deleting contract document:', error);
+            throw error;
+          }
+        }
 
-      // 3. Delete the storage file
-      storage.deleteFile(appwriteConfig.bucketId, bucketFileId),
-    ];
+        // 2. Delete the file document (if we found the file document ID)
+        if (actualFileDocumentId) {
+          try {
+            await tablesDB.deleteRow({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: appwriteConfig.filesCollectionId!,
+              rowId: actualFileDocumentId,
+            });
+            console.log('File document deleted successfully');
+          } catch (error: any) {
+            if (error?.code === 404 || error?.message?.includes('not found')) {
+              console.log('File document not found, skipping deletion');
+            } else {
+              console.error('Error deleting file document:', error);
+              // Don't throw - continue with storage deletion
+            }
+          }
+        }
 
-    // Execute all operations in parallel
-    await Promise.all(operations);
+        // 3. Delete the storage file
+        if (actualBucketFileId) {
+          try {
+            await storage.deleteFile({
+              bucketId: appwriteConfig.bucketId!,
+              fileId: actualBucketFileId,
+            });
+            console.log('Storage file deleted successfully');
+          } catch (error: any) {
+            if (error?.code === 404 || error?.message?.includes('not found')) {
+              console.log('Storage file not found, skipping deletion');
+            } else {
+              console.error('Error deleting storage file:', error);
+              // Don't throw - storage deletion is less critical
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error('Error during contract deletion:', error);
+        throw error;
+      }
+    } else {
+      // This is a regular file deletion
+      // Start all operations in parallel for better performance
+      const operations = [
+        // 1. Find and delete contract document (if exists)
+        tablesDB
+          .listRows({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.contractsCollectionId!,
+            queries: [Query.equal('fileId', fileId)],
+          })
+          .then(async (contractDocs) => {
+            if (contractDocs.rows.length > 0) {
+              const contractIdToDelete = contractDocs.rows[0].$id;
+              try {
+                return await tablesDB.deleteRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: appwriteConfig.contractsCollectionId!,
+                  rowId: contractIdToDelete,
+                });
+              } catch (error: any) {
+                if (
+                  error?.code === 404 ||
+                  error?.message?.includes('not found')
+                ) {
+                  console.log('Contract document not found, skipping deletion');
+                  return null;
+                }
+                throw error;
+              }
+            }
+            return null;
+          })
+          .catch((error) => {
+            console.log('Error finding/deleting contract:', error);
+            return null;
+          }),
+
+        // 2. Delete the file document
+        tablesDB
+          .deleteRow({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.filesCollectionId!,
+            rowId: fileId,
+          })
+          .catch((error: any) => {
+            if (error?.code === 404 || error?.message?.includes('not found')) {
+              console.log('File document not found, skipping deletion');
+              return null;
+            }
+            throw error;
+          }),
+
+        // 3. Delete the storage file
+        bucketFileId
+          ? storage
+              .deleteFile({
+                bucketId: appwriteConfig.bucketId!,
+                fileId: bucketFileId,
+              })
+              .catch((error: any) => {
+                if (
+                  error?.code === 404 ||
+                  error?.message?.includes('not found')
+                ) {
+                  console.log('Storage file not found, skipping deletion');
+                  return null;
+                }
+                throw error;
+              })
+          : Promise.resolve(null),
+      ];
+
+      await Promise.all(operations);
+    }
 
     revalidatePath(path);
     return parseStringify({ status: 'success' });
@@ -623,8 +820,8 @@ export async function getTotalSpaceUsed() {
     }
 
     const files = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.filesCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.filesCollectionId!,
       queries: [Query.equal('owner', [currentUser.$id])],
     });
 
@@ -676,8 +873,8 @@ export const assignContract = async ({
     let contractDoc;
     try {
       contractDoc = await tablesDB.getRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.contractsCollectionId,
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.contractsCollectionId!,
         rowId: fileId,
       });
     } catch (error) {
@@ -692,8 +889,8 @@ export const assignContract = async ({
       // Try to find the contract by fileId in the contracts collection
       try {
         const contracts = await tablesDB.listRows({
-          databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.contractsCollectionId,
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
           queries: [Query.equal('fileId', fileDocumentId || '')],
         });
 
@@ -718,8 +915,8 @@ export const assignContract = async ({
 
     // Update the contract document: assign manager(s)
     const updatedContract = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
       rowId: contractDoc.$id, // Use the actual contract document ID
       data: {
         assignedManagers: managerAccountIds,
@@ -729,8 +926,8 @@ export const assignContract = async ({
     // Update the file document: set isContract true (if fileDocumentId is provided)
     if (fileDocumentId) {
       await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.filesCollectionId,
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.filesCollectionId!,
         rowId: fileDocumentId,
         data: {
           isContract: true,
@@ -752,6 +949,11 @@ export const getContractStatusEnums = async () => {
   const { tablesDB } = await createAdminClient();
   const databaseId = appwriteConfig.databaseId;
   const tableId = appwriteConfig.contractsCollectionId;
+
+  if (!databaseId || !tableId) {
+    throw new Error('Database or contracts collection ID is not configured');
+  }
+
   const attrKey = 'status';
   try {
     // Type assertion to fix linter error
@@ -781,8 +983,8 @@ export const contractStatus = async ({
   try {
     // Update the contract document's status
     const updated = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
       rowId: fileId,
       data: { status },
     });
@@ -836,8 +1038,8 @@ export const getContracts = async () => {
     // Fetch contracts where file owner matches current user
     // (Assumes you want contracts for the user's files)
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
     });
     return parseStringify(contracts);
   } catch (error) {
@@ -851,8 +1053,8 @@ export const getContractsForManager = async (managerAccountId: string) => {
   try {
     // Fetch contracts where the manager's accountId is in the assignedManagers array
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
       queries: [Query.search('assignedManagers', managerAccountId)],
     });
     return parseStringify(contracts.rows);
@@ -865,8 +1067,8 @@ export const getTotalContractsCount = async () => {
   const { tablesDB } = await createAdminClient();
   try {
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
     });
     return contracts.total;
   } catch (error) {
@@ -882,8 +1084,8 @@ export const getExpiringContractsCount = async () => {
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
       queries: [
         Query.lessThanEqual(
           'contractExpiryDate',
@@ -908,8 +1110,8 @@ export const getContractsByUserDivision = async (userDivision: string) => {
   try {
     // Get all contracts
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
     });
 
     // Filter contracts where assigned managers belong to the user's division
@@ -923,8 +1125,13 @@ export const getContractsByUserDivision = async (userDivision: string) => {
         // Check if any assigned manager belongs to the user's division
         for (const managerName of contract.assignedManagers) {
           // Get manager by name to check their division using new RBAC system
-          const { getUsersByRoleNames } = await import('@/lib/utils/get-users-by-role');
-          const allManagers = await getUsersByRoleNames(['Department Manager', 'manager']);
+          const { getUsersByRoleNames } = await import(
+            '@/lib/utils/get-users-by-role'
+          );
+          const allManagers = await getUsersByRoleNames([
+            'Department Manager',
+            'manager',
+          ]);
           const managers = {
             rows: allManagers.filter((m: any) => m.fullName === managerName),
           };

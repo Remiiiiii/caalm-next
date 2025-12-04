@@ -233,3 +233,4 @@ export function useContractForm() {
     extractContractData,
   };
 }
+

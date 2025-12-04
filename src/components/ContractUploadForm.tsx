@@ -44,6 +44,7 @@ import {
   ChevronRight,
   FileCheck,
   StepForward,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DatePicker from 'react-datepicker';
@@ -621,10 +622,80 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
     setCurrentDraftId(null); // Reset draft ID when form is reset
   }, [form]);
 
+  // Step validation - defines required fields for each step
+  const getRequiredFieldsForStep = (step: number): string[] => {
+    switch (step) {
+      case 1: // File Upload - file required
+        return []; // Handled separately by processedFileData check
+      case 2: // Contract Basics
+        return [
+          'contractName',
+          'contractType',
+          'contractCategory',
+          'lifecycleStatus',
+          'contractNumber',
+          'assignToDepartment',
+          'expiryDate',
+        ];
+      case 3: // Parties & Contacts
+        return ['counterpartyLegalName'];
+      case 4: // Financials
+        return ['amount', 'currencyCode', 'riskLevel'];
+      case 5: // Risk & Compliance - no required fields by default
+        return [];
+      case 6: // Workflow & Approvals - no required fields
+        return [];
+      case 7: // Notifications - no required fields
+        return [];
+      case 8: // Documents & Metadata - no required fields
+        return [];
+      case 9: // Legal & Governance - no required fields
+        return [];
+      case 10: // Digital Signatures - no required fields
+        return [];
+      default:
+        return [];
+    }
+  };
+
+  // Validate current step before proceeding
+  const validateStep = async (step: number): Promise<boolean> => {
+    const requiredFields = getRequiredFieldsForStep(step);
+
+    if (requiredFields.length === 0) {
+      return true; // No required fields for this step
+    }
+
+    // Trigger validation for required fields only
+    const result = await form.trigger(requiredFields as any);
+
+    if (!result) {
+      // Show error toast with specific missing fields
+      const errors = form.formState.errors;
+      const missingFields = requiredFields.filter(
+        (field) => errors[field as keyof typeof errors]
+      );
+
+      toast({
+        title: 'Required Fields Missing',
+        description: `Please complete all required fields before proceeding to the next step.`,
+        variant: 'destructive',
+      });
+
+      return false;
+    }
+
+    return true;
+  };
+
   // Step navigation functions
-  const nextStep = () => {
+  const nextStep = async () => {
     if (currentStep < totalSteps) {
-      setCurrentStep((prev) => prev + 1);
+      // Validate current step before proceeding
+      const isValid = await validateStep(currentStep);
+      if (isValid) {
+        setCurrentStep((prev) => prev + 1);
+      }
     }
   };
 
@@ -1384,27 +1455,26 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         description: `${values.contractName} has been uploaded and processed.`,
       });
 
-      // Mark draft as completed
-      try {
-        await fetch('/api/contracts/drafts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ownerId,
-            accountId,
-            formData: values,
-            currentStep: totalSteps,
-            processedFileData,
-            extractedData,
-            isCompleted: true,
-          }),
-        });
-        // Reload drafts to remove completed one
-        loadSavedDrafts();
-      } catch (error) {
-        console.error('Error marking draft as completed:', error);
+      // Delete the draft since contract is successfully uploaded
+      if (currentDraftId) {
+        try {
+          await fetch(
+            `/api/contracts/drafts?draftId=${currentDraftId}&ownerId=${ownerId}`,
+            {
+              method: 'DELETE',
+            }
+          );
+          // Remove from local state immediately
+          setSavedDrafts((prev) =>
+            prev.filter((d) => d.$id !== currentDraftId)
+          );
+          setCurrentDraftId(null);
+          // Reload drafts to ensure cache is fresh
+          await loadSavedDrafts();
+        } catch (error) {
+          console.error('Error deleting draft after upload:', error);
+          // Continue even if draft deletion fails - contract is already uploaded
+        }
       }
 
       // Reset form
@@ -4578,53 +4648,65 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="bg-white/95 backdrop-blur-sm border border-slate-200 shadow-2xl rounded-lg max-w-md mx-4">
-          <AlertDialogHeader className="pb-1">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-                <Trash2 className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <AlertDialogTitle className="text-lg font-semibold sidebar-gradient-text">
-                  Delete Draft?
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-sm text-slate-600 mt-1">
-                  This action cannot be undone
-                </AlertDialogDescription>
-              </div>
-            </div>
-          </AlertDialogHeader>
+        <AlertDialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+          <AlertDialogTitle className="sr-only">Delete Draft</AlertDialogTitle>
+          {/* Cap */}
+          <div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
 
-          <div className="px-6 pb-6">
-            <p className="text-sm text-slate-700">
-              Are you sure you want to delete this draft? Your decision to
-              delete is irreversible, so please make sure you want to continue.
+          {/* Header */}
+          <div className="px-6 py-4 bg-white border-b border-slate-200">
+            <div className="flex gap-2">
+              <AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+              <h2 className="text-base font-semibold sidebar-gradient-text">
+                Delete Draft
+              </h2>
+            </div>
+            <div>
+              <AlertDialogDescription className="text-sm text-slate-600 mt-1 ml-7">
+                Are you sure you want to delete this draft? This action cannot
+                be undone.
+              </AlertDialogDescription>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="px-6 py-5 space-y-3 bg-white">
+            <p className="text-sm text-slate-600">
+              Your decision to delete is irreversible, so please make sure you
+              want to continue.
             </p>
           </div>
 
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setDraftToDelete(null);
-              }}
-              className="primary-btn px-4"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (draftToDelete) {
-                  deleteDraft(draftToDelete);
+          {/* Footer */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="text-xs text-slate-500">
+              This action is permanent.
+            </div>
+            <div className="flex items-center gap-3">
+              <AlertDialogCancel
+                onClick={() => {
+                  setDeleteDialogOpen(false);
                   setDraftToDelete(null);
-                }
-              }}
-              className="modal-submit-button"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Draft
-            </AlertDialogAction>
-          </AlertDialogFooter>
+                }}
+                className="primary-btn px-3 sm:px-4"
+              >
+                <Ban className="h-4 w-4" />
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (draftToDelete) {
+                    deleteDraft(draftToDelete);
+                    setDraftToDelete(null);
+                  }
+                }}
+                className="primary-btn px-3 sm:px-4"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Draft
+              </AlertDialogAction>
+            </div>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
 
