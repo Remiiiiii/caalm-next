@@ -8,8 +8,19 @@ import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
 import type { PermissionKey } from '@/constants/permissions';
-import { getOrSet } from '@/lib/services/redis-cache';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
+
+// Lazy load redis-cache to avoid bundling in client components
+const getOrSet = async (key: string, fetchFn: () => Promise<any>, ttl: number) => {
+  if (typeof window === 'undefined') {
+    // Server-side: use Redis cache
+    const { getOrSet: redisGetOrSet } = await import('@/lib/services/redis-cache');
+    return redisGetOrSet(key, fetchFn, ttl);
+  } else {
+    // Client-side: just fetch (shouldn't happen but safe fallback)
+    return fetchFn();
+  }
+};
 
 /**
  * Check if user has a specific permission in an organization

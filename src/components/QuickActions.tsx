@@ -1,11 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Calendar, TrendingUp } from 'lucide-react';
-import ContractUploadForm from '@/components/ContractUploadForm';
 import ReportGenerator from '@/components/ReportGenerator';
 import { Models } from 'appwrite';
+
+// Lazy load ContractUploadForm for better performance
+const ContractUploadForm = dynamic(
+  () => import('@/components/ContractUploadForm'),
+  {
+    ssr: false,
+    loading: () => null, // No loader for trigger button
+  }
+);
 
 interface QuickActionsProps {
   user?:

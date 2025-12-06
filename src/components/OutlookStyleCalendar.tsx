@@ -1794,8 +1794,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       }
 
       const newState = {
-        ...prev,
-        [calendar]: checked,
+      ...prev,
+      [calendar]: checked,
       };
 
       // Count how many calendars will be checked after this change

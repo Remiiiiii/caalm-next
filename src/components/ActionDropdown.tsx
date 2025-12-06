@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import Image from 'next/image';
 
 import {
@@ -24,7 +29,7 @@ import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Trash2 } from 'lucide-react';
+import { Ban, Trash2, AlertTriangle } from 'lucide-react';
 import {
   deleteFile,
   renameFile,
@@ -163,6 +168,7 @@ const ActionDropdown = ({
           fileId: file.$id,
           bucketFileId: file.bucketFileId || '',
           path,
+          contractId: file.contractId, // Pass contractId if this is a contract
         }),
     };
 
@@ -526,24 +532,47 @@ const ActionDropdown = ({
     // Delete dialog
     if (value === 'delete') {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <Card className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg">
-            {dialogHeader}
-            <CardContent>
-              <p className="delete-confirmation">
-                Are you sure you want to delete{' '}
-                <span className="delete-file-name">
-                  {file.name || file.contractName}
-                </span>
-                ?
-              </p>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3 md:flex-row">
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+          <DialogTitle className="sr-only">Delete File</DialogTitle>
+          {/* Cap */}
+          <div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
+
+          {/* Header */}
+          <div className="px-6 py-4 bg-white border-b border-slate-200">
+            <div className="flex  gap-2">
+              <AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+              <h2 className="text-base font-semibold sidebar-gradient-text">
+                Delete File
+              </h2>
+            </div>
+            <div>
+              <DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
+                Are you sure you want to delete &quot;
+                {file.name || file.contractName}&quot;? This action cannot be
+                undone.
+              </DialogDescription>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="px-6 py-5 space-y-3 bg-white">
+            <p className="text-sm text-slate-600">
+              This will permanently remove the file from the system.
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="text-xs text-slate-500 w-20">
+              This action is permanent.
+            </div>
+            <div className="flex items-center gap-3">
               <Button
+                variant="ghost"
                 onClick={(e) => closeAllModals(e)}
                 className="primary-btn px-3 sm:px-4"
               >
-                <Trash2 className="w-4 h-4" />
+                <Ban className="w-4 h-4" />
                 Cancel
               </Button>
               <Button
@@ -553,22 +582,23 @@ const ActionDropdown = ({
                   handleAction();
                 }}
                 disabled={isLoading}
-                className="modal-submit-button"
+                className="primary-btn px-3 sm:px-4"
               >
-                <p className="capitalize">Delete</p>
+                <Trash2 className="w-4 h-4" />
+                {isLoading ? 'Deleting...' : 'Delete File'}
                 {isLoading && (
                   <Image
                     src="/assets/icons/loader.svg"
                     alt="loader"
-                    width={24}
-                    height={24}
-                    className="animate-spin"
+                    width={16}
+                    height={16}
+                    className="animate-spin ml-2"
                   />
                 )}
               </Button>
-            </CardFooter>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </DialogContent>
       );
     }
     // Status dialog
@@ -674,7 +704,10 @@ const ActionDropdown = ({
     switch (action.value) {
       case 'delete':
         // Delete requires contracts.edit or contracts.approve
-        return permissions.includes(PERMISSIONS.CONTRACTS.EDIT) || permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
+        return (
+          permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
+          permissions.includes(PERMISSIONS.CONTRACTS.APPROVE)
+        );
       case 'rename':
         // Rename requires contracts.edit
         return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);

@@ -16,10 +16,50 @@ import {
   triggerContractExpiryNotification,
   triggerContractRenewalNotification,
 } from '@/lib/utils/notificationTriggers';
+import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
+import { ContractMetadataPayload } from '@/types/contracts';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
   throw error;
+};
+
+const sanitizePayload = <T extends Record<string, unknown>>(payload: T) =>
+  Object.fromEntries(
+    Object.entries(payload).filter(([_, value]) => {
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return value !== undefined && value !== null && value !== '';
+    })
+  );
+
+const mapRiskToPriority = (risk?: string) => {
+  if (!risk) return 'Medium';
+  switch (risk) {
+    case 'critical':
+      return 'Urgent';
+    case 'high':
+      return 'High';
+    case 'low':
+      return 'Low';
+    default:
+      return 'Medium';
+  }
+};
+
+const mapRiskToCompliance = (risk?: string) => {
+  if (!risk) return 'action-required';
+  switch (risk) {
+    case 'critical':
+      return 'non-compliant';
+    case 'high':
+      return 'action-required';
+    case 'low':
+      return 'up-to-date';
+    default:
+      return 'action-required';
+  }
 };
 
 export const uploadFile = async ({
@@ -28,20 +68,35 @@ export const uploadFile = async ({
   accountId,
   path: revalidatePathArg,
   contractMetadata,
-}: UploadFileProps & { contractMetadata?: Record<string, unknown> }) => {
+}: UploadFileProps & { contractMetadata?: ContractMetadataPayload }) => {
   const { storage, tablesDB } = await createAdminClient();
 
   try {
+    // Get user's organization
+    const defaultOrg = await getUserDefaultOrganization(ownerId);
+    if (!defaultOrg) {
+      throw new Error('User organization not found');
+    }
+
+    // Validate required config
+    if (
+      !appwriteConfig.bucketId ||
+      !appwriteConfig.databaseId ||
+      !appwriteConfig.filesCollectionId
+    ) {
+      throw new Error('Appwrite configuration is missing required fields');
+    }
+
     // Convert File to ArrayBuffer for InputFile.fromBuffer
     const arrayBuffer = await file.arrayBuffer();
     const inputFile = InputFile.fromBuffer(Buffer.from(arrayBuffer), file.name);
 
     // Always upload to Appwrite storage
-    const bucketFile = await storage.createFile(
-      appwriteConfig.bucketId,
-      ID.unique(),
-      inputFile
-    );
+    const bucketFile = await storage.createFile({
+      bucketId: appwriteConfig.bucketId,
+      fileId: ID.unique(),
+      file: inputFile,
+    });
 
     const fileDocument = {
       type: getFileType(bucketFile.name).type,
@@ -53,17 +108,21 @@ export const uploadFile = async ({
       accountId,
       users: [],
       bucketFileId: bucketFile.$id,
+      orgId: defaultOrg.orgId,
     };
 
     const newFile = await tablesDB
-      .createRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.filesCollectionId,
-        ID.unique(),
-        fileDocument
-      )
+      .createRow({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.filesCollectionId!,
+        rowId: ID.unique(),
+        data: fileDocument,
+      })
       .catch(async (error: unknown) => {
-        await storage.deleteFile(appwriteConfig.bucketId, bucketFile.$id);
+        await storage.deleteFile({
+          bucketId: appwriteConfig.bucketId!,
+          fileId: bucketFile.$id,
+        });
         handleError(error, 'Failed to create file document');
       });
 
@@ -71,28 +130,19 @@ export const uploadFile = async ({
       throw new Error('File document creation failed');
     }
 
+    const metadata = contractMetadata;
     // Check if filename contains "contract" (case-insensitive) or if contractMetadata is provided
-    if (
-      bucketFile.name.toLowerCase().includes('contract') ||
-      contractMetadata
-    ) {
+    if (bucketFile.name.toLowerCase().includes('contract') || metadata) {
       // Add to Contracts collection as well
-      let contractExpiryDate: string | undefined = undefined;
-      let status: string = 'pending-review'; // Default to pending-review
+      let contractExpiryDate: string | undefined;
+      let status = 'pending-review';
 
-      // Use provided metadata or extract from file
-      if (contractMetadata) {
-        console.log('📋 Contract metadata received:', contractMetadata);
-
-        // Use provided contract metadata
-        contractExpiryDate =
-          typeof contractMetadata.expiryDate === 'string'
-            ? contractMetadata.expiryDate
-            : undefined;
+      if (metadata?.contractExpiryDate) {
+        contractExpiryDate = metadata.contractExpiryDate;
         status =
-          typeof contractMetadata.expiryDate === 'string'
-            ? 'active'
-            : 'action-required';
+          metadata.lifecycleStatus === 'terminated'
+            ? 'action-required'
+            : 'active';
       } else {
         // Fallback to extraction for files with "contract" in name
         try {
@@ -121,21 +171,58 @@ export const uploadFile = async ({
         }
       }
 
-      const contractDocument = {
-        contractName: contractMetadata?.contractName || bucketFile.name,
+      const defaultOrg = await getUserDefaultOrganization(ownerId);
+      const resolvedOrgId = metadata?.orgId || defaultOrg?.orgId;
+
+      if (!resolvedOrgId) {
+        throw new Error(
+          'Unable to determine the organization for this contract upload.'
+        );
+      }
+
+      const assignedManagers = await (async () => {
+        const managerIds = metadata?.assignedManagers || [];
+        if (managerIds.length === 0) return [];
+
+        const managerNames: string[] = [];
+        for (const managerId of managerIds) {
+          try {
+            const user = await getUserById(managerId);
+            if (user && user.fullName) {
+              managerNames.push(user.fullName);
+            } else {
+              managerNames.push(managerId);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch manager ${managerId}:`, error);
+            managerNames.push(managerId);
+          }
+        }
+        return managerNames;
+      })();
+
+      const contractDocument = sanitizePayload({
+        contractName: metadata?.contractName || bucketFile.name,
         contractExpiryDate,
         status,
-        amount: contractMetadata?.amount
-          ? parseFloat(String(contractMetadata.amount))
-          : undefined,
+        startDate: metadata?.startDate,
+        executionDate: metadata?.executionDate,
+        autoRenew: metadata?.autoRenew,
+        renewalNoticeDays: metadata?.renewalNoticeDays,
+        amount: metadata?.amount,
+        currencyCode: metadata?.currencyCode || 'USD',
+        notToExceedAmount: metadata?.notToExceedAmount,
+        paymentTerms: metadata?.paymentTerms,
+        paymentSchedule: metadata?.paymentSchedule,
+        budgetCode: metadata?.budgetCode,
+        costCenter: metadata?.costCenter,
         daysUntilExpiry: (() => {
           if (contractExpiryDate) {
             try {
               const expiryDate = new Date(contractExpiryDate);
               const today = new Date();
               const timeDiff = expiryDate.getTime() - today.getTime();
-              const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-              return daysDiff;
+              return Math.ceil(timeDiff / (1000 * 3600 * 24));
             } catch (error) {
               console.error('Error calculating days until expiry:', error);
               return undefined;
@@ -143,98 +230,143 @@ export const uploadFile = async ({
           }
           return undefined;
         })(),
-        compliance: (() => {
-          const compliance = contractMetadata?.compliance;
-          if (typeof compliance === 'string') {
-            // Map frontend compliance levels to database enum values
-            const complianceMapping: Record<string, string> = {
-              'Low Risk': 'up-to-date',
-              'Medium Risk': 'action-required',
-              'High Risk': 'action-required',
-              'Critical Risk': 'non-compliant',
-            };
-            return complianceMapping[compliance] || 'action-required';
-          }
-          return 'action-required';
-        })(),
-        assignedManagers: await (async () => {
-          const managerIds =
-            (contractMetadata?.assignedManagers as string[]) || [];
-          if (managerIds.length === 0) return [];
-
-          // Fetch full names for each manager ID
-          const managerNames: string[] = [];
-          for (const managerId of managerIds) {
-            try {
-              const user = await getUserById(managerId);
-              if (user && user.fullName) {
-                managerNames.push(user.fullName);
-              } else {
-                // Fallback to ID if name not found
-                managerNames.push(managerId);
-              }
-            } catch (error) {
-              console.error(`Failed to fetch manager ${managerId}:`, error);
-              // Fallback to ID if fetch fails
-              managerNames.push(managerId);
-            }
-          }
-
-          return managerNames;
-        })(),
-        department: contractMetadata?.assignToDepartment || undefined,
+        compliance:
+          metadata?.compliance ?? mapRiskToCompliance(metadata?.riskLevel),
+        assignedManagers,
+        department: metadata?.assignToDepartment,
+        businessUnit: metadata?.businessUnit,
+        subDepartment: metadata?.subDepartment,
+        departmentOwner: metadata?.departmentOwner,
         contractType: (() => {
-          const contractType = contractMetadata?.contractType;
+          const contractType = metadata?.contractType;
           if (typeof contractType === 'string') {
-            // Map frontend values to database enum values
             const typeMapping: Record<string, string> = {
               'Service Agreement': 'Service_Agreement',
+              'Professional Services': 'Consulting_Agreement',
+              'Purchase Agreement': 'Purchase_Order',
               'Purchase Order': 'Purchase_Order',
               'License Agreement': 'License_Agreement',
+              'Confidentiality/NDA': 'NDA_',
               NDA: 'NDA_',
               'Employment Contract': 'Employment_Contract',
               'Vendor Contract': 'Vendor_Contract',
               'Lease Agreement': 'Lease_Agreement',
               'Consulting Agreement': 'Consulting_Agreement',
+              'Statement of Work (SOW)': 'Consulting_Agreement',
+              'Statement of Work': 'Consulting_Agreement',
+              'Master Agreement': 'Service_Agreement',
+              Amendment: 'Other',
               Other: 'Other',
             };
             return typeMapping[contractType] || 'Other';
           }
           return 'Other';
         })(),
-        vendor: contractMetadata?.vendor || undefined,
-        contractNumber: contractMetadata?.contractNumber || undefined,
-        priority: (() => {
-          const priority = contractMetadata?.priority;
-          if (typeof priority === 'string') {
-            // Map frontend priority values to database enum values
-            const priorityMapping: Record<string, string> = {
-              low: 'Low',
-              medium: 'Medium',
-              high: 'High',
-              urgent: 'Urgent',
-            };
-            return priorityMapping[priority.toLowerCase()] || 'Medium';
-          }
-          return 'Medium';
-        })(),
-        description: contractMetadata?.description || undefined,
+        contractCategory: metadata?.contractCategory,
+        vendor: metadata?.vendor ?? metadata?.counterpartyLegalName,
+        contractNumber: metadata?.contractNumber,
+        priority: metadata?.priority ?? mapRiskToPriority(metadata?.riskLevel),
+        description: metadata?.description,
+        contractOwnerId: metadata?.contractOwnerId || ownerId,
+        lifecycleStatus: metadata?.lifecycleStatus || 'draft',
+        riskLevel: metadata?.riskLevel,
+        insuranceRequired: metadata?.insuranceRequired,
+        insuranceVerifiedDate: metadata?.insuranceVerifiedDate,
+        insuranceExpiryDate: metadata?.insuranceExpiryDate,
+        indemnificationIncluded: metadata?.indemnificationIncluded,
+        hipaaRequired: metadata?.hipaaRequired,
+        dataPrivacyRequirements: metadata?.dataPrivacyRequirements,
+        backgroundCheckRequired: metadata?.backgroundCheckRequired,
+        regulatoryRequirements: metadata?.regulatoryRequirements,
+        auditRightsGranted: metadata?.auditRightsGranted,
+        counterpartyLegalName: metadata?.counterpartyLegalName,
+        counterpartyContactEmail: metadata?.counterpartyContactEmail,
+        counterpartyContactPhone: metadata?.counterpartyContactPhone,
+        counterpartyAddress: metadata?.counterpartyAddress,
+        counterpartyType: metadata?.counterpartyType,
+        counterpartyTaxId: metadata?.counterpartyTaxId,
+        counterpartyDunsNumber: metadata?.counterpartyDunsNumber,
+        keyObligations:
+          metadata?.keyObligations && metadata.keyObligations.length > 0
+            ? metadata.keyObligations
+            : undefined,
+        serviceLevelAgreements: metadata?.serviceLevelAgreements,
+        performanceMetrics: metadata?.performanceMetrics,
+        reportingRequirements: metadata?.reportingRequirements,
+        postTerminationObligations: metadata?.postTerminationObligations,
+        terminationNoticeDays: metadata?.terminationNoticeDays,
+        terminationRights: metadata?.terminationRights,
+        curePeriodDays: metadata?.curePeriodDays,
+        attachmentReferences:
+          metadata?.attachmentReferences &&
+          metadata.attachmentReferences.length > 0
+            ? metadata.attachmentReferences
+            : undefined,
+        relatedDocumentIds:
+          metadata?.relatedDocumentIds && metadata.relatedDocumentIds.length > 0
+            ? metadata.relatedDocumentIds
+            : undefined,
+        versionNumber: metadata?.versionNumber,
+        parentContractId: metadata?.parentContractId,
+        templateUsed: metadata?.templateUsed,
+        approvalWorkflowTemplate: metadata?.approvalWorkflowTemplate,
+        internalApproverIds:
+          metadata?.internalApproverIds &&
+          metadata.internalApproverIds.length > 0
+            ? metadata.internalApproverIds
+            : undefined,
+        currentApprovalStage: metadata?.currentApprovalStage,
+        approvalHistoryLog: metadata?.approvalHistoryLog,
+        reviewerComments: metadata?.reviewerComments,
         fileId: newFile.$id,
         fileRef: newFile.$id,
-      };
+        orgId: resolvedOrgId,
+      });
+
+      if (!appwriteConfig.contractsCollectionId) {
+        throw new Error('Contracts collection ID is not configured');
+      }
 
       const contract = await tablesDB.createRow({
-        databaseId: appwriteConfig.databaseId,
+        databaseId: appwriteConfig.databaseId!,
         tableId: appwriteConfig.contractsCollectionId,
         rowId: ID.unique(),
         data: contractDocument,
       });
 
-      // Save all contract metadata in the file document for easy access
-      const fileUpdateData = {
-        contractId: contract.$id,
-        contractExpiryDate: contractExpiryDate,
-        status: status,
+      const enterprisePayload = metadata?.enterpriseMetadata
+        ? sanitizePayload({
+            contractId: contract.$id, // Required attribute
+            orgId: resolvedOrgId,
+            // Exclude fields that are not in the collection schema
+            // Include other enterprise metadata fields
+            ...Object.fromEntries(
+              Object.entries(metadata.enterpriseMetadata).filter(
+                ([key]) =>
+                  key !== 'digitalSignatureRequired' && key !== 'accessScope'
+                // contractId is required, so we set it explicitly above
+              )
+            ),
+          })
+        : null;
+
+      if (enterprisePayload && Object.keys(enterprisePayload).length > 2) {
+        await tablesDB.createRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId:
+            appwriteConfig.contractsEnterpriseMetadataCollectionId ||
+            appwriteConfig.contractExtensionsCollectionId ||
+            'contractsEnterpriseMetadata',
+          rowId: ID.unique(),
+          data: enterprisePayload,
+        });
+      }
+
+      // Save contract metadata in the file document for easy access
+      // Note: Only include attributes that exist in the files collection schema
+      const fileUpdateData = sanitizePayload({
+        contractExpiryDate,
+        status,
         contractName: contractDocument.contractName,
         contractType: contractDocument.contractType,
         amount: contractDocument.amount,
@@ -244,7 +376,8 @@ export const uploadFile = async ({
         compliance: contractDocument.compliance,
         department: contractDocument.department,
         assignedManagers: contractDocument.assignedManagers,
-      };
+        // Excluded: riskLevel, contractCategory, currencyCode (not in files collection schema)
+      });
 
       console.log('📝 Updating file document with contract metadata:', {
         fileId: newFile.$id,
@@ -252,8 +385,8 @@ export const uploadFile = async ({
       });
 
       await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.filesCollectionId,
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.filesCollectionId!,
         rowId: newFile.$id,
         data: fileUpdateData,
       });
@@ -367,8 +500,8 @@ export const getFiles = async ({
     const queries = createQueries(currentUser, types, searchText, sort, limit);
 
     const files = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.filesCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.filesCollectionId!,
       queries: queries,
     });
 
@@ -396,8 +529,8 @@ export const renameFile = async ({
   try {
     const newName = `${name}.${extension}`;
     const updatedFile = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.filesCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.filesCollectionId!,
       rowId: fileId,
       data: { name: newName },
     });
@@ -418,8 +551,8 @@ export const updateFileUsers = async ({
 
   try {
     const updatedFile = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.filesCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.filesCollectionId!,
       rowId: fileId,
       data: { users: emails },
     });
@@ -435,46 +568,221 @@ export const deleteFile = async ({
   fileId,
   bucketFileId,
   path,
-}: DeleteFileProps) => {
+  contractId,
+}: DeleteFileProps & { contractId?: string }) => {
   const { tablesDB, storage } = await createAdminClient();
 
   try {
-    console.log('Deleting fileId:', fileId);
+    console.log('Deleting fileId:', fileId, 'contractId:', contractId);
 
-    // Start all operations in parallel for better performance
-    const operations = [
-      // 1. Find and delete contract document (if exists)
-      tablesDB
-        .listRows({
-          databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.contractsCollectionId,
-          queries: [Query.equal('fileId', fileId)],
-        })
-        .then(async (contractDocs) => {
-          if (contractDocs.rows.length > 0) {
-            const contractId = contractDocs.rows[0].$id;
-            return tablesDB.deleteRow({
-              databaseId: appwriteConfig.databaseId,
-              tableId: appwriteConfig.contractsCollectionId,
-              rowId: contractId,
+    // Validate inputs
+    if (!fileId) {
+      throw new Error('File ID is required');
+    }
+
+    // Determine if this is a contract deletion
+    // If contractId is provided, fileId is the contract ID
+    const isContract = !!contractId;
+    let actualFileDocumentId: string | null = null;
+    let actualBucketFileId: string | null = bucketFileId || null;
+
+    if (isContract) {
+      // This is a contract - fileId is actually the contract ID
+      const contractIdToDelete = fileId;
+
+      // First, get the contract document to find the associated file document
+      try {
+        const contractDoc = await tablesDB.getRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
+          rowId: contractIdToDelete,
+        });
+
+        // Get the file document ID from the contract
+        actualFileDocumentId =
+          contractDoc.fileId || contractDoc.fileRef || null;
+        actualBucketFileId = bucketFileId || contractDoc.bucketFileId || null;
+
+        console.log('Contract document found:', {
+          contractId: contractIdToDelete,
+          fileDocumentId: actualFileDocumentId,
+          bucketFileId: actualBucketFileId,
+        });
+      } catch (error: any) {
+        console.log(
+          'Contract document not found, may have been deleted already'
+        );
+        // Continue with deletion attempt
+      }
+
+      // Start operations for contract deletion
+      // Delete in sequence to avoid constraint issues
+      try {
+        // 0. Delete related enterprise metadata documents first (if they exist)
+        try {
+          const enterpriseMetadataCollectionId =
+            appwriteConfig.contractsEnterpriseMetadataCollectionId ||
+            appwriteConfig.contractExtensionsCollectionId;
+
+          if (enterpriseMetadataCollectionId) {
+            const enterpriseDocs = await tablesDB.listRows({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: enterpriseMetadataCollectionId,
+              queries: [Query.equal('contractId', contractIdToDelete)],
             });
+
+            // Delete all related enterprise metadata documents
+            for (const doc of enterpriseDocs.rows) {
+              try {
+                await tablesDB.deleteRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: enterpriseMetadataCollectionId,
+                  rowId: doc.$id,
+                });
+                console.log('Enterprise metadata document deleted:', doc.$id);
+              } catch (error: any) {
+                console.log('Error deleting enterprise metadata:', error);
+                // Continue with other deletions
+              }
+            }
           }
-          return null;
-        }),
+        } catch (error: any) {
+          console.log('Error finding enterprise metadata:', error);
+          // Continue with contract deletion even if enterprise metadata lookup fails
+        }
 
-      // 2. Delete the file document
-      tablesDB.deleteRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.filesCollectionId,
-        rowId: fileId,
-      }),
+        // 1. Delete the contract document
+        try {
+          await tablesDB.deleteRow({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.contractsCollectionId!,
+            rowId: contractIdToDelete,
+          });
+          console.log('Contract document deleted successfully');
+        } catch (error: any) {
+          if (error?.code === 404 || error?.message?.includes('not found')) {
+            console.log('Contract document not found, skipping deletion');
+          } else {
+            console.error('Error deleting contract document:', error);
+            throw error;
+          }
+        }
 
-      // 3. Delete the storage file
-      storage.deleteFile(appwriteConfig.bucketId, bucketFileId),
-    ];
+        // 2. Delete the file document (if we found the file document ID)
+        if (actualFileDocumentId) {
+          try {
+            await tablesDB.deleteRow({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: appwriteConfig.filesCollectionId!,
+              rowId: actualFileDocumentId,
+            });
+            console.log('File document deleted successfully');
+          } catch (error: any) {
+            if (error?.code === 404 || error?.message?.includes('not found')) {
+              console.log('File document not found, skipping deletion');
+            } else {
+              console.error('Error deleting file document:', error);
+              // Don't throw - continue with storage deletion
+            }
+          }
+        }
 
-    // Execute all operations in parallel
-    await Promise.all(operations);
+        // 3. Delete the storage file
+        if (actualBucketFileId) {
+          try {
+            await storage.deleteFile({
+              bucketId: appwriteConfig.bucketId!,
+              fileId: actualBucketFileId,
+            });
+            console.log('Storage file deleted successfully');
+          } catch (error: any) {
+            if (error?.code === 404 || error?.message?.includes('not found')) {
+              console.log('Storage file not found, skipping deletion');
+            } else {
+              console.error('Error deleting storage file:', error);
+              // Don't throw - storage deletion is less critical
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error('Error during contract deletion:', error);
+        throw error;
+      }
+    } else {
+      // This is a regular file deletion
+      // Start all operations in parallel for better performance
+      const operations = [
+        // 1. Find and delete contract document (if exists)
+        tablesDB
+          .listRows({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.contractsCollectionId!,
+            queries: [Query.equal('fileId', fileId)],
+          })
+          .then(async (contractDocs) => {
+            if (contractDocs.rows.length > 0) {
+              const contractIdToDelete = contractDocs.rows[0].$id;
+              try {
+                return await tablesDB.deleteRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: appwriteConfig.contractsCollectionId!,
+                  rowId: contractIdToDelete,
+                });
+              } catch (error: any) {
+                if (
+                  error?.code === 404 ||
+                  error?.message?.includes('not found')
+                ) {
+                  console.log('Contract document not found, skipping deletion');
+                  return null;
+                }
+                throw error;
+              }
+            }
+            return null;
+          })
+          .catch((error) => {
+            console.log('Error finding/deleting contract:', error);
+            return null;
+          }),
+
+        // 2. Delete the file document
+        tablesDB
+          .deleteRow({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.filesCollectionId!,
+            rowId: fileId,
+          })
+          .catch((error: any) => {
+            if (error?.code === 404 || error?.message?.includes('not found')) {
+              console.log('File document not found, skipping deletion');
+              return null;
+            }
+            throw error;
+          }),
+
+        // 3. Delete the storage file
+        bucketFileId
+          ? storage
+              .deleteFile({
+                bucketId: appwriteConfig.bucketId!,
+                fileId: bucketFileId,
+              })
+              .catch((error: any) => {
+                if (
+                  error?.code === 404 ||
+                  error?.message?.includes('not found')
+                ) {
+                  console.log('Storage file not found, skipping deletion');
+                  return null;
+                }
+                throw error;
+              })
+          : Promise.resolve(null),
+      ];
+
+      await Promise.all(operations);
+    }
 
     revalidatePath(path);
     return parseStringify({ status: 'success' });
@@ -512,8 +820,8 @@ export async function getTotalSpaceUsed() {
     }
 
     const files = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.filesCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.filesCollectionId!,
       queries: [Query.equal('owner', [currentUser.$id])],
     });
 
@@ -565,8 +873,8 @@ export const assignContract = async ({
     let contractDoc;
     try {
       contractDoc = await tablesDB.getRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.contractsCollectionId,
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.contractsCollectionId!,
         rowId: fileId,
       });
     } catch (error) {
@@ -581,8 +889,8 @@ export const assignContract = async ({
       // Try to find the contract by fileId in the contracts collection
       try {
         const contracts = await tablesDB.listRows({
-          databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.contractsCollectionId,
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
           queries: [Query.equal('fileId', fileDocumentId || '')],
         });
 
@@ -607,8 +915,8 @@ export const assignContract = async ({
 
     // Update the contract document: assign manager(s)
     const updatedContract = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
       rowId: contractDoc.$id, // Use the actual contract document ID
       data: {
         assignedManagers: managerAccountIds,
@@ -618,8 +926,8 @@ export const assignContract = async ({
     // Update the file document: set isContract true (if fileDocumentId is provided)
     if (fileDocumentId) {
       await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.filesCollectionId,
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.filesCollectionId!,
         rowId: fileDocumentId,
         data: {
           isContract: true,
@@ -641,6 +949,11 @@ export const getContractStatusEnums = async () => {
   const { tablesDB } = await createAdminClient();
   const databaseId = appwriteConfig.databaseId;
   const tableId = appwriteConfig.contractsCollectionId;
+
+  if (!databaseId || !tableId) {
+    throw new Error('Database or contracts collection ID is not configured');
+  }
+
   const attrKey = 'status';
   try {
     // Type assertion to fix linter error
@@ -670,8 +983,8 @@ export const contractStatus = async ({
   try {
     // Update the contract document's status
     const updated = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
       rowId: fileId,
       data: { status },
     });
@@ -725,8 +1038,8 @@ export const getContracts = async () => {
     // Fetch contracts where file owner matches current user
     // (Assumes you want contracts for the user's files)
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
     });
     return parseStringify(contracts);
   } catch (error) {
@@ -740,8 +1053,8 @@ export const getContractsForManager = async (managerAccountId: string) => {
   try {
     // Fetch contracts where the manager's accountId is in the assignedManagers array
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
       queries: [Query.search('assignedManagers', managerAccountId)],
     });
     return parseStringify(contracts.rows);
@@ -754,8 +1067,8 @@ export const getTotalContractsCount = async () => {
   const { tablesDB } = await createAdminClient();
   try {
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
     });
     return contracts.total;
   } catch (error) {
@@ -771,8 +1084,8 @@ export const getExpiringContractsCount = async () => {
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
       queries: [
         Query.lessThanEqual(
           'contractExpiryDate',
@@ -797,8 +1110,8 @@ export const getContractsByUserDivision = async (userDivision: string) => {
   try {
     // Get all contracts
     const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
     });
 
     // Filter contracts where assigned managers belong to the user's division
@@ -812,8 +1125,13 @@ export const getContractsByUserDivision = async (userDivision: string) => {
         // Check if any assigned manager belongs to the user's division
         for (const managerName of contract.assignedManagers) {
           // Get manager by name to check their division using new RBAC system
-          const { getUsersByRoleNames } = await import('@/lib/utils/get-users-by-role');
-          const allManagers = await getUsersByRoleNames(['Department Manager', 'manager']);
+          const { getUsersByRoleNames } = await import(
+            '@/lib/utils/get-users-by-role'
+          );
+          const allManagers = await getUsersByRoleNames([
+            'Department Manager',
+            'manager',
+          ]);
           const managers = {
             rows: allManagers.filter((m: any) => m.fullName === managerName),
           };

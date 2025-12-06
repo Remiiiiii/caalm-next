@@ -13,6 +13,16 @@ export const appwriteConfig = {
 
   contractsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_CONTRACTS_COLLECTION,
 
+  contractsEnterpriseMetadataCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CONTRACTS_ENTERPRISE_METADATA_COLLECTION,
+
+  contractExtensionsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_EXTENSIONS_COLLECTION,
+
+  contractDraftsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_DRAFTS_COLLECTION ||
+    '692f4a86002ae8f45cae',
+
   calendarEventsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_EVENTS_COLLECTION,
 

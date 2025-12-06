@@ -9,10 +9,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // ESLint configuration
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // ESLint configuration - MIGRATED to .eslintrc.json (Next.js 16 requirement)
 
   // Compiler options
   compiler: {
@@ -69,6 +66,13 @@ const nextConfig: NextConfig = {
               priority: 20,
               enforce: true,
             },
+            // Contract upload components chunk
+            contractUpload: {
+              name: 'contract-upload',
+              test: /[\\/]src[\\/]components[\\/](ContractUploadForm|contract-upload)[\\/]/,
+              priority: 25,
+              enforce: true,
+            },
             // Shared chunks
             common: {
               name: 'common',
@@ -90,26 +94,21 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '100MB',
     },
   },
-  // Disable caching in development
+  // Enable Turbopack explicitly
+  turbopack: {},
+  // Improve development caching for faster reloads
   ...(process.env.NODE_ENV === 'development' && {
     onDemandEntries: {
-      maxInactiveAge: 25 * 1000,
-      pagesBufferLength: 2,
+      maxInactiveAge: 60 * 1000, // Increase from 25s to 60s
+      pagesBufferLength: 5, // Increase from 2 to 5
     },
   }),
-  
+
   // Enable static page generation for faster initial loads
   output: 'standalone',
-  
+
   // Optimize production builds
-  ...(process.env.NODE_ENV === 'production' && {
-    swcMinify: true,
-    compiler: {
-      removeConsole: {
-        exclude: ['error', 'warn'],
-      },
-    },
-  }),
+  // Note: swcMinify is now default in Next.js 16, removed deprecated option
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

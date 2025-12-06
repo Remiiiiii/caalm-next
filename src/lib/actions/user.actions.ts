@@ -17,11 +17,19 @@ import {
   notifyInvitationSent,
   notifyInvitationAccepted,
 } from '../utils/smsNotifications';
-import { getUserRoles, getUserDefaultOrganization } from '@/lib/rbac/permissions';
+import {
+  getUserRoles,
+  getUserDefaultOrganization,
+} from '@/lib/rbac/permissions';
 import CacheManager from '@/lib/services/cache-manager';
 
 // Calendar role type for compatibility with calendar permissions
-export type CalendarRole = 'admin' | 'approver' | 'reviewer' | 'scheduler' | 'viewer';
+export type CalendarRole =
+  | 'admin'
+  | 'approver'
+  | 'reviewer'
+  | 'scheduler'
+  | 'viewer';
 
 export type AppUser = {
   $id: string;
@@ -52,7 +60,7 @@ export const getUserByEmail = async (email: string) => {
       },
       300 // 5 minute cache for user lookups
     );
-    
+
     return cachedUser;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
@@ -93,13 +101,15 @@ export const getUserByAccountId = async (
     }
 
     const user = result.rows[0];
-    
+
     // Get user's role from database (for calendar permissions compatibility)
     // Both functions are now cached, so this is fast
     const defaultOrg = await getUserDefaultOrganization(user.$id);
-    const userRoles = defaultOrg ? await getUserRoles(user.$id, defaultOrg.orgId) : [];
+    const userRoles = defaultOrg
+      ? await getUserRoles(user.$id, defaultOrg.orgId)
+      : [];
     const roleName = userRoles[0]?.roleName || '';
-    
+
     // Map new RBAC roles to calendar roles for compatibility
     let calendarRole: CalendarRole = 'viewer';
     if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
@@ -109,7 +119,7 @@ export const getUserByAccountId = async (
     } else if (roleName === 'Viewer') {
       calendarRole = 'viewer';
     }
-    
+
     return {
       $id: user.$id,
       fullName: user.fullName,
@@ -200,9 +210,11 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
 
     // Send OTP via Mailgun (non-blocking for faster response)
     const { mailgunService } = await import('../services/mailgun');
-    mailgunService.sendOTPEmail(email, otp, { fullName: userFullName }).catch(() => {
-      // Silently fail - email sending shouldn't block sign-in
-    });
+    mailgunService
+      .sendOTPEmail(email, otp, { fullName: userFullName })
+      .catch(() => {
+        // Silently fail - email sending shouldn't block sign-in
+      });
 
     // Return a dummy userId for compatibility with existing code
     return ID.unique();
@@ -599,13 +611,15 @@ export const getCurrentUser = async () => {
 
     // Return only the user data, not the client objects
     const userData = user.rows[0];
-    
+
     // Parallel: Get user's role from database (for calendar permissions compatibility)
     // Both functions are now cached, so this is fast
     const defaultOrg = await getUserDefaultOrganization(userData.$id);
-    const userRoles = defaultOrg ? await getUserRoles(userData.$id, defaultOrg.orgId) : [];
+    const userRoles = defaultOrg
+      ? await getUserRoles(userData.$id, defaultOrg.orgId)
+      : [];
     const roleName = userRoles[0]?.roleName || '';
-    
+
     // Map new RBAC roles to calendar roles for compatibility
     let calendarRole: CalendarRole = 'viewer';
     if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
@@ -615,7 +629,7 @@ export const getCurrentUser = async () => {
     } else if (roleName === 'Viewer') {
       calendarRole = 'viewer';
     }
-    
+
     return parseStringify({
       $id: userData.$id,
       fullName: userData.fullName,
@@ -675,13 +689,15 @@ export const getCurrentUserFrom2FA = async () => {
       }
 
       const user = userResponse.rows[0];
-      
+
       // Get user's role from database (for calendar permissions compatibility)
       // Both functions are now cached, so this is fast
       const defaultOrg = await getUserDefaultOrganization(user.$id);
-      const userRoles = defaultOrg ? await getUserRoles(user.$id, defaultOrg.orgId) : [];
+      const userRoles = defaultOrg
+        ? await getUserRoles(user.$id, defaultOrg.orgId)
+        : [];
       const roleName = userRoles[0]?.roleName || '';
-      
+
       // Map new RBAC roles to calendar roles for compatibility
       let calendarRole: CalendarRole = 'viewer';
       if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
@@ -724,14 +740,14 @@ export const signOutUser = async () => {
   cookieStore.delete('appwrite-session');
   cookieStore.delete('2fa_completed');
   cookieStore.delete('2fa_user_id');
-  
+
   // Fire and forget - delete session in background (non-blocking)
   createSessionClient()
     .then(({ account }) => account.deleteSession('current'))
     .catch(() => {
       // Silently ignore - session might already be invalid
     });
-  
+
   // Redirect immediately
   redirect('/sign-in');
 };
@@ -755,13 +771,16 @@ export const signInUser = async ({ email }: { email: string }) => {
       })(),
     ]);
 
-    const user = existingUser.status === 'fulfilled' 
-      ? (existingUser.value as AppUser | null)
+    const user =
+      existingUser.status === 'fulfilled'
+        ? (existingUser.value as AppUser | null)
+        : null;
+
+    const authUser = user
+      ? null
+      : authUserResult.status === 'fulfilled'
+      ? authUserResult.value
       : null;
-    
-    const authUser = user 
-      ? null 
-      : (authUserResult.status === 'fulfilled' ? authUserResult.value : null);
 
     if (user) {
       // User found - send OTP in background (non-blocking for faster response)
@@ -777,7 +796,7 @@ export const signInUser = async ({ email }: { email: string }) => {
       // Create user record and send OTP in parallel
       const { tablesDB } = await createAdminClient();
       const userId = ID.unique();
-      
+
       // Parallelize user creation and OTP sending
       await Promise.all([
         tablesDB.createRow({
@@ -793,10 +812,10 @@ export const signInUser = async ({ email }: { email: string }) => {
         }),
         sendEmailOTP({ email }),
       ]);
-      
+
       // Invalidate cache for this email to ensure fresh data
       await CacheManager.invalidateUsers(email);
-      
+
       return { accountId: authUser.$id };
     }
 
@@ -1188,7 +1207,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     tableId: 'roles',
     queries: [Query.equal('name', invite.role)],
   });
-  
+
   if (rolesResult.total > 0) {
     const roleId = rolesResult.rows[0].$id;
     // Get default organization
@@ -1204,7 +1223,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
           Query.equal('roleId', roleId),
         ],
       });
-      
+
       if (existingUserRoles.total === 0) {
         await tablesDB.createRow({
           databaseId: appwriteConfig.databaseId || 'default-db',
@@ -1217,7 +1236,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
             assignedBy: invite.invitedBy || user.$id,
           },
         });
-        
+
         // Invalidate RBAC cache for this user
         await CacheManager.invalidateRBAC(user.$id, defaultOrg.orgId);
       }
@@ -1471,13 +1490,13 @@ export const resendInvitation = async ({ token }: { token: string }) => {
 
     // Send the invite email via Mailgun
     const { mailgunService } = await import('../services/mailgun');
-      await mailgunService.sendInvitationEmail(
-        invitation.email,
-        invitation.name,
-        inviteLink,
-        invitation.role || 'Viewer',
-        invitation.department
-      );
+    await mailgunService.sendInvitationEmail(
+      invitation.email,
+      invitation.name,
+      inviteLink,
+      invitation.role || 'Viewer',
+      invitation.department
+    );
 
     console.log(
       'resendInvitation: Email resent successfully to:',
@@ -1509,11 +1528,13 @@ export const updateUserProfile = async ({
   fullName,
   division,
   role,
+  department,
 }: {
   accountId: string;
   fullName?: string;
   division?: UserDivision;
   role?: string;
+  department?: string;
 }) => {
   try {
     const { tablesDB } = await createAdminClient();
@@ -1525,11 +1546,20 @@ export const updateUserProfile = async ({
     });
     if (userList.total === 0) throw new Error('User not found');
     const userDoc = userList.rows[0];
+
     // Prepare update payload
     // Note: role updates should be done via user_roles table, not directly on user
     const updatePayload: Record<string, unknown> = {};
     if (fullName !== undefined) updatePayload.fullName = fullName;
     if (division !== undefined) updatePayload.division = division;
+    if (department !== undefined) updatePayload.department = department;
+
+    // Preserve required fields like orgId if they exist in the document
+    // This ensures we don't lose required attributes during partial updates
+    if (userDoc.orgId) {
+      updatePayload.orgId = userDoc.orgId;
+    }
+
     // Update the user document
     const updatedUser = await tablesDB.updateRow({
       databaseId: appwriteConfig.databaseId || 'default-db',
@@ -1540,6 +1570,65 @@ export const updateUserProfile = async ({
     return updatedUser;
   } catch (error) {
     handleError(error, 'Failed to update user profile');
+  }
+};
+
+/**
+ * Update a user's department field while preserving required attributes
+ * @param userId - The user's document ID ($id)
+ * @param department - The new department value
+ * @returns The updated user document
+ */
+export const updateUserDepartment = async ({
+  userId,
+  department,
+}: {
+  userId: string;
+  department: string;
+}) => {
+  try {
+    const { tablesDB } = await createAdminClient();
+
+    // First, get the existing user document to preserve required fields
+    const userDoc = await tablesDB.getRow({
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
+      rowId: userId,
+    });
+
+    if (!userDoc) {
+      throw new Error('User not found');
+    }
+
+    // Prepare update payload with department and preserve required fields
+    const updatePayload: Record<string, unknown> = {
+      department,
+    };
+
+    // Preserve orgId if it exists (required attribute)
+    if (userDoc.orgId) {
+      updatePayload.orgId = userDoc.orgId;
+    }
+
+    // Preserve other required fields that might exist
+    if (userDoc.accountId) {
+      updatePayload.accountId = userDoc.accountId;
+    }
+    if (userDoc.email) {
+      updatePayload.email = userDoc.email;
+    }
+
+    // Update the user document
+    const updatedUser = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
+      rowId: userId,
+      data: updatePayload,
+    });
+
+    return updatedUser;
+  } catch (error) {
+    handleError(error, 'Failed to update user department');
   }
 };
 
@@ -1713,14 +1802,40 @@ export async function fetchUserNamesByIds(
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: 'Unknown error' }));
+      console.error('[fetchUserNamesByIds] API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData,
+      });
       throw new Error(errorData.error || 'Failed to fetch user names');
     }
 
     const users: AppUser[] = await response.json();
-    return users;
+
+    // Filter out any debug info or non-user objects
+    const validUsers = Array.isArray(users)
+      ? users.filter(
+          (user) =>
+            user &&
+            typeof user === 'object' &&
+            ('$id' in user || 'fullName' in user)
+        )
+      : [];
+
+    if (validUsers.length !== users.length) {
+      console.warn('[fetchUserNamesByIds] Filtered out invalid user objects:', {
+        requested: userIds,
+        received: users.length,
+        valid: validUsers.length,
+      });
+    }
+
+    return validUsers;
   } catch (error) {
-    console.error('Error in fetchUserNamesByIds:', error);
+    console.error('[fetchUserNamesByIds] Error:', error);
     return [];
   }
 }

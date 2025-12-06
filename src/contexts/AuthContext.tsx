@@ -99,14 +99,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 user: typedSessionUser,
                 timestamp: Date.now(),
               }));
-              
-              // Trigger cache warm-up for dashboard data
-              const orgId = 'default_organization'; // You may want to get this from context
-              import('@/lib/services/cache-manager').then(({ default: CacheManager }) => {
-                CacheManager.warmUp(orgId, typedSessionUser.$id).catch(() => {
-                  // Silently fail - warm-up is non-critical
-                });
-              });
             } catch {
               // localStorage might be full, ignore
             }
@@ -222,14 +214,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     user: convertedUser,
                     timestamp: Date.now(),
                   }));
-                  
-                  // Trigger cache warm-up for dashboard data
-                  const orgId = 'default_organization'; // You may want to get this from context
-                  import('@/lib/services/cache-manager').then(({ default: CacheManager }) => {
-                    CacheManager.warmUp(orgId, convertedUser.$id).catch(() => {
-                      // Silently fail - warm-up is non-critical
-                    });
-                  });
                 } catch {
                   // localStorage might be full, ignore
                 }
