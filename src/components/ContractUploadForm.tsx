@@ -2191,7 +2191,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <p className="text-sm font-medium text-slate-700 mb-1">
                                     Save and Resume Later
                                   </p>
-                                  <p className="text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500 max-w-[70%]">
                                     Even though auto-save is on you can still
                                     save your progress to continue filling out
                                     this form at a later time
@@ -2473,7 +2473,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <p className="text-sm font-medium text-slate-700 mb-1">
                                     Save and Resume Later
                                   </p>
-                                  <p className="text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500 max-w-[70%]">
                                     Even though auto-save is on you can still
                                     save your progress to continue filling out
                                     this form at a later time
@@ -2758,7 +2758,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <p className="text-sm font-medium text-slate-700 mb-1">
                                     Save and Resume Later
                                   </p>
-                                  <p className="text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500 max-w-[70%]">
                                     Even though auto-save is on you can still
                                     save your progress to continue filling out
                                     this form at a later time
@@ -3365,7 +3365,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <p className="text-sm font-medium text-slate-700 mb-1">
                                     Save and Resume Later
                                   </p>
-                                  <p className="text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500 max-w-[70%]">
                                     Even though auto-save is on you can still
                                     save your progress to continue filling out
                                     this form at a later time
@@ -3693,7 +3693,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <p className="text-sm font-medium text-slate-700 mb-1">
                                     Save and Resume Later
                                   </p>
-                                  <p className="text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500 max-w-[70%]">
                                     Even though auto-save is on you can still
                                     save your progress to continue filling out
                                     this form at a later time
@@ -3863,7 +3863,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <p className="text-sm font-medium text-slate-700 mb-1">
                                     Save and Resume Later
                                   </p>
-                                  <p className="text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500 max-w-[70%]">
                                     Even though auto-save is on you can still
                                     save your progress to continue filling out
                                     this form at a later time
@@ -4103,7 +4103,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <p className="text-sm font-medium text-slate-700 mb-1">
                                     Save and Resume Later
                                   </p>
-                                  <p className="text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500 max-w-[70%]">
                                     Even though auto-save is on you can still
                                     save your progress to continue filling out
                                     this form at a later time
@@ -4270,7 +4270,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <p className="text-sm font-medium text-slate-700 mb-1">
                                     Save and Resume Later
                                   </p>
-                                  <p className="text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500 max-w-[70%]">
                                     Even though auto-save is on you can still
                                     save your progress to continue filling out
                                     this form at a later time
@@ -4502,7 +4502,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <p className="text-sm font-medium text-slate-700 mb-1">
                                     Save and Resume Later
                                   </p>
-                                  <p className="text-xs text-slate-500">
+                                  <p className="text-xs text-slate-500 max-w-[70%]">
                                     Even though auto-save is on you can still
                                     save your progress to continue filling out
                                     this form at a later time

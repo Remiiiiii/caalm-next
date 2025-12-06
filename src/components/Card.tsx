@@ -83,56 +83,156 @@ const Card = ({
       ? file.owner.fullName
       : null
   );
+  const [isLoadingOwnerName, setIsLoadingOwnerName] = useState(false);
+  const [contractOwnerId, setContractOwnerId] = useState<string | null>(null);
+  const [contractLoaded, setContractLoaded] = useState(false);
 
-  // Fetch owner name if owner is a string (user ID)
+  // Fetch owner name - prioritize contractOwnerId if contract exists
   useEffect(() => {
     const fetchOwnerName = async () => {
-      if (typeof file.owner === 'string' && file.owner && !ownerName) {
-        try {
-          const users = await fetchUserNamesByIds([file.owner]);
-          if (users.length > 0 && users[0].fullName) {
-            setOwnerName(users[0].fullName);
-          }
-        } catch (error) {
-          console.error('Failed to fetch owner name:', error);
+      // Wait for contract to load if we're trying to fetch it (check for contract indicators)
+      const mightHaveContract =
+        file.contractId || file.contractName || file.status;
+      if (mightHaveContract && !contractLoaded) {
+        return;
+      }
+
+      // If we already have a valid name (not "Unknown"), don't re-fetch
+      if (ownerName && ownerName !== 'Unknown') {
+        return;
+      }
+
+      setIsLoadingOwnerName(true);
+      try {
+        let userIdToFetch: string | null = null;
+
+        // For contracts, prioritize contractOwnerId from the contract document
+        if (contractOwnerId) {
+          userIdToFetch = contractOwnerId;
         }
+        // Fall back to file.owner if no contract owner found
+        else if (typeof file.owner === 'string' && file.owner) {
+          userIdToFetch = file.owner;
+        } else if (typeof file.owner === 'object' && file.owner?.fullName) {
+          // Already have the name, no need to fetch
+          setOwnerName(file.owner.fullName);
+          setIsLoadingOwnerName(false);
+          return;
+        }
+
+        if (userIdToFetch) {
+          try {
+            const users = await fetchUserNamesByIds([userIdToFetch]);
+            console.log(`[Card] Fetched users for ${userIdToFetch}:`, users);
+
+            if (users && Array.isArray(users) && users.length > 0) {
+              const user =
+                users.find(
+                  (u) =>
+                    u?.$id === userIdToFetch || u?.accountId === userIdToFetch
+                ) || users[0];
+              if (user?.fullName) {
+                setOwnerName(user.fullName);
+              } else {
+                console.warn(
+                  `[Card] User found but no fullName for ID: ${userIdToFetch}. User object:`,
+                  user
+                );
+                setOwnerName('Unknown');
+              }
+            } else {
+              console.warn(
+                `[Card] User not found for ID: ${userIdToFetch}. API returned:`,
+                users
+              );
+              setOwnerName('Unknown');
+            }
+          } catch (fetchError) {
+            console.error(
+              `[Card] Error fetching user name for ID ${userIdToFetch}:`,
+              fetchError
+            );
+            setOwnerName('Unknown');
+          }
+        } else {
+          setOwnerName('Unknown');
+        }
+      } catch (error) {
+        console.error('Failed to fetch owner name:', error);
+        setOwnerName('Unknown');
+      } finally {
+        setIsLoadingOwnerName(false);
       }
     };
 
     fetchOwnerName();
-  }, [file.owner, ownerName]);
+  }, [file.owner, file.contractId, contractOwnerId, contractLoaded, ownerName]);
 
   useEffect(() => {
-    // If status is not present but contractId exists, fetch the contract status
-    if (!status && !file.status && !expirationDate && file.contractId) {
+    // Fetch contract data - try both contractId and fileId lookup
+    if (!contractLoaded) {
       (async () => {
-        // Dynamically import to avoid SSR issues
-        const { getContracts } = await import('@/lib/actions/file.actions');
-        const contractsRes = await getContracts();
-        const contracts = Array.isArray(contractsRes.documents)
-          ? contractsRes.documents
-          : [];
-        const contract = contracts.find(
-          (c: Models.Document) => c.$id === file.contractId
-        );
-        if (contract && contract.status) {
-          setContractStatus(contract.status);
-        }
+        try {
+          // Dynamically import to avoid SSR issues
+          const { getContracts } = await import('@/lib/actions/file.actions');
+          const contractsRes = await getContracts();
+          const contracts = Array.isArray(contractsRes.documents)
+            ? contractsRes.documents
+            : [];
 
-        if (contract && contract.contractExpiryDate) {
-          setContractExpiryDate(contract.contractExpiryDate);
-        }
+          // Try to find contract by contractId first
+          let contract = file.contractId
+            ? contracts.find((c: Models.Document) => c.$id === file.contractId)
+            : null;
 
-        if (contract && contract.assignedTo) {
-          setAssignedTo(contract.assignedTo);
-        }
+          // If not found and file has an ID, try finding by fileId
+          if (!contract && file.$id) {
+            contract = contracts.find(
+              (c: any) =>
+                (c.fileId && c.fileId === file.$id) ||
+                (c.fileRef && c.fileRef === file.$id)
+            );
+          }
 
-        if (contract && contract.assignedToDepartment) {
-          setAssignedToDepartment(contract.assignedToDepartment);
+          if (contract) {
+            // Update contract status if not already set
+            if (!status && !file.status && contract.status) {
+              setContractStatus(contract.status);
+            }
+
+            if (contract.contractExpiryDate) {
+              setContractExpiryDate(contract.contractExpiryDate);
+            }
+
+            if (contract.assignedTo) {
+              setAssignedTo(contract.assignedTo);
+            }
+
+            if (contract.assignedToDepartment) {
+              setAssignedToDepartment(contract.assignedToDepartment);
+            }
+
+            // Store contractOwnerId for owner name lookup
+            if (contract.contractOwnerId) {
+              console.log('Found contractOwnerId:', contract.contractOwnerId);
+              setContractOwnerId(contract.contractOwnerId);
+            }
+          }
+          setContractLoaded(true);
+        } catch (error) {
+          console.error('Failed to fetch contract:', error);
+          setContractLoaded(true); // Mark as loaded even on error to prevent infinite retries
         }
       })();
     }
-  }, [file.contractId, status, file.status, expirationDate]);
+  }, [
+    file.contractId,
+    file.$id,
+    status,
+    file.status,
+    expirationDate,
+    contractLoaded,
+  ]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent the default link behavior - we don't want to open files in new tabs anymore
@@ -197,12 +297,14 @@ const Card = ({
         </div>
         <p className="caption line-clamp-1 text-light-200">
           By:{' '}
-          {ownerName ||
-            (typeof file.owner === 'object' && file.owner?.fullName
-              ? file.owner.fullName
-              : typeof file.owner === 'string'
-              ? file.owner
-              : 'Unknown')}
+          {isLoadingOwnerName
+            ? 'Loading...'
+            : ownerName ||
+              (typeof file.owner === 'object' && file.owner?.fullName
+                ? file.owner.fullName
+                : typeof file.owner === 'string'
+                ? 'Unknown'
+                : 'Unknown')}
         </p>
       </div>
     </div>
