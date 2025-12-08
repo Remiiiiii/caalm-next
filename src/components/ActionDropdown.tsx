@@ -29,7 +29,7 @@ import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Ban, Trash2, AlertTriangle } from 'lucide-react';
+import { Ban, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
   deleteFile,
   renameFile,
@@ -54,6 +54,7 @@ import { useDepartmentAssignment } from '@/hooks/useDepartmentAssignment';
 import DocumentViewer from './DocumentViewer';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PERMISSIONS } from '@/constants/permissions';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 const ActionDropdown = ({
   file,
@@ -92,6 +93,10 @@ const ActionDropdown = ({
   const { updateStatus } = useUpdateContractStatus({ onStatusChange });
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const { permissions } = usePermissions();
+  const { roles: userRoles } = useUserRoles();
+
+  // Get the actual role name from user roles (e.g., 'Super Admin', 'Organization Admin')
+  const actualRoleName = userRoles[0]?.roleName || userRole || '';
 
   // Fetch department data when Assign dialog is opened
   useEffect(() => {
@@ -208,7 +213,16 @@ const ActionDropdown = ({
       status: selectedStatus,
       path,
     });
-    if (success) closeAllModals();
+    if (success) {
+      closeAllModals();
+      // Trigger immediate UI update
+      if (onStatusChange) {
+        onStatusChange();
+      }
+      if (onRefresh) {
+        onRefresh();
+      }
+    }
     setIsLoading(false);
   };
 
@@ -604,74 +618,145 @@ const ActionDropdown = ({
     // Status dialog
     if (value === 'status') {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <Card className="w-[400px] max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="sidebar-gradient-text">
-                Change Status
-              </CardTitle>
-              <Button variant="ghost" size="icon" onClick={closeAllModals}>
-                <span className="sr-only">Close</span>×
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-2 text-sm text-slate-700">
-                Select a new status for this contract:
+        <Dialog
+          open={isModalOpen && action?.value === 'status'}
+          onOpenChange={(open) => {
+            if (!open) closeAllModals();
+          }}
+        >
+          <DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+            {/* Professional Cap */}
+            <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+            {/* Header with white background */}
+            <div className="sticky top-0 z-10 bg-white py-4 border-b border-slate-200 mt-4">
+              <div className="flex items-center gap-3 ml-6">
+                {/* Icon with circular background
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                </div> */}
+
+                {/* Title */}
+                <RefreshCw className="w-5 h-5 text-[#0f5384]" />
+                <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+                  Change Status
+                </DialogTitle>
               </div>
-              {statusError && (
-                <div className="text-red-500 mb-2">{statusError}</div>
-              )}
-              <div className="flex flex-col gap-2">
-                {statusOptions.map((option) => (
-                  <label key={option} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="contract-status"
-                      value={option}
-                      checked={selectedStatus === option}
-                      onChange={() => setSelectedStatus(option)}
-                      disabled={isLoading}
-                    />
-                    <span className="capitalize">
-                      {option.replace('-', ' ')}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3 md:flex-row">
-              <Button
-                onClick={closeAllModals}
-                className="primary-btn px-3 sm:px-4"
-              >
-                <Trash2 className="w-4 h-4" />
-                Cancel
-              </Button>
-              <Button
-                //stop propagation
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  handleStatusChange();
-                }}
-                disabled={isLoading || !selectedStatus}
-                className="modal-submit-button"
-                style={{ pointerEvents: 'auto' }}
-              >
-                <p className="capitalize">Update Status</p>
-                {isLoading && (
-                  <Image
-                    src="/assets/icons/loader.svg"
-                    alt="loader"
-                    width={24}
-                    height={24}
-                    className="animate-spin"
-                  />
+              <p className="text-sm text-slate-600 mt-1 ml-14">
+                Select a new status for this contract
+              </p>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+              <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+                {statusError && (
+                  <div className="text-red-500 mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                    {statusError}
+                  </div>
                 )}
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+                <div className="space-y-2">
+                  {statusOptions.map((option) => (
+                    <label
+                      key={option}
+                      className="flex items-center gap-3 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-3 rounded-lg border-2 border-slate-200 bg-white group shadow-sm hover:shadow-md"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="radio"
+                        name="contract-status"
+                        value={option}
+                        checked={selectedStatus === option}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setSelectedStatus(option);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        disabled={isLoading}
+                        className="cursor-pointer w-4 h-4 text-blue-600"
+                      />
+                      <span className="capitalize cursor-pointer text-slate-900 font-medium group-hover:text-blue-600 transition-colors">
+                        {option.replace(/-/g, ' ')}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Professional Footer */}
+            {actualRoleName === 'Super Admin' ||
+            actualRoleName === 'Organization Admin' ? (
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeAllModals();
+                    }}
+                    className="primary-btn px-3 sm:px-4"
+                    disabled={isLoading}
+                  >
+                    <Ban className="w-4 h-4" />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleStatusChange();
+                    }}
+                    disabled={isLoading || !selectedStatus}
+                    className="primary-btn px-3 sm:px-4"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    Update Status
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <div className="text-xs text-slate-500">
+                  Status changes require review
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeAllModals();
+                    }}
+                    className="primary-btn px-3 sm:px-4"
+                    disabled={isLoading}
+                  >
+                    <Ban className="w-4 h-4" />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleStatusChange();
+                    }}
+                    disabled={isLoading || !selectedStatus}
+                    className="primary-btn px-3 sm:px-4"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    Update Status
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       );
     }
 

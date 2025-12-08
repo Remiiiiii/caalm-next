@@ -18,6 +18,8 @@ import {
 } from '@/lib/utils/notificationTriggers';
 import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
 import { ContractMetadataPayload } from '@/types/contracts';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
@@ -68,7 +70,11 @@ export const uploadFile = async ({
   accountId,
   path: revalidatePathArg,
   contractMetadata,
-}: UploadFileProps & { contractMetadata?: ContractMetadataPayload }) => {
+  draftId,
+}: UploadFileProps & {
+  contractMetadata?: ContractMetadataPayload;
+  draftId?: string; // Optional draft ID to link the contract to the draft
+}) => {
   const { storage, tablesDB } = await createAdminClient();
 
   try {
@@ -134,15 +140,18 @@ export const uploadFile = async ({
     // Check if filename contains "contract" (case-insensitive) or if contractMetadata is provided
     if (bucketFile.name.toLowerCase().includes('contract') || metadata) {
       // Add to Contracts collection as well
+      // All contracts default to 'pending-review' status and require review before activation
       let contractExpiryDate: string | undefined;
       let status = 'pending-review';
 
       if (metadata?.contractExpiryDate) {
         contractExpiryDate = metadata.contractExpiryDate;
-        status =
-          metadata.lifecycleStatus === 'terminated'
-            ? 'action-required'
-            : 'active';
+        // Keep status as 'pending-review' - contracts must be reviewed before activation
+        // Only set to 'action-required' if explicitly terminated
+        if (metadata.lifecycleStatus === 'terminated') {
+          status = 'action-required';
+        }
+        // Otherwise, keep 'pending-review' (default)
       } else {
         // Fallback to extraction for files with "contract" in name
         try {
@@ -162,12 +171,13 @@ export const uploadFile = async ({
           contractExpiryDate = data.expiryDate;
           if (!contractExpiryDate) {
             contractExpiryDate = new Date().toISOString().split('T')[0];
-            status = 'action-required';
+            // Keep as 'pending-review' - missing expiry date doesn't change review requirement
+            // Status will remain 'pending-review' until reviewed
           }
         } catch (error) {
           console.error('Error extracting contract expiry date:', error);
           contractExpiryDate = new Date().toISOString().split('T')[0];
-          status = 'action-required';
+          // Keep as 'pending-review' - error extracting doesn't change review requirement
         }
       }
 
@@ -201,7 +211,8 @@ export const uploadFile = async ({
         return managerNames;
       })();
 
-      const contractDocument = sanitizePayload({
+      // Build contract document, explicitly excluding contractId (not in Contracts collection schema)
+      const contractDocumentRaw: any = {
         contractName: metadata?.contractName || bucketFile.name,
         contractExpiryDate,
         status,
@@ -267,7 +278,8 @@ export const uploadFile = async ({
         contractNumber: metadata?.contractNumber,
         priority: metadata?.priority ?? mapRiskToPriority(metadata?.riskLevel),
         description: metadata?.description,
-        contractOwnerId: metadata?.contractOwnerId || ownerId,
+        // Always set contractOwnerId to the user who uploaded the contract
+        contractOwnerId: ownerId,
         lifecycleStatus: metadata?.lifecycleStatus || 'draft',
         riskLevel: metadata?.riskLevel,
         insuranceRequired: metadata?.insuranceRequired,
@@ -319,9 +331,15 @@ export const uploadFile = async ({
         approvalHistoryLog: metadata?.approvalHistoryLog,
         reviewerComments: metadata?.reviewerComments,
         fileId: newFile.$id,
-        fileRef: newFile.$id,
+        // fileRef is a relationship attribute - Appwrite will handle it automatically
+        // Setting it as a string causes validation errors
         orgId: resolvedOrgId,
-      });
+      };
+
+      // Explicitly remove contractId if it exists (not in Contracts collection schema)
+      delete contractDocumentRaw.contractId;
+
+      const contractDocument = sanitizePayload(contractDocumentRaw);
 
       if (!appwriteConfig.contractsCollectionId) {
         throw new Error('Contracts collection ID is not configured');
@@ -333,6 +351,315 @@ export const uploadFile = async ({
         rowId: ID.unique(),
         data: contractDocument,
       });
+
+      // Update drafts with the new fileId (from the file row created during upload)
+      // This ensures drafts can be found by fileId for deletion
+      if (appwriteConfig.contractDraftsCollectionId && newFile.$id) {
+        try {
+          // Find drafts that might have a placeholder file row (by filename matching)
+          // and update their fileId to point to the new file row
+          const draftsToUpdate = await tablesDB.listRows({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.contractDraftsCollectionId,
+            queries: [
+              Query.equal('ownerId', ownerId),
+              Query.equal('isCompleted', false),
+              Query.contains('processedFileData', newFile.name),
+            ],
+          });
+
+          // Update drafts that match the filename and don't have a fileId or have a different fileId
+          for (const draft of draftsToUpdate.rows) {
+            try {
+              const processedData = draft.processedFileData
+                ? JSON.parse(draft.processedFileData)
+                : null;
+
+              // Match by exact filename
+              if (processedData?.name === newFile.name) {
+                // Update draft's fileId to point to the new file row
+                await tablesDB.updateRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: appwriteConfig.contractDraftsCollectionId,
+                  rowId: draft.$id,
+                  data: {
+                    fileId: newFile.$id,
+                  },
+                });
+                console.log(
+                  `Updated draft ${draft.$id} fileId to ${newFile.$id}`
+                );
+              }
+            } catch (error) {
+              console.warn(
+                `Error updating draft ${draft.$id} fileId:`,
+                error
+              );
+            }
+          }
+        } catch (updateError: any) {
+          console.warn(
+            'Error updating drafts with new fileId:',
+            updateError.message
+          );
+          // Continue with deletion even if update fails
+        }
+      }
+
+      // Automatically delete drafts associated with this contract
+      // Uses fileId matching (primary) and filename matching (fallback)
+      if (appwriteConfig.contractDraftsCollectionId && newFile.$id) {
+        try {
+          // Primary method: Find drafts by fileId attribute (most efficient - direct query)
+          // This is the most reliable method since fileId is unique per file row
+          const draftsByFileId = await tablesDB.listRows({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.contractDraftsCollectionId,
+            queries: [
+              Query.equal('ownerId', ownerId),
+              Query.equal('fileId', newFile.$id),
+              Query.equal('isCompleted', false), // Only match incomplete drafts
+            ],
+          });
+
+          // Safety check: Filter out drafts that already have a contractId
+          // (shouldn't happen with fileId matching, but safety first)
+          const validDraftsByFileId = draftsByFileId.rows.filter((draft: any) => {
+            if (draft.contractId) {
+              console.warn(
+                `Skipping draft ${draft.$id} - already linked to contract ${draft.contractId} (fileId match)`
+              );
+              return false;
+            }
+            return true;
+          });
+
+          // Fallback method 1: Find drafts by contractId (if draft was already linked)
+          let draftsToDelete = validDraftsByFileId;
+          if (draftsToDelete.length === 0) {
+            const draftsByContractId = await tablesDB.listRows({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: appwriteConfig.contractDraftsCollectionId,
+              queries: [
+                Query.equal('ownerId', ownerId),
+                Query.equal('contractId', contract.$id),
+                Query.equal('isCompleted', false),
+              ],
+            });
+            draftsToDelete = draftsByContractId.rows;
+            console.log(
+              `Found ${draftsToDelete.length} draft(s) by contractId: ${contract.$id}`
+            );
+          }
+
+          // Fallback method 2: Find drafts by filename if no drafts found by fileId or contractId
+          // Use strict matching to avoid deleting drafts from previous uploads with same filename
+          if (draftsToDelete.length === 0) {
+            const draftsByFilename = await tablesDB.listRows({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: appwriteConfig.contractDraftsCollectionId,
+              queries: [
+                Query.equal('ownerId', ownerId),
+                Query.equal('isCompleted', false), // Only match incomplete drafts
+                Query.contains('processedFileData', newFile.name),
+              ],
+            });
+
+            // Filter by exact filename match AND additional safety checks
+            const matchingDrafts = draftsByFilename.rows.filter((draft: any) => {
+              try {
+                const processedData = draft.processedFileData
+                  ? JSON.parse(draft.processedFileData)
+                  : null;
+
+                // Must have exact filename match
+                if (processedData?.name !== newFile.name) {
+                  return false;
+                }
+
+                // Safety check: Draft must not already have a contractId
+                // (indicates it's linked to a different contract)
+                if (draft.contractId) {
+                  console.warn(
+                    `Skipping draft ${draft.$id} - already linked to contract ${draft.contractId}`
+                  );
+                  return false;
+                }
+
+                // Additional safety: Match by file size if available
+                // This ensures we're matching the same file, not just same filename
+                // Compare with both newFile.size (from Files table) and bucketFile.sizeOriginal (from storage)
+                const newFileSize = newFile.size || bucketFile.sizeOriginal;
+                if (
+                  processedData?.size &&
+                  newFileSize &&
+                  processedData.size !== newFileSize
+                ) {
+                  console.warn(
+                    `Skipping draft ${draft.$id} - file size mismatch (draft: ${processedData.size}, new: ${newFileSize})`
+                  );
+                  return false;
+                }
+
+                // Additional safety: Match by bucketFileId if available
+                // This is the most reliable identifier for the same file
+                if (
+                  processedData?.bucketFileId &&
+                  bucketFile.$id &&
+                  processedData.bucketFileId !== bucketFile.$id
+                ) {
+                  console.warn(
+                    `Skipping draft ${draft.$id} - bucketFileId mismatch (draft: ${processedData.bucketFileId}, new: ${bucketFile.$id})`
+                  );
+                  return false;
+                }
+
+                return true;
+              } catch (error) {
+                console.warn(
+                  `Error parsing processedFileData for draft ${draft.$id}:`,
+                  error
+                );
+                return false;
+              }
+            });
+
+            // If multiple drafts match, prioritize the most recent one
+            // This handles the edge case where a user uploads the same filename multiple times
+            if (matchingDrafts.length > 1) {
+              // Sort by lastSavedAt (most recent first) and only delete the most recent
+              matchingDrafts.sort((a: any, b: any) => {
+                const dateA = new Date(a.lastSavedAt || a.$createdAt || 0).getTime();
+                const dateB = new Date(b.lastSavedAt || b.$createdAt || 0).getTime();
+                return dateB - dateA; // Descending order (newest first)
+              });
+
+              // Only delete the most recent matching draft
+              // Log a warning about other matching drafts
+              console.warn(
+                `Found ${matchingDrafts.length} matching drafts for filename "${newFile.name}". Only deleting the most recent draft (${matchingDrafts[0].$id}). Other drafts: ${matchingDrafts.slice(1).map((d: any) => d.$id).join(', ')}`
+              );
+              draftsToDelete = [matchingDrafts[0]];
+            } else {
+              draftsToDelete = matchingDrafts;
+            }
+
+            // Update all matching drafts' fileId to point to the new file row
+            // This ensures future queries work correctly
+            for (const draft of draftsToDelete) {
+              try {
+                await tablesDB.updateRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: appwriteConfig.contractDraftsCollectionId,
+                  rowId: draft.$id,
+                  data: {
+                    fileId: newFile.$id,
+                  },
+                });
+                console.log(
+                  `Updated draft ${draft.$id} fileId to ${newFile.$id} (filename match)`
+                );
+              } catch (updateError: any) {
+                console.warn(
+                  `Failed to update draft ${draft.$id} fileId:`,
+                  updateError.message
+                );
+                // Continue with deletion even if update fails
+              }
+            }
+          }
+
+          // Update drafts with contractId before deletion (as backup for future queries)
+          // This helps if deletion fails or for audit purposes
+          for (const draft of draftsToDelete) {
+            try {
+              // First, update draft with contractId (backup method for identification)
+              await tablesDB.updateRow({
+                databaseId: appwriteConfig.databaseId!,
+                tableId: appwriteConfig.contractDraftsCollectionId,
+                rowId: draft.$id,
+                data: {
+                  contractId: contract.$id,
+                },
+              });
+              console.log(
+                `Updated draft ${draft.$id} with contractId ${contract.$id}`
+              );
+            } catch (updateError: any) {
+              console.warn(
+                `Failed to update draft ${draft.$id} with contractId:`,
+                updateError.message
+              );
+              // Continue with deletion even if update fails
+            }
+
+            // Then delete the draft
+            try {
+              await tablesDB.deleteRow({
+                databaseId: appwriteConfig.databaseId!,
+                tableId: appwriteConfig.contractDraftsCollectionId,
+                rowId: draft.$id,
+              });
+              console.log(
+                `Deleted draft ${draft.$id} after successful contract upload (contract: ${contract.$id})`
+              );
+            } catch (deleteError: any) {
+              console.warn(
+                `Failed to delete draft ${draft.$id}:`,
+                deleteError.message
+              );
+              // Continue with other deletions
+            }
+          }
+
+          // Also handle explicit draftId if provided (for backward compatibility)
+          if (draftId && !draftsToDelete.find((d: any) => d.$id === draftId)) {
+            try {
+              // Update with contractId first
+              await tablesDB.updateRow({
+                databaseId: appwriteConfig.databaseId!,
+                tableId: appwriteConfig.contractDraftsCollectionId,
+                rowId: draftId,
+                data: {
+                  contractId: contract.$id,
+                },
+              });
+              
+              // Then delete
+              await tablesDB.deleteRow({
+                databaseId: appwriteConfig.databaseId!,
+                tableId: appwriteConfig.contractDraftsCollectionId,
+                rowId: draftId,
+              });
+              console.log(
+                `Deleted draft ${draftId} after successful contract upload (contract: ${contract.$id})`
+              );
+              draftsToDelete.push({ $id: draftId } as any);
+            } catch (error: any) {
+              console.warn(
+                `Failed to delete draft ${draftId}:`,
+                error.message
+              );
+            }
+          }
+
+          // Invalidate cache for drafts after deletion
+          if (draftsToDelete.length > 0) {
+            try {
+              await CacheManager.invalidate(CACHE_KEYS.contracts.drafts(ownerId));
+              console.log('Invalidated drafts cache after deletion');
+            } catch (cacheError) {
+              console.warn('Failed to invalidate drafts cache:', cacheError);
+            }
+          }
+        } catch (draftDeletionError: any) {
+          // Log but don't fail - contract is already created successfully
+          console.warn(
+            'Error during automatic draft deletion:',
+            draftDeletionError.message
+          );
+        }
+      }
 
       const enterprisePayload = metadata?.enterpriseMetadata
         ? sanitizePayload({
@@ -364,7 +691,8 @@ export const uploadFile = async ({
 
       // Save contract metadata in the file document for easy access
       // Note: Only include attributes that exist in the files collection schema
-      const fileUpdateData = sanitizePayload({
+      // contractId may not exist in the new Files collection schema, so we conditionally include it
+      const fileUpdateDataRaw: any = {
         contractExpiryDate,
         status,
         contractName: contractDocument.contractName,
@@ -377,19 +705,54 @@ export const uploadFile = async ({
         department: contractDocument.department,
         assignedManagers: contractDocument.assignedManagers,
         // Excluded: riskLevel, contractCategory, currencyCode (not in files collection schema)
-      });
+        // contractId: Only include if the Files collection has this attribute
+        // For now, we'll try to include it and let Appwrite reject it if it doesn't exist
+        // This allows the code to work with both old and new Files collections
+      };
+
+      // Try to include contractId - if the collection doesn't have it, Appwrite will reject it
+      // and we'll catch the error and retry without it
+      try {
+        fileUpdateDataRaw.contractId = contract.$id;
+      } catch (error) {
+        // Ignore - contractId might not be in schema
+      }
+
+      const fileUpdateData = sanitizePayload(fileUpdateDataRaw);
 
       console.log('📝 Updating file document with contract metadata:', {
         fileId: newFile.$id,
         updateData: fileUpdateData,
       });
 
-      await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId!,
-        tableId: appwriteConfig.filesCollectionId!,
-        rowId: newFile.$id,
-        data: fileUpdateData,
-      });
+      try {
+        await tablesDB.updateRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.filesCollectionId!,
+          rowId: newFile.$id,
+          data: fileUpdateData,
+        });
+      } catch (updateError: any) {
+        // If the error is about unknown attributes (like contractId), try again without it
+        if (
+          updateError?.message?.includes('Unknown attribute') &&
+          fileUpdateData.contractId
+        ) {
+          console.warn(
+            'Files collection does not have contractId attribute, retrying without it'
+          );
+          const fileUpdateDataWithoutContractId = { ...fileUpdateData };
+          delete fileUpdateDataWithoutContractId.contractId;
+          await tablesDB.updateRow({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.filesCollectionId!,
+            rowId: newFile.$id,
+            data: fileUpdateDataWithoutContractId,
+          });
+        } else {
+          throw updateError;
+        }
+      }
 
       console.log(
         '✅ File document updated successfully with contract metadata'
@@ -429,8 +792,7 @@ export const uploadFile = async ({
         'File Uploaded',
         bucketFile.name,
         ownerId,
-        'User', // We'll get the actual user name later if needed
-        'General' // We'll get the actual department later if needed
+        'User' // We'll get the actual user name later if needed
       );
     } catch (error) {
       console.error('Failed to create file upload activity:', error);
@@ -464,8 +826,8 @@ const createQueries = (
   sort: string,
   limit?: number
 ) => {
-  // 'owner' is a relationship attribute (not a string or array)
-  const queries = [Query.equal('owner', [currentUser.$id])];
+  // 'owner' is a relationship attribute - query with the ID directly (not in an array)
+  const queries = [Query.equal('owner', currentUser.$id)];
 
   if (types.length > 0) queries.push(Query.equal('type', types));
   if (searchText) queries.push(Query.contains('name', searchText));
@@ -511,7 +873,52 @@ export const getFiles = async ({
       return { documents: [] };
     }
     return plain;
-  } catch (error) {
+  } catch (error: any) {
+    // Handle case where 'owner' attribute might not be available yet (e.g., still processing)
+    if (error?.message?.includes('Attribute not found in schema: owner')) {
+      console.warn(
+        'Owner attribute not available in collection, fetching all files without owner filter'
+      );
+      // Fallback: fetch files without owner filter
+      try {
+        const fallbackQueries: any[] = [];
+        if (types.length > 0) fallbackQueries.push(Query.equal('type', types));
+        if (searchText)
+          fallbackQueries.push(Query.contains('name', searchText));
+        if (limit) fallbackQueries.push(Query.limit(limit));
+        if (sort) {
+          const [sortBy, orderBy] = sort.split('-');
+          fallbackQueries.push(
+            orderBy === 'asc' ? Query.orderAsc(sortBy) : Query.orderDesc(sortBy)
+          );
+        }
+
+        const files = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.filesCollectionId!,
+          queries: fallbackQueries,
+        });
+
+        const plain = parseStringify(files);
+        if (!plain || typeof plain !== 'object' || !Array.isArray(plain.rows)) {
+          return { documents: [] };
+        }
+        // Filter by owner in memory as fallback
+        const user = await getCurrentUser();
+        if (user) {
+          const filtered = plain.rows.filter((file: any) => {
+            const fileOwner =
+              typeof file.owner === 'string' ? file.owner : file.owner?.$id;
+            return fileOwner === user.$id;
+          });
+          return { documents: filtered, total: filtered.length };
+        }
+        return { documents: [] };
+      } catch (fallbackError) {
+        handleError(fallbackError, 'Failed to get files (fallback)');
+        return { documents: [] };
+      }
+    }
     handleError(error, 'Failed to get files');
     // Defensive: always return a plain object
     return { documents: [] };
@@ -671,6 +1078,30 @@ export const deleteFile = async ({
         // 2. Delete the file document (if we found the file document ID)
         if (actualFileDocumentId) {
           try {
+            // Clear owner relationship first to avoid two-way relationship constraint issues
+            try {
+              const fileDoc = await tablesDB.getRow({
+                databaseId: appwriteConfig.databaseId!,
+                tableId: appwriteConfig.filesCollectionId!,
+                rowId: actualFileDocumentId,
+              });
+              if (fileDoc.owner) {
+                await tablesDB.updateRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: appwriteConfig.filesCollectionId!,
+                  rowId: actualFileDocumentId,
+                  data: { owner: null },
+                });
+                console.log('Owner relationship cleared before deletion');
+              }
+            } catch (clearError: any) {
+              console.log(
+                'Could not clear owner relationship, continuing with deletion:',
+                clearError.message
+              );
+              // Continue with deletion even if clearing owner fails
+            }
+
             await tablesDB.deleteRow({
               databaseId: appwriteConfig.databaseId!,
               tableId: appwriteConfig.filesCollectionId!,
@@ -747,16 +1178,66 @@ export const deleteFile = async ({
           }),
 
         // 2. Delete the file document
+        // First, ensure the file has orgId if required (fixes deletion errors for old records)
+        // Also clear owner relationship to avoid two-way relationship constraint issues
         tablesDB
-          .deleteRow({
+          .getRow({
             databaseId: appwriteConfig.databaseId!,
             tableId: appwriteConfig.filesCollectionId!,
             rowId: fileId,
+          })
+          .then(async (fileDoc) => {
+            // If orgId is missing, set a default before deletion
+            if (!fileDoc.orgId) {
+              const defaultOrg = await getUserDefaultOrganization(
+                fileDoc.owner || fileDoc.accountId
+              );
+              if (defaultOrg?.orgId) {
+                await tablesDB.updateRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: appwriteConfig.filesCollectionId!,
+                  rowId: fileId,
+                  data: { orgId: defaultOrg.orgId },
+                });
+              }
+            }
+            // Clear owner relationship to avoid two-way relationship constraint issues
+            if (fileDoc.owner) {
+              try {
+                await tablesDB.updateRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: appwriteConfig.filesCollectionId!,
+                  rowId: fileId,
+                  data: { owner: null },
+                });
+                console.log('Owner relationship cleared before deletion');
+              } catch (clearError: any) {
+                console.log(
+                  'Could not clear owner relationship, continuing with deletion:',
+                  clearError.message
+                );
+                // Continue with deletion even if clearing owner fails
+              }
+            }
+            // Now delete
+            return tablesDB.deleteRow({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: appwriteConfig.filesCollectionId!,
+              rowId: fileId,
+            });
           })
           .catch((error: any) => {
             if (error?.code === 404 || error?.message?.includes('not found')) {
               console.log('File document not found, skipping deletion');
               return null;
+            }
+            // If getRow fails, try direct deletion anyway
+            if (error?.code !== 404) {
+              return tablesDB.deleteRow({
+                databaseId: appwriteConfig.databaseId!,
+                tableId: appwriteConfig.filesCollectionId!,
+                rowId: fileId,
+              });
             }
             throw error;
           }),
@@ -819,11 +1300,38 @@ export async function getTotalSpaceUsed() {
       });
     }
 
-    const files = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId!,
-      tableId: appwriteConfig.filesCollectionId!,
-      queries: [Query.equal('owner', [currentUser.$id])],
-    });
+    let files;
+    try {
+      files = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.filesCollectionId!,
+        queries: [Query.equal('owner', currentUser.$id)],
+      });
+    } catch (error: any) {
+      // Handle case where 'owner' attribute might not be available yet (e.g., still processing)
+      if (error?.message?.includes('Attribute not found in schema: owner')) {
+        console.warn(
+          'Owner attribute not available, fetching all files and filtering in memory'
+        );
+        // Fallback: fetch all files and filter in memory
+        const allFiles = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.filesCollectionId!,
+          queries: [Query.limit(10000)], // Large limit to get all files
+        });
+        // Filter by owner in memory
+        files = {
+          ...allFiles,
+          rows: allFiles.rows.filter((file: any) => {
+            const fileOwner =
+              typeof file.owner === 'string' ? file.owner : file.owner?.$id;
+            return fileOwner === currentUser.$id;
+          }),
+        };
+      } else {
+        throw error;
+      }
+    }
 
     const totalSpace = {
       image: { size: 0, latestDate: '' },
@@ -980,48 +1488,484 @@ export const contractStatus = async ({
   path: string;
 }) => {
   const { tablesDB } = await createAdminClient();
+  
+  // These fields are now string arrays (not relationship attributes), so they don't need normalization
+  // They can accept empty arrays [] or null without validation errors
+  const stringArrayFields = [
+    'assignedManagers',
+    'internalApproverIds',
+    'relatedDocumentIds',
+    'attachmentReferences',
+    'keyObligations',
+  ];
+  
   try {
-    // Update the contract document's status
-    const updated = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId!,
-      tableId: appwriteConfig.contractsCollectionId!,
-      rowId: fileId,
-      data: { status },
-    });
-
-    // Create a recent activity for the contract status change
+    // First, fetch the contract to check for relationship fields stored as arrays
+    let contract: any = null;
+    let relationshipFields: string[] = [];
+    
     try {
-      await createContractActivity(
-        `Contract ${status.replace('-', ' ')}`,
-        updated.contractName || 'Contract',
-        fileId,
-        'User', // We'll get the actual user name later if needed
-        'User' // We'll get the actual user name later if needed
-      );
-    } catch (error) {
-      console.error('Failed to create contract status activity:', error);
-      // Don't throw error here as the status update was successful
-    }
+      contract = await tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.contractsCollectionId!,
+        rowId: fileId,
+      });
 
-    // Trigger contract renewal notification if status is 'renewed'
-    if (status === 'renewed' && updated.contractExpiryDate) {
+      // Get relationship fields from schema
       try {
-        await triggerContractRenewalNotification(
-          updated.owner || 'system', // Use owner if available, otherwise 'system'
+        // Try listAttributes first (more reliable)
+        try {
+          const attributesResponse = await tablesDB.listAttributes({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.contractsCollectionId!,
+          });
+          relationshipFields = (attributesResponse.attributes || [])
+            .filter((attr: any) => attr.type === 'relationship')
+            .map((attr: any) => attr.key);
+        } catch {
+          // Fallback to getCollection if listAttributes doesn't work
+          try {
+            const collection = await (tablesDB as any).getCollection?.({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: appwriteConfig.contractsCollectionId!,
+            });
+            relationshipFields = (collection?.attributes || [])
+              .filter((attr: any) => attr.type === 'relationship')
+              .map((attr: any) => attr.key);
+          } catch {
+            // Final fallback to known relationship fields
+            relationshipFields = ['fileId', 'fileRef', 'owner', 'contractOwnerId', 'parentContractId', 'orgId'];
+          }
+        }
+      } catch {
+        // Fallback to known relationship fields
+        relationshipFields = ['fileId', 'fileRef', 'owner', 'contractOwnerId', 'parentContractId', 'orgId'];
+      }
+
+      // Standard relationship fields that need normalization if stored as arrays
+      const standardRelationshipFields = [
+        'fileId',
+        'fileRef',
+        'owner',
+        'contractOwnerId',
+        'parentContractId',
+      ];
+
+      const fieldsToNormalize = standardRelationshipFields;
+      const normalizationData: any = {};
+
+      // Normalize only actual relationship fields that are stored as arrays
+      // String array fields (assignedManagers, etc.) are now properly configured and don't need normalization
+      console.log('[contractStatus] Checking contract for array relationship fields:', {
+        contractId: fileId,
+        relationshipFields,
+        fieldsToCheck: fieldsToNormalize,
+      });
+      
+      for (const field of fieldsToNormalize) {
+        if (field in contract) {
+          const fieldValue = contract[field];
+          const isArray = Array.isArray(fieldValue);
+          const isRelationshipField = relationshipFields.includes(field);
+          
+          console.log(`[contractStatus] Field ${field}:`, {
+            exists: true,
+            isArray,
+            isRelationshipField,
+            value: fieldValue,
+            valueType: typeof fieldValue,
+          });
+          
+          if (isArray && isRelationshipField) {
+            // For empty arrays, set to null
+            // For non-empty arrays, take first item if it's an ID
+            if (fieldValue.length === 0) {
+              normalizationData[field] = null;
+              console.log(`[contractStatus] Will normalize ${field}: [] -> null`);
+            } else {
+              const firstItem = fieldValue[0];
+              if (typeof firstItem === 'string' && firstItem.length === 24) {
+                // Likely an Appwrite ID
+                normalizationData[field] = firstItem;
+                console.log(`[contractStatus] Will normalize ${field}: [${firstItem}] -> ${firstItem}`);
+              } else if (firstItem?.$id && typeof firstItem.$id === 'string') {
+                normalizationData[field] = firstItem.$id;
+                console.log(`[contractStatus] Will normalize ${field}: [object] -> ${firstItem.$id}`);
+              } else {
+                // Not a valid ID, set to null
+                normalizationData[field] = null;
+                console.log(`[contractStatus] Will normalize ${field}: [invalid] -> null`);
+              }
+            }
+          }
+        } else {
+          console.log(`[contractStatus] Field ${field}: not present in contract`);
+        }
+      }
+
+      // If we have fields to normalize, update them first (without status)
+      let normalizationSucceeded = false;
+      if (Object.keys(normalizationData).length > 0) {
+        console.log('[contractStatus] Found fields to normalize:', Object.keys(normalizationData));
+        try {
+          console.log('[contractStatus] Normalizing relationship fields before status update:', {
+            contractId: fileId,
+            fieldsToNormalize: Object.keys(normalizationData),
+            normalizedValues: normalizationData,
+          });
+
+          // Try to update all fields at once first (more efficient)
+          try {
+            await tablesDB.updateRow({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: appwriteConfig.contractsCollectionId!,
+              rowId: fileId,
+              data: normalizationData,
+            });
+            console.log('[contractStatus] Successfully normalized all relationship fields at once');
+            normalizationSucceeded = true;
+          } catch (bulkError: any) {
+            // If bulk update fails, try updating fields one at a time
+            console.warn('[contractStatus] Bulk normalization failed, trying individual updates:', bulkError?.message);
+            let successCount = 0;
+            for (const [field, value] of Object.entries(normalizationData)) {
+              try {
+                await tablesDB.updateRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: appwriteConfig.contractsCollectionId!,
+                  rowId: fileId,
+                  data: { [field]: value },
+                });
+                console.log(`[contractStatus] Successfully normalized field: ${field}`);
+                successCount++;
+              } catch (fieldError: any) {
+                console.warn(`[contractStatus] Failed to normalize field ${field}:`, {
+                  error: fieldError?.message,
+                  errorType: fieldError?.type,
+                  field,
+                  value,
+                });
+                // Continue with other fields
+              }
+            }
+            if (successCount > 0) {
+              normalizationSucceeded = true;
+              console.log(`[contractStatus] Normalized ${successCount} out of ${Object.keys(normalizationData).length} fields`);
+            }
+          }
+        } catch (normalizeError: any) {
+          console.error('[contractStatus] Failed to normalize relationship fields:', {
+            error: normalizeError?.message,
+            errorType: normalizeError?.type,
+            fields: Object.keys(normalizationData),
+          });
+          // Don't throw - continue to try status update anyway
+          // The status update might still work if the fields aren't actually problematic
+        }
+      } else {
+        console.log('[contractStatus] No fields need normalization - all relationship fields are valid');
+      }
+
+      // Now try to update the status
+      // If normalization was attempted, fields should be normalized by now
+      // If no normalization was needed, try direct update
+      try {
+        console.log('[contractStatus] Attempting status update...');
+        
+        // Ensure relationship fields are not arrays in the update payload
+        // Even though we're only updating status, Appwrite validates all relationship fields
+        const updateData: any = { status };
+        
+        // If we have the contract and normalization data, include normalized fields in the update
+        // This ensures relationship fields are properly formatted before Appwrite validates them
+        if (contract && Object.keys(normalizationData).length > 0) {
+          // Include normalized fields in the update payload
+          Object.assign(updateData, normalizationData);
+          console.log('[contractStatus] Including normalized relationship fields in update:', Object.keys(normalizationData));
+        }
+        
+        await tablesDB.updateRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
+          rowId: fileId,
+          data: updateData,
+        });
+        console.log('[contractStatus] Status update successful');
+      } catch (statusUpdateError: any) {
+        // If status update fails, check if it's a relationship validation error
+        const isRelationshipError = 
+          statusUpdateError?.type === 'relationship_value_invalid' ||
+          statusUpdateError?.message?.includes('Invalid relationship value') ||
+          statusUpdateError?.message?.includes('Array given');
+        
+        if (isRelationshipError) {
+          console.error('[contractStatus] Status update failed with relationship error:', {
+            error: statusUpdateError?.message,
+            errorType: statusUpdateError?.type,
+            normalizationAttempted: Object.keys(normalizationData).length > 0,
+            fieldsNormalized: Object.keys(normalizationData),
+          });
+          
+          // If we already tried normalization and it failed, provide detailed error
+          if (Object.keys(normalizationData).length > 0) {
+            const fieldsToFix = Object.keys(normalizationData).join(', ');
+            throw new Error(
+              `Cannot update contract status: relationship fields are stored as arrays and cannot be automatically fixed. ` +
+              `Appwrite is rejecting updates to fix these fields. ` +
+              `Please fix these fields manually in the Appwrite Console: ${fieldsToFix}. ` +
+              `For each field, change empty arrays [] to null. Contract ID: ${fileId}. ` +
+              `Original error: ${statusUpdateError?.message || 'Unknown error'}`
+            );
+          } else {
+            // No normalization was attempted, but we got a relationship error
+            // This means the fields might be arrays but weren't detected
+            // Provide a generic error message
+            throw new Error(
+              `Cannot update contract status: relationship validation error. ` +
+              `Please check the contract document in Appwrite Console and ensure all relationship fields ` +
+              `(fileId, fileRef, owner, contractOwnerId, parentContractId) are either valid IDs or null, not arrays. ` +
+              `Contract ID: ${fileId}. ` +
+              `Original error: ${statusUpdateError?.message || 'Unknown error'}`
+            );
+          }
+        }
+        // Re-throw other errors as-is
+        throw statusUpdateError;
+      }
+
+      // Fetch the updated contract
+      const updated = await tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.contractsCollectionId!,
+        rowId: fileId,
+      });
+
+      // Create a recent activity for the contract status change
+      try {
+        await createContractActivity(
+          `Contract ${status.replace('-', ' ')}`,
           updated.contractName || 'Contract',
-          updated.contractExpiryDate
+          fileId,
+          'User',
+          'User'
         );
       } catch (error) {
-        console.error(
-          'Failed to trigger contract renewal notification:',
-          error
-        );
-        // Don't throw error here as the status update was successful
+        console.error('Failed to create contract status activity:', error);
       }
-    }
 
-    revalidatePath(path);
-    return parseStringify(updated);
+      // Trigger contract renewal notification if status is 'renewed'
+      if (status === 'renewed' && updated.contractExpiryDate) {
+        try {
+          await triggerContractRenewalNotification(
+            updated.owner || 'system',
+            updated.contractName || 'Contract',
+            updated.contractExpiryDate
+          );
+        } catch (error) {
+          console.error('Failed to trigger contract renewal notification:', error);
+        }
+      }
+
+      revalidatePath(path);
+      return parseStringify(updated);
+    } catch (updateError: any) {
+      // If the error is already a formatted message from inner catch, re-throw it as-is
+      if (updateError?.message?.includes('Cannot update contract status: relationship fields are stored as arrays')) {
+        throw updateError;
+      }
+      
+      // If the error is about relationship validation, provide helpful information
+      if (
+        updateError?.type === 'relationship_value_invalid' ||
+        updateError?.message?.includes('Invalid relationship value') ||
+        updateError?.message?.includes('Array given')
+      ) {
+        let contract: any = null;
+        let contractFetchError: any = null;
+        
+        // Try to get the contract document to identify problematic fields
+        try {
+          contract = await tablesDB.getRow({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.contractsCollectionId!,
+            rowId: fileId,
+          });
+        } catch (error) {
+          contractFetchError = error;
+          console.error('[contractStatus] Failed to fetch contract document:', error);
+        }
+
+        // Get collection attributes to identify relationship fields
+        let relationshipFields: string[] = [];
+        let allAttributes: any[] = [];
+        try {
+          // Try listAttributes first (more reliable)
+          try {
+            const attributesResponse = await tablesDB.listAttributes({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: appwriteConfig.contractsCollectionId!,
+            });
+            allAttributes = attributesResponse.attributes || [];
+            relationshipFields = allAttributes
+              .filter((attr: any) => attr.type === 'relationship')
+              .map((attr: any) => attr.key);
+          } catch {
+            // Fallback to getCollection if listAttributes doesn't work
+            try {
+              const collection = await (tablesDB as any).getCollection?.({
+                databaseId: appwriteConfig.databaseId!,
+                tableId: appwriteConfig.contractsCollectionId!,
+              });
+              allAttributes = collection?.attributes || [];
+              relationshipFields = allAttributes
+                .filter((attr: any) => attr.type === 'relationship')
+                .map((attr: any) => attr.key);
+            } catch {
+              // Final fallback to known relationship fields
+              relationshipFields = ['fileId', 'fileRef', 'owner', 'contractOwnerId', 'parentContractId', 'orgId'];
+            }
+          }
+        } catch (error) {
+          console.error('[contractStatus] Failed to get collection attributes:', error);
+          // Fallback to known relationship fields
+          relationshipFields = ['fileId', 'fileRef', 'owner', 'contractOwnerId', 'parentContractId', 'orgId'];
+        }
+
+        // Find ALL array fields in the contract (including empty arrays)
+        const allContractFields = contract ? Object.keys(contract).filter((k) => !k.startsWith('$')) : [];
+        const allArrayFields: Array<{ field: string; value: any; isRelationship: boolean }> = [];
+        
+        if (contract) {
+          for (const field of allContractFields) {
+            const value = contract[field];
+            // Check for arrays (including empty ones) - empty arrays can also cause validation errors
+            if (Array.isArray(value)) {
+              const isRelationship = relationshipFields.includes(field);
+              allArrayFields.push({
+                field,
+                value: value,
+                isRelationship,
+              });
+            }
+          }
+        }
+
+        // Identify problematic fields (relationship fields that are arrays)
+        const problematicFields: Array<{ field: string; value: any }> = allArrayFields
+          .filter((f) => f.isRelationship)
+          .map((f) => ({ field: f.field, value: f.value }));
+
+        // Exclude string array fields from problematic check - they're valid as arrays
+        // Filter out string array fields from allArrayFields
+        const nonStringArrayFields = allArrayFields.filter(
+          (f) => !stringArrayFields.includes(f.field)
+        );
+        
+        // If no relationship arrays found, check if any non-string-array field contains IDs (might be misconfigured)
+        if (problematicFields.length === 0 && nonStringArrayFields.length > 0) {
+          for (const arrayField of nonStringArrayFields) {
+            // Check if array contains IDs (strings of length 24 are likely Appwrite IDs)
+            // Also check empty arrays as they might be the issue
+            const containsIds = arrayField.value.length === 0 || arrayField.value.some(
+              (item: any) =>
+                (typeof item === 'string' && item.length === 24) ||
+                (typeof item === 'object' && item?.$id && typeof item.$id === 'string' && item.$id.length === 24)
+            );
+            if (containsIds) {
+              problematicFields.push({
+                field: arrayField.field,
+                value: arrayField.value,
+              });
+            }
+          }
+        }
+
+        // If still no problematic fields found, list ALL relationship fields and their values
+        const relationshipFieldValues: Array<{ field: string; value: any; isArray: boolean }> = [];
+        if (contract) {
+          for (const field of relationshipFields) {
+            if (field in contract) {
+              const value = contract[field];
+              relationshipFieldValues.push({
+                field,
+                value: value,
+                isArray: Array.isArray(value),
+              });
+            }
+          }
+        }
+
+        // Log COMPLETE contract structure for debugging
+        console.error('[contractStatus] Relationship validation error - Full contract structure:', {
+          contractId: fileId,
+          contractFetched: !!contract,
+          contractFetchError: contractFetchError ? String(contractFetchError) : null,
+          contractKeys: allContractFields,
+          contractData: contract ? JSON.stringify(contract, null, 2) : 'CONTRACT FETCH FAILED',
+          relationshipFieldsFromSchema: relationshipFields,
+          allAttributes: allAttributes.map((a: any) => ({ key: a.key, type: a.type })),
+          relationshipFieldValues: relationshipFieldValues.map((f) => ({
+            field: f.field,
+            value: f.value,
+            valueType: typeof f.value,
+            isArray: f.isArray,
+            arrayLength: Array.isArray(f.value) ? f.value.length : null,
+          })),
+          allArrayFields: allArrayFields.map((f) => ({
+            field: f.field,
+            arrayLength: f.value.length,
+            firstItem: f.value[0],
+            isRelationship: f.isRelationship,
+          })),
+          problematicFields: problematicFields.map((p) => ({
+            field: p.field,
+            arrayLength: p.value.length,
+            firstItem: p.value[0],
+            allItems: p.value,
+          })),
+          errorType: updateError?.type,
+          errorMessage: updateError?.message,
+          errorResponse: updateError?.response,
+        });
+
+        // Throw a more helpful error message
+        let fieldNames: string;
+        if (problematicFields.length > 0) {
+          fieldNames = problematicFields.map((p) => 
+            `${p.field} (array with ${p.value.length} items: ${JSON.stringify(p.value.slice(0, 3))}${p.value.length > 3 ? '...' : ''})`
+          ).join(', ');
+        } else if (relationshipFieldValues.length > 0) {
+          // List all relationship fields and their types
+          const arrayFields = relationshipFieldValues.filter(f => f.isArray);
+          if (arrayFields.length > 0) {
+            fieldNames = arrayFields.map(f => `${f.field} (array)`).join(', ');
+          } else {
+            fieldNames = `All relationship fields: ${relationshipFieldValues.map(f => `${f.field} (${typeof f.value})`).join(', ')}. Check Appwrite Console.`;
+          }
+        } else if (nonStringArrayFields.length > 0) {
+          fieldNames = `Possible issues: ${nonStringArrayFields.map((f) => `${f.field} (array)`).join(', ')}. Check Appwrite Console for relationship attributes.`;
+        } else if (allArrayFields.length > 0) {
+          // All array fields are valid string arrays, so no issue here
+          fieldNames = 'No relationship fields are arrays. The validation error might be due to another reason. Check Appwrite Console.';
+        } else if (contractFetchError) {
+          fieldNames = `Could not fetch contract document. Error: ${contractFetchError}. Check Appwrite Console manually for contract ID: ${fileId}`;
+        } else {
+          fieldNames = 'unknown - check all relationship fields in Appwrite Console. See server logs for full contract structure.';
+        }
+
+        throw new Error(
+          `Cannot update contract status: relationship fields are stored as arrays instead of single values. ` +
+            `Problematic fields: ${fieldNames}. ` +
+            `Please fix these fields in the Appwrite Console before updating the status. ` +
+            `Contract ID: ${fileId}. ` +
+            `Check server logs for full contract structure. ` +
+            `Original error: ${updateError?.message || 'Unknown error'}`
+        );
+      }
+
+      // Re-throw other errors as-is
+      throw updateError;
+    }
   } catch (error) {
     handleError(error, 'Failed to update contract status');
   }

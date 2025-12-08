@@ -87,6 +87,15 @@ const Card = ({
   const [contractOwnerId, setContractOwnerId] = useState<string | null>(null);
   const [contractLoaded, setContractLoaded] = useState(false);
 
+  // Sync local state with file prop changes (for real-time updates)
+  useEffect(() => {
+    setContractStatus(status || file.status);
+  }, [status, file.status]);
+
+  useEffect(() => {
+    setContractExpiryDate(expirationDate || file.contractExpiryDate);
+  }, [expirationDate, file.contractExpiryDate]);
+
   // Fetch owner name - prioritize contractOwnerId if contract exists
   useEffect(() => {
     const fetchOwnerName = async () => {
@@ -98,7 +107,8 @@ const Card = ({
       }
 
       // If we already have a valid name (not "Unknown"), don't re-fetch
-      if (ownerName && ownerName !== 'Unknown') {
+      // But allow re-fetch if contractOwnerId becomes available
+      if (ownerName && ownerName !== 'Unknown' && !contractOwnerId) {
         return;
       }
 
@@ -166,7 +176,7 @@ const Card = ({
     };
 
     fetchOwnerName();
-  }, [file.owner, file.contractId, contractOwnerId, contractLoaded, ownerName]);
+  }, [file.owner, file.contractId, contractOwnerId, contractLoaded]);
 
   useEffect(() => {
     // Fetch contract data - try both contractId and fileId lookup
@@ -254,6 +264,12 @@ const Card = ({
         <div className="flex flex-col items-end justify-between">
           <ActionDropdown
             file={file}
+            onStatusChange={() => {
+              // Update local state to reflect the new status immediately
+              if (onRefresh) {
+                onRefresh();
+              }
+            }}
             onRefresh={onRefresh}
             userRole={userRole}
           />

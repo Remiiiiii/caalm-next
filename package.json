@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo",
     "dev:setup": "node scripts/setup-dev.js && pnpm run dev",
     "restart": "taskkill /F /IM node.exe 2>nul || echo \"No Node processes to kill\" && pnpm run dev",
     "build": "next build",

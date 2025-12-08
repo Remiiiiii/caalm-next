@@ -50,8 +50,9 @@ export function useDraftManagement({
     if (isResumingDraftRef.current) {
       return false; // Don't save while resuming a draft
     }
-    if (currentStep === 1 && !processedFileData) {
-      return false; // Don't save if no file uploaded
+    // Don't save if no file data is available (required for all drafts)
+    if (!processedFileData) {
+      return false;
     }
 
     setIsSaving(true);
@@ -141,17 +142,24 @@ export function useDraftManagement({
   ]);
 
   // Load saved drafts
-  const loadSavedDrafts = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/contracts/drafts?ownerId=${ownerId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSavedDrafts(data.drafts || []);
+  const loadSavedDrafts = useCallback(
+    async (forceRefresh = false) => {
+      try {
+        // Add cache busting parameter if force refresh is requested
+        const url = forceRefresh
+          ? `/api/contracts/drafts?ownerId=${ownerId}&_t=${Date.now()}`
+          : `/api/contracts/drafts?ownerId=${ownerId}`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          setSavedDrafts(data.drafts || []);
+        }
+      } catch (error) {
+        console.error('Error loading saved drafts:', error);
       }
-    } catch (error) {
-      console.error('Error loading saved drafts:', error);
-    }
-  }, [ownerId]);
+    },
+    [ownerId]
+  );
 
   // Resume a draft
   const resumeDraft = useCallback(
@@ -239,7 +247,14 @@ export function useDraftManagement({
         });
       }
     },
-    [form, toast, setProcessedFileData, setExtractedData, setCurrentStep, setIsOpen]
+    [
+      form,
+      toast,
+      setProcessedFileData,
+      setExtractedData,
+      setCurrentStep,
+      setIsOpen,
+    ]
   );
 
   // Delete a draft
@@ -288,7 +303,9 @@ export function useDraftManagement({
           }
         );
         if (response.ok) {
-          setSavedDrafts((prev) => prev.filter((d) => d.$id !== currentDraftId));
+          setSavedDrafts((prev) =>
+            prev.filter((d) => d.$id !== currentDraftId)
+          );
         }
       } catch (error) {
         console.error('Error deleting draft on cancel:', error);
@@ -299,7 +316,8 @@ export function useDraftManagement({
 
   // Manual save and close
   const handleManualSave = useCallback(async () => {
-    if (currentStep === 1 && !processedFileData) {
+    // Don't save if no file data is available
+    if (!processedFileData) {
       toast({
         title: 'No file uploaded',
         description: 'Please upload a file first before saving',
@@ -313,7 +331,14 @@ export function useDraftManagement({
       setIsOpen(false);
       resetForm();
     }
-  }, [autoSaveDraft, currentStep, processedFileData, toast, setIsOpen, resetForm]);
+  }, [
+    autoSaveDraft,
+    currentStep,
+    processedFileData,
+    toast,
+    setIsOpen,
+    resetForm,
+  ]);
 
   return {
     savedDrafts,
@@ -331,5 +356,3 @@ export function useDraftManagement({
     handleManualSave,
   };
 }
-
-

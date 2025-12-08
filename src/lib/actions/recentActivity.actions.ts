@@ -76,8 +76,11 @@ export async function createRecentActivity(
     // Use default organization if orgId is not provided
     const orgId = data.orgId || 'default_organization';
 
+    // Exclude department as it's not in the collection schema
+    const { department, ...dataWithoutDepartment } = data;
+
     const activityData = {
-      ...data,
+      ...dataWithoutDepartment,
       orgId: orgId,
       timestamp: new Date().toISOString(),
     };
@@ -167,15 +170,13 @@ export async function createFileActivity(
   action: string,
   fileName: string,
   userId?: string,
-  userName?: string,
-  department?: string
+  userName?: string
 ): Promise<RecentActivity | null> {
   return createRecentActivity({
     action,
     description: fileName,
     userId,
     userName,
-    department,
     type: 'file',
   });
 }

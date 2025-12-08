@@ -51,7 +51,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from '@/hooks/use-toast';
 import { uploadFile } from '@/lib/actions/file.actions';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -335,6 +335,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
   onSuccess,
 }) => {
   const path = usePathname();
+  const router = useRouter();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -1229,12 +1230,18 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Load drafts when dialog opens
+  // Reset form and load drafts when dialog opens (unless resuming a draft)
   useEffect(() => {
     if (isOpen) {
+      // Only reset if we're not currently resuming a draft
+      if (!isResumingDraftRef.current) {
+        // Reset form to initial state when opening fresh
+        resetForm();
+        setCurrentDraftId(null);
+      }
       loadSavedDrafts();
     }
-  }, [isOpen, loadSavedDrafts]);
+  }, [isOpen, loadSavedDrafts, resetForm]);
 
   // Removed auto-save on form field changes to prevent infinite loops
   // Auto-save now only happens on step changes and dialog close
@@ -1455,34 +1462,35 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         description: `${values.contractName} has been uploaded and processed.`,
       });
 
-      // Delete the draft since contract is successfully uploaded
-      if (currentDraftId) {
-        try {
-          await fetch(
-            `/api/contracts/drafts?draftId=${currentDraftId}&ownerId=${ownerId}`,
-            {
-              method: 'DELETE',
-            }
-          );
-          // Remove from local state immediately
+      // Draft deletion is now handled automatically in uploadFile function
+      // using fileId matching (primary) and filename matching (fallback)
+      // Just reload drafts to refresh the UI
+      try {
+        await loadSavedDrafts();
+        // Clear current draft ID since it should be deleted
+        if (currentDraftId) {
+          setCurrentDraftId(null);
+          // Remove from local state immediately for better UX
           setSavedDrafts((prev) =>
             prev.filter((d) => d.$id !== currentDraftId)
           );
-          setCurrentDraftId(null);
-          // Reload drafts to ensure cache is fresh
-          await loadSavedDrafts();
-        } catch (error) {
-          console.error('Error deleting draft after upload:', error);
-          // Continue even if draft deletion fails - contract is already uploaded
         }
+      } catch (error) {
+        console.error('Error reloading drafts after upload:', error);
+        // Continue - contract is already uploaded successfully
       }
 
-      // Reset form
-      form.reset();
-      setProcessedFileData(null);
-      setExtractedData(null);
-      setSelectedManagers([]);
+      // Reset form completely before closing
+      resetForm();
+      setCurrentDraftId(null);
       setIsOpen(false);
+      
+      // Clear the resume flag to ensure next open is fresh
+      isResumingDraftRef.current = false;
+      
+      // Navigate to contracts page after successful upload
+      router.push('/contracts');
+      
       onSuccess?.();
     } catch (error) {
       console.error('Upload failed:', error);
@@ -1503,7 +1511,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       onOpenChange={(open) => {
         setIsOpen(open);
         if (!open) {
+          // Reset form when dialog closes
           resetForm();
+          isResumingDraftRef.current = false;
+        } else {
+          // Reset form when dialog opens (unless resuming a draft)
+          if (!isResumingDraftRef.current) {
+            resetForm();
+          }
         }
       }}
     >

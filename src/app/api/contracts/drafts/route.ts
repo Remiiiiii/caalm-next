@@ -4,6 +4,10 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Query } from 'node-appwrite';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
+import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
+import { getFileType } from '@/lib/utils';
+
+const FILES_COLLECTION_ID = '6934a3120033b4a5c4da';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,18 +44,221 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Optimize processedFileData: Remove arrayBuffer and base64Content to reduce size
+    // Upload file to storage and store only bucketFileId + metadata
+    let optimizedProcessedFileData = null;
+    let bucketFileId: string | null = null;
+
+    if (processedFileData) {
+      try {
+        const parsed =
+          typeof processedFileData === 'string'
+            ? JSON.parse(processedFileData)
+            : processedFileData;
+
+        // If file has arrayBuffer, upload it to storage and get bucketFileId
+        if (parsed.arrayBuffer && !parsed.bucketFileId) {
+          try {
+            const { storage } = await createAdminClient();
+            const inputFile = InputFile.fromBuffer(
+              Buffer.from(parsed.arrayBuffer),
+              parsed.name
+            );
+
+            const bucketFile = await storage.createFile({
+              bucketId: appwriteConfig.bucketId!,
+              fileId: ID.unique(),
+              file: inputFile,
+            });
+
+            bucketFileId = bucketFile.$id;
+            console.log(`Uploaded draft file to storage: ${bucketFileId}`);
+          } catch (uploadError: any) {
+            console.warn(
+              'Failed to upload draft file to storage:',
+              uploadError.message
+            );
+            // Continue without bucketFileId - file will need to be re-uploaded on resume
+          }
+        } else if (parsed.bucketFileId) {
+          // Already has bucketFileId from previous save
+          bucketFileId = parsed.bucketFileId;
+        }
+
+        // Store only essential metadata, exclude large binary data
+        optimizedProcessedFileData = {
+          name: parsed.name,
+          type: parsed.type,
+          size: parsed.size,
+          lastModified: parsed.lastModified,
+          bucketFileId: bucketFileId || parsed.bucketFileId || null,
+          // fileId will be added after file row is created
+          // Exclude: arrayBuffer, base64Content (too large for database storage)
+        };
+      } catch (error) {
+        console.warn('Error optimizing processedFileData:', error);
+        // Fallback: try to extract at least the name
+        if (processedFileData && typeof processedFileData === 'object') {
+          optimizedProcessedFileData = {
+            name: processedFileData.name,
+            type: processedFileData.type,
+            size: processedFileData.size,
+            bucketFileId: processedFileData.bucketFileId || null,
+          };
+        }
+      }
+    }
+
+    // Optimize formData: Remove empty/null/undefined values to reduce size
+    let optimizedFormData = formData;
+    if (formData && typeof formData === 'object') {
+      optimizedFormData = Object.fromEntries(
+        Object.entries(formData).filter(([_, value]) => {
+          // Keep only non-empty values
+          if (value === null || value === undefined || value === '')
+            return false;
+          if (Array.isArray(value) && value.length === 0) return false;
+          if (typeof value === 'object' && Object.keys(value).length === 0)
+            return false;
+          return true;
+        })
+      );
+    }
+
+    // Optimize extractedData: Remove empty values
+    let optimizedExtractedData = extractedData;
+    if (extractedData && typeof extractedData === 'object') {
+      optimizedExtractedData = Object.fromEntries(
+        Object.entries(extractedData).filter(([_, value]) => {
+          return value !== null && value !== undefined && value !== '';
+        })
+      );
+    }
+
+    // Create/update file row BEFORE draft creation so we can store fileId in draft
+    // Note: Contracts are only created when form is successfully submitted via uploadFile
+    let fileRow = null;
+
+    if (processedFileData) {
+      try {
+        // Parse processedFileData if it's a string
+        const fileData =
+          typeof processedFileData === 'string'
+            ? JSON.parse(processedFileData)
+            : processedFileData;
+
+        if (fileData && fileData.name) {
+          // Check if file already exists for this draft
+          const existingFiles = await tablesDB.listRows({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: FILES_COLLECTION_ID,
+            queries: [
+              Query.equal('owner', ownerId),
+              Query.equal('name', fileData.name),
+              Query.orderDesc('$createdAt'),
+              Query.limit(1),
+            ],
+          });
+
+          // Get user's default organization
+          const defaultOrg = await getUserDefaultOrganization(ownerId);
+          if (!defaultOrg) {
+            console.warn(
+              'Could not get default organization for file creation'
+            );
+          }
+
+          const fileType = getFileType(fileData.name);
+
+          if (existingFiles.total === 0) {
+            // Create new file entry
+            const fileDocument: any = {
+              name: fileData.name,
+              type: fileType.type,
+              extension: fileType.extension,
+              size: fileData.size || 0,
+              owner: ownerId,
+              accountId,
+              users: [],
+              orgId: defaultOrg?.orgId || 'default_organization',
+              url: '', // Placeholder - will be updated when file is uploaded
+              bucketFileId: '', // Placeholder - will be updated when file is uploaded
+              isContract: true,
+            };
+
+            // Add contract metadata from formData if available
+            if (
+              formData &&
+              typeof formData === 'object' &&
+              formData.contractName
+            ) {
+              fileDocument.contractName = formData.contractName;
+            }
+
+            fileRow = await tablesDB.createRow({
+              databaseId: appwriteConfig.databaseId!,
+              tableId: FILES_COLLECTION_ID,
+              rowId: ID.unique(),
+              data: fileDocument,
+            });
+
+            console.log('File row created in Files collection:', fileRow.$id);
+          } else {
+            // Update existing file entry with latest formData
+            fileRow = existingFiles.rows[0];
+            const updateData: any = {};
+
+            if (formData && typeof formData === 'object') {
+              if (formData.contractName) {
+                updateData.contractName = formData.contractName;
+              }
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              try {
+                fileRow = await tablesDB.updateRow({
+                  databaseId: appwriteConfig.databaseId!,
+                  tableId: FILES_COLLECTION_ID,
+                  rowId: fileRow.$id,
+                  data: updateData,
+                });
+                console.log(
+                  'File row updated in Files collection:',
+                  fileRow.$id
+                );
+              } catch (updateError: any) {
+                console.warn('Could not update file row:', updateError.message);
+              }
+            }
+          }
+        }
+      } catch (fileError: any) {
+        // Don't fail the draft save if file creation fails
+        console.error('Error creating file row:', {
+          error: fileError.message,
+          code: fileError.code,
+          type: fileError.type,
+        });
+      }
+    }
+
+    // Now create draftData with fileId as a separate attribute (more efficient for querying)
     const draftData = {
       ownerId,
       accountId,
-      formData: JSON.stringify(formData),
+      formData: optimizedFormData ? JSON.stringify(optimizedFormData) : null,
       currentStep,
-      processedFileData: processedFileData
-        ? JSON.stringify(processedFileData)
+      processedFileData: optimizedProcessedFileData
+        ? JSON.stringify(optimizedProcessedFileData)
         : null,
-      extractedData: extractedData ? JSON.stringify(extractedData) : null,
+      extractedData: optimizedExtractedData
+        ? JSON.stringify(optimizedExtractedData)
+        : null,
       progressPercentage: Math.round((currentStep / 10) * 100),
       lastSavedAt: new Date().toISOString(),
       isCompleted: body.isCompleted || false,
+      // Store fileId from Files table to enable efficient draft deletion after contract upload
+      fileId: fileRow?.$id || null,
     };
 
     console.log('Saving draft:', {
@@ -63,6 +270,8 @@ export async function POST(request: NextRequest) {
       progressPercentage: draftData.progressPercentage,
       hasFormData: !!formData,
       hasProcessedFileData: !!processedFileData,
+      fileId: draftData.fileId,
+      fileRowId: fileRow?.$id || null,
     });
 
     // Check if draftId is provided - if so, update existing draft
@@ -74,6 +283,28 @@ export async function POST(request: NextRequest) {
       if (draftId) {
         // Update existing draft
         console.log('Updating existing draft:', draftId);
+        
+        // If fileRow exists, update fileId; otherwise preserve existing fileId
+        if (fileRow) {
+          draftData.fileId = fileRow.$id;
+        } else {
+          // Get existing draft to preserve fileId if it exists
+          try {
+            const existingDraft = await tablesDB.getRow({
+              databaseId: appwriteConfig.databaseId,
+              tableId: appwriteConfig.contractDraftsCollectionId,
+              rowId: draftId,
+            });
+            // Preserve existing fileId if no new file row was created
+            if (existingDraft.fileId && !fileRow) {
+              draftData.fileId = existingDraft.fileId;
+            }
+          } catch (error) {
+            // If we can't get the existing draft, continue with null fileId
+            console.warn('Could not fetch existing draft to preserve fileId:', error);
+          }
+        }
+        
         draft = await tablesDB.updateRow({
           databaseId: appwriteConfig.databaseId,
           tableId: appwriteConfig.contractDraftsCollectionId,
@@ -112,6 +343,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       draft,
+      fileRow: fileRow ? { $id: fileRow.$id } : null,
       message: 'Draft saved successfully',
     });
   } catch (error: any) {
@@ -273,22 +505,94 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get ownerId from draft if not provided in query params
+    const FILES_COLLECTION_ID = '6934a3120033b4a5c4da';
+    const CONTRACTS_COLLECTION_ID = '6912e5a400789ef12345';
+
+    // Get draft to find associated file
+    // Note: We don't look for contracts because contracts are only created
+    // when the form is successfully submitted via uploadFile, not during drafts.
+    let draft: any;
     let draftOwnerId: string | null = ownerId;
-    if (!draftOwnerId) {
+    let fileId: string | null = null;
+
+    try {
+      draft = await tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.contractDraftsCollectionId,
+        rowId: draftId,
+      });
+      draftOwnerId = draft.ownerId as string;
+
+      // Parse processedFileData to get file name
+      const processedFileData = draft.processedFileData
+        ? JSON.parse(draft.processedFileData)
+        : null;
+
+      if (processedFileData && processedFileData.name) {
+        // Find the file entry in Files collection
+        try {
+          const files = await tablesDB.listRows({
+            databaseId: appwriteConfig.databaseId,
+            tableId: FILES_COLLECTION_ID,
+            queries: [
+              Query.equal('owner', draftOwnerId),
+              Query.equal('name', processedFileData.name),
+              Query.limit(1),
+            ],
+          });
+
+          if (files.total > 0) {
+            fileId = files.rows[0].$id;
+          }
+        } catch (fileError: any) {
+          console.warn('Could not find file for draft:', fileError.message);
+        }
+      }
+    } catch (error) {
+      // If we can't get the draft, proceed with deletion anyway
+      console.warn('Could not fetch draft:', error);
+    }
+
+    // Delete file entry (if exists)
+    if (fileId) {
       try {
-        const draft = await tablesDB.getRow({
+        // Clear owner relationship first to avoid two-way relationship constraint issues
+        try {
+          const fileDoc = await tablesDB.getRow({
+            databaseId: appwriteConfig.databaseId,
+            tableId: FILES_COLLECTION_ID,
+            rowId: fileId,
+          });
+          if (fileDoc.owner) {
+            await tablesDB.updateRow({
+              databaseId: appwriteConfig.databaseId,
+              tableId: FILES_COLLECTION_ID,
+              rowId: fileId,
+              data: { owner: null },
+            });
+            console.log('Cleared owner relationship before file deletion');
+          }
+        } catch (clearError: any) {
+          console.warn(
+            'Could not clear owner relationship:',
+            clearError.message
+          );
+          // Continue with deletion
+        }
+
+        await tablesDB.deleteRow({
           databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.contractDraftsCollectionId,
-          rowId: draftId,
+          tableId: FILES_COLLECTION_ID,
+          rowId: fileId,
         });
-        draftOwnerId = draft.ownerId as string;
-      } catch (error) {
-        // If we can't get the draft, proceed without cache invalidation
-        console.warn('Could not fetch draft for cache invalidation:', error);
+        console.log(`Deleted file ${fileId} associated with draft ${draftId}`);
+      } catch (fileDeleteError: any) {
+        // Log but don't fail - file might have been deleted already
+        console.warn('Error deleting file:', fileDeleteError.message);
       }
     }
 
+    // Delete the draft
     await tablesDB.deleteRow({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.contractDraftsCollectionId,
@@ -310,6 +614,10 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Draft deleted successfully',
+      deleted: {
+        draft: draftId,
+        file: fileId || null,
+      },
     });
   } catch (error: any) {
     console.error('Error deleting draft:', error);

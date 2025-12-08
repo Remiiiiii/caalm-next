@@ -68,12 +68,22 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       queries: queries,
     });
 
+    // Helper function to validate Appwrite document ID format
+    const isValidDocumentId = (id: string | null | undefined): boolean => {
+      if (!id || typeof id !== 'string') return false;
+      // Appwrite document IDs must be at most 36 chars, contain only a-z, A-Z, 0-9, underscore
+      // and cannot start with a leading underscore
+      if (id.length > 36) return false;
+      if (id.startsWith('_')) return false;
+      return /^[a-zA-Z0-9_]+$/.test(id);
+    };
+
     // Convert contract documents to UIFileDoc format for compatibility with existing components
     const contractDocuments = await Promise.all(
       contractsResult.rows.map(async (contract: any) => {
         // Try to get the associated file document for file-specific data
         let fileData = null;
-        if (contract.fileId) {
+        if (contract.fileId && isValidDocumentId(contract.fileId)) {
           try {
             fileData = await databases.getDocument(
               appwriteConfig.databaseId!,
@@ -83,6 +93,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
           } catch (error: any) {
             // Handle missing file documents gracefully (404 errors)
             if (error?.code === 404 || error?.type === 'document_not_found') {
+              // Only log if it's a valid ID format - invalid IDs are expected to fail
               console.warn(
                 `File document not found for contract ${contract.$id} (fileId: ${contract.fileId}). Contract will be displayed without file metadata.`
               );
@@ -90,14 +101,23 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
               fileData = null;
             } else {
               // Log other errors but don't break the page
-              console.warn(
-                'Could not fetch file data for contract:',
-                contract.$id,
-                error?.message || error
-              );
+              // Suppress "Invalid documentId param" errors as they're expected for invalid IDs
+              const errorMessage = error?.message || String(error);
+              if (!errorMessage.includes('Invalid `documentId` param')) {
+                console.warn(
+                  'Could not fetch file data for contract:',
+                  contract.$id,
+                  errorMessage
+                );
+              }
               fileData = null;
             }
           }
+        } else if (contract.fileId) {
+          // Log invalid fileId format (but don't break the page)
+          console.warn(
+            `Invalid fileId format for contract ${contract.$id} (fileId: ${contract.fileId}). Skipping file document fetch.`
+          );
         }
 
         // Create a UIFileDoc-compatible object using contract data as primary source

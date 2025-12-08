@@ -93,8 +93,8 @@ export const performQuickSearch = async ({
         queries.push(Query.limit(200));
 
         const contractsResult = await tablesDB.listRows({
-          databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.contractsCollectionId,
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
           queries: queries,
         });
 
@@ -118,11 +118,11 @@ export const performQuickSearch = async ({
 
       case 'departments':
         // List all departments that have contracts
-        const allContractsResult = await tablesDB.listRows(
-          appwriteConfig.databaseId,
-          appwriteConfig.contractsCollectionId,
-          [Query.limit(200)]
-        );
+        const allContractsResult = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
+          queries: [Query.limit(200)],
+        });
 
         // Group by department and create department entries
         const departmentMap = new Map();
@@ -148,11 +148,11 @@ export const performQuickSearch = async ({
 
       case 'vendors':
         // List all vendors
-        const vendorContractsResult = await tablesDB.listRows(
-          appwriteConfig.databaseId,
-          appwriteConfig.contractsCollectionId,
-          [Query.limit(200)]
-        );
+        const vendorContractsResult = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
+          queries: [Query.limit(200)],
+        });
 
         // Group by vendor and create vendor entries
         const vendorMap = new Map();
@@ -182,11 +182,11 @@ export const performQuickSearch = async ({
         queries.push(Query.equal('status', 'active'));
         queries.push(Query.limit(200));
 
-        const activeContractsResult = await tablesDB.listRows(
-          appwriteConfig.databaseId,
-          appwriteConfig.contractsCollectionId,
-          queries
-        );
+        const activeContractsResult = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
+          queries: queries,
+        });
 
         results = activeContractsResult.rows.map((doc) => ({
           id: doc.$id,
@@ -335,18 +335,18 @@ export const performAdvancedSearch = async ({
     searchQueries.push(Query.limit(200)); // Get more documents for client-side filtering
 
     // Search in contracts collection
-    const contractsResult = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId,
-      searchQueries
-    );
+    const contractsResult = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.contractsCollectionId!,
+      queries: searchQueries,
+    });
 
     // Search in files collection
-    const filesResult = await tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId,
-      searchQueries
-    );
+    const filesResult = await tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId!,
+      tableId: appwriteConfig.filesCollectionId!,
+      queries: searchQueries,
+    });
 
     // Combine and format results with client-side text filtering
     let results: SearchResult[] = [
@@ -391,14 +391,12 @@ export const performAdvancedSearch = async ({
         const searchableFields = [
           doc.contractName,
           doc.name,
-          doc.contractNumber,
           doc.vendor,
           doc.contractType,
           doc.department,
           doc.status,
           doc.priority,
           doc.assignedManagers,
-          doc.compliance,
           doc.amount?.toString(),
           doc.contractExpiryDate,
         ].filter(Boolean);
@@ -436,7 +434,7 @@ export const performAdvancedSearch = async ({
     // Save search to history
     try {
       await tablesDB.createRow({
-        databaseId: appwriteConfig.databaseId,
+        databaseId: appwriteConfig.databaseId!,
         tableId: 'search_history',
         rowId: ID.unique(),
         data: {
@@ -496,11 +494,11 @@ export const getSearchSuggestions = async (
 
     // Get contract name suggestions using contains instead of search
     try {
-      const contractsResult = await tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.contractsCollectionId,
-        [Query.limit(50)] // Get more documents to filter client-side
-      );
+      const contractsResult = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.contractsCollectionId!,
+        queries: [Query.limit(50)], // Get more documents to filter client-side
+      });
 
       contractsResult.rows.forEach((contract) => {
         if (
@@ -528,11 +526,11 @@ export const getSearchSuggestions = async (
 
     // Get file name suggestions using contains instead of search
     try {
-      const filesResult = await tablesDB.listRows(
-        appwriteConfig.databaseId,
-        appwriteConfig.filesCollectionId,
-        [Query.limit(50)] // Get more documents to filter client-side
-      );
+      const filesResult = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.filesCollectionId!,
+        queries: [Query.limit(50)], // Get more documents to filter client-side
+      });
 
       filesResult.rows.forEach((file) => {
         if (
@@ -575,7 +573,7 @@ export const getRecentSearches = async (
 
   try {
     const recentSearches = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId!,
       tableId: 'search_history',
       queries: [
         Query.equal('userId', userId),
@@ -630,7 +628,7 @@ export const saveSearch = async ({
   try {
     // Check if a saved search with the same name already exists
     const existingSearches = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId!,
       tableId: 'saved_searches',
       queries: [Query.equal('userId', userId), Query.equal('name', name)],
     });
@@ -641,7 +639,7 @@ export const saveSearch = async ({
 
     // Create new saved search
     const savedSearch = await tablesDB.createRow({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId!,
       tableId: 'saved_searches',
       rowId: ID.unique(),
       data: {
@@ -687,7 +685,7 @@ export const getSavedSearches = async (
 
   try {
     const savedSearches = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId!,
       tableId: 'saved_searches',
       queries: [Query.equal('userId', userId), Query.orderDesc('$createdAt')],
     });
@@ -719,7 +717,7 @@ export const deleteSavedSearch = async (
   try {
     // Verify the search belongs to the user
     const search = await tablesDB.getRow({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId!,
       tableId: 'saved_searches',
       rowId: searchId,
     });
@@ -730,7 +728,7 @@ export const deleteSavedSearch = async (
 
     // Delete the saved search
     await tablesDB.deleteRow({
-      databaseId: appwriteConfig.databaseId,
+      databaseId: appwriteConfig.databaseId!,
       tableId: 'saved_searches',
       rowId: searchId,
     });

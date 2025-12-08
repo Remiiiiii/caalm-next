@@ -1793,7 +1793,10 @@ export async function fetchUserNamesByIds(
   }
 
   try {
-    const response = await fetch('/api/users/get-by-ids', {
+    // Use absolute URL for server-side compatibility
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/users/get-by-ids`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
