@@ -6,6 +6,9 @@ import Card from '@/components/Card';
 import { getFileTypesParams } from '@/lib/utils';
 import FileUsageOverview from '@/components/FileUsageOverview';
 import { UIFileDoc } from '@/types/files';
+import ContractsViewClient from '@/components/ContractsViewClient';
+import { ContractsViewToggle } from '@/components/ContractsViewToggle';
+import { ContractsViewProvider } from '@/components/ContractsView';
 
 type FileType = 'image' | 'video' | 'audio' | 'document' | 'other';
 import { createAdminClient } from '@/lib/appwrite/admin';
@@ -136,12 +139,14 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
           extension: fileData?.extension || 'pdf', // Default to pdf if not available
           url: fileData?.url || '',
           size: fileData?.size || 0,
-          owner: contract.owner || fileData?.owner || '',
+          owner:
+            contract.contractOwnerId || contract.owner || fileData?.owner || '',
           users: contract.users || fileData?.users || [],
 
           // Contract-specific data from contracts collection
           contractId: contract.$id,
           contractName: contract.contractName,
+          contractOwnerId: contract.contractOwnerId,
           contractExpiryDate: contract.contractExpiryDate,
           status: contract.status,
           contractType: contract.contractType,
@@ -208,35 +213,67 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
           <FileUsageOverview totalSpace={totalSpace} user={user} />
         </section>
       )}
-      <section className="w-full">
-        <div className="total-size-section">
-          <p className="body-1">
-            Total: <span className="h5">{totalSizeFormatted}</span>
-          </p>
+      {type.toLowerCase() === 'contracts' ? (
+        <ContractsViewProvider>
+          <section className="w-full">
+            <div className="total-size-section">
+              <p className="body-1">
+                Total: <span className="h5">{totalSizeFormatted}</span>
+              </p>
 
-          <div className="sort-container">
-            <p className="body-1 hidden text-light-200 sm:block">Sort by:</p>
+              <div className="sort-container">
+                <ContractsViewToggle />
+                <p className="body-1 hidden text-light-200 sm:block">
+                  Sort by:
+                </p>
 
-            <Sort />
-          </div>
-        </div>
-      </section>
+                <Sort />
+              </div>
+            </div>
+          </section>
 
-      {/* Render the files */}
-      {filteredDocuments.length > 0 ? (
-        <section className="file-list">
-          {filteredDocuments.map((file: UIFileDoc) => (
-            <Card
-              key={file.$id}
-              file={file}
-              status={file.status}
-              expirationDate={file.contractExpiryDate}
-              userRole={user?.role as 'executive' | 'admin' | 'manager'}
-            />
-          ))}
-        </section>
+          {/* Render the files */}
+          {filteredDocuments.length > 0 ? (
+            <ContractsViewClient files={filteredDocuments} user={user} />
+          ) : (
+            <p className="empty-list">No files uploaded yet</p>
+          )}
+        </ContractsViewProvider>
       ) : (
-        <p className="empty-list">No files uploaded yet</p>
+        <>
+          <section className="w-full">
+            <div className="total-size-section">
+              <p className="body-1">
+                Total: <span className="h5">{totalSizeFormatted}</span>
+              </p>
+
+              <div className="sort-container">
+                <p className="body-1 hidden text-light-200 sm:block">
+                  Sort by:
+                </p>
+
+                <Sort />
+              </div>
+            </div>
+          </section>
+
+          {/* Render the files */}
+          {filteredDocuments.length > 0 ? (
+            <section className="file-list">
+              {filteredDocuments.map((file: UIFileDoc) => (
+                <Card
+                  key={file.$id}
+                  file={file}
+                  status={file.status}
+                  expirationDate={file.contractExpiryDate}
+                  userRole={user?.role as 'executive' | 'admin' | 'manager'}
+                />
+              ))}
+            </section>
+          ) : (
+            <p className="empty-list">No files uploaded yet</p>
+          )}
+        </>
       )}
     </div>
   );
