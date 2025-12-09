@@ -30,9 +30,6 @@ export const useCalendarPermissions = ({
 
   const permissions = useMemo(() => {
     if (loading) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[useCalendarPermissions] Still loading, returning empty permissions');
-      }
       return EMPTY_PERMISSIONS;
     }
 
@@ -45,14 +42,6 @@ export const useCalendarPermissions = ({
       },
     });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[useCalendarPermissions] Resolved permissions:', {
-        role,
-        userId,
-        permissions: resolved,
-        createEvent: resolved.createEvent,
-      });
-    }
 
     return resolved;
   }, [eventOverrides, role, loading, userId, teamIds]);

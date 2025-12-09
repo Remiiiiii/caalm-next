@@ -2,12 +2,138 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
+import { CACHE_KEYS, getTTLForRoute } from '@/lib/services/cache-keys';
+import * as cache from '@/lib/services/redis-cache';
+
+/**
+ * Fetch a single user by ID, accountId, or fullName with caching
+ */
+async function fetchUserByIdentifier(
+  identifier: string,
+  adminClient: any
+): Promise<any | null> {
+  // Try individual cache keys first for better hit rates
+  let cachedUser = await cache.get(CACHE_KEYS.users.single(identifier));
+  if (cachedUser) return cachedUser;
+
+  cachedUser = await cache.get(CACHE_KEYS.users.byAccountId(identifier));
+  if (cachedUser) return cachedUser;
+
+  cachedUser = await cache.get(CACHE_KEYS.users.byFullName(identifier));
+  if (cachedUser) return cachedUser;
+
+  // User not in cache, fetch from database
+  try {
+    // First try to get by document ID ($id) using getRow (most direct)
+    try {
+      const user = await adminClient.tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.usersCollectionId,
+        rowId: identifier,
+      });
+
+      if (user) {
+        const userData = {
+          $id: user.$id,
+          accountId: user.accountId,
+          fullName: user.fullName,
+          email: user.email,
+          profileImageId: user.profileImageId || null,
+        };
+
+        // Cache by all identifiers for future lookups
+        const ttl = getTTLForRoute('users/get-by-ids');
+        await cache.set(CACHE_KEYS.users.single(user.$id), userData, ttl);
+        if (user.accountId) {
+          await cache.set(CACHE_KEYS.users.byAccountId(user.accountId), userData, ttl);
+        }
+        if (user.fullName) {
+          await cache.set(CACHE_KEYS.users.byFullName(user.fullName), userData, ttl);
+        }
+
+        return userData;
+      }
+    } catch (getRowError: any) {
+      // getRow returns 404 if not found, which is expected - continue to next lookup method
+    }
+
+    // If not found by $id, try accountId using listRows
+    try {
+      const accountIdResponse = await adminClient.tablesDB.listRows(
+        appwriteConfig.databaseId,
+        appwriteConfig.usersCollectionId,
+        [Query.equal('accountId', identifier), Query.limit(1)]
+      );
+
+      if (accountIdResponse.rows && accountIdResponse.rows.length > 0) {
+        const user = accountIdResponse.rows[0];
+        const userData = {
+          $id: user.$id,
+          accountId: user.accountId,
+          fullName: user.fullName,
+          email: user.email,
+          profileImageId: user.profileImageId || null,
+        };
+
+        // Cache by all identifiers
+        const ttl = getTTLForRoute('users/get-by-ids');
+        await cache.set(CACHE_KEYS.users.single(user.$id), userData, ttl);
+        if (user.accountId) {
+          await cache.set(CACHE_KEYS.users.byAccountId(user.accountId), userData, ttl);
+        }
+        if (user.fullName) {
+          await cache.set(CACHE_KEYS.users.byFullName(user.fullName), userData, ttl);
+        }
+
+        return userData;
+      }
+    } catch (accountIdError: any) {
+      // Continue to next lookup method
+    }
+
+    // If not found by $id or accountId, try fullName (assignedManagers might be stored as names)
+    try {
+      const nameResponse = await adminClient.tablesDB.listRows(
+        appwriteConfig.databaseId,
+        appwriteConfig.usersCollectionId,
+        [Query.equal('fullName', identifier), Query.limit(1)]
+      );
+
+      if (nameResponse.rows && nameResponse.rows.length > 0) {
+        const user = nameResponse.rows[0];
+        const userData = {
+          $id: user.$id,
+          accountId: user.accountId,
+          fullName: user.fullName,
+          email: user.email,
+          profileImageId: user.profileImageId || null,
+        };
+
+        // Cache by all identifiers
+        const ttl = getTTLForRoute('users/get-by-ids');
+        await cache.set(CACHE_KEYS.users.single(user.$id), userData, ttl);
+        if (user.accountId) {
+          await cache.set(CACHE_KEYS.users.byAccountId(user.accountId), userData, ttl);
+        }
+        if (user.fullName) {
+          await cache.set(CACHE_KEYS.users.byFullName(user.fullName), userData, ttl);
+        }
+
+        return userData;
+      }
+    } catch (nameError: any) {
+      // Continue - user not found by any method
+    }
+  } catch (error: any) {
+    // Error fetching user - return null
+  }
+
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const { userIds } = await request.json();
-
-    console.log('[get-by-ids] Received request with userIds:', userIds);
 
     if (!Array.isArray(userIds) || userIds.length === 0) {
       return NextResponse.json(
@@ -28,104 +154,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[get-by-ids] Configuration:', {
-      databaseId: appwriteConfig.databaseId,
-      usersCollectionId: appwriteConfig.usersCollectionId,
-    });
+    // Check cache for the entire batch first
+    const cacheKey = CACHE_KEYS.users.byIds(userIds);
+    const cachedResult = await cache.get<any[]>(cacheKey);
+    if (cachedResult) {
+      return NextResponse.json(cachedResult);
+    }
 
+    // Fetch users using individual caching
     const adminClient = await createAdminClient();
     const users: any[] = [];
     const foundUserIds = new Set<string>();
 
-    // Fetch users - use getRow for single IDs, listRows for queries
+    // Fetch users - check cache first, then database
     for (const userId of userIds) {
       if (foundUserIds.has(userId)) continue; // Skip if already found
 
-      try {
-        // First try to get by document ID ($id) using getRow (most direct)
-        try {
-          console.log(`[get-by-ids] Fetching user by rowId: ${userId}`);
-          const user = await adminClient.tablesDB.getRow({
-            databaseId: appwriteConfig.databaseId,
-            tableId: appwriteConfig.usersCollectionId,
-            rowId: userId,
-          });
-
-          if (user) {
-            console.log(`[get-by-ids] Found user ${userId}:`, {
-              $id: user.$id,
-              fullName: user.fullName,
-              email: user.email,
-            });
-            users.push({
-              $id: user.$id,
-              accountId: user.accountId,
-              fullName: user.fullName,
-              email: user.email,
-            });
-            foundUserIds.add(userId);
-            continue; // Found by $id, move to next
-          }
-        } catch (getRowError: any) {
-          // getRow returns 404 if not found, which is expected
-          if (
-            getRowError?.code === 404 ||
-            getRowError?.message?.includes('not found')
-          ) {
-            console.log(
-              `[get-by-ids] User not found with $id: ${userId}, trying accountId...`
-            );
-          } else {
-            console.warn(
-              `[get-by-ids] Error fetching user ${userId} by $id:`,
-              getRowError?.message || getRowError
-            );
-          }
-        }
-
-        // If not found by $id, try accountId using listRows
-        try {
-          const accountIdResponse = await adminClient.tablesDB.listRows(
-            appwriteConfig.databaseId,
-            appwriteConfig.usersCollectionId,
-            [Query.equal('accountId', userId), Query.limit(1)]
-          );
-
-          if (accountIdResponse.rows && accountIdResponse.rows.length > 0) {
-            const user = accountIdResponse.rows[0];
-            // Only add if not already added (avoid duplicates)
-            if (!foundUserIds.has(user.$id)) {
-              console.log(`[get-by-ids] Found user by accountId ${userId}:`, {
-                $id: user.$id,
-                fullName: user.fullName,
-              });
-              users.push({
-                $id: user.$id,
-                accountId: user.accountId,
-                fullName: user.fullName,
-                email: user.email,
-              });
-              foundUserIds.add(user.$id);
-            }
-          }
-        } catch (accountIdError: any) {
-          console.warn(
-            `[get-by-ids] Error fetching user ${userId} by accountId:`,
-            accountIdError?.message || accountIdError
-          );
-        }
-      } catch (error: any) {
-        console.error(
-          `[get-by-ids] Error fetching user ${userId}:`,
-          error?.message || error
-        );
-        // Continue to next user
+      const user = await fetchUserByIdentifier(userId, adminClient);
+      if (user && !foundUserIds.has(user.$id)) {
+        users.push(user);
+        foundUserIds.add(user.$id);
       }
     }
 
-    console.log(
-      `[get-by-ids] Returning ${users.length} users for ${userIds.length} requested IDs`
-    );
+    // Cache the entire batch result
+    const ttl = getTTLForRoute('users/get-by-ids');
+    await cache.set(cacheKey, users, ttl);
+
     return NextResponse.json(users);
   } catch (error) {
     console.error('Error fetching users by IDs:', error);

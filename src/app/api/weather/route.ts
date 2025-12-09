@@ -47,11 +47,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('[SERVER] Weather API] Fetching weather data:', {
-      hasLat: !!lat,
-      hasLon: !!lon,
-      city: city || 'N/A',
-    });
 
     const response = await fetch(apiUrl, {
       next: { revalidate: 600 }, // Cache for 10 minutes
@@ -77,10 +72,6 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log('[SERVER] Weather API] Weather data fetched successfully:', {
-      city: data.name,
-      temp: data.main?.temp,
-    });
 
     return NextResponse.json({
       success: true,

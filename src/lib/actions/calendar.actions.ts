@@ -368,20 +368,6 @@ export const getCalendarEventsByMonth = async (
           (userAccountId && event.createdByAccountId && event.createdByAccountId === userAccountId) ||
           (userAccountId && event.createdBy && event.createdBy === userAccountId);
 
-        // Debug logging for filtering issues
-        if (process.env.NODE_ENV === 'development' && !isCreatedByUser) {
-          console.log('[getCalendarEventsByMonth] Event filtered out:', {
-            eventId: event.$id,
-            eventTitle: event.title,
-            eventCreatedByUserId: event.createdByUserId,
-            eventCreatedByAccountId: event.createdByAccountId,
-            eventCreatedBy: event.createdBy,
-            currentUserId: userId,
-            currentUserAccountId: userAccountId,
-            sharedCalendarOwnerIds: Array.from(sharedCalendarOwnerIds),
-          });
-        }
-
         // If not created by user, check if user is participant or has shared calendar access
         if (!isCreatedByUser) {
           // Check if user is a participant in this event (explicitly added as participant)
@@ -461,16 +447,6 @@ export const getCalendarEventsByMonth = async (
         return filterEventDetailsByPermission(event, permissionLevel);
       });
 
-      // Debug logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[getCalendarEventsByMonth] Event filtering result:', {
-          userId,
-          userAccountId,
-          initialEventCount,
-          filteredEventCount: events.length,
-          sharedCalendarsCount: sharedCalendars.length,
-        });
-      }
     }
 
     return events;

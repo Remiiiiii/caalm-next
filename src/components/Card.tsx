@@ -133,7 +133,6 @@ const Card = ({
         if (userIdToFetch) {
           try {
             const users = await fetchUserNamesByIds([userIdToFetch]);
-            console.log(`[Card] Fetched users for ${userIdToFetch}:`, users);
 
             if (users && Array.isArray(users) && users.length > 0) {
               const user =

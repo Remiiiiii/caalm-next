@@ -98,7 +98,6 @@ export async function POST(request: NextRequest) {
         );
 
         processedReminders.push(reminder.$id);
-        console.log(`[SERVER] processReminders] Sent reminder ${reminder.$id} for event ${event.title}`);
       } catch (error) {
         console.error(`[SERVER] processReminders] Error processing reminder ${reminder.$id}:`, error);
         failedReminders.push(reminder.$id);

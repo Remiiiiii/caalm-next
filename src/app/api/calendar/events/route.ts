@@ -82,12 +82,6 @@ export async function POST(request: NextRequest) {
       action: 'create',
     });
 
-    // console.log('[POST /api/calendar/events] Permission check result:', {
-    //   allowed: permissionCheck.allowed,
-    //   reason: permissionCheck.reason,
-    //   userRole: permissionCheck.userRole,
-    //   userId: permissionCheck.userId,
-    // });
 
     if (!permissionCheck.allowed) {
       console.error('[POST /api/calendar/events] Permission denied:', {
@@ -386,11 +380,8 @@ export async function POST(request: NextRequest) {
             resourceBookingId = booking.$id;
 
             // If booking requires approval, add to response
-            if (booking.status === 'pending') {
-              console.log('[SERVER] POST /api/calendar/events] Resource booking requires approval');
-            }
           } else {
-            console.warn('[SERVER] POST /api/calendar/events] Resource not available:', availability.reason);
+            // Resource not available
           }
         }
       } catch (resourceError) {
@@ -411,7 +402,6 @@ export async function POST(request: NextRequest) {
             channels: reminderConfig.channels || ['in_app'],
           });
         }
-        console.log('[SERVER] POST /api/calendar/events] Created reminders for event');
       } catch (reminderError) {
         console.error('[SERVER] POST /api/calendar/events] Error creating reminders:', reminderError);
         // Don't fail event creation if reminder creation fails

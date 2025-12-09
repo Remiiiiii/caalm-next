@@ -480,15 +480,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const { permissions } = usePermissions();
   const isApprover = permissions.includes(PERMISSIONS.EVENTS.APPROVE);
 
-  // Debug logging
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[OutlookStyleCalendar] Permission check:', {
-      userId,
-      canCreateEvent,
-      basePermissions,
-      isApprover,
-    });
-  }
   const {
     approvals,
     isLoading: approvalsLoading,
@@ -695,13 +686,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Fetch approval request when event review dialog opens for events with changes_requested or rejected status
   useEffect(() => {
     const fetchApprovalRequest = async () => {
-      console.log('[OutlookStyleCalendar] fetchApprovalRequest triggered:', {
-        isEditEventOpen,
-        hasSelectedEvent: !!selectedEvent,
-        approvalStatus: selectedEvent?.approvalStatus,
-        pendingApprovalId: selectedEvent?.pendingApprovalId,
-        eventId: selectedEvent?.$id,
-      });
 
       if (
         !isEditEventOpen ||
@@ -791,14 +775,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           );
         }
 
-        console.log('[OutlookStyleCalendar] Fetched approval request:', {
-          approval,
-          hasApproval: !!approval,
-          reviewerNotes: approval?.reviewerNotes,
-          reviewerNotesType: typeof approval?.reviewerNotes,
-          reviewerNotesLength: approval?.reviewerNotes?.length,
-          reviewerNotesTruthy: !!approval?.reviewerNotes,
-        });
         setEventApprovalRequest(approval);
       } catch (error) {
         console.error('Failed to fetch approval request:', error);
@@ -2016,17 +1992,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             files.forEach((file: any) => {
               // Only store files that have at least an $id
               if (file && file.$id) {
-                console.log('[OutlookStyleCalendar] Processing file:', {
-                  $id: file.$id,
-                  name: file.name,
-                  size: file.size,
-                  sizeType: typeof file.size,
-                  extension: file.extension,
-                  url: file.url,
-                  type: file.type,
-                  allKeys: Object.keys(file),
-                });
-
                 // Preserve actual values from API
                 // Only convert null to undefined if the value is truly missing
                 // Don't use defaults here - let the display layer handle missing values
@@ -2892,19 +2857,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       return;
     }
 
-    // Debug logging for permission check
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[confirmDeleteEvent] Permission check:', {
-        selectedEventPermissions,
-        cancelEvent: selectedEventPermissions?.cancelEvent,
-        role,
-        userId,
-        eventId: selectedEvent.$id || selectedEvent.id,
-        eventCreatedBy: selectedEvent.createdBy,
-        eventCreatedByAccountId: selectedEvent.createdByAccountId,
-        overrides: selectedEvent.overrides,
-      });
-    }
 
     if (selectedEventPermissions && !selectedEventPermissions.cancelEvent) {
       console.warn('[confirmDeleteEvent] Permission denied:', {
@@ -2923,7 +2875,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
     // Use $id if available (from database), otherwise use id (from converted event)
     const eventId = selectedEvent.$id || selectedEvent.id;
-    console.log('Attempting to delete event with ID:', eventId);
 
     try {
       const response = await fetch(

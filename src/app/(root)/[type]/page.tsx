@@ -9,6 +9,7 @@ import { UIFileDoc } from '@/types/files';
 import ContractsViewClient from '@/components/ContractsViewClient';
 import { ContractsViewToggle } from '@/components/ContractsViewToggle';
 import { ContractsViewProvider } from '@/components/ContractsView';
+import ContractsFilter from '@/components/ContractsFilter';
 
 type FileType = 'image' | 'video' | 'audio' | 'document' | 'other';
 import { createAdminClient } from '@/lib/appwrite/admin';
@@ -27,6 +28,9 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
   let files: { documents: UIFileDoc[] } = { documents: [] };
   let filteredDocuments: UIFileDoc[] = [];
+  let uniqueDepartments: string[] = [];
+  let uniqueAssignedManagers: string[] = [];
+  let contractDocuments: UIFileDoc[] = [];
 
   // Special handling for contracts - get ALL contracts from contracts collection
   if (type.toLowerCase() === 'contracts') {
@@ -82,7 +86,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
     };
 
     // Convert contract documents to UIFileDoc format for compatibility with existing components
-    const contractDocuments = await Promise.all(
+    contractDocuments = await Promise.all(
       contractsResult.rows.map(async (contract: any) => {
         // Try to get the associated file document for file-specific data
         let fileData = null;
@@ -169,6 +173,18 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
     files = { documents: contractDocuments };
     filteredDocuments = contractDocuments;
+    
+    // Extract unique departments and assigned managers for filter options
+    uniqueDepartments = Array.from(
+      new Set(contractDocuments.map((doc: UIFileDoc) => doc.department).filter(Boolean))
+    ) as string[];
+    uniqueAssignedManagers = Array.from(
+      new Set(
+        contractDocuments
+          .flatMap((doc: UIFileDoc) => doc.assignedManagers || [])
+          .filter(Boolean)
+      )
+    ) as string[];
   } else {
     // Regular file handling for other types
     const types = getFileTypesParams(type) as FileType[];
@@ -228,6 +244,11 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
                 </p>
 
                 <Sort />
+                
+                <ContractsFilter 
+                  departments={uniqueDepartments}
+                  assignedManagers={uniqueAssignedManagers}
+                />
               </div>
             </div>
           </section>

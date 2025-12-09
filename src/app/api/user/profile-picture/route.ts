@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client, Storage, Databases, ID } from 'node-appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
+import CacheManager from '@/lib/services/cache-manager';
 
 const client = new Client()
   .setEndpoint(appwriteConfig.endpointUrl!)
@@ -69,18 +70,22 @@ export async function POST(request: NextRequest) {
         );
       }
     } catch (error) {
-      // User might not exist or no existing profile picture
-      console.log('No existing profile picture to delete');
+      // User might not exist or no existing profile picture - continue with upload
     }
 
     // Upload new file
-    console.log('Uploading to bucket:', appwriteConfig.profilePicturesBucketId);
     const uploadedFile = await storage.createFile(
       appwriteConfig.profilePicturesBucketId!,
       ID.unique(),
       file
     );
-    console.log('File uploaded with ID:', uploadedFile.$id);
+
+    // Get user data for cache invalidation
+    const userDoc = await databases.getDocument(
+      appwriteConfig.databaseId!,
+      appwriteConfig.usersCollectionId!,
+      userId
+    );
 
     // Update user document with only the file ID (not the URL)
     await databases.updateDocument(
@@ -92,15 +97,23 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Generate file URL for response (URL object converted to string properly)
-    const fileUrl = storage.getFileView(
-      appwriteConfig.profilePicturesBucketId!,
-      uploadedFile.$id
+    // Invalidate user cache to ensure updated profile picture is reflected
+    await CacheManager.invalidateUsers(
+      userDoc.email,
+      userId,
+      userDoc.accountId,
+      userDoc.fullName
     );
+
+    // Generate file URL for response - construct manually like elsewhere in codebase
+    const endpoint = appwriteConfig.endpointUrl!;
+    const bucketId = appwriteConfig.profilePicturesBucketId!;
+    const projectId = appwriteConfig.projectId!;
+    const imageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${uploadedFile.$id}/view?project=${projectId}`;
 
     return NextResponse.json({
       success: true,
-      imageUrl: fileUrl.href, // Use .href to get the actual URL string
+      imageUrl,
       fileId: uploadedFile.$id,
     });
   } catch (error) {
@@ -140,6 +153,9 @@ export async function DELETE(request: NextRequest) {
         user.profileImageId
       );
 
+      // Get user data for cache invalidation before update
+      const userDoc = user;
+
       // Update user document to remove profile image ID
       await databases.updateDocument(
         appwriteConfig.databaseId!,
@@ -148,6 +164,14 @@ export async function DELETE(request: NextRequest) {
         {
           profileImageId: null,
         }
+      );
+
+      // Invalidate user cache to ensure updated profile picture is reflected
+      await CacheManager.invalidateUsers(
+        userDoc.email,
+        userId,
+        userDoc.accountId,
+        userDoc.fullName
       );
     }
 

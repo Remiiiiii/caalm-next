@@ -40,6 +40,7 @@ export type AppUser = {
   role: CalendarRole; // For calendar permissions compatibility only
   division?: UserDivision;
   status?: 'active' | 'inactive';
+  profileImageId?: string | null;
 };
 
 export const getUserByEmail = async (email: string) => {
@@ -718,6 +719,7 @@ export const getCurrentUserFrom2FA = async () => {
         role: calendarRole,
         division: user.division,
         status: user.status,
+        profileImageId: user.profileImageId || null,
         $createdAt: user.$createdAt,
         $updatedAt: user.$updatedAt,
       });

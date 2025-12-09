@@ -170,11 +170,6 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
           params.append('city', city);
         }
 
-        console.log('[CLIENT] WeatherWidget] Fetching weather data:', {
-          lat,
-          lon,
-          city,
-        });
 
         // Use our server-side API route instead of direct OpenWeatherMap API
         const response = await fetch(`/api/weather?${params.toString()}`);
@@ -209,10 +204,6 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 
         setWeatherData(data);
         setError(null);
-        console.log('[CLIENT] WeatherWidget] Weather data loaded successfully:', {
-          city: data.name,
-          temp: data.main?.temp,
-        });
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to load weather data';

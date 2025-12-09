@@ -1556,64 +1556,37 @@ export const contractStatus = async ({
 
       // Normalize only actual relationship fields that are stored as arrays
       // String array fields (assignedManagers, etc.) are now properly configured and don't need normalization
-      console.log('[contractStatus] Checking contract for array relationship fields:', {
-        contractId: fileId,
-        relationshipFields,
-        fieldsToCheck: fieldsToNormalize,
-      });
-      
       for (const field of fieldsToNormalize) {
         if (field in contract) {
           const fieldValue = contract[field];
           const isArray = Array.isArray(fieldValue);
           const isRelationshipField = relationshipFields.includes(field);
           
-          console.log(`[contractStatus] Field ${field}:`, {
-            exists: true,
-            isArray,
-            isRelationshipField,
-            value: fieldValue,
-            valueType: typeof fieldValue,
-          });
-          
           if (isArray && isRelationshipField) {
             // For empty arrays, set to null
             // For non-empty arrays, take first item if it's an ID
             if (fieldValue.length === 0) {
               normalizationData[field] = null;
-              console.log(`[contractStatus] Will normalize ${field}: [] -> null`);
             } else {
               const firstItem = fieldValue[0];
               if (typeof firstItem === 'string' && firstItem.length === 24) {
                 // Likely an Appwrite ID
                 normalizationData[field] = firstItem;
-                console.log(`[contractStatus] Will normalize ${field}: [${firstItem}] -> ${firstItem}`);
               } else if (firstItem?.$id && typeof firstItem.$id === 'string') {
                 normalizationData[field] = firstItem.$id;
-                console.log(`[contractStatus] Will normalize ${field}: [object] -> ${firstItem.$id}`);
               } else {
                 // Not a valid ID, set to null
                 normalizationData[field] = null;
-                console.log(`[contractStatus] Will normalize ${field}: [invalid] -> null`);
               }
             }
           }
-        } else {
-          console.log(`[contractStatus] Field ${field}: not present in contract`);
         }
       }
 
       // If we have fields to normalize, update them first (without status)
       let normalizationSucceeded = false;
       if (Object.keys(normalizationData).length > 0) {
-        console.log('[contractStatus] Found fields to normalize:', Object.keys(normalizationData));
         try {
-          console.log('[contractStatus] Normalizing relationship fields before status update:', {
-            contractId: fileId,
-            fieldsToNormalize: Object.keys(normalizationData),
-            normalizedValues: normalizationData,
-          });
-
           // Try to update all fields at once first (more efficient)
           try {
             await tablesDB.updateRow({
@@ -1622,11 +1595,9 @@ export const contractStatus = async ({
               rowId: fileId,
               data: normalizationData,
             });
-            console.log('[contractStatus] Successfully normalized all relationship fields at once');
             normalizationSucceeded = true;
           } catch (bulkError: any) {
             // If bulk update fails, try updating fields one at a time
-            console.warn('[contractStatus] Bulk normalization failed, trying individual updates:', bulkError?.message);
             let successCount = 0;
             for (const [field, value] of Object.entries(normalizationData)) {
               try {
@@ -1636,21 +1607,13 @@ export const contractStatus = async ({
                   rowId: fileId,
                   data: { [field]: value },
                 });
-                console.log(`[contractStatus] Successfully normalized field: ${field}`);
                 successCount++;
               } catch (fieldError: any) {
-                console.warn(`[contractStatus] Failed to normalize field ${field}:`, {
-                  error: fieldError?.message,
-                  errorType: fieldError?.type,
-                  field,
-                  value,
-                });
                 // Continue with other fields
               }
             }
             if (successCount > 0) {
               normalizationSucceeded = true;
-              console.log(`[contractStatus] Normalized ${successCount} out of ${Object.keys(normalizationData).length} fields`);
             }
           }
         } catch (normalizeError: any) {
@@ -1662,16 +1625,12 @@ export const contractStatus = async ({
           // Don't throw - continue to try status update anyway
           // The status update might still work if the fields aren't actually problematic
         }
-      } else {
-        console.log('[contractStatus] No fields need normalization - all relationship fields are valid');
       }
 
       // Now try to update the status
       // If normalization was attempted, fields should be normalized by now
       // If no normalization was needed, try direct update
       try {
-        console.log('[contractStatus] Attempting status update...');
-        
         // Ensure relationship fields are not arrays in the update payload
         // Even though we're only updating status, Appwrite validates all relationship fields
         const updateData: any = { status };
@@ -1681,7 +1640,6 @@ export const contractStatus = async ({
         if (contract && Object.keys(normalizationData).length > 0) {
           // Include normalized fields in the update payload
           Object.assign(updateData, normalizationData);
-          console.log('[contractStatus] Including normalized relationship fields in update:', Object.keys(normalizationData));
         }
         
         await tablesDB.updateRow({
@@ -1690,7 +1648,6 @@ export const contractStatus = async ({
           rowId: fileId,
           data: updateData,
         });
-        console.log('[contractStatus] Status update successful');
       } catch (statusUpdateError: any) {
         // If status update fails, check if it's a relationship validation error
         const isRelationshipError = 

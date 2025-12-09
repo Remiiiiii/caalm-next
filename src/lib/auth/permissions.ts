@@ -98,14 +98,6 @@ export const resolveCalendarPermissions = ({
     CALENDAR_ROLE_PERMISSIONS[validRole]
   );
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[resolveCalendarPermissions]', {
-      role,
-      validRole,
-      basePermissions,
-      hasOverrides: overrides.length > 0,
-    });
-  }
 
   if (!overrides.length) {
     return basePermissions;

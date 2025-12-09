@@ -7,17 +7,31 @@ import {
   createContext,
   useContext,
 } from 'react';
+import Image from 'next/image';
 import Card from '@/components/Card';
 import ContractsTableView from './ContractsTableView';
 import type { UIFileDoc } from '@/types/files';
+import { Card as UICard, CardContent } from '@/components/ui/card';
 
 export type ViewType = 'table' | 'card';
 
 const STORAGE_KEY = 'contracts-view-preference';
 
+export interface ContractFilters {
+  status?: string;
+  uploadedOnFrom?: Date;
+  uploadedOnTo?: Date;
+  expiresOnFrom?: Date;
+  expiresOnTo?: Date;
+  department?: string;
+  assignedTo?: string;
+}
+
 interface ContractsViewContextType {
   view: ViewType;
   handleViewChange: (view: ViewType) => void;
+  filters: ContractFilters;
+  setFilters: React.Dispatch<React.SetStateAction<ContractFilters>>;
 }
 
 const ContractsViewContext = createContext<
@@ -30,6 +44,7 @@ export function ContractsViewProvider({
   children: React.ReactNode;
 }) {
   const [view, setView] = useState<ViewType>('card');
+  const [filters, setFilters] = useState<ContractFilters>({});
 
   // Load view preference from localStorage on mount
   useEffect(() => {
@@ -46,7 +61,9 @@ export function ContractsViewProvider({
   }, []);
 
   return (
-    <ContractsViewContext.Provider value={{ view, handleViewChange }}>
+    <ContractsViewContext.Provider
+      value={{ view, handleViewChange, filters, setFilters }}
+    >
       {children}
     </ContractsViewContext.Provider>
   );
@@ -60,6 +77,16 @@ export function useContractsView() {
     );
   }
   return context;
+}
+
+export function useContractsFilter() {
+  const context = useContext(ContractsViewContext);
+  if (context === undefined) {
+    throw new Error(
+      'useContractsFilter must be used within a ContractsViewProvider'
+    );
+  }
+  return { filters: context.filters, setFilters: context.setFilters };
 }
 
 interface ContractsViewProps {
@@ -76,6 +103,22 @@ export default function ContractsView({
   onRefresh,
 }: ContractsViewProps) {
   const { view } = useContractsView();
+
+  // Empty state for card view
+  if (view === 'card' && files.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Image
+          src="/assets/icons/no-data.svg"
+          alt="No contracts found"
+          width={250}
+          height={250}
+          className="mx-auto mb-4"
+        />
+        <p className="body-1 text-slate-700">No contracts found</p>
+      </div>
+    );
+  }
 
   return (
     <>

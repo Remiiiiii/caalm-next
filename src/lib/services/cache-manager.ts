@@ -124,14 +124,26 @@ export class CacheManager {
   /**
    * Invalidate users cache
    */
-  static async invalidateUsers(email?: string): Promise<void> {
+  static async invalidateUsers(email?: string, userId?: string, accountId?: string, fullName?: string): Promise<void> {
     await cache.del(CACHE_KEYS.users.all());
     await cache.del(CACHE_KEYS.users.uninvited());
     // Clear search cache
     await cache.clear('^users:search:');
-    // Invalidate specific user by email if provided
+    // Clear get-by-ids cache (could be multiple keys due to hashing)
+    await cache.clear('^users:byIds:');
+    // Invalidate specific user caches if provided
     if (email) {
+      await cache.del(CACHE_KEYS.users.byEmail(email));
       await cache.del(`user:email:${email.toLowerCase()}`);
+    }
+    if (userId) {
+      await cache.del(CACHE_KEYS.users.single(userId));
+    }
+    if (accountId) {
+      await cache.del(CACHE_KEYS.users.byAccountId(accountId));
+    }
+    if (fullName) {
+      await cache.del(CACHE_KEYS.users.byFullName(fullName));
     }
   }
 

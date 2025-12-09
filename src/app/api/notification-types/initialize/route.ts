@@ -7,9 +7,7 @@ import { initializeCalendarNotificationTypes } from '@/lib/actions/calendar-noti
  */
 export async function POST() {
   try {
-    console.log('[SERVER] /api/notification-types/initialize] Initializing calendar notification types...');
     await initializeCalendarNotificationTypes();
-    console.log('[SERVER] /api/notification-types/initialize] Successfully initialized calendar notification types');
     
     return NextResponse.json(
       { 

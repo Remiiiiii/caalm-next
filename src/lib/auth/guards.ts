@@ -31,11 +31,6 @@ export const evaluateCalendarPermission = async ({
   event,
   teamIds = [],
 }: EvaluateCalendarPermissionArgs): Promise<CalendarPermissionEvaluation> => {
-  console.log('[evaluateCalendarPermission] Checking permission:', {
-    userAccountId,
-    action,
-    eventId: event?.$id,
-  });
 
   const user = await getUserByAccountId(userAccountId);
 
@@ -69,12 +64,6 @@ export const evaluateCalendarPermission = async ({
     calendarRole = 'viewer';
   }
 
-  console.log('[evaluateCalendarPermission] User found:', {
-    userId: user.$id,
-    roleName,
-    calendarRole,
-    email: user.email,
-  });
 
   // Ensure overrides is an array (parse from JSON string if needed)
   let overrides = event?.overrides || [];
@@ -118,33 +107,9 @@ export const evaluateCalendarPermission = async ({
           event.createdBy === userAccountId));
 
     if (isEventCreator) {
-      console.log(
-        '[evaluateCalendarPermission] Allowing event creator to cancel their own event:',
-        {
-          userId: user.$id,
-          userAccountId,
-          eventId: event.$id,
-          eventCreatedBy: event.createdBy,
-          eventCreatedByAccountId: event.createdByAccountId,
-          eventCreatedByUserId: event.createdByUserId,
-        }
-      );
       allowed = true;
     }
   }
-
-  console.log('[evaluateCalendarPermission] Permission check:', {
-    permissionKey,
-    allowed,
-    permissions,
-    isEventCreator:
-      event &&
-      action === 'cancel' &&
-      ((user.$id && event.createdByUserId === user.$id) ||
-        (userAccountId &&
-          (event.createdByAccountId === userAccountId ||
-            event.createdBy === userAccountId))),
-  });
 
   if (!allowed) {
     console.error('[evaluateCalendarPermission] Permission denied:', {

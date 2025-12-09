@@ -3,6 +3,8 @@
  * Prevents cache key collisions and ensures consistency
  */
 
+import * as crypto from 'crypto';
+
 export const CACHE_KEYS = {
   // Dashboard
   dashboard: {
@@ -56,6 +58,20 @@ export const CACHE_KEYS = {
     all: () => `users:all`,
     uninvited: () => `users:uninvited`,
     search: (query: string) => `users:search:${query}`,
+    byIds: (userIds: string[]) => {
+      // Create a consistent cache key by sorting and hashing the IDs
+      const sortedIds = [...userIds].sort().join(',');
+      // Use a hash for very long arrays to avoid key length issues
+      if (sortedIds.length > 200) {
+        const hash = crypto.createHash('md5').update(sortedIds).digest('hex');
+        return `users:byIds:${hash}`;
+      }
+      return `users:byIds:${sortedIds}`;
+    },
+    single: (userId: string) => `users:single:${userId}`,
+    byAccountId: (accountId: string) => `users:byAccountId:${accountId}`,
+    byEmail: (email: string) => `users:byEmail:${email.toLowerCase()}`,
+    byFullName: (fullName: string) => `users:byFullName:${fullName}`,
   },
 
   // Recent Activities
@@ -114,6 +130,7 @@ export const getTTLForRoute = (route: string): number => {
     reports: CACHE_TTLS.static,
     users: CACHE_TTLS.veryLong,
     'users/uninvited': CACHE_TTLS.static,
+    'users/get-by-ids': CACHE_TTLS.long, // 10 minutes - user data changes infrequently
     'recent-activities': CACHE_TTLS.short,
     'audits/logs': CACHE_TTLS.medium,
     'audits/stats': CACHE_TTLS.long,

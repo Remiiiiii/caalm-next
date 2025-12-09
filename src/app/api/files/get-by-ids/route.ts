@@ -7,10 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const { fileIds } = await request.json();
 
-    console.log('[get-by-ids] Received fileIds:', fileIds);
-
     if (!Array.isArray(fileIds) || fileIds.length === 0) {
-      console.error('[get-by-ids] Invalid or empty fileIds array');
       return NextResponse.json(
         { error: 'Invalid or empty fileIds array' },
         { status: 400 }
@@ -29,9 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[get-by-ids] Creating admin client...');
     const adminClient = await createAdminClient();
-    console.log('[get-by-ids] Admin client created successfully');
 
     // Build queries for fetching files by IDs
     const queries = [Query.limit(100)];
@@ -42,12 +37,6 @@ export async function POST(request: NextRequest) {
       queries.unshift(Query.or(fileIds.map((id) => Query.equal('$id', id))));
     }
 
-    console.log('[get-by-ids] Fetching files with queries:', {
-      databaseId: appwriteConfig.databaseId,
-      collectionId: appwriteConfig.filesCollectionId,
-      fileIdsCount: fileIds.length,
-    });
-
     // Fetch files by their IDs using the constructed queries
     // Using positional parameters to match the working pattern from users/get-by-ids
     const response = await adminClient.tablesDB.listRows(
@@ -56,43 +45,7 @@ export async function POST(request: NextRequest) {
       queries
     );
 
-    console.log('[get-by-ids] Files fetched successfully:', {
-      count: response.rows.length,
-    });
-
-    // Log the first file to see its structure
-    if (response.rows.length > 0) {
-      console.log('[get-by-ids] Sample file from database:', {
-        $id: response.rows[0].$id,
-        keys: Object.keys(response.rows[0]),
-        name: response.rows[0].name,
-        size: response.rows[0].size,
-        extension: response.rows[0].extension,
-        url: response.rows[0].url,
-        type: response.rows[0].type,
-        fullRow: response.rows[0],
-      });
-    }
-
     const files = response.rows.map((file: any) => {
-      // Log each file's raw data to understand what we're getting
-      console.log('[get-by-ids] Processing file row:', {
-        $id: file.$id,
-        name: file.name,
-        nameType: typeof file.name,
-        nameValue: file.name,
-        size: file.size,
-        sizeType: typeof file.size,
-        sizeValue: file.size,
-        extension: file.extension,
-        extensionValue: file.extension,
-        url: file.url,
-        urlValue: file.url,
-        type: file.type,
-        typeValue: file.type,
-        allKeys: Object.keys(file),
-        fullFile: JSON.parse(JSON.stringify(file)), // Deep clone for logging
-      });
 
       // Return all fields as they exist in the database
       // Handle null, undefined, and empty string values
@@ -147,11 +100,9 @@ export async function POST(request: NextRequest) {
         ? String(file.$createdAt).trim() 
         : null;
 
-      console.log('[get-by-ids] Processed file result:', result);
       return result;
     });
 
-    console.log('[get-by-ids] Returning files:', files);
     return NextResponse.json(files);
   } catch (error: any) {
     console.error('[get-by-ids] Error fetching files by IDs:', {

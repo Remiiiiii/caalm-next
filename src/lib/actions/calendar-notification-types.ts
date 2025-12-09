@@ -98,9 +98,6 @@ export async function initializeCalendarNotificationTypes(): Promise<void> {
       const existingType = await notificationService.getNotificationType(type.type_key);
       if (!existingType) {
         await notificationService.createNotificationType(type);
-        console.log(`[SERVER] initializeCalendarNotificationTypes] Created notification type: ${type.type_key}`);
-      } else {
-        console.log(`[SERVER] initializeCalendarNotificationTypes] Notification type already exists: ${type.type_key}`);
       }
     } catch (error) {
       console.error(`[SERVER] initializeCalendarNotificationTypes] Error creating notification type ${type.type_key}:`, error);

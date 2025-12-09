@@ -18,7 +18,7 @@ export function ContractsViewToggle() {
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
             'disabled:pointer-events-none disabled:opacity-50',
             view === 'card'
-              ? 'bg-[#0f5384] text-white shadow-sm'
+              ? 'bg-[#03afbf] text-white shadow-sm'
               : 'text-muted-foreground hover:text-foreground hover:bg-accent'
           )}
           aria-label="Card view"
@@ -32,7 +32,7 @@ export function ContractsViewToggle() {
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
             'disabled:pointer-events-none disabled:opacity-50',
             view === 'table'
-              ? 'bg-[#0f5384] text-white shadow-sm'
+              ? 'bg-[#03afbf] text-white shadow-sm'
               : 'text-muted-foreground hover:text-foreground hover:bg-accent'
           )}
           aria-label="Table view"
