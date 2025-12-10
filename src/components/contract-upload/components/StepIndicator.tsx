@@ -18,21 +18,27 @@ export default function StepIndicator({
   currentStep,
   onGoToStep,
 }: StepIndicatorProps) {
+  const steps = Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1);
+
   return (
-    <div className="flex items-center justify-center gap-2 px-4 overflow-x-auto">
-      {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((stepNum) => {
+    <div className="flex items-center justify-center gap-2 px-4 overflow-x-auto relative">
+      <span className="text-red-500 font-bold">TEST</span>
+      {steps.flatMap((stepNum, index) => {
         const isCompleted = stepNum < currentStep;
         const isActive = stepNum === currentStep;
         const isAccessible = stepNum <= currentStep;
+        const nextStepNum = stepNum + 1;
+        const isLineGreen = isCompleted && nextStepNum < currentStep;
+        const hasNextStep = index < TOTAL_STEPS - 1;
 
-        return (
+        const elements = [
           <button
-            key={stepNum}
+            key={`btn-${stepNum}`}
             type="button"
             onClick={() => isAccessible && onGoToStep(stepNum)}
             disabled={!isAccessible}
             className={cn(
-              'flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-200',
+              'flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-200 relative z-10',
               isActive &&
                 'bg-gradient-to-r from-[#0f5384] to-[#03B1C1] text-white scale-110 shadow-lg',
               isCompleted &&
@@ -51,11 +57,29 @@ export default function StepIndicator({
             ) : (
               <span>{stepNum}</span>
             )}
-          </button>
-        );
+          </button>,
+        ];
+
+        if (hasNextStep) {
+          elements.push(
+            <div
+              key={`line-${stepNum}`}
+              className="h-2 w-12 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold"
+              style={{
+                backgroundColor: isLineGreen ? '#3DD9B3' : '#ff0000',
+                minWidth: '48px',
+                minHeight: '8px',
+                color: 'white',
+              }}
+              data-testid={`line-after-step-${stepNum}`}
+            >
+              |
+            </div>
+          );
+        }
+
+        return elements;
       })}
     </div>
   );
 }
-
-

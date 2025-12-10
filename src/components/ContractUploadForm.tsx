@@ -1484,13 +1484,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       resetForm();
       setCurrentDraftId(null);
       setIsOpen(false);
-      
+
       // Clear the resume flag to ensure next open is fresh
       isResumingDraftRef.current = false;
-      
+
       // Navigate to contracts page after successful upload
       router.push('/contracts');
-      
+
       onSuccess?.();
     } catch (error) {
       console.error('Upload failed:', error);
@@ -1611,31 +1611,50 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                 const isCompleted = stepNum < currentStep;
                 const isAccessible =
                   stepNum === 1 || processedFileData || stepNum <= currentStep;
+                const nextStepNum = index + 2;
+                const isNextStepCompleted = nextStepNum < currentStep;
+                const hasNextStep = index < stepTitles.length - 1;
+                const showLine =
+                  isCompleted && hasNextStep && isNextStepCompleted;
 
                 return (
-                  <button
-                    key={stepNum}
-                    type="button"
-                    onClick={() => isAccessible && goToStep(stepNum)}
-                    disabled={!isAccessible}
-                    className={cn(
-                      'flex-1 text-xs px-2 py-1 rounded-md transition-all flex items-center justify-center',
-                      isActive
-                        ? 'bg-[#e1f3ff] border border-[#a0c4db] text-[#6c8ba1] font-semibold'
-                        : isCompleted
-                        ? 'bg-none'
-                        : isAccessible
-                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        : 'bg-slate-50 text-slate-400 cursor-not-allowed'
+                  <React.Fragment key={stepNum}>
+                    <button
+                      type="button"
+                      onClick={() => isAccessible && goToStep(stepNum)}
+                      disabled={!isAccessible}
+                      className={cn(
+                        'flex-1 text-xs px-2 py-1 rounded-md transition-all flex items-center justify-center',
+                        isActive
+                          ? 'bg-[#e1f3ff] border border-[#a0c4db] text-[#6c8ba1] font-semibold'
+                          : isCompleted
+                          ? 'bg-none'
+                          : isAccessible
+                          ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          : 'bg-slate-50 text-slate-400 cursor-not-allowed'
+                      )}
+                      title={title}
+                    >
+                      {isCompleted ? (
+                        <FileCheck className="h-6 w-6 text-green" />
+                      ) : (
+                        <div className="truncate">{stepNum}</div>
+                      )}
+                    </button>
+                    {showLine && (
+                      <div
+                        className="flex-shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: '#3DD9B3',
+                          height: '0.5px',
+                          width: '60px',
+                          marginLeft: '-6px',
+                          marginRight: '-6px',
+                        }}
+                        aria-hidden="true"
+                      />
                     )}
-                    title={title}
-                  >
-                    {isCompleted ? (
-                      <FileCheck className="h-6 w-6 text-green" />
-                    ) : (
-                      <div className="truncate">{stepNum}</div>
-                    )}
-                  </button>
+                  </React.Fragment>
                 );
               })}
             </div>
