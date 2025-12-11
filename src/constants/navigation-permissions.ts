@@ -75,7 +75,10 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
         name: 'Proposals & Approvals',
         icon: '/assets/icons/edit.svg',
         url: '/contracts/approvals',
-        permissions: [PERMISSIONS.CONTRACTS.APPROVE, PERMISSIONS.CONTRACTS.REVIEW],
+        permissions: [
+          PERMISSIONS.CONTRACTS.APPROVE,
+          PERMISSIONS.CONTRACTS.REVIEW,
+        ],
         // Requires approval permission (shows lock icon if missing)
         requiresElevated: true,
         viewerReadOnly: true,
@@ -113,7 +116,10 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
         name: 'Proposals & Approvals',
         icon: '/assets/icons/edit.svg',
         url: '/licenses/approvals',
-        permissions: [PERMISSIONS.CONTRACTS.APPROVE, PERMISSIONS.CONTRACTS.REVIEW],
+        permissions: [
+          PERMISSIONS.CONTRACTS.APPROVE,
+          PERMISSIONS.CONTRACTS.REVIEW,
+        ],
         requiresElevated: true,
         viewerReadOnly: true,
       },
@@ -167,7 +173,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
         viewerFullAccess: true, // Viewers get full read access to audits
       },
       {
-        name: 'System Audit Logs',
+        name: 'Audit Logs',
         icon: '/assets/icons/audit-logs.svg',
         url: '/audits/audit',
         permissions: [PERMISSIONS.AUDIT.VIEW],
@@ -267,7 +273,10 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
         name: 'Billing & Integrations',
         icon: '/assets/icons/settings.svg',
         url: '/settings/billing',
-        permissions: [PERMISSIONS.SETTINGS.BILLING, PERMISSIONS.SETTINGS.INTEGRATIONS],
+        permissions: [
+          PERMISSIONS.SETTINGS.BILLING,
+          PERMISSIONS.SETTINGS.INTEGRATIONS,
+        ],
         // Hidden for Department Manager and Viewer
         hiddenForRoles: ['Department Manager', 'Viewer'],
         requiresElevated: true,
@@ -304,4 +313,3 @@ export function hasNavigationPermission(
     return item.permissions.some((perm) => userPermissions.includes(perm));
   }
 }
-

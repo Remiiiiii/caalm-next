@@ -67,7 +67,10 @@ const SidebarIcon = memo(
 SidebarIcon.displayName = 'SidebarIcon';
 
 // Icon mapping for faster lookups
-const SECTION_ICONS: Record<string, { src: string; width: number; height: number }> = {
+const SECTION_ICONS: Record<
+  string,
+  { src: string; width: number; height: number }
+> = {
   Calendar: { src: '/assets/icons/calendar2.svg', width: 24, height: 24 },
   Contracts: { src: '/assets/icons/contracts.svg', width: 24, height: 24 },
   Licenses: { src: '/assets/icons/license.svg', width: 24, height: 24 },
@@ -87,10 +90,25 @@ const SECTION_ICONS: Record<string, { src: string; width: number; height: number
   },
 };
 
-const ITEM_ICONS: Record<string, { src: string; width: number; height: number }> = {
-  'All Contracts': { src: '/assets/icons/all-contracts.svg', width: 20, height: 20 },
-  'My Contracts': { src: '/assets/icons/my-contracts.svg', width: 20, height: 18 },
-  'Advanced Resources': { src: '/assets/icons/resources.svg', width: 20, height: 20 },
+const ITEM_ICONS: Record<
+  string,
+  { src: string; width: number; height: number }
+> = {
+  'All Contracts': {
+    src: '/assets/icons/all-contracts.svg',
+    width: 20,
+    height: 20,
+  },
+  'My Contracts': {
+    src: '/assets/icons/my-contracts.svg',
+    width: 20,
+    height: 18,
+  },
+  'Advanced Resources': {
+    src: '/assets/icons/resources.svg',
+    width: 20,
+    height: 20,
+  },
   'Proposals & Approvals': {
     src: '/assets/icons/proposal-approval.svg',
     width: 20,
@@ -122,7 +140,11 @@ const ITEM_ICONS: Record<string, { src: string; width: number; height: number }>
     width: 20,
     height: 20,
   },
-  'Calendar View': { src: '/assets/icons/calendar3.svg', width: 20, height: 20 },
+  'Calendar View': {
+    src: '/assets/icons/calendar3.svg',
+    width: 20,
+    height: 20,
+  },
   'Training & Certifications': {
     src: '/assets/icons/training-cert.svg',
     width: 20,
@@ -133,7 +155,11 @@ const ITEM_ICONS: Record<string, { src: string; width: number; height: number }>
   'Quick View': { src: '/assets/icons/analytics.svg', width: 20, height: 20 },
   'C Suite': { src: '/assets/icons/analytics.svg', width: 20, height: 20 },
   'C-Suite': { src: '/assets/icons/analytics.svg', width: 20, height: 20 },
-  'System Settings': { src: '/assets/icons/settings2.svg', width: 20, height: 20 },
+  'System Settings': {
+    src: '/assets/icons/settings2.svg',
+    width: 20,
+    height: 20,
+  },
   'Organization Settings': {
     src: '/assets/icons/settings2.svg',
     width: 20,
@@ -145,7 +171,7 @@ const ITEM_ICONS: Record<string, { src: string; width: number; height: number }>
     height: 20,
   },
   'View My Access': { src: '/assets/icons/key.svg', width: 20, height: 20 },
-  'System Audit Logs': {
+  Logs: {
     src: '/assets/icons/audit-logs.svg',
     width: 20,
     height: 20,
@@ -161,7 +187,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       '/assets/icons/documents.svg',
       '/assets/icons/settings.svg',
     ];
-    
+
     criticalIcons.forEach((icon) => {
       const link = document.createElement('link');
       link.rel = 'preload';
@@ -272,7 +298,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
     // If we have permissions or roles data, build nav even if still loading in background
     const hasData = permissions.length > 0 || userRoles.length > 0;
     const isInitialLoad = permissionsLoading && rolesLoading && !hasData;
-    
+
     if (isInitialLoad) {
       return [];
     }
@@ -625,21 +651,26 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                             </TooltipProvider>
                           )}
                         </span>
-                      ) : (() => {
-                        const iconConfig = SECTION_ICONS[section.header];
-                        if (!iconConfig) return null;
-                        return (
-                          <span className="text-[#03AFBF]">
-                            <SidebarIcon
-                              src={iconConfig.src}
-                              alt={section.header.toLowerCase()}
-                              width={iconConfig.width}
-                              height={iconConfig.height}
-                              priority={section.header === 'Dashboard' || section.header === 'Calendar'}
-                            />
-                          </span>
-                        );
-                      })()}
+                      ) : (
+                        (() => {
+                          const iconConfig = SECTION_ICONS[section.header];
+                          if (!iconConfig) return null;
+                          return (
+                            <span className="text-[#03AFBF]">
+                              <SidebarIcon
+                                src={iconConfig.src}
+                                alt={section.header.toLowerCase()}
+                                width={iconConfig.width}
+                                height={iconConfig.height}
+                                priority={
+                                  section.header === 'Dashboard' ||
+                                  section.header === 'Calendar'
+                                }
+                              />
+                            </span>
+                          );
+                        })()
+                      )}
                       <span className="font-bold text-base sidebar-gradient-text relative z-10">
                         {section.header}
                       </span>

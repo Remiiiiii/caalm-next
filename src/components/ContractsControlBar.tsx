@@ -10,12 +10,10 @@ import type { UIFileDoc } from '@/types/files';
 
 interface ContractsControlBarProps {
   files: UIFileDoc[];
-  totalSizeFormatted: string;
 }
 
 export default function ContractsControlBar({
   files,
-  totalSizeFormatted,
 }: ContractsControlBarProps) {
   const { view } = useContractsView();
 
@@ -55,6 +53,7 @@ export default function ContractsControlBar({
     let activeCount = 0;
     let pendingCount = 0;
     let actionRequiredCount = 0;
+    let inactiveCount = 0;
 
     files.forEach((file) => {
       const status = file.status || 'unknown';
@@ -75,6 +74,10 @@ export default function ContractsControlBar({
       if (status === 'action-required') {
         actionRequiredCount++;
       }
+
+      if (status === 'inactive') {
+        inactiveCount++;
+      }
     });
 
     return {
@@ -83,6 +86,7 @@ export default function ContractsControlBar({
       activeCount,
       pendingCount,
       actionRequiredCount,
+      inactiveCount,
       totalContracts: files.length,
     };
   }, [files]);
@@ -95,15 +99,17 @@ export default function ContractsControlBar({
       {/* Main Control Bar */}
       <div className="total-size-section">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
-          {/* Left side: Total and Count */}
+          {/* Left side: Total Value and Status Badges */}
           <div className="flex items-center gap-4 flex-wrap">
-            <p className="body-1">
-              Total: <span className="h5">{totalSizeFormatted}</span>
-              <span className="body-1 text-slate-500 ml-2">
-                ({metrics.totalContracts}{' '}
-                {metrics.totalContracts === 1 ? 'contract' : 'contracts'})
-              </span>
-            </p>
+            {/* Total Value */}
+            {metrics.totalValue > 0 && (
+              <p className="body-1">
+                Total:{' '}
+                <span className="h5">
+                  ${metrics.totalValue.toLocaleString()}
+                </span>
+              </p>
+            )}
 
             {/* Expiring Soon Indicator */}
             {totalExpiring > 0 && (
@@ -115,38 +121,32 @@ export default function ContractsControlBar({
               </div>
             )}
 
-            {/* Key Metrics Badges */}
+            {/* Static Status Badges */}
             <div className="flex items-center gap-2 flex-wrap">
-              {metrics.activeCount > 0 && (
+              <Badge
+                variant="outline"
+                className="!font-normal border border-slate-200 bg-[#B3EBF2] text-[#12477D]"
+              >
+                Active ({metrics.activeCount})
+              </Badge>
+              <Badge
+                variant="outline"
+                className="!font-normal border border-slate-200 bg-[#FFEA99] text-[#E86100]"
+              >
+                Pending ({metrics.pendingCount})
+              </Badge>
+              <Badge
+                variant="outline"
+                className="!font-normal border border-slate-200 bg-destructive/10 text-destructive"
+              >
+                Action Required ({metrics.actionRequiredCount})
+              </Badge>
+              {metrics.inactiveCount > 0 && (
                 <Badge
                   variant="outline"
-                  className="bg-green-50 text-green-700 border-green-200"
+                  className="!font-normal border border-slate-200 bg-[#D3D3D3] text-[#878787]"
                 >
-                  {metrics.activeCount} Active
-                </Badge>
-              )}
-              {metrics.pendingCount > 0 && (
-                <Badge
-                  variant="outline"
-                  className="bg-amber-50 text-amber-700 border-amber-200"
-                >
-                  {metrics.pendingCount} Pending
-                </Badge>
-              )}
-              {metrics.actionRequiredCount > 0 && (
-                <Badge
-                  variant="outline"
-                  className="bg-red-50 text-red-700 border-red-200"
-                >
-                  {metrics.actionRequiredCount} Action Required
-                </Badge>
-              )}
-              {metrics.totalValue > 0 && (
-                <Badge
-                  variant="outline"
-                  className="bg-blue-50 text-blue-700 border-blue-200"
-                >
-                  ${metrics.totalValue.toLocaleString()}
+                  Inactive ({metrics.inactiveCount})
                 </Badge>
               )}
             </div>
