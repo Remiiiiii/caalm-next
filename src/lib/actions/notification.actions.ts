@@ -7,6 +7,8 @@ import {
   formatDepartmentName,
   type ContractDepartment,
 } from '../../../constants';
+import { hasPermission } from '@/lib/rbac/permissions';
+import { PERMISSIONS } from '@/constants/permissions';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
@@ -146,12 +148,11 @@ export const checkContractExpirations = async () => {
       queries: [Query.isNotNull('contractExpiryDate')],
     });
 
-    // Get all users with allowed roles
-    const allowedRoles = ['executive', 'manager', 'admin'];
+    // Get all users (we'll check permissions for each)
     const users = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.usersCollectionId,
-      queries: [Query.equal('role', allowedRoles)],
+      queries: [Query.limit(100)],
     });
 
     const notificationsCreated: string[] = [];
@@ -164,27 +165,31 @@ export const checkContractExpirations = async () => {
       if (!shouldSendNotification(daysUntil)) continue;
 
       // Check if notification already exists for this contract and threshold
-      const existingNotifications = await tablesDB.listRows(
-        appwriteConfig.databaseId,
-        'notifications',
-        [
+      const existingNotifications = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: 'notifications',
+        queries: [
           Query.equal('type', 'contract-expiry'),
           Query.equal('contractId', contract.$id),
           Query.equal('daysUntil', daysUntil),
-        ]
-      );
+        ],
+      });
 
       if (existingNotifications.total > 0) continue;
 
       for (const user of users.rows) {
         let shouldNotify = false;
 
-        // Executive and Admin get notifications for all contracts
-        if (user.role === 'executive' || user.role === 'admin') {
+        // Check if user has contracts.view permission (all users with contract access)
+        const hasContractView = await hasPermission(user.$id, PERMISSIONS.CONTRACTS.VIEW);
+        const hasSettingsView = await hasPermission(user.$id, PERMISSIONS.SETTINGS.VIEW);
+
+        // Super Admin and Organization Admin get notifications for all contracts
+        if (hasSettingsView) {
           shouldNotify = true;
         }
-        // Manager only gets notifications for contracts in their department
-        else if (user.role === 'manager' && contract.department) {
+        // Department Manager only gets notifications for contracts in their department
+        else if (hasContractView && contract.department && user.department) {
           shouldNotify = user.department === contract.department;
         }
 

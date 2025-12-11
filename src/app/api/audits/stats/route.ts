@@ -1,27 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuditStats } from '@/lib/services/audit-logger';
-import { getCurrentUser } from '@/lib/actions/user.actions';
+import { requirePermission } from '@/lib/rbac/middleware';
+import { PERMISSIONS } from '@/constants/permissions';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    // Check permission
+    const permissionCheck = await requirePermission(request, {
+      permission: PERMISSIONS.AUDIT.VIEW,
+    });
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
+    if (permissionCheck) {
+      return permissionCheck;
     }
-
-    // Check if user has permission to access audit logs (executive or admin only)
-    if (!user.role || !['executive', 'admin'].includes(user.role)) {
-      return NextResponse.json(
-        { success: false, message: 'Insufficient permissions' },
-        { status: 403 }
-      );
-    }
-
-    console.log('Fetching audit statistics for user:', user.$id);
 
     const stats = await getAuditStats();
 

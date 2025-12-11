@@ -35,6 +35,7 @@ import {
   TrendingUp,
   Zap,
   GripVertical,
+  Share2,
 } from 'lucide-react';
 import NotificationSettings from './NotificationSettings';
 import {
@@ -146,6 +147,13 @@ const NOTIFICATION_TYPES = {
     color: 'bg-gray-100 text-gray-800',
     bgColor: 'bg-gray-50/30 border-gray-400',
     priority: 'low' as const,
+  },
+  'calendar_shared': {
+    label: 'Calendar Shared',
+    icon: <Share2 className="w-4 h-4" />,
+    color: 'bg-blue-100 text-blue-800',
+    bgColor: 'bg-blue-50/30 border-blue-400',
+    priority: 'medium' as const,
   },
 } as const;
 

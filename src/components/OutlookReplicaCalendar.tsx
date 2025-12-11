@@ -389,7 +389,7 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
               onClick={() => setIsAddEventOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4" />
               New Event
             </Button>
           </div>
@@ -427,15 +427,15 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
 
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm">
-              <Filter className="h-4 w-4 mr-2" />
+              <Filter className="h-4 w-4" />
               Filter
             </Button>
             <Button variant="ghost" size="sm">
-              <Share2 className="h-4 w-4 mr-2" />
+              <Share2 className="h-4 w-4" />
               Share
             </Button>
             <Button variant="ghost" size="sm">
-              <Printer className="h-4 w-4 mr-2" />
+              <Printer className="h-4 w-4" />
               Print
             </Button>
           </div>
@@ -502,7 +502,7 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
                 size="sm"
                 onClick={() => setShowSettings(true)}
               >
-                <Settings className="h-4 w-4 mr-2" />
+                <Settings className="h-4 w-4" />
                 Settings
               </Button>
             </div>

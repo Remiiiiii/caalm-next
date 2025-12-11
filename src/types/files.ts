@@ -14,6 +14,7 @@ export interface UIFileDoc extends Models.Document {
   // Contract linkage and metadata
   contractId?: string;
   contractName?: string;
+  contractOwnerId?: string;
   contractExpiryDate?: string;
   status?: string;
   contractType?: string;

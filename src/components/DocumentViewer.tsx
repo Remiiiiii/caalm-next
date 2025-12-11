@@ -568,7 +568,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               }}
               disabled={isClosing}
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-4 h-4" />
               Download
             </Button>
             <Button
@@ -576,7 +576,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
               size="sm"
               className="border-light-300 hover:border-[#00C1CB] hover:bg-light-400 transition-all duration-200"
             >
-              <Share2 className="w-4 h-4 mr-2" />
+              <Share2 className="w-4 h-4" />
               Share
             </Button>
             <Button

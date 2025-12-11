@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import Image from 'next/image';
 
 import {
@@ -24,7 +29,7 @@ import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Trash2 } from 'lucide-react';
+import { Ban, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
   deleteFile,
   renameFile,
@@ -47,7 +52,9 @@ import { useContractStatusEnums } from '@/hooks/useContractStatusEnums';
 import { useUpdateContractStatus } from '@/hooks/useUpdateContractStatus';
 import { useDepartmentAssignment } from '@/hooks/useDepartmentAssignment';
 import DocumentViewer from './DocumentViewer';
-import { mapUserRoleToLegacy, UserRole } from '@/constants/rbac';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 const ActionDropdown = ({
   file,
@@ -58,7 +65,7 @@ const ActionDropdown = ({
   file: UIFileDoc;
   onStatusChange?: () => void;
   onRefresh?: () => void;
-  userRole?: UserRole;
+  userRole?: string;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -85,7 +92,11 @@ const ActionDropdown = ({
   const { enums: statusOptions, error: statusError } = useContractStatusEnums();
   const { updateStatus } = useUpdateContractStatus({ onStatusChange });
   const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const legacyRole = mapUserRoleToLegacy(userRole);
+  const { permissions } = usePermissions();
+  const { roles: userRoles } = useUserRoles();
+
+  // Get the actual role name from user roles (e.g., 'Super Admin', 'Organization Admin')
+  const actualRoleName = userRoles[0]?.roleName || userRole || '';
 
   // Fetch department data when Assign dialog is opened
   useEffect(() => {
@@ -162,6 +173,7 @@ const ActionDropdown = ({
           fileId: file.$id,
           bucketFileId: file.bucketFileId || '',
           path,
+          contractId: file.contractId, // Pass contractId if this is a contract
         }),
     };
 
@@ -201,7 +213,16 @@ const ActionDropdown = ({
       status: selectedStatus,
       path,
     });
-    if (success) closeAllModals();
+    if (success) {
+      closeAllModals();
+      // Trigger immediate UI update
+      if (onStatusChange) {
+        onStatusChange();
+      }
+      if (onRefresh) {
+        onRefresh();
+      }
+    }
     setIsLoading(false);
   };
 
@@ -525,24 +546,47 @@ const ActionDropdown = ({
     // Delete dialog
     if (value === 'delete') {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <Card className="w-[500px] max-w-2xl text-slate-700 bg-white/80 backdrop-blur border border-white/40 shadow-lg">
-            {dialogHeader}
-            <CardContent>
-              <p className="delete-confirmation">
-                Are you sure you want to delete{' '}
-                <span className="delete-file-name">
-                  {file.name || file.contractName}
-                </span>
-                ?
-              </p>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3 md:flex-row">
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+          <DialogTitle className="sr-only">Delete File</DialogTitle>
+          {/* Cap */}
+          <div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
+
+          {/* Header */}
+          <div className="px-6 py-4 bg-white border-b border-slate-200">
+            <div className="flex  gap-2">
+              <AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+              <h2 className="text-base font-semibold sidebar-gradient-text">
+                Delete File
+              </h2>
+            </div>
+            <div>
+              <DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
+                Are you sure you want to delete &quot;
+                {file.name || file.contractName}&quot;? This action cannot be
+                undone.
+              </DialogDescription>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="px-6 py-5 space-y-3 bg-white">
+            <p className="text-sm text-slate-600">
+              This will permanently remove the file from the system.
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="text-xs text-slate-500 w-20">
+              This action is permanent.
+            </div>
+            <div className="flex items-center gap-3">
               <Button
+                variant="ghost"
                 onClick={(e) => closeAllModals(e)}
                 className="primary-btn px-3 sm:px-4"
               >
-                <Trash2 className="w-4 h-4" />
+                <Ban className="w-4 h-4" />
                 Cancel
               </Button>
               <Button
@@ -552,95 +596,167 @@ const ActionDropdown = ({
                   handleAction();
                 }}
                 disabled={isLoading}
-                className="modal-submit-button"
+                className="primary-btn px-3 sm:px-4"
               >
-                <p className="capitalize">Delete</p>
+                <Trash2 className="w-4 h-4" />
+                {isLoading ? 'Deleting...' : 'Delete File'}
                 {isLoading && (
                   <Image
                     src="/assets/icons/loader.svg"
                     alt="loader"
-                    width={24}
-                    height={24}
-                    className="animate-spin"
+                    width={16}
+                    height={16}
+                    className="animate-spin ml-2"
                   />
                 )}
               </Button>
-            </CardFooter>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </DialogContent>
       );
     }
     // Status dialog
     if (value === 'status') {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <Card className="w-[400px] max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="sidebar-gradient-text">
-                Change Status
-              </CardTitle>
-              <Button variant="ghost" size="icon" onClick={closeAllModals}>
-                <span className="sr-only">Close</span>×
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-2 text-sm text-slate-700">
-                Select a new status for this contract:
+        <Dialog
+          open={isModalOpen && action?.value === 'status'}
+          onOpenChange={(open) => {
+            if (!open) closeAllModals();
+          }}
+        >
+          <DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+            {/* Professional Cap */}
+            <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+            {/* Header with white background */}
+            <div className="sticky top-0 z-10 bg-white py-4 border-b border-slate-200 mt-4">
+              <div className="flex items-center gap-3 ml-6">
+                {/* Icon with circular background
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                </div> */}
+
+                {/* Title */}
+                <RefreshCw className="w-5 h-5 text-[#0f5384]" />
+                <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+                  Change Status
+                </DialogTitle>
               </div>
-              {statusError && (
-                <div className="text-red-500 mb-2">{statusError}</div>
-              )}
-              <div className="flex flex-col gap-2">
-                {statusOptions.map((option) => (
-                  <label key={option} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="contract-status"
-                      value={option}
-                      checked={selectedStatus === option}
-                      onChange={() => setSelectedStatus(option)}
-                      disabled={isLoading}
-                    />
-                    <span className="capitalize">
-                      {option.replace('-', ' ')}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3 md:flex-row">
-              <Button
-                onClick={closeAllModals}
-                className="primary-btn px-3 sm:px-4"
-              >
-                <Trash2 className="w-4 h-4" />
-                Cancel
-              </Button>
-              <Button
-                //stop propagation
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  handleStatusChange();
-                }}
-                disabled={isLoading || !selectedStatus}
-                className="modal-submit-button"
-                style={{ pointerEvents: 'auto' }}
-              >
-                <p className="capitalize">Update Status</p>
-                {isLoading && (
-                  <Image
-                    src="/assets/icons/loader.svg"
-                    alt="loader"
-                    width={24}
-                    height={24}
-                    className="animate-spin"
-                  />
+              <p className="text-sm text-slate-600 mt-1 ml-14">
+                Select a new status for this contract
+              </p>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+              <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+                {statusError && (
+                  <div className="text-red-500 mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                    {statusError}
+                  </div>
                 )}
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+                <div className="space-y-2">
+                  {statusOptions.map((option) => (
+                    <label
+                      key={option}
+                      className="flex items-center gap-3 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-3 rounded-lg border-2 border-slate-200 bg-white group shadow-sm hover:shadow-md"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="radio"
+                        name="contract-status"
+                        value={option}
+                        checked={selectedStatus === option}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setSelectedStatus(option);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        disabled={isLoading}
+                        className="cursor-pointer w-4 h-4 text-blue-600"
+                      />
+                      <span className="capitalize cursor-pointer text-slate-900 font-medium group-hover:text-blue-600 transition-colors">
+                        {option.replace(/-/g, ' ')}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Professional Footer */}
+            {actualRoleName === 'Super Admin' ||
+            actualRoleName === 'Organization Admin' ? (
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeAllModals();
+                    }}
+                    className="primary-btn px-3 sm:px-4"
+                    disabled={isLoading}
+                  >
+                    <Ban className="w-4 h-4" />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleStatusChange();
+                    }}
+                    disabled={isLoading || !selectedStatus}
+                    className="primary-btn px-3 sm:px-4"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    Update Status
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <div className="text-xs text-slate-500">
+                  Status changes require review
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeAllModals();
+                    }}
+                    className="primary-btn px-3 sm:px-4"
+                    disabled={isLoading}
+                  >
+                    <Ban className="w-4 h-4" />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleStatusChange();
+                    }}
+                    disabled={isLoading || !selectedStatus}
+                    className="primary-btn px-3 sm:px-4"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    Update Status
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       );
     }
 
@@ -665,20 +781,39 @@ const ActionDropdown = ({
     file.contractType ||
     file.contractExpiryDate;
 
-  // Role-based action filtering
+  // Permission-based action filtering
   let filteredActions = actionsDropdownItems;
 
-  if (legacyRole === 'manager') {
-    // Managers can only see: Details, Download, Review, Rename, Share, Status
-    filteredActions = actionsDropdownItems.filter((action) =>
-      ['details', 'download', 'review', 'rename', 'share', 'status'].includes(
-        action.value
-      )
-    );
-  } else if (legacyRole === 'executive' || legacyRole === 'admin') {
-    // Executive and Admin can see all actions
-    filteredActions = actionsDropdownItems;
-  }
+  // Filter actions based on permissions
+  filteredActions = actionsDropdownItems.filter((action) => {
+    switch (action.value) {
+      case 'delete':
+        // Delete requires contracts.edit or contracts.approve
+        return (
+          permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
+          permissions.includes(PERMISSIONS.CONTRACTS.APPROVE)
+        );
+      case 'rename':
+        // Rename requires contracts.edit
+        return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
+      case 'review':
+        // Review requires contracts.review
+        return permissions.includes(PERMISSIONS.CONTRACTS.REVIEW);
+      case 'status':
+        // Status requires contracts.approve
+        return permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
+      case 'assign':
+        // Assign requires contracts.edit
+        return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
+      case 'details':
+      case 'download':
+      case 'share':
+        // Basic actions require contracts.view
+        return permissions.includes(PERMISSIONS.CONTRACTS.VIEW);
+      default:
+        return true;
+    }
+  });
 
   // Additional filtering for contract files
   // Only show Assign and Status for actual contract files

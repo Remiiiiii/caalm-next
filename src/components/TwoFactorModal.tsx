@@ -226,10 +226,10 @@ const TwoFactorModal = ({
             <div className="flex gap-3 justify-center">
               <Button
                 onClick={setupTwoFactor}
-                className="primary-btn"
+                className="primary-btn px-3 sm:px-4"
                 disabled={isLoading}
               >
-                <Shield className="h-4 w-4 mr-2 text-white" />
+                <Shield className="h-4 w-4 text-white" />
                 {isLoading ? 'Setting up...' : 'Setup 2FA'}
               </Button>
             </div>
@@ -303,17 +303,17 @@ const TwoFactorModal = ({
               <div className="flex justify-center">
                 <Button
                   onClick={verifyTwoFactor}
-                  className="primary-btn"
+                  className="primary-btn px-3 sm:px-4"
                   disabled={verificationCode.length !== 6 || isLoading}
                 >
                   {isLoading ? (
                     <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      <RefreshCw className="h-4 w-4 animate-spin" />
                       Verifying...
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                      <CheckCircle className="h-4 w-4 text-green-600" />
                       Verify & Continue
                     </>
                   )}

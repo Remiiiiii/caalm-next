@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2, Ban } from 'lucide-react';
 
 interface DeleteConfirmationDialogProps {
   open: boolean;
@@ -81,7 +81,7 @@ export const DeleteConfirmationDialog: React.FC<
             disabled={isLoading}
             className="primary-btn px-3 sm:px-4 flex-1"
           >
-            <Trash2 className="w-4 h-4" />
+            <Ban className="w-4 h-4" />
             Cancel
           </Button>
           <Button

@@ -43,6 +43,7 @@ import {
   Info,
   MessageSquare,
   Trash2,
+  Ban,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -716,7 +717,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 }}
                 className="primary-btn px-3 sm:px-4"
               >
-                <Trash2 className="w-4 h-4" />
+                <Ban className="w-4 h-4" />
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction

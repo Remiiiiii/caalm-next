@@ -32,6 +32,7 @@ export interface CreateRecentActivityData {
   eventTitle?: string;
   department?: string;
   type: 'contract' | 'user' | 'event' | 'notification' | 'file';
+  orgId?: string;
 }
 
 /**
@@ -72,8 +73,15 @@ export async function createRecentActivity(
       return null;
     }
 
+    // Use default organization if orgId is not provided
+    const orgId = data.orgId || 'default_organization';
+
+    // Exclude department as it's not in the collection schema
+    const { department, ...dataWithoutDepartment } = data;
+
     const activityData = {
-      ...data,
+      ...dataWithoutDepartment,
+      orgId: orgId,
       timestamp: new Date().toISOString(),
     };
 
@@ -140,7 +148,8 @@ export async function createEventActivity(
   eventTitle: string,
   eventId?: string,
   userId?: string,
-  userName?: string
+  userName?: string,
+  orgId?: string
 ): Promise<RecentActivity | null> {
   return createRecentActivity({
     action,
@@ -150,6 +159,7 @@ export async function createEventActivity(
     userId,
     userName,
     type: 'event',
+    orgId,
   });
 }
 
@@ -160,15 +170,13 @@ export async function createFileActivity(
   action: string,
   fileName: string,
   userId?: string,
-  userName?: string,
-  department?: string
+  userName?: string
 ): Promise<RecentActivity | null> {
   return createRecentActivity({
     action,
     description: fileName,
     userId,
     userName,
-    department,
     type: 'file',
   });
 }

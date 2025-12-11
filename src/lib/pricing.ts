@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 export type PricingPlan = {
-  key: 'starter' | 'pro' | 'enterprise';
+  key: 'starter' | 'growth' | 'enterprise';
   name: string;
   monthly: number;
   yearly: number;
@@ -103,7 +103,7 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
   if (md) {
     const planDefs = [
       { key: 'starter' as const, name: 'Starter' },
-      { key: 'pro' as const, name: 'Pro' },
+      { key: 'growth' as const, name: 'Growth' },
       { key: 'enterprise' as const, name: 'Enterprise' },
     ];
 
@@ -144,8 +144,8 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
       ],
     },
     {
-      key: 'pro',
-      name: 'Pro',
+      key: 'growth',
+      name: 'Growth',
       monthly: proMonthly,
       yearly: Math.round(proMonthly * 12 * 0.8 * 100) / 100,
       features: [
@@ -166,7 +166,7 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
       monthly: enterpriseMonthly,
       yearly: Math.round(enterpriseMonthly * 12 * 0.8 * 100) / 100,
       features: [
-        'Includes everything in Pro, plus:',
+        'Includes everything in Growth, plus:',
         '**Unlimited departments**',
         '**Up to 1,000 staff users** (higher limits upon request)',
         '**25,000 active contracts** (higher upon request)',

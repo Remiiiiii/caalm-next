@@ -58,6 +58,12 @@ export interface CalendarEvent {
   $updatedAt?: string;
 }
 
+export interface EventReminderConfig {
+  type?: 'before_start' | 'before_end' | 'custom';
+  minutes?: number;
+  channels?: Array<'in_app' | 'email' | 'sms' | 'push'>;
+}
+
 export interface CreateCalendarEventData {
   title: string;
   startDate: string;
@@ -80,6 +86,8 @@ export interface CreateCalendarEventData {
   approvalStatus?: CalendarApprovalStatus;
   pendingApprovalId?: string | null;
   overrides?: PermissionOverrideRecord[];
+  reminders?: EventReminderConfig[]; // Priority 2: Advanced notifications
+  resourceId?: string; // Priority 2: Resource management
 }
 
 // Get all calendar events
@@ -93,19 +101,59 @@ export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
     }
 
     const adminClient = await createAdminClient();
-    const response = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      [
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      queries: [
         Query.isNull('deleted_at'), // Exclude soft-deleted events
         Query.orderDesc('$createdAt'),
-      ]
-    );
+      ],
+    });
     return response.rows as unknown as CalendarEvent[];
   } catch (error) {
     console.error('Error fetching calendar events:', error);
     throw error;
   }
+};
+
+/**
+ * Filter event details based on permission level (mimics Outlook behavior)
+ */
+const filterEventDetailsByPermission = (
+  event: CalendarEvent,
+  permissionLevel: 'view_busy' | 'view_titles' | 'view_all' | 'edit' | 'delegate'
+): CalendarEvent => {
+  // Create a copy of the event
+  const filteredEvent = { ...event };
+
+  switch (permissionLevel) {
+    case 'view_busy':
+      // Only show free/busy - no details at all
+      filteredEvent.title = 'Busy';
+      filteredEvent.description = undefined;
+      filteredEvent.location = undefined;
+      filteredEvent.participants = undefined;
+      filteredEvent.contractName = undefined;
+      filteredEvent.amount = undefined;
+      filteredEvent.type = 'meeting'; // Generic type
+      break;
+
+    case 'view_titles':
+      // Show titles and locations only
+      filteredEvent.description = undefined;
+      filteredEvent.participants = undefined;
+      filteredEvent.contractName = undefined;
+      filteredEvent.amount = undefined;
+      break;
+
+    case 'view_all':
+    case 'edit':
+    case 'delegate':
+      // Show all details - no filtering needed
+      break;
+  }
+
+  return filteredEvent;
 };
 
 /**
@@ -160,7 +208,8 @@ export const getCalendarEventById = async (
 // Get calendar events for a specific month
 export const getCalendarEventsByMonth = async (
   year: number,
-  month: number
+  month: number,
+  userId?: string
 ): Promise<CalendarEvent[]> => {
   try {
     if (
@@ -169,10 +218,6 @@ export const getCalendarEventsByMonth = async (
     ) {
       throw new Error('Missing required Appwrite configuration');
     }
-
-    // console.log('Server action called with year:', year, 'month:', month);
-    // console.log('Database ID:', appwriteConfig.databaseId);
-    // console.log('Collection ID:', appwriteConfig.calendarEventsCollectionId);
 
     const adminClient = await createAdminClient();
 
@@ -188,18 +233,223 @@ export const getCalendarEventsByMonth = async (
 
     console.log('Date range:', startDate, 'to', endDate);
 
-    const response = await adminClient.tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.calendarEventsCollectionId,
-      queries: [
-        Query.isNull('deleted_at'), // Exclude soft-deleted events
+    let events: CalendarEvent[] = [];
+
+    // CRITICAL: Always filter events by user access - never return all events
+    // If userId is not provided, return empty array to prevent cross-user data leaks
+    if (!userId) {
+      console.warn('[getCalendarEventsByMonth] No userId provided - returning empty array for security');
+      return [];
+    }
+
+    // Filter events based on user access
+    {
+      // Get user information for filtering
+      const { getUserById } = await import('./user.actions');
+      const { getUserDefaultOrganization } = await import(
+        '@/lib/rbac/permissions'
+      );
+      const { getSharedCalendarsForUser } = await import(
+        './shared-calendar.actions'
+      );
+
+      const user = await getUserById(userId);
+      if (!user) {
+        console.warn(`User ${userId} not found, returning empty events array`);
+        return [];
+      }
+
+      const defaultOrg = await getUserDefaultOrganization(userId);
+      if (!defaultOrg) {
+        console.warn(
+          `No organization found for user ${userId}, returning empty events array`
+        );
+        return [];
+      }
+
+      // Extract user identifiers for participant matching
+      const userEmail = user.email?.toLowerCase() || '';
+      const userAccountId = user.accountId || '';
+
+      // Get shared calendars user has access to
+      const sharedCalendars = await getSharedCalendarsForUser(
+        userId,
+        defaultOrg.orgId
+      );
+
+      // Build base queries scoped to org + date range
+      const baseQueries = [
+        Query.isNull('deleted_at'),
         Query.greaterThanEqual('startDate', startDate),
         Query.lessThanEqual('startDate', endDate),
+        Query.equal('orgId', defaultOrg.orgId),
         Query.orderAsc('startDate'),
-      ],
-    });
-    //console.log('Database response:', response);
-    return response.rows as unknown as CalendarEvent[];
+      ];
+
+      // Fetch all events in the date range for the organization
+      // We'll filter in-memory to ensure proper access control:
+      // - Events created by the user
+      // - Events where the user is a participant
+      // - Events from explicitly shared calendars
+      // Note: We can't use Query.search() for participants without a fulltext index,
+      // so we fetch all events and filter in-memory
+      const allEventsResponse = await adminClient.tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.calendarEventsCollectionId,
+        queries: baseQueries,
+      });
+
+      events = allEventsResponse.rows as unknown as CalendarEvent[];
+
+      // Extract owner IDs and their permission levels from shared calendars
+      // CRITICAL: Only include calendars that are EXPLICITLY shared with this user
+      // Do NOT include public/team calendars unless they're also explicitly shared
+      // This ensures users only see events from calendars they have explicit access to
+      type CalendarPermissionLevel = 'view_busy' | 'view_titles' | 'view_all' | 'edit' | 'delegate';
+      const sharedCalendarPermissions = new Map<string, CalendarPermissionLevel>();
+      
+      sharedCalendars
+        .filter((cal) => {
+          // CRITICAL FILTER: Only include calendars that are explicitly shared with this user
+          // Exclude public/team calendars that aren't explicitly shared
+          
+          // Check if user has explicit permission (new model)
+          const hasExplicitPermission = cal.sharePermissions?.some(
+            (p) => p.userId === userId
+          );
+          if (hasExplicitPermission) return true;
+          
+          // Check if user is in sharedWith (legacy model)
+          let sharedWith: string[] = [];
+          if (cal.sharedWith) {
+            if (Array.isArray(cal.sharedWith)) {
+              sharedWith = cal.sharedWith;
+            } else if (typeof cal.sharedWith === 'string') {
+              try {
+                sharedWith = JSON.parse(cal.sharedWith || '[]');
+              } catch {
+                sharedWith = [];
+              }
+            }
+          }
+          const isInSharedWith = Array.isArray(sharedWith) && sharedWith.includes(userId);
+          
+          // Only include if explicitly shared (via permission or sharedWith)
+          // Do NOT include public/team calendars just because they're public/team
+          return isInSharedWith;
+        })
+        .forEach((cal) => {
+          // Get permission level for this user (from new sharePermissions or default to 'view_all' for legacy)
+          const permission = cal.sharePermissions?.find(
+            (p) => p.userId === userId
+          );
+          const permissionLevel: CalendarPermissionLevel = permission?.permissionLevel || 'view_all';
+          sharedCalendarPermissions.set(cal.ownerId, permissionLevel);
+        });
+
+      const sharedCalendarOwnerIds = new Set(sharedCalendarPermissions.keys());
+
+      if (!userAccountId) {
+        console.warn(`[getCalendarEventsByMonth] User ${userId} has no accountId - filtering may not work correctly`);
+      }
+
+      // Filter events based on:
+      // 1. Events created by the user (check all creator fields - PRIMARY FILTER)
+      // 2. Events where the user is a participant
+      // 3. Events created by owners of shared calendars the user has access to
+      const initialEventCount = events.length;
+      events = events.filter((event) => {
+        // PRIMARY CHECK: Event must be created by this user
+        // Check all possible creator fields to ensure proper ownership verification
+        // CRITICAL: We must check ALL creator fields because events may have been created
+        // with different field combinations. An event belongs to a user if ANY creator field matches.
+        const isCreatedByUser =
+          (event.createdByUserId && event.createdByUserId === userId) ||
+          (userAccountId && event.createdByAccountId && event.createdByAccountId === userAccountId) ||
+          (userAccountId && event.createdBy && event.createdBy === userAccountId);
+
+        // If not created by user, check if user is participant or has shared calendar access
+        if (!isCreatedByUser) {
+          // Check if user is a participant in this event (explicitly added as participant)
+          if (event.participants && event.participants.trim()) {
+            const participantsStr = String(event.participants).toLowerCase();
+            const participantsList = participantsStr
+              .split(',')
+              .map((p) => p.trim())
+              .filter((p) => p.length > 0);
+
+            // Check if user's ID, email, or accountId is in participants
+            const isParticipant =
+              participantsList.includes(userId.toLowerCase()) ||
+              (userEmail && participantsList.includes(userEmail)) ||
+              (userAccountId &&
+                participantsList.includes(userAccountId.toLowerCase()));
+
+            if (isParticipant) {
+              return true;
+            }
+          }
+
+          // Check if event was created by an owner of a shared calendar the user has access to
+          // This only applies if the user explicitly has access to that shared calendar
+          const permissionLevel = event.createdByUserId 
+            ? sharedCalendarPermissions.get(event.createdByUserId)
+            : null;
+          
+          if (
+            event.createdByUserId &&
+            sharedCalendarOwnerIds.size > 0 &&
+            sharedCalendarOwnerIds.has(event.createdByUserId) &&
+            permissionLevel &&
+            permissionLevel !== 'view_busy' // view_busy means only free/busy, so we'll handle separately
+          ) {
+            return true;
+          }
+
+          // For view_busy permission, we still show the event but will filter details later
+          if (
+            event.createdByUserId &&
+            permissionLevel === 'view_busy'
+          ) {
+            return true;
+          }
+
+          // If event doesn't belong to user and user is not a participant and not via shared calendar, exclude it
+          return false;
+        }
+
+        // Event is created by this user - include it
+        return true;
+      });
+
+      // Apply permission-based detail filtering for events from shared calendars
+      events = events.map((event) => {
+        // If event belongs to user, show full details
+        const isCreatedByUser =
+          (event.createdByUserId && event.createdByUserId === userId) ||
+          (userAccountId && event.createdByAccountId && event.createdByAccountId === userAccountId) ||
+          (userAccountId && event.createdBy && event.createdBy === userAccountId);
+
+        if (isCreatedByUser) {
+          return event; // Full access to own events
+        }
+
+        // Get permission level for this event's creator
+        const permissionLevel = event.createdByUserId 
+          ? sharedCalendarPermissions.get(event.createdByUserId)
+          : null;
+
+        if (!permissionLevel) {
+          return event; // No permission restriction, show full details
+        }
+
+        // Filter event details based on permission level
+        return filterEventDetailsByPermission(event, permissionLevel);
+      });
+
+    }
+
+    return events;
   } catch (error) {
     console.error('Error fetching calendar events by month:', error);
     throw error;
@@ -213,8 +463,8 @@ export const getCalendarEventsWithSync = async (
   userId: string
 ): Promise<CalendarEvent[]> => {
   try {
-    // First, get local CAALM events
-    const localEvents = await getCalendarEventsByMonth(year, month);
+    // First, get local CAALM events (with user filtering)
+    const localEvents = await getCalendarEventsByMonth(year, month, userId);
 
     // Check if user has Microsoft integration
     const hasIntegration = await hasMicrosoftCalendarIntegration(userId);
@@ -225,8 +475,12 @@ export const getCalendarEventsWithSync = async (
         const syncResult = await syncMicrosoftCalendar(userId);
         console.log('Microsoft sync result:', syncResult);
 
-        // After sync, get updated events (including synced Outlook events)
-        const syncedEvents = await getCalendarEventsByMonth(year, month);
+        // After sync, get updated events (including synced Outlook events, with user filtering)
+        const syncedEvents = await getCalendarEventsByMonth(
+          year,
+          month,
+          userId
+        );
         return syncedEvents;
       } catch (syncError) {
         console.error('Error syncing Microsoft calendar:', syncError);
@@ -261,16 +515,16 @@ export const getCalendarEventsByDate = async (
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const response = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      [
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      queries: [
         Query.isNull('deleted_at'), // Exclude soft-deleted events
         Query.greaterThanEqual('startDate', startOfDay.toISOString()),
         Query.lessThanEqual('startDate', endOfDay.toISOString()),
         Query.orderAsc('startTime'),
-      ]
-    );
+      ],
+    });
     return response.rows as unknown as CalendarEvent[];
   } catch (error) {
     console.error('Error fetching calendar events by date:', error);
@@ -337,12 +591,97 @@ export const createCalendarEvent = async (
       delete dataToCreate.attachments;
     }
 
-    const response = await adminClient.tablesDB.createRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      ID.unique(),
-      dataToCreate
-    );
+    // Get orgId for the event
+    let orgId: string = 'default_organization';
+    try {
+      if (eventData.createdByUserId) {
+        const { getUserDefaultOrganization } = await import(
+          '@/lib/rbac/permissions'
+        );
+        const defaultOrg = await getUserDefaultOrganization(
+          eventData.createdByUserId
+        );
+        if (defaultOrg?.orgId) {
+          orgId = defaultOrg.orgId;
+        }
+      } else if (eventData.createdBy) {
+        // Fallback: try to get user by account ID and then get org
+        const { getUserByAccountId } = await import('./user.actions');
+        const { getUserDefaultOrganization } = await import(
+          '@/lib/rbac/permissions'
+        );
+        const user = await getUserByAccountId(eventData.createdBy);
+        if (user?.$id) {
+          const defaultOrg = await getUserDefaultOrganization(user.$id);
+          if (defaultOrg?.orgId) {
+            orgId = defaultOrg.orgId;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(
+        'Could not get orgId for event creation, using default:',
+        error
+      );
+    }
+
+    // Ensure orgId is a valid string (not null or undefined)
+    if (!orgId || typeof orgId !== 'string') {
+      orgId = 'default_organization';
+    }
+
+    // Add orgId to the data
+    dataToCreate.orgId = orgId;
+
+    // Ensure all required fields are present and valid
+    if (!dataToCreate.title || typeof dataToCreate.title !== 'string') {
+      throw new Error('Event title is required');
+    }
+    if (!dataToCreate.startDate || typeof dataToCreate.startDate !== 'string') {
+      throw new Error('Event startDate is required');
+    }
+    if (!dataToCreate.createdBy || typeof dataToCreate.createdBy !== 'string') {
+      throw new Error('Event createdBy is required');
+    }
+
+    // Log the data being sent for debugging
+    console.log('Creating event with data:', {
+      ...dataToCreate,
+      attachments: Array.isArray(dataToCreate.attachments)
+        ? `${dataToCreate.attachments.length} attachments`
+        : 'none',
+      overrides:
+        typeof dataToCreate.overrides === 'string' ? 'JSON string' : 'array',
+    });
+
+    let response;
+    try {
+      response = await adminClient.tablesDB.createRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.calendarEventsCollectionId,
+        rowId: ID.unique(),
+        data: dataToCreate,
+      });
+    } catch (createError: any) {
+      console.error('Error creating calendar event row:', {
+        error: createError,
+        errorMessage: createError?.message,
+        errorCode: createError?.code,
+        errorType: createError?.type,
+        errorResponse: createError?.response,
+        dataBeingSent: {
+          ...dataToCreate,
+          attachments: Array.isArray(dataToCreate.attachments)
+            ? `${dataToCreate.attachments.length} attachments`
+            : 'none',
+          overrides:
+            typeof dataToCreate.overrides === 'string'
+              ? 'JSON string'
+              : 'array',
+        },
+      });
+      throw createError;
+    }
 
     console.log('Event created successfully:', response);
 
@@ -353,7 +692,8 @@ export const createCalendarEvent = async (
         eventData.title,
         response.$id,
         eventData.createdBy,
-        eventData.createdBy
+        eventData.createdBy,
+        orgId
       );
       console.log('Recent activity created successfully');
     } catch (activityError) {
@@ -490,18 +830,93 @@ export const deleteCalendarEvent = async (
 
     const adminClient = await createAdminClient();
 
-    // Perform soft delete by setting deleted_at timestamp
-    await adminClient.tablesDB.updateRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      eventId,
-      {
-        deleted_at: new Date().toISOString(),
-        deleted_by: deletedBy || null,
-        deletion_status: 'pending_outlook_deletion',
-        deletion_synced: false,
+    // Get the existing event to retrieve orgId and ensure we have all required fields
+    let orgId: string | undefined;
+    let existingEvent: any = null;
+    try {
+      existingEvent = await adminClient.tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.calendarEventsCollectionId,
+        rowId: eventId,
+      });
+      orgId = (existingEvent as any)?.orgId;
+    } catch (error) {
+      console.warn('Could not fetch existing event for orgId:', error);
+    }
+
+    // If event doesn't have orgId and we have deletedBy, try to get user's org
+    if (!orgId && deletedBy) {
+      try {
+        const { getUserByAccountId } = await import('./user.actions');
+        const { getUserDefaultOrganization } = await import(
+          '@/lib/rbac/permissions'
+        );
+        const user = await getUserByAccountId(deletedBy);
+        if (user?.$id) {
+          const defaultOrg = await getUserDefaultOrganization(user.$id);
+          orgId = defaultOrg?.orgId;
+        }
+      } catch (error) {
+        console.warn('Could not get user org for deletedBy:', error);
       }
-    );
+    }
+
+    // Use default organization if still no orgId (required field)
+    if (!orgId || typeof orgId !== 'string') {
+      orgId = 'default_organization';
+    }
+
+    // Prepare update data - only include fields we're updating
+    // Appwrite partial updates should only include changed fields
+    const updateData: Record<string, any> = {
+      deleted_at: new Date().toISOString(),
+      deleted_by: deletedBy || null,
+      deletion_status: 'pending_outlook_deletion',
+      deletion_synced: false,
+    };
+
+    // Always include orgId to ensure the required field is present
+    // If the event doesn't have orgId (null/undefined) or it's different, we need to set it
+    const existingOrgId = existingEvent ? (existingEvent as any)?.orgId : null;
+    // Include orgId if event doesn't have it or if it's different from what we want to set
+    if (!existingOrgId || existingOrgId !== orgId) {
+      updateData.orgId = orgId;
+    }
+
+    // Log the data being sent for debugging
+    console.log('Soft deleting event with data:', {
+      eventId,
+      updateData,
+      existingOrgId: existingEvent ? (existingEvent as any).orgId : 'not found',
+      newOrgId: orgId,
+    });
+
+    try {
+      await adminClient.tablesDB.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.calendarEventsCollectionId,
+        rowId: eventId,
+        data: updateData,
+      });
+    } catch (updateError: any) {
+      console.error('Error updating event for soft delete:', {
+        error: updateError,
+        errorMessage: updateError?.message,
+        errorCode: updateError?.code,
+        errorType: updateError?.type,
+        errorResponse: updateError?.response,
+        eventId,
+        updateData,
+        existingEvent: existingEvent
+          ? {
+              $id: (existingEvent as any).$id,
+              title: (existingEvent as any).title,
+              orgId: (existingEvent as any).orgId,
+            }
+          : null,
+      });
+      throw updateError;
+    }
   } catch (error) {
     console.error('Error soft deleting calendar event:', error);
     throw error;
@@ -521,11 +936,11 @@ export const hardDeleteCalendarEvent = async (
     }
 
     const adminClient = await createAdminClient();
-    await adminClient.tablesDB.deleteRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      eventId
-    );
+    await adminClient.tablesDB.deleteRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      rowId: eventId,
+    });
   } catch (error) {
     console.error('Error hard deleting calendar event:', error);
     throw error;
@@ -545,17 +960,17 @@ export const restoreCalendarEvent = async (eventId: string): Promise<void> => {
     const adminClient = await createAdminClient();
 
     // Remove soft delete markers
-    await adminClient.tablesDB.updateRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      eventId,
-      {
+    await adminClient.tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      rowId: eventId,
+      data: {
         deleted_at: null,
         deleted_by: null,
         deletion_status: null,
         deletion_synced: false,
-      }
-    );
+      },
+    });
   } catch (error) {
     console.error('Error restoring calendar event:', error);
     throw error;
@@ -576,16 +991,16 @@ export const getCalendarEventsByWeek = async (
     }
 
     const adminClient = await createAdminClient();
-    const response = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId,
-      [
+    const response = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId,
+      queries: [
         Query.isNull('deleted_at'), // Exclude soft-deleted events
         Query.greaterThanEqual('startDate', startDate),
         Query.lessThanEqual('startDate', endDate),
         Query.orderAsc('startDate'),
-      ]
-    );
+      ],
+    });
     return response.rows as unknown as CalendarEvent[];
   } catch (error) {
     console.error('Error fetching calendar events by week:', error);

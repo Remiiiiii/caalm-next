@@ -35,14 +35,12 @@ interface WeatherWidgetProps {
   location?: string;
   latitude?: number;
   longitude?: number;
-  apiKey?: string;
 }
 
 const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   location,
   latitude,
   longitude,
-  apiKey = process.env.OPENWEATHER_API_KEY,
 }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,17 +100,22 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
                 // Reverse geocoding to get city name
                 try {
                   const geoResponse = await fetch(
-                    `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${apiKey}`
+                    `/api/weather?lat=${lat}&lon=${lon}`
                   );
-                  const geoData = await geoResponse.json();
-                  const cityName = geoData[0]?.name || 'Current Location';
-                  resolve({ lat, lon, city: cityName });
+                  if (geoResponse.ok) {
+                    const geoResult = await geoResponse.json();
+                    const cityName =
+                      geoResult.data?.name || 'Current Location';
+                    resolve({ lat, lon, city: cityName });
+                  } else {
+                    resolve({ lat, lon, city: 'Current Location' });
+                  }
                 } catch {
                   resolve({ lat, lon, city: 'Current Location' });
                 }
               },
               (error) => {
-                console.warn('Geolocation error:', error);
+                console.warn('[CLIENT] WeatherWidget] Geolocation error:', error);
                 // Fallback to default location
                 resolve({ lat: 25.7617, lon: -80.1918, city: 'Miami' });
               },
@@ -127,12 +130,6 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
     };
 
     const fetchWeather = async (forceRefresh = false) => {
-      if (!apiKey) {
-        setError('Weather API key not configured');
-        setLoading(false);
-        return;
-      }
-
       try {
         const { lat, lon, city } = await getCurrentLocation();
         setUserLocation(city);
@@ -164,22 +161,39 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
           }
         }
 
-        let apiUrl: string;
+        // Build query parameters for our server-side API route
+        const params = new URLSearchParams();
         if (lat !== 0 && lon !== 0) {
-          // Use coordinates for more accurate weather data
-          apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=imperial`;
-        } else {
-          // Use city name
-          apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=imperial`;
+          params.append('lat', lat.toString());
+          params.append('lon', lon.toString());
+        } else if (city) {
+          params.append('city', city);
         }
 
-        const response = await fetch(apiUrl);
+
+        // Use our server-side API route instead of direct OpenWeatherMap API
+        const response = await fetch(`/api/weather?${params.toString()}`);
 
         if (!response.ok) {
-          throw new Error('Failed to fetch weather data');
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage =
+            errorData.message ||
+            errorData.error ||
+            'Failed to fetch weather data';
+          console.error('[CLIENT] WeatherWidget] Weather API error:', {
+            status: response.status,
+            error: errorMessage,
+          });
+          throw new Error(errorMessage);
         }
 
-        const data = await response.json();
+        const result = await response.json();
+
+        if (!result.success || !result.data) {
+          throw new Error(result.message || 'Invalid weather data received');
+        }
+
+        const data = result.data;
 
         // Update cache with fresh data
         cache.current = {
@@ -191,9 +205,10 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
         setWeatherData(data);
         setError(null);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load weather data'
-        );
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to load weather data';
+        console.error('[CLIENT] WeatherWidget] Error:', errorMessage, err);
+        setError(errorMessage);
       } finally {
         setLoading(false);
         setIsRefreshing(false);
@@ -211,7 +226,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
     }, 10 * 60 * 1000); // 10 minutes
 
     return () => clearInterval(interval);
-  }, [location, latitude, longitude, apiKey, isVisible]);
+  }, [location, latitude, longitude, isVisible]);
 
   const getWeatherIcon = (weatherMain: string) => {
     const iconClass = 'h-10 w-10';

@@ -3,14 +3,14 @@ export const NAVIGATION_CONFIG = {
   admin: {
     analytics: {
       name: 'Overview',
-      url: '/analytics/admin',
+      url: '/analytics?tab=organization',
       icon: '/assets/icons/analytics.svg',
     },
   },
   executive: {
     analytics: {
       name: 'Overview',
-      url: '/analytics/admin',
+      url: '/analytics?tab=organization',
       icon: '/assets/icons/analytics.svg',
     },
     quickView: {

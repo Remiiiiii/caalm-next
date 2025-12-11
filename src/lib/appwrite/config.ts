@@ -13,6 +13,16 @@ export const appwriteConfig = {
 
   contractsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_CONTRACTS_COLLECTION,
 
+  contractsEnterpriseMetadataCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CONTRACTS_ENTERPRISE_METADATA_COLLECTION,
+
+  contractExtensionsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_EXTENSIONS_COLLECTION,
+
+  contractDraftsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_DRAFTS_COLLECTION ||
+    '692f4a86002ae8f45cae',
+
   calendarEventsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_EVENTS_COLLECTION,
 
@@ -68,4 +78,22 @@ export const appwriteConfig = {
   // Calendar Integrations Collection
   calendarIntegrationsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION,
+
+  // Priority 2: Shared Calendars and Delegation
+  sharedCalendarsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_SHARED_CALENDARS_COLLECTION,
+  calendarDelegationsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_DELEGATIONS_COLLECTION,
+
+  // Priority 2: Resource Management
+  calendarResourcesCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_RESOURCES_COLLECTION,
+  resourceBookingsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_RESOURCE_BOOKINGS_COLLECTION,
+
+  // Priority 2: Advanced Notifications
+  calendarRemindersCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_REMINDERS_COLLECTION,
+  escalationRulesCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_ESCALATION_RULES_COLLECTION,
 };

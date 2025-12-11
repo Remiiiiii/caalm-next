@@ -15,6 +15,19 @@ import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 import { evaluateCalendarPermission } from '@/lib/auth/guards';
 import { createCalendarApprovalRequest } from '@/lib/actions/calendar-approval.actions';
+import { getUserByAccountId } from '@/lib/actions/user.actions';
+import {
+  detectParticipantConflicts,
+  detectResourceConflicts,
+  suggestAlternateSlots,
+} from '@/lib/utils/conflict-detection';
+import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
+import { createEventReminder } from '@/lib/services/calendar-notifications.service';
+import {
+  createResourceBooking,
+  checkResourceAvailability,
+  getResourceById,
+} from '@/lib/actions/resource-management.actions';
 
 const buildPermissionErrorResponse = (
   reason: string,
@@ -69,12 +82,6 @@ export async function POST(request: NextRequest) {
       action: 'create',
     });
 
-    // console.log('[POST /api/calendar/events] Permission check result:', {
-    //   allowed: permissionCheck.allowed,
-    //   reason: permissionCheck.reason,
-    //   userRole: permissionCheck.userRole,
-    //   userId: permissionCheck.userId,
-    // });
 
     if (!permissionCheck.allowed) {
       console.error('[POST /api/calendar/events] Permission denied:', {
@@ -105,6 +112,118 @@ export async function POST(request: NextRequest) {
         { success: false, message: 'Title and startDate are required' },
         { status: 400 }
       );
+    }
+
+    // Validate that event is not in the past
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const [startYear, startMonth, startDay] = (eventData.startDate as string)
+      .split('-')
+      .map(Number);
+    const eventStartDate = new Date(startYear, startMonth - 1, startDay);
+
+    // Check if the date is in the past
+    if (eventStartDate < today) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            'Cannot create events in the past. Please select a current or future date.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // If date is today, check if the time is in the past
+    if (eventStartDate.getTime() === today.getTime() && eventData.startTime) {
+      const timeStr = eventData.startTime as string;
+      let hour24 = 0;
+      let minutes = 0;
+
+      // Handle 12-hour format (e.g., "2:00 PM")
+      if (timeStr.includes('PM') || timeStr.includes('AM')) {
+        const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+        if (match) {
+          hour24 = parseInt(match[1]);
+          minutes = parseInt(match[2]);
+          const period = match[3].toUpperCase();
+          if (period === 'PM' && hour24 !== 12) {
+            hour24 += 12;
+          } else if (period === 'AM' && hour24 === 12) {
+            hour24 = 0;
+          }
+        }
+      } else {
+        // Handle 24-hour format (e.g., "14:00")
+        const [h, m] = timeStr.split(':').map(Number);
+        hour24 = h;
+        minutes = m || 0;
+      }
+
+      const eventDateTime = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        hour24,
+        minutes
+      );
+
+      if (eventDateTime < now) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              'Cannot create events in the past. Please select a current or future time.',
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Check for conflicts (blocking - requires user confirmation)
+    let conflictInfo: {
+      conflicts: any[];
+      alternateSlots: any[];
+    } | null = null;
+    try {
+      const participantConflicts = await detectParticipantConflicts(
+        eventData,
+        undefined,
+        userId
+      );
+      const resourceConflicts = await detectResourceConflicts(
+        eventData,
+        undefined,
+        userId
+      );
+      const allConflicts = [...participantConflicts, ...resourceConflicts];
+
+      if (allConflicts.length > 0) {
+        const alternateSlots = await suggestAlternateSlots(eventData);
+        conflictInfo = { conflicts: allConflicts, alternateSlots };
+
+        // Check if user explicitly confirmed to proceed with conflicts
+        const forceCreate =
+          eventData.forceCreate === true || eventData.forceCreate === 'true';
+
+        if (!forceCreate) {
+          // Block creation and return conflicts for user confirmation
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                'Conflicts detected. Please review and confirm to proceed.',
+              conflicts: allConflicts,
+              alternateSlots,
+              requiresConfirmation: true,
+            },
+            { status: 409 } // 409 Conflict status code
+          );
+        }
+      }
+    } catch (conflictError) {
+      console.error('Error checking conflicts:', conflictError);
+      // If conflict check fails, allow creation to proceed (fail open)
     }
 
     // Add the user ID to the event data
@@ -158,7 +277,32 @@ export async function POST(request: NextRequest) {
 
     console.log('Creating calendar event via API:', eventWithUser);
 
-    const createdEvent = await createCalendarEvent(eventWithUser);
+    let createdEvent;
+    try {
+      createdEvent = await createCalendarEvent(eventWithUser);
+    } catch (createError: any) {
+      console.error('Error creating calendar event:', {
+        error: createError,
+        message: createError?.message,
+        code: createError?.code,
+        type: createError?.type,
+        response: createError?.response,
+        stack: createError?.stack,
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: createError?.message || 'Failed to create calendar event',
+          error: {
+            code: createError?.code,
+            type: createError?.type,
+            details: createError?.response || createError?.message,
+          },
+        },
+        { status: 500 }
+      );
+    }
 
     let pendingApprovalId: string | null = null;
 
@@ -179,6 +323,89 @@ export async function POST(request: NextRequest) {
       await updateCalendarEvent(createdEvent.$id, {
         pendingApprovalId,
       });
+    }
+
+    // Note: Audit logging for 'create' action is not supported by the current schema
+    // The audit logs collection only supports: delete, sync_delete, restore, cleanup
+
+    // Priority 2: Handle resource booking if resourceId is provided or location matches a resource
+    let resourceBookingId: string | null = null;
+    if (createdEvent.$id && (eventData.resourceId || eventData.location)) {
+      try {
+        let resource = null;
+
+        // First, try to get resource by ID if provided directly
+        if (eventData.resourceId) {
+          resource = await getResourceById(eventData.resourceId as string);
+          if (!resource) {
+            console.warn('[SERVER] POST /api/calendar/events] Resource not found by ID:', eventData.resourceId);
+          }
+        }
+
+        // If no resource found by ID, try matching by location name
+        if (!resource && eventData.location) {
+          const { getResources } = await import('@/lib/actions/resource-management.actions');
+          const defaultOrg = await getUserDefaultOrganization(permissionCheck.userId || userId);
+          if (defaultOrg) {
+            const resources = await getResources(defaultOrg.orgId);
+            resource = resources.find(
+              (r) => r.name.toLowerCase() === (eventData.location as string).toLowerCase() ||
+                     (r.location && r.location.toLowerCase() === (eventData.location as string).toLowerCase())
+            ) || null;
+          }
+        }
+
+        if (resource) {
+          // Check availability
+          const availability = await checkResourceAvailability(
+            resource.$id,
+            eventData.startDate as string,
+            eventData.endDate || eventData.startDate,
+            eventData.startTime || '00:00',
+            eventData.endTime || '23:59'
+          );
+
+          if (availability.available) {
+            // Create resource booking
+            const booking = await createResourceBooking({
+              resourceId: resource.$id,
+              eventId: createdEvent.$id,
+              startDate: eventData.startDate as string,
+              endDate: eventData.endDate || eventData.startDate,
+              startTime: eventData.startTime || '00:00',
+              endTime: eventData.endTime || '23:59',
+              requestedBy: permissionCheck.userId || userId,
+              requestedByAccountId: userId,
+            });
+            resourceBookingId = booking.$id;
+
+            // If booking requires approval, add to response
+          } else {
+            // Resource not available
+          }
+        }
+      } catch (resourceError) {
+        console.error('[SERVER] POST /api/calendar/events] Error handling resource booking:', resourceError);
+        // Don't fail event creation if resource booking fails
+      }
+    }
+
+    // Priority 2: Create default reminders if specified
+    if (eventData.reminders && Array.isArray(eventData.reminders) && createdEvent.$id) {
+      try {
+        for (const reminderConfig of eventData.reminders) {
+          await createEventReminder({
+            eventId: createdEvent.$id,
+            userId: permissionCheck.userId || userId,
+            reminderType: reminderConfig.type || 'before_start',
+            reminderMinutes: reminderConfig.minutes || 15,
+            channels: reminderConfig.channels || ['in_app'],
+          });
+        }
+      } catch (reminderError) {
+        console.error('[SERVER] POST /api/calendar/events] Error creating reminders:', reminderError);
+        // Don't fail event creation if reminder creation fails
+      }
     }
 
     // Invalidate calendar cache for the month
@@ -217,15 +444,37 @@ export async function POST(request: NextRequest) {
               status: 'pending',
             }
           : null,
+      conflicts: conflictInfo?.conflicts || [],
+      alternateSlots: conflictInfo?.alternateSlots || [],
     });
-  } catch (error) {
-    console.error('Error creating calendar event via API:', error);
+  } catch (error: any) {
+    console.error('Error creating calendar event via API:', {
+      error,
+      message: error?.message,
+      code: error?.code,
+      type: error?.type,
+      response: error?.response,
+      stack: error?.stack,
+    });
+
+    // Extract error details for client
+    const errorMessage = error?.message || 'Failed to create event';
+    const errorCode = error?.code || 'unknown';
+    const errorType = error?.type || 'general_unknown';
+    const errorResponse = error?.response || errorMessage;
+
     return NextResponse.json(
       {
         success: false,
-        message:
-          error instanceof Error ? error.message : 'Failed to create event',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        message: errorMessage,
+        error: {
+          code: errorCode,
+          type: errorType,
+          details:
+            typeof errorResponse === 'string'
+              ? errorResponse
+              : JSON.stringify(errorResponse),
+        },
       },
       { status: 500 }
     );
@@ -234,14 +483,25 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getCurrentUserId();
+    const accountId = await getCurrentUserId();
 
-    if (!userId) {
+    if (!accountId) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
         { status: 401 }
       );
     }
+
+    // Get user by account ID to get the user's $id (userId)
+    const user = await getUserByAccountId(accountId);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = user.$id;
 
     const { searchParams } = new URL(request.url);
     const year = parseInt(
@@ -260,16 +520,16 @@ export async function GET(request: NextRequest) {
     let payload: any;
     if (noCacheHeader || noCacheQuery) {
       // Bypass server cache entirely
-      const events = await getCalendarEventsByMonth(year, month);
+      const events = await getCalendarEventsByMonth(year, month, userId);
       payload = { success: true, events };
     } else {
-      // Use server cache
-      const cacheKey = CACHE_KEYS.calendar.events(year, month);
+      // Use server cache with user-specific cache key
+      const cacheKey = CACHE_KEYS.calendar.events(year, month, userId);
       payload = await CacheManager.withCache(
         'calendar/events',
         cacheKey,
         async () => {
-          const events = await getCalendarEventsByMonth(year, month);
+          const events = await getCalendarEventsByMonth(year, month, userId);
           return { success: true, events };
         },
         CACHE_TTLS.medium
@@ -351,6 +611,53 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Check for conflicts (blocking - requires user confirmation)
+    let conflictInfo: {
+      conflicts: any[];
+      alternateSlots: any[];
+    } | null = null;
+    try {
+      const participantConflicts = await detectParticipantConflicts(
+        eventData,
+        eventId,
+        userId
+      );
+      const resourceConflicts = await detectResourceConflicts(
+        eventData,
+        eventId,
+        userId
+      );
+      const allConflicts = [...participantConflicts, ...resourceConflicts];
+
+      if (allConflicts.length > 0) {
+        const alternateSlots = await suggestAlternateSlots(eventData, eventId);
+        conflictInfo = { conflicts: allConflicts, alternateSlots };
+
+        // Check if user explicitly confirmed to proceed with conflicts
+        const forceCreate =
+          (eventData as Record<string, unknown>).forceCreate === true ||
+          String((eventData as Record<string, unknown>).forceCreate) === 'true';
+
+        if (!forceCreate) {
+          // Block update and return conflicts for user confirmation
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                'Conflicts detected. Please review and confirm to proceed.',
+              conflicts: allConflicts,
+              alternateSlots,
+              requiresConfirmation: true,
+            },
+            { status: 409 } // 409 Conflict status code
+          );
+        }
+      }
+    } catch (conflictError) {
+      console.error('Error checking conflicts:', conflictError);
+      // If conflict check fails, allow update to proceed (fail open)
+    }
+
     // Check if event requires approval for updates
     const sensitivityLevel =
       eventData.sensitivityLevel || event.sensitivityLevel || 'standard';
@@ -394,6 +701,9 @@ export async function PUT(request: NextRequest) {
       updatedEvent = await updateCalendarEvent(eventId, eventData);
     }
 
+    // Note: Audit logging for 'update' action is not supported by the current schema
+    // The audit logs collection only supports: delete, sync_delete, restore, cleanup
+
     // Invalidate calendar cache for the month
     if (eventData.startDate || event.startDate) {
       const dateStr = (eventData.startDate || event.startDate) as string;
@@ -412,6 +722,8 @@ export async function PUT(request: NextRequest) {
               status: 'pending',
             }
           : null,
+      conflicts: conflictInfo?.conflicts || [],
+      alternateSlots: conflictInfo?.alternateSlots || [],
     });
   } catch (error) {
     console.error('Error updating calendar event via API:', error);
@@ -565,14 +877,8 @@ export async function DELETE(request: NextRequest) {
       });
     }
 
-    // Get event details before deletion for audit logging
-    let eventTitle = 'Unknown Event';
-    try {
-      // We'll get the event title from the soft delete operation
-      // For now, we'll use a placeholder and update it after
-    } catch (error) {
-      console.warn('Could not fetch event details for audit:', error);
-    }
+    // Get event title for audit logging (event already fetched above)
+    const eventTitle = event?.title || 'Unknown Event';
 
     // Perform soft delete immediately
     await deleteCalendarEvent(eventId, userId);
@@ -584,15 +890,34 @@ export async function DELETE(request: NextRequest) {
       'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
+    // Get user information for audit logging
+    let userName = 'Unknown User';
+    let userEmail = 'unknown@example.com';
+    let auditUserId = userId;
+    let orgId: string | undefined;
+    try {
+      const user = await getUserByAccountId(userId);
+      if (user) {
+        userName = user.fullName || 'Unknown User';
+        userEmail = user.email || 'unknown@example.com';
+        auditUserId = user.$id || userId;
+        const defaultOrg = await getUserDefaultOrganization(user.$id);
+        orgId = defaultOrg?.orgId;
+      }
+    } catch (userError) {
+      console.warn('Could not fetch user details for audit:', userError);
+    }
+
     // Log the deletion audit event
     await logAuditEvent({
       event_id: eventId,
       event_title: eventTitle,
       action: 'delete',
       source: 'caalm',
-      user_id: userId,
-      user_name: 'User', // We'll need to fetch this from user data
-      user_email: 'user@example.com', // We'll need to fetch this from user data
+      user_id: auditUserId,
+      user_name: userName,
+      user_email: userEmail,
+      orgId: orgId,
       ip_address: ipAddress,
       user_agent: userAgent,
       reason: reason,
@@ -625,14 +950,36 @@ export async function DELETE(request: NextRequest) {
 
     if (eventId) {
       try {
+        // Try to get orgId from userId if available
+        const deleteUserId = await getCurrentUserId();
+        let orgId: string | undefined;
+        let userName = 'Unknown User';
+        let userEmail = 'unknown@example.com';
+        let auditUserId = deleteUserId || 'unknown';
+        try {
+          if (deleteUserId) {
+            const user = await getUserByAccountId(deleteUserId);
+            if (user?.$id) {
+              userName = user.fullName || 'Unknown User';
+              userEmail = user.email || 'unknown@example.com';
+              auditUserId = user.$id;
+              const defaultOrg = await getUserDefaultOrganization(user.$id);
+              orgId = defaultOrg?.orgId;
+            }
+          }
+        } catch {
+          // Ignore errors getting orgId for failed deletion log
+        }
+
         await logAuditEvent({
           event_id: eventId,
           event_title: 'Unknown Event',
           action: 'delete',
           source: 'caalm',
-          user_id: 'unknown',
-          user_name: 'Unknown User',
-          user_email: 'unknown@example.com',
+          user_id: auditUserId,
+          user_name: userName,
+          user_email: userEmail,
+          orgId: orgId,
           status: 'failed',
           error_message:
             error instanceof Error ? error.message : 'Unknown error',

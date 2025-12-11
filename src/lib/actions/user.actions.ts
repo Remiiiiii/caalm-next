@@ -18,12 +18,18 @@ import {
   notifyInvitationAccepted,
 } from '../utils/smsNotifications';
 import {
-  UserRole,
-  normalizeUserRole,
-  USER_ROLES,
-  isUserRole,
-  isLegacyRole,
-} from '@/constants/rbac';
+  getUserRoles,
+  getUserDefaultOrganization,
+} from '@/lib/rbac/permissions';
+import CacheManager from '@/lib/services/cache-manager';
+
+// Calendar role type for compatibility with calendar permissions
+export type CalendarRole =
+  | 'admin'
+  | 'approver'
+  | 'reviewer'
+  | 'scheduler'
+  | 'viewer';
 
 export type AppUser = {
   $id: string;
@@ -31,32 +37,36 @@ export type AppUser = {
   email: string;
   avatar: string;
   accountId: string;
-  role: UserRole;
+  role: CalendarRole; // For calendar permissions compatibility only
   division?: UserDivision;
   status?: 'active' | 'inactive';
+  profileImageId?: string | null;
 };
 
 export const getUserByEmail = async (email: string) => {
   try {
-    console.log('getUserByEmail: Looking for user with email:', email);
-    const { tablesDB } = await createAdminClient();
-    console.log('getUserByEmail: Admin client created successfully');
+    // Check cache first for faster lookups during sign-in
+    const cacheKey = `user:email:${email.toLowerCase()}`;
+    const cachedUser = await CacheManager.withCache(
+      'users',
+      cacheKey,
+      async () => {
+        const { tablesDB } = await createAdminClient();
+        const result = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.usersCollectionId || 'users',
+          queries: [Query.equal('email', email)],
+        });
+        return result.total > 0 ? result.rows[0] : null;
+      },
+      300 // 5 minute cache for user lookups
+    );
 
-    const result = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: appwriteConfig.usersCollectionId || 'users',
-      queries: [Query.equal('email', email)],
-    });
-
-    console.log('getUserByEmail: Query result:', {
-      total: result.total,
-      rowsLength: result.rows?.length || 0,
-      firstRow: result.rows?.[0] ? 'Found' : 'Not found',
-    });
-
-    return result.total > 0 ? result.rows[0] : null;
+    return cachedUser;
   } catch (error) {
-    console.error('getUserByEmail: Error occurred:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('getUserByEmail: Error occurred:', error);
+    }
     throw error;
   }
 };
@@ -92,13 +102,32 @@ export const getUserByAccountId = async (
     }
 
     const user = result.rows[0];
+
+    // Get user's role from database (for calendar permissions compatibility)
+    // Both functions are now cached, so this is fast
+    const defaultOrg = await getUserDefaultOrganization(user.$id);
+    const userRoles = defaultOrg
+      ? await getUserRoles(user.$id, defaultOrg.orgId)
+      : [];
+    const roleName = userRoles[0]?.roleName || '';
+
+    // Map new RBAC roles to calendar roles for compatibility
+    let calendarRole: CalendarRole = 'viewer';
+    if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
+      calendarRole = 'admin';
+    } else if (roleName === 'Department Manager') {
+      calendarRole = 'approver';
+    } else if (roleName === 'Viewer') {
+      calendarRole = 'viewer';
+    }
+
     return {
       $id: user.$id,
       fullName: user.fullName,
       email: user.email,
       avatar: user.avatar,
       accountId: user.accountId,
-      role: normalizeUserRole(user.role),
+      role: calendarRole,
       division: user.division,
       status: user.status,
     };
@@ -115,10 +144,7 @@ const handleError = (error: unknown, message: string) => {
 
 export const sendEmailOTP = async ({ email }: { email: string }) => {
   try {
-    console.log('sendEmailOTP: Starting OTP send for email:', email);
-
     const { tablesDB } = await createAdminClient();
-    console.log('sendEmailOTP: Admin client created successfully');
 
     // Check if an OTP was recently sent (within the last 30 seconds) to prevent duplicates
     const thirtySecondsAgo = new Date();
@@ -135,10 +161,6 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     });
 
     if (recentOtpResponse.rows.length > 0) {
-      console.log(
-        'sendEmailOTP: Recent OTP found, skipping duplicate send for:',
-        email
-      );
       // Return success but don't send duplicate email
       return ID.unique();
     }
@@ -152,60 +174,48 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
         Query.equal('email', email),
         Query.equal('used', false),
         Query.greaterThan('expiresAt', now.toISOString()),
+        Query.limit(1), // Only need to check if one exists
       ],
     });
 
     if (validOtpResponse.rows.length > 0) {
-      console.log(
-        'sendEmailOTP: Valid unused OTP already exists, skipping duplicate send for:',
-        email
-      );
       // Return success but don't send duplicate email
       return ID.unique();
     }
 
     // Generate a 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log('sendEmailOTP: Generated OTP:', otp);
 
     // Store OTP in database with expiration (5 minutes)
     const expirationTime = new Date();
     expirationTime.setMinutes(expirationTime.getMinutes() + 5);
 
-    // Store OTP in the database
-    await tablesDB.createRow({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
-      rowId: ID.unique(),
-      data: {
-        email,
-        otp,
-        expiresAt: expirationTime.toISOString(),
-        used: false,
-      },
-    });
-    console.log('sendEmailOTP: OTP stored in database');
-
-    // Get user's full name from database
-    let userFullName = 'User';
-    try {
-      const userResponse = await tablesDB.listRows({
+    // Store OTP in the database and get user name in parallel
+    const [_, user] = await Promise.all([
+      tablesDB.createRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
-        tableId: appwriteConfig.usersCollectionId || 'users',
-        queries: [Query.equal('email', email)],
-      });
+        tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
+        rowId: ID.unique(),
+        data: {
+          email,
+          otp,
+          expiresAt: expirationTime.toISOString(),
+          used: false,
+        },
+      }),
+      getUserByEmail(email).catch(() => null), // Get user in parallel
+    ]);
 
-      if (userResponse.rows.length > 0) {
-        userFullName = userResponse.rows[0].fullName || 'User';
-      }
-    } catch (error) {
-      console.warn('Could not retrieve user full name:', error);
-    }
+    // Use user data from parallel fetch
+    const userFullName = user?.fullName || 'User';
 
-    // Send OTP via Mailgun
+    // Send OTP via Mailgun (non-blocking for faster response)
     const { mailgunService } = await import('../services/mailgun');
-    await mailgunService.sendOTPEmail(email, otp, { fullName: userFullName });
-    console.log('sendEmailOTP: OTP sent via Mailgun successfully');
+    mailgunService
+      .sendOTPEmail(email, otp, { fullName: userFullName })
+      .catch(() => {
+        // Silently fail - email sending shouldn't block sign-in
+      });
 
     // Return a dummy userId for compatibility with existing code
     return ID.unique();
@@ -312,7 +322,6 @@ export const finalizeAccountAfterEmailVerification = async ({
           email: email,
           avatar: avatarPlaceholderUrl,
           accountId: accountId,
-          role: 'viewer', // Default role until invitation assigns a higher permission
         },
       });
       console.log(
@@ -408,11 +417,9 @@ export const verifyOTP = async ({
   accountId?: string;
 }) => {
   try {
-    console.log('verifyOTP: Starting OTP verification for email:', email);
-
     const { tablesDB } = await createAdminClient();
 
-    // Find the OTP in the database
+    // Find the OTP in the database (optimized query with limit)
     const result = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
@@ -420,6 +427,7 @@ export const verifyOTP = async ({
         Query.equal('email', email),
         Query.equal('otp', otp),
         Query.equal('used', false),
+        Query.limit(1), // Only need one result
       ],
     });
 
@@ -438,8 +446,8 @@ export const verifyOTP = async ({
       );
     }
 
-    // Mark OTP as used
-    await tablesDB.updateRow({
+    // Mark OTP as used and return success in parallel for faster response
+    const updatePromise = tablesDB.updateRow({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: appwriteConfig.otpTokensCollectionId || 'otp-tokens',
       rowId: otpRecord.$id,
@@ -447,8 +455,6 @@ export const verifyOTP = async ({
         used: true,
       },
     });
-
-    console.log('verifyOTP: OTP verified successfully');
 
     // Send SMS notification to admins for sign-up (not sign-in)
     // Run in background without blocking the response
@@ -459,15 +465,16 @@ export const verifyOTP = async ({
             return notifyOTPVerified(email, userInfo.fullName);
           }
         })
-        .catch((error) => {
-          console.error('Failed to send OTP verification SMS:', error);
-          // Don't throw - SMS failure shouldn't block user flow
+        .catch(() => {
+          // Silently fail - SMS failure shouldn't block user flow
         });
     }
 
+    // Wait for update to complete
+    await updatePromise;
+
     // If accountId is provided (sign-in flow), return it for client-side session creation
     if (accountId) {
-      console.log('verifyOTP: Returning accountId for sign-in flow');
       return {
         success: true,
         accountId: accountId,
@@ -476,7 +483,9 @@ export const verifyOTP = async ({
 
     return { success: true };
   } catch (error) {
-    console.error('verifyOTP: Error occurred:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('verifyOTP: Error occurred:', error);
+    }
 
     if (error instanceof Error) {
       if (
@@ -580,7 +589,10 @@ export const getCurrentUser = async () => {
     const { tablesDB, account } = await createSessionClient();
     const result = await account.get();
 
-    console.log('getCurrentUser - Account ID:', result.$id);
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('getCurrentUser - Account ID:', result.$id);
+    }
 
     const user = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
@@ -588,23 +600,44 @@ export const getCurrentUser = async () => {
       queries: [Query.equal('accountId', result.$id)],
     });
 
-    console.log('getCurrentUser - Database query result:', {
-      total: user.total,
-      rows: user.rows,
-      firstRow: user.rows[0] || null,
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('getCurrentUser - Database query result:', {
+        total: user.total,
+        rows: user.rows,
+        firstRow: user.rows[0] || null,
+      });
+    }
 
     if (user.total === 0) return null;
 
     // Return only the user data, not the client objects
     const userData = user.rows[0];
+
+    // Parallel: Get user's role from database (for calendar permissions compatibility)
+    // Both functions are now cached, so this is fast
+    const defaultOrg = await getUserDefaultOrganization(userData.$id);
+    const userRoles = defaultOrg
+      ? await getUserRoles(userData.$id, defaultOrg.orgId)
+      : [];
+    const roleName = userRoles[0]?.roleName || '';
+
+    // Map new RBAC roles to calendar roles for compatibility
+    let calendarRole: CalendarRole = 'viewer';
+    if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
+      calendarRole = 'admin';
+    } else if (roleName === 'Department Manager') {
+      calendarRole = 'approver';
+    } else if (roleName === 'Viewer') {
+      calendarRole = 'viewer';
+    }
+
     return parseStringify({
       $id: userData.$id,
       fullName: userData.fullName,
       email: userData.email,
       avatar: userData.avatar,
       accountId: userData.accountId,
-      role: normalizeUserRole(userData.role),
+      role: calendarRole,
       division: userData.division,
       status: userData.status,
       $createdAt: userData.$createdAt,
@@ -657,9 +690,24 @@ export const getCurrentUserFrom2FA = async () => {
       }
 
       const user = userResponse.rows[0];
-      // console.log(
-      //   'getCurrentUserFrom2FA - Returning actual user data for 2FA-authenticated user'
-      // );
+
+      // Get user's role from database (for calendar permissions compatibility)
+      // Both functions are now cached, so this is fast
+      const defaultOrg = await getUserDefaultOrganization(user.$id);
+      const userRoles = defaultOrg
+        ? await getUserRoles(user.$id, defaultOrg.orgId)
+        : [];
+      const roleName = userRoles[0]?.roleName || '';
+
+      // Map new RBAC roles to calendar roles for compatibility
+      let calendarRole: CalendarRole = 'viewer';
+      if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
+        calendarRole = 'admin';
+      } else if (roleName === 'Department Manager') {
+        calendarRole = 'approver';
+      } else if (roleName === 'Viewer') {
+        calendarRole = 'viewer';
+      }
 
       // Return only the user data, not any client objects
       return parseStringify({
@@ -668,9 +716,10 @@ export const getCurrentUserFrom2FA = async () => {
         email: user.email,
         avatar: user.avatar,
         accountId: user.accountId,
-        role: normalizeUserRole(user.role),
+        role: calendarRole,
         division: user.division,
         status: user.status,
+        profileImageId: user.profileImageId || null,
         $createdAt: user.$createdAt,
         $updatedAt: user.$updatedAt,
       });
@@ -688,73 +737,87 @@ export const getCurrentUserFrom2FA = async () => {
 };
 
 export const signOutUser = async () => {
-  try {
-    // Try to get session client, but don't fail if no session exists
-    const { account } = await createSessionClient();
-    await account.deleteSession('current');
-  } catch (error) {
-    console.log('No active session to delete:', error);
-  } finally {
-    // Always delete the session cookie and 2FA cookies, then redirect
-    const cookieStore = await cookies();
-    cookieStore.delete('appwrite-session');
-    cookieStore.delete('2fa_completed');
-    cookieStore.delete('2fa_user_id');
-    redirect('/sign-in');
-  }
+  // Clear cookies immediately and redirect - don't wait for Appwrite session deletion
+  const cookieStore = await cookies();
+  cookieStore.delete('appwrite-session');
+  cookieStore.delete('2fa_completed');
+  cookieStore.delete('2fa_user_id');
+
+  // Fire and forget - delete session in background (non-blocking)
+  createSessionClient()
+    .then(({ account }) => account.deleteSession('current'))
+    .catch(() => {
+      // Silently ignore - session might already be invalid
+    });
+
+  // Redirect immediately
+  redirect('/sign-in');
 };
 
 export const signInUser = async ({ email }: { email: string }) => {
   try {
-    console.log('signInUser: Starting sign-in process for:', email);
+    // Optimized: Check both sources in parallel for faster response
+    const [existingUser, authUserResult] = await Promise.allSettled([
+      getUserByEmail(email),
+      // Check Appwrite Auth in parallel (only if custom user not found)
+      (async () => {
+        const client = new sdk.Client()
+          .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+          .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+          .setKey(process.env.NEXT_APPWRITE_API_KEY!);
+        const users = new sdk.Users(client);
+        const userList = await users.list({
+          queries: [sdk.Query.equal('email', email)],
+        });
+        return userList.total > 0 ? userList.users[0] : null;
+      })(),
+    ]);
 
-    // Check if user exists in our custom users collection
-    console.log('signInUser: Calling getUserByEmail...');
-    const existingUser = (await getUserByEmail(email)) as AppUser | null;
-    console.log('signInUser: existingUser result:', existingUser);
+    const user =
+      existingUser.status === 'fulfilled'
+        ? (existingUser.value as AppUser | null)
+        : null;
 
-    if (existingUser) {
-      console.log('signInUser: User found, sending OTP...');
-      await sendEmailOTP({ email });
-      console.log(
-        'signInUser: OTP sent successfully, returning accountId:',
-        existingUser.accountId
-      );
-      return { accountId: existingUser.accountId };
+    const authUser = user
+      ? null
+      : authUserResult.status === 'fulfilled'
+      ? authUserResult.value
+      : null;
+
+    if (user) {
+      // User found - send OTP in background (non-blocking for faster response)
+      sendEmailOTP({ email }).catch((err) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to send OTP (non-blocking):', err);
+        }
+      });
+      return { accountId: user.accountId };
     }
 
-    console.log(
-      'signInUser: User not found in custom collection, checking Appwrite Auth...'
-    );
-
-    // Try to find the user in Appwrite Auth (pseudo-code, depends on your SDK)
-    const client = new sdk.Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-      .setKey(process.env.NEXT_APPWRITE_API_KEY!);
-
-    const users = new sdk.Users(client);
-    const userList = await users.list({
-      queries: [sdk.Query.equal('email', email)],
-    });
-    const authUser = userList.total > 0 ? userList.users[0] : null;
-
     if (authUser) {
-      // Create the missing users collection document
+      // Create user record and send OTP in parallel
       const { tablesDB } = await createAdminClient();
-      await tablesDB.createRow({
-        databaseId: appwriteConfig.databaseId || 'default-db',
-        tableId: appwriteConfig.usersCollectionId || 'users',
-        rowId: ID.unique(),
-        data: {
-          fullName: authUser.name || '',
-          email: authUser.email,
-          avatar: avatarPlaceholderUrl,
-          accountId: authUser.$id,
-          role: 'viewer',
-        },
-      });
-      await sendEmailOTP({ email });
+      const userId = ID.unique();
+
+      // Parallelize user creation and OTP sending
+      await Promise.all([
+        tablesDB.createRow({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.usersCollectionId || 'users',
+          rowId: userId,
+          data: {
+            fullName: authUser.name || '',
+            email: authUser.email,
+            avatar: avatarPlaceholderUrl,
+            accountId: authUser.$id,
+          },
+        }),
+        sendEmailOTP({ email }),
+      ]);
+
+      // Invalidate cache for this email to ensure fresh data
+      await CacheManager.invalidateUsers(email);
+
       return { accountId: authUser.$id };
     }
 
@@ -764,11 +827,9 @@ export const signInUser = async ({ email }: { email: string }) => {
         'No account found with this email address. Please check your email or sign up for a new account.',
     };
   } catch (error) {
-    console.error('signInUser: Error occurred:', error);
-    console.error('signInUser: Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace',
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.error('signInUser: Error occurred:', error);
+    }
 
     // Handle specific errors with user-friendly messages
     if (error instanceof Error) {
@@ -844,7 +905,13 @@ interface ListPendingInvitationsParams {
   orgId: string;
 }
 
-const allowedRoles = USER_ROLES;
+// Valid RBAC role names for invitations
+const VALID_RBAC_ROLES = [
+  'Super Admin',
+  'Organization Admin',
+  'Department Manager',
+  'Viewer',
+];
 
 export const createInvitation = async ({
   email,
@@ -876,27 +943,25 @@ export const createInvitation = async ({
     const status = 'pending';
     const revoked = false;
 
-    const normalizedInput = role.trim().toLowerCase();
-    const isRecognizedRole =
-      isUserRole(normalizedInput) || isLegacyRole(normalizedInput);
-    const canonicalRole = normalizeUserRole(normalizedInput);
+    // Validate role against new RBAC roles
+    const normalizedRole = role.trim();
+    const isRecognizedRole = VALID_RBAC_ROLES.includes(normalizedRole);
 
     console.log('createInvitation: Role validation:', {
       originalRole: role,
-      normalizedInput,
-      canonicalRole,
-      allowedRoles,
+      normalizedRole,
       isRecognizedRole,
+      validRoles: VALID_RBAC_ROLES,
     });
 
     if (!isRecognizedRole) {
       console.error('createInvitation: Invalid role:', {
         role,
-        normalizedInput,
-        allowedRoles,
+        normalizedRole,
+        validRoles: VALID_RBAC_ROLES,
       });
       throw new Error(
-        `Invalid role: ${role}. Must be one of ${allowedRoles.join(', ')}`
+        `Invalid role: ${role}. Must be one of ${VALID_RBAC_ROLES.join(', ')}`
       );
     }
     console.log('createInvitation: Role validation passed');
@@ -954,7 +1019,7 @@ export const createInvitation = async ({
       data: {
         email,
         orgId,
-        role: canonicalRole,
+        role: normalizedRole,
         department: department?.trim(),
         division: division?.trim(),
         name,
@@ -972,7 +1037,7 @@ export const createInvitation = async ({
       await notifyInvitationSent(
         email,
         name,
-        canonicalRole,
+        normalizedRole,
         department || 'N/A'
       );
     } catch (error) {
@@ -992,7 +1057,7 @@ export const createInvitation = async ({
         email,
         name,
         inviteLink,
-        canonicalRole,
+        normalizedRole,
         department
       );
       console.log('Invitation email sent via Mailgun to:', email);
@@ -1076,11 +1141,9 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   if (!authUser) throw new Error('User not found in Auth');
   const accountId = authUser.$id;
 
-  // 2. Create users collection document with role if not exists
+  // 2. Create users collection document if not exists (role is assigned via user_roles table)
   let user = await getUserByEmail(invite.email);
   if (!user) {
-    const canonicalInviteRole = normalizeUserRole(invite.role);
-
     // Validate division against expected enum values
     const validDivisions = [
       'c-suite',
@@ -1098,7 +1161,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     console.log('acceptInvitation: Creating user with data:', {
       fullName: invite.name,
       email: invite.email,
-      role: canonicalInviteRole,
+      role: invite.role,
       department: invite.department,
       division: invite.division,
       divisionType: typeof invite.division,
@@ -1131,7 +1194,6 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
         email: invite.email,
         avatar: avatarPlaceholderUrl,
         accountId,
-        role: canonicalInviteRole,
         department: invite.department,
         division: invite.division,
       },
@@ -1140,7 +1202,50 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   }
   if (!user) throw new Error('User creation failed');
 
-  // 3. Mark invitation as accepted
+  // 3. Assign role to user via user_roles table
+  // Get role ID from roles table
+  const rolesResult = await tablesDB.listRows({
+    databaseId: appwriteConfig.databaseId || 'default-db',
+    tableId: 'roles',
+    queries: [Query.equal('name', invite.role)],
+  });
+
+  if (rolesResult.total > 0) {
+    const roleId = rolesResult.rows[0].$id;
+    // Get default organization
+    const defaultOrg = await getUserDefaultOrganization(user.$id);
+    if (defaultOrg) {
+      // Check if user_role already exists
+      const existingUserRoles = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: 'user_roles',
+        queries: [
+          Query.equal('userId', user.$id),
+          Query.equal('orgId', defaultOrg.orgId),
+          Query.equal('roleId', roleId),
+        ],
+      });
+
+      if (existingUserRoles.total === 0) {
+        await tablesDB.createRow({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: 'user_roles',
+          rowId: ID.unique(),
+          data: {
+            userId: user.$id,
+            orgId: defaultOrg.orgId,
+            roleId: roleId,
+            assignedBy: invite.invitedBy || user.$id,
+          },
+        });
+
+        // Invalidate RBAC cache for this user
+        await CacheManager.invalidateRBAC(user.$id, defaultOrg.orgId);
+      }
+    }
+  }
+
+  // 4. Mark invitation as accepted
   await tablesDB.updateRow({
     databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
@@ -1153,7 +1258,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     await notifyInvitationAccepted(
       invite.email,
       invite.name,
-      normalizeUserRole(invite.role),
+      invite.role,
       invite.department || 'N/A'
     );
   } catch (error) {
@@ -1161,12 +1266,12 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
     // Don't throw - SMS failure shouldn't block invitation acceptance
   }
 
-  // 4. Return info for frontend to redirect to dashboard
+  // 5. Return info for frontend to redirect to dashboard
   return {
     success: true,
     email: invite.email,
     accountId: user.accountId,
-    role: user.role,
+    role: invite.role,
     department: user.department,
   };
 };
@@ -1391,7 +1496,7 @@ export const resendInvitation = async ({ token }: { token: string }) => {
       invitation.email,
       invitation.name,
       inviteLink,
-      invitation.role,
+      invitation.role || 'Viewer',
       invitation.department
     );
 
@@ -1425,11 +1530,13 @@ export const updateUserProfile = async ({
   fullName,
   division,
   role,
+  department,
 }: {
   accountId: string;
   fullName?: string;
   division?: UserDivision;
   role?: string;
+  department?: string;
 }) => {
   try {
     const { tablesDB } = await createAdminClient();
@@ -1441,11 +1548,20 @@ export const updateUserProfile = async ({
     });
     if (userList.total === 0) throw new Error('User not found');
     const userDoc = userList.rows[0];
+
     // Prepare update payload
+    // Note: role updates should be done via user_roles table, not directly on user
     const updatePayload: Record<string, unknown> = {};
     if (fullName !== undefined) updatePayload.fullName = fullName;
-    if (role !== undefined) updatePayload.role = role;
     if (division !== undefined) updatePayload.division = division;
+    if (department !== undefined) updatePayload.department = department;
+
+    // Preserve required fields like orgId if they exist in the document
+    // This ensures we don't lose required attributes during partial updates
+    if (userDoc.orgId) {
+      updatePayload.orgId = userDoc.orgId;
+    }
+
     // Update the user document
     const updatedUser = await tablesDB.updateRow({
       databaseId: appwriteConfig.databaseId || 'default-db',
@@ -1456,6 +1572,65 @@ export const updateUserProfile = async ({
     return updatedUser;
   } catch (error) {
     handleError(error, 'Failed to update user profile');
+  }
+};
+
+/**
+ * Update a user's department field while preserving required attributes
+ * @param userId - The user's document ID ($id)
+ * @param department - The new department value
+ * @returns The updated user document
+ */
+export const updateUserDepartment = async ({
+  userId,
+  department,
+}: {
+  userId: string;
+  department: string;
+}) => {
+  try {
+    const { tablesDB } = await createAdminClient();
+
+    // First, get the existing user document to preserve required fields
+    const userDoc = await tablesDB.getRow({
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
+      rowId: userId,
+    });
+
+    if (!userDoc) {
+      throw new Error('User not found');
+    }
+
+    // Prepare update payload with department and preserve required fields
+    const updatePayload: Record<string, unknown> = {
+      department,
+    };
+
+    // Preserve orgId if it exists (required attribute)
+    if (userDoc.orgId) {
+      updatePayload.orgId = userDoc.orgId;
+    }
+
+    // Preserve other required fields that might exist
+    if (userDoc.accountId) {
+      updatePayload.accountId = userDoc.accountId;
+    }
+    if (userDoc.email) {
+      updatePayload.email = userDoc.email;
+    }
+
+    // Update the user document
+    const updatedUser = await tablesDB.updateRow({
+      databaseId: appwriteConfig.databaseId || 'default-db',
+      tableId: appwriteConfig.usersCollectionId || 'users',
+      rowId: userId,
+      data: updatePayload,
+    });
+
+    return updatedUser;
+  } catch (error) {
+    handleError(error, 'Failed to update user department');
   }
 };
 
@@ -1620,7 +1795,10 @@ export async function fetchUserNamesByIds(
   }
 
   try {
-    const response = await fetch('/api/users/get-by-ids', {
+    // Use absolute URL for server-side compatibility
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/users/get-by-ids`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1629,14 +1807,40 @@ export async function fetchUserNamesByIds(
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: 'Unknown error' }));
+      console.error('[fetchUserNamesByIds] API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData,
+      });
       throw new Error(errorData.error || 'Failed to fetch user names');
     }
 
     const users: AppUser[] = await response.json();
-    return users;
+
+    // Filter out any debug info or non-user objects
+    const validUsers = Array.isArray(users)
+      ? users.filter(
+          (user) =>
+            user &&
+            typeof user === 'object' &&
+            ('$id' in user || 'fullName' in user)
+        )
+      : [];
+
+    if (validUsers.length !== users.length) {
+      console.warn('[fetchUserNamesByIds] Filtered out invalid user objects:', {
+        requested: userIds,
+        received: users.length,
+        valid: validUsers.length,
+      });
+    }
+
+    return validUsers;
   } catch (error) {
-    console.error('Error in fetchUserNamesByIds:', error);
+    console.error('[fetchUserNamesByIds] Error:', error);
     return [];
   }
 }

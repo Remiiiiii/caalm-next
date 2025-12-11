@@ -1,5 +1,7 @@
 import useSWR from 'swr';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMemo } from 'react';
+import { getCachedData, setCachedData } from '@/lib/utils/client-cache';
 
 interface DashboardData {
   stats: {
@@ -31,38 +33,56 @@ const fetcher = async (url: string): Promise<UnifiedDashboardDataResponse> => {
   if (!response.ok) {
     throw new Error('Failed to fetch unified dashboard data');
   }
-  return response.json();
+  const data = await response.json();
+  
+  // Cache the response client-side for stale-while-revalidate
+  if (typeof window !== 'undefined') {
+    setCachedData(url, data, 300000); // 5 minutes
+  }
+  
+  return data;
 };
 
 export const useUnifiedDashboardData = (orgId: string) => {
   const { user } = useAuth();
+  const url = user?.$id
+    ? `/api/dashboard/unified?orgId=${orgId}&userId=${user.$id}`
+    : null;
+
+  // Get cached data as fallback for stale-while-revalidate
+  const fallbackData = useMemo(() => {
+    if (!url || typeof window === 'undefined') return undefined;
+    return getCachedData<UnifiedDashboardDataResponse>(url);
+  }, [url]);
 
   const { data, error, isLoading, mutate } = useSWR(
-    user?.$id
-      ? `/api/dashboard/unified?orgId=${orgId}&userId=${user.$id}`
-      : null,
+    url,
     fetcher,
     {
-      refreshInterval: 60000, // Refresh every minute
+      refreshInterval: 120000, // Refresh every 2 minutes
       revalidateOnFocus: false, // Disable focus revalidation to prevent flickering
       revalidateOnReconnect: true,
-      dedupingInterval: 30000, // Dedupe requests within 30 seconds
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
+      dedupingInterval: 60000, // Dedupe requests within 1 minute
+      errorRetryCount: 2, // Reduced retries for faster failure
+      errorRetryInterval: 3000, // Faster retry interval
       revalidateIfStale: true,
       revalidateOnMount: true,
       keepPreviousData: true, // Keep previous data to prevent flickering
+      fallbackData, // Stale-while-revalidate: show cached data immediately
+      // Only log in development
+      onError: (err) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Dashboard data fetch error:', err);
+        }
+      },
+      onSuccess: (data) => {
+        // Update cache when fresh data arrives
+        if (url && typeof window !== 'undefined') {
+          setCachedData(url, data, 300000);
+        }
+      },
     }
   );
-
-  // Debug logging
-  console.log('useUnifiedDashboardData Debug:', {
-    hasData: !!data,
-    hasDataData: !!data?.data,
-    filesLength: data?.data?.files?.length || 0,
-    recentActivitiesLength: data?.data?.recentActivities?.length || 0,
-    rawData: data ? 'present' : 'missing',
-  });
 
   return {
     // Data

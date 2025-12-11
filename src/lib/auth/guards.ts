@@ -7,6 +7,7 @@ import {
   CalendarPermissionAction,
 } from './permissions';
 import { CalendarPermissionMap, UserRole } from '@/constants/rbac';
+import { getUserRoles, getUserDefaultOrganization } from '@/lib/rbac/permissions';
 
 export type CalendarPermissionEvaluation = {
   allowed: boolean;
@@ -30,11 +31,6 @@ export const evaluateCalendarPermission = async ({
   event,
   teamIds = [],
 }: EvaluateCalendarPermissionArgs): Promise<CalendarPermissionEvaluation> => {
-  console.log('[evaluateCalendarPermission] Checking permission:', {
-    userAccountId,
-    action,
-    eventId: event?.$id,
-  });
 
   const user = await getUserByAccountId(userAccountId);
 
@@ -52,11 +48,22 @@ export const evaluateCalendarPermission = async ({
     };
   }
 
-  console.log('[evaluateCalendarPermission] User found:', {
-    userId: user.$id,
-    role: user.role,
-    email: user.email,
-  });
+  // Get user's role from database
+  const defaultOrg = await getUserDefaultOrganization(user.$id);
+  const userRoles = defaultOrg ? await getUserRoles(user.$id, defaultOrg.orgId) : [];
+  const roleName = userRoles[0]?.roleName || '';
+  
+  // Map new RBAC roles to legacy calendar roles for compatibility
+  // This is temporary until calendar permissions are fully migrated
+  let calendarRole: UserRole = 'viewer';
+  if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
+    calendarRole = 'admin';
+  } else if (roleName === 'Department Manager') {
+    calendarRole = 'approver';
+  } else if (roleName === 'Viewer') {
+    calendarRole = 'viewer';
+  }
+
 
   // Ensure overrides is an array (parse from JSON string if needed)
   let overrides = event?.overrides || [];
@@ -80,7 +87,7 @@ export const evaluateCalendarPermission = async ({
   }
 
   const permissions = resolveCalendarPermissions({
-    role: user.role,
+    role: calendarRole,
     overrides: overrides,
     context: {
       userId: user.$id,
@@ -100,37 +107,14 @@ export const evaluateCalendarPermission = async ({
           event.createdBy === userAccountId));
 
     if (isEventCreator) {
-      console.log(
-        '[evaluateCalendarPermission] Allowing event creator to cancel their own event:',
-        {
-          userId: user.$id,
-          userAccountId,
-          eventId: event.$id,
-          eventCreatedBy: event.createdBy,
-          eventCreatedByAccountId: event.createdByAccountId,
-          eventCreatedByUserId: event.createdByUserId,
-        }
-      );
       allowed = true;
     }
   }
 
-  console.log('[evaluateCalendarPermission] Permission check:', {
-    permissionKey,
-    allowed,
-    permissions,
-    isEventCreator:
-      event &&
-      action === 'cancel' &&
-      ((user.$id && event.createdByUserId === user.$id) ||
-        (userAccountId &&
-          (event.createdByAccountId === userAccountId ||
-            event.createdBy === userAccountId))),
-  });
-
   if (!allowed) {
     console.error('[evaluateCalendarPermission] Permission denied:', {
-      userRole: user.role,
+      userRole: calendarRole,
+      roleName,
       permissionKey,
       permissions,
       eventId: event?.$id,
@@ -140,7 +124,7 @@ export const evaluateCalendarPermission = async ({
     });
     return {
       allowed,
-      userRole: user.role,
+      userRole: calendarRole,
       permissions,
       userId: user.$id,
       reason: 'permission_denied',
@@ -157,7 +141,7 @@ export const evaluateCalendarPermission = async ({
   ) {
     return {
       allowed: false,
-      userRole: user.role,
+      userRole: calendarRole,
       permissions,
       userId: user.$id,
       reason: 'pending_approval',
@@ -170,7 +154,7 @@ export const evaluateCalendarPermission = async ({
 
   return {
     allowed: true,
-    userRole: user.role,
+    userRole: calendarRole,
     permissions,
     userId: user.$id,
   };

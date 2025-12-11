@@ -42,9 +42,14 @@ import {
   Eye,
   ChevronDown,
   ChevronUp,
+  FileCheck,
+  Building2,
+  Settings,
+  Users,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import useSWR from 'swr';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface AuditLog {
   event_id: string;
@@ -83,6 +88,7 @@ interface Filters {
 
 const AuditLogsPage = () => {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('calendar');
   const [filters, setFilters] = useState<Filters>({
     startDate: '',
     endDate: '',
@@ -334,450 +340,653 @@ const AuditLogsPage = () => {
     <div className="main-content">
       {/* Professional Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-              <Shield className="w-6 h-6 text-white" />
+              <Shield className="w-6 h-6 text-[#0f5384]" />
             </div>
-            <div>
-              <h1 className="h1 sidebar-gradient-text">Audit Logs</h1>
-              <p className="body-1 text-slate-600 mt-1">
-                Monitor calendar event deletions and sync operations
-              </p>
-            </div>
+            <h1 className="h1 sidebar-gradient-text">System Audit Logs</h1>
           </div>
           <div className="flex gap-3">
             <Button
-              onClick={() => refreshLogs()}
-              variant="outline"
-              className="primary-btn flex items-center gap-2 px-4 py-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </Button>
-            <Button
               onClick={exportToCSV}
-              className="primary-btn flex items-center gap-2 px-4 py-2"
+              className="primary-btn flex items-center gap-2 px-4"
             >
               <Download className="w-4 h-4" />
               Export CSV
             </Button>
           </div>
         </div>
+        <div>
+          <p className="text-slate-600 ml-16">
+            Monitor and track all system activities and changes
+          </p>
+        </div>
       </div>
 
-      {/* Professional Stats Cards */}
-      {auditStats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="body-2 text-slate-600 mb-1">Total Deletions</p>
-                  <p className="h2 text-slate-900">
-                    {auditStats.totalDeletions}
-                  </p>
-                </div>
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600">
-                  <AlertTriangle className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Tabs for different audit types */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-7 mb-6 bg-white border border-slate-200">
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Calendar Events
+          </TabsTrigger>
+          <TabsTrigger value="contracts" className="flex items-center gap-2">
+            <FileCheck className="w-4 h-4" />
+            Contracts
+          </TabsTrigger>
+          <TabsTrigger value="licenses" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Licenses
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Documents
+          </TabsTrigger>
+          <TabsTrigger value="team" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Team
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Reports & Analytics
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Settings
+          </TabsTrigger>
+        </TabsList>
 
-          <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="body-2 text-slate-600 mb-1">Success Rate</p>
-                  <p className="h2 text-emerald-600">
-                    {auditStats.successRate.toFixed(1)}%
-                  </p>
-                </div>
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Calendar Events Tab */}
+        <TabsContent value="calendar" className="space-y-8">
+          {/* Professional Stats Cards */}
+          {auditStats && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="body-2 text-slate-700 mb-1">
+                        Total Deletions
+                      </p>
+                      <p className="h2 text-slate-900">
+                        {auditStats.totalDeletions}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600">
+                      <AlertTriangle className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="body-2 text-slate-600 mb-1">Failed Syncs</p>
-                  <p className="h2 text-red-600">{auditStats.failedSyncs}</p>
-                </div>
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600">
-                  <XCircle className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="body-2 text-slate-600 mb-1">Success Rate</p>
+                      <p className="h2 text-emerald-600">
+                        {auditStats.successRate.toFixed(1)}%
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
+                      <TrendingUp className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="body-2 text-slate-600 mb-1">Pending Syncs</p>
-                  <p className="h2 text-amber-600">{auditStats.pendingSyncs}</p>
-                </div>
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="body-2 text-slate-600 mb-1">Failed Syncs</p>
+                      <p className="h2 text-red-600">
+                        {auditStats.failedSyncs}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600">
+                      <XCircle className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-      {/* Professional Filters */}
-      <Card className="mb-8 shadow-drop-1">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 h3">
-              <Filter className="w-5 h-5 text-slate-600" />
-              Filters & Search
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900"
-            >
-              {isFiltersOpen ? (
-                <>
-                  <ChevronUp className="w-4 h-4" />
-                  Hide Filters
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  Show Filters
-                </>
-              )}
-            </Button>
-          </div>
-        </CardHeader>
-        {isFiltersOpen && (
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-              <div>
-                <Label
-                  htmlFor="startDate"
-                  className="body-2 text-slate-600 mb-2 block"
-                >
-                  Start Date
-                </Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) =>
-                    handleFilterChange('startDate', e.target.value)
-                  }
-                  className="shad-input"
-                />
-              </div>
-              <div>
-                <Label
-                  htmlFor="endDate"
-                  className="body-2 text-slate-600 mb-2 block"
-                >
-                  End Date
-                </Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) =>
-                    handleFilterChange('endDate', e.target.value)
-                  }
-                  className="shad-input"
-                />
-              </div>
-              <div>
-                <Label
-                  htmlFor="action"
-                  className="body-2 text-slate-600 mb-2 block"
-                >
-                  Action
-                </Label>
-                <Select
-                  value={filters.action}
-                  onValueChange={(value) => handleFilterChange('action', value)}
-                >
-                  <SelectTrigger className="shad-input">
-                    <SelectValue placeholder="All actions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All actions</SelectItem>
-                    <SelectItem value="delete">Delete</SelectItem>
-                    <SelectItem value="sync_delete">Sync Delete</SelectItem>
-                    <SelectItem value="restore">Restore</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label
-                  htmlFor="status"
-                  className="body-2 text-slate-600 mb-2 block"
-                >
-                  Status
-                </Label>
-                <Select
-                  value={filters.status}
-                  onValueChange={(value) => handleFilterChange('status', value)}
-                >
-                  <SelectTrigger className="shad-input">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="success">Success</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label
-                  htmlFor="search"
-                  className="body-2 text-slate-600 mb-2 block"
-                >
-                  Search
-                </Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="search"
-                    placeholder="Search events..."
-                    value={filters.search}
-                    onChange={(e) =>
-                      handleFilterChange('search', e.target.value)
-                    }
-                    className="shad-input pl-10"
-                  />
-                </div>
-              </div>
-              <div className="flex items-end">
+              <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="body-2 text-slate-600 mb-1">
+                        Pending Syncs
+                      </p>
+                      <p className="h2 text-amber-600">
+                        {auditStats.pendingSyncs}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600">
+                      <Clock className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Professional Filters */}
+          <Card className="mb-8 shadow-drop-1">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 h3 text-slate-700">
+                  <Filter className="w-5 h-5 text-[#0f5384]" />
+                  Filters & Search
+                </CardTitle>
                 <Button
-                  onClick={clearFilters}
-                  variant="outline"
-                  className="w-full h-12 border-slate-200 hover:bg-slate-50"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                  className="flex items-center gap-2 text-slate-600 hover:text-slate-900"
                 >
-                  Clear Filters
+                  {isFiltersOpen ? (
+                    <>
+                      <ChevronUp className="w-4 h-4" />
+                      Hide Filters
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-4 h-4" />
+                      Show Filters
+                    </>
+                  )}
                 </Button>
               </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
+            </CardHeader>
+            {isFiltersOpen && (
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                  <div>
+                    <Label
+                      htmlFor="startDate"
+                      className="body-2 text-slate-600 mb-2 block"
+                    >
+                      Start Date
+                    </Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={filters.startDate}
+                      onChange={(e) =>
+                        handleFilterChange('startDate', e.target.value)
+                      }
+                      className="shad-input"
+                    />
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="endDate"
+                      className="body-2 text-slate-600 mb-2 block"
+                    >
+                      End Date
+                    </Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={filters.endDate}
+                      onChange={(e) =>
+                        handleFilterChange('endDate', e.target.value)
+                      }
+                      className="shad-input"
+                    />
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="action"
+                      className="body-2 text-slate-600 mb-2 block"
+                    >
+                      Action
+                    </Label>
+                    <Select
+                      value={filters.action}
+                      onValueChange={(value) =>
+                        handleFilterChange('action', value)
+                      }
+                    >
+                      <SelectTrigger className="shad-input">
+                        <SelectValue placeholder="All actions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All actions</SelectItem>
+                        <SelectItem value="delete">Delete</SelectItem>
+                        <SelectItem value="sync_delete">Sync Delete</SelectItem>
+                        <SelectItem value="restore">Restore</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="status"
+                      className="body-2 text-slate-600 mb-2 block"
+                    >
+                      Status
+                    </Label>
+                    <Select
+                      value={filters.status}
+                      onValueChange={(value) =>
+                        handleFilterChange('status', value)
+                      }
+                    >
+                      <SelectTrigger className="shad-input">
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="success">Success</SelectItem>
+                        <SelectItem value="failed">Failed</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="search"
+                      className="body-2 text-slate-600 mb-2 block"
+                    >
+                      Search
+                    </Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="search"
+                        placeholder="Search events..."
+                        value={filters.search}
+                        onChange={(e) =>
+                          handleFilterChange('search', e.target.value)
+                        }
+                        className="shad-input pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={clearFilters}
+                      variant="outline"
+                      className="w-full h-12 border-slate-200 hover:bg-slate-50"
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
 
-      {/* Professional Audit Logs Table */}
-      <Card className="shadow-drop-1">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 h3">
-              <BarChart3 className="w-5 h-5 text-slate-600" />
-              Audit Logs
-              <Badge
-                variant="secondary"
-                className="ml-2 bg-slate-100 text-slate-700"
-              >
-                {auditLogs.length} entries
-              </Badge>
-            </CardTitle>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Activity className="w-4 h-4" />
-              Auto-refresh every 30s
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-200 bg-slate-50">
-                  <TableHead className="font-semibold text-slate-700 py-4">
-                    Timestamp
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">
-                    Event Title
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">
-                    Action
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">
-                    Source
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">
-                    User
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">
-                    Status
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">
-                    Details
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {auditLogs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100">
-                          <FileText className="w-8 h-8 text-slate-400" />
-                        </div>
-                        <div>
-                          <h3 className="h4 text-slate-600 mb-2">
-                            No Audit Logs Found
-                          </h3>
-                          <p className="body-1 text-slate-500">
-                            No audit logs match your current filters
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  auditLogs.map((log) => (
-                    <React.Fragment key={`${log.event_id}-${log.created_at}`}>
-                      <TableRow className="hover:bg-slate-50 transition-colors">
-                        <TableCell className="py-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-slate-400" />
-                            <span className="body-2 text-slate-700">
-                              {format(
-                                new Date(log.created_at),
-                                'MMM dd, yyyy HH:mm'
-                              )}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="font-medium text-slate-900 max-w-[200px] truncate">
-                            {log.event_title}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          {getActionBadge(log.action)}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <Badge
-                            variant="outline"
-                            className="capitalize bg-slate-50 text-slate-700 border-slate-200"
-                          >
-                            {log.source}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100">
-                              <User className="w-4 h-4 text-slate-600" />
+          {/* Professional Audit Logs Table */}
+          <Card className="shadow-drop-1">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 h3 text-slate-700">
+                  <BarChart3 className="w-5 h-5 text-[#0f5384]" />
+                  Audit Logs
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 bg-slate-100 text-slate-700"
+                  >
+                    {auditLogs.length} entries
+                  </Badge>
+                </CardTitle>
+                <div className="flex items-center gap-2 text-sm text-slate-600"></div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200 bg-slate-50">
+                      <TableHead className="font-semibold text-slate-700 py-4">
+                        Timestamp
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700 py-4">
+                        Event Title
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700 py-4">
+                        Action
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700 py-4">
+                        Source
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700 py-4">
+                        User
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700 py-4">
+                        Status
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700 py-4">
+                        Details
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {auditLogs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-4">
+                            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100">
+                              <FileText className="w-8 h-8 text-slate-400" />
                             </div>
                             <div>
-                              <div className="font-medium text-slate-900 text-sm">
-                                {log.user_name}
-                              </div>
-                              <div className="text-xs text-slate-500">
-                                {log.user_email}
-                              </div>
+                              <h3 className="h4 text-slate-600 mb-2">
+                                No Audit Logs Found
+                              </h3>
+                              <p className="body-1 text-slate-500">
+                                No audit logs match your current filters
+                              </p>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="py-4">
-                          {getStatusBadge(log.status)}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleRowExpansion(log.event_id)}
-                            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                          >
-                            <Eye className="w-4 h-4" />
-                            {expandedRows.has(log.event_id) ? 'Hide' : 'Show'}
-                          </Button>
-                        </TableCell>
                       </TableRow>
-                      {expandedRows.has(log.event_id) && (
-                        <TableRow>
-                          <TableCell colSpan={7} className="bg-slate-50 p-0">
-                            <div className="p-6 border-t border-slate-200">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-3">
-                                  <div>
-                                    <Label className="body-2 text-slate-600">
-                                      Event ID
-                                    </Label>
-                                    <p className="font-mono text-sm text-slate-900 bg-white p-2 rounded border">
-                                      {log.event_id}
-                                    </p>
+                    ) : (
+                      auditLogs.map((log) => (
+                        <React.Fragment
+                          key={`${log.event_id}-${log.created_at}`}
+                        >
+                          <TableRow className="hover:bg-slate-50 transition-colors">
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-slate-400" />
+                                <span className="body-2 text-slate-700">
+                                  {format(
+                                    new Date(log.created_at),
+                                    'MMM dd, yyyy HH:mm'
+                                  )}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <div className="font-medium text-slate-900 max-w-[200px] truncate">
+                                {log.event_title}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              {getActionBadge(log.action)}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <Badge
+                                variant="outline"
+                                className="capitalize bg-slate-50 text-slate-700 border-slate-200"
+                              >
+                                {log.source}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100">
+                                  <User className="w-4 h-4 text-slate-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-slate-900 text-sm">
+                                    {log.user_name}
                                   </div>
-                                  <div>
-                                    <Label className="body-2 text-slate-600">
-                                      IP Address
-                                    </Label>
-                                    <p className="text-sm text-slate-900">
-                                      {log.ip_address || 'N/A'}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <Label className="body-2 text-slate-600">
-                                      Reason
-                                    </Label>
-                                    <p className="text-sm text-slate-900">
-                                      {log.reason || 'N/A'}
-                                    </p>
+                                  <div className="text-xs text-slate-500">
+                                    {log.user_email}
                                   </div>
                                 </div>
-                                <div className="space-y-3">
-                                  <div>
-                                    <Label className="body-2 text-slate-600">
-                                      User Agent
-                                    </Label>
-                                    <p className="text-sm text-slate-900 break-all">
-                                      {log.user_agent || 'N/A'}
-                                    </p>
-                                  </div>
-                                  {log.error_message && (
-                                    <div>
-                                      <Label className="body-2 text-red-600">
-                                        Error Message
-                                      </Label>
-                                      <div className="mt-1 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                        <p className="text-sm text-red-800">
-                                          {log.error_message}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              {getStatusBadge(log.status)}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleRowExpansion(log.event_id)}
+                                className="flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                              >
+                                <Eye className="w-4 h-4" />
+                                {expandedRows.has(log.event_id)
+                                  ? 'Hide'
+                                  : 'Show'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          {expandedRows.has(log.event_id) && (
+                            <TableRow>
+                              <TableCell
+                                colSpan={7}
+                                className="bg-slate-50 p-0"
+                              >
+                                <div className="p-6 border-t border-slate-200">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          Event ID
+                                        </Label>
+                                        <p className="font-mono text-sm text-slate-900 bg-white p-2 rounded border">
+                                          {log.event_id}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          IP Address
+                                        </Label>
+                                        <p className="text-sm text-slate-900">
+                                          {log.ip_address || 'N/A'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          Reason
+                                        </Label>
+                                        <p className="text-sm text-slate-900">
+                                          {log.reason || 'N/A'}
                                         </p>
                                       </div>
                                     </div>
-                                  )}
-                                  {log.metadata && (
-                                    <div>
-                                      <Label className="body-2 text-slate-600">
-                                        Metadata
-                                      </Label>
-                                      <pre className="mt-1 p-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 overflow-x-auto">
-                                        {JSON.stringify(log.metadata, null, 2)}
-                                      </pre>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          User Agent
+                                        </Label>
+                                        <p className="text-sm text-slate-900 break-all">
+                                          {log.user_agent || 'N/A'}
+                                        </p>
+                                      </div>
+                                      {log.error_message && (
+                                        <div>
+                                          <Label className="body-2 text-red-600">
+                                            Error Message
+                                          </Label>
+                                          <div className="mt-1 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                            <p className="text-sm text-red-800">
+                                              {log.error_message}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {log.metadata && (
+                                        <div>
+                                          <Label className="body-2 text-slate-600">
+                                            Metadata
+                                          </Label>
+                                          <pre className="mt-1 p-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 overflow-x-auto">
+                                            {JSON.stringify(
+                                              log.metadata,
+                                              null,
+                                              2
+                                            )}
+                                          </pre>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </React.Fragment>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Contracts Tab */}
+        <TabsContent value="contracts" className="space-y-8">
+          <Card className="shadow-drop-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 h3">
+                <FileCheck className="w-5 h-5 text-slate-600" />
+                Contract Audit Logs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <FileCheck className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="h4 text-slate-600 mb-2">
+                  No Contract Audit Logs
+                </h3>
+                <p className="body-1 text-slate-500">
+                  Contract audit logs will appear here once contract operations
+                  are tracked
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Licenses Tab */}
+        <TabsContent value="licenses" className="space-y-8">
+          <Card className="shadow-drop-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 h3">
+                <FileText className="w-5 h-5 text-slate-600" />
+                License Audit Logs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <FileText className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="h4 text-slate-600 mb-2">
+                  No License Audit Logs
+                </h3>
+                <p className="body-1 text-slate-500">
+                  License audit logs will appear here once license operations
+                  are tracked
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-8">
+          <Card className="shadow-drop-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 h3">
+                <FileText className="w-5 h-5 text-slate-600" />
+                Document Audit Logs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <FileText className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="h4 text-slate-600 mb-2">
+                  No Document Audit Logs
+                </h3>
+                <p className="body-1 text-slate-500">
+                  Document audit logs will appear here once document operations
+                  are tracked
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Team Tab */}
+        <TabsContent value="team" className="space-y-8">
+          <Card className="shadow-drop-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 h3">
+                <Users className="w-5 h-5 text-slate-600" />
+                Team Audit Logs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <Users className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="h4 text-slate-600 mb-2">No Team Audit Logs</h3>
+                <p className="body-1 text-slate-500">
+                  Team audit logs will appear here once team operations are
+                  tracked
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Reports & Analytics Tab */}
+        <TabsContent value="reports" className="space-y-8">
+          <Card className="shadow-drop-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 h3">
+                <BarChart3 className="w-5 h-5 text-slate-600" />
+                Reports & Analytics Audit Logs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <BarChart3 className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="h4 text-slate-600 mb-2">
+                  No Reports & Analytics Audit Logs
+                </h3>
+                <p className="body-1 text-slate-500">
+                  Reports & Analytics audit logs will appear here once report
+                  operations are tracked
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-8">
+          <Card className="shadow-drop-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 h3">
+                <Settings className="w-5 h-5 text-slate-600" />
+                Settings Audit Logs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <Settings className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="h4 text-slate-600 mb-2">
+                  No Settings Audit Logs
+                </h3>
+                <p className="body-1 text-slate-500">
+                  Settings audit logs will appear here once settings changes are
+                  tracked
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

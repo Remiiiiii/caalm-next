@@ -142,3 +142,27 @@ globs: \*_/_.{ts,tsx,js,jsx,md,json}
 - 🔴 Server Restart Required:
   - "⚠️ SERVER RESTART REQUIRED - server-side code was modified"
 - Use the appropriate indicator based on the scope of changes made
+
+---
+
+name: database-operations.mdc
+description: Rules for performing database operations and schema changes
+globs: \*_/_.{ts,tsx,js,jsx}
+
+---
+
+- NEVER create scripts (`.ts`, `.js`, `.sh`, etc.) to perform database operations, schema changes, or attribute creation.
+- ALWAYS use MCP (Model Context Protocol) tools for all database operations.
+- When database attributes need to be created or modified, use the available MCP database tools:
+  - `mcp_caalm_databases_create_string_attribute` for string attributes
+  - `mcp_caalm_databases_create_boolean_attribute` for boolean attributes
+  - `mcp_caalm_databases_create_integer_attribute` for integer attributes
+  - `mcp_caalm_databases_create_datetime_attribute` for datetime attributes
+  - Other MCP database attribute creation tools as needed
+- If MCP tools are not available or fail, provide clear instructions for manual creation via Appwrite Console UI.
+- Database operations include but are not limited to:
+  - Creating table attributes/columns
+  - Modifying table schemas
+  - Creating indexes
+  - Database migrations
+- This rule ensures consistency, reduces maintenance overhead, and leverages the integrated MCP tooling.

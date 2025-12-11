@@ -191,10 +191,47 @@
       #11487d,
       #162768
     );
+    /* Add shimmer-hover styles */
+    position: relative;
+    overflow: hidden;
+  }
+
+  .primary-btn::after,
+  .shad-active::after,
+  .shad-submit-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.45) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    transform: skewX(-20deg);
+    border-radius: inherit;
+    pointer-events: none;
   }
 
   .primary-btn:hover {
     @apply text-white !important;
+  }
+
+  .primary-btn:hover::after,
+  .shad-active:hover::after,
+  .shad-submit-btn:hover::after {
+    animation: shimmer-slide 900ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .primary-btn:hover::after,
+    .shad-active:hover::after,
+    .shad-submit-btn:hover::after {
+      animation: none;
+    }
   }
   .analytics-icon {
     @apply shadow-md;
@@ -326,13 +363,13 @@
     @apply mx-auto flex w-full max-w-7xl flex-col items-center gap-8;
   }
   .total-size-section {
-    @apply flex mt-2 flex-col justify-between sm:flex-row sm:items-center;
+    @apply flex mt-2 flex-col justify-between sm:flex-row sm:items-center bg-slate-50 rounded-lg p-4 shadow-sm border border-slate-200;
   }
   .file-list {
     @apply grid w-full gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
   }
   .sort-container {
-    @apply mt-5 flex items-center sm:mt-0 sm:gap-3;
+    @apply mt-5 flex items-center gap-4 sm:mt-0 sm:gap-4;
   }
 
   /* ActionsDropdown */
@@ -392,7 +429,7 @@
 
   /* Card */
   .file-card {
-    @apply flex cursor-pointer flex-col gap-6 rounded-[18px] text-slate-700 bg-white p-5 shadow-sm transition-all hover:shadow-drop-3;
+    @apply flex cursor-pointer flex-col gap-6 rounded-[18px] text-slate-700 bg-white p-5 shadow-lg transition-all hover:shadow-drop-3;
   }
   .file-card-details {
     @apply flex flex-col gap-2 text-slate-700;
@@ -512,7 +549,7 @@
 
   /* Sidebar */
   .sidebar {
-    @apply remove-scrollbar hidden h-screen w-[90px] flex-col overflow-auto px-5 py-7 sm:flex lg:w-[280px] xl:w-[325px];
+    @apply remove-scrollbar hidden h-screen w-[90px] flex-col overflow-auto px-5 py-7 sm:flex lg:w-[250px] xl:w-[260px];
   }
   .sidebar.collapsed {
     width: 90px;

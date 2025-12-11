@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
@@ -50,7 +50,20 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
           <section className="flex h-full w-full flex-1 flex-col">
             <MobileNavigation {...user} />
             <DashboardHeader user={user} />
-            <div className="main-content">{children}</div>
+            <div className="main-content">
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Loading...</p>
+                    </div>
+                  </div>
+                }
+              >
+                {children}
+              </Suspense>
+            </div>
           </section>
           <Toaster />
         </main>

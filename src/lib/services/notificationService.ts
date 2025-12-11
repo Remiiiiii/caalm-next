@@ -109,9 +109,9 @@ class NotificationService {
       const tablesDB = await this.getTablesDB();
       const response = await tablesDB.updateRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
-        collectionId:
+        tableId:
           appwriteConfig.notificationTypesCollectionId || 'notification-types',
-        documentId: id,
+        rowId: id,
         data: updates,
       });
       return response as unknown as NotificationType;
@@ -251,29 +251,73 @@ class NotificationService {
   ): Promise<Notification> {
     try {
       const tablesDB = await this.getTablesDB();
+      console.log(
+        '[SERVER] NotificationService.createNotification] Creating notification with type:',
+        notification.type
+      );
+
       // Validate notification type exists and is enabled
       const notificationType = await this.getNotificationType(
         notification.type
       );
       if (!notificationType) {
-        throw new Error(
-          `Notification type '${notification.type}' not found or disabled`
+        const errorMsg = `Notification type '${notification.type}' not found or disabled`;
+        console.error(
+          '[SERVER] NotificationService.createNotification]',
+          errorMsg
         );
+        throw new Error(errorMsg);
       }
 
-      const notificationData = {
+      console.log(
+        '[SERVER] NotificationService.createNotification] Notification type validated:',
+        notificationType.type_key
+      );
+
+      // Get user's organization ID (required field)
+      const { getUserDefaultOrganization } = await import(
+        '@/lib/rbac/permissions'
+      );
+      const defaultOrg = await getUserDefaultOrganization(notification.userId);
+      if (!defaultOrg) {
+        const errorMsg = `User ${notification.userId} has no default organization`;
+        console.error(
+          '[SERVER] NotificationService.createNotification]',
+          errorMsg
+        );
+        throw new Error(errorMsg);
+      }
+
+      // Build notification data, excluding undefined values
+      const notificationData: Record<string, any> = {
         userId: notification.userId,
         title: notification.title,
         message: notification.message,
         type: notification.type,
         read: false,
         priority: notification.priority || notificationType.priority,
-        actionUrl: notification.actionUrl,
-        actionText: notification.actionText,
-        metadata: notification.metadata
-          ? JSON.stringify(notification.metadata)
-          : undefined,
+        orgId: defaultOrg.orgId, // Required field
       };
+
+      // Only add optional fields if they have values
+      if (notification.actionUrl) {
+        notificationData.actionUrl = notification.actionUrl;
+      }
+      if (notification.actionText) {
+        notificationData.actionText = notification.actionText;
+      }
+      if (notification.metadata) {
+        notificationData.metadata = JSON.stringify(notification.metadata);
+      }
+
+      console.log(
+        '[SERVER] NotificationService.createNotification] Creating row in database:',
+        {
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+          dataKeys: Object.keys(notificationData),
+        }
+      );
 
       const response = await tablesDB.createRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
@@ -282,13 +326,44 @@ class NotificationService {
         data: notificationData,
       });
 
+      console.log(
+        '[SERVER] NotificationService.createNotification] Successfully created notification:',
+        (response as any).$id || 'unknown-id'
+      );
+
       // Send SMS notification if user has SMS enabled
-      await this.sendSMSNotification(notification.userId, notificationData);
+      try {
+        await this.sendSMSNotification(notification.userId, {
+          title: notificationData.title,
+          message: notificationData.message,
+          priority: notificationData.priority,
+          actionUrl: notificationData.actionUrl,
+          type: notificationData.type,
+        });
+      } catch (smsError) {
+        console.warn(
+          '[SERVER] NotificationService.createNotification] SMS notification failed (non-critical):',
+          smsError
+        );
+        // Don't throw - SMS failure shouldn't break notification creation
+      }
 
       return response as unknown as Notification;
     } catch (error) {
-      console.error('Failed to create notification:', error);
-      throw new Error('Failed to create notification');
+      console.error(
+        '[SERVER] NotificationService.createNotification] Failed to create notification:',
+        error
+      );
+      if (error instanceof Error) {
+        console.error(
+          '[SERVER] NotificationService.createNotification] Error details:',
+          {
+            message: error.message,
+            stack: error.stack,
+          }
+        );
+      }
+      throw error; // Re-throw the original error instead of wrapping it
     }
   }
 
@@ -354,7 +429,7 @@ class NotificationService {
       });
 
       // Update each notification
-      const unreadRows = unreadNotifications.rows as Array<
+      const unreadRows = unreadNotifications.rows as unknown as Array<
         Notification & { $id: string }
       >;
       const updatePromises = unreadRows.map((notification) =>
@@ -596,7 +671,7 @@ class NotificationService {
   /**
    * Send SMS notification to user if SMS is enabled
    */
-  private async sendSMSNotification(
+  async sendSMSNotification(
     userId: string,
     notificationData: {
       title: string;
@@ -676,3 +751,6 @@ class NotificationService {
 // Export singleton instance
 export const notificationService = new NotificationService();
 export default notificationService;
+
+// Export the class for cases where a new instance is needed
+export { NotificationService };

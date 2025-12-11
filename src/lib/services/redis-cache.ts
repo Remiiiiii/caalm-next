@@ -270,10 +270,23 @@ export async function get<T>(key: string): Promise<T | null> {
   const value = await cacheService.get<T>(key);
   const duration = Date.now() - startTime;
 
-  if (value) {
-    console.log(`Cache HIT: ${key} (${duration}ms)`);
-  } else {
-    console.log(`Cache MISS: ${key} (${duration}ms)`);
+  // Track metrics
+  if (process.env.NODE_ENV !== 'test') {
+    const { recordCacheHit, recordCacheMiss } = await import('./cache-metrics');
+    if (value) {
+      recordCacheHit(key, duration);
+    } else {
+      recordCacheMiss(key, duration);
+    }
+  }
+
+  // Only log in development to reduce production overhead
+  if (process.env.NODE_ENV === 'development') {
+    if (value) {
+      console.log(`Cache HIT: ${key} (${duration}ms)`);
+    } else {
+      console.log(`Cache MISS: ${key} (${duration}ms)`);
+    }
   }
 
   return value;
@@ -287,11 +300,15 @@ export async function set(
   value: any,
   ttl: number = 300
 ): Promise<void> {
-  const startTime = Date.now();
-  await cacheService.set(key, value, ttl);
-  const duration = Date.now() - startTime;
-
-  console.log(`Cache SET: ${key} (TTL: ${ttl}s, ${duration}ms)`);
+  // Only log in development to reduce production overhead
+  if (process.env.NODE_ENV === 'development') {
+    const startTime = Date.now();
+    await cacheService.set(key, value, ttl);
+    const duration = Date.now() - startTime;
+    console.log(`Cache SET: ${key} (TTL: ${ttl}s, ${duration}ms)`);
+  } else {
+    await cacheService.set(key, value, ttl);
+  }
 }
 
 /**
@@ -299,7 +316,10 @@ export async function set(
  */
 export async function del(key: string): Promise<void> {
   await cacheService.del(key);
-  console.log(`Cache DEL: ${key}`);
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Cache DEL: ${key}`);
+  }
 }
 
 /**
@@ -314,7 +334,10 @@ export async function exists(key: string): Promise<boolean> {
  */
 export async function clear(pattern: string): Promise<void> {
   await cacheService.clear(pattern);
-  console.log(`Cache CLEAR: ${pattern}`);
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Cache CLEAR: ${pattern}`);
+  }
 }
 
 /**

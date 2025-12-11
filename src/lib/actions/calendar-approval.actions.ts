@@ -298,11 +298,6 @@ export const getLatestApprovalRequestByEventId = async (
       Query.limit(1),
     ];
 
-    console.log('[getLatestApprovalRequestByEventId] Querying for approval:', {
-      eventId,
-      status,
-      queries: queries.length,
-    });
 
     const response = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId!,
@@ -371,11 +366,6 @@ export const getLatestApprovalRequestByEventId = async (
 
     const plainResponse = { total, rows };
 
-    console.log('[getLatestApprovalRequestByEventId] Query result:', {
-      total: plainResponse.total,
-      rowsFound: plainResponse.rows.length,
-    });
-
     if (plainResponse.rows.length === 0) {
       console.log(
         '[getLatestApprovalRequestByEventId] No approval requests found'
@@ -386,23 +376,6 @@ export const getLatestApprovalRequestByEventId = async (
     // Now we can safely access the row - it's already a plain object with no client references
     const raw = plainResponse.rows[0] as Record<string, unknown>;
 
-    // Debug: Log the raw reviewerNotes value and full approval data
-    console.log('[getLatestApprovalRequestByEventId] Raw approval data:', {
-      $id: raw.$id,
-      eventId: raw.eventId,
-      status: raw.status,
-      decidedAt: raw.decidedAt,
-      reviewerNotes: raw.reviewerNotes,
-      reviewerNotesType: typeof raw.reviewerNotes,
-      reviewerNotesIsNull: raw.reviewerNotes === null,
-      reviewerNotesIsUndefined: raw.reviewerNotes === undefined,
-      reviewerNotesIsEmptyString: raw.reviewerNotes === '',
-      reviewerNotesTruthy: !!raw.reviewerNotes,
-      reviewerNotesLength:
-        typeof raw.reviewerNotes === 'string'
-          ? raw.reviewerNotes.length
-          : 'N/A',
-    });
 
     // Parse changeSummary from JSON string to object and deeply serialize to remove any client instances
     let changeSummary: CalendarApprovalChangeSummary = {
@@ -706,11 +679,6 @@ export const decideCalendarApprovalRequest = async ({
   ) {
     const trimmedNotes = reviewerNotes.trim();
     updateData.reviewerNotes = trimmedNotes;
-    console.log('[decideCalendarApprovalRequest] Saving reviewerNotes:', {
-      original: reviewerNotes,
-      trimmed: trimmedNotes,
-      length: trimmedNotes.length,
-    });
   } else {
     // Explicitly set to null if not provided or empty
     updateData.reviewerNotes = null;

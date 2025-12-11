@@ -44,6 +44,8 @@ interface ReportGeneratorProps {
 }
 
 import { CONTRACT_DEPARTMENTS } from '../../constants';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
 
 const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   open,
@@ -53,6 +55,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   autoCloseOnSuccess = false,
   onReportGenerated,
 }) => {
+  const { permissions } = usePermissions();
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState<ReportData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -264,13 +267,13 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                     variant="secondary"
                     className="bg-light-300 text-light-100 ml-auto"
                   >
-                    {user?.role === 'executive'
-                      ? 'Executive Access'
+                    {permissions.includes(PERMISSIONS.SETTINGS.VIEW)
+                      ? 'Admin Access'
                       : 'Standard User'}
                   </Badge>
                 </div>
 
-                {user?.role === 'executive' ? (
+                {permissions.includes(PERMISSIONS.SETTINGS.VIEW) ? (
                   <div className="grid grid-cols-2 gap-3">
                     {CONTRACT_DEPARTMENTS.map((dept) => (
                       <label
@@ -315,7 +318,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                   onClick={handleGenerateReport}
                   disabled={
                     isGenerating ||
-                    (user?.role === 'executive' && !selectedDepartment)
+                    (permissions.includes(PERMISSIONS.SETTINGS.VIEW) && !selectedDepartment)
                   }
                   className="primary-btn h-[52px] px-8 shadow-drop-1 text-white font-semibold"
                 >
@@ -616,7 +619,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                       variant="outline"
                       className="flex-1 h-[42px] border-light-300 text-light-100 hover:bg-light-300/50 shadow-drop-1"
                     >
-                      <Share2 className="mr-2 h-4 w-4" />
+                      <Share2 className="h-4 w-4" />
                       Share Report
                     </Button>
                     <Button
@@ -624,7 +627,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                       variant="outline"
                       className="h-[42px] px-4 border-red-300 text-red-600 hover:bg-red-50 shadow-drop-1"
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                       Delete
                     </Button>
                   </div>

@@ -4,11 +4,11 @@ import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Query } from 'node-appwrite';
 import { model } from '@/lib/ai/gemini';
+import { getUserRoles, getUserDefaultOrganization } from '@/lib/rbac/permissions';
 // Fluent Reports import removed - will be handled server-side only
 
 export interface GenerateReportData {
   userId: string;
-  userRole: string;
   department: string;
   userName: string;
 }
@@ -40,6 +40,11 @@ export async function generateReport(
   const adminClient = await createAdminClient();
 
   try {
+    // Get user's role name from database
+    const defaultOrg = await getUserDefaultOrganization(data.userId);
+    const userRoles = defaultOrg ? await getUserRoles(data.userId, defaultOrg.orgId) : [];
+    const userRole = userRoles[0]?.roleName || 'User';
+
     console.log('Fetching metrics...');
     // Fetch metrics for all collections
     let metrics;
@@ -63,7 +68,7 @@ export async function generateReport(
       aiContent = await generateAIAnalysis({
         department: data.department,
         metrics,
-        userRole: data.userRole,
+        userRole,
         userName: data.userName,
       });
       console.log('AI analysis generated, length:', aiContent.length);
@@ -94,7 +99,7 @@ export async function generateReport(
             reportId,
             department: data.department,
             metrics,
-            userRole: data.userRole,
+            userRole,
             userName: data.userName,
             aiContent,
           }),
@@ -125,7 +130,7 @@ export async function generateReport(
       pdfFilePath: pdfFilePath,
       userId: data.userId,
       userName: data.userName,
-      userRole: data.userRole,
+      userRole,
       division:
         data.department === 'all'
           ? 'all'
@@ -139,7 +144,7 @@ export async function generateReport(
         department: data.department,
         metrics: metrics,
         generatedBy: data.userName,
-        generatedRole: data.userRole,
+        generatedRole: userRole,
       }),
     };
 
@@ -152,12 +157,12 @@ export async function generateReport(
     });
 
     console.log('Attempting to create document in Appwrite...');
-    const createdDocument = await adminClient.tablesDB.createRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.reportsCollectionId,
-      reportId,
-      reportData
-    );
+    const createdDocument = await adminClient.tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.reportsCollectionId,
+      rowId: reportId,
+      data: reportData,
+    });
     console.log('Document created successfully:', createdDocument.$id);
 
     console.log('Report document created successfully');
@@ -182,7 +187,7 @@ export async function generateReport(
     console.error('Error generating report:', error);
     console.error('Error details:', {
       userId: data.userId,
-      userRole: data.userRole,
+      userRole,
       department: data.department,
       userName: data.userName,
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
@@ -215,39 +220,39 @@ async function getMetricsForDepartment() {
     // Fetch contracts count
     const contractsQuery = [Query.limit(1)];
     // Note: Contracts may not have department field, so we'll get all contracts
-    const contractsResponse = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.contractsCollectionId || 'contracts',
-      contractsQuery
-    );
+    const contractsResponse = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.contractsCollectionId || 'contracts',
+      queries: contractsQuery,
+    });
     console.log('Contracts response:', { total: contractsResponse.total });
 
     // Fetch users count
     const usersQuery = [Query.limit(1)];
     // Note: Users may not have department field, so we'll get all users
-    const usersResponse = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.usersCollectionId || 'users',
-      usersQuery
-    );
+    const usersResponse = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.usersCollectionId || 'users',
+      queries: usersQuery,
+    });
 
     // Fetch events count
     const eventsQuery = [Query.limit(1)];
     // Note: Calendar events may not have department field, so we'll get all events
-    const eventsResponse = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.calendarEventsCollectionId || 'calendar',
-      eventsQuery
-    );
+    const eventsResponse = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.calendarEventsCollectionId || 'calendar',
+      queries: eventsQuery,
+    });
 
     // Fetch files count
     const filesQuery = [Query.limit(1)];
     // Note: Files may not have department field, so we'll get all files
-    const filesResponse = await adminClient.tablesDB.listRows(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId || 'files',
-      filesQuery
-    );
+    const filesResponse = await adminClient.tablesDB.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.filesCollectionId || 'files',
+      queries: filesQuery,
+    });
 
     return {
       contracts: contractsResponse.total || 0,
@@ -327,12 +332,12 @@ export async function uploadReport(
     };
 
     // Store in files collection
-    await adminClient.tablesDB.createRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.filesCollectionId || 'files',
-      ID.unique(),
-      fileData
-    );
+    await adminClient.tablesDB.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.filesCollectionId || 'files',
+      rowId: ID.unique(),
+      data: fileData,
+    });
 
     // Create activity log
     // await createFileActivity(
@@ -507,13 +512,20 @@ async function generateAIAnalysis(data: {
 }
 
 /**
- * Get user's accessible departments based on role
+ * Get user's accessible departments based on permissions
  */
 export async function getUserAccessibleDepartments(
-  userRole: string,
+  userId: string,
   userDivision?: string
 ): Promise<string[]> {
-  if (userRole === 'executive') {
+  const { hasPermission } = await import('@/lib/rbac/permissions');
+  const { PERMISSIONS } = await import('@/constants/permissions');
+  
+  const hasSettingsView = await hasPermission(userId, PERMISSIONS.SETTINGS.VIEW);
+  const hasContractView = await hasPermission(userId, PERMISSIONS.CONTRACTS.VIEW);
+
+  // Super Admin and Organization Admin can access all departments
+  if (hasSettingsView) {
     return [
       'IT',
       'Finance',
@@ -525,10 +537,8 @@ export async function getUserAccessibleDepartments(
       'Engineering',
       'Other',
     ];
-  } else if (userRole === 'admin') {
-    return ['IT', 'Finance', 'Administration', 'Legal', 'Operations'];
-  } else if (userRole === 'manager' && userDivision) {
-    // Managers can access all departments for contract management
+  } else if (hasContractView && userDivision) {
+    // Department Manager can access their department
     return [
       'IT',
       'Finance',
@@ -556,22 +566,22 @@ export async function deleteReport(reportId: string): Promise<void> {
     // First get the report data to check for PDF file
     let pdfFilePath: string | undefined;
     try {
-      const report = await adminClient.tablesDB.getRow(
-        appwriteConfig.databaseId,
-        appwriteConfig.reportsCollectionId,
-        reportId
-      );
+      const report = await adminClient.tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.reportsCollectionId,
+        rowId: reportId,
+      });
       pdfFilePath = report.pdfFilePath;
     } catch (getError) {
       console.warn('Could not fetch report data before deletion:', getError);
     }
 
     // Delete the report document from Appwrite
-    await adminClient.tablesDB.deleteRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.reportsCollectionId,
-      reportId
-    );
+    await adminClient.tablesDB.deleteRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.reportsCollectionId,
+      rowId: reportId,
+    });
 
     // Also delete the PDF file if it exists
     if (pdfFilePath) {

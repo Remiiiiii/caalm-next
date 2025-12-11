@@ -306,7 +306,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
         <Popover open={showFilters} onOpenChange={setShowFilters}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="relative">
-              <Filter className="h-4 w-4 mr-2" />
+              <Filter className="h-4 w-4" />
               Filters
               {getActiveFiltersCount() > 0 && (
                 <Badge
@@ -574,7 +574,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
         </Popover>
 
         <Button variant="outline" onClick={handleSaveSearch}>
-          <Save className="h-4 w-4 mr-2" />
+          <Save className="h-4 w-4" />
           Save
         </Button>
 
@@ -591,7 +591,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm">
-                <Clock className="h-4 w-4 mr-2" />
+                <Clock className="h-4 w-4" />
                 Recent
               </Button>
             </PopoverTrigger>
@@ -623,7 +623,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
           <Popover open={showSavedSearches} onOpenChange={setShowSavedSearches}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm">
-                <Star className="h-4 w-4 mr-2" />
+                <Star className="h-4 w-4" />
                 Saved
               </Button>
             </PopoverTrigger>

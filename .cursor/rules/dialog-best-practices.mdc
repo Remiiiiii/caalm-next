@@ -38,7 +38,7 @@ globs: **/*.{ts,tsx,js,jsx}
     </div>
 
     {/* Scrollable Content */}
-    <div className="flex-1 overflow-y-auto p-6 bg-white">
+    <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
       {/* Main content here */}
     </div>
 
@@ -72,9 +72,10 @@ globs: **/*.{ts,tsx,js,jsx}
 
 ### Content Section
 
-- Scrollable area with `flex-1 overflow-y-auto p-6 bg-white`
+- Scrollable area MUST use `bg-slate-50` background: `flex-1 overflow-y-auto p-6 bg-slate-50`
+- The main content area in dialogs, popovers, and cards should always use `bg-slate-50` for visual consistency
 - Use adequate padding (p-6 or p-4) for breathing room
-- Group related content in cards with `bg-slate-50 rounded-lg p-4 border border-slate-200`
+- Group related content in nested cards with `bg-white rounded-lg p-4 border border-slate-200` for contrast against the slate-50 background
 
 ### Footer Section
 
@@ -105,7 +106,10 @@ globs: **/*.{ts,tsx,js,jsx}
 ## Color Palette
 
 - Primary: Blue gradient (from-blue-50 to-indigo-50)
-- Background: White (bg-white) with slate-50 for sections
+- Background: 
+  - Main content areas: `bg-slate-50` (ALWAYS use in dialog/popover/card content sections)
+  - Nested content cards: `bg-white` for contrast
+  - Footer sections: `bg-slate-50`
 - Borders: slate-200
 - Text:
   - Primary: slate-900
@@ -148,8 +152,10 @@ Example structure:
 - NEVER use plain DialogContent without the professional structure
 - NEVER skip the cap bar at the top
 - NEVER use flat backgrounds in headers - always use the gradient
+- NEVER use `bg-white` for main dialog/popover/card content areas - ALWAYS use `bg-slate-50`
 - NEVER forget to make content areas scrollable for overflow
 - ALWAYS include footer sections with proper background and borders
+- ALWAYS use `bg-slate-50` for the scrollable content area in dialogs, popovers, and cards
 - ALWAYS use consistent spacing and padding throughout
 - ALWAYS apply transition effects for interactive elements
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import CalendarAIChat from '@/components/CalendarAIChat';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -29,8 +29,16 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import CalendarSettings from '@/components/CalendarSettings';
+import { SharedCalendarManager } from '@/components/SharedCalendarManager';
+import { CreateSharedCalendarDialog } from '@/components/CreateSharedCalendarDialog';
+import { SharePrimaryCalendarDialog } from '@/components/SharePrimaryCalendarDialog';
+import { ResourceManager } from '@/components/ResourceManager';
+import { CalendarDelegationManager } from '@/components/CalendarDelegationManager';
+import { CalendarSidebar } from '@/components/CalendarSidebar';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import type { SharedCalendar } from '@/lib/actions/shared-calendar.actions';
 import { useAutoSync } from '@/hooks/useAutoSync';
+import { useSharedCalendars } from '@/hooks/useSharedCalendars';
 import { cn, getFileType, convertFileSize } from '@/lib/utils';
 import type {
   CalendarApprovalRequest,
@@ -48,8 +56,14 @@ import {
 } from '@/constants/rbac';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCalendarPermissions } from '@/hooks/useCalendarPermissions';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/constants/permissions';
 import { useCalendarApprovals } from '@/hooks/useCalendarApprovals';
 import { resolveCalendarPermissions } from '@/lib/auth/permissions';
+import {
+  EventReminderConfig as EventReminderConfigComponent,
+  type EventReminderConfig as EventReminderConfigType,
+} from '@/components/EventReminderConfig';
 import {
   Select,
   SelectContent,
@@ -58,9 +72,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Activity,
   AlertCircle,
   AlertTriangle,
   Ban,
+  Minimize2,
   Calendar as CalendarIcon,
   CalendarDays,
   CalendarPlus,
@@ -160,6 +176,12 @@ interface LocalCalendarEvent {
   overrides?: PermissionOverrideRecord[];
 }
 
+interface EventReminderConfigData {
+  type: 'before_start' | 'before_end' | 'custom';
+  minutes: number;
+  channels: Array<'in_app' | 'email' | 'sms' | 'push'>;
+}
+
 interface NewEventForm {
   title: string;
   date: Date;
@@ -178,6 +200,7 @@ interface NewEventForm {
   location: string;
   attachments?: EventAttachment[];
   sensitivityLevel: CalendarSensitivity;
+  reminders?: EventReminderConfigData[]; // Priority 2: Advanced notifications
 }
 
 interface ParticipantOption {
@@ -192,6 +215,8 @@ interface CalendarUser {
   fullName?: string;
   role?: string;
   department?: string;
+  accountId?: string;
+  email?: string;
 }
 
 interface OutlookStyleCalendarProps {
@@ -238,6 +263,93 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   user,
 }) => {
   const { toast } = useToast();
+
+  // Preload all holidays for the current year on mount for instant access
+  useEffect(() => {
+    const preloadHolidays = async () => {
+      const currentYear = new Date().getFullYear();
+      const { getCachedData, setCachedData } = await import(
+        '@/lib/utils/client-cache'
+      );
+
+      // Check if we already have holidays cached for this year
+      const yearCacheKey = `holidays:${currentYear}:all`;
+      const cachedYearHolidays =
+        getCachedData<Array<{ date: string; name: string }>>(yearCacheKey);
+
+      if (!cachedYearHolidays) {
+        // Preload all months for the current year in the background
+        const preloadPromises = [];
+        for (let month = 1; month <= 12; month++) {
+          const cacheKey = `holidays:${currentYear}:${month}`;
+          const cached =
+            getCachedData<Array<{ date: string; name: string }>>(cacheKey);
+
+          if (!cached) {
+            preloadPromises.push(
+              fetch(`/api/calendar/holidays?year=${currentYear}&month=${month}`)
+                .then((res) => res.json())
+                .then((data) => {
+                  if (data.success && data.holidays) {
+                    // Cache for 1 year (holidays don't change)
+                    setCachedData(
+                      cacheKey,
+                      data.holidays,
+                      365 * 24 * 60 * 60 * 1000
+                    );
+                  }
+                })
+                .catch((err) => {
+                  // Silently fail - we'll fetch on demand
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn(
+                      `Failed to preload holidays for ${currentYear}-${month}:`,
+                      err
+                    );
+                  }
+                })
+            );
+          }
+        }
+
+        // Also preload next year's holidays
+        const nextYear = currentYear + 1;
+        for (let month = 1; month <= 12; month++) {
+          const cacheKey = `holidays:${nextYear}:${month}`;
+          const cached =
+            getCachedData<Array<{ date: string; name: string }>>(cacheKey);
+
+          if (!cached) {
+            preloadPromises.push(
+              fetch(`/api/calendar/holidays?year=${nextYear}&month=${month}`)
+                .then((res) => res.json())
+                .then((data) => {
+                  if (data.success && data.holidays) {
+                    setCachedData(
+                      cacheKey,
+                      data.holidays,
+                      365 * 24 * 60 * 60 * 1000
+                    );
+                  }
+                })
+                .catch(() => {
+                  // Silently fail
+                })
+            );
+          }
+        }
+
+        // Run preloads in parallel but don't block
+        Promise.all(preloadPromises).catch(() => {
+          // Silently handle errors
+        });
+      }
+    };
+
+    // Preload after a short delay to not block initial render
+    const timeout = setTimeout(preloadHolidays, 100);
+    return () => clearTimeout(timeout);
+  }, []);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
   );
@@ -250,8 +362,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
 
-  // Pending approvals collapse state
-  const [isApprovalsExpanded, setIsApprovalsExpanded] = useState(true);
+  // Pending approvals collapse state - default to collapsed
+  const [isApprovalsExpanded, setIsApprovalsExpanded] = useState(false);
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
@@ -275,9 +387,46 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const [syncing, setSyncing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
+  // Calendar selection state
+  const [selectedMyCalendars, setSelectedMyCalendars] = useState({
+    calendar: true, // Default checked
+    usHolidays: false,
+  });
+  const [selectedSharedCalendars, setSelectedSharedCalendars] = useState<
+    string[]
+  >([]);
+  const [sharedCalendars, setSharedCalendars] = useState<SharedCalendar[]>([]);
+  const [loadingSharedCalendars, setLoadingSharedCalendars] = useState(false);
+  const [sharedCalendarOwnerNames, setSharedCalendarOwnerNames] = useState<
+    Record<string, string>
+  >({});
+  const calendarContainerRef = React.useRef<HTMLDivElement>(null);
+  const [calendarWidth, setCalendarWidth] = useState<string>('100%');
+
+  // Conflict dialog state
+  const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
+  const [conflictData, setConflictData] = useState<{
+    conflicts: Array<{
+      type: 'participant' | 'resource';
+      conflictingEvent: any;
+      conflictReason: string;
+    }>;
+    alternateSlots: Array<{
+      startDate: string;
+      startTime: string;
+      endDate: string;
+      endTime: string;
+    }>;
+    pendingEventData: any;
+  } | null>(null);
+
   // Enable automatic sync with Outlook (polls every 5 minutes)
   useAutoSync(user?.$id, outlookConnected);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isCreateSharedCalendarOpen, setIsCreateSharedCalendarOpen] =
+    useState(false);
+  const [isSharePrimaryCalendarOpen, setIsSharePrimaryCalendarOpen] =
+    useState(false);
   const [shareSettings, setShareSettings] = useState({
     users: [],
     permissions: 'view' as 'view' | 'edit',
@@ -301,9 +450,18 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Location search state
   const [locationSearch, setLocationSearch] = useState('');
   const [locationResults, setLocationResults] = useState<
-    Array<{ id: string; name: string; address: string }>
+    Array<{
+      id: string;
+      name: string;
+      address: string;
+      type?: 'external' | 'resource';
+      resourceId?: string;
+    }>
   >([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(
+    null
+  );
 
   // AI Panel state
   const [showAiPanel, setShowAiPanel] = useState(false);
@@ -316,20 +474,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   } | null>(null);
   const [loadingContract, setLoadingContract] = useState(false);
 
-  const { role, userId, accountId } = useUserRole();
+  const { userId, accountId, role } = useUserRole();
   const { permissions: basePermissions } = useCalendarPermissions({ userId });
   const canCreateEvent = basePermissions.createEvent;
+  const { permissions } = usePermissions();
+  const isApprover = permissions.includes(PERMISSIONS.EVENTS.APPROVE);
 
-  // Debug logging
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[OutlookStyleCalendar] Permission check:', {
-      role,
-      userId,
-      canCreateEvent,
-      basePermissions,
-    });
-  }
-  const isApprover = role === 'approver' || role === 'admin';
   const {
     approvals,
     isLoading: approvalsLoading,
@@ -339,11 +489,21 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     enabled: isApprover,
   });
 
+  // Auto-expand approvals section when there are pending approvals
+  useEffect(() => {
+    if (!approvalsLoading && approvals.length > 0) {
+      setIsApprovalsExpanded(true);
+    } else if (!approvalsLoading && approvals.length === 0) {
+      setIsApprovalsExpanded(false);
+    }
+  }, [approvals, approvalsLoading]);
+
   // Approval dialog state
   const [selectedApproval, setSelectedApproval] =
     useState<CalendarApprovalRequest | null>(null);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
+
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [userNamesMap, setUserNamesMap] = useState<Record<string, string>>({});
   const [loadingUserNames, setLoadingUserNames] = useState(false);
@@ -526,13 +686,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   // Fetch approval request when event review dialog opens for events with changes_requested or rejected status
   useEffect(() => {
     const fetchApprovalRequest = async () => {
-      console.log('[OutlookStyleCalendar] fetchApprovalRequest triggered:', {
-        isEditEventOpen,
-        hasSelectedEvent: !!selectedEvent,
-        approvalStatus: selectedEvent?.approvalStatus,
-        pendingApprovalId: selectedEvent?.pendingApprovalId,
-        eventId: selectedEvent?.$id,
-      });
 
       if (
         !isEditEventOpen ||
@@ -622,14 +775,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           );
         }
 
-        console.log('[OutlookStyleCalendar] Fetched approval request:', {
-          approval,
-          hasApproval: !!approval,
-          reviewerNotes: approval?.reviewerNotes,
-          reviewerNotesType: typeof approval?.reviewerNotes,
-          reviewerNotesLength: approval?.reviewerNotes?.length,
-          reviewerNotesTruthy: !!approval?.reviewerNotes,
-        });
         setEventApprovalRequest(approval);
       } catch (error) {
         console.error('Failed to fetch approval request:', error);
@@ -646,6 +791,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     selectedEvent?.pendingApprovalId,
     selectedEvent?.approvalStatus,
   ]);
+
+  // Check if selected event is a US holiday
+  const isHolidayEvent = useMemo(() => {
+    if (!selectedEvent) return false;
+    return (
+      selectedEvent.$id?.startsWith('holiday-') ||
+      selectedEvent.id?.startsWith('holiday-')
+    );
+  }, [selectedEvent]);
 
   const selectedEventWithDetails = useMemo(() => {
     if (!selectedEvent) return null;
@@ -929,12 +1083,29 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   };
 
   // Function to generate time options for dropdowns (30-minute intervals, 12-hour format)
-  const generateTimeOptions = () => {
+  // Filters out past times when the selected date is today
+  const generateTimeOptions = (selectedDate?: Date) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const isToday =
+      selectedDate &&
+      new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate()
+      ).getTime() === today.getTime();
+
     const times = [];
     for (let hour = 0; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        const time = new Date();
-        time.setHours(hour, minute, 0, 0);
+        // Check if this time is in the past (only if date is today)
+        let isPast = false;
+        if (isToday) {
+          const timeInMinutes = hour * 60 + minute;
+          const nowInMinutes = now.getHours() * 60 + now.getMinutes();
+          // Add a small buffer (5 minutes) to allow times very close to now
+          isPast = timeInMinutes < nowInMinutes - 5;
+        }
 
         // Format as 12-hour time
         const hours12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
@@ -949,6 +1120,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         times.push({
           value: time24, // Store as 24-hour format
           label: displayTime, // Display as 12-hour format
+          disabled: isPast, // Disable past times
         });
       }
     }
@@ -1063,7 +1235,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     }
   };
 
-  // Function to search for locations
+  // Function to search for locations (both external and managed resources)
   const searchLocations = async (query: string) => {
     if (query.length < 2) {
       setLocationResults([]);
@@ -1072,15 +1244,61 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
     setIsSearchingLocation(true);
     try {
-      const response = await fetch(
-        `/api/locations/search?q=${encodeURIComponent(query)}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.locations) {
-          setLocationResults(data.locations);
+      // Search both external locations and managed resources in parallel
+      const [externalResponse, resourcesResponse] = await Promise.all([
+        fetch(`/api/locations/search?q=${encodeURIComponent(query)}`),
+        fetch(`/api/calendar/resources?search=${encodeURIComponent(query)}`),
+      ]);
+
+      const results: Array<{
+        id: string;
+        name: string;
+        address: string;
+        type?: 'external' | 'resource';
+        resourceId?: string;
+      }> = [];
+
+      // Add external locations
+      if (externalResponse.ok) {
+        const externalData = await externalResponse.json();
+        if (externalData.success && externalData.locations) {
+          externalData.locations.forEach(
+            (loc: { id: string; name: string; address: string }) => {
+              results.push({
+                ...loc,
+                type: 'external',
+              });
+            }
+          );
         }
       }
+
+      // Add managed resources
+      if (resourcesResponse.ok) {
+        const resourcesData = await resourcesResponse.json();
+        if (resourcesData.success && resourcesData.resources) {
+          resourcesData.resources.forEach(
+            (resource: {
+              $id: string;
+              name: string;
+              location?: string;
+              type: string;
+            }) => {
+              results.push({
+                id: resource.$id,
+                name: `${resource.name}${
+                  resource.type === 'room' ? ' (Room)' : ' (Equipment)'
+                }`,
+                address: resource.location || 'No location specified',
+                type: 'resource',
+                resourceId: resource.$id,
+              });
+            }
+          );
+        }
+      }
+
+      setLocationResults(results);
     } catch (error) {
       console.error('Error searching locations:', error);
       setLocationResults([]);
@@ -1128,6 +1346,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     // Reset location state
     setLocationSearch('');
     setLocationResults([]);
+    setSelectedResourceId(null);
   };
 
   // Initialize with smart placeholder times
@@ -1385,6 +1604,231 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     });
   }, [events, calendarEvents]);
 
+  // Filter events for default calendar (exclude events from shared calendars)
+  const defaultCalendarEvents = useMemo(() => {
+    if (!selectedMyCalendars.calendar) return [];
+
+    // Get owner IDs of all shared calendars
+    const sharedCalendarOwnerIds = new Set(
+      sharedCalendars.map((cal) => cal.ownerId).filter(Boolean)
+    );
+
+    // Filter out events created by shared calendar owners
+    return normalizedEvents.filter((event) => {
+      // Include events created by current user
+      if (
+        event.createdByUserId === user?.$id ||
+        event.createdByAccountId === user?.accountId
+      ) {
+        return true;
+      }
+      // Include participant events (user is invited)
+      if (event.participants) {
+        const participantsStr = String(event.participants).toLowerCase();
+        const userEmail = user?.email?.toLowerCase() || '';
+        const userAccountId = user?.accountId?.toLowerCase() || '';
+        if (
+          participantsStr.includes(userEmail) ||
+          participantsStr.includes(userAccountId) ||
+          (user?.$id && participantsStr.includes(user.$id.toLowerCase()))
+        ) {
+          return true;
+        }
+      }
+      // Exclude events from shared calendar owners (these belong in shared calendar views)
+      if (
+        event.createdByUserId &&
+        sharedCalendarOwnerIds.has(event.createdByUserId)
+      ) {
+        return false;
+      }
+      // Include other events (fallback)
+      return true;
+    });
+  }, [normalizedEvents, selectedMyCalendars.calendar, sharedCalendars, user]);
+
+  // Helper to get events for a specific shared calendar
+  const getSharedCalendarEvents = useCallback(
+    (calendar: SharedCalendar): LocalCalendarEvent[] => {
+      return normalizedEvents.filter((event) => {
+        // Only show events created by this calendar's owner
+        return (
+          event.createdByUserId === calendar.ownerId ||
+          event.createdByAccountId === calendar.ownerAccountId
+        );
+      });
+    },
+    [normalizedEvents]
+  );
+
+  // Get US holidays as events with fast caching
+  const [usHolidaysEvents, setUsHolidaysEvents] = useState<
+    LocalCalendarEvent[]
+  >([]);
+
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      if (!selectedMyCalendars.usHolidays) {
+        setUsHolidaysEvents([]);
+        return;
+      }
+
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth() + 1;
+      const cacheKey = `holidays:${year}:${month}`;
+
+      // Try to get cached data immediately for instant display
+      const { getCachedData, setCachedData } = await import(
+        '@/lib/utils/client-cache'
+      );
+      const cachedHolidays =
+        getCachedData<Array<{ date: string; name: string }>>(cacheKey);
+
+      if (cachedHolidays) {
+        // Show cached data immediately
+        const holidayEvents: LocalCalendarEvent[] = cachedHolidays.map(
+          (holiday: { date: string; name: string }): LocalCalendarEvent => ({
+            $id: `holiday-${holiday.date}`,
+            id: `holiday-${holiday.date}`,
+            title: holiday.name,
+            startDate: new Date(holiday.date),
+            endDate: new Date(holiday.date),
+            type: 'meeting',
+            startTime: undefined,
+            endTime: undefined,
+            sensitivityLevel: 'standard',
+            approvalStatus: 'not_required',
+            requiresApproval: false,
+            pendingApprovalId: null,
+            overrides: [],
+          })
+        );
+        setUsHolidaysEvents(holidayEvents);
+      }
+
+      try {
+        // Fetch fresh data in background (stale-while-revalidate)
+        const response = await fetch(
+          `/api/calendar/holidays?year=${year}&month=${month}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const holidays = data.holidays || [];
+
+          // Cache for 1 year (holidays don't change)
+          setCachedData(cacheKey, holidays, 365 * 24 * 60 * 60 * 1000);
+
+          const holidayEvents: LocalCalendarEvent[] = holidays.map(
+            (holiday: { date: string; name: string }): LocalCalendarEvent => ({
+              $id: `holiday-${holiday.date}`,
+              id: `holiday-${holiday.date}`,
+              title: holiday.name,
+              startDate: new Date(holiday.date),
+              endDate: new Date(holiday.date),
+              type: 'meeting',
+              startTime: undefined,
+              endTime: undefined,
+              sensitivityLevel: 'standard',
+              approvalStatus: 'not_required',
+              requiresApproval: false,
+              pendingApprovalId: null,
+              overrides: [],
+            })
+          );
+          setUsHolidaysEvents(holidayEvents);
+        }
+      } catch (error) {
+        console.error(
+          '[CLIENT] OutlookStyleCalendar] Error fetching holidays:',
+          error
+        );
+        // Only clear if we don't have cached data
+        if (!cachedHolidays) {
+          setUsHolidaysEvents([]);
+        }
+      }
+    };
+
+    fetchHolidays();
+  }, [currentMonth, selectedMyCalendars.usHolidays]);
+
+  // Handlers for calendar selection
+  const handleMyCalendarChange = (
+    calendar: 'calendar' | 'usHolidays',
+    checked: boolean
+  ) => {
+    setSelectedMyCalendars((prev) => {
+      // Count how many calendars are currently checked (before this change)
+      const currentCheckedCount =
+        (prev.calendar ? 1 : 0) +
+        (prev.usHolidays ? 1 : 0) +
+        selectedSharedCalendars.length;
+
+      // If trying to uncheck Calendar and it's the only checked calendar, prevent it
+      if (calendar === 'calendar' && !checked && currentCheckedCount === 1) {
+        return prev; // Don't allow unchecking Calendar if it's the last one
+      }
+
+      const newState = {
+      ...prev,
+      [calendar]: checked,
+      };
+
+      // Count how many calendars will be checked after this change
+      const newCheckedCount =
+        (newState.calendar ? 1 : 0) +
+        (newState.usHolidays ? 1 : 0) +
+        selectedSharedCalendars.length;
+
+      // If no calendars will be checked, ensure Calendar is checked by default
+      if (newCheckedCount === 0) {
+        return {
+          ...newState,
+          calendar: true,
+        };
+      }
+
+      return newState;
+    });
+  };
+
+  const handleSharedCalendarChange = (calendarId: string, checked: boolean) => {
+    setSelectedSharedCalendars((prev) => {
+      const newSharedCalendars = checked
+        ? [...prev, calendarId]
+        : prev.filter((id) => id !== calendarId);
+
+      // Count how many calendars will be checked after this change
+      const checkedCount =
+        (selectedMyCalendars.calendar ? 1 : 0) +
+        (selectedMyCalendars.usHolidays ? 1 : 0) +
+        newSharedCalendars.length;
+
+      // If no calendars will be checked, ensure Calendar is checked by default
+      if (checkedCount === 0) {
+        setSelectedMyCalendars((prevMy) => ({
+          ...prevMy,
+          calendar: true,
+        }));
+      }
+
+      return newSharedCalendars;
+    });
+  };
+
+  const handleCloseCalendar = (
+    calendarType: 'calendar' | 'usHolidays' | string
+  ) => {
+    if (calendarType === 'calendar' || calendarType === 'usHolidays') {
+      // Use handleMyCalendarChange which already has the logic to prevent unchecking Calendar if it's the last one
+      handleMyCalendarChange(calendarType, false);
+    } else {
+      // It's a shared calendar ID
+      // Use handleSharedCalendarChange which already has the logic to ensure Calendar is checked if all become unchecked
+      handleSharedCalendarChange(calendarType, false);
+    }
+  };
+
   // Debug logging
   console.log('Calendar events from hook:', calendarEvents);
   console.log('All events (normalized):', normalizedEvents);
@@ -1395,6 +1839,84 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       currentMonth.getMonth() + 1
     }`
   );
+
+  // Use optimized SWR hook for shared calendars
+  const {
+    calendars: swrCalendars,
+    isLoading: swrLoading,
+    refresh: refreshSharedCalendars,
+  } = useSharedCalendars();
+
+  // Update shared calendars state from SWR
+  useEffect(() => {
+    if (swrCalendars.length > 0) {
+      setSharedCalendars(swrCalendars);
+      setLoadingSharedCalendars(swrLoading);
+
+      // Fetch owner names (cached by SWR hook)
+      const ownerIds = swrCalendars
+        .map((cal: SharedCalendar) => cal.ownerId)
+        .filter((id: string) => id);
+      if (ownerIds.length > 0) {
+        fetchUserNamesByIds(ownerIds).then((ownerNames) => {
+          const namesMap: Record<string, string> = {};
+          ownerNames.forEach((user) => {
+            swrCalendars.forEach((cal: SharedCalendar) => {
+              if (cal.ownerId === user.$id) {
+                namesMap[cal.$id] = user.fullName || 'Unknown';
+              }
+            });
+          });
+          setSharedCalendarOwnerNames(namesMap);
+        });
+      }
+    } else if (!swrLoading) {
+      setSharedCalendars([]);
+      setLoadingSharedCalendars(false);
+    }
+  }, [swrCalendars, swrLoading]);
+
+  // Calculate calendar width based on container and number of calendars
+  useEffect(() => {
+    const calculateWidth = () => {
+      const visibleCalendarsCount =
+        (selectedMyCalendars.calendar ? 1 : 0) +
+        (selectedMyCalendars.usHolidays ? 1 : 0) +
+        selectedSharedCalendars.length;
+
+      if (visibleCalendarsCount === 1) {
+        setCalendarWidth('100%');
+      } else if (calendarContainerRef.current && visibleCalendarsCount > 1) {
+        // When multiple calendars, use the container's width as fixed width for each
+        // This ensures each calendar is the same size as when only one is displayed
+        const containerWidth = calendarContainerRef.current.offsetWidth;
+        if (containerWidth > 0) {
+          // Account for padding (32px total: 16px on each side)
+          // Each calendar should be the full container width minus padding
+          const singleCalendarWidth = containerWidth - 32;
+          setCalendarWidth(`${singleCalendarWidth}px`);
+        } else {
+          // If container width is 0, retry after a short delay
+          setTimeout(calculateWidth, 100);
+        }
+      }
+    };
+
+    // Use setTimeout to ensure DOM is fully rendered
+    const timeoutId = setTimeout(() => {
+      calculateWidth();
+    }, 0);
+
+    window.addEventListener('resize', calculateWidth);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', calculateWidth);
+    };
+  }, [
+    selectedMyCalendars.calendar,
+    selectedMyCalendars.usHolidays,
+    selectedSharedCalendars.length,
+  ]);
 
   // Check Outlook connection status
   useEffect(() => {
@@ -1470,17 +1992,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             files.forEach((file: any) => {
               // Only store files that have at least an $id
               if (file && file.$id) {
-                console.log('[OutlookStyleCalendar] Processing file:', {
-                  $id: file.$id,
-                  name: file.name,
-                  size: file.size,
-                  sizeType: typeof file.size,
-                  extension: file.extension,
-                  url: file.url,
-                  type: file.type,
-                  allKeys: Object.keys(file),
-                });
-
                 // Preserve actual values from API
                 // Only convert null to undefined if the value is truly missing
                 // Don't use defaults here - let the display layer handle missing values
@@ -1665,27 +2176,56 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   const getEventTypeConfig = (type: LocalCalendarEvent['type']) => {
     const configs = {
       'contract review': {
+        color: 'bg-blue text-blue border-blue',
+        icon: FileText,
+        borderColor: 'border-blue',
+      },
+      contract: {
         color: 'bg-blue-100 text-blue-800 border-blue-200',
         icon: FileText,
+        borderColor: 'border-blue',
       },
       'deadline discussion': {
         color: 'bg-red-100 text-red-800 border-red-200',
         icon: Clock,
+        borderColor: 'border-red',
+      },
+      deadline: {
+        color: 'bg-red-100 text-red-800 border-red-200',
+        icon: Clock,
+        borderColor: 'border-red',
       },
       meeting: {
         color: 'bg-green-100 text-green-800 border-green-200',
         icon: Users,
+        borderColor: 'border-green',
       },
       'internal review': {
         color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
         icon: FileText,
+        borderColor: 'border-orange',
+      },
+      review: {
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        icon: FileText,
+        borderColor: 'border-orange',
       },
       audit: {
         color: 'bg-purple-100 text-purple-800 border-purple-200',
         icon: FileText,
+        borderColor: 'border-purple-500',
       },
     };
     return configs[type] || configs.meeting;
+  };
+
+  const getEventTypeBorderColor = (type: string | undefined): string => {
+    if (!type) return 'border-gray-400';
+    const normalizedType = type.toLowerCase().trim();
+    const config = getEventTypeConfig(
+      normalizedType as LocalCalendarEvent['type']
+    );
+    return config.borderColor || 'border-gray-400';
   };
 
   const handleCreateEvent = async () => {
@@ -1705,6 +2245,59 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         variant: 'destructive',
       });
       return;
+    }
+
+    // Validate that event is not in the past
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventDate = new Date(
+      newEvent.date.getFullYear(),
+      newEvent.date.getMonth(),
+      newEvent.date.getDate()
+    );
+
+    // Check if the date is in the past
+    if (eventDate < today) {
+      toast({
+        title: 'Invalid Date',
+        description:
+          'Cannot create events in the past. Please select a current or future date.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // If date is today, check if the time is in the past
+    if (eventDate.getTime() === today.getTime() && newEvent.startTime) {
+      const [hours, minutes] = newEvent.startTime.includes(':')
+        ? newEvent.startTime.split(':').map(Number)
+        : [0, 0];
+
+      // Handle 12-hour format (e.g., "2:00 PM")
+      let hour24 = hours;
+      if (newEvent.startTime.includes('PM') && hours !== 12) {
+        hour24 = hours + 12;
+      } else if (newEvent.startTime.includes('AM') && hours === 12) {
+        hour24 = 0;
+      }
+
+      const eventDateTime = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        hour24,
+        minutes
+      );
+
+      if (eventDateTime < now) {
+        toast({
+          title: 'Invalid Time',
+          description:
+            'Cannot create events in the past. Please select a current or future time.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setCreatingEvent(true);
@@ -1740,6 +2333,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           .map((p) => `${p.fullName || p.name} <${p.email}>`)
           .join(', '),
         location: newEvent.location || undefined,
+        resourceId: selectedResourceId || undefined, // Priority 2: Resource booking
         createdBy: accountId || user?.$id || 'user',
         createdByAccountId: accountId || user?.$id || 'user',
         createdByUserId: userId,
@@ -1776,8 +2370,21 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       });
 
       if (!response.ok) {
-        let errorData: { message?: string; reason?: string; error?: string } =
-          {};
+        let errorData: {
+          message?: string;
+          reason?: string;
+          conflicts?: any[];
+          alternateSlots?: any[];
+          requiresConfirmation?: boolean;
+          error?:
+            | string
+            | {
+                details?: string;
+                message?: string;
+                code?: string;
+                type?: string;
+              };
+        } = {};
         try {
           errorData = await response.json();
         } catch (parseError) {
@@ -1785,28 +2392,62 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           errorData = { message: response.statusText || 'Unknown error' };
         }
 
+        // Handle conflict detection (409 status)
+        if (
+          response.status === 409 &&
+          errorData.requiresConfirmation &&
+          errorData.conflicts
+        ) {
+          // Store conflict data and show dialog
+          setConflictData({
+            conflicts: errorData.conflicts || [],
+            alternateSlots: errorData.alternateSlots || [],
+            pendingEventData: eventData,
+          });
+          setIsConflictDialogOpen(true);
+          setCreatingEvent(false);
+          return; // Don't throw error, user will confirm in dialog
+        }
+
+        // Extract error message from response
+        const errorObj =
+          errorData?.error &&
+          typeof errorData.error === 'object' &&
+          !Array.isArray(errorData.error)
+            ? errorData.error
+            : null;
+        const errorMessage =
+          errorData?.message ||
+          (errorObj && 'details' in errorObj ? errorObj.details : null) ||
+          (errorObj && 'message' in errorObj ? errorObj.message : null) ||
+          errorData?.reason ||
+          (typeof errorData?.error === 'string' ? errorData.error : null) ||
+          response.statusText ||
+          'Failed to create event';
+
         console.error('Failed to create event:', {
           status: response.status,
           statusText: response.statusText,
-          error: errorData,
+          errorData,
+          errorMessage,
+          errorCode: errorObj && 'code' in errorObj ? errorObj.code : undefined,
+          errorType: errorObj && 'type' in errorObj ? errorObj.type : undefined,
         });
 
         // Provide clearer error messages based on status code
-        let errorMessage = 'Failed to create event';
+        let userFriendlyMessage = errorMessage;
         if (response.status === 404) {
-          errorMessage =
+          userFriendlyMessage =
             'API route not found. Please restart the development server.';
         } else if (response.status === 403) {
-          errorMessage =
-            errorData.message || errorData.reason || 'Permission denied';
+          userFriendlyMessage = errorMessage || 'Permission denied';
         } else if (response.status === 401) {
-          errorMessage = 'Authentication required. Please sign in again.';
-        } else {
-          errorMessage =
-            errorData.message ||
-            errorData.reason ||
-            errorData.error ||
-            'Failed to create event';
+          userFriendlyMessage =
+            'Authentication required. Please sign in again.';
+        } else if (response.status === 500) {
+          userFriendlyMessage =
+            errorMessage ||
+            'Server error. Please try again or contact support.';
         }
 
         throw new Error(errorMessage);
@@ -1867,7 +2508,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('Error creating event:', {
+        error,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       console.error('Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
@@ -2082,6 +2727,84 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       setCreatingEvent(false);
     }
   };
+
+  // Handle conflict confirmation
+  const handleConfirmConflict = async () => {
+    if (!conflictData) return;
+
+    setCreatingEvent(true);
+    setIsConflictDialogOpen(false);
+
+    try {
+      // Retry creation with forceCreate flag
+      const eventDataWithForce = {
+        ...conflictData.pendingEventData,
+        forceCreate: true,
+      };
+
+      const response = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventDataWithForce),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create event');
+      }
+
+      const result = await response.json();
+      console.log(
+        'Event created successfully after conflict confirmation:',
+        result
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Event created successfully despite conflicts',
+      });
+
+      setIsAddEventOpen(false);
+      setNewEvent({
+        title: '',
+        date: new Date(),
+        endDate: new Date(),
+        type: 'meeting',
+        description: '',
+        startTime: '',
+        endTime: '',
+        contractName: '',
+        participants: '',
+        location: '',
+        attachments: [],
+        sensitivityLevel: 'standard',
+      });
+      setSelectedParticipants([]);
+      setParticipantSearch('');
+      setSearchResults([]);
+      setConflictData(null);
+
+      await forceRefresh();
+    } catch (error) {
+      console.error('Error creating event after conflict confirmation:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Failed to create event',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingEvent(false);
+    }
+  };
+
+  const handleCancelConflict = () => {
+    setIsConflictDialogOpen(false);
+    setConflictData(null);
+    setCreatingEvent(false);
+  };
   // Display-friendly label for event type (keeps full text like "Deadline Discussion")
   const getEventTypeLabel = (
     t: string | undefined
@@ -2134,19 +2857,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       return;
     }
 
-    // Debug logging for permission check
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[confirmDeleteEvent] Permission check:', {
-        selectedEventPermissions,
-        cancelEvent: selectedEventPermissions?.cancelEvent,
-        role,
-        userId,
-        eventId: selectedEvent.$id || selectedEvent.id,
-        eventCreatedBy: selectedEvent.createdBy,
-        eventCreatedByAccountId: selectedEvent.createdByAccountId,
-        overrides: selectedEvent.overrides,
-      });
-    }
 
     if (selectedEventPermissions && !selectedEventPermissions.cancelEvent) {
       console.warn('[confirmDeleteEvent] Permission denied:', {
@@ -2165,7 +2875,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
     // Use $id if available (from database), otherwise use id (from converted event)
     const eventId = selectedEvent.$id || selectedEvent.id;
-    console.log('Attempting to delete event with ID:', eventId);
 
     try {
       const response = await fetch(
@@ -2376,7 +3085,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
     }
   };
 
-  const renderMonthView = () => {
+  const renderMonthView = (
+    eventsToRender: LocalCalendarEvent[] = normalizedEvents
+  ) => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const startDate = startOfWeek(monthStart);
@@ -2398,7 +3109,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
         {/* Calendar days */}
         {days.map((day) => {
           // Use isSameDay for proper date comparison (handles timezone safely)
-          const dayEvents = normalizedEvents.filter((event) => {
+          const dayEvents = eventsToRender.filter((event) => {
             // event.startDate is already a Date object from useCalendarEvents
             if (!event.startDate) return false;
 
@@ -2452,7 +3163,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             <div
               key={day.toISOString()}
               className={cn(
-                'min-h-[120px] max-h-[120px] overflow-hidden p-2 bg-white border border-gray-200 cursor-pointer transition-colors flex flex-col',
+                'min-h-[105px] max-h-[105px] overflow-hidden p-2 bg-white border border-gray-200 cursor-pointer transition-colors flex flex-col',
                 !isCurrentMonth && 'bg-gray-50 text-gray-400',
                 isSelected && 'bg-gray-50 border-blue-300'
               )}
@@ -2490,10 +3201,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       event.approvalStatus !== 'not_required'
                         ? event.approvalStatus
                         : null;
+                    const borderColor = getEventTypeBorderColor(event.type);
                     return (
                       <div
                         key={event.$id || `event-${index}-${event.title}`}
-                        className="bg-gray-100 border-l-4 border-gray-400 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-200 transition-colors"
+                        className={cn(
+                          'bg-gray-100 border-l-4 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-200 transition-colors',
+                          borderColor
+                        )}
                         onClick={(e) => {
                           e.stopPropagation();
                           openEditDialog(event);
@@ -2832,7 +3547,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
       </div>
 
       {/* Header */}
-      <div className="flex rounded-t-lg items-center justify-between p-6 border-b bg-white">
+      <div className="flex rounded-t-lg items-center justify-between p-4 border-b bg-white">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <Button
@@ -2888,79 +3603,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
             </TabsList>
           </Tabs>
 
-          <Button
-            size="sm"
-            variant="outline"
-            className="primary-btn px-3 sm:px-4"
-          >
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            className="primary-btn px-3 sm:px-4"
-          >
-            <Share2 className="h-4 w-4" />
-            Share
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            className="primary-btn px-3 sm:px-4"
-          >
-            <Printer className="h-4 w-4" />
-            Print
-          </Button>
-
-          {/* Sync Button */}
-          {outlookConnected && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSync}
-              disabled={syncing}
-              className="primary-btn px-3 sm:px-4"
-            >
-              {syncing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Syncing...
-                </>
-              ) : (
-                <>
-                  <Loader2 className="h-4 w-4" /> Sync
-                </>
-              )}
-            </Button>
-          )}
-
-          {/* Settings Button */}
-          <Dialog open={showSettings} onOpenChange={setShowSettings}>
-            <DialogTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="primary-btn px-3 sm:px-4"
-              >
-                <Settings className="h-4 w-4 text-white" />
-                Settings
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
-              <DialogHeader>
-                <DialogTitle className="sidebar-gradient-text">
-                  Calendar Settings
-                </DialogTitle>
-              </DialogHeader>
-              <CalendarSettings
-                userId={user?.$id || ''}
-                onClose={() => setShowSettings(false)}
-              />
-            </DialogContent>
-          </Dialog>
-
+          {/* New Event Button - PRIMARY ACTION (Leftmost for maximum discoverability) */}
           <Dialog
             open={isAddEventOpen}
             onOpenChange={(open) => {
@@ -3202,6 +3845,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             <Calendar
                               mode="single"
                               selected={newEvent.date}
+                              disabled={(date) => {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const checkDate = new Date(date);
+                                checkDate.setHours(0, 0, 0, 0);
+                                return checkDate < today;
+                              }}
                               onSelect={(date) => {
                                 const selectedDate = date || new Date();
                                 const smartTimes =
@@ -3251,6 +3901,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             <Calendar
                               mode="single"
                               selected={newEvent.endDate}
+                              disabled={(date) => {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const checkDate = new Date(date);
+                                checkDate.setHours(0, 0, 0, 0);
+                                return checkDate < today;
+                              }}
                               onSelect={(date) => {
                                 const selectedEndDate = date || new Date();
                                 setNewEvent({
@@ -3286,8 +3943,17 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             <SelectValue placeholder="Select start time" />
                           </SelectTrigger>
                           <SelectContent className="shadow-lg border-slate-200">
-                            {generateTimeOptions().map((time) => (
-                              <SelectItem key={time.value} value={time.value}>
+                            {generateTimeOptions(newEvent.date).map((time) => (
+                              <SelectItem
+                                key={time.value}
+                                value={time.value}
+                                disabled={time.disabled}
+                                className={
+                                  time.disabled
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : ''
+                                }
+                              >
                                 {time.label}
                               </SelectItem>
                             ))}
@@ -3314,8 +3980,17 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                             <SelectValue placeholder="Select end time" />
                           </SelectTrigger>
                           <SelectContent className="shadow-lg border-slate-200">
-                            {generateTimeOptions().map((time) => (
-                              <SelectItem key={time.value} value={time.value}>
+                            {generateTimeOptions(newEvent.date).map((time) => (
+                              <SelectItem
+                                key={time.value}
+                                value={time.value}
+                                disabled={time.disabled}
+                                className={
+                                  time.disabled
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : ''
+                                }
+                              >
                                 {time.label}
                               </SelectItem>
                             ))}
@@ -3356,25 +4031,25 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       </SelectItem>
                       <SelectItem value="contract">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div className="w-2 h-2 bg-blue rounded-full"></div>
                           Contract Review
                         </div>
                       </SelectItem>
                       <SelectItem value="meeting">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <div className="w-2 h-2 bg-green rounded-full"></div>
                           Meeting
                         </div>
                       </SelectItem>
                       <SelectItem value="deadline">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <div className="w-2 h-2 bg-red rounded-full"></div>
                           Deadline Discussion
                         </div>
                       </SelectItem>
                       <SelectItem value="review">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                          <div className="w-2 h-2 bg-orange rounded-full"></div>
                           Internal Review
                         </div>
                       </SelectItem>
@@ -3532,6 +4207,17 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                                       });
                                       setLocationSearch(location.address);
                                       setLocationResults([]);
+                                      // If this is a resource, set the resourceId
+                                      if (
+                                        location.type === 'resource' &&
+                                        location.resourceId
+                                      ) {
+                                        setSelectedResourceId(
+                                          location.resourceId
+                                        );
+                                      } else {
+                                        setSelectedResourceId(null);
+                                      }
                                     }}
                                   >
                                     <div className="flex items-center gap-3">
@@ -3574,6 +4260,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       )}
                   </div>
                 </div>
+
+                {/* Priority 2: Reminders Section */}
+                <EventReminderConfigComponent
+                  reminders={newEvent.reminders || []}
+                  onChange={(reminders) =>
+                    setNewEvent({ ...newEvent, reminders })
+                  }
+                />
 
                 {/* Description Section */}
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
@@ -3704,7 +4398,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                       className="primary-btn px-3 sm:px-4"
                       onClick={handleCancelEvent}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Ban className="w-4 h-4" />
                       Cancel
                     </Button>
                     <Button
@@ -3741,11 +4435,88 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Filter Button - Viewing tools */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="primary-btn px-3 sm:px-4"
+          >
+            <Filter className="h-4 w-4" />
+            Filter
+          </Button>
+
+          {/* Share Button */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="primary-btn px-3 sm:px-4"
+            onClick={() => setIsSharePrimaryCalendarOpen(true)}
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+
+          {/* Print Button */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="primary-btn px-3 sm:px-4"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
+
+          {/* Settings Button - Configuration */}
+          <Dialog open={showSettings} onOpenChange={setShowSettings}>
+            <DialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="primary-btn px-3 sm:px-4"
+              >
+                <Settings className="h-4 w-4 text-white" />
+                Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
+              <DialogHeader>
+                <DialogTitle className="sidebar-gradient-text">
+                  Calendar Settings
+                </DialogTitle>
+              </DialogHeader>
+              <CalendarSettings
+                userId={user?.$id || ''}
+                onClose={() => setShowSettings(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* Sync Button - Utility action */}
+          {outlookConnected && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSync}
+              disabled={syncing}
+              className="primary-btn px-3 sm:px-4"
+            >
+              {syncing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Syncing...
+                </>
+              ) : (
+                <>
+                  <Loader2 className="h-4 w-4" /> Sync
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
       {isApprover && (
-        <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-5 shadow-sm">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
@@ -3953,13 +4724,168 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           )}
         </div>
       )}
+      {/* Management Buttons */}
+      <div className="flex justify-end gap-4">
+        <SharedCalendarManager />
+        <ResourceManager />
+        <CalendarDelegationManager />
+      </div>
 
-      {/* Calendar View */}
-      <Card>
-        <CardContent className="p-0">
-          {viewMode === 'month' ? renderMonthView() : renderWeekView()}
-        </CardContent>
-      </Card>
+      {/* Calendar View with Sidebar */}
+      <div className="flex gap-0 border border-slate-200 rounded-lg overflow-hidden">
+        {/* Left Sidebar */}
+        <CalendarSidebar
+          selectedMyCalendars={selectedMyCalendars}
+          selectedSharedCalendars={selectedSharedCalendars}
+          onMyCalendarChange={handleMyCalendarChange}
+          onSharedCalendarChange={handleSharedCalendarChange}
+          sharedCalendars={sharedCalendars.map((cal) => ({
+            ...cal,
+            ownerName: sharedCalendarOwnerNames[cal.$id] || cal.name,
+          }))}
+          loadingSharedCalendars={loadingSharedCalendars}
+        />
+
+        {/* Calendar Display Area */}
+        <div
+          ref={calendarContainerRef}
+          className={`flex-1 bg-white ${
+            (selectedMyCalendars.calendar ? 1 : 0) +
+              (selectedMyCalendars.usHolidays ? 1 : 0) +
+              selectedSharedCalendars.length >
+            1
+              ? 'overflow-x-auto'
+              : 'overflow-x-hidden'
+          }`}
+        >
+          <div
+            className="flex gap-4 p-4"
+            style={{
+              minWidth:
+                (selectedMyCalendars.calendar ? 1 : 0) +
+                  (selectedMyCalendars.usHolidays ? 1 : 0) +
+                  selectedSharedCalendars.length >
+                1
+                  ? 'max-content'
+                  : 'auto',
+            }}
+          >
+            {(() => {
+              // Calculate number of visible calendars
+              const visibleCalendarsCount =
+                (selectedMyCalendars.calendar ? 1 : 0) +
+                (selectedMyCalendars.usHolidays ? 1 : 0) +
+                selectedSharedCalendars.length;
+
+              // Use the calculated calendarWidth from state
+
+              return (
+                <>
+                  {/* Main Calendar */}
+                  {selectedMyCalendars.calendar && (
+                    <div
+                      className="flex-shrink-0"
+                      style={{ width: calendarWidth }}
+                    >
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <h3 className="text-lg font-semibold text-slate-700">
+                          Calendar
+                        </h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCloseCalendar('calendar')}
+                          className="h-6 w-6 p-0 hover:bg-slate-100"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Card>
+                        <CardContent className="p-0">
+                          {viewMode === 'month'
+                            ? renderMonthView(defaultCalendarEvents)
+                            : renderWeekView()}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {/* US Holidays Calendar */}
+                  {selectedMyCalendars.usHolidays && (
+                    <div
+                      className="flex-shrink-0"
+                      style={{ width: calendarWidth }}
+                    >
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <h3 className="text-lg font-semibold text-slate-700">
+                          United States holidays
+                        </h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCloseCalendar('usHolidays')}
+                          className="h-6 w-6 p-0 hover:bg-slate-100"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Card>
+                        <CardContent className="p-0">
+                          {viewMode === 'month'
+                            ? renderMonthView(usHolidaysEvents)
+                            : renderWeekView()}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {/* Shared Calendars */}
+                  {selectedSharedCalendars.map((calendarId) => {
+                    const calendar = sharedCalendars.find(
+                      (cal) => cal.$id === calendarId
+                    );
+                    if (!calendar) return null;
+
+                    // Get events for this specific shared calendar (filtered by owner)
+                    const sharedCalendarEvents =
+                      getSharedCalendarEvents(calendar);
+
+                    return (
+                      <div
+                        key={calendarId}
+                        className="flex-shrink-0"
+                        style={{ width: calendarWidth }}
+                      >
+                        <div className="flex items-center justify-between mb-2 px-1">
+                          <h3 className="text-lg font-semibold text-slate-700">
+                            {sharedCalendarOwnerNames[calendarId] ||
+                              calendar.name}
+                          </h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCloseCalendar(calendarId)}
+                            className="h-6 w-6 p-0 hover:bg-slate-100"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <Card>
+                          <CardContent className="p-0">
+                            {viewMode === 'month'
+                              ? renderMonthView(sharedCalendarEvents)
+                              : renderWeekView()}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      </div>
 
       {/* Approval Review Dialog */}
       <Dialog
@@ -4635,7 +5561,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                   disabled={isProcessingApproval}
                   className="primary-btn px-3 sm:px-4 flex-1"
                 >
-                  <X className="w-4 h-4" />
+                  <Ban className="w-4 h-4" />
                   Cancel
                 </Button>
               </div>
@@ -4686,355 +5612,376 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           </div>
 
           {selectedEvent && (
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-6 space-y-6">
-                {/* Event Details Section */}
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <div className="flex items-center gap-2 text-sm font-semibold mb-4 text-slate-700">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    Event Information
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {selectedEvent.sensitivityLevel && (
-                        <Badge
-                          variant="outline"
-                          className={getSensitivityBadgeClasses(
-                            selectedEvent.sensitivityLevel || 'standard'
-                          )}
-                        >
-                          {
-                            SENSITIVITY_LABELS[
-                              selectedEvent.sensitivityLevel || 'standard'
-                            ]
-                          }
-                        </Badge>
-                      )}
-                      {selectedEvent.approvalStatus &&
-                        selectedEvent.approvalStatus !== 'not_required' && (
-                          <Badge
-                            variant={
-                              selectedEvent.approvalStatus === 'approved'
-                                ? 'secondary'
-                                : 'outline'
-                            }
-                            className="uppercase sidebar-gradient-text"
-                          >
-                            {getApprovalStatusText(
-                              selectedEvent.approvalStatus
-                            )}
-                          </Badge>
-                        )}
+            <>
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-6 space-y-6">
+                  {/* Event Details Section */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 text-sm font-semibold mb-4 text-slate-700">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      Event Information
                     </div>
-                    {!canViewSelectedEventSensitiveDetails &&
-                      selectedEvent.sensitivityLevel &&
-                      selectedEvent.sensitivityLevel !== 'standard' && (
-                        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                          You can view scheduling details, but sensitive content
-                          is hidden until an approver grants access.
-                        </div>
-                      )}
 
-                    {/* Enhanced Reviewer Notes Section */}
-                    {(selectedEvent.approvalStatus === 'changes_requested' ||
-                      selectedEvent.approvalStatus === 'rejected') && (
-                      <div className="mt-4">
-                        {loadingApprovalRequest ? (
-                          <div className="rounded-lg p-4 border bg-slate-50 border-slate-200">
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
-                              <span className="text-sm text-slate-600">
-                                Loading reviewer feedback...
-                              </span>
-                            </div>
-                          </div>
-                        ) : eventApprovalRequest?.reviewerNotes ? (
-                          <div
-                            className={cn(
-                              'rounded-lg p-4 border shadow-sm',
-                              selectedEvent.approvalStatus ===
-                                'changes_requested'
-                                ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300'
-                                : 'bg-gradient-to-br from-red-50 to-pink-50 border-red-300'
-                            )}
-                          >
-                            <div className="flex items-start gap-3 mb-3">
-                              <div
-                                className={cn(
-                                  'flex items-center justify-center w-10 h-10 rounded-lg',
-                                  selectedEvent.approvalStatus ===
-                                    'changes_requested'
-                                    ? 'bg-amber-100'
-                                    : 'bg-red-100'
+                    <div className="space-y-4">
+                      {!isHolidayEvent && (
+                        <>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {selectedEvent.sensitivityLevel && (
+                              <Badge
+                                variant="outline"
+                                className={getSensitivityBadgeClasses(
+                                  selectedEvent.sensitivityLevel || 'standard'
                                 )}
                               >
-                                {selectedEvent.approvalStatus ===
-                                'changes_requested' ? (
-                                  <MessageSquare className="w-5 h-5 text-amber-700" />
-                                ) : (
-                                  <AlertCircle className="w-5 h-5 text-red-700" />
-                                )}
+                                {
+                                  SENSITIVITY_LABELS[
+                                    selectedEvent.sensitivityLevel || 'standard'
+                                  ]
+                                }
+                              </Badge>
+                            )}
+                            {selectedEvent.approvalStatus &&
+                              selectedEvent.approvalStatus !==
+                                'not_required' && (
+                                <Badge
+                                  variant={
+                                    selectedEvent.approvalStatus === 'approved'
+                                      ? 'secondary'
+                                      : 'outline'
+                                  }
+                                  className="uppercase sidebar-gradient-text"
+                                >
+                                  {getApprovalStatusText(
+                                    selectedEvent.approvalStatus
+                                  )}
+                                </Badge>
+                              )}
+                          </div>
+                          {!canViewSelectedEventSensitiveDetails &&
+                            selectedEvent.sensitivityLevel &&
+                            selectedEvent.sensitivityLevel !== 'standard' && (
+                              <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                                You can view scheduling details, but sensitive
+                                content is hidden until an approver grants
+                                access.
                               </div>
-                              <div className="flex-1">
-                                <h4
+                            )}
+
+                          {/* Enhanced Reviewer Notes Section */}
+                          {(selectedEvent.approvalStatus ===
+                            'changes_requested' ||
+                            selectedEvent.approvalStatus === 'rejected') && (
+                            <div className="mt-4">
+                              {loadingApprovalRequest ? (
+                                <div className="rounded-lg p-4 border bg-slate-50 border-slate-200">
+                                  <div className="flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                                    <span className="text-sm text-slate-600">
+                                      Loading reviewer feedback...
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : eventApprovalRequest?.reviewerNotes ? (
+                                <div
                                   className={cn(
-                                    'text-sm font-semibold mb-1',
+                                    'rounded-lg p-4 border shadow-sm',
                                     selectedEvent.approvalStatus ===
                                       'changes_requested'
-                                      ? 'text-amber-900'
-                                      : 'text-red-900'
+                                      ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300'
+                                      : 'bg-gradient-to-br from-red-50 to-pink-50 border-red-300'
                                   )}
                                 >
-                                  {selectedEvent.approvalStatus ===
-                                  'changes_requested'
-                                    ? 'Reviewer Feedback - Changes Requested'
-                                    : 'Reviewer Feedback - Request Denied'}
-                                </h4>
-                                {eventApprovalRequest.decidedAt && (
-                                  <p
+                                  <div className="flex items-start gap-3 mb-3">
+                                    <div
+                                      className={cn(
+                                        'flex items-center justify-center w-10 h-10 rounded-lg',
+                                        selectedEvent.approvalStatus ===
+                                          'changes_requested'
+                                          ? 'bg-amber-100'
+                                          : 'bg-red-100'
+                                      )}
+                                    >
+                                      {selectedEvent.approvalStatus ===
+                                      'changes_requested' ? (
+                                        <MessageSquare className="w-5 h-5 text-amber-700" />
+                                      ) : (
+                                        <AlertCircle className="w-5 h-5 text-red-700" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1">
+                                      <h4
+                                        className={cn(
+                                          'text-sm font-semibold mb-1',
+                                          selectedEvent.approvalStatus ===
+                                            'changes_requested'
+                                            ? 'text-amber-900'
+                                            : 'text-red-900'
+                                        )}
+                                      >
+                                        {selectedEvent.approvalStatus ===
+                                        'changes_requested'
+                                          ? 'Reviewer Feedback - Changes Requested'
+                                          : 'Reviewer Feedback - Request Denied'}
+                                      </h4>
+                                      {eventApprovalRequest.decidedAt && (
+                                        <p
+                                          className={cn(
+                                            'text-xs',
+                                            selectedEvent.approvalStatus ===
+                                              'changes_requested'
+                                              ? 'text-amber-600'
+                                              : 'text-red-600'
+                                          )}
+                                        >
+                                          Reviewed on{' '}
+                                          {format(
+                                            new Date(
+                                              eventApprovalRequest.decidedAt
+                                            ),
+                                            'MMM d, yyyy h:mm a'
+                                          )}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div
                                     className={cn(
-                                      'text-xs',
+                                      'rounded-md p-3 bg-white border',
                                       selectedEvent.approvalStatus ===
                                         'changes_requested'
-                                        ? 'text-amber-600'
-                                        : 'text-red-600'
+                                        ? 'border-amber-200'
+                                        : 'border-red-200'
                                     )}
                                   >
-                                    Reviewed on{' '}
-                                    {format(
-                                      new Date(eventApprovalRequest.decidedAt),
-                                      'MMM d, yyyy h:mm a'
-                                    )}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div
-                              className={cn(
-                                'rounded-md p-3 bg-white border',
-                                selectedEvent.approvalStatus ===
-                                  'changes_requested'
-                                  ? 'border-amber-200'
-                                  : 'border-red-200'
-                              )}
-                            >
-                              <p
-                                className={cn(
-                                  'text-sm whitespace-pre-wrap leading-relaxed',
-                                  selectedEvent.approvalStatus ===
+                                    <p
+                                      className={cn(
+                                        'text-sm whitespace-pre-wrap leading-relaxed',
+                                        selectedEvent.approvalStatus ===
+                                          'changes_requested'
+                                          ? 'text-amber-900'
+                                          : 'text-red-900'
+                                      )}
+                                    >
+                                      {eventApprovalRequest.reviewerNotes}
+                                    </p>
+                                  </div>
+                                  {selectedEvent.approvalStatus ===
+                                    'changes_requested' && (
+                                    <div className="mt-3 pt-3 border-t border-amber-200">
+                                      <p className="text-xs text-amber-700">
+                                        <strong>Next steps:</strong> Please
+                                        review the feedback above and make the
+                                        requested changes. Once updated, your
+                                        event will be resubmitted for approval.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="rounded-lg p-4 border bg-slate-50 border-slate-200">
+                                  <p className="text-sm text-slate-600">
+                                    {selectedEvent.approvalStatus ===
                                     'changes_requested'
-                                    ? 'text-amber-900'
-                                    : 'text-red-900'
-                                )}
-                              >
-                                {eventApprovalRequest.reviewerNotes}
-                              </p>
+                                      ? 'No specific feedback provided. Please review your event details and resubmit.'
+                                      : 'No denial reason provided.'}
+                                  </p>
+                                </div>
+                              )}
                             </div>
-                            {selectedEvent.approvalStatus ===
-                              'changes_requested' && (
-                              <div className="mt-3 pt-3 border-t border-amber-200">
-                                <p className="text-xs text-amber-700">
-                                  <strong>Next steps:</strong> Please review the
-                                  feedback above and make the requested changes.
-                                  Once updated, your event will be resubmitted
-                                  for approval.
-                                </p>
-                              </div>
-                            )}
+                          )}
+                        </>
+                      )}
+
+                      {/* Date & Time */}
+                      <div
+                        className={
+                          isHolidayEvent
+                            ? 'grid grid-cols-1 gap-4'
+                            : 'grid grid-cols-[1fr_.8fr] gap-4'
+                        }
+                      >
+                        <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                          <div className="w-8 h-8 bg-[#E6FAF9] rounded-full flex items-center justify-center mt-0.5">
+                            <Clock className="w-4 h-4 text-blue" />
                           </div>
-                        ) : (
-                          <div className="rounded-lg p-4 border bg-slate-50 border-slate-200">
-                            <p className="text-sm text-slate-600">
-                              {selectedEvent.approvalStatus ===
-                              'changes_requested'
-                                ? 'No specific feedback provided. Please review your event details and resubmit.'
-                                : 'No denial reason provided.'}
-                            </p>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-slate-900">
+                              Date
+                            </div>
+                            <div className="text-sm text-slate-600">
+                              {format(
+                                selectedEvent.startDate instanceof Date
+                                  ? selectedEvent.startDate
+                                  : new Date(selectedEvent.startDate),
+                                'EEEE, MMMM d, yyyy'
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Event Type - Only show for non-holiday events */}
+                        {!isHolidayEvent && (
+                          <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
+                              <Tag className="w-4 h-4 text-purple-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-slate-900">
+                                Event Type
+                              </div>
+                              <div className="text-sm text-slate-600 whitespace-nowrap">
+                                {getEventTypeLabel(
+                                  selectedEvent.type as unknown as string
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
-                    )}
 
-                    {/* Date & Time */}
-                    <div className="grid grid-cols-[1fr_.8fr] gap-4">
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="w-8 h-8 bg-[#E6FAF9] rounded-full flex items-center justify-center mt-0.5">
-                          <Clock className="w-4 h-4 text-blue" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-slate-900">
-                            {format(
-                              selectedEvent.startDate instanceof Date
-                                ? selectedEvent.startDate
-                                : new Date(selectedEvent.startDate),
-                              'EEEE, MMMM d, yyyy'
-                            )}
+                      {/* Participants - Only show for non-holiday events */}
+                      {!isHolidayEvent &&
+                      canViewSelectedEventSensitiveDetails ? (
+                        <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                          <div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
+                            <Users className="w-4 h-4 text-[#5558F9]" />
                           </div>
-                          <div className="text-sm text-slate-600">
-                            {selectedEvent.startTime && selectedEvent.endTime
-                              ? `${formatTimeForDisplay(
-                                  selectedEvent.startTime
-                                )} - ${formatTimeForDisplay(
-                                  selectedEvent.endTime
-                                )}`
-                              : selectedEvent.startTime
-                              ? formatTimeForDisplay(selectedEvent.startTime)
-                              : 'All day'}
-                          </div>
-                        </div>
-                      </div>
-                      {/* Event Type */}
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
-                          <Tag className="w-4 h-4 text-purple-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-slate-900">
-                            Event Type
-                          </div>
-                          <div className="text-sm text-slate-600 whitespace-nowrap">
-                            {getEventTypeLabel(
-                              selectedEvent.type as unknown as string
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-slate-900 mb-1">
+                              Participants
+                            </div>
+                            <div className="text-sm text-slate-600">
+                              {(() => {
+                                // Check if participants exist (handle both string and array formats)
+                                const hasParticipants =
+                                  selectedEvent.participants &&
+                                  (Array.isArray(selectedEvent.participants)
+                                    ? selectedEvent.participants.length > 0
+                                    : typeof selectedEvent.participants ===
+                                        'string' &&
+                                      selectedEvent.participants.trim().length >
+                                        0);
 
-                    {/* Participants */}
-                    {canViewSelectedEventSensitiveDetails ? (
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
-                          <Users className="w-4 h-4 text-[#5558F9]" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-slate-900 mb-1">
-                            Participants
-                          </div>
-                          <div className="text-sm text-slate-600">
-                            {(() => {
-                              // Check if participants exist (handle both string and array formats)
-                              const hasParticipants =
-                                selectedEvent.participants &&
-                                (Array.isArray(selectedEvent.participants)
-                                  ? selectedEvent.participants.length > 0
-                                  : typeof selectedEvent.participants ===
-                                      'string' &&
-                                    selectedEvent.participants.trim().length >
-                                      0);
+                                if (!hasParticipants) {
+                                  return (
+                                    <span className="text-slate-400 italic">
+                                      No participants
+                                    </span>
+                                  );
+                                }
 
-                              if (!hasParticipants) {
-                                return (
+                                return loadingNames ? (
+                                  <span className="text-slate-400 flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                    Loading participants...
+                                  </span>
+                                ) : participantNames.length > 0 ? (
+                                  <div className="space-y-1">
+                                    {participantNames.map((name, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center gap-2"
+                                      >
+                                        <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
+                                          {name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span>{name}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : Array.isArray(
+                                    selectedEvent.participants
+                                  ) ? (
+                                  <div className="space-y-1">
+                                    {selectedEvent.participants.map(
+                                      (participant, index) => (
+                                        <div
+                                          key={index}
+                                          className="flex items-center gap-2"
+                                        >
+                                          <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
+                                            {participant
+                                              .charAt(0)
+                                              .toUpperCase()}
+                                          </div>
+                                          <span>{participant}</span>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                ) : selectedEvent.participants ? (
+                                  <div className="space-y-1">
+                                    {selectedEvent.participants
+                                      .split(', ')
+                                      .map((participant, index) => (
+                                        <div
+                                          key={index}
+                                          className="flex items-center gap-2"
+                                        >
+                                          <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
+                                            {participant
+                                              .charAt(0)
+                                              .toUpperCase()}
+                                          </div>
+                                          <span>{participant}</span>
+                                        </div>
+                                      ))}
+                                  </div>
+                                ) : (
                                   <span className="text-slate-400 italic">
                                     No participants
                                   </span>
                                 );
-                              }
-
-                              return loadingNames ? (
-                                <span className="text-slate-400 flex items-center gap-2">
-                                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                  Loading participants...
-                                </span>
-                              ) : participantNames.length > 0 ? (
-                                <div className="space-y-1">
-                                  {participantNames.map((name, index) => (
-                                    <div
-                                      key={index}
-                                      className="flex items-center gap-2"
-                                    >
-                                      <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
-                                        {name.charAt(0).toUpperCase()}
-                                      </div>
-                                      <span>{name}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : Array.isArray(selectedEvent.participants) ? (
-                                <div className="space-y-1">
-                                  {selectedEvent.participants.map(
-                                    (participant, index) => (
-                                      <div
-                                        key={index}
-                                        className="flex items-center gap-2"
-                                      >
-                                        <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
-                                          {participant.charAt(0).toUpperCase()}
-                                        </div>
-                                        <span>{participant}</span>
-                                      </div>
-                                    )
-                                  )}
-                                </div>
-                              ) : selectedEvent.participants ? (
-                                <div className="space-y-1">
-                                  {selectedEvent.participants
-                                    .split(', ')
-                                    .map((participant, index) => (
-                                      <div
-                                        key={index}
-                                        className="flex items-center gap-2"
-                                      >
-                                        <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-medium">
-                                          {participant.charAt(0).toUpperCase()}
-                                        </div>
-                                        <span>{participant}</span>
-                                      </div>
-                                    ))}
-                                </div>
-                              ) : (
-                                <span className="text-slate-400 italic">
-                                  No participants
-                                </span>
-                              );
-                            })()}
+                              })()}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200 text-sm text-slate-500">
-                        <div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
-                          <Users className="w-4 h-4 text-[#5558F9]" />
-                        </div>
-                        <div className="flex-1">
-                          Participant details are restricted for this event.
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Contract */}
-                    {canViewSelectedEventSensitiveDetails &&
-                      (() => {
-                        if (!selectedEvent) return null;
-                        const eventType = String(
-                          selectedEvent.type || ''
-                        ).toLowerCase();
-                        const isContractType =
-                          eventType === 'contract review' ||
-                          eventType === 'contract';
-                        if (!isContractType || !selectedEvent.contractName)
-                          return null;
-                        return (
-                          <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                            <div className="w-8 h-8 bg-[#f0ecec] rounded-full flex items-center justify-center mt-0.5">
-                              <FileText className="w-4 h-4 text-[#838181]" />
+                      ) : (
+                        !isHolidayEvent && (
+                          <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200 text-sm text-slate-500">
+                            <div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
+                              <Users className="w-4 h-4 text-[#5558F9]" />
                             </div>
                             <div className="flex-1">
-                              <div className="text-sm font-medium text-slate-900 mb-1">
-                                Contract
-                              </div>
-                              <div className="text-sm text-slate-600 break-words">
-                                {selectedEvent.contractName}
-                              </div>
+                              Participant details are restricted for this event.
                             </div>
                           </div>
-                        );
-                      })()}
+                        )
+                      )}
 
-                    {/* Location */}
-                    {canViewSelectedEventSensitiveDetails &&
-                      selectedEvent.location && (
+                      {/* Contract - Only show for non-holiday events */}
+                      {!isHolidayEvent &&
+                        canViewSelectedEventSensitiveDetails &&
+                        (() => {
+                          if (!selectedEvent) return null;
+                          const eventType = String(
+                            selectedEvent.type || ''
+                          ).toLowerCase();
+                          const isContractType =
+                            eventType === 'contract review' ||
+                            eventType === 'contract';
+                          if (!isContractType || !selectedEvent.contractName)
+                            return null;
+                          return (
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                              <div className="w-8 h-8 bg-[#f0ecec] rounded-full flex items-center justify-center mt-0.5">
+                                <FileText className="w-4 h-4 text-[#838181]" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-slate-900 mb-1">
+                                  Contract
+                                </div>
+                                <div className="text-sm text-slate-600 break-words">
+                                  {selectedEvent.contractName}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                      {/* Location - Always show for holidays, conditional for others */}
+                      {(isHolidayEvent ||
+                        (canViewSelectedEventSensitiveDetails &&
+                          selectedEvent.location)) && (
                         <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
                           <div className="w-8 h-8 bg-[#fae3d3] rounded-full flex items-center justify-center mt-0.5">
                             <MapPin className="w-4 h-4 text-orange" />
@@ -5044,280 +5991,299 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                               Location
                             </div>
                             <div className="text-sm text-slate-600 break-words">
-                              {selectedEvent.location}
+                              {isHolidayEvent
+                                ? 'United States'
+                                : selectedEvent.location}
                             </div>
                           </div>
                         </div>
                       )}
 
-                    {/* Description */}
-                    {canViewSelectedEventSensitiveDetails &&
-                      selectedEvent.description &&
-                      selectedEvent.description.trim() && (
-                        <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mt-0.5">
-                            <MessageSquare className="w-4 h-4 text-indigo-600" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-slate-900 mb-1">
-                              Description
-                            </div>
-                            <div className="text-sm text-slate-600 break-words whitespace-pre-wrap">
-                              {selectedEvent.description
-                                .replace(/<[^>]*>/g, '')
-                                .trim()}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Attachments */}
-                    {canViewSelectedEventSensitiveDetails &&
-                      (() => {
-                        const attachmentFileIds = (
-                          selectedEvent.attachments || []
-                        ).map((att) =>
-                          typeof att === 'string' ? att : att.$id
-                        );
-
-                        if (attachmentFileIds.length === 0) return null;
-
-                        return (
+                      {/* Description - Only show for non-holiday events */}
+                      {!isHolidayEvent &&
+                        canViewSelectedEventSensitiveDetails &&
+                        selectedEvent.description &&
+                        selectedEvent.description.trim() && (
                           <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                            <div className="w-8 h-8 bg-[#e0dede] rounded-full flex items-center justify-center mt-0.5">
-                              <Paperclip className="w-4 h-4 text-[#808080]" />
+                            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mt-0.5">
+                              <MessageSquare className="w-4 h-4 text-indigo-600" />
                             </div>
                             <div className="flex-1">
-                              <div className="text-sm font-medium text-slate-900 mb-2">
-                                Attachments ({attachmentFileIds.length})
+                              <div className="text-sm font-medium text-slate-900 mb-1">
+                                Description
                               </div>
-                              <div className="space-y-2">
-                                {attachmentFileIds.map((fileId: string) => {
-                                  const attachment = attachmentDetails[fileId];
-                                  if (!attachment) {
+                              <div className="text-sm text-slate-600 break-words whitespace-pre-wrap">
+                                {selectedEvent.description
+                                  .replace(/<[^>]*>/g, '')
+                                  .trim()}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Attachments - Only show for non-holiday events */}
+                      {!isHolidayEvent &&
+                        canViewSelectedEventSensitiveDetails &&
+                        (() => {
+                          const attachmentFileIds = (
+                            selectedEvent.attachments || []
+                          ).map((att) =>
+                            typeof att === 'string' ? att : att.$id
+                          );
+
+                          if (attachmentFileIds.length === 0) return null;
+
+                          return (
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                              <div className="w-8 h-8 bg-[#e0dede] rounded-full flex items-center justify-center mt-0.5">
+                                <Paperclip className="w-4 h-4 text-[#808080]" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-slate-900 mb-2">
+                                  Attachments ({attachmentFileIds.length})
+                                </div>
+                                <div className="space-y-2">
+                                  {attachmentFileIds.map((fileId: string) => {
+                                    const attachment =
+                                      attachmentDetails[fileId];
+                                    if (!attachment) {
+                                      return (
+                                        <div
+                                          key={fileId}
+                                          className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200"
+                                        >
+                                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-medium text-slate-900 truncate">
+                                                Loading...
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+
+                                    // Only render if attachment has at least a name or $id
+                                    if (!attachment.name && !attachment.$id) {
+                                      return null;
+                                    }
+
                                     return (
                                       <div
-                                        key={fileId}
-                                        className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200"
+                                        key={attachment.$id}
+                                        className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
                                       >
                                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                                          <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                                          <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
                                           <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-slate-900 truncate">
-                                              Loading...
+                                            {attachment.url ? (
+                                              <a
+                                                href={attachment.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline truncate block"
+                                              >
+                                                {attachment.name ||
+                                                  'Unknown file'}
+                                              </a>
+                                            ) : (
+                                              <p className="text-sm font-medium text-slate-900 truncate">
+                                                {attachment.name ||
+                                                  'Unknown file'}
+                                              </p>
+                                            )}
+                                            <p className="text-xs text-slate-500">
+                                              {convertFileSize({
+                                                sizeInBytes: attachment.size,
+                                              })}
+                                              {attachment.extension && (
+                                                <>
+                                                  {' '}
+                                                  •{' '}
+                                                  {attachment.extension.toUpperCase()}
+                                                </>
+                                              )}
                                             </p>
                                           </div>
                                         </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                          onClick={() => {
+                                            window.open(
+                                              attachment.url,
+                                              '_blank'
+                                            );
+                                          }}
+                                        >
+                                          <Eye className="w-4 h-4 text-blue-600" />
+                                        </Button>
                                       </div>
                                     );
-                                  }
-
-                                  // Only render if attachment has at least a name or $id
-                                  if (!attachment.name && !attachment.$id) {
-                                    return null;
-                                  }
-
-                                  return (
-                                    <div
-                                      key={attachment.$id}
-                                      className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
-                                    >
-                                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                        <div className="flex-1 min-w-0">
-                                          {attachment.url ? (
-                                            <a
-                                              href={attachment.url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline truncate block"
-                                            >
-                                              {attachment.name ||
-                                                'Unknown file'}
-                                            </a>
-                                          ) : (
-                                            <p className="text-sm font-medium text-slate-900 truncate">
-                                              {attachment.name ||
-                                                'Unknown file'}
-                                            </p>
-                                          )}
-                                          <p className="text-xs text-slate-500">
-                                            {convertFileSize({
-                                              sizeInBytes: attachment.size,
-                                            })}
-                                            {attachment.extension && (
-                                              <>
-                                                {' '}
-                                                •{' '}
-                                                {attachment.extension.toUpperCase()}
-                                              </>
-                                            )}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => {
-                                          window.open(attachment.url, '_blank');
-                                        }}
-                                      >
-                                        <Eye className="w-4 h-4 text-blue-600" />
-                                      </Button>
-                                    </div>
-                                  );
-                                })}
+                                  })}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })()}
-                  </div>
-                </div>
-
-                {/* AI Assistant Section */}
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
-                    <MessageSquare className="w-4 h-4 text-blue-600" />
-                    AI Assistant
+                          );
+                        })()}
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
-                      disabled={!canViewSelectedEventSensitiveDetails}
-                      title={
-                        !canViewSelectedEventSensitiveDetails
-                          ? 'You do not have permission to view sensitive AI recommendations'
-                          : undefined
-                      }
-                      onClick={() =>
-                        handleOpenAiPanel('pre-reads', selectedEvent)
-                      }
-                    >
-                      <Paperclip className="w-4 h-4 mr-3 text-slate-500" />
-                      <div className="text-left">
-                        <div className="font-medium text-slate-900">
-                          What pre-reads should I review?
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          Get AI recommendations for preparation materials
-                        </div>
-                      </div>
-                    </Button>
+                  {/* AI Assistant Section */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
+                      <MessageSquare className="w-4 h-4 text-blue-600" />
+                      AI Assistant
+                    </div>
 
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
-                      disabled={!canViewSelectedEventSensitiveDetails}
-                      title={
-                        !canViewSelectedEventSensitiveDetails
-                          ? 'You do not have permission to view sensitive AI recommendations'
-                          : undefined
-                      }
-                      onClick={() => handleOpenAiPanel('chat', selectedEvent)}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-3 text-slate-500" />
-                      <div className="text-left">
-                        <div className="font-medium text-slate-900">
-                          Chat with AI Assistant
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          Get help with meeting preparation and insights
-                        </div>
-                      </div>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Static Footer */}
-          {selectedEvent && (
-            <div className="sticky bottom-0 z-10 bg-slate-50 border-t border-slate-200 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-500">
-                  Event created{' '}
-                  {format(new Date(selectedEvent.startDate), 'MMM d, yyyy')}
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      // Pre-fill edit form
-                      setNewEvent({
-                        title: selectedEvent.title,
-                        date: new Date(selectedEvent.startDate),
-                        endDate: new Date(
-                          selectedEvent.endDate || selectedEvent.startDate
-                        ), // Use endDate if available, otherwise startDate
-                        type: selectedEvent.type,
-                        description: selectedEvent.description || '',
-                        startTime: selectedEvent.startTime || '',
-                        endTime: selectedEvent.endTime || '',
-                        contractName: selectedEvent.contractName || '',
-                        participants: selectedEvent.participants || '',
-                        location: selectedEvent.location || '',
-                        sensitivityLevel:
-                          selectedEvent.sensitivityLevel || 'standard',
-                      });
-                      setLocationSearch(selectedEvent.location || '');
-
-                      // Parse participants string to populate selectedParticipants
-                      if (
-                        selectedEvent.participants &&
-                        typeof selectedEvent.participants === 'string'
-                      ) {
-                        const participantStrings =
-                          selectedEvent.participants.split(', ');
-                        const parsedParticipants = participantStrings.map(
-                          (p) => {
-                            // Parse "Name <email>" format
-                            const match = p.match(/^(.+?) <(.+?)>$/);
-                            if (match) {
-                              return {
-                                $id: match[2], // Use email as ID for now
-                                fullName: match[1],
-                                name: match[1],
-                                email: match[2],
-                              };
-                            }
-                            // Fallback for old format (just user ID)
-                            return {
-                              $id: p,
-                              fullName: p,
-                              name: p,
-                              email: p,
-                            };
+                    <div className="space-y-3">
+                      {/* Pre-reads button - Only show for non-holiday events */}
+                      {!isHolidayEvent && (
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
+                          disabled={!canViewSelectedEventSensitiveDetails}
+                          title={
+                            !canViewSelectedEventSensitiveDetails
+                              ? 'You do not have permission to view sensitive AI recommendations'
+                              : undefined
                           }
-                        );
-                        setSelectedParticipants(parsedParticipants);
-                      } else {
-                        setSelectedParticipants([]);
-                      }
+                          onClick={() =>
+                            handleOpenAiPanel('pre-reads', selectedEvent)
+                          }
+                        >
+                          <Paperclip className="w-4 h-4 mr-3 text-slate-500" />
+                          <div className="text-left">
+                            <div className="font-medium text-slate-900">
+                              What pre-reads should I review?
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              Get AI recommendations for preparation materials
+                            </div>
+                          </div>
+                        </Button>
+                      )}
 
-                      setIsEditEventOpen(false);
-                      setIsAddEventOpen(true);
-                    }}
-                    className="primary-btn px-3 sm:px-4"
-                  >
-                    <Pencil className="w-4 h-4 " />
-                    Edit Event
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleDeleteEvent}
-                    className="primary-btn px-3 sm:px-4 text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
+                        disabled={
+                          !isHolidayEvent &&
+                          !canViewSelectedEventSensitiveDetails
+                        }
+                        title={
+                          !isHolidayEvent &&
+                          !canViewSelectedEventSensitiveDetails
+                            ? 'You do not have permission to view sensitive AI recommendations'
+                            : undefined
+                        }
+                        onClick={() => handleOpenAiPanel('chat', selectedEvent)}
+                      >
+                        <MessageSquare className="w-4 h-4 mr-3 text-slate-500" />
+                        <div className="text-left">
+                          <div className="font-medium text-slate-900">
+                            Chat with AI Assistant
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Get help with meeting preparation and insights
+                          </div>
+                        </div>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+
+              {/* Static Footer */}
+              <div className="sticky bottom-0 z-10 bg-slate-50 border-t border-slate-200 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-slate-500">
+                    Event created{' '}
+                    {selectedEvent &&
+                      format(new Date(selectedEvent.startDate), 'MMM d, yyyy')}
+                  </div>
+                  {/* Only show Edit and Delete buttons for non-holiday events */}
+                  {!isHolidayEvent && (
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          if (!selectedEvent) return;
+                          // Pre-fill edit form
+                          setNewEvent({
+                            title: selectedEvent.title || '',
+                            date: new Date(selectedEvent.startDate),
+                            endDate: new Date(
+                              selectedEvent.endDate || selectedEvent.startDate
+                            ), // Use endDate if available, otherwise startDate
+                            type: selectedEvent.type || 'meeting',
+                            description: selectedEvent.description || '',
+                            startTime: selectedEvent.startTime || '',
+                            endTime: selectedEvent.endTime || '',
+                            contractName: selectedEvent.contractName || '',
+                            participants: selectedEvent.participants || '',
+                            location: selectedEvent.location || '',
+                            sensitivityLevel:
+                              selectedEvent.sensitivityLevel || 'standard',
+                          });
+                          setLocationSearch(selectedEvent.location || '');
+
+                          // Parse participants string to populate selectedParticipants
+                          if (
+                            selectedEvent.participants &&
+                            typeof selectedEvent.participants === 'string'
+                          ) {
+                            const participantStrings =
+                              selectedEvent.participants.split(', ');
+                            const parsedParticipants = participantStrings.map(
+                              (p) => {
+                                // Parse "Name <email>" format
+                                const match = p.match(/^(.+?) <(.+?)>$/);
+                                if (match) {
+                                  return {
+                                    $id: match[2], // Use email as ID for now
+                                    fullName: match[1],
+                                    name: match[1],
+                                    email: match[2],
+                                  };
+                                }
+                                // Fallback for old format (just user ID)
+                                return {
+                                  $id: p,
+                                  fullName: p,
+                                  name: p,
+                                  email: p,
+                                };
+                              }
+                            );
+                            setSelectedParticipants(parsedParticipants);
+                          } else {
+                            setSelectedParticipants([]);
+                          }
+
+                          setIsEditEventOpen(false);
+                          setIsAddEventOpen(true);
+                        }}
+                        className="primary-btn px-3 sm:px-4"
+                      >
+                        <Pencil className="w-4 h-4 " />
+                        Edit Event
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleDeleteEvent}
+                        className="primary-btn px-3 sm:px-4 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -5377,7 +6343,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
                 onClick={handleShare}
                 className="flex-1"
               >
-                <Link className="h-4 w-4 mr-2" />
+                <Link className="h-4 w-4" />
                 Generate Link
               </Button>
             </div>
@@ -5478,6 +6444,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           side="right"
           className="!w-full sm:!w-[500px] md:!w-[600px] lg:!w-[700px] !max-w-none p-0 flex flex-col h-full"
         >
+          <SheetTitle>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold sidebar-gradient-text"></h3>
+            </div>
+          </SheetTitle>
           <CalendarAIChat
             mode={aiPanelMode}
             event={selectedEventWithDetails || selectedEvent}
@@ -5487,6 +6458,221 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           />
         </SheetContent>
       </Sheet>
+
+      {/* Conflict Confirmation Dialog */}
+      <Dialog
+        open={isConflictDialogOpen}
+        onOpenChange={setIsConflictDialogOpen}
+      >
+        <DialogContent className="sm:max-w-2xl p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+          <VisuallyHiddenPrimitive.Root>
+            <DialogTitle>Scheduling Conflicts Detected</DialogTitle>
+          </VisuallyHiddenPrimitive.Root>
+
+          {/* Professional Cap */}
+          <div className="h-4 w-full bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+          {/* Header with gradient background */}
+          <div className="sticky top-0 z-10 bg-gradient-to-r from-red-50 to-orange-50 py-4 border-b border-slate-200">
+            <div className="flex items-center gap-3 px-6">
+              {/* Icon with circular background */}
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+
+              {/* Title */}
+              <div>
+                <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+                  Scheduling Conflicts Detected
+                </DialogTitle>
+                <DialogDescription className="text-sm text-slate-600 mt-1">
+                  The following conflicts were detected. Please review and
+                  confirm if you want to proceed with creating this event.
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-6 bg-white">
+            {conflictData && (
+              <div className="space-y-6">
+                {/* Conflicts List */}
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                    Conflicts:
+                  </h3>
+                  <div className="space-y-3">
+                    {conflictData?.conflicts.map((conflict, index) => (
+                      <div
+                        key={index}
+                        className="bg-red-50 border border-red-200 rounded-lg p-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge
+                                variant={
+                                  conflict.type === 'participant'
+                                    ? 'destructive'
+                                    : 'secondary'
+                                }
+                              >
+                                {conflict.type === 'participant'
+                                  ? 'Participant Conflict'
+                                  : 'Resource Conflict'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-slate-700 mb-2">
+                              {conflict.conflictReason}
+                            </p>
+                            <div className="text-xs text-slate-600 space-y-1">
+                              <div>
+                                <strong>Event:</strong>{' '}
+                                {conflict.conflictingEvent.title}
+                              </div>
+                              <div>
+                                <strong>Time:</strong>{' '}
+                                {formatTimeForDisplay(
+                                  conflict.conflictingEvent.startTime || ''
+                                )}{' '}
+                                -{' '}
+                                {formatTimeForDisplay(
+                                  conflict.conflictingEvent.endTime || ''
+                                )}
+                              </div>
+                              {conflict.conflictingEvent.location && (
+                                <div>
+                                  <strong>Location:</strong>{' '}
+                                  {conflict.conflictingEvent.location}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Alternate Slots */}
+                {conflictData && conflictData.alternateSlots.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                      Suggested Alternate Times:
+                    </h3>
+                    <div className="space-y-2">
+                      {conflictData?.alternateSlots
+                        .slice(0, 5)
+                        .map((slot, index) => (
+                          <div
+                            key={index}
+                            className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-blue-600" />
+                              <span className="text-slate-700">
+                                {slot.startDate} at{' '}
+                                {formatTimeForDisplay(slot.startTime)} -{' '}
+                                {formatTimeForDisplay(slot.endTime)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warning Message */}
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-amber-800">
+                      <strong>Warning:</strong> Creating this event will result
+                      in scheduling conflicts. Participants may be double-booked
+                      or resources may be over-allocated.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Professional Footer */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="text-xs text-slate-500">
+              Review conflicts before proceeding.
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={handleCancelConflict}
+                disabled={creatingEvent}
+                className="primary-btn px-3 sm:px-4"
+              >
+                <Ban className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmConflict}
+                disabled={creatingEvent}
+                className="primary-btn px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white"
+              >
+                {creatingEvent ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-4 h-4" />
+                    Create Anyway
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Shared Calendar Dialog */}
+      <CreateSharedCalendarDialog
+        open={isCreateSharedCalendarOpen}
+        onOpenChange={setIsCreateSharedCalendarOpen}
+        onCalendarCreated={async (calendar) => {
+          // Refresh shared calendars if needed
+          if (!loadingSharedCalendars) {
+            setLoadingSharedCalendars(true);
+            try {
+              const response = await fetch('/api/calendar/shared');
+              if (response.ok) {
+                const data = await response.json();
+                setSharedCalendars(data.calendars || []);
+              }
+            } catch (error) {
+              console.error(
+                '[CLIENT] OutlookStyleCalendar] Error refreshing shared calendars:',
+                error
+              );
+            } finally {
+              setLoadingSharedCalendars(false);
+            }
+          }
+        }}
+      />
+
+      {/* Share Primary Calendar Dialog */}
+      <SharePrimaryCalendarDialog
+        open={isSharePrimaryCalendarOpen}
+        onOpenChange={setIsSharePrimaryCalendarOpen}
+        onShared={async () => {
+          // Refresh shared calendars immediately using SWR
+          if (refreshSharedCalendars) {
+            await refreshSharedCalendars();
+          }
+        }}
+      />
     </div>
   );
 };

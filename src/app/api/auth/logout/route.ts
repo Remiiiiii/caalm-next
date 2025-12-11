@@ -9,6 +9,12 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     const session = cookieStore.get('appwrite-session');
 
+    // Clear all auth-related cookies immediately (don't wait for Appwrite)
+    cookieStore.delete('appwrite-session');
+    cookieStore.delete('2fa_completed');
+    cookieStore.delete('auth_status');
+
+    // Fire and forget - delete session on Appwrite in background (non-blocking)
     if (session?.value) {
       const client = new Client()
         .setEndpoint(appwriteConfig.endpointUrl)
@@ -17,22 +23,11 @@ export async function POST(request: Request) {
 
       const account = new Account(client);
 
-      try {
-        // Delete the current session on Appwrite
-        await account.deleteSession('current');
-      } catch (error) {
-        // Session might already be invalid, continue with cleanup
-        console.log(
-          'Session deletion error (expected for expired sessions):',
-          error
-        );
-      }
+      // Don't await - let it run in background
+      account.deleteSession('current').catch(() => {
+        // Silently ignore - session might already be invalid
+      });
     }
-
-    // Clear all auth-related cookies
-    cookieStore.delete('appwrite-session');
-    cookieStore.delete('2fa_completed');
-    cookieStore.delete('auth_status');
 
     // Set a flag to indicate the logout reason
     const response = NextResponse.json({
@@ -56,9 +51,16 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error('Logout error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Logout failed' },
-      { status: 500 }
-    );
+    // Even on error, clear cookies and return success for fast logout
+    const cookieStore = await cookies();
+    cookieStore.delete('appwrite-session');
+    cookieStore.delete('2fa_completed');
+    cookieStore.delete('auth_status');
+    
+    return NextResponse.json({
+      success: true,
+      reason: 'manual',
+      message: 'Successfully logged out.',
+    });
   }
 }

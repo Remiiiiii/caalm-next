@@ -299,7 +299,7 @@ const ContractExpiryAlertsWidget = ({
       >
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center text-lg font-bold sidebar-gradient-text">
-            <Clock className="h-5 w-5 mr-2" />
+            <Clock className="h-5 w-5" />
             Contract Expiry Alerts
           </CardTitle>
         </CardHeader>
@@ -323,7 +323,7 @@ const ContractExpiryAlertsWidget = ({
       >
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center text-lg font-bold sidebar-gradient-text">
-            <AlertTriangle className="h-5 w-5 mr-2 text-red-500" />
+            <AlertTriangle className="h-5 w-5 text-red-500" />
             Contract Expiry Alerts
           </CardTitle>
         </CardHeader>
@@ -343,7 +343,7 @@ const ContractExpiryAlertsWidget = ({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center text-lg font-bold sidebar-gradient-text">
-            <Clock className="h-5 w-5 mr-2" />
+            <Clock className="h-5 w-5" />
             Contract Expiry Alerts
             {filteredContracts.length > 0 && (
               <Badge variant="secondary" className="ml-2">

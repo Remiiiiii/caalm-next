@@ -3,6 +3,8 @@
  * Prevents cache key collisions and ensures consistency
  */
 
+import * as crypto from 'crypto';
+
 export const CACHE_KEYS = {
   // Dashboard
   dashboard: {
@@ -20,8 +22,13 @@ export const CACHE_KEYS = {
 
   // Calendar
   calendar: {
-    events: (year: number, month: number) => `calendar:events:${year}:${month}`,
+    events: (year: number, month: number, userId?: string) =>
+      userId
+        ? `calendar:events:${userId}:${year}:${month}`
+        : `calendar:events:${year}:${month}`,
     event: (eventId: string) => `calendar:event:${eventId}`,
+    shared: (userId: string, orgId: string) =>
+      `calendar:shared:${userId}:${orgId}`,
   },
 
   // Notifications
@@ -36,6 +43,7 @@ export const CACHE_KEYS = {
     all: () => `contracts:all`,
     user: (userId: string) => `contracts:user:${userId}`,
     expirations: () => `contracts:expirations`,
+    drafts: (ownerId: string) => `contracts:drafts:${ownerId}`,
   },
 
   // Reports
@@ -50,6 +58,20 @@ export const CACHE_KEYS = {
     all: () => `users:all`,
     uninvited: () => `users:uninvited`,
     search: (query: string) => `users:search:${query}`,
+    byIds: (userIds: string[]) => {
+      // Create a consistent cache key by sorting and hashing the IDs
+      const sortedIds = [...userIds].sort().join(',');
+      // Use a hash for very long arrays to avoid key length issues
+      if (sortedIds.length > 200) {
+        const hash = crypto.createHash('md5').update(sortedIds).digest('hex');
+        return `users:byIds:${hash}`;
+      }
+      return `users:byIds:${sortedIds}`;
+    },
+    single: (userId: string) => `users:single:${userId}`,
+    byAccountId: (accountId: string) => `users:byAccountId:${accountId}`,
+    byEmail: (email: string) => `users:byEmail:${email.toLowerCase()}`,
+    byFullName: (fullName: string) => `users:byFullName:${fullName}`,
   },
 
   // Recent Activities
@@ -65,6 +87,16 @@ export const CACHE_KEYS = {
   search: {
     global: (query: string) => `search:global:${query}`,
     suggestions: (query: string) => `search:suggestions:${query}`,
+  },
+
+  // RBAC - Permissions and Roles
+  rbac: {
+    permissions: (userId: string, orgId?: string) =>
+      `rbac:permissions:${userId}${orgId ? `:${orgId}` : ''}`,
+    userRoles: (userId: string, orgId?: string) =>
+      `rbac:userRoles:${userId}${orgId ? `:${orgId}` : ''}`,
+    defaultOrg: (userId: string) => `rbac:defaultOrg:${userId}`,
+    userWithRoles: (userId: string) => `rbac:userWithRoles:${userId}`,
   },
 } as const;
 
@@ -89,16 +121,22 @@ export const getTTLForRoute = (route: string): number => {
     'analytics/unified': CACHE_TTLS.veryLong,
     'analytics/admin': CACHE_TTLS.veryLong,
     'calendar/events': CACHE_TTLS.medium,
+    'calendar/shared': CACHE_TTLS.medium,
     notifications: CACHE_TTLS.short,
     'notifications/stats': CACHE_TTLS.medium,
     contracts: CACHE_TTLS.long,
     'contracts/check-expirations': CACHE_TTLS.static,
+    'contracts/drafts': CACHE_TTLS.medium, // Drafts change frequently but cache for quick loading
     reports: CACHE_TTLS.static,
     users: CACHE_TTLS.veryLong,
     'users/uninvited': CACHE_TTLS.static,
+    'users/get-by-ids': CACHE_TTLS.long, // 10 minutes - user data changes infrequently
     'recent-activities': CACHE_TTLS.short,
     'audits/logs': CACHE_TTLS.medium,
     'audits/stats': CACHE_TTLS.long,
+    'rbac/permissions': CACHE_TTLS.veryLong, // Permissions rarely change
+    'rbac/userRoles': CACHE_TTLS.veryLong, // Roles rarely change
+    'rbac/defaultOrg': CACHE_TTLS.static, // Default org rarely changes
   };
 
   return ttlMap[route] || CACHE_TTLS.medium;

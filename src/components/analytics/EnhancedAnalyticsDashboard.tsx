@@ -229,7 +229,7 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
               onClick={handleExport}
               className="bg-white/60 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4" />
               Export
             </Button>
             <Button

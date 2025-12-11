@@ -8,9 +8,9 @@ import NotificationCenter from '@/components/NotificationCenter';
 import NotificationBadge from '@/components/NotificationBadge';
 import QuickActions from '@/components/QuickActions';
 import { Models } from 'appwrite';
-import { signOutUser } from '@/lib/actions/user.actions';
 import { getUnreadNotificationsCount } from '@/lib/actions/notification.actions';
 import ProfilePicture from '@/components/ProfilePicture';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DashboardHeaderProps {
   user?:
@@ -24,6 +24,7 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   const router = useRouter();
+  const { logout } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -52,15 +53,9 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
     fetchUnread(); // Refresh count after any actions
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOutUser();
-      router.push('/sign-in');
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Fallback: redirect anyway
-      router.push('/sign-in');
-    }
+  const handleLogout = () => {
+    // Use AuthContext logout for instant response
+    logout('manual');
   };
 
   return (

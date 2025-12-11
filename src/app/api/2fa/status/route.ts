@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_TTLS } from '@/lib/services/cache-keys';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,74 +16,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = await createAdminClient();
+    // Check cache first for faster response
+    const cacheKey = `2fa:status:${userId}`;
+    const cachedData = await CacheManager.withCache(
+      '2fa/status',
+      cacheKey,
+      async () => {
+        const client = await createAdminClient();
 
-    try {
-      // Check if user has 2FA enabled by looking for stored 2FA data
-      // In production, you would store this in a separate collection or user profile
-      console.log('2FA Status: Looking for user with accountId:', userId);
-      const userResponse = await client.tablesDB.listRows({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.usersCollectionId,
-        queries: [Query.equal('accountId', userId)],
-      });
-
-      console.log('2FA Status: User query result:', {
-        total: userResponse.total,
-        rowsLength: userResponse.rows?.length || 0,
-        userId: userId,
-      });
-
-      if (userResponse.rows.length > 0) {
-        const user = userResponse.rows[0];
-
-        // Check if user has 2FA enabled according to the schema
-        // All 4 fields must be populated for 2FA to be considered "enabled"
-        const has2FA =
-          user.twoFactorEnabled === true &&
-          user.twoFactorSecret !== null &&
-          user.twoFactorSecret !== undefined &&
-          user.twoFactorFactorId !== null &&
-          user.twoFactorFactorId !== undefined &&
-          user.twoFactorSetupAt !== null &&
-          user.twoFactorSetupAt !== undefined;
-
-        console.log('2FA Status: User 2FA fields:', {
-          twoFactorEnabled: user.twoFactorEnabled,
-          hasSecret: !!user.twoFactorSecret,
-          hasFactorId: !!user.twoFactorFactorId,
-          hasSetupAt: !!user.twoFactorSetupAt,
-          has2FA: has2FA,
+        // Check if user has 2FA enabled by looking for stored 2FA data
+        const userResponse = await client.tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.usersCollectionId,
+          queries: [Query.equal('accountId', userId)],
         });
 
-        return NextResponse.json({
-          success: true,
-          has2FA,
-          twoFactorEnabled: user.twoFactorEnabled,
-          twoFactorSecret: user.twoFactorSecret,
-          twoFactorFactorId: user.twoFactorFactorId,
-          twoFactorSetupAt: user.twoFactorSetupAt,
-        });
-      } else {
-        return NextResponse.json({
-          success: true,
-          has2FA: false,
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching user from database:', error);
+        if (userResponse.rows.length > 0) {
+          const user = userResponse.rows[0];
 
-      // If we can't fetch from database, return false (no 2FA)
-      return NextResponse.json({
-        success: true,
-        has2FA: false,
-      });
-    }
-  } catch (error) {
-    console.error('Error checking 2FA status:', error);
-    return NextResponse.json(
-      { error: 'Failed to check 2FA status' },
-      { status: 500 }
+          // Check if user has 2FA enabled according to the schema
+          const has2FA =
+            user.twoFactorEnabled === true &&
+            user.twoFactorSecret !== null &&
+            user.twoFactorSecret !== undefined &&
+            user.twoFactorSecret !== '' &&
+            user.twoFactorFactorId !== null &&
+            user.twoFactorFactorId !== undefined &&
+            user.twoFactorFactorId !== '' &&
+            user.twoFactorSetupAt !== null &&
+            user.twoFactorSetupAt !== undefined;
+
+          return {
+            success: true,
+            has2FA,
+            twoFactorEnabled: user.twoFactorEnabled,
+            twoFactorSecret: user.twoFactorSecret,
+            twoFactorFactorId: user.twoFactorFactorId,
+            twoFactorSetupAt: user.twoFactorSetupAt,
+            timestamp: Date.now(),
+          };
+        } else {
+          return {
+            success: true,
+            has2FA: false,
+            timestamp: Date.now(),
+          };
+        }
+      },
+      CACHE_TTLS.medium // 5 minutes
     );
+
+    return NextResponse.json(cachedData, {
+      headers: {
+        'Cache-Control': 'private, max-age=300',
+      },
+    });
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error checking 2FA status:', error);
+    }
+    // Return false on error to allow sign-in to continue
+    return NextResponse.json({
+      success: true,
+      has2FA: false,
+    });
   }
 }

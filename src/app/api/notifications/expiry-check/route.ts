@@ -46,6 +46,7 @@ const getDocInfo = ({
 };
 
 async function sendExpiryEmail({
+  to,
   subject,
   message,
 }: {
@@ -90,12 +91,10 @@ export async function POST(_req: NextRequest) {
   const db = new Databases(client);
   const users = new Users(client);
 
-  // 1. Fetch all users with allowed roles
-  const allowedRoles = ['executive', 'manager', 'admin'];
-  const userList = await tablesDB.listRows({
-    queries: [Query.or(allowedRoles.map((role) => Query.equal('role', role)))],
-  });
-  const recipients = userList.users;
+  // 1. Fetch all users with allowed roles using new RBAC system
+  const { getUsersByRoleNames } = await import('@/lib/utils/get-users-by-role');
+  const allowedRoles = ['Super Admin', 'Organization Admin', 'Department Manager', 'executive', 'manager', 'admin'];
+  const recipients = await getUsersByRoleNames(allowedRoles, undefined, { status: 'active' });
 
   // 2. For each collection, check for expiring docs
   for (const [type, collection] of Object.entries(COLLECTIONS)) {
@@ -116,7 +115,7 @@ export async function POST(_req: NextRequest) {
             tableId: COLLECTIONS.notifications,
             rowId: ID.unique(),
             data: {
-              userId: user.$id,
+              userId: user.$id || user.accountId, // Use $id from users collection or accountId
               title: `${type.slice(0, -1).toUpperCase()} Expiry Reminder`,
               message: `The ${type.slice(
                 0,
@@ -137,7 +136,7 @@ export async function POST(_req: NextRequest) {
               -1
             )} Expiry Reminder: "${name}" Expires in ${daysUntil} Days`,
             message: `Hello ${
-              user.name
+              user.fullName || user.name || 'User'
             },\n\nThis is a reminder that the ${type.slice(
               0,
               -1

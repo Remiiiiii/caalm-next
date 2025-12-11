@@ -3,7 +3,7 @@ import { verifyOTP } from '@/lib/actions/user.actions';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, otp } = await request.json();
+    const { email, otp, accountId } = await request.json();
 
     if (!email || !otp) {
       return NextResponse.json(
@@ -12,19 +12,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the OTP
-    const result = await verifyOTP({ email, otp });
+    // Verify the OTP (optimized with caching)
+    const result = await verifyOTP({ email, otp, accountId });
 
     if (result?.success) {
       return NextResponse.json({
         success: true,
         message: 'OTP verified successfully',
+        accountId: result.accountId,
       });
     } else {
       return NextResponse.json({ error: 'Invalid OTP' }, { status: 400 });
     }
   } catch (error) {
-    console.error('OTP verification error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('OTP verification error:', error);
+    }
     return NextResponse.json(
       {
         error: 'Failed to verify OTP',

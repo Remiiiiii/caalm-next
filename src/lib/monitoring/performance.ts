@@ -171,7 +171,6 @@ export async function measureAsync<T>(
   try {
     const result = await fn();
     const duration = Date.now() - start;
-    console.log(`[Performance] ${label} took ${duration}ms`);
     addMetric(label, duration);
     return result;
   } catch (error) {

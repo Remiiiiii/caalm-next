@@ -32,6 +32,7 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(
     (user?.prefs as any)?.profileImage || null
   );
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { refreshUser } = useAuth();
@@ -58,26 +59,22 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
   const config = sizeConfig[size];
 
   // Sync profileImageUrl with user.prefs when user changes
+  // Prioritize uploadedImageUrl if it exists (recent upload), but sync with user state when it updates
   useEffect(() => {
     const imageUrl = (user?.prefs as any)?.profileImage || null;
-    console.log('ProfilePicture: User changed, updating image URL:', {
-      userId: user?.$id,
-      imageUrl,
-      profileImageId: (user?.prefs as any)?.profileImageId,
-      hasImageUrl: !!imageUrl,
-      imageUrlLength: imageUrl?.length,
-    });
-    setProfileImageUrl(imageUrl);
-  }, [user]);
 
-  // Log when profileImageUrl state changes
-  useEffect(() => {
-    console.log('ProfilePicture: profileImageUrl state updated:', {
-      profileImageUrl,
-      isString: typeof profileImageUrl === 'string',
-      willRenderImage: !!profileImageUrl,
-    });
-  }, [profileImageUrl]);
+    // If user state has an image URL, use it and clear uploadedImageUrl
+    if (imageUrl) {
+      setProfileImageUrl(imageUrl);
+      // Clear uploadedImageUrl once user state is synced
+      if (uploadedImageUrl && uploadedImageUrl === imageUrl) {
+        setUploadedImageUrl(null);
+      }
+    } else {
+      // Use uploaded URL if available (during upload/refresh), otherwise use user prefs
+      setProfileImageUrl(uploadedImageUrl || imageUrl);
+    }
+  }, [user, uploadedImageUrl]);
 
   const handleFileSelect = () => {
     fileInputRef.current?.click();
@@ -144,9 +141,14 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
       }
 
       const result = await response.json();
+
+      // Set the uploaded image URL immediately from the API response
+      setUploadedImageUrl(result.imageUrl);
       setProfileImageUrl(result.imageUrl);
 
-      // Refresh user data to get the updated profile image
+      // Refresh user data to sync with backend
+      // Add a small delay to ensure database update is propagated
+      await new Promise((resolve) => setTimeout(resolve, 200));
       await refreshUser();
 
       toast({
@@ -187,9 +189,11 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
         throw new Error('Failed to delete profile picture');
       }
 
+      setUploadedImageUrl(null);
       setProfileImageUrl(null);
 
       // Refresh user data to clear the profile image
+      await new Promise((resolve) => setTimeout(resolve, 200));
       await refreshUser();
 
       toast({
@@ -240,12 +244,6 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
         src={profileImageUrl}
         alt={user.name || 'Profile'}
         className="w-25 h-25 object-cover rounded-full border-2 border-[#FCFEFF]"
-        onLoad={() => {
-          console.log(
-            'ProfilePicture: Image loaded successfully!',
-            profileImageUrl
-          );
-        }}
         onError={(e: any) => {
           console.error('ProfilePicture: Image failed to load:', {
             src: profileImageUrl,
@@ -291,7 +289,7 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem onClick={handleFileSelect} disabled={isUploading}>
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4" />
             {profileImageUrl ? 'Change picture' : 'Upload picture'}
           </DropdownMenuItem>
           {profileImageUrl && (
@@ -300,7 +298,7 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
               disabled={isUploading}
               className="text-red-600 hover:text-red-700"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <Trash2 className="w-4 h-4" />
               Remove picture
             </DropdownMenuItem>
           )}

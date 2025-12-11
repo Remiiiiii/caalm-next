@@ -51,21 +51,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         setLoading(true);
 
+        // Optimize: Check localStorage first for cached user data to show UI immediately
+        if (typeof window !== 'undefined') {
+          const cachedUser = localStorage.getItem('cached_user');
+          if (cachedUser) {
+            try {
+              const parsed = JSON.parse(cachedUser);
+              // Only use cache if it's less than 5 minutes old
+              if (parsed.timestamp && Date.now() - parsed.timestamp < 300000) {
+                setUser(parsed.user);
+                setIsSessionValid(true);
+                setLoading(false);
+                // Continue with fresh check in background
+              }
+            } catch {
+              // Invalid cache, continue with fresh check
+            }
+          }
+        }
+
         // First try to get session-based user
         const sessionUser = await getSessionUser();
-        console.log(
-          'AuthContext: Session user check result:',
-          sessionUser ? 'Found' : 'Not found'
-        );
+        
+        // Only log in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            'AuthContext: Session user check result:',
+            sessionUser ? 'Found' : 'Not found'
+          );
+        }
 
           if (sessionUser) {
-          console.log('AuthContext: Using session-based user');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('AuthContext: Using session-based user');
+          }
             const typedSessionUser = sessionUser as AuthenticatedUser;
             if (typeof typedSessionUser.role === 'string') {
               typedSessionUser.role = normalizeUserRole(typedSessionUser.role);
             }
             setUser(typedSessionUser);
           setIsSessionValid(true);
+          
+          // Cache user data for faster subsequent loads
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('cached_user', JSON.stringify({
+                user: typedSessionUser,
+                timestamp: Date.now(),
+              }));
+            } catch {
+              // localStorage might be full, ignore
+            }
+          }
         } else {
           // Check for 2FA-based authentication only if we're on a dashboard route
           // This prevents automatic authentication on sign-in page
@@ -90,35 +127,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             (pathname.startsWith('/sign-in') ||
               pathname.startsWith('/sign-up'));
 
-          console.log(
-            'AuthContext: Current pathname:',
-            pathname,
-            'isDashboardRoute:',
-            isDashboardRoute,
-            'isAuthRoute:',
-            isAuthRoute
-          );
+          if (process.env.NODE_ENV === 'development') {
+            console.log(
+              'AuthContext: Current pathname:',
+              pathname,
+              'isDashboardRoute:',
+              isDashboardRoute,
+              'isAuthRoute:',
+              isAuthRoute
+            );
+          }
 
           if (isAuthRoute) {
             // Explicitly set to null on auth routes to prevent any 2FA interference
-            console.log(
-              'AuthContext: On auth route, explicitly setting user to null'
-            );
+            if (process.env.NODE_ENV === 'development') {
+              console.log(
+                'AuthContext: On auth route, explicitly setting user to null'
+              );
+            }
             setUser(null);
             setIsSessionValid(false);
           } else if (isDashboardRoute) {
-            console.log(
-              'AuthContext: On protected route, checking 2FA-based user for path:',
-              pathname
-            );
+            if (process.env.NODE_ENV === 'development') {
+              console.log(
+                'AuthContext: On protected route, checking 2FA-based user for path:',
+                pathname
+              );
+            }
             const twoFAUser = await getCurrentUserFrom2FA();
-            console.log(
-              'AuthContext: 2FA user check result:',
-              twoFAUser ? 'Found' : 'Not found'
-            );
+            if (process.env.NODE_ENV === 'development') {
+              console.log(
+                'AuthContext: 2FA user check result:',
+                twoFAUser ? 'Found' : 'Not found'
+              );
+            }
 
             if (twoFAUser) {
-              console.log('AuthContext: Using 2FA-based user for dashboard');
+              if (process.env.NODE_ENV === 'development') {
+                console.log('AuthContext: Using 2FA-based user for dashboard');
+              }
 
               // Generate profile image URL from fileId
               let profileImageUrl = null;
@@ -159,15 +206,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
               setUser(convertedUser);
               setIsSessionValid(true);
+              
+              // Cache user data for faster subsequent loads
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.setItem('cached_user', JSON.stringify({
+                    user: convertedUser,
+                    timestamp: Date.now(),
+                  }));
+                } catch {
+                  // localStorage might be full, ignore
+                }
+              }
             } else {
-              console.log('AuthContext: No 2FA user found, setting to null');
+              if (process.env.NODE_ENV === 'development') {
+                console.log('AuthContext: No 2FA user found, setting to null');
+              }
               setUser(null);
               setIsSessionValid(false);
             }
           } else {
-            console.log(
-              'AuthContext: Not on dashboard or auth route, setting to null'
-            );
+            if (process.env.NODE_ENV === 'development') {
+              console.log(
+                'AuthContext: Not on dashboard or auth route, setting to null'
+              );
+            }
             setUser(null);
             setIsSessionValid(false);
           }
@@ -245,44 +308,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async (reason: 'manual' | 'inactivity' = 'manual') => {
-    try {
-      // Call the server action to logout
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reason }),
-      });
+    // Clear client-side state immediately for instant logout
+    setUser(null);
+    setIsSessionValid(false);
 
-      if (response.ok) {
-        setUser(null);
-        setIsSessionValid(false);
+    // Clear any client-side storage immediately
+    localStorage.removeItem('session');
+    localStorage.removeItem('cached_user');
+    sessionStorage.clear();
 
-        // Clear any client-side storage
-        localStorage.removeItem('session');
-        sessionStorage.clear();
-
-        // Redirect based on reason using window.location to avoid router conflicts
-        if (reason === 'inactivity') {
-          window.location.href = '/sign-in?reason=inactivity';
-        } else {
-          window.location.href = '/sign-in';
-        }
-      } else {
-        console.error('Logout failed');
-        // Force logout even if API fails
-        setUser(null);
-        setIsSessionValid(false);
-        window.location.href = '/sign-in';
+    // Redirect immediately without waiting for API call
+    const redirectUrl = reason === 'inactivity' 
+      ? '/sign-in?reason=inactivity' 
+      : '/sign-in';
+    
+    // Fire and forget - don't wait for API response
+    fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reason }),
+      keepalive: true, // Ensure request completes even after navigation
+    }).catch((error) => {
+      // Silently handle errors - logout should succeed even if API fails
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Logout API call failed (non-critical):', error);
       }
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Force logout even if API fails
-      setUser(null);
-      setIsSessionValid(false);
-      window.location.href = '/sign-in';
-    }
+    });
+
+    // Redirect immediately
+    window.location.href = redirectUrl;
   };
 
   // Always render the same structure, but conditionally show content

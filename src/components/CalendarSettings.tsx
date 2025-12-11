@@ -26,6 +26,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import { EscalationRulesManager } from '@/components/EscalationRulesManager';
 import { format } from 'date-fns';
 import {
   getMicrosoftCalendarIntegration,
@@ -369,12 +370,12 @@ export default function CalendarSettings({
                   >
                     {syncing ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />{' '}
+                        <Loader2 className="h-4 w-4 animate-spin" />{' '}
                         Syncing...
                       </>
                     ) : (
                       <>
-                        <RefreshCw className="h-4 w-4 mr-2" /> Sync Now
+                        <RefreshCw className="h-4 w-4" /> Sync Now
                       </>
                     )}
                   </Button>
@@ -384,7 +385,7 @@ export default function CalendarSettings({
                     variant="destructive"
                     className="flex-1"
                   >
-                    <XCircle className="h-4 w-4 mr-2" /> Emergency Stop
+                    <XCircle className="h-4 w-4" /> Emergency Stop
                   </Button>
                   <Button
                     onClick={handleDisconnect}
@@ -425,11 +426,32 @@ export default function CalendarSettings({
               </div>
 
               <Button onClick={handleConnect} className="w-full" size="sm">
-                <ExternalLink className="h-4 w-4 mr-2" />
+                <ExternalLink className="h-4 w-4" />
                 Connect Microsoft Outlook
               </Button>
             </div>
           )}
+        </div>
+
+        <Separator />
+
+        {/* Escalation Rules */}
+        <div className="space-y-3">
+          <h3 className="font-medium text-sm">Notification Escalation</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <h4 className="font-medium text-sm">Escalation Rules</h4>
+                <p className="text-xs text-muted-foreground">
+                  Configure automatic notification escalation
+                </p>
+              </div>
+            </div>
+            <EscalationRulesManager />
+          </div>
         </div>
 
         <Separator />

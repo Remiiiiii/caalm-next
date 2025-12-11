@@ -6,6 +6,11 @@ import Card from '@/components/Card';
 import { getFileTypesParams } from '@/lib/utils';
 import FileUsageOverview from '@/components/FileUsageOverview';
 import { UIFileDoc } from '@/types/files';
+import ContractsViewClient from '@/components/ContractsViewClient';
+import { ContractsViewToggle } from '@/components/ContractsViewToggle';
+import { ContractsViewProvider } from '@/components/ContractsView';
+import ContractsControlBar from '@/components/ContractsControlBar';
+import ContractsTopControls from '@/components/ContractsTopControls';
 
 type FileType = 'image' | 'video' | 'audio' | 'document' | 'other';
 import { createAdminClient } from '@/lib/appwrite/admin';
@@ -24,6 +29,9 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
   let files: { documents: UIFileDoc[] } = { documents: [] };
   let filteredDocuments: UIFileDoc[] = [];
+  let uniqueDepartments: string[] = [];
+  let uniqueAssignedManagers: string[] = [];
+  let contractDocuments: UIFileDoc[] = [];
 
   // Special handling for contracts - get ALL contracts from contracts collection
   if (type.toLowerCase() === 'contracts') {
@@ -68,25 +76,56 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       queries: queries,
     });
 
+    // Helper function to validate Appwrite document ID format
+    const isValidDocumentId = (id: string | null | undefined): boolean => {
+      if (!id || typeof id !== 'string') return false;
+      // Appwrite document IDs must be at most 36 chars, contain only a-z, A-Z, 0-9, underscore
+      // and cannot start with a leading underscore
+      if (id.length > 36) return false;
+      if (id.startsWith('_')) return false;
+      return /^[a-zA-Z0-9_]+$/.test(id);
+    };
+
     // Convert contract documents to UIFileDoc format for compatibility with existing components
-    const contractDocuments = await Promise.all(
+    contractDocuments = await Promise.all(
       contractsResult.rows.map(async (contract: any) => {
         // Try to get the associated file document for file-specific data
         let fileData = null;
-        if (contract.fileId) {
+        if (contract.fileId && isValidDocumentId(contract.fileId)) {
           try {
             fileData = await databases.getDocument(
               appwriteConfig.databaseId!,
               appwriteConfig.filesCollectionId!,
               contract.fileId
             );
-          } catch (error) {
-            console.warn(
-              'Could not fetch file data for contract:',
-              contract.$id,
-              error
-            );
+          } catch (error: any) {
+            // Handle missing file documents gracefully (404 errors)
+            if (error?.code === 404 || error?.type === 'document_not_found') {
+              // Only log if it's a valid ID format - invalid IDs are expected to fail
+              console.warn(
+                `File document not found for contract ${contract.$id} (fileId: ${contract.fileId}). Contract will be displayed without file metadata.`
+              );
+              // Set fileData to null to continue processing without file data
+              fileData = null;
+            } else {
+              // Log other errors but don't break the page
+              // Suppress "Invalid documentId param" errors as they're expected for invalid IDs
+              const errorMessage = error?.message || String(error);
+              if (!errorMessage.includes('Invalid `documentId` param')) {
+                console.warn(
+                  'Could not fetch file data for contract:',
+                  contract.$id,
+                  errorMessage
+                );
+              }
+              fileData = null;
+            }
           }
+        } else if (contract.fileId) {
+          // Log invalid fileId format (but don't break the page)
+          console.warn(
+            `Invalid fileId format for contract ${contract.$id} (fileId: ${contract.fileId}). Skipping file document fetch.`
+          );
         }
 
         // Create a UIFileDoc-compatible object using contract data as primary source
@@ -105,12 +144,14 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
           extension: fileData?.extension || 'pdf', // Default to pdf if not available
           url: fileData?.url || '',
           size: fileData?.size || 0,
-          owner: contract.owner || fileData?.owner || '',
+          owner:
+            contract.contractOwnerId || contract.owner || fileData?.owner || '',
           users: contract.users || fileData?.users || [],
 
           // Contract-specific data from contracts collection
           contractId: contract.$id,
           contractName: contract.contractName,
+          contractOwnerId: contract.contractOwnerId,
           contractExpiryDate: contract.contractExpiryDate,
           status: contract.status,
           contractType: contract.contractType,
@@ -133,6 +174,22 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
     files = { documents: contractDocuments };
     filteredDocuments = contractDocuments;
+
+    // Extract unique departments and assigned managers for filter options
+    uniqueDepartments = Array.from(
+      new Set(
+        contractDocuments
+          .map((doc: UIFileDoc) => doc.department)
+          .filter(Boolean)
+      )
+    ) as string[];
+    uniqueAssignedManagers = Array.from(
+      new Set(
+        contractDocuments
+          .flatMap((doc: UIFileDoc) => doc.assignedManagers || [])
+          .filter(Boolean)
+      )
+    ) as string[];
   } else {
     // Regular file handling for other types
     const types = getFileTypesParams(type) as FileType[];
@@ -177,35 +234,62 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
           <FileUsageOverview totalSpace={totalSpace} user={user} />
         </section>
       )}
-      <section className="w-full">
-        <div className="total-size-section">
-          <p className="body-1">
-            Total: <span className="h5">{totalSizeFormatted}</span>
-          </p>
-
-          <div className="sort-container">
-            <p className="body-1 hidden text-light-200 sm:block">Sort by:</p>
-
-            <Sort />
-          </div>
-        </div>
-      </section>
-
-      {/* Render the files */}
-      {filteredDocuments.length > 0 ? (
-        <section className="file-list">
-          {filteredDocuments.map((file: UIFileDoc) => (
-            <Card
-              key={file.$id}
-              file={file}
-              status={file.status}
-              expirationDate={file.contractExpiryDate}
-              userRole={user?.role as 'executive' | 'admin' | 'manager'}
+      {type.toLowerCase() === 'contracts' ? (
+        <ContractsViewProvider>
+          <section className="w-full">
+            <ContractsTopControls
+              files={contractDocuments}
+              departments={uniqueDepartments}
+              assignedManagers={uniqueAssignedManagers}
             />
-          ))}
-        </section>
+            <ContractsControlBar
+              files={contractDocuments}
+              totalSizeFormatted={totalSizeFormatted}
+            />
+          </section>
+
+          {/* Render the files */}
+          {filteredDocuments.length > 0 ? (
+            <ContractsViewClient files={filteredDocuments} user={user} />
+          ) : (
+            <p className="empty-list">No files uploaded yet</p>
+          )}
+        </ContractsViewProvider>
       ) : (
-        <p className="empty-list">No files uploaded yet</p>
+        <>
+          <section className="w-full">
+            <div className="total-size-section">
+              <p className="body-1">
+                Total: <span className="h5">{totalSizeFormatted}</span>
+              </p>
+
+              <div className="sort-container">
+                <p className="body-1 hidden text-light-200 sm:block">
+                  Sort by:
+                </p>
+
+                <Sort />
+              </div>
+            </div>
+          </section>
+
+          {/* Render the files */}
+          {filteredDocuments.length > 0 ? (
+            <section className="file-list">
+              {filteredDocuments.map((file: UIFileDoc) => (
+                <Card
+                  key={file.$id}
+                  file={file}
+                  status={file.status}
+                  expirationDate={file.contractExpiryDate}
+                  userRole={user?.role as 'executive' | 'admin' | 'manager'}
+                />
+              ))}
+            </section>
+          ) : (
+            <p className="empty-list">No files uploaded yet</p>
+          )}
+        </>
       )}
     </div>
   );
