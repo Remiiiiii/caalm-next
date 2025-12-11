@@ -89,6 +89,25 @@ export default function ContractsViewClient({
         if (!hasMatch) return false;
       }
 
+      // Contract Type filter
+      if (filters.contractType && file.contractType !== filters.contractType) {
+        return false;
+      }
+
+      // Search query filter (contract name, number, vendor)
+      if (filters.searchQuery) {
+        const query = filters.searchQuery.toLowerCase();
+        const matchesName =
+          (file.contractName || file.name || '').toLowerCase().includes(query);
+        const matchesNumber = (file.contractNumber || '')
+          .toLowerCase()
+          .includes(query);
+        const matchesVendor = (file.vendor || '').toLowerCase().includes(query);
+        if (!matchesName && !matchesNumber && !matchesVendor) {
+          return false;
+        }
+      }
+
       return true;
     });
   }, [files, filters]);

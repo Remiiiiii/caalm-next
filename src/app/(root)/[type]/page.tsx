@@ -9,7 +9,8 @@ import { UIFileDoc } from '@/types/files';
 import ContractsViewClient from '@/components/ContractsViewClient';
 import { ContractsViewToggle } from '@/components/ContractsViewToggle';
 import { ContractsViewProvider } from '@/components/ContractsView';
-import ContractsFilter from '@/components/ContractsFilter';
+import ContractsControlBar from '@/components/ContractsControlBar';
+import ContractsTopControls from '@/components/ContractsTopControls';
 
 type FileType = 'image' | 'video' | 'audio' | 'document' | 'other';
 import { createAdminClient } from '@/lib/appwrite/admin';
@@ -173,10 +174,14 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
     files = { documents: contractDocuments };
     filteredDocuments = contractDocuments;
-    
+
     // Extract unique departments and assigned managers for filter options
     uniqueDepartments = Array.from(
-      new Set(contractDocuments.map((doc: UIFileDoc) => doc.department).filter(Boolean))
+      new Set(
+        contractDocuments
+          .map((doc: UIFileDoc) => doc.department)
+          .filter(Boolean)
+      )
     ) as string[];
     uniqueAssignedManagers = Array.from(
       new Set(
@@ -232,25 +237,15 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       {type.toLowerCase() === 'contracts' ? (
         <ContractsViewProvider>
           <section className="w-full">
-            <div className="total-size-section">
-              <p className="body-1">
-                Total: <span className="h5">{totalSizeFormatted}</span>
-              </p>
-
-              <div className="sort-container">
-                <ContractsViewToggle />
-                <p className="body-1 hidden text-light-200 sm:block">
-                  Sort by:
-                </p>
-
-                <Sort />
-                
-                <ContractsFilter 
-                  departments={uniqueDepartments}
-                  assignedManagers={uniqueAssignedManagers}
-                />
-              </div>
-            </div>
+            <ContractsTopControls
+              files={contractDocuments}
+              departments={uniqueDepartments}
+              assignedManagers={uniqueAssignedManagers}
+            />
+            <ContractsControlBar
+              files={contractDocuments}
+              totalSizeFormatted={totalSizeFormatted}
+            />
           </section>
 
           {/* Render the files */}

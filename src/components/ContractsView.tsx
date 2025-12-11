@@ -25,6 +25,8 @@ export interface ContractFilters {
   expiresOnTo?: Date;
   department?: string;
   assignedTo?: string;
+  contractType?: string;
+  searchQuery?: string;
 }
 
 interface ContractsViewContextType {

@@ -19,7 +19,10 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
-import { LIFECYCLE_STATUSES } from '@/components/contract-upload/constants';
+import {
+  LIFECYCLE_STATUSES,
+  CONTRACT_TYPES,
+} from '@/components/contract-upload/constants';
 import { useContractsFilter, type ContractFilters } from './ContractsView';
 
 const CONTRACT_STATUS_OPTIONS = [
@@ -74,6 +77,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
   const getActiveFiltersCount = (): number => {
     let count = 0;
     if (filters.status) count++;
+    if (filters.contractType) count++;
     if (filters.uploadedOnFrom || filters.uploadedOnTo) count++;
     if (filters.expiresOnFrom || filters.expiresOnTo) count++;
     if (filters.department) count++;
@@ -85,12 +89,14 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
   const clearFilters = () => {
     setFilters({
       status: undefined,
+      contractType: undefined,
       uploadedOnFrom: undefined,
       uploadedOnTo: undefined,
       expiresOnFrom: undefined,
       expiresOnTo: undefined,
       department: undefined,
       assignedTo: undefined,
+      searchQuery: undefined,
     });
   };
 
@@ -107,10 +113,11 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="relative bg-white/30 backdrop-blur border border-white/40 shadow-md"
+          size="sm"
+          className="primary-btn px-3 sm:px-4"
         >
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
+          <Filter className="w-4 h-4" />
+          <span className="hidden sm:inline">Filter</span>
           {getActiveFiltersCount() > 0 && (
             <Badge
               variant="secondary"
@@ -168,6 +175,32 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
                   {CONTRACT_STATUS_OPTIONS.map((status) => (
                     <SelectItem key={status.value} value={status.value}>
                       {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Contract Type Filter */}
+            <div className="space-y-2">
+              <Label className="text-slate-700 font-medium">Type</Label>
+              <Select
+                value={filters.contractType || 'all'}
+                onValueChange={(value) =>
+                  updateFilter(
+                    'contractType',
+                    value === 'all' ? undefined : value
+                  )
+                }
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All types</SelectItem>
+                  {CONTRACT_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
                     </SelectItem>
                   ))}
                 </SelectContent>
