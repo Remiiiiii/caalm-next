@@ -49,7 +49,7 @@ const riskLevelBadge = (risk: string) => {
   let color = '';
   switch (risk.toLowerCase()) {
     case 'critical':
-      color = 'border border-slate-200 bg-red text-red-700';
+      color = 'border border-slate-200 bg-black text-white';
       break;
     case 'high':
       color = 'border border-slate-200 bg-destructive/10 text-destructive';

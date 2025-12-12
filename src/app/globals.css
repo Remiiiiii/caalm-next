@@ -562,8 +562,8 @@
   .sidebar-nav-item {
     @apply flex text-light-100 gap-4 rounded-xl lg:w-full justify-center lg:justify-start items-center h5 lg:px-[30px] h-[52px] lg:rounded-full;
   }
-  .sidebar-user-info {
-    @apply mt-4 flex items-center justify-center gap-2 rounded-full p-1 text-light-100 lg:justify-start lg:p-3;
+  .sidebar-storage-info {
+    @apply mt-4 flex items-center justify-center gap-2 rounded-md p-1 text-light-100 lg:justify-start lg:p-3;
     background-color: #e3f2fd;
   }
   .sidebar-user-avatar {

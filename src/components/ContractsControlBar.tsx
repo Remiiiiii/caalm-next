@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useContractsView } from './ContractsView';
 import { ContractsViewToggle } from './ContractsViewToggle';
 import Sort from './Sort';
 import type { UIFileDoc } from '@/types/files';
@@ -15,41 +13,8 @@ interface ContractsControlBarProps {
 export default function ContractsControlBar({
   files,
 }: ContractsControlBarProps) {
-  const { view } = useContractsView();
-
-  // Calculate expiring contracts
-  const expiringContracts = useMemo(() => {
-    const now = new Date();
-    const in30Days = new Date(now);
-    in30Days.setDate(now.getDate() + 30);
-    const in60Days = new Date(now);
-    in60Days.setDate(now.getDate() + 60);
-    const in90Days = new Date(now);
-    in90Days.setDate(now.getDate() + 90);
-
-    return {
-      in30: files.filter((file) => {
-        if (!file.contractExpiryDate) return false;
-        const expiry = new Date(file.contractExpiryDate);
-        return expiry >= now && expiry <= in30Days;
-      }).length,
-      in60: files.filter((file) => {
-        if (!file.contractExpiryDate) return false;
-        const expiry = new Date(file.contractExpiryDate);
-        return expiry > in30Days && expiry <= in60Days;
-      }).length,
-      in90: files.filter((file) => {
-        if (!file.contractExpiryDate) return false;
-        const expiry = new Date(file.contractExpiryDate);
-        return expiry > in60Days && expiry <= in90Days;
-      }).length,
-    };
-  }, [files]);
-
-  // Calculate key metrics
+  // Calculate key metrics for status badges
   const metrics = useMemo(() => {
-    const statusCounts: Record<string, number> = {};
-    let totalValue = 0;
     let activeCount = 0;
     let pendingCount = 0;
     let actionRequiredCount = 0;
@@ -57,11 +22,6 @@ export default function ContractsControlBar({
 
     files.forEach((file) => {
       const status = file.status || 'unknown';
-      statusCounts[status] = (statusCounts[status] || 0) + 1;
-
-      if (file.amount) {
-        totalValue += file.amount;
-      }
 
       if (status === 'active') {
         activeCount++;
@@ -81,82 +41,66 @@ export default function ContractsControlBar({
     });
 
     return {
-      statusCounts,
-      totalValue,
       activeCount,
       pendingCount,
       actionRequiredCount,
       inactiveCount,
-      totalContracts: files.length,
     };
   }, [files]);
-
-  const totalExpiring =
-    expiringContracts.in30 + expiringContracts.in60 + expiringContracts.in90;
 
   return (
     <div className="w-full">
       {/* Main Control Bar */}
-      <div className="total-size-section">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
-          {/* Left side: Total Value and Status Badges */}
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Total Value */}
-            {metrics.totalValue > 0 && (
-              <p className="body-1">
-                Total:{' '}
-                <span className="h5">
-                  ${metrics.totalValue.toLocaleString()}
-                </span>
-              </p>
-            )}
+      <div className="relative border border-slate-200 shadow-lg bg-white rounded-lg overflow-hidden">
+        {/* Professional Cap */}
+        <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-lg" />
 
-            {/* Expiring Soon Indicator */}
-            {totalExpiring > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <span className="text-xs font-medium text-amber-700">
-                  {totalExpiring} expiring in 30/60/90 days
-                </span>
-              </div>
-            )}
-
-            {/* Static Status Badges */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge
-                variant="outline"
-                className="!font-normal border border-slate-200 bg-[#B3EBF2] text-[#12477D]"
-              >
-                Active ({metrics.activeCount})
-              </Badge>
-              <Badge
-                variant="outline"
-                className="!font-normal border border-slate-200 bg-[#FFEA99] text-[#E86100]"
-              >
-                Pending ({metrics.pendingCount})
-              </Badge>
-              <Badge
-                variant="outline"
-                className="!font-normal border border-slate-200 bg-destructive/10 text-destructive"
-              >
-                Action Required ({metrics.actionRequiredCount})
-              </Badge>
-              {metrics.inactiveCount > 0 && (
+        {/* Control Bar Content */}
+        <div className="bg-slate-50 pt-6 pb-4 px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between w-full">
+            {/* Left side: Status Badges */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Status Badges */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge
                   variant="outline"
-                  className="!font-normal border border-slate-200 bg-[#D3D3D3] text-[#878787]"
+                  className="!font-medium border-2 border-cyan-200 bg-[#B3EBF2] text-[#12477D] hover:bg-[#9FE0E8] hover:border-cyan-300 transition-all duration-200 shadow-sm"
                 >
-                  Inactive ({metrics.inactiveCount})
+                  Active ({metrics.activeCount})
                 </Badge>
-              )}
+                <Badge
+                  variant="outline"
+                  className="!font-medium border-2 border-amber-200 bg-[#FFEA99] text-[#E86100] hover:bg-[#FFE066] hover:border-amber-300 transition-all duration-200 shadow-sm"
+                >
+                  Pending ({metrics.pendingCount})
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="!font-medium border-2 border-destructive/10 bg-destructive/10 text-destructive hover:bg-red-100 hover:border-red-300 transition-all duration-200 shadow-sm"
+                >
+                  Action Required ({metrics.actionRequiredCount})
+                </Badge>
+                {metrics.inactiveCount > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="!font-medium border-2 border-slate-300 bg-[#D3D3D3] text-[#878787] hover:bg-[#C0C0C0] hover:border-slate-400 transition-all duration-200 shadow-sm"
+                  >
+                    Inactive ({metrics.inactiveCount})
+                  </Badge>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Right side: View, Sort */}
-          <div className="sort-container">
-            <ContractsViewToggle />
-            <p className="body-1 hidden text-light-200 sm:block">Sort by:</p>
-            <Sort />
+            {/* Right side: View, Sort */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <ContractsViewToggle />
+              <div className="flex items-center gap-2">
+                <p className="body-1 hidden text-slate-700 sm:block font-medium">
+                  Sort by:
+                </p>
+                <Sort />
+              </div>
+            </div>
           </div>
         </div>
       </div>

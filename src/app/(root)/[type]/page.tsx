@@ -10,6 +10,7 @@ import ContractsViewClient from '@/components/ContractsViewClient';
 import { ContractsViewToggle } from '@/components/ContractsViewToggle';
 import { ContractsViewProvider } from '@/components/ContractsView';
 import ContractsControlBar from '@/components/ContractsControlBar';
+import ContractsMetricsBar from '@/components/ContractsMetricsBar';
 import ContractsTopControls from '@/components/ContractsTopControls';
 import StorageProgressBar from '@/components/StorageProgressBar';
 
@@ -94,11 +95,11 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
         let fileData = null;
         if (contract.fileId && isValidDocumentId(contract.fileId)) {
           try {
-            fileData = await databases.getDocument(
-              appwriteConfig.databaseId!,
-              appwriteConfig.filesCollectionId!,
-              contract.fileId
-            );
+            fileData = await databases.getDocument({
+              databaseId: appwriteConfig.databaseId!,
+              collectionId: appwriteConfig.filesCollectionId!,
+              documentId: contract.fileId,
+            });
           } catch (error: any) {
             // Handle missing file documents gracefully (404 errors)
             if (error?.code === 404 || error?.type === 'document_not_found') {
@@ -235,11 +236,6 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
     <div className="page-container">
       <div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
         <h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
-        {type.toLowerCase() === 'contracts' && contractCount > 0 && (
-          <p className="body-1 text-slate-500">
-            ({contractCount} {contractCount === 1 ? 'contract' : 'contracts'})
-          </p>
-        )}
       </div>
       {/* File Usage Overview Section - Only show on uploads page */}
       {(!type || type.toLowerCase() === 'uploads') && (
@@ -250,15 +246,13 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       {type.toLowerCase() === 'contracts' ? (
         <ContractsViewProvider>
           <section className="w-full">
+            <ContractsMetricsBar files={contractDocuments} />
             <ContractsTopControls
               files={contractDocuments}
               departments={uniqueDepartments}
               assignedManagers={uniqueAssignedManagers}
             />
             <ContractsControlBar files={contractDocuments} />
-
-            {/* Storage Progress Bar - Shows total usage across all file types */}
-            <StorageProgressBar totalSpace={totalSpace} />
           </section>
 
           {/* Render the files */}

@@ -59,8 +59,8 @@ export default function StorageProgressBar({
   }
 
   return (
-    <div className="mt-4 w-full">
-      <div className="space-y-2">
+    <div className="w-full">
+      <div className="space-y-1">
         <div className="relative h-1 w-full overflow-hidden rounded-full bg-slate-200">
           <div
             className="h-full transition-all"
@@ -70,7 +70,7 @@ export default function StorageProgressBar({
             }}
           />
         </div>
-        <p className="text-sm text-center text-slate-600">
+        <p className="text-xs text-center text-slate-600">
           {formattedUsed} {usedUnit} of {maxSizeGB} GB used
         </p>
       </div>

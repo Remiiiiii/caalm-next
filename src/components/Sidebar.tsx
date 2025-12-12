@@ -20,7 +20,7 @@ import {
 } from '@/constants/navigation-permissions';
 import { PERMISSIONS } from '@/constants/permissions';
 import type { PermissionKey } from '@/constants/permissions';
-import { Crown, Building2, Building, Eye, Lock } from 'lucide-react';
+import { Crown, Building2, Building, Eye, Lock, Cloud } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -28,6 +28,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { memo } from 'react';
+import StorageProgressBar from '@/components/StorageProgressBar';
+
+interface TotalSpace {
+  document: { size: number; latestDate: string };
+  image: { size: number; latestDate: string };
+  video: { size: number; latestDate: string };
+  audio: { size: number; latestDate: string };
+  other: { size: number; latestDate: string };
+  used: number;
+  all: number;
+}
 
 interface Props {
   name?: string;
@@ -179,6 +190,38 @@ const ITEM_ICONS: Record<
 };
 
 const Sidebar = ({ name, avatar, email, role, division }: Props) => {
+  const [totalSpace, setTotalSpace] = useState<TotalSpace | null>(null);
+
+  // Fetch storage data
+  useEffect(() => {
+    async function fetchTotalSpace() {
+      try {
+        const response = await fetch('/api/storage/usage');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const space = await response.json();
+        setTotalSpace(space);
+      } catch (error) {
+        console.error('Failed to fetch total space:', error);
+        // Set default empty space on error
+        setTotalSpace({
+          document: { size: 0, latestDate: '' },
+          image: { size: 0, latestDate: '' },
+          video: { size: 0, latestDate: '' },
+          audio: { size: 0, latestDate: '' },
+          other: { size: 0, latestDate: '' },
+          used: 0,
+          all: 2 * 1024 * 1024 * 1024,
+        });
+      }
+    }
+    fetchTotalSpace();
+    // Refresh storage data every 30 seconds
+    const interval = setInterval(fetchTotalSpace, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Preload critical icons on mount
   useEffect(() => {
     const criticalIcons = [
@@ -844,27 +887,17 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
           </div>
         </Link>
       )}
-      <div className="sidebar-user-info">
-        {avatar ? (
-          <Image
-            src={avatar}
-            alt="avatar"
-            width={44}
-            height={44}
-            className="sidebar-user-avatar"
-          />
-        ) : (
-          <Avatar
-            name={name}
-            userId={email}
-            size="lg"
-            className="sidebar-user-avatar"
-          />
+      <div className="sidebar-storage-info">
+        {/* Storage Section */}
+        {totalSpace && (
+          <div className="w-full">
+            <div className="flex items-center gap-2 mb-2">
+              <Cloud className="h-4 w-4 text-slate-700" />
+              <p className="caption text-slate-700">Storage</p>
+            </div>
+            <StorageProgressBar totalSpace={totalSpace} />
+          </div>
         )}
-        <div className="hidden lg:block">
-          <p className="subtitle-2 capitalize">{name || 'User'}</p>
-          <p className="caption">{email}</p>
-        </div>
       </div>
     </aside>
   );
