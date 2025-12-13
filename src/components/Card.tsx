@@ -44,6 +44,35 @@ const statusBadge = (status: string) => {
   return <span className={`inline-block px-2 py-1 ${color}`}>{label}</span>;
 };
 
+// Map risk level to badge color and label
+const riskLevelBadge = (risk: string) => {
+  let color = '';
+  switch (risk.toLowerCase()) {
+    case 'critical':
+      color = 'border border-slate-200 bg-black text-white';
+      break;
+    case 'high':
+      color = 'border border-slate-200 bg-destructive/10 text-destructive';
+      break;
+    case 'medium':
+      color = 'border border-slate-200 bg-amber-100 text-amber-700';
+      break;
+    case 'low':
+      color = 'border border-slate-200 bg-green-100 text-green-700';
+      break;
+    default:
+      color = 'border border-slate-200 bg-slate-100 text-slate-800';
+  }
+  const label = risk.charAt(0).toUpperCase() + risk.slice(1).toLowerCase();
+  return (
+    <span
+      className={`inline-block px-2 py-1 text-xs rounded-xl font-medium ${color}`}
+    >
+      {label} Risk
+    </span>
+  );
+};
+
 import type { UIFileDoc } from '@/types/files';
 
 interface CardProps {
@@ -98,6 +127,9 @@ const Card = ({
   >({});
   const [failedProfileImages, setFailedProfileImages] = useState<Set<string>>(
     new Set()
+  );
+  const [riskLevel, setRiskLevel] = useState<string | undefined>(
+    (file as any).riskLevel || undefined
   );
 
   // Sync local state with file prop changes (for real-time updates)
@@ -232,6 +264,14 @@ const Card = ({
 
             if (contract.assignedToDepartment) {
               setAssignedToDepartment(contract.assignedToDepartment);
+            }
+
+            // Store riskLevel from contract (prefer contract data over file prop)
+            if (contract.riskLevel) {
+              setRiskLevel(contract.riskLevel);
+            } else if ((file as any).riskLevel && !riskLevel) {
+              // Fallback to file prop if contract doesn't have it
+              setRiskLevel((file as any).riskLevel);
             }
 
             // Store contractOwnerId for owner name lookup
@@ -442,8 +482,11 @@ const Card = ({
       </div>
       <div className="file-card-details">
         <p className="subtitle-2 line-clamp-1">{file.name}</p>
-        {contractStatus && (
-          <div className="mb-1">{statusBadge(contractStatus)}</div>
+        {(contractStatus || riskLevel) && (
+          <div className="mb-1 flex items-center gap-2 flex-wrap">
+            {contractStatus && <div>{statusBadge(contractStatus)}</div>}
+            {riskLevel && <div>{riskLevelBadge(riskLevel)}</div>}
+          </div>
         )}
         {/* Horizontal divider between status and details */}
         <hr className="border-slate-200 my-1" />

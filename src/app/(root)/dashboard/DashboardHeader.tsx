@@ -10,13 +10,16 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 import { Models } from 'appwrite';
 import { signOutUser } from '@/lib/actions/user.actions';
 import { UserRoleDisplay } from '@/components/UserRoleDisplay';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DashboardHeaderProps {
   user?: Models.User<Models.Preferences> | null;
 }
 
-const DashboardHeader = ({ user }: DashboardHeaderProps) => {
+const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
   const router = useRouter();
+  const { user: authUser } = useAuth();
+  const user = userProp || authUser;
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -45,6 +48,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
     const interval = setInterval(fetchUnread, 10000);
     return () => clearInterval(interval);
   }, [user]);
+
 
   const handleLogout = async () => {
     try {

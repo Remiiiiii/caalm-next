@@ -30,7 +30,7 @@ import EnhancedSearch from '@/components/EnhancedSearch';
 import SearchResultHighlight from '@/components/SearchResultHighlight';
 
 const EnhancedMyContractsPage = () => {
-  const { division, loading, error } = useUserRole();
+  const { role, division, loading, error } = useUserRole();
   const { permissions } = usePermissions();
   const [contracts, setContracts] = useState<UIFileDoc[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<UIFileDoc[]>([]);
@@ -45,7 +45,11 @@ const EnhancedMyContractsPage = () => {
   // Function to refresh contracts data
   const refreshContracts = async () => {
     try {
-      if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && !permissions.includes(PERMISSIONS.SETTINGS.VIEW) && division) {
+      if (
+        permissions.includes(PERMISSIONS.CONTRACTS.VIEW) &&
+        !permissions.includes(PERMISSIONS.SETTINGS.VIEW) &&
+        division
+      ) {
         // For managers, get contracts filtered by their division
         const divisionContracts = await getContractsByUserDivision(division);
 
@@ -255,7 +259,9 @@ const EnhancedMyContractsPage = () => {
       {permissions.length > 0 && (
         <div className="space-y-6">
           {/* Permission-based Access */}
-          {permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && !permissions.includes(PERMISSIONS.SETTINGS.VIEW) && division ? (
+          {permissions.includes(PERMISSIONS.CONTRACTS.VIEW) &&
+          !permissions.includes(PERMISSIONS.SETTINGS.VIEW) &&
+          division ? (
             <div className="space-y-6">
               <UICard>
                 <CardHeader>

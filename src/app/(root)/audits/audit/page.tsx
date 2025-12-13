@@ -345,7 +345,7 @@ const AuditLogsPage = () => {
             <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
               <Shield className="w-6 h-6 text-[#0f5384]" />
             </div>
-            <h1 className="h1 sidebar-gradient-text">System Audit Logs</h1>
+            <h1 className="h1 sidebar-gradient-text">Audit Logs</h1>
           </div>
           <div className="flex gap-3">
             <Button

@@ -25,6 +25,7 @@ export interface UIFileDoc extends Models.Document {
   compliance?: string;
   department?: string;
   assignedManagers?: string[];
+  riskLevel?: string;
 
   // Storage/other optional attributes referenced by UI
   bucketFileId?: string;

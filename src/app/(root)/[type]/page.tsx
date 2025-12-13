@@ -10,7 +10,9 @@ import ContractsViewClient from '@/components/ContractsViewClient';
 import { ContractsViewToggle } from '@/components/ContractsViewToggle';
 import { ContractsViewProvider } from '@/components/ContractsView';
 import ContractsControlBar from '@/components/ContractsControlBar';
+import ContractsMetricsBar from '@/components/ContractsMetricsBar';
 import ContractsTopControls from '@/components/ContractsTopControls';
+import StorageProgressBar from '@/components/StorageProgressBar';
 
 type FileType = 'image' | 'video' | 'audio' | 'document' | 'other';
 import { createAdminClient } from '@/lib/appwrite/admin';
@@ -93,11 +95,11 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
         let fileData = null;
         if (contract.fileId && isValidDocumentId(contract.fileId)) {
           try {
-            fileData = await databases.getDocument(
-              appwriteConfig.databaseId!,
-              appwriteConfig.filesCollectionId!,
-              contract.fileId
-            );
+            fileData = await databases.getDocument({
+              databaseId: appwriteConfig.databaseId!,
+              collectionId: appwriteConfig.filesCollectionId!,
+              documentId: contract.fileId,
+            });
           } catch (error: any) {
             // Handle missing file documents gracefully (404 errors)
             if (error?.code === 404 || error?.type === 'document_not_found') {
@@ -163,6 +165,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
           department: contract.department,
           assignedManagers: contract.assignedManagers,
           description: contract.description,
+          riskLevel: contract.riskLevel,
 
           // File-specific data (fallback to file collection if available)
           bucketFileId: fileData?.bucketFileId || contract.bucketFileId,
@@ -225,9 +228,15 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
   const { convertFileSize } = await import('@/lib/utils');
   const totalSizeFormatted = convertFileSize({ sizeInBytes: totalSizeBytes });
 
+  // Calculate contract count for contracts page
+  const contractCount =
+    type.toLowerCase() === 'contracts' ? contractDocuments.length : 0;
+
   return (
     <div className="page-container">
-      <h1 className="h1 capitalize mr-auto">{type}</h1>
+      <div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
+        <h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
+      </div>
       {/* File Usage Overview Section - Only show on uploads page */}
       {(!type || type.toLowerCase() === 'uploads') && (
         <section className="mb-8 w-full">
@@ -237,15 +246,13 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
       {type.toLowerCase() === 'contracts' ? (
         <ContractsViewProvider>
           <section className="w-full">
+            <ContractsMetricsBar files={contractDocuments} />
             <ContractsTopControls
               files={contractDocuments}
               departments={uniqueDepartments}
               assignedManagers={uniqueAssignedManagers}
             />
-            <ContractsControlBar
-              files={contractDocuments}
-              totalSizeFormatted={totalSizeFormatted}
-            />
+            <ContractsControlBar files={contractDocuments} />
           </section>
 
           {/* Render the files */}
@@ -271,6 +278,9 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
                 <Sort />
               </div>
             </div>
+
+            {/* Storage Progress Bar - Shows total usage across all file types */}
+            <StorageProgressBar totalSpace={totalSpace} />
           </section>
 
           {/* Render the files */}

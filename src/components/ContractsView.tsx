@@ -6,12 +6,14 @@ import {
   useCallback,
   createContext,
   useContext,
+  useMemo,
 } from 'react';
 import Image from 'next/image';
 import Card from '@/components/Card';
 import ContractsTableView from './ContractsTableView';
 import type { UIFileDoc } from '@/types/files';
 import { Card as UICard, CardContent } from '@/components/ui/card';
+import ContractsPagination from './ContractsPagination';
 
 export type ViewType = 'table' | 'card';
 
@@ -104,7 +106,40 @@ export default function ContractsView({
   user,
   onRefresh,
 }: ContractsViewProps) {
-  const { view } = useContractsView();
+  const { view, filters } = useContractsView();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+
+  // Reset to page 1 when files array changes (length or content)
+  // Using JSON.stringify to detect filter changes that affect results
+  const filesKey = useMemo(() => JSON.stringify(files.map(f => f.$id)), [files]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filesKey]);
+
+  // Calculate total pages
+  const totalPages = Math.max(1, Math.ceil(files.length / itemsPerPage));
+  
+  // Ensure currentPage is within valid range
+  const validCurrentPage = useMemo(() => {
+    return Math.min(Math.max(1, currentPage), totalPages);
+  }, [currentPage, totalPages]);
+
+  // Sync currentPage if out of bounds (e.g., when filtering reduces total pages)
+  useEffect(() => {
+    if (totalPages > 0 && (currentPage > totalPages || currentPage < 1)) {
+      setCurrentPage(Math.min(Math.max(1, currentPage), totalPages));
+    }
+  }, [totalPages, currentPage]);
+
+  // Calculate pagination with valid page number
+  const startIndex = (validCurrentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedFiles = useMemo(
+    () => files.slice(startIndex, endIndex),
+    [files, startIndex, endIndex]
+  );
 
   // Empty state for card view
   if (view === 'card' && files.length === 0) {
@@ -125,20 +160,42 @@ export default function ContractsView({
   return (
     <>
       {view === 'table' ? (
-        <ContractsTableView files={files} user={user} onRefresh={onRefresh} />
-      ) : (
-        <section className="file-list">
-          {files.map((file: UIFileDoc) => (
-            <Card
-              key={file.$id}
-              file={file}
-              status={file.status}
-              expirationDate={file.contractExpiryDate}
-              userRole={user?.role as 'executive' | 'admin' | 'manager'}
-              onRefresh={onRefresh}
+        <>
+          <ContractsTableView
+            files={paginatedFiles}
+            user={user}
+            onRefresh={onRefresh}
+          />
+          {files.length > itemsPerPage && (
+            <ContractsPagination
+              currentPage={validCurrentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
             />
-          ))}
-        </section>
+          )}
+        </>
+      ) : (
+        <>
+          <section className="file-list">
+            {paginatedFiles.map((file: UIFileDoc) => (
+              <Card
+                key={file.$id}
+                file={file}
+                status={file.status}
+                expirationDate={file.contractExpiryDate}
+                userRole={user?.role as 'executive' | 'admin' | 'manager'}
+                onRefresh={onRefresh}
+              />
+            ))}
+          </section>
+          {files.length > itemsPerPage && (
+            <ContractsPagination
+              currentPage={validCurrentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </>
       )}
     </>
   );
