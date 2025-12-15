@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Query } from 'node-appwrite';
+import { InputFile } from 'node-appwrite/file';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
 import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
 
     // Optimize processedFileData: Remove arrayBuffer and base64Content to reduce size
     // Upload file to storage and store only bucketFileId + metadata
+    // NOTE: Only upload to storage and create database rows when user has progressed to step 2
     let optimizedProcessedFileData = null;
     let bucketFileId: string | null = null;
 
@@ -56,33 +58,36 @@ export async function POST(request: NextRequest) {
             ? JSON.parse(processedFileData)
             : processedFileData;
 
-        // If file has arrayBuffer, upload it to storage and get bucketFileId
-        if (parsed.arrayBuffer && !parsed.bucketFileId) {
-          try {
-            const { storage } = await createAdminClient();
-            const inputFile = InputFile.fromBuffer(
-              Buffer.from(parsed.arrayBuffer),
-              parsed.name
-            );
+        // Only upload to storage if user has progressed to step 2 or beyond
+        if (currentStep > 1) {
+          // If file has arrayBuffer, upload it to storage and get bucketFileId
+          if (parsed.arrayBuffer && !parsed.bucketFileId) {
+            try {
+              const { storage } = await createAdminClient();
+              const inputFile = InputFile.fromBuffer(
+                Buffer.from(parsed.arrayBuffer),
+                parsed.name
+              );
 
-            const bucketFile = await storage.createFile({
-              bucketId: appwriteConfig.bucketId!,
-              fileId: ID.unique(),
-              file: inputFile,
-            });
+              const bucketFile = await storage.createFile({
+                bucketId: appwriteConfig.bucketId!,
+                fileId: ID.unique(),
+                file: inputFile,
+              });
 
-            bucketFileId = bucketFile.$id;
-            console.log(`Uploaded draft file to storage: ${bucketFileId}`);
-          } catch (uploadError: any) {
-            console.warn(
-              'Failed to upload draft file to storage:',
-              uploadError.message
-            );
-            // Continue without bucketFileId - file will need to be re-uploaded on resume
+              bucketFileId = bucketFile.$id;
+              console.log(`Uploaded draft file to storage: ${bucketFileId}`);
+            } catch (uploadError: any) {
+              console.warn(
+                'Failed to upload draft file to storage:',
+                uploadError.message
+              );
+              // Continue without bucketFileId - file will need to be re-uploaded on resume
+            }
+          } else if (parsed.bucketFileId) {
+            // Already has bucketFileId from previous save
+            bucketFileId = parsed.bucketFileId;
           }
-        } else if (parsed.bucketFileId) {
-          // Already has bucketFileId from previous save
-          bucketFileId = parsed.bucketFileId;
         }
 
         // Store only essential metadata, exclude large binary data
@@ -137,9 +142,10 @@ export async function POST(request: NextRequest) {
 
     // Create/update file row BEFORE draft creation so we can store fileId in draft
     // Note: Contracts are only created when form is successfully submitted via uploadFile
+    // NOTE: Only create file rows when user has progressed to step 2
     let fileRow = null;
 
-    if (processedFileData) {
+    if (processedFileData && currentStep > 1) {
       try {
         // Parse processedFileData if it's a string
         const fileData =
@@ -283,7 +289,7 @@ export async function POST(request: NextRequest) {
       if (draftId) {
         // Update existing draft
         console.log('Updating existing draft:', draftId);
-        
+
         // If fileRow exists, update fileId; otherwise preserve existing fileId
         if (fileRow) {
           draftData.fileId = fileRow.$id;
@@ -301,10 +307,13 @@ export async function POST(request: NextRequest) {
             }
           } catch (error) {
             // If we can't get the existing draft, continue with null fileId
-            console.warn('Could not fetch existing draft to preserve fileId:', error);
+            console.warn(
+              'Could not fetch existing draft to preserve fileId:',
+              error
+            );
           }
         }
-        
+
         draft = await tablesDB.updateRow({
           databaseId: appwriteConfig.databaseId,
           tableId: appwriteConfig.contractDraftsCollectionId,

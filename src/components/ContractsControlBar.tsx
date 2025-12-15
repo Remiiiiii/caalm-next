@@ -80,14 +80,12 @@ export default function ContractsControlBar({
                 >
                   Action Required ({metrics.actionRequiredCount})
                 </Badge>
-                {metrics.inactiveCount > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="!font-medium border-2 border-slate-300 bg-[#D3D3D3] text-[#878787] hover:bg-[#C0C0C0] hover:border-slate-400 transition-all duration-200 shadow-sm"
-                  >
-                    Inactive ({metrics.inactiveCount})
-                  </Badge>
-                )}
+                <Badge
+                  variant="outline"
+                  className="!font-medium border-2 border-slate-300 bg-[#D3D3D3] text-[#878787] hover:bg-[#C0C0C0] hover:border-slate-400 transition-all duration-200 shadow-sm"
+                >
+                  Inactive ({metrics.inactiveCount})
+                </Badge>
               </div>
             </div>
 

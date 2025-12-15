@@ -14,7 +14,20 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Button as ShadButton } from '@/components/ui/button';
-import { Trash2, FileText, Clock, SquarePen, Save } from 'lucide-react';
+import {
+  Trash2,
+  FileText,
+  Clock,
+  SquarePen,
+  Save,
+  ChevronDown,
+} from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 import { updateContractExpiryDate } from '@/lib/actions/file.actions';
 
@@ -105,6 +118,9 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
     Set<string>
   >(new Set());
   const [ownerFullName, setOwnerFullName] = React.useState<string | null>(null);
+  const [contractOwnerFullName, setContractOwnerFullName] = React.useState<
+    string | null
+  >(null);
 
   // Fetch owner's full name if owner is a string (user ID)
   React.useEffect(() => {
@@ -130,6 +146,30 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
 
     fetchOwnerName();
   }, [file.owner]);
+
+  // Fetch contract owner's full name if contractOwnerId exists
+  React.useEffect(() => {
+    const fetchContractOwnerName = async () => {
+      const contractOwnerId = (file as any).contractOwnerId;
+      if (contractOwnerId && typeof contractOwnerId === 'string') {
+        try {
+          const users = await fetchUserNamesByIds([contractOwnerId]);
+          if (users.length > 0 && users[0].fullName) {
+            setContractOwnerFullName(users[0].fullName);
+          } else {
+            // Fallback to ID if name not found
+            setContractOwnerFullName(contractOwnerId);
+          }
+        } catch (error) {
+          console.error('Failed to fetch contract owner name:', error);
+          // Fallback to ID on error
+          setContractOwnerFullName(contractOwnerId);
+        }
+      }
+    };
+
+    fetchContractOwnerName();
+  }, [(file as any).contractOwnerId]);
 
   const ownerName =
     ownerFullName ||
@@ -291,12 +331,48 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
     );
   };
 
-  // Helper function to format priority and compliance values
-  const formatValue = (
-    value: string | undefined,
-    type: 'priority' | 'compliance' | 'contractType'
-  ) => {
-    if (!value) return '';
+  // Helper function to format and display values, returning "N/A" for null/empty
+  const formatDisplayValue = (
+    value: any,
+    type?:
+      | 'priority'
+      | 'compliance'
+      | 'contractType'
+      | 'date'
+      | 'currency'
+      | 'boolean'
+      | 'array'
+  ): string => {
+    if (value === null || value === undefined || value === '') {
+      return 'N/A';
+    }
+
+    if (type === 'boolean') {
+      return value === true ? 'Yes' : value === false ? 'No' : 'N/A';
+    }
+
+    if (type === 'array') {
+      if (Array.isArray(value) && value.length > 0) {
+        return value.join(', ');
+      }
+      return 'N/A';
+    }
+
+    if (type === 'date' && value) {
+      try {
+        return new Date(value).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+      } catch {
+        return String(value);
+      }
+    }
+
+    if (type === 'currency' && typeof value === 'number') {
+      return `$${value.toLocaleString()}`;
+    }
 
     if (type === 'priority') {
       const priorityMapping: Record<string, string> = {
@@ -305,7 +381,7 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
         High: 'High',
         Urgent: 'Urgent',
       };
-      return priorityMapping[value] || value;
+      return priorityMapping[String(value)] || String(value);
     }
 
     if (type === 'compliance') {
@@ -314,7 +390,7 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
         'action-required': 'Medium Risk',
         'non-compliant': 'High Risk',
       };
-      return complianceMapping[value] || value;
+      return complianceMapping[String(value)] || String(value);
     }
 
     if (type === 'contractType') {
@@ -329,11 +405,51 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
         Consulting_Agreement: 'Consulting Agreement',
         Other: 'Other',
       };
-      return contractTypeMapping[value] || value;
+      return contractTypeMapping[String(value)] || String(value);
     }
 
-    return value;
+    return String(value);
   };
+
+  // Helper component to render a field
+  const renderField = (
+    label: string,
+    value: any,
+    type?:
+      | 'priority'
+      | 'compliance'
+      | 'contractType'
+      | 'date'
+      | 'currency'
+      | 'boolean'
+      | 'array'
+  ) => (
+    <div className="bg-white rounded-lg p-3 border border-slate-200">
+      <p className="text-sm text-slate-500 font-medium mb-1">{label}</p>
+      {type === 'priority' && value ? (
+        <div className="flex items-center space-x-2">
+          <span
+            className={`w-3 h-3 rounded-full ${
+              value === 'Urgent'
+                ? 'bg-red-500'
+                : value === 'High'
+                ? 'bg-orange-500'
+                : value === 'Medium'
+                ? 'bg-yellow-500'
+                : 'bg-green-500'
+            }`}
+          ></span>
+          <span className="text-slate-800 font-semibold">
+            {formatDisplayValue(value, type)}
+          </span>
+        </div>
+      ) : (
+        <p className="text-slate-800 font-semibold">
+          {formatDisplayValue(value, type)}
+        </p>
+      )}
+    </div>
+  );
 
   const saveExpiry = async () => {
     if (!selectedDate) return;
@@ -384,261 +500,661 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
     }
   };
 
+  // Extract all contract attributes from file
+  const contractAttributes = {
+    // Basic Information
+    contractName: file.contractName || file.name,
+    contractNumber: file.contractNumber,
+    contractType: file.contractType,
+    contractCategory: (file as any).contractCategory,
+    status: file.status,
+    lifecycleStatus: (file as any).lifecycleStatus,
+    priority: file.priority,
+    description: file.description,
+
+    // Financial
+    amount: file.amount,
+    currencyCode: (file as any).currencyCode,
+    notToExceedAmount: (file as any).notToExceedAmount,
+    paymentTerms: (file as any).paymentTerms,
+    paymentSchedule: (file as any).paymentSchedule,
+    budgetCode: (file as any).budgetCode,
+    costCenter: (file as any).costCenter,
+
+    // Dates
+    startDate: (file as any).startDate,
+    executionDate: (file as any).executionDate,
+    contractExpiryDate: displayExpiry || file.contractExpiryDate,
+    daysUntilExpiry: (file as any).daysUntilExpiry,
+
+    // Organization
+    orgId: (file as any).orgId,
+    department: file.department,
+    division: (file as any).division,
+    subDepartment: (file as any).subDepartment,
+    businessUnit: (file as any).businessUnit,
+    departmentOwner: (file as any).departmentOwner,
+    contractOwnerId: (file as any).contractOwnerId,
+
+    // Counterparty
+    vendor: file.vendor,
+    counterpartyLegalName: (file as any).counterpartyLegalName,
+    counterpartyContactEmail: (file as any).counterpartyContactEmail,
+    counterpartyContactPhone: (file as any).counterpartyContactPhone,
+    counterpartyAddress: (file as any).counterpartyAddress,
+    counterpartyType: (file as any).counterpartyType,
+    counterpartyTaxId: (file as any).counterpartyTaxId,
+    counterpartyDunsNumber: (file as any).counterpartyDunsNumber,
+
+    // Compliance & Risk
+    compliance: file.compliance,
+    complianceLevel: (file as any).complianceLevel,
+    riskLevel: (file as any).riskLevel,
+    regulatoryRequirements: (file as any).regulatoryRequirements,
+    hipaaRequired: (file as any).hipaaRequired,
+    dataPrivacyRequirements: (file as any).dataPrivacyRequirements,
+
+    // Insurance & Legal
+    insuranceRequired: (file as any).insuranceRequired,
+    insuranceVerifiedDate: (file as any).insuranceVerifiedDate,
+    insuranceExpiryDate: (file as any).insuranceExpiryDate,
+    indemnificationIncluded: (file as any).indemnificationIncluded,
+    backgroundCheckRequired: (file as any).backgroundCheckRequired,
+
+    // Contract Terms
+    autoRenew: (file as any).autoRenew,
+    renewalNoticeDays: (file as any).renewalNoticeDays,
+    terminationNoticeDays: (file as any).terminationNoticeDays,
+    terminationRights: (file as any).terminationRights,
+    curePeriodDays: (file as any).curePeriodDays,
+    postTerminationObligations: (file as any).postTerminationObligations,
+
+    // Approval & Workflow
+    approvalWorkflowTemplate: (file as any).approvalWorkflowTemplate,
+    currentApprovalStage: (file as any).currentApprovalStage,
+    approvalHistoryLog: (file as any).approvalHistoryLog,
+    reviewerComments: (file as any).reviewerComments,
+    internalApproverIds: (file as any).internalApproverIds,
+
+    // Related Documents
+    relatedDocumentIds: (file as any).relatedDocumentIds,
+    attachmentReferences: (file as any).attachmentReferences,
+    parentContractId: (file as any).parentContractId,
+    templateUsed: (file as any).templateUsed,
+    versionNumber: (file as any).versionNumber,
+
+    // Performance & Metrics
+    serviceLevelAgreements: (file as any).serviceLevelAgreements,
+    performanceMetrics: (file as any).performanceMetrics,
+    reportingRequirements: (file as any).reportingRequirements,
+    auditRightsGranted: (file as any).auditRightsGranted,
+    keyObligations: (file as any).keyObligations,
+
+    // File Information
+    fileId: (file as any).fileId,
+    extension: file.extension,
+    size: file.size,
+  };
+
   return (
     <>
       <ImageThumbnail file={file} status={status} />
-      {/* File Attachment Section */}
-      <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
-          <FileText className="w-4 h-4 text-blue-600" />
-          File Information
-        </div>
 
-        {/* File Info Row */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-lg p-3 border border-slate-200">
-            <p className="text-sm text-slate-500 font-medium mb-1">Owner</p>
-            <p className="text-slate-800 font-semibold">{ownerName}</p>
-          </div>
-          <div className="bg-white rounded-lg p-3 border border-slate-200">
-            <p className="text-sm text-slate-500 font-medium mb-1">Created</p>
-            <p className="text-slate-800 font-semibold">
-              {new Date(file.$createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              })}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg p-3 border border-slate-200">
-            <p className="text-sm text-slate-500 font-medium mb-1">
-              Last Modified
-            </p>
-            <p className="text-slate-800 font-semibold">
-              {formatDateTime(file.$updatedAt)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Contract Details Section */}
-      {isContract && (
-        <div className="space-y-6">
-          {/* Grid Layout: Contract Information (Left) + Additional Details (Right) */}
-
-          {/* Left Column: Contract Information */}
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
-              <FileText className="w-4 h-4 text-blue-600" />
-              Contract Information
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              {/* Priority - Most important (top left) */}
-              {priority && (
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium mb-1">
-                    Priority
-                  </p>
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`w-3 h-3 rounded-full ${
-                        priority === 'Urgent'
-                          ? 'bg-red-500'
-                          : priority === 'High'
-                          ? 'bg-orange-500'
-                          : priority === 'Medium'
-                          ? 'bg-yellow-500'
-                          : 'bg-green-500'
-                      }`}
-                    ></span>
-                    <span className="text-slate-800 font-semibold">
-                      {formatValue(priority, 'priority')}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {/* Contract Amount - Second most important (top middle) */}
-              {amount && (
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium mb-1">
-                    Contract Amount
-                  </p>
-                  <p className="text-slate-800 font-semibold text-lg">
-                    ${amount.toLocaleString()}
-                  </p>
-                </div>
-              )}
-              {/* Contract Type - Third most important (top right) */}
-              {contractType && (
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium mb-1">
-                    Contract Type
-                  </p>
-                  <p className="text-slate-800 font-semibold">
-                    {formatValue(contractType, 'contractType')}
-                  </p>
-                </div>
-              )}
-              {/* Vendor/Supplier - Fourth (bottom left) */}
-              {vendor && (
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium mb-1">
-                    Vendor/Supplier
-                  </p>
-                  <p className="text-slate-800 font-semibold">{vendor}</p>
-                </div>
-              )}
-              {/* Department - Fifth (bottom middle) */}
-              {department && (
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium mb-1">
-                    Department
-                  </p>
-                  <p className="text-slate-800 font-semibold">{department}</p>
-                </div>
-              )}
-              {/* Contract Number - Least important (bottom right) */}
-              {contractNumber && (
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium mb-1">
-                    Contract Number
-                  </p>
-                  <p className="text-slate-800 font-semibold">
-                    {contractNumber}
-                  </p>
-                </div>
+      <Accordion
+        type="multiple"
+        className="w-full space-y-4"
+        defaultValue={['file-info', 'contract-info']}
+      >
+        {/* File Information Accordion */}
+        <AccordionItem
+          value="file-info"
+          className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+        >
+          <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+            <FileText className="w-4 h-4 text-blue-600" />
+            File Information
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              {renderField('Owner', ownerName || 'N/A')}
+              {renderField('Created', file.$createdAt, 'date')}
+              {renderField('Last Modified', file.$updatedAt, 'date')}
+              {renderField('File ID', contractAttributes.fileId)}
+              {renderField('Extension', contractAttributes.extension)}
+              {renderField(
+                'Size',
+                contractAttributes.size
+                  ? convertFileSize({ sizeInBytes: contractAttributes.size })
+                  : 'N/A'
               )}
             </div>
-          </div>
+          </AccordionContent>
+        </AccordionItem>
 
-          {/* Right Column: Additional Details */}
+        {/* Contract Information Accordion */}
+        {isContract && (
+          <>
+            <AccordionItem
+              value="contract-info"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Contract Information
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField(
+                    'Priority',
+                    contractAttributes.priority,
+                    'priority'
+                  )}
+                  {renderField(
+                    'Contract Amount',
+                    contractAttributes.amount,
+                    'currency'
+                  )}
+                  {renderField(
+                    'Contract Type',
+                    contractAttributes.contractType,
+                    'contractType'
+                  )}
+                  {renderField('Vendor/Supplier', contractAttributes.vendor)}
+                  {renderField('Department', contractAttributes.department)}
+                  {renderField(
+                    'Contract Number',
+                    contractAttributes.contractNumber
+                  )}
+                  {renderField(
+                    'Contract Name',
+                    contractAttributes.contractName
+                  )}
+                  {renderField('Status', contractAttributes.status)}
+                  {renderField(
+                    'Lifecycle Status',
+                    contractAttributes.lifecycleStatus
+                  )}
+                  {renderField(
+                    'Contract Category',
+                    contractAttributes.contractCategory
+                  )}
+                  {renderField('Description', contractAttributes.description)}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
-              <FileText className="w-4 h-4 text-blue-600" />
-              Additional Details
-            </div>
-            <div className="space-y-3">
-              {compliance && (
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium mb-1">
-                    Compliance Level
-                  </p>
-                  <p className="text-slate-800 font-semibold">
-                    {formatValue(compliance, 'compliance')}
-                  </p>
-                </div>
-              )}
-              {assignedManagers && assignedManagers.length > 0 && (
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium mb-2">
-                    Assigned To
-                  </p>
-                  {renderAssignedManagers()}
-                </div>
-              )}
-              {description && (
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
-                  <p className="text-sm text-slate-500 font-medium mb-1">
-                    Description
-                  </p>
-                  <p className="text-slate-800 font-semibold text-sm leading-relaxed">
-                    {description}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Expiry Date Section */}
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
-              <Clock className="w-4 h-4 text-blue-600" />
-              Expiry Date
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500 font-medium mb-1">
-                    Expiry Date
-                  </p>
-                  <p className="text-slate-800 font-semibold">
-                    {displayExpiry
-                      ? new Date(displayExpiry).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
-                      : 'Not set'}
-                  </p>
-                </div>
-                {!editing ? (
-                  <ShadButton
-                    onClick={() => setEditing(true)}
-                    variant="outline"
-                    size="sm"
-                    className="primary-btn px-3 sm:px-4"
-                  >
-                    <SquarePen className="w-4 h-4" />
-                    Edit Date
-                  </ShadButton>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
+            {/* Dates & Timeline Accordion */}
+            <AccordionItem
+              value="dates"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <Clock className="w-4 h-4 text-blue-600" />
+                Dates & Timeline
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3 pt-2">
+                  <div className="bg-white rounded-lg p-3 border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-slate-500 font-medium mb-1">
+                          Expiry Date
+                        </p>
+                        <p className="text-slate-800 font-semibold">
+                          {displayExpiry
+                            ? new Date(displayExpiry).toLocaleDateString(
+                                'en-US',
+                                {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                }
+                              )
+                            : 'N/A'}
+                        </p>
+                      </div>
+                      {!editing ? (
                         <ShadButton
+                          onClick={() => setEditing(true)}
                           variant="outline"
                           size="sm"
-                          className="w-[180px] justify-start text-left font-normal border-blue-300"
+                          className="primary-btn px-3 sm:px-4"
                         >
-                          {selectedDate
-                            ? selectedDate.toLocaleDateString()
-                            : 'Pick a date'}
+                          <SquarePen className="w-4 h-4" />
+                          Edit Date
                         </ShadButton>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          className="text-slate-700"
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={setSelectedDate}
-                          disabled={(date) => {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            return date < today;
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <ShadButton
-                      size="sm"
-                      onClick={saveExpiry}
-                      disabled={!selectedDate}
-                      className="primary-btn px-3 sm:px-4"
-                    >
-                      <Save className="w-4 h-4" />
-                      Save
-                    </ShadButton>
-                    <ShadButton
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setSelectedDate(undefined);
-                        setEditing(false);
-                      }}
-                      className="primary-btn px-3 sm:px-4 text-slate-600 hover:text-slate-800"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Cancel
-                    </ShadButton>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <ShadButton
+                                variant="outline"
+                                size="sm"
+                                className="w-[180px] justify-start text-left font-normal border-blue-300"
+                              >
+                                {selectedDate
+                                  ? selectedDate.toLocaleDateString()
+                                  : 'Pick a date'}
+                              </ShadButton>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                className="text-slate-700"
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={setSelectedDate}
+                                disabled={(date) => {
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  return date < today;
+                                }}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <ShadButton
+                            size="sm"
+                            onClick={saveExpiry}
+                            disabled={!selectedDate}
+                            className="primary-btn px-3 sm:px-4"
+                          >
+                            <Save className="w-4 h-4" />
+                            Save
+                          </ShadButton>
+                          <ShadButton
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setSelectedDate(undefined);
+                              setEditing(false);
+                            }}
+                            className="primary-btn px-3 sm:px-4 text-slate-600 hover:text-slate-800"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Cancel
+                          </ShadButton>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+                  {renderField(
+                    'Start Date',
+                    contractAttributes.startDate,
+                    'date'
+                  )}
+                  {renderField(
+                    'Execution Date',
+                    contractAttributes.executionDate,
+                    'date'
+                  )}
+                  {renderField(
+                    'Days Until Expiry',
+                    contractAttributes.daysUntilExpiry
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Counterparty Information Accordion */}
+            <AccordionItem
+              value="counterparty"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Counterparty Information
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField(
+                    'Counterparty Legal Name',
+                    contractAttributes.counterpartyLegalName
+                  )}
+                  {renderField(
+                    'Contact Email',
+                    contractAttributes.counterpartyContactEmail
+                  )}
+                  {renderField(
+                    'Contact Phone',
+                    contractAttributes.counterpartyContactPhone
+                  )}
+                  {renderField(
+                    'Address',
+                    contractAttributes.counterpartyAddress
+                  )}
+                  {renderField('Type', contractAttributes.counterpartyType)}
+                  {renderField('Tax ID', contractAttributes.counterpartyTaxId)}
+                  {renderField(
+                    'DUNS Number',
+                    contractAttributes.counterpartyDunsNumber
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Financial Details Accordion */}
+            <AccordionItem
+              value="financial"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Financial Details
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField(
+                    'Currency Code',
+                    contractAttributes.currencyCode
+                  )}
+                  {renderField(
+                    'Not To Exceed Amount',
+                    contractAttributes.notToExceedAmount,
+                    'currency'
+                  )}
+                  {renderField(
+                    'Payment Terms',
+                    contractAttributes.paymentTerms
+                  )}
+                  {renderField(
+                    'Payment Schedule',
+                    contractAttributes.paymentSchedule
+                  )}
+                  {renderField('Budget Code', contractAttributes.budgetCode)}
+                  {renderField('Cost Center', contractAttributes.costCenter)}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Compliance & Risk Accordion */}
+            <AccordionItem
+              value="compliance"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Compliance & Risk
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField(
+                    'Compliance Level',
+                    contractAttributes.complianceLevel
+                  )}
+                  {renderField(
+                    'Compliance Status',
+                    contractAttributes.compliance,
+                    'compliance'
+                  )}
+                  {renderField('Risk Level', contractAttributes.riskLevel)}
+                  {renderField(
+                    'Regulatory Requirements',
+                    contractAttributes.regulatoryRequirements
+                  )}
+                  {renderField(
+                    'HIPAA Required',
+                    contractAttributes.hipaaRequired,
+                    'boolean'
+                  )}
+                  {renderField(
+                    'Data Privacy Requirements',
+                    contractAttributes.dataPrivacyRequirements
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Insurance & Legal Accordion */}
+            <AccordionItem
+              value="insurance"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Insurance & Legal
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField(
+                    'Insurance Required',
+                    contractAttributes.insuranceRequired,
+                    'boolean'
+                  )}
+                  {renderField(
+                    'Insurance Verified Date',
+                    contractAttributes.insuranceVerifiedDate,
+                    'date'
+                  )}
+                  {renderField(
+                    'Insurance Expiry Date',
+                    contractAttributes.insuranceExpiryDate,
+                    'date'
+                  )}
+                  {renderField(
+                    'Indemnification Included',
+                    contractAttributes.indemnificationIncluded,
+                    'boolean'
+                  )}
+                  {renderField(
+                    'Background Check Required',
+                    contractAttributes.backgroundCheckRequired,
+                    'boolean'
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Contract Terms Accordion */}
+            <AccordionItem
+              value="terms"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Contract Terms
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField(
+                    'Auto Renew',
+                    contractAttributes.autoRenew,
+                    'boolean'
+                  )}
+                  {renderField(
+                    'Renewal Notice Days',
+                    contractAttributes.renewalNoticeDays
+                  )}
+                  {renderField(
+                    'Termination Notice Days',
+                    contractAttributes.terminationNoticeDays
+                  )}
+                  {renderField(
+                    'Termination Rights',
+                    contractAttributes.terminationRights
+                  )}
+                  {renderField(
+                    'Cure Period Days',
+                    contractAttributes.curePeriodDays
+                  )}
+                  {renderField(
+                    'Post Termination Obligations',
+                    contractAttributes.postTerminationObligations
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Organization & Ownership Accordion */}
+            <AccordionItem
+              value="organization"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Organization & Ownership
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField('Organization ID', contractAttributes.orgId)}
+                  {renderField(
+                    'Contract Owner',
+                    contractOwnerFullName || contractAttributes.contractOwnerId
+                  )}
+                  {renderField(
+                    'Department Owner',
+                    contractAttributes.departmentOwner
+                  )}
+                  {renderField(
+                    'Business Unit',
+                    contractAttributes.businessUnit
+                  )}
+                  {renderField(
+                    'Sub Department',
+                    contractAttributes.subDepartment
+                  )}
+                  {renderField('Division', contractAttributes.division)}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Approval & Workflow Accordion */}
+            <AccordionItem
+              value="approval"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Approval & Workflow
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField(
+                    'Approval Workflow Template',
+                    contractAttributes.approvalWorkflowTemplate
+                  )}
+                  {renderField(
+                    'Current Approval Stage',
+                    contractAttributes.currentApprovalStage
+                  )}
+                  {renderField(
+                    'Approval History Log',
+                    contractAttributes.approvalHistoryLog
+                  )}
+                  {renderField(
+                    'Reviewer Comments',
+                    contractAttributes.reviewerComments
+                  )}
+                  {renderField(
+                    'Internal Approver IDs',
+                    contractAttributes.internalApproverIds,
+                    'array'
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Related Documents Accordion */}
+            <AccordionItem
+              value="documents"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Related Documents
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField(
+                    'Related Document IDs',
+                    contractAttributes.relatedDocumentIds,
+                    'array'
+                  )}
+                  {renderField(
+                    'Attachment References',
+                    contractAttributes.attachmentReferences,
+                    'array'
+                  )}
+                  {renderField(
+                    'Parent Contract ID',
+                    contractAttributes.parentContractId
+                  )}
+                  {renderField(
+                    'Template Used',
+                    contractAttributes.templateUsed
+                  )}
+                  {renderField(
+                    'Version Number',
+                    contractAttributes.versionNumber
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Performance & Metrics Accordion */}
+            <AccordionItem
+              value="performance"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Performance & Metrics
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {renderField(
+                    'Service Level Agreements',
+                    contractAttributes.serviceLevelAgreements
+                  )}
+                  {renderField(
+                    'Performance Metrics',
+                    contractAttributes.performanceMetrics
+                  )}
+                  {renderField(
+                    'Reporting Requirements',
+                    contractAttributes.reportingRequirements
+                  )}
+                  {renderField(
+                    'Audit Rights Granted',
+                    contractAttributes.auditRightsGranted,
+                    'boolean'
+                  )}
+                  {renderField(
+                    'Key Obligations',
+                    contractAttributes.keyObligations,
+                    'array'
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Additional Details Accordion */}
+            <AccordionItem
+              value="additional"
+              className="bg-slate-50 rounded-lg border border-slate-200 px-4"
+            >
+              <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Additional Details
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3 pt-2">
+                  {assignedManagers && assignedManagers.length > 0 && (
+                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                      <p className="text-sm text-slate-500 font-medium mb-2">
+                        Assigned To
+                      </p>
+                      {renderAssignedManagers()}
+                    </div>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </>
+        )}
+      </Accordion>
     </>
   );
 };

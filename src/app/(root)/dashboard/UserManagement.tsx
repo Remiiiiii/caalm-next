@@ -150,9 +150,7 @@ const UserManagement = () => {
   };
 
   const hasActiveFilters =
-    searchTerm ||
-    filters.departments.length > 0 ||
-    filters.statuses.length > 0;
+    searchTerm || filters.departments.length > 0 || filters.statuses.length > 0;
 
   // User edit handlers
   const closeEditModal = () => {
@@ -302,8 +300,7 @@ const UserManagement = () => {
                     Filter{' '}
                     {hasActiveFilters &&
                       `(${
-                        filters.departments.length +
-                        filters.statuses.length
+                        filters.departments.length + filters.statuses.length
                       })`}
                   </Button>
                 </DropdownMenuTrigger>

@@ -22,13 +22,14 @@ const fetchManagers = async () => {
   const allManagers = await getAllManagers();
   if (!allManagers) return [];
 
-  return (allManagers as Models.Document[]).map((u) => ({
+  return (allManagers as Models.Document[]).map((u: any) => ({
     fullName: u.fullName,
     email: u.email,
     avatar: u.avatar,
     accountId: u.$id || u.accountId,
     role: u.role,
     division: u.division,
+    department: u.department, // Include department field if available
     status: u.status,
   })) as AppUser[];
 };
@@ -77,11 +78,25 @@ export const useDepartmentAssignment = () => {
   // Return directly from memo to avoid extra render cycle
   const filteredManagers = useMemo(() => {
     if (selectedDepartment && managers.length > 0) {
-      // Filter managers whose division maps to the selected department
-      return managers.filter((manager) => {
-        if (!manager.division) return false;
-        const managerDepartment = DIVISION_TO_DEPARTMENT[manager.division];
-        return managerDepartment === selectedDepartment;
+      // Filter managers by:
+      // 1. Direct department field match (if manager has department field)
+      // 2. Division-to-department mapping (if manager has division field)
+      return managers.filter((manager: any) => {
+        // Check direct department field first
+        if (manager.department && manager.department === selectedDepartment) {
+          return true;
+        }
+
+        // Fall back to division-to-department mapping
+        if (manager.division) {
+          const managerDepartment =
+            DIVISION_TO_DEPARTMENT[
+              manager.division as keyof typeof DIVISION_TO_DEPARTMENT
+            ];
+          return managerDepartment === selectedDepartment;
+        }
+
+        return false;
       });
     }
     return [];

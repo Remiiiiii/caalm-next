@@ -97,11 +97,25 @@ export const uploadFile = async ({
     const arrayBuffer = await file.arrayBuffer();
     const inputFile = InputFile.fromBuffer(Buffer.from(arrayBuffer), file.name);
 
-    // Always upload to Appwrite storage
-    const bucketFile = await storage.createFile({
+    console.log('Uploading file to Appwrite storage:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
       bucketId: appwriteConfig.bucketId,
-      fileId: ID.unique(),
-      file: inputFile,
+    });
+
+    // ✅ CORRECT - Use positional parameters, not object syntax
+    const bucketFile = await storage.createFile(
+      appwriteConfig.bucketId!, // First parameter: bucketId
+      ID.unique(), // Second parameter: fileId
+      inputFile // Third parameter: file (InputFile)
+    );
+
+    console.log('File uploaded to storage successfully:', {
+      bucketFileId: bucketFile.$id,
+      bucketFileName: bucketFile.name,
+      bucketFileSize: bucketFile.sizeOriginal,
+      bucketFileMimeType: bucketFile.mimeType,
     });
 
     const fileDocument = {
@@ -1620,23 +1634,26 @@ export const contractStatus = async ({
 
       // Get relationship fields from schema
       try {
-        // Try listAttributes first (more reliable)
+        // Try getCollection first (matches pattern in list-attributes/route.ts)
+        // Note: getCollection may not be in TypeScript types but exists in runtime
+        let collection: any;
         try {
-          const attributesResponse = await tablesDB.listAttributes({
+          collection = await (tablesDB as any).getCollection({
             databaseId: appwriteConfig.databaseId!,
             tableId: appwriteConfig.contractsCollectionId!,
           });
-          relationshipFields = (attributesResponse.attributes || [])
+          relationshipFields = (collection?.attributes || [])
             .filter((attr: any) => attr.type === 'relationship')
             .map((attr: any) => attr.key);
-        } catch {
-          // Fallback to getCollection if listAttributes doesn't work
+        } catch (error: any) {
+          // Fallback: try to get attributes via listColumns
           try {
-            const collection = await (tablesDB as any).getCollection?.({
+            const columns = await tablesDB.listColumns({
               databaseId: appwriteConfig.databaseId!,
               tableId: appwriteConfig.contractsCollectionId!,
             });
-            relationshipFields = (collection?.attributes || [])
+            const attributes = columns.columns || [];
+            relationshipFields = attributes
               .filter((attr: any) => attr.type === 'relationship')
               .map((attr: any) => attr.key);
           } catch {
@@ -1897,24 +1914,26 @@ export const contractStatus = async ({
         let relationshipFields: string[] = [];
         let allAttributes: any[] = [];
         try {
-          // Try listAttributes first (more reliable)
+          // Try getCollection first (matches pattern in list-attributes/route.ts)
+          // Note: getCollection may not be in TypeScript types but exists in runtime
+          let collection: any;
           try {
-            const attributesResponse = await tablesDB.listAttributes({
+            collection = await (tablesDB as any).getCollection({
               databaseId: appwriteConfig.databaseId!,
               tableId: appwriteConfig.contractsCollectionId!,
             });
-            allAttributes = attributesResponse.attributes || [];
+            allAttributes = collection?.attributes || [];
             relationshipFields = allAttributes
               .filter((attr: any) => attr.type === 'relationship')
               .map((attr: any) => attr.key);
-          } catch {
-            // Fallback to getCollection if listAttributes doesn't work
+          } catch (error: any) {
+            // Fallback: try to get attributes via listColumns
             try {
-              const collection = await (tablesDB as any).getCollection?.({
+              const columns = await tablesDB.listColumns({
                 databaseId: appwriteConfig.databaseId!,
                 tableId: appwriteConfig.contractsCollectionId!,
               });
-              allAttributes = collection?.attributes || [];
+              allAttributes = columns.columns || [];
               relationshipFields = allAttributes
                 .filter((attr: any) => attr.type === 'relationship')
                 .map((attr: any) => attr.key);

@@ -39,6 +39,7 @@ export type AppUser = {
   accountId: string;
   role: CalendarRole; // For calendar permissions compatibility only
   division?: UserDivision;
+  department?: string; // Direct department field (if available)
   status?: 'active' | 'inactive';
   profileImageId?: string | null;
 };
@@ -1796,8 +1797,7 @@ export async function fetchUserNamesByIds(
 
   try {
     // Use absolute URL for server-side compatibility
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const response = await fetch(`${baseUrl}/api/users/get-by-ids`, {
       method: 'POST',
       headers: {

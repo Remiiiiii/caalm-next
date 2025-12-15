@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Coming Soon Mode - redirect to coming soon page in production
@@ -101,7 +101,7 @@ export async function middleware(request: NextRequest) {
         );
       }
     } catch (error) {
-      console.error('Session validation error in middleware:', error);
+      console.error('Session validation error in proxy:', error);
       // On error, redirect to sign-in to be safe
       return NextResponse.redirect(
         new URL('/sign-in?reason=validation_error', request.url)

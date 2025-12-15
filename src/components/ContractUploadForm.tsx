@@ -907,7 +907,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
     if (isResumingDraftRef.current) {
       return false; // Don't save while resuming a draft
     }
-    if (currentStep === 1 && !processedFileData) {
+    // Don't save to database until user progresses to step 2
+    if (currentStep === 1) {
+      return false; // Don't save on step 1 - wait until step 2
+    }
+    if (!processedFileData) {
       return false; // Don't save if no file uploaded
     }
 
@@ -999,7 +1003,16 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
   // Manual save function
   const handleManualSave = useCallback(async () => {
-    if (currentStep === 1 && !processedFileData) {
+    // Don't allow saving on step 1 - user must progress to step 2 first
+    if (currentStep === 1) {
+      toast({
+        title: 'Cannot save on step 1',
+        description: 'Please progress to step 2 before saving your progress',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!processedFileData) {
       toast({
         title: 'No file uploaded',
         description: 'Please upload a file first before saving',
@@ -1184,12 +1197,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
     [toast, currentDraftId, ownerId, loadSavedDrafts]
   );
 
-  // Auto-save on step change
+  // Auto-save on step change (only after step 2)
   useEffect(() => {
     if (isResumingDraftRef.current) {
       return; // Don't auto-save while resuming a draft
     }
-    if (currentStep > 1 || processedFileData) {
+    // Only auto-save when user has progressed to step 2 or beyond
+    if (currentStep > 1 && processedFileData) {
       const timeout = setTimeout(() => {
         if (!isResumingDraftRef.current) {
           autoSaveDraft();
@@ -1200,9 +1214,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep]);
 
-  // Auto-save when dialog is about to close
+  // Auto-save when dialog is about to close (only if user has progressed to step 2)
   useEffect(() => {
-    if (!isOpen && (currentStep > 1 || processedFileData)) {
+    // Only save to database if user has progressed to step 2 or beyond
+    if (!isOpen && currentStep > 1 && processedFileData) {
       // Save draft when dialog closes (silent save, no toast)
       const saveOnClose = async () => {
         try {
@@ -3816,7 +3831,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                 </FormLabel>
                                 <FormControl>
                                   <Input
-                                    placeholder="e.g., 30,60,90"
+                                    placeholder="e.g., 30,60, or 90"
                                     {...field}
                                     className="bg-white border-slate-300"
                                   />

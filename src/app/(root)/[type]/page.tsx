@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import Sort from '@/components/Sort';
 import { getFiles, getTotalSpaceUsed } from '@/lib/actions/file.actions';
 import { getCurrentUser } from '@/lib/actions/user.actions';
@@ -259,7 +260,16 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
           {filteredDocuments.length > 0 ? (
             <ContractsViewClient files={filteredDocuments} user={user} />
           ) : (
-            <p className="empty-list">No files uploaded yet</p>
+            <div className="text-center py-12">
+              <Image
+                src="/assets/icons/no-data.svg"
+                alt="No contracts uploaded yet"
+                width={250}
+                height={250}
+                className="mb-4 opacity-60"
+              />
+              <p className="body-1 text-slate-700">No contracts uploaded yet</p>
+            </div>
           )}
         </ContractsViewProvider>
       ) : (
@@ -297,7 +307,16 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
               ))}
             </section>
           ) : (
-            <p className="empty-list">No files uploaded yet</p>
+            <div className="text-center py-12">
+              <Image
+                src="/assets/icons/no-data.svg"
+                alt="No contracts uploaded yet"
+                width={250}
+                height={250}
+                className="mb-4 opacity-60"
+              />
+              <p className="body-1 text-slate-700">No contracts uploaded yet</p>
+            </div>
           )}
         </>
       )}

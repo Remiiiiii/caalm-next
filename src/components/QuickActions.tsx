@@ -34,7 +34,7 @@ const QuickActions = ({ user }: QuickActionsProps) => {
           <ContractUploadForm
             ownerId={user.$id}
             accountId={user.$id}
-            className="primary-btn h-10 px-4 shadow-drop-1 text-sm"
+            className="primary-btn h-10 px-2 shadow-drop-1 text-sm"
             onSuccess={() => {
               // Refresh data or show success message
               console.log('Contract uploaded successfully');
@@ -42,12 +42,20 @@ const QuickActions = ({ user }: QuickActionsProps) => {
           />
         </>
       )}
-      <Button className="primary-btn h-10 px-4 shadow-drop-1 text-sm">
+      <Button className="primary-btn h-10 px-2 shadow-drop-1 text-sm">
+        <Calendar className="h-4 w-4" />
+        Upload Audit
+      </Button>
+      <Button className="primary-btn h-10 px-2 shadow-drop-1 text-sm">
+        <Calendar className="h-4 w-4" />
+        Upload License
+      </Button>
+      <Button className="primary-btn h-10 px-2 shadow-drop-1 text-sm">
         <Calendar className="h-4 w-4" />
         Schedule Review
       </Button>
       <Button
-        className="primary-btn h-10 gap-2 px-4 shadow-drop-1 text-sm"
+        className="primary-btn h-10 gap-2 px-2 shadow-drop-1 text-sm"
         onClick={() => setReportOpen(true)}
       >
         <TrendingUp className="h-4 w-4" />

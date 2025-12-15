@@ -37,17 +37,21 @@ export const useFileUploader = (department?: string) => {
   const [uploads, setUploads] = useState<FileUpload[]>([]);
 
   // File list
-  const { data: fileList, error: fileListError, isLoading: fileListLoading } = useSWR(
-    `/api/files?department=${department || 'all'}`,
-    fetcher,
-    {
-      refreshInterval: 30000, // Refresh every 30 seconds
-      revalidateOnFocus: true,
-    }
-  );
+  const {
+    data: fileList,
+    error: fileListError,
+    isLoading: fileListLoading,
+  } = useSWR(`/api/files?department=${department || 'all'}`, fetcher, {
+    refreshInterval: 30000, // Refresh every 30 seconds
+    revalidateOnFocus: true,
+  });
 
   // Upload queue
-  const { data: uploadQueue, error: queueError, isLoading: queueLoading } = useSWR(
+  const {
+    data: uploadQueue,
+    error: queueError,
+    isLoading: queueLoading,
+  } = useSWR(
     user?.$id ? `/api/files/upload-queue?userId=${user.$id}` : null,
     fetcher,
     {
@@ -56,7 +60,11 @@ export const useFileUploader = (department?: string) => {
   );
 
   // Storage usage
-  const { data: storageUsage, error: storageError, isLoading: storageLoading } = useSWR(
+  const {
+    data: storageUsage,
+    error: storageError,
+    isLoading: storageLoading,
+  } = useSWR(
     user?.$id ? `/api/files/storage-usage?userId=${user.$id}` : null,
     fetcher,
     {
@@ -76,7 +84,7 @@ export const useFileUploader = (department?: string) => {
       progress: 0,
     };
 
-    setUploads(prev => [...prev, newUpload]);
+    setUploads((prev) => [...prev, newUpload]);
 
     try {
       const formData = new FormData();
@@ -92,11 +100,18 @@ export const useFileUploader = (department?: string) => {
 
       if (!response.ok) throw new Error('Upload failed');
 
+      const data = await response.json();
+
       // Update upload status
-      setUploads(prev =>
-        prev.map(upload =>
+      setUploads((prev) =>
+        prev.map((upload) =>
           upload.$id === uploadId
-            ? { ...upload, status: 'completed', progress: 100, uploadedAt: new Date().toISOString() }
+            ? {
+                ...upload,
+                status: 'completed',
+                progress: 100,
+                uploadedAt: new Date().toISOString(),
+              }
             : upload
         )
       );
@@ -105,13 +120,15 @@ export const useFileUploader = (department?: string) => {
       mutate(`/api/files?department=${department || 'all'}`);
       mutate(`/api/files/storage-usage?userId=${user?.$id}`);
 
-      return response.data;
+      return data;
     } catch (error) {
       // Update upload status to failed
-      setUploads(prev =>
-        prev.map(upload =>
+      const errorMessage =
+        error instanceof Error ? error.message : 'Upload failed';
+      setUploads((prev) =>
+        prev.map((upload) =>
           upload.$id === uploadId
-            ? { ...upload, status: 'failed', error: error.message }
+            ? { ...upload, status: 'failed', error: errorMessage }
             : upload
         )
       );
@@ -123,10 +140,14 @@ export const useFileUploader = (department?: string) => {
 
   // Update upload progress
   const updateUploadProgress = (uploadId: string, progress: number) => {
-    setUploads(prev =>
-      prev.map(upload =>
+    setUploads((prev) =>
+      prev.map((upload) =>
         upload.$id === uploadId
-          ? { ...upload, progress, status: progress === 100 ? 'completed' : 'uploading' }
+          ? {
+              ...upload,
+              progress,
+              status: progress === 100 ? 'completed' : 'uploading',
+            }
           : upload
       )
     );
@@ -134,7 +155,7 @@ export const useFileUploader = (department?: string) => {
 
   // Remove upload from queue
   const removeUpload = (uploadId: string) => {
-    setUploads(prev => prev.filter(upload => upload.$id !== uploadId));
+    setUploads((prev) => prev.filter((upload) => upload.$id !== uploadId));
   };
 
   // Delete file
@@ -147,7 +168,8 @@ export const useFileUploader = (department?: string) => {
       // Optimistic update
       mutate(
         `/api/files?department=${department || 'all'}`,
-        (current: FileList[]) => current?.filter(file => file.$id !== fileId),
+        (current: FileList[] | undefined) =>
+          current?.filter((file) => file.$id !== fileId) || [],
         false
       );
 
@@ -169,10 +191,12 @@ export const useFileUploader = (department?: string) => {
       // Optimistic update
       mutate(
         `/api/files?department=${department || 'all'}`,
-        (current: FileList[]) =>
-          current?.map(file =>
-            file.$id === fileId ? { ...file, status: 'archived' } : file
-          ),
+        (current: FileList[] | undefined) =>
+          current?.map((file) =>
+            file.$id === fileId
+              ? { ...file, status: 'archived' as const }
+              : file
+          ) || [],
         false
       );
     } catch (error) {
@@ -219,4 +243,4 @@ export const useFileUploader = (department?: string) => {
     archiveFile,
     refreshAll,
   };
-}; 
+};

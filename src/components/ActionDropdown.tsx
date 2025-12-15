@@ -23,10 +23,68 @@ import type { UIFileDoc } from '@/types/files';
 import {
   actionsDropdownItems,
   formatDepartmentName,
+  formatDivisionName,
   ContractDepartment,
   DIVISION_TO_DEPARTMENT,
+  UserDivision,
 } from '../../constants';
-import { constructDownloadUrl, constructFileUrl } from '@/lib/utils';
+import { constructFileUrl } from '@/lib/utils';
+
+// Helper function to validate Appwrite storage file ID format
+const isValidBucketFileId = (id: string | null | undefined): boolean => {
+  if (!id || typeof id !== 'string') return false;
+  // Appwrite storage file IDs must be:
+  // - At most 36 characters
+  // - Only contain a-z, A-Z, 0-9, and underscore
+  // - Cannot start with a leading underscore
+  if (id.length > 36) return false;
+  if (id.startsWith('_')) return false;
+  return /^[a-zA-Z0-9_]+$/.test(id);
+};
+
+// Map division to badge color for Re-assign dialog
+const getDivisionBadgeClasses = (division: string): string => {
+  const normalized = division?.toLowerCase?.() ?? '';
+  switch (normalized) {
+    case 'c-suite':
+      return 'bg-purple-100 text-purple-800 border border-purple-200 text-xs rounded-xl font-medium px-2 py-1';
+    case 'behavioral-health':
+      return 'bg-blue-100 text-blue-800 border border-blue-200 text-xs rounded-xl font-medium px-2 py-1';
+    case 'child-welfare':
+      return 'bg-teal-100 text-teal-800 border border-teal-200 text-xs rounded-xl font-medium px-2 py-1';
+    case 'clinic':
+      return 'bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs rounded-xl font-medium px-2 py-1';
+    case 'cfs':
+      return 'bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs rounded-xl font-medium px-2 py-1';
+    case 'hr':
+      return 'bg-pink-100 text-pink-800 border border-pink-200 text-xs rounded-xl font-medium px-2 py-1';
+    case 'residential':
+      return 'bg-green-100 text-green-800 border border-green-200 text-xs rounded-xl font-medium px-2 py-1';
+    case 'support':
+      return 'bg-orange-100 text-orange-800 border border-orange-200 text-xs rounded-xl font-medium px-2 py-1';
+    case 'help-desk':
+      return 'bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs rounded-xl font-medium px-2 py-1';
+    case 'accounting':
+      return 'bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs rounded-xl font-medium px-2 py-1';
+    default:
+      return 'bg-slate-100 text-slate-800 border border-slate-200 text-xs rounded-xl font-medium px-2 py-1';
+  }
+};
+
+// Map status to badge color for Re-assign dialog
+const getStatusBadgeClasses = (status: string): string => {
+  const normalized = status?.toLowerCase?.() ?? '';
+  switch (normalized) {
+    case 'active':
+      return 'bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-xl font-medium px-2 py-1';
+    case 'inactive':
+      return 'bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-xl font-medium px-2 py-1';
+    case 'pending':
+      return 'bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-xl font-medium px-2 py-1';
+    default:
+      return 'bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-xl font-medium px-2 py-1';
+  }
+};
 import Link from 'next/link';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -39,6 +97,7 @@ import {
   FileText,
   FolderPen,
   Share2,
+  Info,
 } from 'lucide-react';
 import {
   deleteFile,
@@ -85,6 +144,7 @@ const ActionDropdown = ({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [emails, setEmails] = useState<string[]>([]);
+  const [downloading, setDownloading] = useState(false);
 
   const [selectedStatus, setSelectedStatus] = useState<string>(
     file?.status || ''
@@ -294,14 +354,33 @@ const ActionDropdown = ({
                     departmentEnums.map((dept) => (
                       <label
                         key={dept}
-                        className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-2 rounded-lg border-2 border-slate-200 bg-white group shadow-sm hover:shadow-md"
+                        className={`flex items-center gap-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-2 rounded-lg border-2 ${
+                          selectedDepartment === dept
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-slate-200 bg-white'
+                        } group shadow-sm hover:shadow-md`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!isLoading) {
+                            handleDepartmentChange(dept);
+                          }
+                        }}
                       >
                         <input
                           type="radio"
                           name="contract-department"
                           value={dept}
                           checked={selectedDepartment === dept}
-                          onChange={() => handleDepartmentChange(dept)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            if (!isLoading) {
+                              handleDepartmentChange(dept);
+                            }
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
                           disabled={isLoading}
                           className="cursor-pointer w-4 h-4 text-blue-600"
                         />
@@ -337,7 +416,7 @@ const ActionDropdown = ({
                           Department
                         </th>
                         <th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
-                          Role
+                          Division
                         </th>
                         <th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
                           Status
@@ -382,7 +461,12 @@ const ActionDropdown = ({
                               {manager.fullName}
                             </td>
                             <td className="text-center px-2 py-2">
-                              {manager.division
+                              {(manager as any).department
+                                ? formatDepartmentName(
+                                    (manager as any)
+                                      .department as ContractDepartment
+                                  )
+                                : manager.division
                                 ? formatDepartmentName(
                                     DIVISION_TO_DEPARTMENT[
                                       manager.division
@@ -391,10 +475,23 @@ const ActionDropdown = ({
                                 : 'N/A'}
                             </td>
                             <td className="text-center px-2 py-2">
-                              {manager.role}
+                              {manager.division
+                                ? formatDivisionName(
+                                    manager.division as UserDivision
+                                  )
+                                : '-'}
                             </td>
                             <td className="text-center px-2 py-2">
-                              {manager.status}
+                              <span
+                                className={`inline-block ${getStatusBadgeClasses(
+                                  manager.status || ''
+                                )}`}
+                              >
+                                {manager.status
+                                  ? manager.status.charAt(0).toUpperCase() +
+                                    manager.status.slice(1).toLowerCase()
+                                  : 'N/A'}
+                              </span>
                             </td>
                           </tr>
                         ))
@@ -569,7 +666,7 @@ const ActionDropdown = ({
               <div className="flex items-center">
                 <div>
                   <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-[#0f5384]" />
+                    <Info className="h-5 w-5 text-[#0f5384]" />
                     <h2 className="text-xl font-semibold sidebar-gradient-text">
                       {label}
                     </h2>
@@ -982,61 +1079,156 @@ const ActionDropdown = ({
             height={34}
           />
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuLabel className="max-w-[200px] truncate">
-            {file.name || file.contractName}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {filteredActions.map((actionItem) => (
-            <DropdownMenuItem
-              key={actionItem.value}
-              className="shad-dropdown-item"
-              onClick={() => {
-                setAction(actionItem);
-                if (actionItem.value === 'review') {
-                  setIsViewerOpen(true);
-                } else if (
-                  [
-                    'assign',
-                    'rename',
-                    'delete',
-                    'share',
-                    'details',
-                    'status',
-                  ].includes(actionItem.value)
-                ) {
-                  setIsModalOpen(true);
-                }
-              }}
-            >
-              {actionItem.value === 'download' ? (
-                <Link
-                  href={constructDownloadUrl(file.bucketFileId || '')}
-                  download={file.name || file.contractName}
-                  className="flex items-center gap-2"
-                  onClick={(e) => e.stopPropagation()}
+        <DropdownMenuContent className="relative p-0">
+          {/* Professional Cap */}
+          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+          <div className="pt-4 px-1 pb-1">
+            <DropdownMenuLabel className="max-w-[200px] truncate">
+              {file.name || file.contractName}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {filteredActions.map((actionItem) => {
+              // Handle download action separately
+              if (actionItem.value === 'download') {
+                const handleDownload = async () => {
+                  if (downloading) return;
+
+                  setDownloading(true);
+                  setIsDropdownOpen(false);
+
+                  try {
+                    const params = new URLSearchParams();
+
+                    if (isValidBucketFileId(file.bucketFileId)) {
+                      params.append('bucketFileId', file.bucketFileId!);
+                    } else if (file.contractId) {
+                      params.append('contractId', file.contractId);
+                    } else if (file.$id) {
+                      params.append('fileId', file.$id);
+                    }
+
+                    const response = await fetch(
+                      `/api/files/download?${params.toString()}`
+                    );
+
+                    if (!response.ok) {
+                      throw new Error('Download failed');
+                    }
+
+                    // Get the blob directly without conversion
+                    const blob = await response.blob();
+
+                    // Get filename from header
+                    const contentDisposition = response.headers.get(
+                      'Content-Disposition'
+                    );
+                    let filename = file.name || file.contractName || 'download';
+
+                    if (contentDisposition) {
+                      const match = contentDisposition.match(
+                        /filename\*?=['"]?([^'";\n]+)/
+                      );
+                      if (match?.[1]) {
+                        filename = decodeURIComponent(
+                          match[1].replace(/^UTF-8''/, '')
+                        );
+                      }
+                    }
+
+                    // Ensure filename has extension if file has extension
+                    if (
+                      file.extension &&
+                      !filename
+                        .toLowerCase()
+                        .endsWith(`.${file.extension.toLowerCase()}`)
+                    ) {
+                      filename = `${filename}.${file.extension}`;
+                    }
+
+                    // Create download link with proper attributes
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.style.display = 'none'; // Hide but keep in DOM
+                    link.setAttribute('download', filename); // Ensure download attribute is set
+                    document.body.appendChild(link);
+
+                    // Trigger download
+                    link.click();
+
+                    // Clean up after a short delay to ensure download starts
+                    setTimeout(() => {
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    }, 100);
+                  } catch (error) {
+                    console.error('Download failed:', error);
+                    alert('Failed to download file');
+                  } finally {
+                    setDownloading(false);
+                  }
+                };
+
+                return (
+                  <DropdownMenuItem
+                    key={actionItem.value}
+                    className="shad-dropdown-item"
+                    onSelect={(e) => {
+                      console.log('Download onSelect triggered');
+                      e.preventDefault();
+                      handleDownload();
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Image
+                        src={actionItem.icon}
+                        alt={actionItem.label}
+                        width={30}
+                        height={30}
+                      />
+                      {downloading ? 'Downloading...' : actionItem.label}
+                    </div>
+                  </DropdownMenuItem>
+                );
+              }
+
+              // Handle other actions
+              return (
+                <DropdownMenuItem
+                  key={actionItem.value}
+                  className="shad-dropdown-item"
+                  onClick={() => {
+                    setAction(actionItem);
+                    if (actionItem.value === 'review') {
+                      setIsViewerOpen(true);
+                    } else if (
+                      [
+                        'assign',
+                        'rename',
+                        'delete',
+                        'share',
+                        'details',
+                        'status',
+                      ].includes(actionItem.value)
+                    ) {
+                      setIsModalOpen(true);
+                    }
+                  }}
                 >
-                  <Image
-                    src={actionItem.icon}
-                    alt={actionItem.label}
-                    width={30}
-                    height={30}
-                  />
-                  {actionItem.label}
-                </Link>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Image
-                    src={actionItem.icon}
-                    alt={actionItem.label}
-                    width={30}
-                    height={30}
-                  />
-                  {actionItem.label}
-                </div>
-              )}
-            </DropdownMenuItem>
-          ))}
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src={actionItem.icon}
+                      alt={actionItem.label}
+                      width={30}
+                      height={30}
+                    />
+                    {actionItem.label}
+                  </div>
+                </DropdownMenuItem>
+              );
+            })}
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
       {renderDialogContent()}
