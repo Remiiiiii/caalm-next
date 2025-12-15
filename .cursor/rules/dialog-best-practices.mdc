@@ -18,23 +18,19 @@ globs: **/*.{ts,tsx,js,jsx}
     <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
     {/* Header with gradient background */}
-    <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
+    <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
       <div className="flex items-center gap-3 px-6">
-        {/* Icon with circular background */}
-        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-          <IconComponent className="w-5 h-5 text-blue-600" />
-        </div>
-
-        {/* Title */}
-        <div>
+        {/* Title with icon */}
+        <div className="flex items-center gap-3">
+          <IconComponent className="w-5 h-5 text-[#0f5384]" />
           <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
             Dialog Title
           </DialogTitle>
-          <p className="text-sm text-slate-600 mt-1">
-            Optional subtitle or description
-          </p>
         </div>
       </div>
+      <p className="text-sm text-slate-600 mt-1 ml-14">
+        Optional subtitle or description
+      </p>
     </div>
 
     {/* Scrollable Content */}
@@ -66,9 +62,12 @@ globs: **/*.{ts,tsx,js,jsx}
 ### Header Section
 
 - Use gradient background: `bg-gradient-to-r from-blue-50 to-indigo-50`
-- Include a prominent icon in a circular colored background
+- Add `mt-4` to account for the professional cap bar
+- Icon is placed directly next to the title in a flex container: `<div className="flex items-center gap-3">`
+- Icon uses brand color: `text-[#0f5384]` (no circular background)
+- Icon size: `w-5 h-5` for header icons
 - Title uses `sidebar-gradient-text` for brand consistency
-- Subtitle uses `text-sm text-slate-600` for hierarchy
+- Subtitle uses `text-sm text-slate-600 mt-1 ml-14` to align with title text (margin-left accounts for icon + gap)
 
 ### Content Section
 
@@ -94,8 +93,9 @@ globs: **/*.{ts,tsx,js,jsx}
 ### Icons
 
 - Use consistent icon sizing: `h-4 w-4` or `h-5 w-5` for most icons
-- Colored icons: `text-blue-600`, `text-green`, `text-slate-600` etc.
-- Circular icon backgrounds: `w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center`
+- Header icons: Place directly next to title with `gap-3`, use `text-[#0f5384]` for brand color
+- Colored icons: `text-[#0f5384]` (brand blue), `text-blue-600`, `text-green`, `text-slate-600` etc.
+- For list items or cards, circular icon backgrounds can be used: `w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center`
 
 ### Buttons
 
@@ -106,7 +106,7 @@ globs: **/*.{ts,tsx,js,jsx}
 ## Color Palette
 
 - Primary: Blue gradient (from-blue-50 to-indigo-50)
-- Background: 
+- Background:
   - Main content areas: `bg-slate-50` (ALWAYS use in dialog/popover/card content sections)
   - Nested content cards: `bg-white` for contrast
   - Footer sections: `bg-slate-50`
@@ -116,7 +116,7 @@ globs: **/*.{ts,tsx,js,jsx}
   - Secondary: slate-600
   - Muted: slate-500
   - Headers: sidebar-gradient-text (brand colors)
-- Accents: blue-600, green, purple-600
+- Accents: `#0f5384` (brand blue), blue-600, green, purple-600
 
 ## List/Event Items in Dialogs
 
@@ -152,10 +152,14 @@ Example structure:
 - NEVER use plain DialogContent without the professional structure
 - NEVER skip the cap bar at the top
 - NEVER use flat backgrounds in headers - always use the gradient
+- NEVER use circular icon backgrounds in dialog headers - icons should be placed directly next to the title
 - NEVER use `bg-white` for main dialog/popover/card content areas - ALWAYS use `bg-slate-50`
 - NEVER forget to make content areas scrollable for overflow
 - ALWAYS include footer sections with proper background and borders
 - ALWAYS use `bg-slate-50` for the scrollable content area in dialogs, popovers, and cards
+- ALWAYS use `mt-4` on the header div to account for the professional cap bar
+- ALWAYS place header icons directly next to title with `gap-3` and use `text-[#0f5384]` color
+- ALWAYS use `ml-14` on subtitle paragraphs to align with the title text (accounts for icon + gap)
 - ALWAYS use consistent spacing and padding throughout
 - ALWAYS apply transition effects for interactive elements
 
@@ -163,6 +167,7 @@ Example structure:
 
 Reference these components for correct implementation:
 
+- `ActionDropdown.tsx` - Re-assign dialog (primary reference for current header style)
 - `OutlookStyleCalendar.tsx` - OverflowDialog
 - `OutlookStyleCalendar.tsx` - Event Review Dialog
 - `OutlookStyleCalendar.tsx` - Delete Confirmation Modal

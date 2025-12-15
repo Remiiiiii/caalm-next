@@ -14,18 +14,38 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Button as ShadButton } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, FileText, Clock, SquarePen, Save } from 'lucide-react';
 
-import { tablesDB } from '@/lib/appwrite/client';
-import { appwriteConfig } from '@/lib/appwrite/config';
+import { updateContractExpiryDate } from '@/lib/actions/file.actions';
 
 import type { UIFileDoc } from '@/types/files';
+import type { AppUser } from '@/lib/actions/user.actions';
+import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
+import ManagerAvatars from './ManagerAvatars';
+import { useToast } from '@/hooks/use-toast';
 
-const ImageThumbnail = ({ file }: { file: UIFileDoc }) => (
-  <div className="file-details-thumbnail">
+const ImageThumbnail = ({
+  file,
+  status,
+}: {
+  file: UIFileDoc;
+  status?: string;
+}) => (
+  <div className="file-details-thumbnail flex items-start gap-3">
     <Thumbnail type={file.type} extension={file.extension} url={file.url} />
-    <div className="flex flex-col">
-      <p className="subtitle-2 mb-1">{file.name}</p>
+    <div className="flex flex-col flex-1">
+      <div className="flex items-center justify-between gap-2">
+        <p className="subtitle-2 mb-1">{file.name}</p>
+        {status && (
+          <div
+            className={`inline-block px-2 py-1 ${getStatusBadgeClasses(
+              status
+            )}`}
+          >
+            {getStatusLabel(status)}
+          </div>
+        )}
+      </div>
       <FormattedDateTime date={file.$createdAt} className="caption" />
       <p className="text-sm text-slate-600">
         {convertFileSize({ sizeInBytes: file.size })}
@@ -34,14 +54,86 @@ const ImageThumbnail = ({ file }: { file: UIFileDoc }) => (
   </div>
 );
 
+// Map contract status to badge color and label (same as Card component)
+const getStatusBadgeClasses = (status: string) => {
+  switch (status) {
+    case 'pending-review':
+      return 'border border-slate-200 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium';
+    case 'action-required':
+      return 'border border-slate-200 bg-destructive/10 text-destructive text-xs rounded-xl font-medium';
+    case 'active':
+      return 'border border-slate-200 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
+    case 'inactive':
+      return 'border border-slate-200 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium';
+    default:
+      return 'border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
+  }
+};
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'pending-review':
+      return 'Pending Review';
+    case 'action-required':
+      return 'Action Required';
+    case 'active':
+      return 'Active';
+    case 'inactive':
+      return 'Inactive';
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+};
+
 export const FileDetails = ({ file }: { file: UIFileDoc }) => {
+  const { toast } = useToast();
   const [editing, setEditing] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
     undefined
   );
+  const [displayExpiry, setDisplayExpiry] = React.useState<string | undefined>(
+    file.contractExpiryDate
+  );
+  const [assignedManagerUsers, setAssignedManagerUsers] = React.useState<
+    AppUser[]
+  >([]);
+  const [loadingManagers, setLoadingManagers] = React.useState(false);
+  const [managerProfileImages, setManagerProfileImages] = React.useState<
+    Record<string, string>
+  >({});
+  const [failedProfileImages, setFailedProfileImages] = React.useState<
+    Set<string>
+  >(new Set());
+  const [ownerFullName, setOwnerFullName] = React.useState<string | null>(null);
+
+  // Fetch owner's full name if owner is a string (user ID)
+  React.useEffect(() => {
+    const fetchOwnerName = async () => {
+      if (typeof file.owner === 'string') {
+        try {
+          const users = await fetchUserNamesByIds([file.owner]);
+          if (users.length > 0 && users[0].fullName) {
+            setOwnerFullName(users[0].fullName);
+          } else {
+            // Fallback to ID if name not found
+            setOwnerFullName(file.owner);
+          }
+        } catch (error) {
+          console.error('Failed to fetch owner name:', error);
+          // Fallback to ID on error
+          setOwnerFullName(file.owner);
+        }
+      } else if (file.owner?.fullName) {
+        setOwnerFullName(file.owner.fullName);
+      }
+    };
+
+    fetchOwnerName();
+  }, [file.owner]);
 
   const ownerName =
-    typeof file.owner === 'string' ? file.owner : file.owner.fullName;
+    ownerFullName ||
+    (typeof file.owner === 'string' ? file.owner : file.owner?.fullName || '');
   const isContract =
     file.type === 'contract' ||
     /contract/i.test(file.name) ||
@@ -66,6 +158,11 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
   const currentExpiry: string | undefined = file.contractExpiryDate;
   const status = file.status;
 
+  // Sync displayExpiry with file prop changes
+  React.useEffect(() => {
+    setDisplayExpiry(file.contractExpiryDate);
+  }, [file.contractExpiryDate]);
+
   // Debug logging to see what data is available
   console.log('🔍 FileDetails Debug:', {
     fileId: file.$id,
@@ -89,10 +186,110 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
 
   // Initialize selectedDate with current expiry date when editing starts
   React.useEffect(() => {
-    if (editing && currentExpiry) {
-      setSelectedDate(new Date(currentExpiry));
+    if (editing && displayExpiry) {
+      setSelectedDate(new Date(displayExpiry));
     }
-  }, [editing, currentExpiry]);
+  }, [editing, displayExpiry]);
+
+  // Fetch assigned manager users
+  React.useEffect(() => {
+    const fetchAssignedManagers = async () => {
+      if (!assignedManagers || assignedManagers.length === 0) {
+        setAssignedManagerUsers([]);
+        return;
+      }
+
+      setLoadingManagers(true);
+      try {
+        const managerIds = Array.isArray(assignedManagers)
+          ? assignedManagers
+          : [assignedManagers];
+
+        const fileManagers = await fetchUserNamesByIds(managerIds);
+
+        // Fetch profile images for managers
+        const newProfileImages: Record<string, string> = {};
+        for (const user of fileManagers) {
+          if (user.accountId) {
+            try {
+              const profileResponse = await fetch(
+                `/api/users/${user.accountId}/profile-picture`
+              );
+              if (profileResponse.ok) {
+                const profileData = await profileResponse.json();
+                if (profileData.url) {
+                  newProfileImages[user.$id] = profileData.url;
+                  if (user.accountId) {
+                    newProfileImages[user.accountId] = profileData.url;
+                  }
+                }
+              }
+            } catch (error) {
+              console.error(
+                `Failed to fetch profile image for ${user.$id}:`,
+                error
+              );
+            }
+          }
+        }
+
+        setManagerProfileImages((prev) => ({ ...prev, ...newProfileImages }));
+        setAssignedManagerUsers(fileManagers);
+      } catch (error) {
+        console.error('Failed to fetch assigned manager users:', error);
+        setAssignedManagerUsers([]);
+      } finally {
+        setLoadingManagers(false);
+      }
+    };
+
+    fetchAssignedManagers();
+  }, [assignedManagers]);
+
+  // Memoized handler for image load errors
+  const handleImageError = React.useCallback(
+    (userId: string, accountId?: string) => {
+      setFailedProfileImages((prev) => {
+        const newSet = new Set(prev);
+        if (userId) newSet.add(userId);
+        if (accountId) newSet.add(accountId);
+        return newSet;
+      });
+    },
+    []
+  );
+
+  const renderAssignedManagers = () => {
+    if (assignedManagerUsers.length === 0) {
+      if (loadingManagers) {
+        return <span className="text-slate-400">Loading...</span>;
+      }
+      if (Array.isArray(assignedManagers) && assignedManagers.length > 0) {
+        return (
+          <span className="text-slate-800 font-semibold">
+            {assignedManagers.join(', ')}
+          </span>
+        );
+      }
+      if (typeof assignedManagers === 'string') {
+        return (
+          <span className="text-slate-800 font-semibold">
+            {assignedManagers}
+          </span>
+        );
+      }
+      return <span className="text-slate-400">-</span>;
+    }
+
+    return (
+      <ManagerAvatars
+        managers={assignedManagerUsers}
+        profileImages={managerProfileImages}
+        failedImages={failedProfileImages}
+        onImageError={handleImageError}
+      />
+    );
+  };
 
   // Helper function to format priority and compliance values
   const formatValue = (
@@ -141,81 +338,70 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
   const saveExpiry = async () => {
     if (!selectedDate) return;
     const now = new Date();
-    if (selectedDate <= now) return;
-    try {
-      // Update both file document and contract document
-      await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.filesCollectionId,
-        rowId: file.$id,
-        data: { contractExpiryDate: selectedDate.toISOString() },
+    if (selectedDate <= now) {
+      toast({
+        title: 'Invalid Date',
+        description: 'Expiry date must be in the future.',
+        variant: 'destructive',
       });
-
-      // Also update the contract document if linked
-      if (
-        file.contractId &&
-        typeof file.contractId === 'string' &&
-        file.contractId.length <= 36
-      ) {
-        try {
-          await tablesDB.updateRow({
-            databaseId: appwriteConfig.databaseId,
-            tableId: appwriteConfig.contractsCollectionId,
-            rowId: file.contractId,
-            data: { contractExpiryDate: selectedDate.toISOString() },
-          });
-          console.log('✅ Contract document updated successfully');
-        } catch (contractError) {
-          console.error(
-            '⚠️ Failed to update contract document:',
-            contractError
-          );
-          // Continue execution even if contract update fails
-        }
-      } else {
-        console.log(
-          'ℹ️ No valid contractId found, skipping contract document update'
-        );
-      }
-    } catch (error) {
-      console.error('Failed to update expiry date:', error);
+      return;
     }
-    setEditing(false);
+
+    // Validate file ID exists
+    if (!file.$id || typeof file.$id !== 'string' || file.$id.trim() === '') {
+      toast({
+        title: 'Error',
+        description: 'File document ID is missing or invalid.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const expiryDateISO = selectedDate.toISOString();
+
+      // Use server action to update expiry date (handles authentication properly)
+      await updateContractExpiryDate(file.$id, expiryDateISO);
+
+      // Update local state to reflect the change immediately
+      setDisplayExpiry(expiryDateISO);
+      setEditing(false);
+
+      toast({
+        title: 'Success',
+        description: 'Expiry date updated successfully.',
+      });
+    } catch (error: any) {
+      console.error('Failed to update expiry date:', error);
+      toast({
+        title: 'Update Failed',
+        description:
+          error?.message ||
+          'An unexpected error occurred while updating the expiry date.',
+        variant: 'destructive',
+      });
+      // Don't close editing mode on error
+    }
   };
 
   return (
     <>
-      {status && (
-        <div
-          className={`px-2 py-1 max-w-[50px] border-light-200/40 bg-light-400/50 ml-auto rounded-full text-xs font-medium ${
-            status === 'active'
-              ? 'bg-green-100 text-green-800 border border-green-200'
-              : status === 'expired'
-              ? 'bg-red-100 text-red-800 border border-red-200'
-              : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-          }`}
-        >
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </div>
-      )}
-      {/* Enhanced Header Section */}
-      <ImageThumbnail file={file} />
-
-      <div className="bg-white  rounded-xl p-4 border-b border-slate-200">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-3">
-            <div></div>
-          </div>
+      <ImageThumbnail file={file} status={status} />
+      {/* File Attachment Section */}
+      <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
+          <FileText className="w-4 h-4 text-blue-600" />
+          File Information
         </div>
 
         {/* File Info Row */}
-        <div className="grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <p className="text-slate-500 font-medium">Owner</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-lg p-3 border border-slate-200">
+            <p className="text-sm text-slate-500 font-medium mb-1">Owner</p>
             <p className="text-slate-800 font-semibold">{ownerName}</p>
           </div>
-          <div>
-            <p className="text-slate-500 font-medium">Created</p>
+          <div className="bg-white rounded-lg p-3 border border-slate-200">
+            <p className="text-sm text-slate-500 font-medium mb-1">Created</p>
             <p className="text-slate-800 font-semibold">
               {new Date(file.$createdAt).toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -224,8 +410,10 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
               })}
             </p>
           </div>
-          <div>
-            <p className="text-slate-500 font-medium">Last Modified</p>
+          <div className="bg-white rounded-lg p-3 border border-slate-200">
+            <p className="text-sm text-slate-500 font-medium mb-1">
+              Last Modified
+            </p>
             <p className="text-slate-800 font-semibold">
               {formatDateTime(file.$updatedAt)}
             </p>
@@ -235,203 +423,218 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
 
       {/* Contract Details Section */}
       {isContract && (
-        <div className="p-4 space-y-4">
+        <div className="space-y-6">
           {/* Grid Layout: Contract Information (Left) + Additional Details (Right) */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* Left Column: Contract Information */}
-            <div>
-              <h3 className="text-lg font-semibold sidebar-gradient-text mb-3">
-                Contract Information
-              </h3>
-              <div className="grid grid-cols-3 gap-3">
-                {contractType && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-500 font-medium mb-1">
-                      Contract Type
-                    </p>
-                    <p className="text-slate-800 font-semibold">
-                      {formatValue(contractType, 'contractType')}
-                    </p>
-                  </div>
-                )}
-                {contractNumber && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-500 font-medium mb-1">
-                      Contract Number
-                    </p>
-                    <p className="text-slate-800 font-semibold">
-                      {contractNumber}
-                    </p>
-                  </div>
-                )}
-                {amount && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-500 font-medium mb-1">
-                      Contract Amount
-                    </p>
-                    <p className="text-slate-800 font-semibold text-lg">
-                      ${amount.toLocaleString()}
-                    </p>
-                  </div>
-                )}
-                {vendor && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-500 font-medium mb-1">
-                      Vendor/Supplier
-                    </p>
-                    <p className="text-slate-800 font-semibold">{vendor}</p>
-                  </div>
-                )}
-                {department && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-500 font-medium mb-1">
-                      Department
-                    </p>
-                    <p className="text-slate-800 font-semibold">{department}</p>
-                  </div>
-                )}
-                {priority && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-500 font-medium mb-1">
-                      Priority
-                    </p>
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className={`w-3 h-3 rounded-full ${
-                          priority === 'Urgent'
-                            ? 'bg-red-500'
-                            : priority === 'High'
-                            ? 'bg-orange-500'
-                            : priority === 'Medium'
-                            ? 'bg-yellow-500'
-                            : 'bg-green-500'
-                        }`}
-                      ></span>
-                      <span className="text-slate-800 font-semibold">
-                        {formatValue(priority, 'priority')}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            {/* Right Column: Additional Details */}
-            <div>
-              <h3 className="text-lg font-semibold sidebar-gradient-text mb-3">
-                Additional Details
-              </h3>
-              <div className="space-y-3">
-                {compliance && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-500 font-medium mb-1">
-                      Compliance Level
-                    </p>
-                    <p className="text-slate-800 font-semibold">
-                      {formatValue(compliance, 'compliance')}
-                    </p>
+          {/* Left Column: Contract Information */}
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
+              <FileText className="w-4 h-4 text-blue-600" />
+              Contract Information
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {/* Priority - Most important (top left) */}
+              {priority && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Priority
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <span
+                      className={`w-3 h-3 rounded-full ${
+                        priority === 'Urgent'
+                          ? 'bg-red-500'
+                          : priority === 'High'
+                          ? 'bg-orange-500'
+                          : priority === 'Medium'
+                          ? 'bg-yellow-500'
+                          : 'bg-green-500'
+                      }`}
+                    ></span>
+                    <span className="text-slate-800 font-semibold">
+                      {formatValue(priority, 'priority')}
+                    </span>
                   </div>
-                )}
-                {assignedManagers && assignedManagers.length > 0 && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-500 font-medium mb-1">
-                      Assigned To
-                    </p>
-                    <p className="text-slate-800 font-semibold">
-                      {assignedManagers.join(', ')}
-                    </p>
-                  </div>
-                )}
-                {description && (
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-sm text-slate-500 font-medium mb-1">
-                      Description
-                    </p>
-                    <p className="text-slate-800 font-semibold">
-                      {description}
-                    </p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
+              {/* Contract Amount - Second most important (top middle) */}
+              {amount && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Contract Amount
+                  </p>
+                  <p className="text-slate-800 font-semibold text-lg">
+                    ${amount.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {/* Contract Type - Third most important (top right) */}
+              {contractType && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Contract Type
+                  </p>
+                  <p className="text-slate-800 font-semibold">
+                    {formatValue(contractType, 'contractType')}
+                  </p>
+                </div>
+              )}
+              {/* Vendor/Supplier - Fourth (bottom left) */}
+              {vendor && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Vendor/Supplier
+                  </p>
+                  <p className="text-slate-800 font-semibold">{vendor}</p>
+                </div>
+              )}
+              {/* Department - Fifth (bottom middle) */}
+              {department && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Department
+                  </p>
+                  <p className="text-slate-800 font-semibold">{department}</p>
+                </div>
+              )}
+              {/* Contract Number - Least important (bottom right) */}
+              {contractNumber && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Contract Number
+                  </p>
+                  <p className="text-slate-800 font-semibold">
+                    {contractNumber}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Additional Details */}
+
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
+              <FileText className="w-4 h-4 text-blue-600" />
+              Additional Details
+            </div>
+            <div className="space-y-3">
+              {compliance && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Compliance Level
+                  </p>
+                  <p className="text-slate-800 font-semibold">
+                    {formatValue(compliance, 'compliance')}
+                  </p>
+                </div>
+              )}
+              {assignedManagers && assignedManagers.length > 0 && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium mb-2">
+                    Assigned To
+                  </p>
+                  {renderAssignedManagers()}
+                </div>
+              )}
+              {description && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Description
+                  </p>
+                  <p className="text-slate-800 font-semibold text-sm leading-relaxed">
+                    {description}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Expiry Date Section */}
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-700 font-medium mb-1">
-                  Expiry Date
-                </p>
-                <p className="text-blue-900 font-semibold">
-                  {currentExpiry
-                    ? new Date(currentExpiry).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })
-                    : 'Not set'}
-                </p>
-              </div>
-              {!editing ? (
-                <ShadButton
-                  onClick={() => setEditing(true)}
-                  variant="outline"
-                  size="sm"
-                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                >
-                  Edit Date
-                </ShadButton>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <ShadButton
-                        variant="outline"
-                        size="sm"
-                        className="w-[180px] justify-start text-left font-normal border-blue-300"
-                      >
-                        {selectedDate
-                          ? selectedDate.toLocaleDateString()
-                          : 'Pick a date'}
-                      </ShadButton>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={(date) => {
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          return date < today;
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <ShadButton
-                    size="sm"
-                    onClick={saveExpiry}
-                    disabled={!selectedDate}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Save
-                  </ShadButton>
-                  <ShadButton
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setSelectedDate(undefined);
-                      setEditing(false);
-                    }}
-                    className="primary-btn px-3 sm:px-4 text-slate-600 hover:text-slate-800"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Cancel
-                  </ShadButton>
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
+              <Clock className="w-4 h-4 text-blue-600" />
+              Expiry Date
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-500 font-medium mb-1">
+                    Expiry Date
+                  </p>
+                  <p className="text-slate-800 font-semibold">
+                    {displayExpiry
+                      ? new Date(displayExpiry).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })
+                      : 'Not set'}
+                  </p>
                 </div>
-              )}
+                {!editing ? (
+                  <ShadButton
+                    onClick={() => setEditing(true)}
+                    variant="outline"
+                    size="sm"
+                    className="primary-btn px-3 sm:px-4"
+                  >
+                    <SquarePen className="w-4 h-4" />
+                    Edit Date
+                  </ShadButton>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <ShadButton
+                          variant="outline"
+                          size="sm"
+                          className="w-[180px] justify-start text-left font-normal border-blue-300"
+                        >
+                          {selectedDate
+                            ? selectedDate.toLocaleDateString()
+                            : 'Pick a date'}
+                        </ShadButton>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          className="text-slate-700"
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return date < today;
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <ShadButton
+                      size="sm"
+                      onClick={saveExpiry}
+                      disabled={!selectedDate}
+                      className="primary-btn px-3 sm:px-4"
+                    >
+                      <Save className="w-4 h-4" />
+                      Save
+                    </ShadButton>
+                    <ShadButton
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedDate(undefined);
+                        setEditing(false);
+                      }}
+                      className="primary-btn px-3 sm:px-4 text-slate-600 hover:text-slate-800"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Cancel
+                    </ShadButton>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -447,8 +650,36 @@ interface Props {
 }
 
 export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
+  const [ownerFullName, setOwnerFullName] = React.useState<string | null>(null);
+
+  // Fetch owner's full name if owner is a string (user ID)
+  React.useEffect(() => {
+    const fetchOwnerName = async () => {
+      if (typeof file.owner === 'string') {
+        try {
+          const users = await fetchUserNamesByIds([file.owner]);
+          if (users.length > 0 && users[0].fullName) {
+            setOwnerFullName(users[0].fullName);
+          } else {
+            // Fallback to ID if name not found
+            setOwnerFullName(file.owner);
+          }
+        } catch (error) {
+          console.error('Failed to fetch owner name:', error);
+          // Fallback to ID on error
+          setOwnerFullName(file.owner);
+        }
+      } else if (file.owner?.fullName) {
+        setOwnerFullName(file.owner.fullName);
+      }
+    };
+    fetchOwnerName();
+  }, [file.owner]);
+
   const ownerName =
-    typeof file.owner === 'string' ? file.owner : file.owner.fullName;
+    ownerFullName ||
+    (typeof file.owner === 'string' ? file.owner : file.owner?.fullName || '');
+
   return (
     <>
       <ImageThumbnail file={file} />

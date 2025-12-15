@@ -296,7 +296,7 @@ const Card = ({
     contractLoaded,
   ]);
 
-  // Fetch assigned manager user data
+  // Fetch assigned manager user data - render immediately, fetch async
   useEffect(() => {
     const fetchAssignedManagers = async () => {
       let managers: string[] = [];
@@ -316,6 +316,7 @@ const Card = ({
 
       if (managers.length === 0) {
         setAssignedManagerUsers([]);
+        setLoadingManagers(false);
         return;
       }
 
@@ -323,10 +324,24 @@ const Card = ({
 
       if (managerIdsArray.length === 0) {
         setAssignedManagerUsers([]);
+        setLoadingManagers(false);
         return;
       }
 
+      // Set loading state and show fallback immediately
       setLoadingManagers(true);
+
+      // Create fallback users immediately so UI renders
+      const fallbackUsers: AppUser[] = managerIdsArray.map((manager) => ({
+        $id: manager,
+        fullName: manager,
+        email: '',
+        avatar: '',
+        accountId: manager,
+        role: 'viewer' as const,
+        profileImageId: null,
+      }));
+      setAssignedManagerUsers(fallbackUsers);
 
       try {
         const users = await fetchUserNamesByIds(managerIdsArray);
@@ -405,11 +420,12 @@ const Card = ({
   }, []);
 
   const renderAssignedManagers = () => {
-    if (loadingManagers) {
-      return <span className="body-2 text-slate-400">Loading...</span>;
-    }
-
+    // Show content immediately - either loaded users or fallback
     if (assignedManagerUsers.length === 0) {
+      // Only show loading if we have no data at all
+      if (loadingManagers) {
+        return <span className="body-2 text-slate-400">Loading...</span>;
+      }
       // Fallback to original display if no user data
       if (
         Array.isArray(file.assignedManagers) &&

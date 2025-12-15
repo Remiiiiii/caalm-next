@@ -45,10 +45,18 @@ async function fetchUserByIdentifier(
         const ttl = getTTLForRoute('users/get-by-ids');
         await cache.set(CACHE_KEYS.users.single(user.$id), userData, ttl);
         if (user.accountId) {
-          await cache.set(CACHE_KEYS.users.byAccountId(user.accountId), userData, ttl);
+          await cache.set(
+            CACHE_KEYS.users.byAccountId(user.accountId),
+            userData,
+            ttl
+          );
         }
         if (user.fullName) {
-          await cache.set(CACHE_KEYS.users.byFullName(user.fullName), userData, ttl);
+          await cache.set(
+            CACHE_KEYS.users.byFullName(user.fullName),
+            userData,
+            ttl
+          );
         }
 
         return userData;
@@ -79,10 +87,18 @@ async function fetchUserByIdentifier(
         const ttl = getTTLForRoute('users/get-by-ids');
         await cache.set(CACHE_KEYS.users.single(user.$id), userData, ttl);
         if (user.accountId) {
-          await cache.set(CACHE_KEYS.users.byAccountId(user.accountId), userData, ttl);
+          await cache.set(
+            CACHE_KEYS.users.byAccountId(user.accountId),
+            userData,
+            ttl
+          );
         }
         if (user.fullName) {
-          await cache.set(CACHE_KEYS.users.byFullName(user.fullName), userData, ttl);
+          await cache.set(
+            CACHE_KEYS.users.byFullName(user.fullName),
+            userData,
+            ttl
+          );
         }
 
         return userData;
@@ -113,10 +129,18 @@ async function fetchUserByIdentifier(
         const ttl = getTTLForRoute('users/get-by-ids');
         await cache.set(CACHE_KEYS.users.single(user.$id), userData, ttl);
         if (user.accountId) {
-          await cache.set(CACHE_KEYS.users.byAccountId(user.accountId), userData, ttl);
+          await cache.set(
+            CACHE_KEYS.users.byAccountId(user.accountId),
+            userData,
+            ttl
+          );
         }
         if (user.fullName) {
-          await cache.set(CACHE_KEYS.users.byFullName(user.fullName), userData, ttl);
+          await cache.set(
+            CACHE_KEYS.users.byFullName(user.fullName),
+            userData,
+            ttl
+          );
         }
 
         return userData;
@@ -161,21 +185,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(cachedResult);
     }
 
-    // Fetch users using individual caching
+    // Fetch users in parallel for better performance
     const adminClient = await createAdminClient();
-    const users: any[] = [];
-    const foundUserIds = new Set<string>();
+    const uniqueUserIds = Array.from(new Set(userIds)); // Remove duplicates
 
-    // Fetch users - check cache first, then database
-    for (const userId of userIds) {
-      if (foundUserIds.has(userId)) continue; // Skip if already found
+    // Fetch all users in parallel instead of sequentially
+    const userPromises = uniqueUserIds.map((userId) =>
+      fetchUserByIdentifier(userId, adminClient).catch((error) => {
+        console.warn(`Failed to fetch user ${userId}:`, error);
+        return null; // Return null for failed fetches
+      })
+    );
 
-      const user = await fetchUserByIdentifier(userId, adminClient);
-      if (user && !foundUserIds.has(user.$id)) {
-        users.push(user);
-        foundUserIds.add(user.$id);
+    const userResults = await Promise.all(userPromises);
+
+    // Filter out nulls and deduplicate by $id
+    const usersMap = new Map<string, any>();
+    userResults.forEach((user) => {
+      if (user && user.$id && !usersMap.has(user.$id)) {
+        usersMap.set(user.$id, user);
       }
-    }
+    });
+
+    const users = Array.from(usersMap.values());
 
     // Cache the entire batch result
     const ttl = getTTLForRoute('users/get-by-ids');
