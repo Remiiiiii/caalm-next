@@ -71,15 +71,15 @@ const ImageThumbnail = ({
 const getStatusBadgeClasses = (status: string) => {
   switch (status) {
     case 'pending-review':
-      return 'border border-slate-200 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium';
+      return 'border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium';
     case 'action-required':
-      return 'border border-slate-200 bg-destructive/10 text-destructive text-xs rounded-xl font-medium';
+      return 'border-2 border-red-400 bg-destructive/10 text-destructive text-xs rounded-xl font-medium';
     case 'active':
-      return 'border border-slate-200 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
+      return 'border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
     case 'inactive':
-      return 'border border-slate-200 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium';
+      return 'border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium';
     default:
-      return 'border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
+      return 'border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
   }
 };
 

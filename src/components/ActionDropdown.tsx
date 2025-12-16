@@ -85,9 +85,46 @@ const getStatusBadgeClasses = (status: string): string => {
       return 'bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-xl font-medium px-2 py-1';
   }
 };
+
+// Map status to badge color matching ContractsControlBar styles
+const getStatusDialogBadgeClasses = (status: string): string => {
+  const normalized = status?.toLowerCase?.() ?? '';
+  switch (normalized) {
+    case 'active':
+      return '!font-medium border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D]';
+    case 'pending-review':
+    case 'under_review':
+      return '!font-medium border-2 border-amber-400 bg-[#FFEA99] text-[#E86100]';
+    case 'action-required':
+      return '!font-medium border-2 border-red-400 bg-destructive/10 text-destructive';
+    case 'inactive':
+      return '!font-medium border-2 border-slate-500 bg-[#D3D3D3] text-[#878787]';
+    default:
+      return '!font-medium border-2 border-slate-200 bg-slate-100 text-slate-800';
+  }
+};
+
+// Get status label for display
+const getStatusLabel = (status: string): string => {
+  const normalized = status?.toLowerCase?.() ?? '';
+  switch (normalized) {
+    case 'pending-review':
+    case 'under_review':
+      return 'Pending Review';
+    case 'action-required':
+      return 'Action Required';
+    case 'active':
+      return 'Active';
+    case 'inactive':
+      return 'Inactive';
+    default:
+      return status.replace(/-/g, ' ');
+  }
+};
 import Link from 'next/link';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import {
   Ban,
   Trash2,
@@ -919,9 +956,12 @@ const ActionDropdown = ({
                         disabled={isLoading}
                         className="cursor-pointer w-4 h-4 text-blue-600"
                       />
-                      <span className="capitalize cursor-pointer text-slate-900 font-medium group-hover:text-blue-600 transition-colors">
-                        {option.replace(/-/g, ' ')}
-                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`${getStatusDialogBadgeClasses(option)} transition-all duration-200 shadow-sm`}
+                      >
+                        {getStatusLabel(option)}
+                      </Badge>
                     </label>
                   ))}
                 </div>

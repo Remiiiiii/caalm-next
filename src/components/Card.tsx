@@ -18,27 +18,27 @@ const statusBadge = (status: string) => {
   switch (status) {
     case 'pending-review':
       color =
-        'border border-slate-200 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium mr-auto';
+        'border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium mr-auto';
       label = 'Pending Review';
       break;
     case 'action-required':
       color =
-        'border border-slate-200 bg-destructive/10 text-destructive text-xs rounded-xl font-medium mr-auto';
+        'border-2 border-red-400 bg-destructive/10 text-destructive text-xs rounded-xl font-medium mr-auto';
       label = 'Action Required';
       break;
     case 'active':
       color =
-        'border border-slate-200 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
+        'border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
       label = 'Active';
       break;
     case 'inactive':
       color =
-        'border border-slate-200 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium mr-auto';
+        'border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium mr-auto';
       label = 'Inactive';
       break;
     default:
       color =
-        'border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
+        'border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
       label = status;
   }
   return <span className={`inline-block px-2 py-1 ${color}`}>{label}</span>;
@@ -49,19 +49,19 @@ const riskLevelBadge = (risk: string) => {
   let color = '';
   switch (risk.toLowerCase()) {
     case 'critical':
-      color = 'border border-slate-200 bg-black text-white';
+      color = 'border-2 border-slate-700 bg-black text-white';
       break;
     case 'high':
-      color = 'border border-slate-200 bg-destructive/10 text-destructive';
+      color = 'border-2 border-red-400 bg-destructive/10 text-destructive';
       break;
     case 'medium':
-      color = 'border border-slate-200 bg-amber-100 text-amber-700';
+      color = 'border-2 border-amber-400 bg-amber-100 text-amber-700';
       break;
     case 'low':
-      color = 'border border-slate-200 bg-green-100 text-green-700';
+      color = 'border-2 border-green-400 bg-green-100 text-green-700';
       break;
     default:
-      color = 'border border-slate-200 bg-slate-100 text-slate-800';
+      color = 'border-2 border-slate-200 bg-slate-100 text-slate-800';
   }
   const label = risk.charAt(0).toUpperCase() + risk.slice(1).toLowerCase();
   return (

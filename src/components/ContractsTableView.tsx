@@ -30,24 +30,24 @@ const statusBadge = (status: string) => {
   let label = status;
   switch (status) {
     case 'pending-review':
-      color = 'bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium';
+      color = 'border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium';
       label = 'Pending Review';
       break;
     case 'action-required':
       color =
-        'bg-destructive/10 text-destructive text-xs rounded-xl font-medium';
+        'border-2 border-red-400 bg-destructive/10 text-destructive text-xs rounded-xl font-medium';
       label = 'Action Required';
       break;
     case 'active':
-      color = 'bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
+      color = 'border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
       label = 'Active';
       break;
     case 'inactive':
-      color = 'bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium';
+      color = 'border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium';
       label = 'Inactive';
       break;
     default:
-      color = 'bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
+      color = 'border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
       label = status;
   }
   return <span className={`inline-block px-2 py-1 ${color}`}>{label}</span>;

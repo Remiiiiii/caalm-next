@@ -59,9 +59,9 @@ export const ComplianceDeadlineTracker: React.FC<
           </Badge>
         );
       case 'at_risk':
-        return <Badge className="bg-amber-100 text-amber-800">At Risk</Badge>;
+        return <Badge className="border-2 border-amber-400 bg-amber-100 text-amber-800">At Risk</Badge>;
       case 'on_track':
-        return <Badge className="bg-green-100 text-green-800">On Track</Badge>;
+        return <Badge className="border-2 border-green-400 bg-green-100 text-green-800">On Track</Badge>;
       default:
         return <Badge variant="secondary">Unknown</Badge>;
     }

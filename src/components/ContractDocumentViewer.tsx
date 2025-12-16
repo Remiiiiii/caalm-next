@@ -537,6 +537,7 @@ ${contractDetails.attachments
               className="shadow-drop-1 primary-btn px-3 sm:px-4"
             >
               <Minimize2 className="h-4 w-4" />
+              Close
             </Button>
           </div>
           <div className="flex items-center justify-between">
@@ -970,35 +971,35 @@ ${contractDetails.attachments
                 {aiAnalysis && (
                   <>
                     {/* Summary */}
-                    <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
+                    <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
+                        <CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
                           <FileText className="h-4 w-4 text-cyan-600" />
                           Summary
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-700">
+                        <p className="text-sm text-slate-700">
                           {aiAnalysis.summary}
                         </p>
                       </CardContent>
                     </Card>
 
                     {/* Key Terms */}
-                    <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
+                    <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
+                        <CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
                           <Lightbulb className="h-4 w-4 text-cyan-600" />
                           Key Terms
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-2">
                           {aiAnalysis.keyTerms.map((term, index) => (
                             <Badge
                               key={index}
                               variant="secondary"
-                              className="text-xs"
+                              className="bg-slate-100 text-slate-700 border-0 text-xs font-normal px-3 py-1 rounded-full"
                             >
                               {term}
                             </Badge>

@@ -1,10 +1,28 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useDocumentViewer } from '@/hooks/useDocumentViewer';
-import { X, Send, Download, Share2, FileText, Calendar } from 'lucide-react';
+import {
+  X,
+  Send,
+  Download,
+  Share2,
+  FileText,
+  Calendar,
+  Lightbulb,
+  Users,
+  Target,
+  Shield,
+  Bot,
+  AlertTriangle,
+  CheckCircle,
+  Loader2,
+  Minimize2,
+} from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import Image from 'next/image';
 import { formatAIResponse } from '@/lib/utils/aiResponseFormatter';
 
@@ -556,7 +574,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="border-light-300 hover:border-[#00C1CB] hover:bg-light-400 transition-all duration-200"
+              className="primary-btn px-3 sm:px-4"
               onClick={(e) => {
                 e.stopPropagation();
                 if (isOpen && !isClosing) {
@@ -574,7 +592,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="border-light-300 hover:border-[#00C1CB] hover:bg-light-400 transition-all duration-200"
+              className="primary-btn px-3 sm:px-4"
             >
               <Share2 className="w-4 h-4" />
               Share
@@ -582,7 +600,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="border-light-300 hover:border-[#00C1CB] hover:bg-light-400 transition-all duration-200"
+              className="primary-btn px-3 sm:px-4"
               onClick={() => {
                 setIsClosing(true);
                 onClose();
@@ -591,7 +609,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 pointerEvents: 'auto',
               }}
             >
-              <X className="w-4 h-4" />
+              <Minimize2 className="w-4 h-4" />
+              Close
             </Button>
           </div>
         </div>
@@ -623,174 +642,185 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             )}
           </div>
 
-          {/* Chat Interface */}
+          {/* AI Analysis Panel */}
           <div
-            className="w-1/3 flex flex-col bg-light-400"
+            className="w-1/3 border-l border-light-300 bg-light-400/30 backdrop-blur flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Header */}
+            <div className="flex justify-center flex-col p-4 border-b border-light-300 bg-white/80 backdrop-blur">
+              <div className="flex items-center justify-center mb-4">
+                <h3 className="font-bold sidebar-gradient-text flex items-center gap-2">
+                  <Image
+                    src="/assets/images/assistant.svg"
+                    alt="AI Assistant"
+                    width={30}
+                    height={30}
+                  />
+                  AI Assistant
+                </h3>
+              </div>
+            </div>
+
             {/* Scrollable Content */}
             <ScrollArea className="flex-1" onClick={(e) => e.stopPropagation()}>
-              <div className="p-4" onClick={(e) => e.stopPropagation()}>
-                {/* Loading State */}
-                {aiLoading && !welcomeMessageLoaded && (
-                  <div className="flex justify-start mb-6">
-                    <div className="flex items-start space-x-3 max-w-[85%]">
-                      <div className="flex-shrink-0">
-                        <Image
-                          src="/assets/images/assistant.svg"
-                          alt="AI Assistant"
-                          width={54}
-                          height={54}
-                          className="w-12 h-12 rounded-full bg-blue-100 p-1"
-                        />
-                      </div>
-                      <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div
-                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: '0.1s' }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: '0.2s' }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Chat Messages */}
-                <div className="space-y-6">
-                  {/* Default welcome message if no messages */}
-                  {chatMessages.length === 0 &&
-                    !aiLoading &&
-                    !welcomeMessageLoaded && (
-                      <div className="flex justify-start">
-                        <div className="flex items-start space-x-3 max-w-[95%]">
-                          <div className="flex-shrink-0">
-                            <Image
-                              src="/assets/images/assistant.svg"
-                              alt="AI Assistant"
-                              width={54}
-                              height={54}
-                              className="w-12 h-12 rounded-full bg-blue-100 p-1"
-                            />
-                          </div>
-                          <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
-                            <p className="text-sm text-gray-700">
-                              Hi! I&apos;m your document assistant. I can help
-                              you understand and analyze this contract. What
-                              would you like to know about it?
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  {chatMessages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.sender === 'user'
-                          ? 'justify-end'
-                          : 'justify-start'
-                      }`}
-                    >
-                      {message.sender === 'assistant' && (
-                        <div className="flex items-start space-x-3 max-w-[95%]">
-                          <div className="flex-shrink-0">
-                            <Image
-                              src="/assets/images/assistant.svg"
-                              alt="AI Assistant"
-                              width={54}
-                              height={54}
-                              className="w-12 h-12 rounded-full bg-blue-100 p-1"
-                            />
-                          </div>
-                          <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
-                            <p className="text-sm text-gray-700 whitespace-pre-line">
-                              {message.text}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-2">
-                              {message.timestamp.toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      {message.sender === 'user' && (
-                        <div className="bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white rounded-2xl px-4 py-3 max-w-[85%] shadow-drop-1">
-                          <p className="text-sm whitespace-pre-line">
-                            {message.text}
-                          </p>
-                          <p className="text-xs text-blue-100 mt-2">
-                            {message.timestamp.toLocaleTimeString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {isLoading && (
+              <div
+                className="p-4 space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Welcome Message - Display greeting from analyze function */}
+                {chatMessages.length > 0 &&
+                  chatMessages[0].sender === 'assistant' && (
                     <div className="flex justify-start">
-                      <div className="flex items-start space-x-3 max-w-[85%]">
+                      <div className="flex items-start space-x-3 max-w-[95%]">
                         <div className="flex-shrink-0">
                           <Image
                             src="/assets/images/assistant.svg"
                             alt="AI Assistant"
-                            width={54}
-                            height={54}
-                            className="w-12 h-12 rounded-full bg-blue-100 p-1"
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 rounded-full bg-blue-100 p-1"
                           />
                         </div>
                         <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                              style={{ animationDelay: '0.1s' }}
-                            ></div>
-                            <div
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                              style={{ animationDelay: '0.2s' }}
-                            ></div>
-                          </div>
+                          <p className="text-sm text-gray-700 whitespace-pre-line">
+                            {chatMessages[0].text}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-2">
+                            {chatMessages[0].timestamp.toLocaleTimeString()}
+                          </p>
                         </div>
                       </div>
                     </div>
                   )}
-                  <div ref={chatEndRef} />
-                </div>
 
-                {/* Chat Input */}
-                <div className="mt-8 pt-4 border-t border-light-300">
-                  <div className="flex space-x-2">
-                    <Input
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="Ask about this document..."
-                      className="flex-1 bg-white rounded-full border-none px-4 py-2 shadow-drop-1 focus:border-[#00C1CB] focus:ring-1 focus:ring-[#00C1CB] focus:outline-none transition-all duration-200"
-                      disabled={isLoading}
-                    />
+                {/* Document Information Cards */}
+                {/* Summary */}
+                {file.description && (
+                  <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
+                        <FileText className="h-4 w-4 text-cyan-600" />
+                        Summary
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-slate-700">
+                        {file.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Important Dates */}
+                <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
+                      <Calendar className="h-4 w-4 text-cyan-600" />
+                      Important Dates
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Created:</span>
+                        <span className="font-medium text-gray-900">
+                          {formatDate(file.createdAt)}
+                        </span>
+                      </div>
+                      {file.expiresAt && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Expires:</span>
+                          <span className="font-medium text-gray-900">
+                            {formatDate(file.expiresAt)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Document Information */}
+                <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
+                      <FileText className="h-4 w-4 text-cyan-600" />
+                      Document Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">File Type:</span>
+                        <span className="font-medium text-gray-900">
+                          {file.type.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">File Size:</span>
+                        <span className="font-medium text-gray-900">
+                          {file.size}
+                        </span>
+                      </div>
+                      {file.createdBy && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Created By:</span>
+                          <span className="font-medium text-gray-900">
+                            {file.createdBy}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* AI Chat */}
+                <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
+                      <Bot className="h-4 w-4 text-cyan-600" />
+                      Ask AI
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex gap-2">
+                      <Textarea
+                        placeholder="Ask a question about this document..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-sm"
+                        rows={2}
+                      />
+                    </div>
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSendMessage({ message: undefined });
                       }}
                       disabled={!newMessage.trim() || isLoading}
-                      className="bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] hover:from-[#078FAB] hover:via-[#11487D] hover:to-[#00C1CB] text-white rounded-full p-2 shadow-drop-1 transition-all duration-300"
+                      size="sm"
+                      className="!w-full shadow-drop-1 primary-btn"
                     >
-                      <Send className="w-4 h-4" />
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Thinking...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4" />
+                          Ask AI
+                        </>
+                      )}
                     </Button>
-                  </div>
 
-                  {/* Suggested Questions */}
-                  {chatMessages.length <= 1 && welcomeMessageLoaded && (
+                    {/* Suggested Questions */}
                     <div className="mt-4">
                       <div className="mb-3">
                         <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
+                          <FileText className="h-4 w-4 text-cyan-600" />
                           Quick Questions
                         </h4>
                       </div>
@@ -818,8 +848,48 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         ))}
                       </div>
                     </div>
-                  )}
-                </div>
+
+                    {/* Chat Messages Display - Exclude greeting message shown at top */}
+                    {chatMessages.length > 1 && (
+                      <div className="mt-4 space-y-3 max-h-64 overflow-y-auto">
+                        {chatMessages
+                          .filter((message) => message.id !== 'greeting')
+                          .map((message) => (
+                            <div
+                              key={message.id}
+                              className={`p-3 rounded-lg ${
+                                message.sender === 'user'
+                                  ? 'bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white'
+                                  : 'bg-slate-50 text-slate-700'
+                              }`}
+                            >
+                              <p className="text-sm whitespace-pre-line">
+                                {message.text}
+                              </p>
+                              <p
+                                className={`text-xs mt-2 ${
+                                  message.sender === 'user'
+                                    ? 'text-blue-100'
+                                    : 'text-gray-400'
+                                }`}
+                              >
+                                {message.timestamp.toLocaleTimeString()}
+                              </p>
+                            </div>
+                          ))}
+                        {isLoading && (
+                          <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
+                            <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+                            <span className="text-sm text-gray-600">
+                              Thinking...
+                            </span>
+                          </div>
+                        )}
+                        <div ref={chatEndRef} />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </ScrollArea>
           </div>

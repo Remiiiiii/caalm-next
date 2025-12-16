@@ -64,25 +64,25 @@ export default function ContractsControlBar({
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge
                   variant="outline"
-                  className="!font-medium border-2 border-cyan-200 bg-[#B3EBF2] text-[#12477D] hover:bg-[#9FE0E8] hover:border-cyan-300 transition-all duration-200 shadow-sm"
+                  className="!font-medium border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] hover:bg-[#9FE0E8] hover:border-cyan-500 transition-all duration-200 shadow-sm"
                 >
                   Active ({metrics.activeCount})
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="!font-medium border-2 border-amber-200 bg-[#FFEA99] text-[#E86100] hover:bg-[#FFE066] hover:border-amber-300 transition-all duration-200 shadow-sm"
+                  className="!font-medium border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] hover:bg-[#FFE066] hover:border-amber-500 transition-all duration-200 shadow-sm"
                 >
                   Pending ({metrics.pendingCount})
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="!font-medium border-2 border-destructive/10 bg-destructive/10 text-destructive hover:bg-red-100 hover:border-red-300 transition-all duration-200 shadow-sm"
+                  className="!font-medium border-2 border-red-400 bg-destructive/10 text-destructive hover:bg-red-100 hover:border-red-500 transition-all duration-200 shadow-sm"
                 >
                   Action Required ({metrics.actionRequiredCount})
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="!font-medium border-2 border-slate-300 bg-[#D3D3D3] text-[#878787] hover:bg-[#C0C0C0] hover:border-slate-400 transition-all duration-200 shadow-sm"
+                  className="!font-medium border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] hover:bg-[#C0C0C0] hover:border-slate-600 transition-all duration-200 shadow-sm"
                 >
                   Inactive ({metrics.inactiveCount})
                 </Badge>
