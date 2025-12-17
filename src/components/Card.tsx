@@ -52,7 +52,8 @@ const riskLevelBadge = (risk: string) => {
       color = 'border-2 border-slate-700 bg-black text-white';
       break;
     case 'high':
-      color = 'border-2 border-red-400 bg-destructive/10 text-destructive';
+      color =
+        'border-2 border-destructive/50 bg-destructive/10 text-destructive';
       break;
     case 'medium':
       color = 'border-2 border-amber-400 bg-amber-100 text-amber-700';

@@ -76,7 +76,7 @@ export default function ContractsControlBar({
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="!font-medium border-2 border-red-400 bg-destructive/10 text-destructive hover:bg-red-100 hover:border-red-500 transition-all duration-200 shadow-sm"
+                  className="!font-medium border-2 border-destructive/50 bg-destructive/10 text-destructive hover:bg-red-100 hover:border-red-500 transition-all duration-200 shadow-sm"
                 >
                   Action Required ({metrics.actionRequiredCount})
                 </Badge>
