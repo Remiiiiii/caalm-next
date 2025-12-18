@@ -16,6 +16,8 @@ import {
   CheckCircle,
   Loader2,
   Minimize2,
+  ChevronsUp,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -24,7 +26,8 @@ import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import Image from 'next/image';
-import { formatAIResponse } from '@/lib/utils/aiResponseFormatter';
+import { convertFileSize } from '@/lib/utils';
+import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
 
 interface DocumentViewerProps {
   isOpen: boolean;
@@ -63,6 +66,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [showUploadPrompt, setShowUploadPrompt] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [welcomeMessageLoaded, setWelcomeMessageLoaded] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [creatorName, setCreatorName] = useState<string>('');
+  const [documentSummary, setDocumentSummary] = useState<string>('');
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -89,6 +96,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
       setIsLoading(false);
       setShowUploadPrompt(false);
       setWelcomeMessageLoaded(false);
+      setShowAIAssistant(false);
+      setDocumentSummary('');
     }
   }, [isOpen, file.id]);
 
@@ -146,6 +155,247 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
     setIsPreviewLoading(true);
   }, [file.url, file.name]);
 
+  // Format AI response to convert markdown to HTML (similar to CalendarAIChat)
+  const formatAIResponseHTML = (text: string): string => {
+    if (!text) return '';
+
+    let formatted = text;
+
+    // Break long paragraphs into smaller paragraphs (after ~75 words)
+    const wordsPerParagraph = 25;
+    const breakIntoParagraphs = (text: string): string => {
+      // Split by sentences (ending with . ! or ?)
+      const sentenceRegex = /[^.!?]+[.!?]+|[^.!?]+$/g;
+      const sentences = text.match(sentenceRegex) || [text];
+      const paragraphs: string[] = [];
+      let currentParagraph = '';
+      let wordCount = 0;
+
+      for (const sentence of sentences) {
+        const trimmedSentence = sentence.trim();
+        if (!trimmedSentence) continue;
+
+        const sentenceWords = trimmedSentence
+          .split(/\s+/)
+          .filter((w) => w.length > 0).length;
+        wordCount += sentenceWords;
+
+        if (currentParagraph) {
+          currentParagraph += ' ' + trimmedSentence;
+        } else {
+          currentParagraph = trimmedSentence;
+        }
+
+        // Break paragraph if we've reached the word limit
+        if (wordCount >= wordsPerParagraph) {
+          paragraphs.push(currentParagraph);
+          currentParagraph = '';
+          wordCount = 0;
+        }
+      }
+
+      // Add any remaining content
+      if (currentParagraph.trim()) {
+        paragraphs.push(currentParagraph.trim());
+      }
+
+      // If no breaks were made, return original text
+      if (paragraphs.length <= 1) {
+        return text;
+      }
+
+      // Join paragraphs with double line breaks
+      return paragraphs.join('\n\n');
+    };
+
+    // Apply paragraph breaking to text that doesn't already have clear paragraph breaks
+    // Only break if text is one continuous block (no existing double line breaks)
+    if (
+      !formatted.includes('\n\n') &&
+      formatted.split(/\s+/).length > wordsPerParagraph
+    ) {
+      formatted = breakIntoParagraphs(formatted);
+    }
+
+    // First, handle section headers like "**Key Sections to Review:**" before processing other content
+    formatted = formatted.replace(
+      /^\*\*([^*]+?)\*\*:?\s*$/gm,
+      '<strong class="block mb-0 mt-3 text-base font-semibold sidebar-gradient-text">$1</strong>'
+    );
+
+    // Split by double line breaks first to handle sections
+    const sections = formatted.split(/\n\n+/);
+    const formattedSections = sections.map((section) => {
+      let sectionText = section.trim();
+      if (!sectionText) return '';
+
+      // Handle bullet points with proper indentation
+      sectionText = sectionText.replace(
+        /^([-*])\s+(.+)$/gm,
+        (match, bullet, content) => {
+          const isNested = /^\s{2,}/.test(match);
+          const indent = isNested ? 'ml-8' : 'ml-4';
+
+          // Process bold text within the content
+          let processedContent = content
+            .replace(
+              /\*\*([^*]+?)\*\*/g,
+              '<strong class="font-semibold sidebar-gradient-text">$1</strong>'
+            )
+            .replace(
+              /__([^_]+?)__/g,
+              '<strong class="font-semibold sidebar-gradient-text">$1</strong>'
+            );
+
+          // Process italic text
+          processedContent = processedContent
+            .replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>')
+            .replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
+
+          return `<div class="${indent} mb-2 flex items-start"><span class="mr-2 text-gray-600 flex-shrink-0">•</span><span class="flex-1">${processedContent.trim()}</span></div>`;
+        }
+      );
+
+      // Handle numbered lists (1. 2. etc.)
+      sectionText = sectionText.replace(
+        /^(\d+\.)\s+(.+)$/gm,
+        (match, number, content) => {
+          const isNested = /^\s{2,}/.test(match);
+          const indent = isNested ? 'ml-8' : 'ml-4';
+
+          // Process bold and italic within content
+          let processedContent = content
+            .replace(
+              /\*\*([^*]+?)\*\*/g,
+              '<strong class="font-semibold sidebar-gradient-text">$1</strong>'
+            )
+            .replace(
+              /__([^_]+?)__/g,
+              '<strong class="font-semibold sidebar-gradient-text">$1</strong>'
+            );
+
+          processedContent = processedContent
+            .replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>')
+            .replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
+
+          return `<div class="${indent} mb-2 flex items-start"><span class="mr-2 font-semibold text-gray-700 flex-shrink-0">${number}</span><span class="flex-1">${processedContent.trim()}</span></div>`;
+        }
+      );
+
+      // Process any remaining bold text in regular paragraphs
+      sectionText = sectionText.replace(
+        /\*\*([^*]+?)\*\*/g,
+        '<strong class="font-semibold sidebar-gradient-text">$1</strong>'
+      );
+      sectionText = sectionText.replace(
+        /__([^_]+?)__/g,
+        '<strong class="font-semibold sidebar-gradient-text">$1</strong>'
+      );
+
+      // Process italic text
+      sectionText = sectionText.replace(
+        /(?<!\*)\*([^*]+?)\*(?!\*)/g,
+        '<em>$1</em>'
+      );
+      sectionText = sectionText.replace(
+        /(?<!_)_([^_]+?)_(?!_)/g,
+        '<em>$1</em>'
+      );
+
+      // Convert remaining single line breaks to <br> but preserve list structure
+      sectionText = sectionText.replace(/\n(?!<div)/g, '');
+
+      return sectionText;
+    });
+
+    // Join sections with proper spacing - wrap each section appropriately
+    formatted = formattedSections
+      .filter((s) => s.trim())
+      .map((section) => {
+        // If section contains lists or headers, wrap in div with spacing
+        if (
+          section.includes('<div') ||
+          section.includes('<strong class="block')
+        ) {
+          return `<div class="mb-4 leading-relaxed">${section}</div>`;
+        }
+        // Otherwise, wrap plain text paragraphs with paragraph tags
+        return `<p class="mb-4 leading-relaxed">${section}</p>`;
+      })
+      .join('');
+
+    // Clean up any empty divs or paragraphs
+    formatted = formatted.replace(
+      /<div class="mb-4 leading-relaxed"><\/div>/g,
+      ''
+    );
+    formatted = formatted.replace(/<p class="mb-4 leading-relaxed"><\/p>/g, '');
+
+    // Process any remaining bold text
+    formatted = formatted.replace(
+      /\*\*([^*]+?)\*\*/g,
+      '<strong class="font-semibold sidebar-gradient-text">$1</strong>'
+    );
+
+    // Process any remaining italic text
+    formatted = formatted.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+
+    return formatted;
+  };
+
+  // Generate document summary
+  const generateSummary = useCallback(async () => {
+    if (!file.id || !file.name || isGeneratingSummary) return;
+
+    setIsGeneratingSummary(true);
+    try {
+      // Get file content if available
+      let contentToAnalyze = fileContent?.content;
+      let urlToUse = file.url;
+
+      // If it's a local PDF and we have extracted content, use that
+      if (
+        file.type.toLowerCase() === 'pdf' &&
+        file.url.startsWith('file://') &&
+        fileContent
+      ) {
+        urlToUse = '';
+      }
+
+      const response = await fetch('/api/ai-analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'analyze',
+          fileName: file.name,
+          fileType: file.type,
+          fileUrl: urlToUse,
+          fileContent: contentToAnalyze,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.summary && result.summary.trim()) {
+          setDocumentSummary(result.summary.trim());
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate summary:', error);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  }, [
+    file.id,
+    file.name,
+    file.type,
+    file.url,
+    fileContent,
+    isGeneratingSummary,
+  ]);
+
   const analyze = useCallback(async () => {
     // Always start with the greeting message
     setChatMessages([
@@ -172,6 +422,37 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
       analyze();
     }
   }, [isOpen, welcomeMessageLoaded, chatMessages.length, analyze]);
+
+  // Fetch creator's full name
+  useEffect(() => {
+    const fetchCreatorName = async () => {
+      if (!file.createdBy) {
+        setCreatorName('');
+        return;
+      }
+
+      try {
+        const users = await fetchUserNamesByIds([file.createdBy]);
+        if (users && users.length > 0) {
+          const user =
+            users.find(
+              (u) =>
+                u?.$id === file.createdBy || u?.accountId === file.createdBy
+            ) || users[0];
+          setCreatorName(user?.fullName || 'Unknown');
+        } else {
+          setCreatorName('Unknown');
+        }
+      } catch (error) {
+        console.error('Failed to fetch creator name:', error);
+        setCreatorName('Unknown');
+      }
+    };
+
+    if (isOpen && file.createdBy) {
+      fetchCreatorName();
+    }
+  }, [isOpen, file.createdBy]);
 
   const handleSendMessage = async ({
     message: overrideMessage,
@@ -236,7 +517,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         ...prev,
         {
           id: Date.now().toString() + '-ai',
-          text: formatAIResponse(ai.answer),
+          text: ai.answer, // Store raw text, format on render
           sender: 'assistant',
           timestamp: new Date(),
         },
@@ -618,7 +899,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
         {/* Main Content */}
         <div className="rounded-3xl flex-1 flex overflow-hidden">
           {/* Document Preview */}
-          <div className="w-2/3 border-r border-light-300 bg-light-400 relative">
+          <div className="w-[72%] border-r border-light-300 bg-light-400 relative pl-8">
             {previewError ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
@@ -644,12 +925,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
           {/* AI Analysis Panel */}
           <div
-            className="w-1/3 border-l border-light-300 bg-light-400/30 backdrop-blur flex flex-col"
+            className="w-[28%] border-l border-light-300 bg-light-400/30 backdrop-blur flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex justify-center flex-col p-4 border-b border-light-300 bg-white/80 backdrop-blur">
-              <div className="flex items-center justify-center mb-4">
+            <div className="flex justify-center items-center flex-col p-4 border-b border-light-300 bg-white/80 backdrop-blur">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold sidebar-gradient-text flex items-center gap-2">
                   <Image
                     src="/assets/images/assistant.svg"
@@ -659,239 +940,297 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                   />
                   AI Assistant
                 </h3>
+                {showAIAssistant && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAIAssistant(false);
+                    }}
+                    className="h-8 w-8 pl-6 rounded-lg shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center"
+                    title="Collapse AI Assistant"
+                  >
+                    <Minimize2 className="h-4 w-4 text-black" />
+                  </Button>
+                )}
               </div>
+              {!showAIAssistant && (
+                <Button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setShowAIAssistant(true);
+                    // Generate summary and analyze
+                    await generateSummary();
+                    analyze();
+                  }}
+                  className="w-full rounded-full bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white font-semibold py-6 shadow-drop-1 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  <Lightbulb className="w-5 h-5" />
+                  Analyze Document
+                </Button>
+              )}
             </div>
 
             {/* Scrollable Content */}
-            <ScrollArea className="flex-1" onClick={(e) => e.stopPropagation()}>
-              <div
-                className="p-4 space-y-4"
+            {showAIAssistant && (
+              <ScrollArea
+                className="flex-1"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Welcome Message - Display greeting from analyze function */}
-                {chatMessages.length > 0 &&
-                  chatMessages[0].sender === 'assistant' && (
-                    <div className="flex justify-start">
-                      <div className="flex items-start space-x-3 max-w-[95%]">
-                        <div className="flex-shrink-0">
-                          <Image
-                            src="/assets/images/assistant.svg"
-                            alt="AI Assistant"
-                            width={40}
-                            height={40}
-                            className="w-10 h-10 rounded-full bg-blue-100 p-1"
-                          />
-                        </div>
-                        <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
-                          <p className="text-sm text-gray-700 whitespace-pre-line">
-                            {chatMessages[0].text}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-2">
-                            {chatMessages[0].timestamp.toLocaleTimeString()}
-                          </p>
+                <div
+                  className="p-4 space-y-4"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Welcome Message - Display greeting from analyze function */}
+                  {chatMessages.length > 0 &&
+                    chatMessages[0].sender === 'assistant' && (
+                      <div className="flex justify-start">
+                        <div className="flex items-start space-x-3 max-w-[95%]">
+                          <div className="flex-shrink-0">
+                            <Image
+                              src="/assets/images/assistant.svg"
+                              alt="AI Assistant"
+                              width={40}
+                              height={40}
+                              className="w-10 h-10 rounded-full bg-blue-100 p-1"
+                            />
+                          </div>
+                          <div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
+                            <p className="text-sm text-gray-700 whitespace-pre-line">
+                              {chatMessages[0].text}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              {chatMessages[0].timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
+
+                  {/* Document Information Cards */}
+                  {/* Summary */}
+                  {(documentSummary || file.description) && (
+                    <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2 font-semibold sidebar-gradient-text">
+                          <FileText className="h-4 w-4 text-cyan-600" />
+                          Summary
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {isGeneratingSummary ? (
+                          <div className="flex items-center gap-2 text-sm text-slate-500">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Generating summary...
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-700 leading-relaxed">
+                            {documentSummary || file.description}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
                   )}
 
-                {/* Document Information Cards */}
-                {/* Summary */}
-                {file.description && (
+                  {/* Important Dates */}
                   <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
-                        <FileText className="h-4 w-4 text-cyan-600" />
-                        Summary
+                      <CardTitle className="text-sm flex items-center gap-2 font-semibold sidebar-gradient-text">
+                        <Calendar className="h-4 w-4 text-cyan-600" />
+                        Important Dates
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-slate-700">
-                        {file.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Important Dates */}
-                <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
-                      <Calendar className="h-4 w-4 text-cyan-600" />
-                      Important Dates
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Created:</span>
-                        <span className="font-medium text-gray-900">
-                          {formatDate(file.createdAt)}
-                        </span>
-                      </div>
-                      {file.expiresAt && (
+                      <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Expires:</span>
+                          <span className="text-gray-600">Created:</span>
                           <span className="font-medium text-gray-900">
-                            {formatDate(file.expiresAt)}
+                            {formatDate(file.createdAt)}
                           </span>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Document Information */}
-                <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
-                      <FileText className="h-4 w-4 text-cyan-600" />
-                      Document Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">File Type:</span>
-                        <span className="font-medium text-gray-900">
-                          {file.type.toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">File Size:</span>
-                        <span className="font-medium text-gray-900">
-                          {file.size}
-                        </span>
-                      </div>
-                      {file.createdBy && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Created By:</span>
-                          <span className="font-medium text-gray-900">
-                            {file.createdBy}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* AI Chat */}
-                <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-                      <Bot className="h-4 w-4 text-cyan-600" />
-                      Ask AI
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex gap-2">
-                      <Textarea
-                        placeholder="Ask a question about this document..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-sm"
-                        rows={2}
-                      />
-                    </div>
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSendMessage({ message: undefined });
-                      }}
-                      disabled={!newMessage.trim() || isLoading}
-                      size="sm"
-                      className="!w-full shadow-drop-1 primary-btn"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Thinking...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4" />
-                          Ask AI
-                        </>
-                      )}
-                    </Button>
-
-                    {/* Suggested Questions */}
-                    <div className="mt-4">
-                      <div className="mb-3">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-cyan-600" />
-                          Quick Questions
-                        </h4>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          'What is this document about?',
-                          'When does this contract expire?',
-                          'What are the key terms and conditions?',
-                          'What actions do I need to take?',
-                        ].map((q, idx) => (
-                          <Button
-                            key={idx}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs rounded-full bg-white border-light-300 hover:bg-light-400 hover:border-[#00C1CB] focus:ring-2 focus:ring-[#078FAB] focus:outline-none transition-all duration-200 shadow-drop-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSendMessage({ message: q });
-                            }}
-                            disabled={isLoading}
-                          >
-                            {q}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Chat Messages Display - Exclude greeting message shown at top */}
-                    {chatMessages.length > 1 && (
-                      <div className="mt-4 space-y-3 max-h-64 overflow-y-auto">
-                        {chatMessages
-                          .filter((message) => message.id !== 'greeting')
-                          .map((message) => (
-                            <div
-                              key={message.id}
-                              className={`p-3 rounded-lg ${
-                                message.sender === 'user'
-                                  ? 'bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white'
-                                  : 'bg-slate-50 text-slate-700'
-                              }`}
-                            >
-                              <p className="text-sm whitespace-pre-line">
-                                {message.text}
-                              </p>
-                              <p
-                                className={`text-xs mt-2 ${
-                                  message.sender === 'user'
-                                    ? 'text-blue-100'
-                                    : 'text-gray-400'
-                                }`}
-                              >
-                                {message.timestamp.toLocaleTimeString()}
-                              </p>
-                            </div>
-                          ))}
-                        {isLoading && (
-                          <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
-                            <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
-                            <span className="text-sm text-gray-600">
-                              Thinking...
+                        {file.expiresAt && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Expires:</span>
+                            <span className="font-medium text-gray-900">
+                              {formatDate(file.expiresAt)}
                             </span>
                           </div>
                         )}
-                        <div ref={chatEndRef} />
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </ScrollArea>
+                    </CardContent>
+                  </Card>
+
+                  {/* Document Information */}
+                  <Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2 font-semibold sidebar-gradient-text">
+                        <FileText className="h-4 w-4 text-cyan-600" />
+                        Document Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">File Type:</span>
+                          <span className="font-medium text-gray-900">
+                            {file.type.toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">File Size:</span>
+                          <span className="font-medium text-gray-900">
+                            {convertFileSize({
+                              sizeInBytes:
+                                typeof file.size === 'string'
+                                  ? isNaN(Number(file.size))
+                                    ? null
+                                    : Number(file.size)
+                                  : file.size,
+                            })}
+                          </span>
+                        </div>
+                        {file.createdBy && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Created By:</span>
+                            <span className="font-medium text-gray-900">
+                              {creatorName || 'Loading...'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* AI Chat */}
+                  <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
+                        <Sparkles className="h-4 w-4 text-cyan-600" />
+                        Ask AI
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex gap-2">
+                        <Textarea
+                          placeholder="Ask a question about this document..."
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyPress={handleKeyPress}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-sm"
+                          rows={2}
+                        />
+                      </div>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSendMessage({ message: undefined });
+                        }}
+                        disabled={!newMessage.trim() || isLoading}
+                        size="sm"
+                        className="!w-full shadow-drop-1 primary-btn"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Thinking...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+
+                      {/* Suggested Questions */}
+                      <div className="mt-4">
+                        <div className="mb-3">
+                          <h4 className="text-sm font-semibold sidebar-gradient-text mb-2 flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-cyan-600" />
+                            Quick Questions
+                          </h4>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            'What is this document about?',
+                            'When does this contract expire?',
+                            'What are the key terms and conditions?',
+                            'What actions do I need to take?',
+                          ].map((q, idx) => (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              className="text-xs rounded-full bg-white border-light-300 hover:bg-light-400 hover:border-[#00C1CB] focus:ring-2 focus:ring-[#078FAB] focus:outline-none transition-all duration-200 shadow-drop-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSendMessage({ message: q });
+                              }}
+                              disabled={isLoading}
+                            >
+                              {q}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Chat Messages Display - Exclude greeting message shown at top */}
+                      {chatMessages.length > 1 && (
+                        <div className="mt-4 space-y-3 max-h-64 overflow-y-auto">
+                          {chatMessages
+                            .filter((message) => message.id !== 'greeting')
+                            .map((message) => (
+                              <div
+                                key={message.id}
+                                className={`p-3 rounded-lg ${
+                                  message.sender === 'user'
+                                    ? 'bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white'
+                                    : 'bg-slate-50 text-slate-700'
+                                }`}
+                              >
+                                {message.sender === 'assistant' ? (
+                                  <div
+                                    className="text-sm text-gray-700 prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1"
+                                    dangerouslySetInnerHTML={{
+                                      __html: formatAIResponseHTML(
+                                        message.text
+                                      ),
+                                    }}
+                                  />
+                                ) : (
+                                  <p className="text-sm whitespace-pre-line">
+                                    {message.text}
+                                  </p>
+                                )}
+                                <p
+                                  className={`text-xs mt-2 ${
+                                    message.sender === 'user'
+                                      ? 'text-blue-100'
+                                      : 'text-gray-400'
+                                  }`}
+                                >
+                                  {message.timestamp.toLocaleTimeString()}
+                                </p>
+                              </div>
+                            ))}
+                          {isLoading && (
+                            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
+                              <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+                              <span className="text-sm text-gray-600">
+                                Thinking...
+                              </span>
+                            </div>
+                          )}
+                          <div ref={chatEndRef} />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </ScrollArea>
+            )}
           </div>
         </div>
       </div>

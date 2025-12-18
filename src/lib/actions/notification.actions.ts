@@ -32,6 +32,13 @@ export const createNotification = async ({
 }: CreateNotificationProps) => {
   const { tablesDB } = await createAdminClient();
   try {
+    // Get orgId - it's a required field in the database
+    const { getUserDefaultOrganization } = await import('@/lib/rbac/permissions');
+    const defaultOrg = await getUserDefaultOrganization(userId);
+    if (!defaultOrg?.orgId) {
+      throw new Error(`User ${userId} has no default organization - cannot create notification`);
+    }
+
     const notification = await tablesDB.createRow({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.notificationsCollectionId || 'notifications',
@@ -42,6 +49,7 @@ export const createNotification = async ({
         message,
         type,
         read,
+        orgId: defaultOrg.orgId, // REQUIRED field
       },
     });
     // SMS notification is now handled automatically by the notification service

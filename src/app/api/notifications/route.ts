@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
           limit
         );
 
+        console.log(`[SERVER] /api/notifications GET - userId: ${userId}, total: ${notifications.total}, data length: ${notifications.data?.length || 0}`);
+        
         return notifications;
       },
       CACHE_TTLS.short // 2 minutes for notifications

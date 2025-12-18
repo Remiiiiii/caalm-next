@@ -55,6 +55,9 @@ import {
   FileArchive,
   FileText,
   Minimize2,
+  Sparkles,
+  Send,
+  RotateCw,
 } from 'lucide-react';
 import { SAMContract } from '@/lib/sam-config';
 import { ContractAnalysis } from '@/lib/ai-contract-analyzer';
@@ -961,7 +964,10 @@ ${contractDetails.attachments
                         Re-analyzing...
                       </>
                     ) : (
-                      'Refresh Analysis'
+                      <>
+                        <RotateCw className="h-4 w-4" />
+                        Refresh Analysis
+                      </>
                     )}
                   </Button>
                 )}
@@ -1297,7 +1303,7 @@ ${contractDetails.attachments
                     <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-                          <Bot className="h-4 w-4 text-cyan-600" />
+                          <Sparkles className="h-4 w-4 text-cyan-600" />
                           Ask AI
                         </CardTitle>
                       </CardHeader>
@@ -1323,7 +1329,7 @@ ${contractDetails.attachments
                               Thinking...
                             </>
                           ) : (
-                            'Ask AI'
+                            <Send className="h-4 w-4" />
                           )}
                         </Button>
 

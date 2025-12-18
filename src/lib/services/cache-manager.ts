@@ -95,11 +95,20 @@ export class CacheManager {
 
   /**
    * Invalidate notifications cache
+   * Invalidates all notification-related cache keys for a user, including all filter/page variations
    */
   static async invalidateNotifications(userId: string): Promise<void> {
+    // Invalidate base keys
     await cache.del(CACHE_KEYS.notifications.user(userId));
     await cache.del(CACHE_KEYS.notifications.stats(userId));
     await cache.del(CACHE_KEYS.notifications.unreadCount(userId));
+    
+    // Also invalidate all variations with filters/pages using pattern matching
+    // The cache key format is: notifications:user:${userId}:${page}:${limit}:${filters}
+    const pattern = `notifications:user:${userId}:*`;
+    await cache.clear(pattern);
+    
+    console.log(`[SERVER] Invalidated notification cache for userId: ${userId} (including pattern: ${pattern})`);
   }
 
   /**

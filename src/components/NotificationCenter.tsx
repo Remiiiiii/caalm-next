@@ -36,6 +36,8 @@ import {
   Zap,
   GripVertical,
   Share2,
+  Trash2Icon,
+  Trash2,
 } from 'lucide-react';
 import NotificationSettings from './NotificationSettings';
 import {
@@ -148,7 +150,7 @@ const NOTIFICATION_TYPES = {
     bgColor: 'bg-gray-50/30 border-gray-400',
     priority: 'low' as const,
   },
-  'calendar_shared': {
+  calendar_shared: {
     label: 'Calendar Shared',
     icon: <Share2 className="w-4 h-4" />,
     color: 'bg-blue-100 text-blue-800',
@@ -190,6 +192,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     isLoading: loading,
     error: swrError,
     markAsRead,
+    markAsUnread,
     markAllAsRead,
     deleteNotification,
     mutate,
@@ -275,8 +278,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
   const handleMarkAsUnread = async (ids: string[]) => {
     try {
-      // Note: markAsUnread is not implemented in the SWR hook yet
-      // For now, we'll use the optimistic update approach
+      await Promise.all(ids.map((id) => markAsUnread(id)));
       setSelected([]);
       toast({
         title: 'Success',
@@ -296,6 +298,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
   const handleDeleteNotifications = async (ids: string[]) => {
     try {
+      // Delete all notifications in parallel
       await Promise.all(ids.map((id) => deleteNotification(id)));
       setSelected([]);
       toast({
@@ -304,6 +307,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
           ids.length > 1 ? 's' : ''
         }`,
       });
+      // Force immediate refresh - the deleteNotification function already handles revalidation
+      // But also manually trigger mutate to ensure UI updates immediately
+      mutate();
       onRefresh?.();
     } catch {
       toast({
@@ -311,6 +317,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         description: 'Failed to delete notifications',
         variant: 'destructive',
       });
+      // Force revalidation on error to ensure UI is in sync
+      mutate();
     }
   };
 
@@ -393,26 +401,25 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     }
   };
 
+  const unreadCount = notifications.filter((n: Notification) => !n.read).length;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className="w-full max-w-6xl bg-white/95 backdrop-blur border border-white/40 shadow-xl"
+        className="max-w-[800px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl"
         data-testid="notification-center"
       >
-        <DialogHeader className="pb-4">
-          <div className="flex items-center justify-between">
+        {/* Professional Cap */}
+        <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+        {/* Header with gradient background */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+          <div className="flex items-center justify-between px-6">
             <div className="flex items-center gap-3">
-              <Bell className="w-6 h-6 text-cyan-600" />
-              <DialogTitle className="text-xl font-bold sidebar-gradient-text">
+              <Bell className="w-5 h-5 text-[#0f5384]" />
+              <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
                 Notifications
               </DialogTitle>
-              <span
-                className="text-sm text-gray-500"
-                data-testid="unread-count"
-              >
-                {notifications.filter((n: Notification) => !n.read).length}{' '}
-                unread
-              </span>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -428,16 +435,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleMarkAllAsUnread}
-                disabled={!notifications.some((n: Notification) => !n.read)}
-                className="text-sm"
-              >
-                <Check className="w-4 h-4 mr-1" />
-                Mark all unread
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
                 onClick={() => setShowSettings(true)}
                 className="text-sm"
               >
@@ -445,247 +442,289 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               </Button>
             </div>
           </div>
+          <p
+            className="text-sm text-slate-600 mt-1 ml-14"
+            data-testid="unread-count"
+          >
+            {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+          </p>
           <DialogDescription className="sr-only">
             View and manage your notifications
           </DialogDescription>
-        </DialogHeader>
+        </div>
 
-        <div className="space-y-4">
-          {/* Enhanced Search and Filter Bar */}
-          <div className="flex gap-2" data-testid="notification-filters">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Search notifications..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 placeholder:text-slate-400"
-              />
-            </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="sort-select" data-testid="type-filter">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent className="sort-select-content">
-                <SelectItem className="shad-select-item" value="all">
-                  All Types
-                </SelectItem>
-                {Object.entries(NOTIFICATION_TYPES).map(([key, value]) => (
-                  <SelectItem
-                    key={key}
-                    className="shad-select-item"
-                    value={key}
-                  >
-                    <div className="flex items-center gap-2">
-                      {value.icon}
-                      {value.label}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="sort-select">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent className="sort-select-content">
-                <SelectItem className="shad-select-item" value="all">
-                  All Status
-                </SelectItem>
-                <SelectItem className="shad-select-item" value="unread">
-                  Unread
-                </SelectItem>
-                <SelectItem className="shad-select-item" value="read">
-                  Read
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger
-                className="sort-select"
-                data-testid="priority-filter"
-              >
-                <SelectValue placeholder="All Priorities" />
-              </SelectTrigger>
-              <SelectContent className="sort-select-content">
-                <SelectItem className="shad-select-item" value="all">
-                  All Priorities
-                </SelectItem>
-                <SelectItem className="shad-select-item" value="urgent">
-                  Urgent
-                </SelectItem>
-                <SelectItem className="shad-select-item" value="high">
-                  High
-                </SelectItem>
-                <SelectItem className="shad-select-item" value="medium">
-                  Medium
-                </SelectItem>
-                <SelectItem className="shad-select-item" value="low">
-                  Low
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Sort Options */}
-          <div className="flex items-center gap-2" data-testid="sort-controls">
-            <span className="text-sm text-gray-600">Sort by:</span>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-32 h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Date</SelectItem>
-                <SelectItem value="priority">Priority</SelectItem>
-                <SelectItem value="type">Type</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Bulk Actions */}
-          {selected.length > 0 && (
-            <div className="flex gap-2 p-3 rounded-lg border border-cyan-200/30 bg-cyan-50/20">
-              <Button
-                size="sm"
-                onClick={() => handleMarkAsRead(selected)}
-                disabled={loading}
-                className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 flex items-center gap-2"
-              >
-                <Check className="w-4 h-4" />
-                Mark as Read ({selected.length})
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleMarkAsUnread(selected)}
-                disabled={loading}
-                className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 flex items-center gap-2"
-              >
-                <Check className="w-4 h-4" />
-                Mark as Unread ({selected.length})
-              </Button>
-              <Button
-                onClick={() => handleDeleteNotifications(selected)}
-                disabled={loading}
-                className="h-8 flex items-center gap-2 bg-destructive/10 text-destructive border-destructive hover:bg-destructive/20"
-              >
-                <Trash className="w-4 h-4 mr-1" />
-                Delete ({selected.length})
-              </Button>
-            </div>
-          )}
-
-          {/* Enhanced Notifications List */}
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={paginated.map((n) => n.$id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div
-                className="space-y-2 max-h-96 overflow-y-auto"
-                data-testid="notification-list"
-              >
-                {loading ? (
-                  <div className="text-center py-8 text-gray-400">
-                    <div className="w-8 h-8 mx-auto mb-2 animate-spin border-2 border-gray-300 border-t-blue-500 rounded-full"></div>
-                    Loading notifications...
-                  </div>
-                ) : error ? (
-                  <div
-                    className="text-center py-8 text-red-400"
-                    data-testid="error-message"
-                  >
-                    <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-red-300" />
-                    <p className="text-lg font-medium text-red-600">
-                      Error loading notifications
-                    </p>
-                    <p className="text-sm text-red-500">{error}</p>
-                  </div>
-                ) : paginated.length === 0 ? (
-                  <div
-                    className="text-center py-8 text-gray-400"
-                    data-testid="empty-state"
-                  >
-                    <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-lg font-medium">
-                      No notifications found
-                    </p>
-                    <p className="text-sm">You&apos;re all caught up!</p>
-                  </div>
-                ) : (
-                  paginated.map((notification) => {
-                    const typeConfig =
-                      NOTIFICATION_TYPES[notification.type as NotificationType];
-                    return (
-                      <SortableNotificationItem
-                        key={notification.$id}
-                        notification={notification}
-                        isSelected={selected.includes(notification.$id)}
-                        onSelect={handleSelect}
-                        onMarkAsRead={(id) => handleMarkAsRead([id])}
-                        onMarkAsUnread={(id) => handleMarkAsUnread([id])}
-                        typeConfig={typeConfig}
-                        getPriorityColor={getPriorityColor}
-                        formatNotificationTime={formatNotificationTime}
-                      />
-                    );
-                  })
-                )}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+          <div className="space-y-4">
+            {/* Enhanced Search and Filter Bar */}
+            <div className="flex gap-2" data-testid="notification-filters">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Search notifications..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 bg-white border border-slate-200 text-slate-700 placeholder:text-slate-400"
+                />
               </div>
-            </SortableContext>
-          </DndContext>
-
-          {/* Enhanced Pagination */}
-          <div
-            className="flex items-center justify-between mt-4 pt-4 border-t"
-            data-testid="pagination"
-          >
-            <div className="flex items-center gap-4">
-              <label className="text-xs text-slate-700">
-                Items per page:
-                <select
-                  className="ml-2 border rounded px-2 py-1"
-                  value={perPage}
-                  onChange={(e) => setPerPage(Number(e.target.value))}
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger
+                  className="sort-select"
+                  data-testid="type-filter"
                 >
-                  {[5, 10, 20, 50].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent className="sort-select-content">
+                  <SelectItem className="shad-select-item" value="all">
+                    All Types
+                  </SelectItem>
+                  {Object.entries(NOTIFICATION_TYPES).map(([key, value]) => (
+                    <SelectItem
+                      key={key}
+                      className="shad-select-item"
+                      value={key}
+                    >
+                      <div className="flex items-center gap-2">
+                        {value.icon}
+                        {value.label}
+                      </div>
+                    </SelectItem>
                   ))}
-                </select>
-              </label>
-              <span className="text-sm text-gray-500">
-                {`${(page - 1) * perPage + 1}-${Math.min(
-                  page * perPage,
-                  filtered.length
-                )} of ${filtered.length} items`}
-              </span>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="sort-select">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent className="sort-select-content">
+                  <SelectItem className="shad-select-item" value="all">
+                    All Status
+                  </SelectItem>
+                  <SelectItem className="shad-select-item" value="unread">
+                    Unread
+                  </SelectItem>
+                  <SelectItem className="shad-select-item" value="read">
+                    Read
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger
+                  className="sort-select"
+                  data-testid="priority-filter"
+                >
+                  <SelectValue placeholder="All Priorities" />
+                </SelectTrigger>
+                <SelectContent className="sort-select-content">
+                  <SelectItem className="shad-select-item" value="all">
+                    All Priorities
+                  </SelectItem>
+                  <SelectItem className="shad-select-item" value="urgent">
+                    Urgent
+                  </SelectItem>
+                  <SelectItem className="shad-select-item" value="high">
+                    High
+                  </SelectItem>
+                  <SelectItem className="shad-select-item" value="medium">
+                    Medium
+                  </SelectItem>
+                  <SelectItem className="shad-select-item" value="low">
+                    Low
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </Button>
-              <span className="flex items-center px-3 text-sm">
-                Page {page} of {Math.ceil(filtered.length / perPage)}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page * perPage >= filtered.length}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
+
+            {/* Sort Options */}
+            <div
+              className="flex items-center gap-2"
+              data-testid="sort-controls"
+            >
+              <span className="text-sm text-gray-600">Sort by:</span>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-32 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Date</SelectItem>
+                  <SelectItem value="priority">Priority</SelectItem>
+                  <SelectItem value="type">Type</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Bulk Actions */}
+            {selected.length > 0 && (
+              <div className="flex gap-2 p-3 rounded-lg border-2 border-blue-300 bg-white">
+                <Button
+                  size="sm"
+                  onClick={() => handleMarkAsRead(selected)}
+                  disabled={loading}
+                  className="primary-btn px-3 sm:px-4 flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  Mark as Read ({selected.length})
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handleMarkAsUnread(selected)}
+                  disabled={loading}
+                  variant="outline"
+                  className="primary-btn px-3 sm:px-4 flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  Mark as Unread ({selected.length})
+                </Button>
+                <Button
+                  onClick={() => handleDeleteNotifications(selected)}
+                  disabled={loading}
+                  variant="destructive"
+                  className="primary-btn px-3 sm:px-4"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete ({selected.length})
+                </Button>
+              </div>
+            )}
+
+            {/* Enhanced Notifications List */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={paginated.map((n) => n.$id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2" data-testid="notification-list">
+                  {loading ? (
+                    <div className="text-center py-12 text-slate-500">
+                      <div className="w-8 h-8 mx-auto mb-3 animate-spin border-2 border-slate-300 border-t-[#0f5384] rounded-full"></div>
+                      <p className="text-sm font-medium">
+                        Loading notifications...
+                      </p>
+                    </div>
+                  ) : error ? (
+                    <div
+                      className="text-center py-12"
+                      data-testid="error-message"
+                    >
+                      <div className="w-12 h-12 mx-auto mb-3 bg-red-100 rounded-full flex items-center justify-center">
+                        <AlertTriangle className="w-6 h-6 text-red-600" />
+                      </div>
+                      <p className="text-lg font-semibold text-red-600 mb-1">
+                        Error loading notifications
+                      </p>
+                      <p className="text-sm text-red-500">{error}</p>
+                    </div>
+                  ) : paginated.length === 0 ? (
+                    <div
+                      className="text-center py-12"
+                      data-testid="empty-state"
+                    >
+                      <div className="w-12 h-12 mx-auto mb-3 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Bell className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <p className="text-lg font-semibold text-slate-900 mb-1">
+                        No notifications found
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        You&apos;re all caught up!
+                      </p>
+                    </div>
+                  ) : (
+                    paginated.map((notification) => {
+                      const typeConfig =
+                        NOTIFICATION_TYPES[
+                          notification.type as NotificationType
+                        ];
+                      return (
+                        <SortableNotificationItem
+                          key={notification.$id}
+                          notification={notification}
+                          isSelected={selected.includes(notification.$id)}
+                          onSelect={handleSelect}
+                          onMarkAsRead={(id) => handleMarkAsRead([id])}
+                          onMarkAsUnread={(id) => handleMarkAsUnread([id])}
+                          typeConfig={typeConfig}
+                          getPriorityColor={getPriorityColor}
+                          formatNotificationTime={formatNotificationTime}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+              </SortableContext>
+            </DndContext>
+
+            {/* Enhanced Pagination */}
+            <div
+              className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200"
+              data-testid="pagination"
+            >
+              <div className="flex items-center gap-4">
+                <label className="text-xs text-slate-700">
+                  Items per page:
+                  <select
+                    className="ml-2 border rounded px-2 py-1"
+                    value={perPage}
+                    onChange={(e) => setPerPage(Number(e.target.value))}
+                  >
+                    {[5, 10, 20, 50].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span className="text-sm text-gray-500">
+                  {`${(page - 1) * perPage + 1}-${Math.min(
+                    page * perPage,
+                    filtered.length
+                  )} of ${filtered.length} items`}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="flex items-center px-3 text-sm">
+                  Page {page} of {Math.ceil(filtered.length / perPage)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page * perPage >= filtered.length}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Professional Footer */}
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <div className="text-xs text-slate-500">
+            Showing {paginated.length} of {filtered.length} notification
+            {filtered.length !== 1 ? 's' : ''}
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="primary-btn px-3 sm:px-4"
+            >
+              Close
+            </Button>
           </div>
         </div>
       </DialogContent>
@@ -742,31 +781,38 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
       data-read={notification.read.toString()}
       data-priority={notification.priority || 'low'}
       data-date={notification.$createdAt}
-      className={`p-4 rounded-lg border transition-all hover:shadow-md ${
+      className={`p-4 rounded-lg border-2 bg-white transition-all duration-200 group ${
         notification.read
-          ? typeConfig?.bgColor || 'bg-white/50 border-gray-200'
-          : typeConfig?.bgColor || 'bg-blue-50/50 border-blue-200 shadow-sm'
-      } ${isDragging ? 'opacity-50 shadow-lg' : ''}`}
+          ? 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+          : 'border-blue-200 hover:border-blue-300 hover:bg-blue-50'
+      } ${isDragging ? 'opacity-50 shadow-lg' : 'shadow-sm hover:shadow-md'}`}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 mt-1">
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onSelect(notification.$id)}
-            className="mt-1"
           />
+        </div>
+
+        {/* Icon with gradient background */}
+        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
+          {typeConfig?.icon ? (
+            <div className="h-5 w-5 text-blue-600 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-blue-600">
+              {typeConfig.icon}
+            </div>
+          ) : (
+            <Bell className="h-5 w-5 text-blue-600" />
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <div className="flex items-center gap-1">
-                  {typeConfig?.icon || <Bell className="w-4 h-4" />}
-                  <span className="text-sm font-medium text-gray-900">
-                    {notification.title}
-                  </span>
-                </div>
+                <span className="text-sm font-semibold text-slate-900">
+                  {notification.title}
+                </span>
                 {notification.priority && (
                   <span
                     className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(
@@ -780,26 +826,31 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
                   <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                 )}
               </div>
-              <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+              <p className="text-sm text-slate-600 mb-2 line-clamp-2">
                 {notification.message}
               </p>
-              <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span>{formatNotificationTime(notification.$createdAt)}</span>
+              <div className="flex items-center gap-4 text-xs text-slate-500">
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>{formatNotificationTime(notification.$createdAt)}</span>
+                </div>
                 {typeConfig && (
-                  <span className={`px-2 py-0.5 rounded ${typeConfig.color}`}>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeConfig.color}`}
+                  >
                     {typeConfig.label}
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               {!notification.read && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onMarkAsRead(notification.$id)}
-                  className="h-6 px-2 text-xs"
+                  className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900"
                 >
                   Mark read
                 </Button>
@@ -809,7 +860,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => onMarkAsUnread(notification.$id)}
-                  className="h-6 px-2 text-xs"
+                  className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900"
                 >
                   Mark unread
                 </Button>
@@ -818,10 +869,10 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
               <div
                 {...attributes}
                 {...listeners}
-                className="flex-shrink-0 cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+                className="flex-shrink-0 cursor-grab active:cursor-grabbing p-1 hover:bg-slate-100 rounded transition-colors"
                 title="Drag to reorder"
               >
-                <GripVertical className="w-5 h-5 text-gray-400" />
+                <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
               </div>
               {/* <Button
                 variant="ghost"
@@ -835,12 +886,12 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
           </div>
 
           {notification.actionUrl && notification.actionText && (
-            <div className="mt-2">
+            <div className="mt-3 pt-3 border-t border-slate-200">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => window.open(notification.actionUrl, '_blank')}
-                className="text-xs"
+                className="primary-btn px-3 sm:px-4 text-xs"
               >
                 {notification.actionText}
               </Button>

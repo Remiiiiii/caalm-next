@@ -4,5 +4,11 @@
       "main": true,
       "[!main]": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/notifications/process-digest",
+      "schedule": "0 * * * *"
+    }
+  ]
 }

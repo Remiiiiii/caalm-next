@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Bell, Mail, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NotificationCenter from '@/components/NotificationCenter';
-import { Client, TablesDB, Query } from 'appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
+import NotificationBadge from '@/components/NotificationBadge';
 import { Models } from 'appwrite';
 import { signOutUser } from '@/lib/actions/user.actions';
 import { UserRoleDisplay } from '@/components/UserRoleDisplay';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnreadCount } from '@/hooks/useNotifications';
+import { mutate } from 'swr';
 
 interface DashboardHeaderProps {
   user?: Models.User<Models.Preferences> | null;
@@ -21,34 +22,16 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
   const { user: authUser } = useAuth();
   const user = userProp || authUser;
   const [notifOpen, setNotifOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    async function fetchUnread() {
-      // Fetch unread notifications for the current user
-      try {
-        if (!user) return;
-        const client = new Client();
-        client
-          .setEndpoint(appwriteConfig.endpointUrl)
-          .setProject(appwriteConfig.projectId);
-        const tablesDB = new TablesDB(client);
-        const res = await tablesDB.listRows({
-          databaseId: appwriteConfig.databaseId,
-          tableId: 'notifications',
-          queries: [
-            Query.equal('userId', user.$id),
-            Query.equal('read', false),
-          ],
-        });
-        setUnreadCount(res.total);
-      } catch {}
+  // Use SWR hook for unread count (handles both $id and accountId)
+  const { unreadCount } = useUnreadCount(user?.$id);
+
+  const fetchUnread = useCallback(async () => {
+    // Force revalidation of unread count
+    if (user?.$id) {
+      await mutate(`/api/notifications/unread-count?userId=${user.$id}`);
     }
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 10000);
-    return () => clearInterval(interval);
   }, [user]);
-
 
   const handleLogout = async () => {
     try {
@@ -60,7 +43,6 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
       router.push('/sign-in');
     }
   };
-
 
   return (
     <header className="bg-background shadow-drop-1 border-b border-border">
@@ -79,9 +61,7 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
                 <div className="text-sm text-foreground">
                   <p className="font-medium text-navy">{user.name}</p>
                   <p className="text-xs text-slate-dark">
-                    <UserRoleDisplay 
-                      userId={user.$id} 
-                    /> -{' '}
+                    <UserRoleDisplay userId={user.$id} /> -{' '}
                     {user.prefs?.division || 'Unknown Division'}
                   </p>
                 </div>
@@ -92,11 +72,11 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
                   className="relative"
                 >
                   <Bell className="w-6 h-6" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-xs rounded-full px-1.5 py-0.5 border-2 border-white animate-pulse">
-                      {unreadCount}
-                    </span>
-                  )}
+                  <NotificationBadge
+                    count={unreadCount}
+                    size="sm"
+                    className="absolute -top-1 -right-1"
+                  />
                 </Button>
 
                 <Button
@@ -128,7 +108,12 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
       </div>
       <NotificationCenter
         open={notifOpen}
-        onClose={() => setNotifOpen(false)}
+        onClose={() => {
+          setNotifOpen(false);
+          fetchUnread(); // Refresh count after any actions
+        }}
+        onRefresh={fetchUnread}
+        userId={user?.$id}
       />
     </header>
   );

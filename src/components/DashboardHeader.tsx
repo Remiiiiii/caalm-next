@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Bell, Mail, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -8,9 +8,10 @@ import NotificationCenter from '@/components/NotificationCenter';
 import NotificationBadge from '@/components/NotificationBadge';
 import QuickActions from '@/components/QuickActions';
 import { Models } from 'appwrite';
-import { getUnreadNotificationsCount } from '@/lib/actions/notification.actions';
 import ProfilePicture from '@/components/ProfilePicture';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnreadCount } from '@/hooks/useNotifications';
+import { mutate } from 'swr';
 
 interface DashboardHeaderProps {
   user?:
@@ -26,26 +27,16 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   const router = useRouter();
   const { logout } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Use SWR hook for instant updates
+  const { unreadCount } = useUnreadCount(user?.$id);
 
   const fetchUnread = useCallback(async () => {
-    // Fetch unread notifications for the current user
-    try {
-      if (!user) return;
-      const count = await getUnreadNotificationsCount(user.$id);
-      setUnreadCount(count);
-    } catch {}
+    // Force revalidation of unread count
+    if (user?.$id) {
+      await mutate(`/api/notifications/unread-count?userId=${user.$id}`);
+    }
   }, [user]);
-
-  useEffect(() => {
-    // Initial fetch
-    fetchUnread();
-
-    // Only poll if user is active and component is mounted
-    const interval = setInterval(fetchUnread, 300000); // Poll every 5 minutes
-
-    return () => clearInterval(interval);
-  }, [user, fetchUnread]);
 
   // Refresh count when notification center is closed
   const handleNotificationClose = () => {

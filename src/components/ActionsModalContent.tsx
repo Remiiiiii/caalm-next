@@ -6,6 +6,7 @@ import { convertFileSize } from '@/lib/utils';
 import { formatDateTime } from '@/lib/utils';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { Label } from './ui/label';
 import Image from 'next/image';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -21,6 +22,8 @@ import {
   SquarePen,
   Save,
   ChevronDown,
+  Users,
+  X,
 } from 'lucide-react';
 import {
   Accordion,
@@ -1163,9 +1166,18 @@ interface Props {
   file: UIFileDoc;
   onInputChange: React.Dispatch<React.SetStateAction<string[]>>;
   onRemove: (email: string) => void;
+  currentUsers?: string[]; // Optional prop to override file.users for real-time updates
 }
 
-export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
+export const ShareInput = ({
+  file,
+  onInputChange,
+  onRemove,
+  currentUsers,
+}: Props) => {
+  // Use currentUsers if provided, otherwise fall back to file.users
+  const displayUsers =
+    currentUsers !== undefined ? currentUsers : file.users || [];
   const [ownerFullName, setOwnerFullName] = React.useState<string | null>(null);
 
   // Fetch owner's full name if owner is a string (user ID)
@@ -1200,78 +1212,125 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
     <>
       <ImageThumbnail file={file} />
 
-      <div className="share-wrapper" style={{ pointerEvents: 'none' }}>
-        <p
-          className="subtitle-2 pl-1 text-light-100"
-          style={{ pointerEvents: 'none' }}
-        >
-          Share file with other users
-        </p>
-        <Input
-          type="email"
-          placeholder="Enter email addresses"
-          onChange={(e) => onInputChange(e.target.value.trim().split(','))}
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-          }}
-          className="share-input-field"
-        />
-        <div className="pt-4">
-          <div className="flex justify-between">
-            <p className="subtitle-2 text-light-100">Shared with</p>
-            <p className="subtitle-2 text-light-100">
-              {file.users.length} users
-            </p>
+      <div className="space-y-4" style={{ pointerEvents: 'none' }}>
+        {/* Share file with other users Section */}
+        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <Label
+            className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+            htmlFor="share-email"
+            style={{ pointerEvents: 'none' }}
+          >
+            <Users className="w-4 h-4 text-blue-600" />
+            Share file with other users
+          </Label>
+          <Input
+            id="share-email"
+            type="email"
+            placeholder="Enter email addresses"
+            onChange={(e) => onInputChange(e.target.value.trim().split(','))}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onFocus={(e) => {
+              e.stopPropagation();
+            }}
+            onBlur={(e) => {
+              e.stopPropagation();
+            }}
+            style={{ pointerEvents: 'auto' }}
+            className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11 text-base"
+          />
+        </div>
+
+        {/* Shared with Section */}
+        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <div className="flex items-center justify-between mb-3">
+            <Label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Users className="w-4 h-4 text-blue-600" />
+              Shared with
+            </Label>
+            <span className="text-sm text-slate-600 font-medium">
+              {displayUsers.length}{' '}
+              {displayUsers.length === 1 ? 'user' : 'users'}
+            </span>
           </div>
-          <ul className="pt-2">
-            {file.users.map((email: string) => (
-              <li
-                key={email}
-                className="flex items-center justify-between gap-2"
-              >
-                <p className="subtitle-2">{email}</p>
-                <Button
-                  onClick={() => onRemove(email)}
-                  className="share-remove-user"
+          {displayUsers.length > 0 ? (
+            <div className="space-y-2">
+              {displayUsers.map((email: string) => (
+                <div
+                  key={email}
+                  className="flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-2 border border-slate-200"
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  <Image
-                    src="/assets/icons/remove.svg"
-                    alt="Remove"
-                    width={24}
-                    height={24}
-                    className="remove-icon"
-                  />
-                </Button>
-              </li>
-            ))}
-          </ul>
+                  <span className="text-sm text-slate-700">{email}</span>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove(email);
+                    }}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-red-50 rounded-full"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 italic">No users shared yet</p>
+          )}
         </div>
-        <div className="flex items-center justify-between py-2 border-t border-slate-200">
-          <span className="text-sm text-slate-600 font-medium">Format</span>
-          <span className="text-sm text-slate-800 font-semibold">
-            {file.extension}
-          </span>
-        </div>
-        <div className="flex items-center justify-between py-2 border-t border-slate-200">
-          <span className="text-sm text-slate-600 font-medium">Size</span>
-          <span className="text-sm text-slate-800 font-semibold">
-            {convertFileSize({ sizeInBytes: file.size })}
-          </span>
-        </div>
-        <div className="flex items-center justify-between py-2 border-t border-slate-200">
-          <span className="text-sm text-slate-600 font-medium">Owner</span>
-          <span className="text-sm text-slate-800 font-semibold">
-            {ownerName}
-          </span>
-        </div>
-        <div className="flex items-center justify-between py-2 border-t border-slate-200">
-          <span className="text-sm text-slate-600 font-medium">
-            Last Modified
-          </span>
-          <span className="text-sm text-slate-800 font-semibold">
-            {formatDateTime(file.$updatedAt)}
-          </span>
+
+        {/* File Information Section */}
+        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
+          <Label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <FileText className="w-4 h-4 text-blue-600" />
+            File Information
+          </Label>
+
+          {/* Format */}
+          <div className="bg-white rounded-lg p-4 border border-slate-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600 font-medium">Format</span>
+              <span className="text-sm text-slate-800 font-semibold">
+                {file.extension}
+              </span>
+            </div>
+          </div>
+
+          {/* Size */}
+          <div className="bg-white rounded-lg p-4 border border-slate-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600 font-medium">Size</span>
+              <span className="text-sm text-slate-800 font-semibold">
+                {convertFileSize({ sizeInBytes: file.size })}
+              </span>
+            </div>
+          </div>
+
+          {/* Owner */}
+          <div className="bg-white rounded-lg p-4 border border-slate-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600 font-medium">Owner</span>
+              <span className="text-sm text-slate-800 font-semibold">
+                {ownerName}
+              </span>
+            </div>
+          </div>
+
+          {/* Last Modified */}
+          <div className="bg-white rounded-lg p-4 border border-slate-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600 font-medium">
+                Last Modified
+              </span>
+              <span className="text-sm text-slate-800 font-semibold">
+                {formatDateTime(file.$updatedAt)}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </>

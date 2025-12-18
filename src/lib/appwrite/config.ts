@@ -45,6 +45,12 @@ export const appwriteConfig = {
   notificationSettingsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_SETTINGS_COLLECTION,
 
+  smsFormSubmissionsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_SMS_FORM_SUBMISSIONS_COLLECTION,
+
+  notificationDigestQueueCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_DIGEST_QUEUE_COLLECTION,
+
   notesCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NOTES_COLLECTION,
 
   calendarApprovalRequestsCollectionId:

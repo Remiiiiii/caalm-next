@@ -6,7 +6,7 @@ import { appwriteConfig } from '@/lib/appwrite/config';
 import { ID, Models, Query } from 'node-appwrite';
 import { constructFileUrl, getFileType, parseStringify } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser, getUserById } from './user.actions';
+import { getCurrentUser, getUserById, getUserByEmail } from './user.actions';
 import {
   createFileActivity,
   createContractActivity,
@@ -1066,17 +1066,487 @@ export const updateFileUsers = async ({
   const { tablesDB } = await createAdminClient();
 
   try {
+    // Get current user (who is sharing)
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    // First, try to check if this is a contract ID
+    let actualFileDocumentId = fileId;
+    let isContract = false;
+    let contractDoc: any = null;
+    let fileDoc: any = null;
+    let fileName = '';
+    let previousUsers: string[] = [];
+
+    if (appwriteConfig.contractsCollectionId) {
+      try {
+        contractDoc = await tablesDB.getRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
+          rowId: fileId,
+        });
+
+        // Contracts don't have a 'users' attribute, so we need to update the associated file document
+        // Get the file document ID from the contract
+        actualFileDocumentId =
+          contractDoc.fileId || contractDoc.fileRef || null;
+        isContract = true;
+        fileName = contractDoc.contractName || contractDoc.name || 'Contract';
+
+        if (!actualFileDocumentId) {
+          throw new Error(
+            'Contract does not have an associated file document to update'
+          );
+        }
+      } catch (error: any) {
+        // Not a contract, continue with file update using the original fileId
+        isContract = false;
+        actualFileDocumentId = fileId;
+      }
+    }
+
+    // Get the file document to check previous users
+    try {
+      fileDoc = await tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.filesCollectionId!,
+        rowId: actualFileDocumentId,
+      });
+      previousUsers = (fileDoc.users as string[]) || [];
+      if (!fileName) {
+        fileName = fileDoc.name || fileDoc.contractName || 'Document';
+      }
+    } catch (error: any) {
+      console.warn('Could not fetch previous file document:', error);
+    }
+
+    // Always update the file document (contracts reference file documents)
     const updatedFile = await tablesDB.updateRow({
       databaseId: appwriteConfig.databaseId!,
       tableId: appwriteConfig.filesCollectionId!,
-      rowId: fileId,
+      rowId: actualFileDocumentId,
       data: { users: emails },
     });
+
+    // Find newly added users (emails that weren't in previousUsers)
+    const newUsers = emails.filter((email) => !previousUsers.includes(email));
+
+    // Send notifications and emails to newly added users (fire-and-forget)
+    if (newUsers.length > 0) {
+      Promise.allSettled(
+        newUsers.map(async (email) => {
+          try {
+            // Get recipient user info by email
+            const recipientUser = await getUserByEmail(email);
+            // The notification center uses user.$id from auth context, which is the user's document ID (not accountId)
+            // So we need to use $id (document ID) for notifications to match the frontend query
+            const recipientUserId = recipientUser?.$id; // Use document ID, not accountId
+            const recipientName =
+              recipientUser?.fullName || recipientUser?.name || email;
+
+            console.log(`[SERVER] Processing notification for ${email}:`, {
+              recipientUserId,
+              recipientUserExists: !!recipientUser,
+              recipientUserAccountId: recipientUser?.accountId,
+              recipientUser$id: recipientUser?.$id,
+              recipientEmail: recipientUser?.email,
+            });
+
+            // Get sharer info
+            const sharerName =
+              currentUser.fullName || currentUser.name || 'A user';
+            const sharerEmail = currentUser.email || '';
+
+            // Create notification if user exists in system and has $id (document ID)
+            if (recipientUserId && recipientUser?.$id) {
+              try {
+                // Try to create notification using the notification service with file_shared type
+                // Fall back to simple createNotification if type doesn't exist
+                let notificationCreated = false;
+
+                try {
+                  const { notificationService } = await import(
+                    '@/lib/services/notificationService'
+                  );
+
+                  // Check if file_shared type exists, create it if it doesn't
+                  let typeExists =
+                    await notificationService.getNotificationType(
+                      'file_shared'
+                    );
+
+                  // If type doesn't exist, try to create it
+                  if (!typeExists) {
+                    try {
+                      await notificationService.createNotificationType({
+                        type_key: 'file_shared',
+                        label: 'File Shared',
+                        icon: 'file-text',
+                        color_classes: 'text-blue-600',
+                        bg_color_classes: 'bg-blue-50',
+                        priority: 'medium',
+                        enabled: true,
+                        description:
+                          'Notification when a document or file is shared with you',
+                      });
+                      typeExists =
+                        await notificationService.getNotificationType(
+                          'file_shared'
+                        );
+                      console.log(
+                        `[SERVER] Created file_shared notification type`
+                      );
+                    } catch (createTypeError) {
+                      console.warn(
+                        `[SERVER] Could not create file_shared notification type:`,
+                        createTypeError
+                      );
+                    }
+                  }
+
+                  if (typeExists && recipientUser?.$id) {
+                    try {
+                      const notification =
+                        await notificationService.createNotification({
+                          userId: recipientUser.$id, // Use document $id (matches auth context user.$id)
+                          title: 'Document Shared with You',
+                          message: `${sharerName} shared "${fileName}" with you.`,
+                          type: 'file_shared',
+                          priority: 'medium',
+                          metadata: {
+                            fileId: actualFileDocumentId,
+                            contractId: isContract ? fileId : undefined,
+                            fileName,
+                            sharedBy: currentUser.$id,
+                            sharedByName: sharerName,
+                          },
+                        });
+                      // Set flag immediately after successful creation to prevent fallback
+                      // Even if cache invalidation fails later, the notification is already created
+                      notificationCreated = true;
+                      console.log(
+                        `[SERVER] ✅ Created notification for file sharing: ${email}`,
+                        {
+                          notificationId: notification?.$id,
+                          userId: recipientUser.$id,
+                          recipientEmail: email,
+                        }
+                      );
+                    } catch (createError: any) {
+                      // Check if the error is from cache invalidation (non-critical) or actual creation failure
+                      const isCacheError =
+                        createError?.message?.includes('cache') ||
+                        createError?.message?.includes('Cache');
+                      if (isCacheError) {
+                        // If it's just a cache error, the notification was likely created successfully
+                        // Verify by checking if notification exists
+                        try {
+                          const { tablesDB } = await createAdminClient();
+                          const { Query } = await import('node-appwrite');
+                          const recentNotifications = await tablesDB.listRows({
+                            databaseId: appwriteConfig.databaseId!,
+                            tableId:
+                              appwriteConfig.notificationsCollectionId ||
+                              'notifications',
+                            queries: [
+                              Query.equal('userId', recipientUser.$id),
+                              Query.equal('type', 'file_shared'),
+                              Query.orderDesc('$createdAt'),
+                              Query.limit(1),
+                            ],
+                          });
+                          if (recentNotifications.total > 0) {
+                            const latest = recentNotifications.rows[0] as any;
+                            // Check if this notification was created in the last 5 seconds (likely our notification)
+                            const createdAt = new Date(
+                              latest.$createdAt
+                            ).getTime();
+                            const now = Date.now();
+                            if (
+                              now - createdAt < 5000 &&
+                              latest.title === 'Document Shared with You'
+                            ) {
+                              notificationCreated = true;
+                              console.log(
+                                `[SERVER] ✅ Notification created successfully (verified after cache error): ${email}`,
+                                { notificationId: latest.$id }
+                              );
+                            }
+                          }
+                        } catch (verifyError) {
+                          console.warn(
+                            `[SERVER] Could not verify notification after cache error:`,
+                            verifyError
+                          );
+                        }
+                      } else {
+                        // Actual creation failure - log and let fallback handle it
+                        console.warn(
+                          `[SERVER] Notification service createNotification failed:`,
+                          createError
+                        );
+                      }
+                    }
+                  }
+                } catch (serviceError: any) {
+                  // If notification service fails (e.g., type doesn't exist), try fallback
+                  console.warn(
+                    `[SERVER] Notification service failed, trying fallback:`,
+                    serviceError
+                  );
+                }
+
+                // Fallback: Use simple createNotification action (doesn't require type to exist)
+                // orgId is REQUIRED in the database schema, so we must get it
+                // Also check for duplicates before creating
+                if (!notificationCreated && recipientUser?.$id) {
+                  try {
+                    // Check for duplicate notification created in the last 10 seconds
+                    // This prevents duplicates if notificationService.createNotification succeeded
+                    // but threw an error after creation (e.g., in cache invalidation)
+                    const { tablesDB: duplicateCheckDB } =
+                      await createAdminClient();
+                    const { Query } = await import('node-appwrite');
+                    const tenSecondsAgo = new Date(
+                      Date.now() - 10000
+                    ).toISOString();
+                    const duplicateCheck = await duplicateCheckDB.listRows({
+                      databaseId: appwriteConfig.databaseId!,
+                      tableId:
+                        appwriteConfig.notificationsCollectionId ||
+                        'notifications',
+                      queries: [
+                        Query.equal('userId', recipientUser.$id),
+                        Query.equal('title', 'Document Shared with You'),
+                        Query.greaterThan('$createdAt', tenSecondsAgo),
+                        Query.limit(1),
+                      ],
+                    });
+
+                    if (duplicateCheck.total > 0) {
+                      console.log(
+                        `[SERVER] ⚠️ Duplicate notification prevented for ${email} - notification already exists`
+                      );
+                      notificationCreated = true; // Mark as created to prevent fallback
+                      // Skip creating notification - it already exists
+                    } else {
+                      // Get orgId for the recipient user - REQUIRED field
+                      // First try to use the user's orgId if it exists directly
+                      let orgId = recipientUser.orgId;
+
+                      // If not found, try to get it from getUserDefaultOrganization
+                      if (!orgId) {
+                        // Try with user's $id (document ID) first, then accountId
+                        const defaultOrg = await getUserDefaultOrganization(
+                          recipientUser.$id || recipientUser.accountId
+                        );
+                        orgId = defaultOrg?.orgId;
+                      }
+
+                      if (!orgId) {
+                        throw new Error(
+                          `User ${email} has no default organization. User object: ${JSON.stringify(
+                            {
+                              $id: recipientUser.$id,
+                              accountId: recipientUser.accountId,
+                              orgId: recipientUser.orgId,
+                            }
+                          )}`
+                        );
+                      }
+
+                      // Use tablesDB directly to create notification with all required fields
+                      const { tablesDB } = await createAdminClient();
+                      const notificationData: Record<string, any> = {
+                        userId: recipientUser.$id, // Use document $id (matches auth context user.$id)
+                        title: 'Document Shared with You',
+                        message: `${sharerName} shared "${fileName}" with you.`,
+                        type: 'file-shared',
+                        read: false,
+                        orgId: orgId, // REQUIRED field - must be included
+                      };
+
+                      const notification = await tablesDB.createRow({
+                        databaseId: appwriteConfig.databaseId!,
+                        tableId:
+                          appwriteConfig.notificationsCollectionId ||
+                          'notifications',
+                        rowId: ID.unique(),
+                        data: notificationData,
+                      });
+
+                      // Verify the notification was created and can be queried
+                      try {
+                        // First verify by ID
+                        const verifyById = await tablesDB.listRows({
+                          databaseId: appwriteConfig.databaseId!,
+                          tableId:
+                            appwriteConfig.notificationsCollectionId ||
+                            'notifications',
+                          queries: [Query.equal('$id', notification.$id)],
+                        });
+
+                        // Then verify by userId (how the notification center queries)
+                        const verifyByUserId = await tablesDB.listRows({
+                          databaseId: appwriteConfig.databaseId!,
+                          tableId:
+                            appwriteConfig.notificationsCollectionId ||
+                            'notifications',
+                          queries: [
+                            Query.equal('userId', recipientUser.$id),
+                            Query.orderDesc('$createdAt'),
+                            Query.limit(5), // Get last 5 notifications for this user
+                          ],
+                        });
+
+                        console.log(
+                          `[SERVER] ✅ Verified notification exists in database:`,
+                          {
+                            notificationId: notification?.$id,
+                            foundById: verifyById.total > 0,
+                            foundByUserId: verifyByUserId.total > 0,
+                            totalForUser: verifyByUserId.total,
+                            userId: recipientUser.$id,
+                            userNotifications: verifyByUserId.rows.map(
+                              (n: any) => ({
+                                id: n.$id,
+                                title: n.title,
+                                userId: n.userId,
+                                type: n.type,
+                              })
+                            ),
+                          }
+                        );
+                      } catch (verifyError) {
+                        console.error(
+                          `[SERVER] ❌ Could not verify notification:`,
+                          verifyError
+                        );
+                      }
+
+                      notificationCreated = true;
+
+                      // Log successful creation with all details
+                      console.log(
+                        `[SERVER] ✅ SUCCESS: Created notification for ${email}`,
+                        {
+                          notificationId: notification?.$id,
+                          userId: recipientUser.$id,
+                          recipientEmail: email,
+                          orgId: orgId,
+                          notificationData: JSON.stringify(notificationData),
+                          recipientUserAccountId: recipientUser.accountId,
+                          recipientUser$id: recipientUser.$id,
+                          recipientUserOrgId: recipientUser.orgId,
+                          collectionId:
+                            appwriteConfig.notificationsCollectionId ||
+                            'notifications',
+                          databaseId: appwriteConfig.databaseId,
+                        }
+                      );
+
+                      // Invalidate cache to ensure notification appears immediately
+                      // This includes unread count cache for instant badge update
+                      try {
+                        const { CacheManager } = await import(
+                          '@/lib/services/cache-manager'
+                        );
+                        await CacheManager.invalidateNotifications(
+                          recipientUser.$id
+                        );
+                        console.log(
+                          `[SERVER] Invalidated notification cache (including unread count) for ${recipientUser.$id}`
+                        );
+                      } catch (cacheError) {
+                        console.warn(
+                          `[SERVER] Could not invalidate cache:`,
+                          cacheError
+                        );
+                      }
+                    }
+                  } catch (fallbackError) {
+                    console.error(
+                      `[SERVER] Could not create notification for ${email}:`,
+                      fallbackError,
+                      { recipientUser, recipientUserId }
+                    );
+                  }
+                } else if (!recipientUser?.$id) {
+                  console.warn(
+                    `[SERVER] Cannot create notification for ${email} - user has no $id (document ID)`,
+                    { recipientUser }
+                  );
+                }
+              } catch (notificationError) {
+                console.error(
+                  `[SERVER] Failed to create notification for ${email}:`,
+                  notificationError
+                );
+                // Continue with email even if notification fails
+              }
+            }
+
+            // Send email notification
+            try {
+              const { mailgunService } = await import('@/lib/services/mailgun');
+              const baseUrl =
+                process.env.NEXT_PUBLIC_APP_URL ||
+                'https://www.caalmsolutions.com';
+              const fileUrl = `${baseUrl}/contracts?fileId=${actualFileDocumentId}`;
+
+              const emailSubject = `[CAALM] Document Shared: ${fileName}`;
+              const emailText = `Hello ${recipientName},\n\n${sharerName} (${sharerEmail}) shared the document "${fileName}" with you.\n\nYou can now access this document in your CAALM account.\n\nView Document: ${fileUrl}\n\nBest regards,\nCAALM Solutions Team`;
+
+              const emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #078FAB; text-align: center;">CAALM Solutions</h2>
+                  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="color: #333; margin-top: 0;">Document Shared with You</h3>
+                    <p style="color: #666; font-size: 16px;">${sharerName} <span style="color: #888;">(${sharerEmail})</span> shared the document <strong>"${fileName}"</strong> with you in CAALM.</p>
+                    <p style="color: #666; font-size: 16px;">You can now view and access this document in your account.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                      <a href="${fileUrl}" style="background-color: #078FAB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">View Document</a>
+                    </div>
+                  </div>
+                  <p style="color: #999; font-size: 12px; text-align: center;">Best regards,<br>CAALM Solutions Team</p>
+                </div>
+              `;
+
+              await mailgunService.sendEmail({
+                to: email,
+                subject: emailSubject,
+                text: emailText,
+                html: emailHtml,
+              });
+              console.log(
+                `[SERVER] Sent email notification for file sharing: ${email}`
+              );
+            } catch (emailError) {
+              console.error(
+                `[SERVER] Failed to send email notification for ${email}:`,
+                emailError
+              );
+            }
+          } catch (error) {
+            console.error(
+              `[SERVER] Error processing notification for ${email}:`,
+              error
+            );
+          }
+        })
+      ).then(() => {
+        console.log(
+          `[SERVER] Completed sending notifications for ${newUsers.length} new users`
+        );
+      });
+    }
 
     revalidatePath(path);
     return parseStringify(updatedFile);
   } catch (error) {
-    handleError(error, 'Failed to rename file');
+    handleError(error, 'Failed to update file users');
   }
 };
 

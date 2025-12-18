@@ -13,6 +13,7 @@ import {
   UpsertNotificationSettingsRequest,
 } from '@/types/notifications';
 import { Query } from 'appwrite';
+import { CacheManager } from '@/lib/services/cache-manager';
 import type { appwriteMessagingService as AppwriteMessagingServiceInstance } from './appwriteMessagingService';
 
 // Lazy import to avoid initialization errors when messaging service is not configured
@@ -42,6 +43,57 @@ class NotificationService {
   private async getTablesDB() {
     const { tablesDB } = await this.getClient();
     return tablesDB;
+  }
+
+  /**
+   * Helper method to resolve both document $id and accountId for a user
+   * This ensures we can query notifications regardless of which ID format is used
+   */
+  private async resolveUserIds(
+    userId: string
+  ): Promise<{ docId: string; accountId: string | null }> {
+    const tablesDB = await this.getTablesDB();
+
+    // Try to get user by $id first
+    try {
+      const user = await tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.usersCollectionId || 'users',
+        rowId: userId,
+      });
+      return {
+        docId: user.$id,
+        accountId: user.accountId || null,
+      };
+    } catch (error) {
+      // If not found by $id, try to find by accountId
+      try {
+        const users = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.usersCollectionId || 'users',
+          queries: [Query.equal('accountId', userId), Query.limit(1)],
+        });
+
+        if (users.rows.length > 0) {
+          const user = users.rows[0];
+          return {
+            docId: user.$id,
+            accountId: user.accountId || userId,
+          };
+        }
+      } catch (accountIdError) {
+        console.warn(
+          '[SERVER] Could not resolve user IDs, using provided userId as-is:',
+          userId
+        );
+      }
+
+      // Fallback: assume userId is docId
+      return {
+        docId: userId,
+        accountId: null,
+      };
+    }
   }
 
   // Notification Types Management
@@ -146,7 +198,48 @@ class NotificationService {
   ): Promise<NotificationsResponse> {
     try {
       const tablesDB = await this.getTablesDB();
-      const queries = [Query.equal('userId', userId)];
+
+      // Resolve both docId and accountId
+      const { docId, accountId } = await this.resolveUserIds(userId);
+
+      // Query for notifications with docId
+      const queries = [Query.equal('userId', docId)];
+
+      // If we found an accountId, also query for notifications with that accountId (for backward compatibility)
+      // We'll merge the results
+      let accountIdNotifications: any[] = [];
+      if (accountId && accountId !== userId) {
+        try {
+          const accountIdQuery = [Query.equal('userId', accountId)];
+          // Apply same filters
+          if (filters?.search) {
+            accountIdQuery.push(Query.search('title', filters.search));
+            accountIdQuery.push(Query.search('message', filters.search));
+          }
+          if (filters?.type && filters.type !== 'all') {
+            accountIdQuery.push(Query.equal('type', filters.type));
+          }
+          if (filters?.status && filters.status !== 'all') {
+            accountIdQuery.push(Query.equal('read', filters.status === 'read'));
+          }
+          if (filters?.priority && filters.priority !== 'all') {
+            accountIdQuery.push(Query.equal('priority', filters.priority));
+          }
+
+          const accountIdResponse = await tablesDB.listRows({
+            databaseId: appwriteConfig.databaseId || 'default-db',
+            tableId:
+              appwriteConfig.notificationsCollectionId || 'notifications',
+            queries: accountIdQuery,
+          });
+          accountIdNotifications = accountIdResponse.rows || [];
+        } catch (accountIdError) {
+          console.warn(
+            '[SERVER] Could not query notifications by accountId:',
+            accountIdError
+          );
+        }
+      }
 
       // Apply filters
       if (filters?.search) {
@@ -208,10 +301,9 @@ class NotificationService {
         );
       }
 
-      // Apply pagination
-      const offset = (page - 1) * limit;
-      queries.push(Query.limit(limit));
-      queries.push(Query.offset(offset));
+      // Don't apply pagination yet - we need to merge with accountId notifications first
+      // queries.push(Query.limit(limit));
+      // queries.push(Query.offset(offset));
 
       const response = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
@@ -219,9 +311,73 @@ class NotificationService {
         queries,
       });
 
+      // Merge with accountId notifications if any (for backward compatibility)
+      let allNotifications = [...(response.rows || [])];
+      if (accountIdNotifications.length > 0) {
+        // Combine and deduplicate by $id
+        const existingIds = new Set(allNotifications.map((n: any) => n.$id));
+        const uniqueAccountIdNotifications = accountIdNotifications.filter(
+          (n: any) => !existingIds.has(n.$id)
+        );
+        allNotifications = [
+          ...allNotifications,
+          ...uniqueAccountIdNotifications,
+        ];
+      }
+
+      // Apply sorting to merged results
+      if (sortField === 'date') {
+        allNotifications.sort((a: any, b: any) => {
+          const dateA = new Date(a.$createdAt).getTime();
+          const dateB = new Date(b.$createdAt).getTime();
+          return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
+        });
+      } else if (sortField === 'priority') {
+        const priorityOrder: Record<string, number> = {
+          urgent: 4,
+          high: 3,
+          medium: 2,
+          low: 1,
+        };
+        allNotifications.sort((a: any, b: any) => {
+          const priorityA = priorityOrder[a.priority || 'low'] || 1;
+          const priorityB = priorityOrder[b.priority || 'low'] || 1;
+          return sortDirection === 'desc'
+            ? priorityB - priorityA
+            : priorityA - priorityB;
+        });
+      } else if (sortField === 'type') {
+        allNotifications.sort((a: any, b: any) => {
+          const typeA = (a.type || '').toLowerCase();
+          const typeB = (b.type || '').toLowerCase();
+          return sortDirection === 'desc'
+            ? typeB.localeCompare(typeA)
+            : typeA.localeCompare(typeB);
+        });
+      } else if (sortField === 'title') {
+        allNotifications.sort((a: any, b: any) => {
+          const titleA = (a.title || '').toLowerCase();
+          const titleB = (b.title || '').toLowerCase();
+          return sortDirection === 'desc'
+            ? titleB.localeCompare(titleA)
+            : titleA.localeCompare(titleB);
+        });
+      }
+
+      // Apply pagination to sorted results
+      const offset = (page - 1) * limit;
+      const paginatedNotifications = allNotifications.slice(
+        offset,
+        offset + limit
+      );
+
+      console.log(
+        `[SERVER] NotificationService.getNotifications - userId: ${userId}, docId: ${docId}, accountId: ${accountId}, total found: ${allNotifications.length}, returning: ${paginatedNotifications.length}`
+      );
+
       return {
-        data: response.rows as unknown as Notification[],
-        total: response.total,
+        data: paginatedNotifications as unknown as Notification[],
+        total: allNotifications.length,
         page,
         limit,
       };
@@ -278,25 +434,82 @@ class NotificationService {
       const { getUserDefaultOrganization } = await import(
         '@/lib/rbac/permissions'
       );
-      const defaultOrg = await getUserDefaultOrganization(notification.userId);
-      if (!defaultOrg) {
-        const errorMsg = `User ${notification.userId} has no default organization`;
-        console.error(
-          '[SERVER] NotificationService.createNotification]',
-          errorMsg
-        );
-        throw new Error(errorMsg);
+
+      // notification.userId should be the user's document $id (not accountId)
+      // The frontend queries with user.$id from auth context, which is the document ID
+      let userDocId = notification.userId;
+      let orgId: string | undefined;
+
+      // Try to get user by $id first to check if orgId is available directly
+      try {
+        const tablesDB = await this.getTablesDB();
+        const user = await tablesDB.getRow({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.usersCollectionId || 'users',
+          rowId: notification.userId,
+        });
+
+        if (user) {
+          userDocId = user.$id;
+          // Use user's orgId directly if available
+          orgId = user.orgId;
+        }
+      } catch (userLookupError: any) {
+        // If getRow fails (e.g., userId is accountId instead of $id), try lookup by accountId
+        if (
+          userLookupError?.code === 404 ||
+          userLookupError?.message?.includes('not found')
+        ) {
+          try {
+            const tablesDB = await this.getTablesDB();
+            const users = await tablesDB.listRows({
+              databaseId: appwriteConfig.databaseId || 'default-db',
+              tableId: appwriteConfig.usersCollectionId || 'users',
+              queries: [Query.equal('accountId', notification.userId)],
+            });
+
+            if (users.rows.length > 0) {
+              const user = users.rows[0];
+              userDocId = user.$id;
+              orgId = user.orgId;
+            }
+          } catch (accountIdLookupError) {
+            console.warn(
+              '[SERVER] NotificationService.createNotification] Could not look up user by $id or accountId:',
+              accountIdLookupError
+            );
+          }
+        } else {
+          console.warn(
+            '[SERVER] NotificationService.createNotification] Error looking up user:',
+            userLookupError
+          );
+        }
+      }
+
+      // Get orgId from user's default organization if not found directly
+      if (!orgId) {
+        const defaultOrg = await getUserDefaultOrganization(userDocId);
+        if (!defaultOrg) {
+          const errorMsg = `User ${notification.userId} (docId: ${userDocId}) has no default organization`;
+          console.error(
+            '[SERVER] NotificationService.createNotification]',
+            errorMsg
+          );
+          throw new Error(errorMsg);
+        }
+        orgId = defaultOrg.orgId;
       }
 
       // Build notification data, excluding undefined values
       const notificationData: Record<string, any> = {
-        userId: notification.userId,
+        userId: notification.userId, // Keep accountId for querying (matches auth context)
         title: notification.title,
         message: notification.message,
         type: notification.type,
         read: false,
         priority: notification.priority || notificationType.priority,
-        orgId: defaultOrg.orgId, // Required field
+        orgId: orgId, // Required field
       };
 
       // Only add optional fields if they have values
@@ -326,26 +539,75 @@ class NotificationService {
         data: notificationData,
       });
 
+      const notificationId = (response as any).$id;
+
       console.log(
         '[SERVER] NotificationService.createNotification] Successfully created notification:',
-        (response as any).$id || 'unknown-id'
+        {
+          notificationId: notificationId || 'unknown-id',
+          userId: notification.userId,
+          orgId: orgId,
+          type: notification.type,
+          title: notification.title,
+        }
       );
 
-      // Send SMS notification if user has SMS enabled
+      // Check user's digest frequency setting
+      const userSettings = await this.getNotificationSettings(
+        notification.userId
+      );
+      const digestFrequency = userSettings?.frequency || 'instant';
+
+      // If user has digest frequency enabled, queue the notification instead of sending immediately
+      if (digestFrequency === 'daily' || digestFrequency === 'weekly') {
+        try {
+          const { digestService } = await import('./digestService');
+          await digestService.queueNotificationForDigest(
+            notification.userId,
+            notificationId,
+            digestFrequency
+          );
+          console.log(
+            `[SERVER] NotificationService.createNotification] Queued notification ${notificationId} for ${digestFrequency} digest`
+          );
+        } catch (digestError) {
+          console.warn(
+            '[SERVER] NotificationService.createNotification] Failed to queue notification for digest (non-critical):',
+            digestError
+          );
+          // Continue with normal notification flow if digest queueing fails
+        }
+      }
+
+      // Invalidate cache to ensure notification appears immediately
+      // Do this in a separate try-catch so cache errors don't prevent notification creation from succeeding
       try {
-        await this.sendSMSNotification(notification.userId, {
-          title: notificationData.title,
-          message: notificationData.message,
-          priority: notificationData.priority,
-          actionUrl: notificationData.actionUrl,
-          type: notificationData.type,
-        });
-      } catch (smsError) {
-        console.warn(
-          '[SERVER] NotificationService.createNotification] SMS notification failed (non-critical):',
-          smsError
+        await CacheManager.invalidateNotifications(notification.userId);
+        console.log(
+          `[SERVER] Invalidated notification cache for ${notification.userId}`
         );
-        // Don't throw - SMS failure shouldn't break notification creation
+      } catch (cacheError) {
+        console.warn(`[SERVER] Could not invalidate cache:`, cacheError);
+      }
+
+      // Send SMS notification if user has SMS enabled and digest is instant
+      // (SMS for digest users will be sent when digest is processed)
+      if (digestFrequency === 'instant') {
+        try {
+          await this.sendSMSNotification(notification.userId, {
+            title: notificationData.title,
+            message: notificationData.message,
+            priority: notificationData.priority,
+            actionUrl: notificationData.actionUrl,
+            type: notificationData.type,
+          });
+        } catch (smsError) {
+          console.warn(
+            '[SERVER] NotificationService.createNotification] SMS notification failed (non-critical):',
+            smsError
+          );
+          // Don't throw - SMS failure shouldn't break notification creation
+        }
       }
 
       return response as unknown as Notification;
@@ -451,20 +713,75 @@ class NotificationService {
   async deleteNotification(id: string): Promise<void> {
     try {
       const tablesDB = await this.getTablesDB();
+
+      // Get notification first to find userId for cache invalidation
+      let userId: string | null = null;
+      try {
+        const notification = await tablesDB.getRow({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+          rowId: id,
+        });
+        userId = (notification as any).userId;
+      } catch (getError) {
+        console.warn(
+          'Could not fetch notification before deletion (non-critical):',
+          getError
+        );
+      }
+
       await tablesDB.deleteRow({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
         rowId: id,
       });
+
+      // Invalidate cache immediately for instant UI update
+      if (userId) {
+        try {
+          await CacheManager.invalidateNotifications(userId);
+          console.log(
+            `[SERVER] NotificationService: Invalidated cache for userId: ${userId} after deletion`
+          );
+        } catch (cacheError) {
+          console.warn(
+            'Could not invalidate cache after deletion (non-critical):',
+            cacheError
+          );
+        }
+      }
     } catch (error) {
       console.error('Failed to delete notification:', error);
       throw new Error('Failed to delete notification');
     }
   }
 
-  async deleteMultipleNotifications(ids: string[]): Promise<void> {
+  async deleteMultipleNotifications(
+    ids: string[],
+    userId?: string
+  ): Promise<void> {
     try {
       const tablesDB = await this.getTablesDB();
+
+      // Get userId from first notification if not provided
+      let targetUserId = userId;
+      if (!targetUserId && ids.length > 0) {
+        try {
+          const firstNotification = await tablesDB.getRow({
+            databaseId: appwriteConfig.databaseId || 'default-db',
+            tableId:
+              appwriteConfig.notificationsCollectionId || 'notifications',
+            rowId: ids[0],
+          });
+          targetUserId = (firstNotification as any).userId;
+        } catch (getError) {
+          console.warn(
+            'Could not fetch notification before bulk deletion (non-critical):',
+            getError
+          );
+        }
+      }
+
       const deletePromises = ids.map((id) =>
         tablesDB.deleteRow({
           databaseId: appwriteConfig.databaseId || 'default-db',
@@ -474,6 +791,21 @@ class NotificationService {
       );
 
       await Promise.all(deletePromises);
+
+      // Invalidate cache immediately for instant UI update
+      if (targetUserId) {
+        try {
+          await CacheManager.invalidateNotifications(targetUserId);
+          console.log(
+            `[SERVER] NotificationService: Invalidated cache for userId: ${targetUserId} after bulk deletion`
+          );
+        } catch (cacheError) {
+          console.warn(
+            'Could not invalidate cache after bulk deletion (non-critical):',
+            cacheError
+          );
+        }
+      }
     } catch (error) {
       console.error('Failed to delete multiple notifications:', error);
       throw new Error('Failed to delete multiple notifications');
@@ -572,12 +904,54 @@ class NotificationService {
   async getUnreadCount(userId: string): Promise<number> {
     try {
       const tablesDB = await this.getTablesDB();
-      const response = await tablesDB.listRows({
+
+      // Resolve both docId and accountId
+      const { docId, accountId } = await this.resolveUserIds(userId);
+
+      // Query for unread notifications with docId
+      const docIdResponse = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
-        queries: [Query.equal('userId', userId), Query.equal('read', false)],
+        queries: [Query.equal('userId', docId), Query.equal('read', false)],
       });
-      return response.total;
+
+      let totalUnread = docIdResponse.total || 0;
+
+      // If we have an accountId that's different from docId, also query for it
+      if (accountId && accountId !== docId) {
+        try {
+          const accountIdResponse = await tablesDB.listRows({
+            databaseId: appwriteConfig.databaseId || 'default-db',
+            tableId:
+              appwriteConfig.notificationsCollectionId || 'notifications',
+            queries: [
+              Query.equal('userId', accountId),
+              Query.equal('read', false),
+            ],
+          });
+
+          // Deduplicate by $id
+          const docIdIds = new Set(
+            (docIdResponse.rows || []).map((n: any) => n.$id)
+          );
+          const uniqueAccountIdCount = (accountIdResponse.rows || []).filter(
+            (n: any) => !docIdIds.has(n.$id)
+          ).length;
+
+          totalUnread += uniqueAccountIdCount;
+        } catch (accountIdError) {
+          console.warn(
+            '[SERVER] Could not query unread count by accountId:',
+            accountIdError
+          );
+        }
+      }
+
+      console.log(
+        `[SERVER] NotificationService.getUnreadCount - userId: ${userId}, docId: ${docId}, accountId: ${accountId}, total unread: ${totalUnread}`
+      );
+
+      return totalUnread;
     } catch (error) {
       console.error('Failed to get unread count:', error);
       throw new Error('Failed to get unread count');
