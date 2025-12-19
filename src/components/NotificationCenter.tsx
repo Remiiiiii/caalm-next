@@ -455,257 +455,257 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-          <div className="space-y-4">
-            {/* Enhanced Search and Filter Bar */}
-            <div className="flex gap-2" data-testid="notification-filters">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Search notifications..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+        <div className="space-y-4">
+          {/* Enhanced Search and Filter Bar */}
+          <div className="flex gap-2" data-testid="notification-filters">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search notifications..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 bg-white border border-slate-200 text-slate-700 placeholder:text-slate-400"
-                />
-              </div>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
+              />
+            </div>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger
                   className="sort-select"
                   data-testid="type-filter"
                 >
-                  <SelectValue placeholder="All Types" />
-                </SelectTrigger>
-                <SelectContent className="sort-select-content">
-                  <SelectItem className="shad-select-item" value="all">
-                    All Types
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent className="sort-select-content">
+                <SelectItem className="shad-select-item" value="all">
+                  All Types
+                </SelectItem>
+                {Object.entries(NOTIFICATION_TYPES).map(([key, value]) => (
+                  <SelectItem
+                    key={key}
+                    className="shad-select-item"
+                    value={key}
+                  >
+                    <div className="flex items-center gap-2">
+                      {value.icon}
+                      {value.label}
+                    </div>
                   </SelectItem>
-                  {Object.entries(NOTIFICATION_TYPES).map(([key, value]) => (
-                    <SelectItem
-                      key={key}
-                      className="shad-select-item"
-                      value={key}
-                    >
-                      <div className="flex items-center gap-2">
-                        {value.icon}
-                        {value.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="sort-select">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent className="sort-select-content">
-                  <SelectItem className="shad-select-item" value="all">
-                    All Status
-                  </SelectItem>
-                  <SelectItem className="shad-select-item" value="unread">
-                    Unread
-                  </SelectItem>
-                  <SelectItem className="shad-select-item" value="read">
-                    Read
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger
-                  className="sort-select"
-                  data-testid="priority-filter"
-                >
-                  <SelectValue placeholder="All Priorities" />
-                </SelectTrigger>
-                <SelectContent className="sort-select-content">
-                  <SelectItem className="shad-select-item" value="all">
-                    All Priorities
-                  </SelectItem>
-                  <SelectItem className="shad-select-item" value="urgent">
-                    Urgent
-                  </SelectItem>
-                  <SelectItem className="shad-select-item" value="high">
-                    High
-                  </SelectItem>
-                  <SelectItem className="shad-select-item" value="medium">
-                    Medium
-                  </SelectItem>
-                  <SelectItem className="shad-select-item" value="low">
-                    Low
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="sort-select">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="sort-select-content">
+                <SelectItem className="shad-select-item" value="all">
+                  All Status
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="unread">
+                  Unread
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="read">
+                  Read
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger
+                className="sort-select"
+                data-testid="priority-filter"
+              >
+                <SelectValue placeholder="All Priorities" />
+              </SelectTrigger>
+              <SelectContent className="sort-select-content">
+                <SelectItem className="shad-select-item" value="all">
+                  All Priorities
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="urgent">
+                  Urgent
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="high">
+                  High
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="medium">
+                  Medium
+                </SelectItem>
+                <SelectItem className="shad-select-item" value="low">
+                  Low
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Sort Options */}
+          {/* Sort Options */}
             <div
               className="flex items-center gap-2"
               data-testid="sort-controls"
             >
-              <span className="text-sm text-gray-600">Sort by:</span>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-32 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="priority">Priority</SelectItem>
-                  <SelectItem value="type">Type</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <span className="text-sm text-gray-600">Sort by:</span>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-32 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Date</SelectItem>
+                <SelectItem value="priority">Priority</SelectItem>
+                <SelectItem value="type">Type</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Bulk Actions */}
-            {selected.length > 0 && (
+          {/* Bulk Actions */}
+          {selected.length > 0 && (
               <div className="flex gap-2 p-3 rounded-lg border-2 border-blue-300 bg-white">
-                <Button
-                  size="sm"
-                  onClick={() => handleMarkAsRead(selected)}
-                  disabled={loading}
+              <Button
+                size="sm"
+                onClick={() => handleMarkAsRead(selected)}
+                disabled={loading}
                   className="primary-btn px-3 sm:px-4 flex items-center gap-2"
-                >
-                  <Check className="w-4 h-4" />
-                  Mark as Read ({selected.length})
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleMarkAsUnread(selected)}
-                  disabled={loading}
+              >
+                <Check className="w-4 h-4" />
+                Mark as Read ({selected.length})
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleMarkAsUnread(selected)}
+                disabled={loading}
                   variant="outline"
                   className="primary-btn px-3 sm:px-4 flex items-center gap-2"
-                >
-                  <Check className="w-4 h-4" />
-                  Mark as Unread ({selected.length})
-                </Button>
-                <Button
-                  onClick={() => handleDeleteNotifications(selected)}
-                  disabled={loading}
+              >
+                <Check className="w-4 h-4" />
+                Mark as Unread ({selected.length})
+              </Button>
+              <Button
+                onClick={() => handleDeleteNotifications(selected)}
+                disabled={loading}
                   variant="destructive"
                   className="primary-btn px-3 sm:px-4"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete ({selected.length})
-                </Button>
-              </div>
-            )}
-
-            {/* Enhanced Notifications List */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={paginated.map((n) => n.$id)}
-                strategy={verticalListSortingStrategy}
               >
+                  <Trash2 className="w-4 h-4" />
+                Delete ({selected.length})
+              </Button>
+            </div>
+          )}
+
+          {/* Enhanced Notifications List */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={paginated.map((n) => n.$id)}
+              strategy={verticalListSortingStrategy}
+            >
                 <div className="space-y-2" data-testid="notification-list">
-                  {loading ? (
+                {loading ? (
                     <div className="text-center py-12 text-slate-500">
                       <div className="w-8 h-8 mx-auto mb-3 animate-spin border-2 border-slate-300 border-t-[#0f5384] rounded-full"></div>
                       <p className="text-sm font-medium">
-                        Loading notifications...
+                    Loading notifications...
                       </p>
-                    </div>
-                  ) : error ? (
-                    <div
+                  </div>
+                ) : error ? (
+                  <div
                       className="text-center py-12"
-                      data-testid="error-message"
-                    >
+                    data-testid="error-message"
+                  >
                       <div className="w-12 h-12 mx-auto mb-3 bg-red-100 rounded-full flex items-center justify-center">
                         <AlertTriangle className="w-6 h-6 text-red-600" />
                       </div>
                       <p className="text-lg font-semibold text-red-600 mb-1">
-                        Error loading notifications
-                      </p>
-                      <p className="text-sm text-red-500">{error}</p>
-                    </div>
-                  ) : paginated.length === 0 ? (
-                    <div
+                      Error loading notifications
+                    </p>
+                    <p className="text-sm text-red-500">{error}</p>
+                  </div>
+                ) : paginated.length === 0 ? (
+                  <div
                       className="text-center py-12"
-                      data-testid="empty-state"
-                    >
+                    data-testid="empty-state"
+                  >
                       <div className="w-12 h-12 mx-auto mb-3 bg-blue-100 rounded-full flex items-center justify-center">
                         <Bell className="w-6 h-6 text-blue-600" />
                       </div>
                       <p className="text-lg font-semibold text-slate-900 mb-1">
-                        No notifications found
-                      </p>
+                      No notifications found
+                    </p>
                       <p className="text-sm text-slate-600">
                         You&apos;re all caught up!
                       </p>
-                    </div>
-                  ) : (
-                    paginated.map((notification) => {
-                      const typeConfig =
+                  </div>
+                ) : (
+                  paginated.map((notification) => {
+                    const typeConfig =
                         NOTIFICATION_TYPES[
                           notification.type as NotificationType
                         ];
-                      return (
-                        <SortableNotificationItem
-                          key={notification.$id}
-                          notification={notification}
-                          isSelected={selected.includes(notification.$id)}
-                          onSelect={handleSelect}
-                          onMarkAsRead={(id) => handleMarkAsRead([id])}
-                          onMarkAsUnread={(id) => handleMarkAsUnread([id])}
-                          typeConfig={typeConfig}
-                          getPriorityColor={getPriorityColor}
-                          formatNotificationTime={formatNotificationTime}
-                        />
-                      );
-                    })
-                  )}
-                </div>
-              </SortableContext>
-            </DndContext>
+                    return (
+                      <SortableNotificationItem
+                        key={notification.$id}
+                        notification={notification}
+                        isSelected={selected.includes(notification.$id)}
+                        onSelect={handleSelect}
+                        onMarkAsRead={(id) => handleMarkAsRead([id])}
+                        onMarkAsUnread={(id) => handleMarkAsUnread([id])}
+                        typeConfig={typeConfig}
+                        getPriorityColor={getPriorityColor}
+                        formatNotificationTime={formatNotificationTime}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </SortableContext>
+          </DndContext>
 
-            {/* Enhanced Pagination */}
-            <div
+          {/* Enhanced Pagination */}
+          <div
               className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200"
-              data-testid="pagination"
-            >
-              <div className="flex items-center gap-4">
-                <label className="text-xs text-slate-700">
-                  Items per page:
-                  <select
-                    className="ml-2 border rounded px-2 py-1"
-                    value={perPage}
-                    onChange={(e) => setPerPage(Number(e.target.value))}
-                  >
-                    {[5, 10, 20, 50].map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <span className="text-sm text-gray-500">
-                  {`${(page - 1) * perPage + 1}-${Math.min(
-                    page * perPage,
-                    filtered.length
-                  )} of ${filtered.length} items`}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+            data-testid="pagination"
+          >
+            <div className="flex items-center gap-4">
+              <label className="text-xs text-slate-700">
+                Items per page:
+                <select
+                  className="ml-2 border rounded px-2 py-1"
+                  value={perPage}
+                  onChange={(e) => setPerPage(Number(e.target.value))}
                 >
-                  Previous
-                </Button>
-                <span className="flex items-center px-3 text-sm">
-                  Page {page} of {Math.ceil(filtered.length / perPage)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page * perPage >= filtered.length}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
+                  {[5, 10, 20, 50].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="text-sm text-gray-500">
+                {`${(page - 1) * perPage + 1}-${Math.min(
+                  page * perPage,
+                  filtered.length
+                )} of ${filtered.length} items`}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <span className="flex items-center px-3 text-sm">
+                Page {page} of {Math.ceil(filtered.length / perPage)}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page * perPage >= filtered.length}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
             </div>
           </div>
         </div>
@@ -811,8 +811,8 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-semibold text-slate-900">
-                  {notification.title}
-                </span>
+                    {notification.title}
+                  </span>
                 {notification.priority && (
                   <span
                     className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(
@@ -832,7 +832,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
               <div className="flex items-center gap-4 text-xs text-slate-500">
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  <span>{formatNotificationTime(notification.$createdAt)}</span>
+                <span>{formatNotificationTime(notification.$createdAt)}</span>
                 </div>
                 {typeConfig && (
                   <span

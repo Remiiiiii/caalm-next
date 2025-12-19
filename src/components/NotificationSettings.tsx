@@ -533,8 +533,8 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             <div className="flex justify-between">
               <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                 <Globe className="w-5 h-5 text-[#0f5384]" />
-                Global Settings
-              </h3>
+              Global Settings
+            </h3>
               <div className="flex items-center gap-2">
                 <Label className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-[#0f5384]" />
@@ -563,57 +563,57 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
               </div>
             </div>
             <div className="bg-white rounded-lg p-4 border-2 border-slate-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-5">
-                    <Label className="flex items-center gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-5">
+                  <Label className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-[#0f5384]" />
-                      Email Notifications
-                    </Label>
-                    <Switch
-                      checked={globalSettings.emailNotifications}
-                      onCheckedChange={(checked) =>
-                        handleGlobalSettingChange('emailNotifications', checked)
-                      }
-                    />
-                  </div>
+                    Email Notifications
+                  </Label>
+                  <Switch
+                    checked={globalSettings.emailNotifications}
+                    onCheckedChange={(checked) =>
+                      handleGlobalSettingChange('emailNotifications', checked)
+                    }
+                  />
+                </div>
 
-                  <div className="flex items-center gap-5">
-                    <Label className="flex items-center gap-2">
+                <div className="flex items-center gap-5">
+                  <Label className="flex items-center gap-2">
                       <Smartphone className="w-4 h-4 text-[#0f5384]" />
-                      SMS Notifications
-                    </Label>
-                    <Switch
-                      checked={globalSettings.pushNotifications}
+                    SMS Notifications
+                  </Label>
+                  <Switch
+                    checked={globalSettings.pushNotifications}
                       disabled={
                         !globalSettings.smsNotifications || !phoneNumber.trim()
                       }
-                      onCheckedChange={(checked) =>
-                        handleGlobalSettingChange('pushNotifications', checked)
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label className="flex items-center gap-2">
+                    onCheckedChange={(checked) =>
+                      handleGlobalSettingChange('pushNotifications', checked)
+                    }
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-[#0f5384]" />
-                      In-App Notifications
-                    </Label>
-                    <Switch
-                      checked={globalSettings.inAppNotifications}
-                      onCheckedChange={(checked) =>
-                        handleGlobalSettingChange('inAppNotifications', checked)
-                      }
-                    />
-                  </div>
+                    In-App Notifications
+                  </Label>
+                  <Switch
+                    checked={globalSettings.inAppNotifications}
+                    onCheckedChange={(checked) =>
+                      handleGlobalSettingChange('inAppNotifications', checked)
+                    }
+                  />
+                </div>
 
-                  {globalSettings.smsNotifications && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">SMS Phone Number (US)</Label>
-                      <Input
-                        type="tel"
-                        inputMode="tel"
+                {globalSettings.smsNotifications && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">SMS Phone Number (US)</Label>
+                    <Input
+                      type="tel"
+                      inputMode="tel"
                         placeholder="(254) 721-8691 or 2547218691"
-                        value={phoneNumber}
+                      value={phoneNumber}
                         onChange={(e) => {
                           // Only allow digits, spaces, dashes, parentheses, and + sign
                           const value = e.target.value;
@@ -651,32 +651,32 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                           }
                         }}
                         className="text-xs border border-slate-300 bg-white"
-                      />
-                      <p className="text-[11px] text-gray-500">
-                        Enter a valid US number. We&#39;ll store it securely to
-                        enable SMS alerts.
-                      </p>
-                    </div>
-                  )}
+                    />
+                    <p className="text-[11px] text-gray-500">
+                      Enter a valid US number. We&#39;ll store it securely to
+                      enable SMS alerts.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label className="flex items-center gap-2">
+                      <BellOff className="w-4 h-4 text-[#0f5384]" />
+                    Quiet Hours
+                  </Label>
+                  <Switch
+                    checked={globalSettings.quietHours}
+                    onCheckedChange={(checked) =>
+                      handleGlobalSettingChange('quietHours', checked)
+                    }
+                  />
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Label className="flex items-center gap-2">
-                      <BellOff className="w-4 h-4 text-[#0f5384]" />
-                      Quiet Hours
-                    </Label>
-                    <Switch
-                      checked={globalSettings.quietHours}
-                      onCheckedChange={(checked) =>
-                        handleGlobalSettingChange('quietHours', checked)
-                      }
-                    />
-                  </div>
-
-                  {globalSettings.quietHours && (
+                {globalSettings.quietHours && (
                     <div className="space-y-4">
-                      <div>
+                    <div>
                         <Label
                           htmlFor="quietHoursStart"
                           className="text-sm font-medium text-slate-700 mb-2 block"
@@ -684,7 +684,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                           Start Time
                         </Label>
                         <Select
-                          value={globalSettings.quietHoursStart}
+                        value={globalSettings.quietHoursStart}
                           onValueChange={(value) =>
                             handleGlobalSettingChange('quietHoursStart', value)
                           }
@@ -703,8 +703,8 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div>
+                    </div>
+                    <div>
                         <Label
                           htmlFor="quietHoursEnd"
                           className="text-sm font-medium text-slate-700 mb-2 block"
@@ -712,7 +712,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                           End Time
                         </Label>
                         <Select
-                          value={globalSettings.quietHoursEnd}
+                        value={globalSettings.quietHoursEnd}
                           onValueChange={(value) =>
                             handleGlobalSettingChange('quietHoursEnd', value)
                           }
@@ -731,165 +731,165 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  <div>
+                <div>
                     <div className="flex items-center gap-2 pb-2">
                       <ClockArrowDown className="w-4 h-4 text-[#0f5384]" />
                       <Label>Digest Frequency</Label>
                     </div>
-                    <Select
-                      value={globalSettings.digestFrequency}
-                      onValueChange={(value) =>
-                        handleGlobalSettingChange('digestFrequency', value)
-                      }
-                    >
-                      <SelectTrigger className="text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="instant">Instant</SelectItem>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select
+                    value={globalSettings.digestFrequency}
+                    onValueChange={(value) =>
+                      handleGlobalSettingChange('digestFrequency', value)
+                    }
+                  >
+                    <SelectTrigger className="text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="instant">Instant</SelectItem>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Notification Type Preferences */}
-            <div className="space-y-4">
+          {/* Notification Type Preferences */}
+          <div className="space-y-4">
               <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                 <Bell className="w-5 h-5 text-[#0f5384]" />
-                Notification Types
-              </h3>
+              Notification Types
+            </h3>
 
-              <div className="space-y-3">
-                {preferences.map((preference) => {
-                  const typeConfig =
-                    NOTIFICATION_TYPES[
-                      preference.type as keyof typeof NOTIFICATION_TYPES
-                    ];
-                  return (
-                    <div
-                      key={preference.type}
+            <div className="space-y-3">
+              {preferences.map((preference) => {
+                const typeConfig =
+                  NOTIFICATION_TYPES[
+                    preference.type as keyof typeof NOTIFICATION_TYPES
+                  ];
+                return (
+                  <div
+                    key={preference.type}
                       className="p-4 border-2 border-slate-200 rounded-lg bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 shadow-sm hover:shadow-md"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          {typeConfig?.icon}
-                          <div>
-                            <h4 className="font-medium text-gray-900">
-                              {typeConfig?.label}
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              {typeConfig?.description}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`${preference.type}-email`}
-                            checked={preference.email}
-                            onCheckedChange={(checked) =>
-                              handlePreferenceChange(
-                                preference.type,
-                                'email',
-                                checked
-                              )
-                            }
-                          />
-                          <Label
-                            htmlFor={`${preference.type}-email`}
-                            className="text-sm"
-                          >
-                            Email
-                          </Label>
-                        </div>
-
-                        {/* Push channel removed */}
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`${preference.type}-inapp`}
-                            checked={preference.inApp}
-                            onCheckedChange={(checked) =>
-                              handlePreferenceChange(
-                                preference.type,
-                                'inApp',
-                                checked
-                              )
-                            }
-                          />
-                          <Label
-                            htmlFor={`${preference.type}-inapp`}
-                            className="text-sm"
-                          >
-                            In-App
-                          </Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`${preference.type}-sms`}
-                            checked={preference.sms}
-                            disabled={!globalSettings.smsNotifications}
-                            onCheckedChange={(checked) =>
-                              handlePreferenceChange(
-                                preference.type,
-                                'sms',
-                                checked
-                              )
-                            }
-                          />
-                          <Label
-                            htmlFor={`${preference.type}-sms`}
-                            className={`text-sm ${
-                              !globalSettings.smsNotifications
-                                ? 'opacity-60'
-                                : ''
-                            }`}
-                          >
-                            <span className="inline-flex items-center gap-1">
-                              <MessageSquare className="w-3.5 h-3.5" /> SMS Text
-                              Messages
-                            </span>
-                          </Label>
-                        </div>
-
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        {typeConfig?.icon}
                         <div>
-                          <Label className="text-xs">Priority</Label>
-                          <Select
-                            value={preference.priority}
-                            onValueChange={(value) =>
-                              handlePreferenceChange(
-                                preference.type,
-                                'priority',
-                                value
-                              )
-                            }
-                          >
-                            <SelectTrigger className="text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <h4 className="font-medium text-gray-900">
+                            {typeConfig?.label}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {typeConfig?.description}
+                          </p>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${preference.type}-email`}
+                          checked={preference.email}
+                          onCheckedChange={(checked) =>
+                            handlePreferenceChange(
+                              preference.type,
+                              'email',
+                              checked
+                            )
+                          }
+                        />
+                        <Label
+                          htmlFor={`${preference.type}-email`}
+                          className="text-sm"
+                        >
+                          Email
+                        </Label>
+                      </div>
+
+                      {/* Push channel removed */}
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${preference.type}-inapp`}
+                          checked={preference.inApp}
+                          onCheckedChange={(checked) =>
+                            handlePreferenceChange(
+                              preference.type,
+                              'inApp',
+                              checked
+                            )
+                          }
+                        />
+                        <Label
+                          htmlFor={`${preference.type}-inapp`}
+                          className="text-sm"
+                        >
+                          In-App
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${preference.type}-sms`}
+                          checked={preference.sms}
+                          disabled={!globalSettings.smsNotifications}
+                          onCheckedChange={(checked) =>
+                            handlePreferenceChange(
+                              preference.type,
+                              'sms',
+                              checked
+                            )
+                          }
+                        />
+                        <Label
+                          htmlFor={`${preference.type}-sms`}
+                          className={`text-sm ${
+                              !globalSettings.smsNotifications
+                                ? 'opacity-60'
+                                : ''
+                          }`}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            <MessageSquare className="w-3.5 h-3.5" /> SMS Text
+                            Messages
+                          </span>
+                        </Label>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs">Priority</Label>
+                        <Select
+                          value={preference.priority}
+                          onValueChange={(value) =>
+                            handlePreferenceChange(
+                              preference.type,
+                              'priority',
+                              value
+                            )
+                          }
+                        >
+                          <SelectTrigger className="text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="urgent">Urgent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
               </div>
             </div>
           </div>
@@ -933,7 +933,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             setShowSmsSetupModal(open);
             // If dialog is closed without submission, turn off SMS switch
             if (!open && !smsFormSubmitted) {
-              handleGlobalSettingChange('smsNotifications', false);
+                  handleGlobalSettingChange('smsNotifications', false);
             }
           }}
           onSuccess={async () => {
@@ -965,8 +965,8 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           onCancel={() => {
             // User cancelled, turn off SMS switch
             handleGlobalSettingChange('smsNotifications', false);
-            setShowSmsSetupModal(false);
-          }}
+                  setShowSmsSetupModal(false);
+                }}
         />
       </DialogContent>
     </Dialog>

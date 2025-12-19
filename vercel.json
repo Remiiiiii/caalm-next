@@ -9,6 +9,6 @@
     {
       "path": "/api/notifications/process-digest",
       "schedule": "0 * * * *"
-    }
+  }
   ]
 }

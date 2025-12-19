@@ -55,3 +55,4 @@ export const NOTIFICATION_DIGEST_QUEUE_ATTRIBUTES = [
     required: true,
   },
 ] as const;
+
