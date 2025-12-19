@@ -13,7 +13,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Button } from './ui/button';
-import { Smartphone, Ban, Save, Loader2 } from 'lucide-react';
+import { Smartphone, Ban, Save, Loader2, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -43,7 +43,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Normalize phone number for comparison
-  // Handles: (254) 721-8691 → +12547218691 or 2547218691 → +12547218691
+  // Handles: (555) 123-4567 → +15551234567 or 5551234567 → +15551234567
   const normalizePhoneNumber = (phone: string): string => {
     if (!phone) return '';
 
@@ -118,7 +118,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
       const phoneRegex = /^\+\d{10,15}$/;
       if (!phoneRegex.test(normalizedPhone)) {
         newErrors.phoneNumber =
-          'Please enter a valid phone number (e.g., (254) 721-8691 or 2547218691)';
+          'Please enter a valid phone number (e.g., (555) 123-4567 or 5551234567)';
       }
     }
 
@@ -318,7 +318,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
                 className={`bg-white border-slate-300 ${
                   errors.phoneNumber ? 'border-red-500' : ''
                 }`}
-                placeholder="(254) 721-8691 or 2547218691"
+                placeholder="(555) 123-4567 or 5551234567"
               />
               <p className="text-xs text-slate-500">Enter your phone number</p>
               {errors.phoneNumber && (
@@ -412,7 +412,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
               </>
             ) : (
               <>
-                <Save className="w-4 h-4" />
+                <Send className="w-4 h-4" />
                 Submit
               </>
             )}

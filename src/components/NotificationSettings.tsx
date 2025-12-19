@@ -48,6 +48,7 @@ import {
   Globe,
   Smartphone,
   ShieldCheck,
+  ShieldX,
   BellOff,
   ClockArrowDown,
   CalendarSync,
@@ -195,6 +196,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   >(null);
   const [checkingFormStatus, setCheckingFormStatus] = useState(false);
   const [hasShownPhoneMismatch, setHasShownPhoneMismatch] = useState(false);
+  const [phoneNumberVerified, setPhoneNumberVerified] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   // Push notifications removed
@@ -240,7 +242,10 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             phoneNumber: data.phone_number || '',
             digestFrequency: (data.frequency as string) || 'daily',
           }));
-          setPhoneNumber((data.phone_number as string) || '');
+          const savedPhoneNumber = (data.phone_number as string) || '';
+          setPhoneNumber(savedPhoneNumber);
+          // Phone number verification will be set after form status check
+          // to ensure it matches the form submission
         }
       } catch {
         // noop
@@ -261,12 +266,39 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           signal: controller.signal,
         });
         const result = await res.json();
-        if (result.submitted && result.verified) {
+        // Enable switch whenever a row exists in SMS form submissions collection
+        if (result.submitted) {
           setSmsFormSubmitted(true);
+          // Enable SMS Notifications switch if a submission exists
+          handleGlobalSettingChange('smsNotifications', true);
           // Store the phone number from form submission for comparison
+          // Do NOT auto-populate - user must enter it manually to verify
           if (result.data?.phone_number) {
             const dbPhoneNumber = result.data.phone_number;
             setFormSubmissionPhoneNumber(dbPhoneNumber);
+            // Don't pre-fill phone number field - user needs to enter it manually for verification
+            // Only set if it's empty to avoid overwriting user input
+            if (!phoneNumber.trim()) {
+              setPhoneNumber('');
+            }
+            // Check if saved phone number matches form submission (already verified)
+            // Use normalizePhoneNumber for comparison (defined later in component)
+            if (phoneNumber.trim()) {
+              const normalizePhone = (phone: string): string => {
+                if (!phone) return '';
+                const digits = phone.replace(/\D/g, '');
+                if (!digits) return '';
+                if (digits.length === 10) return '+1' + digits;
+                if (digits.length === 11 && digits.startsWith('1'))
+                  return '+' + digits;
+                return '+' + digits;
+              };
+              const normalized1 = normalizePhone(dbPhoneNumber);
+              const normalized2 = normalizePhone(phoneNumber);
+              if (normalized1 === normalized2) {
+                setPhoneNumberVerified(true);
+              }
+            }
             // Debug logging in development
             if (process.env.NODE_ENV === 'development') {
               console.log(
@@ -278,9 +310,12 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
         } else {
           setSmsFormSubmitted(false);
           setFormSubmissionPhoneNumber(null);
+          // Disable SMS Notifications switch if no submission exists
+          handleGlobalSettingChange('smsNotifications', false);
         }
       } catch {
         setSmsFormSubmitted(false);
+        handleGlobalSettingChange('smsNotifications', false);
       } finally {
         setCheckingFormStatus(false);
       }
@@ -295,6 +330,8 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
       setPreferences((prev) => prev.map((p) => ({ ...p, sms: false })));
       // Also disable SMS Notifications switch when Enable SMS is off
       handleGlobalSettingChange('pushNotifications', false);
+      // Reset verified state when SMS is disabled
+      setPhoneNumberVerified(false);
     }
   }, [globalSettings.smsNotifications]);
 
@@ -320,11 +357,17 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     } else if (
       !phoneNumber.trim() &&
       globalSettings.pushNotifications &&
-      globalSettings.smsNotifications
+      globalSettings.smsNotifications &&
+      !formSubmissionPhoneNumber
     ) {
-      // Disable if phone number is cleared (but only if Enable SMS is still on)
+      // Only disable if phone number is cleared AND there's no form submission phone number
+      // This prevents disabling right after form submission when phone number is cleared
+      // to allow user to enter it manually for verification
+      // If formSubmissionPhoneNumber exists, keep the switch state as-is until user enters number
       setGlobalSettings((prev) => ({ ...prev, pushNotifications: false }));
     }
+    // If formSubmissionPhoneNumber exists but phoneNumber is empty, don't change pushNotifications state
+    // This prevents the flicker after form submission
   }, [
     globalSettings.smsNotifications,
     phoneNumber || '',
@@ -387,6 +430,35 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   };
 
   const saveSettings = async () => {
+    // Validate phone number match if SMS notifications are enabled
+    if (globalSettings.smsNotifications && formSubmissionPhoneNumber) {
+      if (!phoneNumber.trim()) {
+        toast({
+          title: 'Phone Number Required',
+          description:
+            'Please enter your phone number in the SMS Phone Number field to enable SMS notifications.',
+          variant: 'destructive',
+        });
+        setSaving(false);
+        return;
+      }
+
+      const matches = comparePhoneNumbers(
+        formSubmissionPhoneNumber,
+        phoneNumber
+      );
+      if (!matches) {
+        toast({
+          title: 'Phone Number Mismatch',
+          description:
+            'The phone number you entered does not match the phone number provided in the SMS setup form. Please enter the correct phone number.',
+          variant: 'destructive',
+        });
+        setSaving(false);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const sanitizedPhone = formatUSPhoneToE164(phoneNumber);
@@ -408,6 +480,21 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
         }),
       });
       if (!res.ok) throw new Error('Save failed');
+
+      // If SMS notifications are enabled and phone numbers matched, mark as verified
+      if (
+        globalSettings.smsNotifications &&
+        formSubmissionPhoneNumber &&
+        phoneNumber.trim()
+      ) {
+        const matches = comparePhoneNumbers(
+          formSubmissionPhoneNumber,
+          phoneNumber
+        );
+        if (matches) {
+          setPhoneNumberVerified(true);
+        }
+      }
 
       toast({
         title: 'Settings Saved',
@@ -452,7 +539,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   };
 
   // Normalize phone number for comparison
-  // Handles: (254) 721-8691 → +12547218691 or 2547218691 → +12547218691
+  // Handles: (555) 123-4567 → +15551234567 or 5551234567 → +15551234567
   const normalizePhoneNumber = (phone: string): string => {
     if (!phone) return '';
 
@@ -533,17 +620,26 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             <div className="flex justify-between">
               <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                 <Globe className="w-5 h-5 text-[#0f5384]" />
-              Global Settings
-            </h3>
+                Global Settings
+              </h3>
               <div className="flex items-center gap-2">
                 <Label className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#0f5384]" />
-                  Enable SMS Notifications
+                  {globalSettings.smsNotifications ? (
+                    <>
+                      <ShieldX className="w-4 h-4 text-[#0f5384]" />
+                      Disable SMS Notifications
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4 text-[#0f5384]" />
+                      Enable SMS Notifications
+                    </>
+                  )}
                 </Label>
                 <Switch
                   checked={globalSettings.smsNotifications}
                   disabled={checkingFormStatus}
-                  onCheckedChange={(checked) => {
+                  onCheckedChange={async (checked) => {
                     if (checked) {
                       // Always allow toggle ON - show form dialog if not submitted
                       if (!smsFormSubmitted) {
@@ -555,65 +651,116 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                         handleGlobalSettingChange('smsNotifications', true);
                       }
                     } else {
-                      // Toggling OFF - disable SMS
-                      handleGlobalSettingChange('smsNotifications', false);
+                      // Toggling OFF - disable SMS notifications
+                      try {
+                        const res = await fetch(
+                          `/api/sms-form-submission?userId=${user?.$id}`,
+                          {
+                            method: 'DELETE',
+                          }
+                        );
+
+                        const result = await res.json();
+
+                        // Handle both success cases: newly disabled or already disabled
+                        if (!res.ok && !result.alreadyDisabled) {
+                          throw new Error(
+                            result.error ||
+                              'Failed to disable SMS notifications'
+                          );
+                        }
+
+                        // Disable SMS Notifications switch
+                        handleGlobalSettingChange('smsNotifications', false);
+                        // Also disable SMS Notifications switch (pushNotifications)
+                        handleGlobalSettingChange('pushNotifications', false);
+                        // Clear form submission state
+                        setSmsFormSubmitted(false);
+                        setFormSubmissionPhoneNumber(null);
+                        // Clear phone number field
+                        setPhoneNumber('');
+                        // Reset verified state
+                        setPhoneNumberVerified(false);
+
+                        toast({
+                          title: 'SMS Notifications Disabled',
+                          description: result.alreadyDisabled
+                            ? 'SMS notifications were already disabled.'
+                            : 'SMS notifications have been disabled. You will need to re-verify to enable them again.',
+                        });
+                      } catch (error: any) {
+                        console.error(
+                          'Failed to disable SMS notifications:',
+                          error
+                        );
+                        toast({
+                          title: 'Error',
+                          description:
+                            error.message ||
+                            'Failed to disable SMS notifications. Please try again.',
+                          variant: 'destructive',
+                        });
+                        // Revert switch state on error
+                        handleGlobalSettingChange('smsNotifications', true);
+                      }
                     }
                   }}
                 />
               </div>
             </div>
             <div className="bg-white rounded-lg p-4 border-2 border-slate-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-5">
-                  <Label className="flex items-center gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-5">
+                    <Label className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-[#0f5384]" />
-                    Email Notifications
-                  </Label>
-                  <Switch
-                    checked={globalSettings.emailNotifications}
-                    onCheckedChange={(checked) =>
-                      handleGlobalSettingChange('emailNotifications', checked)
-                    }
-                  />
-                </div>
+                      Email Notifications
+                    </Label>
+                    <Switch
+                      checked={globalSettings.emailNotifications}
+                      onCheckedChange={(checked) =>
+                        handleGlobalSettingChange('emailNotifications', checked)
+                      }
+                    />
+                  </div>
 
-                <div className="flex items-center gap-5">
-                  <Label className="flex items-center gap-2">
+                  <div className="flex items-center gap-5">
+                    <Label className="flex items-center gap-2">
                       <Smartphone className="w-4 h-4 text-[#0f5384]" />
-                    SMS Notifications
-                  </Label>
-                  <Switch
-                    checked={globalSettings.pushNotifications}
+                      SMS Notifications
+                    </Label>
+                    <Switch
+                      checked={globalSettings.pushNotifications}
                       disabled={
                         !globalSettings.smsNotifications || !phoneNumber.trim()
                       }
-                    onCheckedChange={(checked) =>
-                      handleGlobalSettingChange('pushNotifications', checked)
-                    }
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="flex items-center gap-2">
+                      onCheckedChange={(checked) =>
+                        handleGlobalSettingChange('pushNotifications', checked)
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-[#0f5384]" />
-                    In-App Notifications
-                  </Label>
-                  <Switch
-                    checked={globalSettings.inAppNotifications}
-                    onCheckedChange={(checked) =>
-                      handleGlobalSettingChange('inAppNotifications', checked)
-                    }
-                  />
-                </div>
+                      In-App Notifications
+                    </Label>
+                    <Switch
+                      checked={globalSettings.inAppNotifications}
+                      onCheckedChange={(checked) =>
+                        handleGlobalSettingChange('inAppNotifications', checked)
+                      }
+                    />
+                  </div>
 
-                {globalSettings.smsNotifications && (
-                  <div className="space-y-1">
-                    <Label className="text-xs">SMS Phone Number (US)</Label>
-                    <Input
-                      type="tel"
-                      inputMode="tel"
-                        placeholder="(254) 721-8691 or 2547218691"
-                      value={phoneNumber}
+                  {globalSettings.smsNotifications && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">SMS Phone Number (US)</Label>
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="(555) 123-4567 or 5551234567"
+                        value={phoneNumber}
+                        disabled={phoneNumberVerified}
                         onChange={(e) => {
                           // Only allow digits, spaces, dashes, parentheses, and + sign
                           const value = e.target.value;
@@ -621,6 +768,10 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                           if (allowedChars.test(value) || value === '') {
                             const newPhoneNumber = value;
                             setPhoneNumber(newPhoneNumber);
+                            // Reset verified state if phone number is changed
+                            if (phoneNumberVerified) {
+                              setPhoneNumberVerified(false);
+                            }
 
                             // Reset mismatch flag when phone number changes
                             if (hasShownPhoneMismatch) {
@@ -650,33 +801,37 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                             }
                           }
                         }}
-                        className="text-xs border border-slate-300 bg-white"
-                    />
-                    <p className="text-[11px] text-gray-500">
-                      Enter a valid US number. We&#39;ll store it securely to
-                      enable SMS alerts.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Label className="flex items-center gap-2">
-                      <BellOff className="w-4 h-4 text-[#0f5384]" />
-                    Quiet Hours
-                  </Label>
-                  <Switch
-                    checked={globalSettings.quietHours}
-                    onCheckedChange={(checked) =>
-                      handleGlobalSettingChange('quietHours', checked)
-                    }
-                  />
+                        className={`text-xs border border-slate-300 ${
+                          phoneNumberVerified
+                            ? 'bg-slate-100 cursor-not-allowed'
+                            : 'bg-white'
+                        }`}
+                      />
+                      <p className="text-[11px] text-gray-500">
+                        Enter a valid US number. We&#39;ll store it securely to
+                        enable SMS alerts.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {globalSettings.quietHours && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2">
+                      <BellOff className="w-4 h-4 text-[#0f5384]" />
+                      Quiet Hours
+                    </Label>
+                    <Switch
+                      checked={globalSettings.quietHours}
+                      onCheckedChange={(checked) =>
+                        handleGlobalSettingChange('quietHours', checked)
+                      }
+                    />
+                  </div>
+
+                  {globalSettings.quietHours && (
                     <div className="space-y-4">
-                    <div>
+                      <div>
                         <Label
                           htmlFor="quietHoursStart"
                           className="text-sm font-medium text-slate-700 mb-2 block"
@@ -684,7 +839,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                           Start Time
                         </Label>
                         <Select
-                        value={globalSettings.quietHoursStart}
+                          value={globalSettings.quietHoursStart}
                           onValueChange={(value) =>
                             handleGlobalSettingChange('quietHoursStart', value)
                           }
@@ -703,8 +858,8 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                             ))}
                           </SelectContent>
                         </Select>
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                         <Label
                           htmlFor="quietHoursEnd"
                           className="text-sm font-medium text-slate-700 mb-2 block"
@@ -712,7 +867,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                           End Time
                         </Label>
                         <Select
-                        value={globalSettings.quietHoursEnd}
+                          value={globalSettings.quietHoursEnd}
                           onValueChange={(value) =>
                             handleGlobalSettingChange('quietHoursEnd', value)
                           }
@@ -731,165 +886,165 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <div>
+                  <div>
                     <div className="flex items-center gap-2 pb-2">
                       <ClockArrowDown className="w-4 h-4 text-[#0f5384]" />
                       <Label>Digest Frequency</Label>
                     </div>
-                  <Select
-                    value={globalSettings.digestFrequency}
-                    onValueChange={(value) =>
-                      handleGlobalSettingChange('digestFrequency', value)
-                    }
-                  >
-                    <SelectTrigger className="text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="instant">Instant</SelectItem>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <Select
+                      value={globalSettings.digestFrequency}
+                      onValueChange={(value) =>
+                        handleGlobalSettingChange('digestFrequency', value)
+                      }
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="instant">Instant</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Notification Type Preferences */}
-          <div className="space-y-4">
+            {/* Notification Type Preferences */}
+            <div className="space-y-4">
               <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                 <Bell className="w-5 h-5 text-[#0f5384]" />
-              Notification Types
-            </h3>
+                Notification Types
+              </h3>
 
-            <div className="space-y-3">
-              {preferences.map((preference) => {
-                const typeConfig =
-                  NOTIFICATION_TYPES[
-                    preference.type as keyof typeof NOTIFICATION_TYPES
-                  ];
-                return (
-                  <div
-                    key={preference.type}
+              <div className="space-y-3">
+                {preferences.map((preference) => {
+                  const typeConfig =
+                    NOTIFICATION_TYPES[
+                      preference.type as keyof typeof NOTIFICATION_TYPES
+                    ];
+                  return (
+                    <div
+                      key={preference.type}
                       className="p-4 border-2 border-slate-200 rounded-lg bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        {typeConfig?.icon}
-                        <div>
-                          <h4 className="font-medium text-gray-900">
-                            {typeConfig?.label}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {typeConfig?.description}
-                          </p>
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          {typeConfig?.icon}
+                          <div>
+                            <h4 className="font-medium text-gray-900">
+                              {typeConfig?.label}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {typeConfig?.description}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`${preference.type}-email`}
-                          checked={preference.email}
-                          onCheckedChange={(checked) =>
-                            handlePreferenceChange(
-                              preference.type,
-                              'email',
-                              checked
-                            )
-                          }
-                        />
-                        <Label
-                          htmlFor={`${preference.type}-email`}
-                          className="text-sm"
-                        >
-                          Email
-                        </Label>
-                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`${preference.type}-email`}
+                            checked={preference.email}
+                            onCheckedChange={(checked) =>
+                              handlePreferenceChange(
+                                preference.type,
+                                'email',
+                                checked
+                              )
+                            }
+                          />
+                          <Label
+                            htmlFor={`${preference.type}-email`}
+                            className="text-sm"
+                          >
+                            Email
+                          </Label>
+                        </div>
 
-                      {/* Push channel removed */}
+                        {/* Push channel removed */}
 
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`${preference.type}-inapp`}
-                          checked={preference.inApp}
-                          onCheckedChange={(checked) =>
-                            handlePreferenceChange(
-                              preference.type,
-                              'inApp',
-                              checked
-                            )
-                          }
-                        />
-                        <Label
-                          htmlFor={`${preference.type}-inapp`}
-                          className="text-sm"
-                        >
-                          In-App
-                        </Label>
-                      </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`${preference.type}-inapp`}
+                            checked={preference.inApp}
+                            onCheckedChange={(checked) =>
+                              handlePreferenceChange(
+                                preference.type,
+                                'inApp',
+                                checked
+                              )
+                            }
+                          />
+                          <Label
+                            htmlFor={`${preference.type}-inapp`}
+                            className="text-sm"
+                          >
+                            In-App
+                          </Label>
+                        </div>
 
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`${preference.type}-sms`}
-                          checked={preference.sms}
-                          disabled={!globalSettings.smsNotifications}
-                          onCheckedChange={(checked) =>
-                            handlePreferenceChange(
-                              preference.type,
-                              'sms',
-                              checked
-                            )
-                          }
-                        />
-                        <Label
-                          htmlFor={`${preference.type}-sms`}
-                          className={`text-sm ${
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`${preference.type}-sms`}
+                            checked={preference.sms}
+                            disabled={!globalSettings.smsNotifications}
+                            onCheckedChange={(checked) =>
+                              handlePreferenceChange(
+                                preference.type,
+                                'sms',
+                                checked
+                              )
+                            }
+                          />
+                          <Label
+                            htmlFor={`${preference.type}-sms`}
+                            className={`text-sm ${
                               !globalSettings.smsNotifications
                                 ? 'opacity-60'
                                 : ''
-                          }`}
-                        >
-                          <span className="inline-flex items-center gap-1">
-                            <MessageSquare className="w-3.5 h-3.5" /> SMS Text
-                            Messages
-                          </span>
-                        </Label>
-                      </div>
+                            }`}
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              <MessageSquare className="w-3.5 h-3.5" /> SMS Text
+                              Messages
+                            </span>
+                          </Label>
+                        </div>
 
-                      <div>
-                        <Label className="text-xs">Priority</Label>
-                        <Select
-                          value={preference.priority}
-                          onValueChange={(value) =>
-                            handlePreferenceChange(
-                              preference.type,
-                              'priority',
-                              value
-                            )
-                          }
-                        >
-                          <SelectTrigger className="text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="urgent">Urgent</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div>
+                          <Label className="text-xs">Priority</Label>
+                          <Select
+                            value={preference.priority}
+                            onValueChange={(value) =>
+                              handlePreferenceChange(
+                                preference.type,
+                                'priority',
+                                value
+                              )
+                            }
+                          >
+                            <SelectTrigger className="text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                              <SelectItem value="urgent">Urgent</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -929,44 +1084,86 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
         {/* SMS Form Dialog */}
         <SmsFormDialog
           open={showSmsSetupModal}
-          onOpenChange={(open) => {
+          onOpenChange={async (open) => {
             setShowSmsSetupModal(open);
-            // If dialog is closed without submission, turn off SMS switch
-            if (!open && !smsFormSubmitted) {
-                  handleGlobalSettingChange('smsNotifications', false);
+            // If dialog is closed, check form status to ensure switch state is correct
+            if (!open) {
+              // Small delay to allow onSuccess to complete first
+              setTimeout(async () => {
+                try {
+                  const res = await fetch(
+                    `/api/sms-form-submission?userId=${user?.$id}`
+                  );
+                  const result = await res.json();
+                  if (result.submitted) {
+                    // Submission exists - ensure switch is enabled
+                    setSmsFormSubmitted(true);
+                    handleGlobalSettingChange('smsNotifications', true);
+                    if (result.data?.phone_number) {
+                      setFormSubmissionPhoneNumber(result.data.phone_number);
+                    }
+                  } else if (!smsFormSubmitted) {
+                    // No submission and form wasn't submitted - disable switch
+                    handleGlobalSettingChange('smsNotifications', false);
+                  }
+                } catch (error) {
+                  console.error(
+                    'Failed to check form status after dialog close:',
+                    error
+                  );
+                  // If check fails and form wasn't submitted, disable switch
+                  if (!smsFormSubmitted) {
+                    handleGlobalSettingChange('smsNotifications', false);
+                  }
+                }
+              }, 200);
             }
           }}
           onSuccess={async () => {
-            // Form submitted successfully
+            // Form submitted successfully - enable switch immediately
             setSmsFormSubmitted(true);
-            // SMS is already enabled (switch was toggled), just confirm
+            handleGlobalSettingChange('smsNotifications', true);
+            // Ensure SMS Notifications switch is disabled until phone numbers match
+            handleGlobalSettingChange('pushNotifications', false);
 
-            // Fetch the form submission to get the phone number
+            // Fetch the form submission to get the phone number for comparison
+            // Do NOT auto-populate the phone number field - user must enter it manually to verify
             try {
               const res = await fetch(
                 `/api/sms-form-submission?userId=${user?.$id}`
               );
               const result = await res.json();
               if (result.submitted && result.data?.phone_number) {
-                setFormSubmissionPhoneNumber(result.data.phone_number);
-                // Pre-fill the SMS Phone Number field with form submission phone number
-                setPhoneNumber(result.data.phone_number);
+                const dbPhoneNumber = result.data.phone_number;
+                // Store for comparison FIRST, before clearing phone number
+                // This prevents the useEffect from disabling the switch
+                setFormSubmissionPhoneNumber(dbPhoneNumber);
+                // Clear phone number field so user can enter it manually for verification
+                // Do this after setting formSubmissionPhoneNumber to prevent flicker
+                setPhoneNumber('');
+              }
+
+              // Ensure switch is enabled (double-check after fetching)
+              if (result.submitted) {
+                handleGlobalSettingChange('smsNotifications', true);
+                // Keep pushNotifications disabled until user enters matching phone number
+                handleGlobalSettingChange('pushNotifications', false);
               }
             } catch (error) {
               console.error('Failed to fetch form submission:', error);
             }
 
             toast({
-              title: 'SMS Notifications Enabled',
+              title: 'Form Submitted',
               description:
-                'Your SMS notification preferences have been saved and SMS notifications are now enabled.',
+                'Please enter your phone number in the SMS Phone Number field to verify and enable SMS notifications.',
             });
           }}
           onCancel={() => {
             // User cancelled, turn off SMS switch
             handleGlobalSettingChange('smsNotifications', false);
-                  setShowSmsSetupModal(false);
-                }}
+            setShowSmsSetupModal(false);
+          }}
         />
       </DialogContent>
     </Dialog>
