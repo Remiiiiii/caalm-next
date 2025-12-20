@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/appwrite';
+import { appwriteConfig } from '@/lib/appwrite/config';
 import { triggerContractExpiryNotification } from '@/lib/utils/notificationTriggers';
 
 // Lazy import to avoid initialization errors when messaging service is not configured
@@ -91,8 +92,8 @@ class ContractExpiryService {
     try {
       const client = await this.getClient();
       const response = await client.tablesDB.listRows({
-        databaseId: '685ed87c0009d8189fc7',
-        tableId: 'contracts',
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.contractsCollectionId!,
         queries: [
           // Only get active contracts
           // Note: You might want to adjust this filter based on your status values
@@ -190,11 +191,11 @@ class ContractExpiryService {
   ): Promise<void> {
     try {
       const client = await this.getClient();
-      const contract = (await client.databases.getDocument(
-        '685ed87c0009d8189fc7',
-        'contracts',
-        contractId
-      )) as Contract;
+      const contract = (await client.tablesDB.getRow({
+        databaseId: appwriteConfig.databaseId!,
+        tableId: appwriteConfig.contractsCollectionId!,
+        rowId: contractId,
+      })) as Contract;
 
       const daysUntilExpiry = this.calculateDaysUntilExpiry(
         contract.contractExpiryDate

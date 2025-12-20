@@ -135,6 +135,7 @@ import {
   FolderPen,
   Share2,
   Info,
+  Minimize2,
 } from 'lucide-react';
 import {
   deleteFile,
@@ -187,7 +188,10 @@ const ActionDropdown = ({
   useEffect(() => {
     if (action?.value === 'share' && file.users && file.users.length > 0) {
       setEmails(file.users);
-    } else if (action?.value === 'share' && (!file.users || file.users.length === 0)) {
+    } else if (
+      action?.value === 'share' &&
+      (!file.users || file.users.length === 0)
+    ) {
       setEmails([]);
     }
   }, [action?.value, file.users]);
@@ -747,8 +751,8 @@ const ActionDropdown = ({
                   onClick={(e) => closeAllModals(e)}
                   className="primary-btn px-3 sm:px-4"
                 >
-                  <Ban className="w-4 h-4" />
-                  Cancel
+                  <Minimize2 className="w-4 h-4" />
+                  Close
                 </Button>
               </div>
             </div>
@@ -973,7 +977,9 @@ const ActionDropdown = ({
                       />
                       <Badge
                         variant="outline"
-                        className={`${getStatusDialogBadgeClasses(option)} transition-all duration-200 shadow-sm`}
+                        className={`${getStatusDialogBadgeClasses(
+                          option
+                        )} transition-all duration-200 shadow-sm`}
                       >
                         {getStatusLabel(option)}
                       </Badge>
@@ -1138,23 +1144,23 @@ const ActionDropdown = ({
           {/* Professional Cap */}
           <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
           <div className="pt-4 px-1 pb-1">
-          <DropdownMenuLabel className="max-w-[200px] truncate">
-            {file.name || file.contractName}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {filteredActions.map((actionItem) => {
-            // Handle download action separately
-            if (actionItem.value === 'download') {
-              const handleDownload = async () => {
+            <DropdownMenuLabel className="max-w-[200px] truncate">
+              {file.name || file.contractName}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {filteredActions.map((actionItem) => {
+              // Handle download action separately
+              if (actionItem.value === 'download') {
+                const handleDownload = async () => {
                   if (downloading) return;
 
-                setDownloading(true);
+                  setDownloading(true);
                   setIsDropdownOpen(false);
 
-                try {
+                  try {
                     const params = new URLSearchParams();
 
-                  if (isValidBucketFileId(file.bucketFileId)) {
+                    if (isValidBucketFileId(file.bucketFileId)) {
                       params.append('bucketFileId', file.bucketFileId!);
                     } else if (file.contractId) {
                       params.append('contractId', file.contractId);
@@ -1162,16 +1168,16 @@ const ActionDropdown = ({
                       params.append('fileId', file.$id);
                     }
 
-                      const response = await fetch(
-                        `/api/files/download?${params.toString()}`
-                      );
+                    const response = await fetch(
+                      `/api/files/download?${params.toString()}`
+                    );
 
-                      if (!response.ok) {
+                    if (!response.ok) {
                       throw new Error('Download failed');
-                      }
+                    }
 
                     // Get the blob directly without conversion
-                      const blob = await response.blob();
+                    const blob = await response.blob();
 
                     // Get filename from header
                     const contentDisposition = response.headers.get(
@@ -1202,15 +1208,15 @@ const ActionDropdown = ({
 
                     // Create download link with proper attributes
                     const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
+                    const link = document.createElement('a');
+                    link.href = url;
                     link.download = filename;
                     link.style.display = 'none'; // Hide but keep in DOM
                     link.setAttribute('download', filename); // Ensure download attribute is set
-                      document.body.appendChild(link);
+                    document.body.appendChild(link);
 
                     // Trigger download
-                      link.click();
+                    link.click();
 
                     // Clean up after a short delay to ensure download starts
                     setTimeout(() => {
@@ -1218,21 +1224,57 @@ const ActionDropdown = ({
                       URL.revokeObjectURL(url);
                     }, 100);
                   } catch (error) {
-                  console.error('Download failed:', error);
+                    console.error('Download failed:', error);
                     alert('Failed to download file');
-                } finally {
-                  setDownloading(false);
-                }
-              };
+                  } finally {
+                    setDownloading(false);
+                  }
+                };
 
+                return (
+                  <DropdownMenuItem
+                    key={actionItem.value}
+                    className="shad-dropdown-item"
+                    onSelect={(e) => {
+                      console.log('Download onSelect triggered');
+                      e.preventDefault();
+                      handleDownload();
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Image
+                        src={actionItem.icon}
+                        alt={actionItem.label}
+                        width={30}
+                        height={30}
+                      />
+                      {downloading ? 'Downloading...' : actionItem.label}
+                    </div>
+                  </DropdownMenuItem>
+                );
+              }
+
+              // Handle other actions
               return (
                 <DropdownMenuItem
                   key={actionItem.value}
                   className="shad-dropdown-item"
-                  onSelect={(e) => {
-                    console.log('Download onSelect triggered');
-                    e.preventDefault();
-                    handleDownload();
+                  onClick={() => {
+                    setAction(actionItem);
+                    if (actionItem.value === 'review') {
+                      setIsViewerOpen(true);
+                    } else if (
+                      [
+                        'assign',
+                        'rename',
+                        'delete',
+                        'share',
+                        'details',
+                        'status',
+                      ].includes(actionItem.value)
+                    ) {
+                      setIsModalOpen(true);
+                    }
                   }}
                 >
                   <div className="flex items-center gap-2">
@@ -1242,47 +1284,11 @@ const ActionDropdown = ({
                       width={30}
                       height={30}
                     />
-                    {downloading ? 'Downloading...' : actionItem.label}
+                    {actionItem.label}
                   </div>
                 </DropdownMenuItem>
               );
-            }
-
-            // Handle other actions
-            return (
-              <DropdownMenuItem
-                key={actionItem.value}
-                className="shad-dropdown-item"
-                onClick={() => {
-                  setAction(actionItem);
-                  if (actionItem.value === 'review') {
-                    setIsViewerOpen(true);
-                  } else if (
-                    [
-                      'assign',
-                      'rename',
-                      'delete',
-                      'share',
-                      'details',
-                      'status',
-                    ].includes(actionItem.value)
-                  ) {
-                    setIsModalOpen(true);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <Image
-                    src={actionItem.icon}
-                    alt={actionItem.label}
-                    width={30}
-                    height={30}
-                  />
-                  {actionItem.label}
-                </div>
-              </DropdownMenuItem>
-            );
-          })}
+            })}
           </div>
         </DropdownMenuContent>
       </DropdownMenu>

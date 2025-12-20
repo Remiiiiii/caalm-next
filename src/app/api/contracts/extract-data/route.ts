@@ -1,4 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import {
+  successResponse,
+  errorResponse,
+  validationErrorResponse,
+  generateRequestId,
+} from '@/lib/api/contracts/utils/response.util';
+import { requireAuth } from '@/lib/api/contracts/middleware/auth.middleware';
+import { parseAndValidateBody } from '@/lib/api/contracts/middleware/validation.middleware';
+import { extractDataJsonSchema } from '@/lib/api/contracts/schemas/extract-data.schema';
 
 // Add a GET route for testing
 export async function GET() {
@@ -10,9 +19,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = generateRequestId();
   try {
     console.log('=== CONTRACT EXTRACTION API START ===');
-    console.log('Contract extraction API called');
+    console.log('Contract extraction API called', { requestId });
 
     // First, let's test if we can read the request at all
     const contentType = request.headers.get('content-type');
@@ -44,10 +54,7 @@ export async function POST(request: NextRequest) {
 
       if (!fileContent) {
         console.log('No file content provided in JSON payload');
-        return NextResponse.json(
-          { error: 'No file content provided' },
-          { status: 400 }
-        );
+        return validationErrorResponse('No file content provided', requestId);
       }
 
       const fileName = name || 'unknown';
@@ -61,14 +68,8 @@ export async function POST(request: NextRequest) {
       let buffer;
       try {
         console.log('Converting base64 to buffer...');
-        const binaryString = atob(fileContent);
-        console.log('Binary string length:', binaryString.length);
-
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        buffer = Buffer.from(bytes);
+        // Use Node.js Buffer.from() instead of browser-only atob()
+        buffer = Buffer.from(fileContent, 'base64');
         console.log('Buffer created, length:', buffer.length);
       } catch (base64Error) {
         console.error('Base64 decoding error:', base64Error);
@@ -82,9 +83,8 @@ export async function POST(request: NextRequest) {
 
       // For now, return a simple success response to test the flow
       console.log('=== CONTRACT EXTRACTION API SUCCESS ===');
-      return NextResponse.json({
-        success: true,
-        data: {
+      return successResponse(
+        {
           contractName: fileName.replace(/\.[^/.]+$/, ''),
           contractNumber: 'TEST-001',
           vendor: 'Test Vendor',
@@ -93,11 +93,12 @@ export async function POST(request: NextRequest) {
             Date.now() + 365 * 24 * 60 * 60 * 1000
           ).toISOString(),
           description: 'Test contract extracted successfully',
+          filename: fileName,
+          method: 'test-extraction',
+          textLength: buffer.length,
         },
-        filename: fileName,
-        method: 'test-extraction',
-        textLength: buffer.length,
-      });
+        { requestId }
+      );
     } else {
       console.log('Processing FormData request...');
       // Handle FormData (legacy approach)
@@ -123,9 +124,8 @@ export async function POST(request: NextRequest) {
       console.log('File received via FormData:', fileName, fileType, fileSize);
 
       // Return test data for FormData as well
-      return NextResponse.json({
-        success: true,
-        data: {
+      return successResponse(
+        {
           contractName: fileName.replace(/\.[^/.]+$/, ''),
           contractNumber: 'TEST-002',
           vendor: 'Test Vendor',
@@ -134,11 +134,12 @@ export async function POST(request: NextRequest) {
             Date.now() + 365 * 24 * 60 * 60 * 1000
           ).toISOString(),
           description: 'Test contract extracted successfully',
+          filename: fileName,
+          method: 'test-extraction',
+          textLength: buffer.length,
         },
-        filename: fileName,
-        method: 'test-extraction',
-        textLength: buffer.length,
-      });
+        { requestId }
+      );
     }
   } catch (error) {
     console.error('=== CONTRACT EXTRACTION API ERROR ===');
@@ -147,13 +148,15 @@ export async function POST(request: NextRequest) {
       'Error stack:',
       error instanceof Error ? error.stack : 'No stack trace'
     );
-    return NextResponse.json(
+    return errorResponse(
+      error instanceof Error
+        ? error
+        : new Error('Failed to extract contract data'),
+      500,
       {
-        success: false,
-        error: 'Failed to extract contract data',
+        requestId,
         details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
+      }
     );
   }
 }

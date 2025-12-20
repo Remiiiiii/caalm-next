@@ -20,8 +20,7 @@ export const appwriteConfig = {
     process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_EXTENSIONS_COLLECTION,
 
   contractDraftsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_DRAFTS_COLLECTION ||
-    '692f4a86002ae8f45cae',
+    process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_DRAFTS_COLLECTION,
 
   calendarEventsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_EVENTS_COLLECTION,
@@ -33,6 +32,8 @@ export const appwriteConfig = {
     process.env.NEXT_PUBLIC_APPWRITE_INVITATIONS_COLLECTION,
 
   reportsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_REPORTS_COLLECTION,
+
+  licensesCollectionId: process.env.NEXT_PUBLIC_APPWRITE_LICENSES_COLLECTION,
 
   otpTokensCollectionId: process.env.NEXT_PUBLIC_APPWRITE_OTPTOKENS_COLLECTION,
 
@@ -66,6 +67,8 @@ export const appwriteConfig = {
 
   auditLogsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_AUDIT_LOGS_COLLECTION,
 
+  auditsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_AUDITS_COLLECTION,
+
   secretKey: process.env.NEXT_APPWRITE_API_KEY,
 
   govApiKey: process.env.GOV_API_KEY,
@@ -85,21 +88,13 @@ export const appwriteConfig = {
   calendarIntegrationsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION,
 
-  // Priority 2: Shared Calendars and Delegation
+  // Shared Calendars
   sharedCalendarsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_SHARED_CALENDARS_COLLECTION,
-  calendarDelegationsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_DELEGATIONS_COLLECTION,
 
-  // Priority 2: Resource Management
+  // Resource Management
   calendarResourcesCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_RESOURCES_COLLECTION,
   resourceBookingsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_RESOURCE_BOOKINGS_COLLECTION,
-
-  // Priority 2: Advanced Notifications
-  calendarRemindersCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_REMINDERS_COLLECTION,
-  escalationRulesCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_ESCALATION_RULES_COLLECTION,
 };

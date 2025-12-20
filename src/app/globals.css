@@ -320,7 +320,18 @@
 
   /* Root Layout */
   .main-content {
-    @apply remove-scrollbar text-slate-700 h-full flex-1 overflow-auto bg-light-400 px-5 py-7 sm:mr-7 sm:rounded-[30px] md:mb-7 md:px-9 md:py-10;
+    @apply remove-scrollbar text-slate-700 h-full flex-1 overflow-auto px-5 py-7 sm:mr-7 sm:rounded-[30px] md:mb-7 md:px-9 md:py-10;
+    background-color: #f0eded;
+    background-image: linear-gradient(
+        rgba(255, 255, 255, 0.6),
+        rgba(255, 255, 255, 0.6)
+      ),
+      url('/assets/images/main-content-overlay2.png');
+    background-size: 100% 100%;
+    background-position: top center;
+    background-repeat: no-repeat;
+    background-attachment: scroll;
+    position: relative;
   }
 
   /* Dashboard */
@@ -429,10 +440,43 @@
 
   /* Card */
   .file-card {
-    @apply flex cursor-pointer flex-col gap-6 rounded-[18px] text-slate-700 bg-white p-5 shadow-lg transition-all hover:shadow-drop-3;
+    @apply flex cursor-pointer flex-col gap-6 rounded-[18px] text-slate-700 p-5 transition-all;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  }
+  .file-card:hover {
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.2);
   }
   .file-card-details {
     @apply flex flex-col gap-2 text-slate-700;
+  }
+
+  /* Glass Card (for stat cards and similar components) */
+  .glass-card {
+    @apply relative rounded-lg overflow-hidden transition-all;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  }
+
+  .glass-card-cap {
+    @apply absolute top-0 left-0 right-0 h-2 rounded-t-lg;
+    background: rgba(214, 215, 216, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .glass-card-inner {
+    @apply rounded-lg p-3;
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
   }
 
   /* Chart */

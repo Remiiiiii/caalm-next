@@ -238,6 +238,29 @@ export const constructDownloadUrl = (bucketFileId: string) => {
   return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_BUCKET}/files/${bucketFileId}/download?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`;
 };
 
+/**
+ * Construct profile picture URL from profileImageId
+ * Returns null if profileImageId is not provided
+ */
+export const getProfilePictureUrl = (
+  profileImageId: string | null | undefined
+): string | null => {
+  if (!profileImageId) {
+    return null;
+  }
+
+  const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+  const bucketId = process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET;
+  const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
+
+  if (!endpoint || !bucketId || !projectId) {
+    console.warn('Profile picture configuration missing');
+    return null;
+  }
+
+  return `${endpoint}/storage/buckets/${bucketId}/files/${profileImageId}/view?project=${projectId}`;
+};
+
 // DASHBOARD UTILS
 interface FileTypeSummary {
   size: number;

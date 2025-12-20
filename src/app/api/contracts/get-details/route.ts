@@ -1,24 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/appwrite/admin';
+import { NextRequest } from 'next/server';
+import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { constructFileUrl } from '@/lib/utils';
+import {
+  successResponse,
+  errorResponse,
+  notFoundResponse,
+  validationErrorResponse,
+  generateRequestId,
+} from '@/lib/api/contracts/utils/response.util';
+import { requireAuth } from '@/lib/api/contracts/middleware/auth.middleware';
+import { parseAndValidateQuery } from '@/lib/api/contracts/middleware/validation.middleware';
+import { contractQuerySchema } from '@/lib/api/contracts/schemas/contract.schema';
 
 export async function GET(request: NextRequest) {
+  const requestId = generateRequestId();
   try {
     const { searchParams } = new URL(request.url);
     const contractId = searchParams.get('contractId');
 
     if (!contractId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Contract ID is required',
-        },
-        { status: 400 }
-      );
+      return validationErrorResponse('Contract ID is required', requestId);
     }
 
-    const { tablesDB, databases, storage } = await createAdminClient();
+    const { tablesDB } = await createAdminClient();
 
     // Fetch contract from database
     const contract = await tablesDB.getRow({
@@ -28,13 +33,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!contract) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Contract not found',
-        },
-        { status: 404 }
-      );
+      return notFoundResponse('Contract', requestId);
     }
 
     let fileUrl = '';
@@ -67,9 +66,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
+    return successResponse(
+      {
         contractId: contract.$id,
         contractName: contract.contractName || 'Unnamed Contract',
         description: contract.description || '',
@@ -83,18 +81,16 @@ export async function GET(request: NextRequest) {
         fileUrl: fileUrl,
         fileExtension: fileExtension,
       },
-    });
+      { requestId }
+    );
   } catch (error) {
     console.error('Error fetching contract details:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error:
+    return errorResponse(
           error instanceof Error
-            ? error.message
-            : 'Failed to fetch contract details',
-      },
-      { status: 500 }
+        ? error
+        : new Error('Failed to fetch contract details'),
+      500,
+      { requestId }
     );
   }
 }

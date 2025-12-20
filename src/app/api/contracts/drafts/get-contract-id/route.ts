@@ -3,27 +3,28 @@ import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 
 export async function GET(request: NextRequest) {
+  const requestId = generateRequestId();
   try {
     const { searchParams } = new URL(request.url);
     const draftId = searchParams.get('draftId');
     const ownerId = searchParams.get('ownerId');
 
     if (!draftId) {
-      return NextResponse.json(
-        { error: 'Draft ID is required' },
-        { status: 400 }
-      );
+      return validationErrorResponse('Draft ID is required', requestId);
     }
 
     if (
       !appwriteConfig.databaseId ||
       !appwriteConfig.contractDraftsCollectionId
     ) {
-      return NextResponse.json(
-        { error: 'Database configuration missing' },
-        { status: 500 }
-      );
+      return errorResponse(new Error('Database configuration missing'), 500, {
+        requestId,
+      });
     }
+
+    // Authentication
+    const authError = await requireAuth(request);
+    if (authError) return authError;
 
     const { tablesDB } = await createAdminClient();
 
@@ -49,20 +50,20 @@ export async function GET(request: NextRequest) {
         typeof draft.contractId === 'string' ? draft.contractId : null;
     }
 
-    return NextResponse.json({
-      success: true,
-      draftId,
-      contractId,
-      hasRelationship: !!contractId,
-    });
+    return successResponse(
+      {
+        draftId: query.draftId,
+        contractId,
+        hasRelationship: !!contractId,
+      },
+      { requestId }
+    );
   } catch (error: any) {
     console.error('Error getting contract ID from draft:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to get contract ID',
-        message: error.message || 'Unknown error',
-      },
-      { status: 500 }
+    return errorResponse(
+      error instanceof Error ? error : new Error('Failed to get contract ID'),
+      500,
+      { requestId }
     );
   }
 }

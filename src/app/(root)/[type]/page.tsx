@@ -253,7 +253,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
               departments={uniqueDepartments}
               assignedManagers={uniqueAssignedManagers}
             />
-            <ContractsControlBar files={contractDocuments} />
+            <ContractsControlBar />
           </section>
 
           {/* Render the files */}

@@ -1,5 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { contractExpiryService } from '@/lib/services/contractExpiryService';
+import {
+  successResponse,
+  errorResponse,
+  generateRequestId,
+} from '@/lib/api/contracts/utils/response.util';
+import { requireAuth } from '@/lib/api/contracts/middleware/auth.middleware';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,19 +33,21 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  const requestId = generateRequestId();
   try {
-    return NextResponse.json({
-      message: 'Contract expiry check endpoint is available',
-      usage: 'POST to this endpoint to manually trigger contract expiry checks',
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    return NextResponse.json(
+    return successResponse(
       {
-        error: 'Failed to get endpoint info',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Contract expiry check endpoint is available',
+        usage:
+          'POST to this endpoint to manually trigger contract expiry checks',
       },
-      { status: 500 }
+      { requestId }
+    );
+  } catch (error) {
+    return errorResponse(
+      error instanceof Error ? error : new Error('Failed to get endpoint info'),
+      500,
+      { requestId }
     );
   }
 }

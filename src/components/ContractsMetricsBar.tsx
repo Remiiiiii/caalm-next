@@ -85,17 +85,17 @@ export default function ContractsMetricsBar({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Total Value Card */}
         {metrics.totalValue > 0 && (
-          <Card className="relative border border-slate-200 shadow-lg bg-white rounded-lg overflow-hidden">
+          <Card className="glass-card">
             {/* Professional Cap */}
-            <div className="absolute top-0 left-0 right-0 h-2 bg-[#d6d7d8] opacity-70 rounded-t-lg" />
-            <CardContent className="p-4 bg-slate-50 pt-5">
+            <div className="glass-card-cap" />
+            <CardContent className="p-4 pt-5">
               {/* Label with Icon */}
               <div className="flex items-center gap-1.5 mb-2">
                 <DollarSign className="h-3 w-3 text-slate-700" />
                 <p className="body-2 text-slate-700 text-sm">Total Value</p>
               </div>
               {/* Value Display Area */}
-              <div className="bg-white rounded-lg border border-slate-300 p-3">
+              <div className="glass-card-inner">
                 <p className="h3 text-navy font-bold text-center">
                   ${metrics.totalValue.toLocaleString()}
                 </p>
@@ -105,17 +105,17 @@ export default function ContractsMetricsBar({
         )}
 
         {/* Total Contracts Card */}
-        <Card className="relative border border-slate-200 shadow-lg bg-white rounded-lg overflow-hidden">
+        <Card className="glass-card">
           {/* Professional Cap */}
-          <div className="absolute top-0 left-0 right-0 h-2 bg-[#d6d7d8] opacity-70 rounded-t-lg" />
-          <CardContent className="p-4 bg-slate-50 pt-5">
+          <div className="glass-card-cap" />
+          <CardContent className="p-4 pt-5">
             {/* Label with Icon */}
             <div className="flex items-center gap-1.5 mb-2">
               <FileText className="h-3 w-3 text-slate-700" />
               <p className="body-2 text-slate-700 text-sm">Total Contracts</p>
             </div>
             {/* Value Display Area */}
-            <div className="bg-white rounded-lg border border-slate-300 p-3">
+            <div className="glass-card-inner">
               <p className="h3 text-navy font-bold text-center">
                 {metrics.totalContracts.toLocaleString()}
               </p>
@@ -125,17 +125,17 @@ export default function ContractsMetricsBar({
 
         {/* Expiring Soon Card */}
         {totalExpiring > 0 && (
-          <Card className="relative border border-slate-200 shadow-lg bg-white rounded-lg overflow-hidden">
+          <Card className="glass-card">
             {/* Professional Cap */}
-            <div className="absolute top-0 left-0 right-0 h-2 bg-[#d6d7d8] opacity-70 rounded-t-lg" />
-            <CardContent className="p-4 bg-slate-50 pt-5">
+            <div className="glass-card-cap" />
+            <CardContent className="p-4 pt-5">
               {/* Label with Icon */}
               <div className="flex items-center gap-1.5 mb-2">
                 <AlertTriangle className="h-3 w-3 text-slate-700" />
                 <p className="body-2 text-slate-700 text-sm">Expiring Soon</p>
               </div>
               {/* Value Display Area */}
-              <div className="bg-white rounded-lg border border-slate-300 p-3">
+              <div className="glass-card-inner">
                 <p className="h3 text-navy font-bold text-center">
                   {totalExpiring}
                 </p>
@@ -148,17 +148,17 @@ export default function ContractsMetricsBar({
         )}
 
         {/* Active Contracts Card */}
-        <Card className="relative border border-slate-200 shadow-lg bg-white rounded-lg overflow-hidden">
+        <Card className="glass-card">
           {/* Professional Cap */}
-          <div className="absolute top-0 left-0 right-0 h-2 bg-[#d6d7d8] opacity-70 rounded-t-lg" />
-          <CardContent className="p-4 bg-slate-50 pt-5">
+          <div className="glass-card-cap" />
+          <CardContent className="p-4 pt-5">
             {/* Label with Icon */}
             <div className="flex items-center gap-1.5 mb-2">
               <CheckCircle className="h-3 w-3 text-slate-700" />
               <p className="body-2 text-slate-700 text-sm">Active</p>
             </div>
             {/* Value Display Area */}
-            <div className="bg-white rounded-lg border border-slate-300 p-3">
+            <div className="glass-card-inner">
               <p className="h3 text-navy font-bold text-center">
                 {metrics.activeCount}
               </p>

@@ -23,7 +23,7 @@ const statusBadge = (status: string) => {
       break;
     case 'action-required':
       color =
-        'border-2 border-red-400 bg-destructive/10 text-destructive text-xs rounded-xl font-medium mr-auto';
+        'border-2 border-red-400 bg-destructive/10 border border-destructive/50 text-destructive text-xs rounded-xl font-medium mr-auto';
       label = 'Action Required';
       break;
     case 'active':
@@ -470,7 +470,14 @@ const Card = ({
   return (
     <div className="file-card relative" onClick={handleCardClick}>
       {/* Professional Cap */}
-      <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-[18px]" />
+      <div
+        className="absolute top-0 left-0 right-0 h-4 rounded-t-[18px]"
+        style={{
+          background: 'rgba(214, 215, 216, 0.5)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+        }}
+      />
 
       <div className="flex justify-between text-slate-700 mt-2">
         <Thumbnail
@@ -492,7 +499,15 @@ const Card = ({
             onRefresh={onRefresh}
             userRole={userRole}
           />
-          <span className="inline-block px-2 py-1 border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium">
+          <span
+            className="inline-block px-2 py-1 text-slate-800 text-xs rounded-xl font-medium"
+            style={{
+              background: 'rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.5)',
+            }}
+          >
             {convertFileSize({ sizeInBytes: file.size })}
           </span>
         </div>
@@ -509,7 +524,15 @@ const Card = ({
         <hr className="border-slate-200 my-1" />
         <div className="flex flex-col gap-3">
           {/* Uploaded on section */}
-          <div className="bg-slate-50 rounded-lg p-2 shadow-sm border border-slate-200">
+          <div
+            className="rounded-lg p-2"
+            style={{
+              background: 'rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.5)',
+            }}
+          >
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
               <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                 Uploaded on:
@@ -525,7 +548,15 @@ const Card = ({
 
           {/* Expires on section */}
           {contractExpiryDate && (
-            <div className="bg-slate-50 rounded-lg p-2 shadow-sm border border-slate-200">
+            <div
+              className="rounded-lg p-2"
+              style={{
+                background: 'rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.5)',
+              }}
+            >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
                 <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                   Expires on:
@@ -542,7 +573,15 @@ const Card = ({
 
           {/* Assigned To section */}
           {(assignedTo || assignedManagerUsers.length > 0) && (
-            <div className="bg-slate-50 rounded-lg p-2 shadow-sm border border-slate-200">
+            <div
+              className="rounded-lg p-2"
+              style={{
+                background: 'rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.5)',
+              }}
+            >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
                 <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                   Assigned To:
@@ -556,7 +595,15 @@ const Card = ({
 
           {/* Department section */}
           {assignedToDepartment && (
-            <div className="bg-slate-50 rounded-lg p-2 shadow-sm border border-slate-200">
+            <div
+              className="rounded-lg p-2"
+              style={{
+                background: 'rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.5)',
+              }}
+            >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
                 <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                   Department:
@@ -571,7 +618,7 @@ const Card = ({
           )}
         </div>
         {/* Horizontal divider between details and owner */}
-        <hr className="border-slate-200 my-1" />
+        <hr className="my-1 border-white/30" />
         <p className="caption line-clamp-1 text-light-200">
           By:{' '}
           {isLoadingOwnerName

@@ -2,8 +2,11 @@
 import React from 'react';
 import FormattedDateTime from './FormattedDateTime';
 import Thumbnail from './Thumbnail';
-import { convertFileSize } from '@/lib/utils';
-import { formatDateTime } from '@/lib/utils';
+import {
+  convertFileSize,
+  formatDateTime,
+  getProfilePictureUrl,
+} from '@/lib/utils';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
@@ -250,28 +253,16 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
 
         const fileManagers = await fetchUserNamesByIds(managerIds);
 
-        // Fetch profile images for managers
+        // Generate profile image URLs from profileImageId
         const newProfileImages: Record<string, string> = {};
         for (const user of fileManagers) {
-          if (user.accountId) {
-            try {
-              const profileResponse = await fetch(
-                `/api/users/${user.accountId}/profile-picture`
-              );
-              if (profileResponse.ok) {
-                const profileData = await profileResponse.json();
-                if (profileData.url) {
-                  newProfileImages[user.$id] = profileData.url;
-                  if (user.accountId) {
-                    newProfileImages[user.accountId] = profileData.url;
-                  }
-                }
+          if (user.profileImageId) {
+            const profileImageUrl = getProfilePictureUrl(user.profileImageId);
+            if (profileImageUrl) {
+              newProfileImages[user.$id] = profileImageUrl;
+              if (user.accountId) {
+                newProfileImages[user.accountId] = profileImageUrl;
               }
-            } catch (error) {
-              console.error(
-                `Failed to fetch profile image for ${user.$id}:`,
-                error
-              );
             }
           }
         }

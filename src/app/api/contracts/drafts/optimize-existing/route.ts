@@ -5,16 +5,20 @@ import { Query, ID } from 'node-appwrite';
 import { InputFile } from 'node-appwrite/file';
 
 export async function POST(request: NextRequest) {
+  const requestId = generateRequestId();
+  // Authentication - this is an admin operation
+  const authError = await requireAuth(request);
+  if (authError) return authError;
+
   try {
     if (
       !appwriteConfig.databaseId ||
       !appwriteConfig.contractDraftsCollectionId ||
       !appwriteConfig.bucketId
     ) {
-      return NextResponse.json(
-        { error: 'Database configuration missing' },
-        { status: 500 }
-      );
+      return errorResponse(new Error('Database configuration missing'), 500, {
+        requestId,
+      });
     }
 
     const { tablesDB, storage } = await createAdminClient();
@@ -41,9 +45,10 @@ export async function POST(request: NextRequest) {
         // Optimize processedFileData
         if (draft.processedFileData) {
           try {
-            const parsed = typeof draft.processedFileData === 'string'
-              ? JSON.parse(draft.processedFileData)
-              : draft.processedFileData;
+            const parsed =
+              typeof draft.processedFileData === 'string'
+                ? JSON.parse(draft.processedFileData)
+                : draft.processedFileData;
 
             // Check if it has large fields that need optimization
             if (parsed.arrayBuffer || parsed.base64Content) {
@@ -65,7 +70,10 @@ export async function POST(request: NextRequest) {
 
                   bucketFileId = bucketFile.$id;
                 } catch (uploadError: any) {
-                  console.warn(`Failed to upload file for draft ${draft.$id}:`, uploadError.message);
+                  console.warn(
+                    `Failed to upload file for draft ${draft.$id}:`,
+                    uploadError.message
+                  );
                   // Skip this draft if upload fails
                   result.skipped++;
                   continue;
@@ -85,43 +93,59 @@ export async function POST(request: NextRequest) {
               needsUpdate = true;
             }
           } catch (error: any) {
-            result.errors.push(`Error optimizing processedFileData for draft ${draft.$id}: ${error.message}`);
+            result.errors.push(
+              `Error optimizing processedFileData for draft ${draft.$id}: ${error.message}`
+            );
           }
         }
 
         // Optimize formData
         if (draft.formData) {
           try {
-            const parsed = typeof draft.formData === 'string'
-              ? JSON.parse(draft.formData)
-              : draft.formData;
+            const parsed =
+              typeof draft.formData === 'string'
+                ? JSON.parse(draft.formData)
+                : draft.formData;
 
             // Remove empty values
             const optimized = Object.fromEntries(
               Object.entries(parsed).filter(([_, value]) => {
-                if (value === null || value === undefined || value === '') return false;
+                if (value === null || value === undefined || value === '')
+                  return false;
                 if (Array.isArray(value) && value.length === 0) return false;
-                if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+                if (
+                  typeof value === 'object' &&
+                  Object.keys(value).length === 0
+                )
+                  return false;
                 return true;
               })
             );
 
             const optimizedString = JSON.stringify(optimized);
-            if (optimizedString.length < (typeof draft.formData === 'string' ? draft.formData.length : JSON.stringify(parsed).length)) {
+            if (
+              optimizedString.length <
+              (typeof draft.formData === 'string'
+                ? draft.formData.length
+                : JSON.stringify(parsed).length)
+            ) {
               updateData.formData = optimizedString;
               needsUpdate = true;
             }
           } catch (error: any) {
-            result.errors.push(`Error optimizing formData for draft ${draft.$id}: ${error.message}`);
+            result.errors.push(
+              `Error optimizing formData for draft ${draft.$id}: ${error.message}`
+            );
           }
         }
 
         // Optimize extractedData
         if (draft.extractedData) {
           try {
-            const parsed = typeof draft.extractedData === 'string'
-              ? JSON.parse(draft.extractedData)
-              : draft.extractedData;
+            const parsed =
+              typeof draft.extractedData === 'string'
+                ? JSON.parse(draft.extractedData)
+                : draft.extractedData;
 
             // Remove empty values
             const optimized = Object.fromEntries(
@@ -131,12 +155,19 @@ export async function POST(request: NextRequest) {
             );
 
             const optimizedString = JSON.stringify(optimized);
-            if (optimizedString.length < (typeof draft.extractedData === 'string' ? draft.extractedData.length : JSON.stringify(parsed).length)) {
+            if (
+              optimizedString.length <
+              (typeof draft.extractedData === 'string'
+                ? draft.extractedData.length
+                : JSON.stringify(parsed).length)
+            ) {
               updateData.extractedData = optimizedString;
               needsUpdate = true;
             }
           } catch (error: any) {
-            result.errors.push(`Error optimizing extractedData for draft ${draft.$id}: ${error.message}`);
+            result.errors.push(
+              `Error optimizing extractedData for draft ${draft.$id}: ${error.message}`
+            );
           }
         }
 
@@ -154,37 +185,19 @@ export async function POST(request: NextRequest) {
           result.skipped++;
         }
       } catch (error: any) {
-        result.errors.push(`Error processing draft ${draft.$id}: ${error.message}`);
+        result.errors.push(
+          `Error processing draft ${draft.$id}: ${error.message}`
+        );
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      result,
-    });
+    return successResponse(result, { requestId });
   } catch (error: any) {
     console.error('Error optimizing drafts:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to optimize drafts',
-        message: error.message || 'Unknown error',
-      },
-      { status: 500 }
+    return errorResponse(
+      error instanceof Error ? error : new Error('Failed to optimize drafts'),
+      500,
+      { requestId }
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

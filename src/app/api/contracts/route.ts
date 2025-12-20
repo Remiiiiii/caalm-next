@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createSAMApiService } from '@/lib/sam-api';
 import {
   SAMContractSearchParams,
@@ -7,20 +7,26 @@ import {
 } from '@/lib/sam-config';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
+import {
+  successResponse,
+  errorResponse,
+  generateRequestId,
+} from '@/lib/api/contracts/utils/response.util';
+import { requireAuth } from '@/lib/api/contracts/middleware/auth.middleware';
 
 export async function GET(request: NextRequest) {
+  const requestId = generateRequestId();
   try {
     const { searchParams } = new URL(request.url);
+
+    // Parse pagination parameters
+    const { limit, offset } = parsePaginationParams(request);
 
     // Extract search parameters
     const params: Omit<SAMContractSearchParams, 'api_key'> = {
       keyword: searchParams.get('keyword') || undefined,
-      limit: searchParams.get('limit')
-        ? parseInt(searchParams.get('limit')!)
-        : 25,
-      offset: searchParams.get('offset')
-        ? parseInt(searchParams.get('offset')!)
-        : 0,
+      limit,
+      offset,
       noticeType:
         (searchParams.get('noticeType') as keyof typeof NOTICE_TYPES) ||
         undefined,
@@ -52,10 +58,7 @@ export async function GET(request: NextRequest) {
       CACHE_TTLS.long
     );
 
-    return NextResponse.json({
-      success: true,
-      data: results,
-    });
+    return successResponse(results, { requestId });
   } catch (error) {
     console.error('Contracts API error:', error);
 
@@ -64,37 +67,46 @@ export async function GET(request: NextRequest) {
       error instanceof Error &&
       error.message.includes('SAM.gov API key is required')
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
+      return errorResponse(
             'SAM.gov API key not configured. Please check your environment variables.',
-          errorCode: 'API_KEY_MISSING',
-        },
-        { status: 400 }
+        400,
+        {
+          requestId,
+          details: { errorCode: 'API_KEY_MISSING' },
+        }
       );
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to fetch contracts',
-      },
-      { status: 500 }
+    return errorResponse(
+      error instanceof Error ? error : new Error('Failed to fetch contracts'),
+      500,
+      { requestId }
     );
   }
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = generateRequestId();
+  // Authentication
+  const authError = await requireAuth(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
+
+    // Parse pagination from body or use defaults
+    const limit = body.limit
+      ? Math.min(Math.max(parseInt(String(body.limit), 10) || 25, 1), 1000)
+      : 25;
+    const offset = body.offset
+      ? Math.max(parseInt(String(body.offset), 10) || 0, 0)
+      : 0;
 
     // Extract search parameters from POST body
     const params: Omit<SAMContractSearchParams, 'api_key'> = {
       keyword: body.keyword,
-      limit: body.limit || 25,
-      offset: body.offset || 0,
+      limit,
+      offset,
       noticeType: body.noticeType,
       setAside: body.setAside,
       naicsCode: body.naicsCode,
@@ -122,10 +134,7 @@ export async function POST(request: NextRequest) {
       CACHE_TTLS.long
     );
 
-    return NextResponse.json({
-      success: true,
-      data: results,
-    });
+    return successResponse(results, { requestId });
   } catch (error) {
     console.error('Contracts API error:', error);
 
@@ -134,24 +143,20 @@ export async function POST(request: NextRequest) {
       error instanceof Error &&
       error.message.includes('SAM.gov API key is required')
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
+      return errorResponse(
             'SAM.gov API key not configured. Please check your environment variables.',
-          errorCode: 'API_KEY_MISSING',
-        },
-        { status: 400 }
+        400,
+        {
+          requestId,
+          details: { errorCode: 'API_KEY_MISSING' },
+        }
       );
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to fetch contracts',
-      },
-      { status: 500 }
+    return errorResponse(
+      error instanceof Error ? error : new Error('Failed to fetch contracts'),
+      500,
+      { requestId }
     );
   }
 }

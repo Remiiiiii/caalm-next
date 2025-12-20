@@ -1,61 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
-import { ID, Query } from 'node-appwrite';
-import { InputFile } from 'node-appwrite/file';
 import { Storage } from 'node-appwrite';
+import { appwriteConfig } from '@/lib/appwrite/config';
+import { ID } from 'node-appwrite';
 import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
-import { getFileType, constructFileUrl } from '@/lib/utils';
-import { getUserById } from '@/lib/actions/user.actions';
-
-const sanitizePayload = <T extends Record<string, unknown>>(payload: T) =>
-  Object.fromEntries(
-    Object.entries(payload).filter(([_, value]) => {
-      if (Array.isArray(value)) {
-        return value.length > 0;
-      }
-      return value !== undefined && value !== null && value !== '';
-    })
-  );
-
-const mapRiskToPriority = (risk?: string) => {
-  if (!risk) return 'Medium';
-  switch (risk) {
-    case 'critical':
-      return 'Urgent';
-    case 'high':
-      return 'High';
-    case 'low':
-      return 'Low';
-    default:
-      return 'Medium';
-  }
-};
-
-const mapRiskToCompliance = (risk?: string) => {
-  if (!risk) return 'action-required';
-  switch (risk) {
-    case 'critical':
-      return 'non-compliant';
-    case 'high':
-      return 'action-required';
-    case 'low':
-      return 'up-to-date';
-    default:
-      return 'action-required';
-  }
-};
+import { DraftService } from '@/lib/api/contracts/services/DraftService';
 
 export async function POST(request: NextRequest) {
+  const requestId = generateRequestId();
   try {
-    const { draftId } = await request.json();
-
-    if (!draftId) {
-      return NextResponse.json(
-        { error: 'draftId is required' },
-        { status: 400 }
-      );
-    }
+    // Validate request body
+    const body = await parseAndValidateBody(request, processDraftSchema);
+    const { draftId } = body;
 
     const { tablesDB, storage } = await createAdminClient();
 
@@ -78,11 +34,15 @@ export async function POST(request: NextRequest) {
     });
 
     if (!draft) {
-      return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
+      return notFoundResponse('Draft', requestId);
     }
 
     const ownerId = draft.ownerId as string;
     const accountId = draft.accountId as string;
+
+    // Verify owner access
+    const ownerError = await requireAuthAndOwner(request, ownerId);
+    if (ownerError) return ownerError;
     const formData = draft.formData
       ? JSON.parse(draft.formData as string)
       : null;
@@ -91,9 +51,9 @@ export async function POST(request: NextRequest) {
       : null;
 
     if (!processedFileData || !processedFileData.name) {
-      return NextResponse.json(
-        { error: 'Draft does not contain file data' },
-        { status: 400 }
+      return validationErrorResponse(
+        'Draft does not contain file data',
+        requestId
       );
     }
 
@@ -111,10 +71,9 @@ export async function POST(request: NextRequest) {
       // If bucketFileId exists, fetch the file from storage
       if (processedFileData.bucketFileId) {
         try {
-          bucketFile = await storage.getFile({
-            bucketId: appwriteConfig.bucketId!,
-            fileId: processedFileData.bucketFileId,
-          });
+          bucketFile = await FileService.getFileFromStorage(
+            processedFileData.bucketFileId
+          );
           result.steps.push(`✓ File retrieved from storage: ${bucketFile.$id}`);
         } catch (fetchError: any) {
           // File might have been deleted, need to re-upload
@@ -135,17 +94,11 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const inputFile = InputFile.fromBuffer(
+        const bucketFileId = await FileService.uploadFileToStorage(
           arrayBuffer,
           processedFileData.name
         );
-
-        bucketFile = await storage.createFile({
-          bucketId: appwriteConfig.bucketId!,
-          fileId: ID.unique(),
-          file: inputFile,
-        });
-
+        bucketFile = await FileService.getFileFromStorage(bucketFileId);
         result.steps.push(`✓ File uploaded to storage: ${bucketFile.$id}`);
       }
     } catch (error: any) {
@@ -178,7 +131,6 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Create file row in Files collection
     result.steps.push('Step 3: Creating file row in Files collection...');
-    const filesCollectionId = '6934a3120033b4a5c4da';
     const fileType = getFileType(processedFileData.name);
 
     const fileDocument: any = {
@@ -203,7 +155,7 @@ export async function POST(request: NextRequest) {
     try {
       const fileRow = await tablesDB.createRow({
         databaseId: appwriteConfig.databaseId!,
-        tableId: filesCollectionId,
+        tableId: appwriteConfig.filesCollectionId!,
         rowId: ID.unique(),
         data: fileDocument,
       });
@@ -219,13 +171,10 @@ export async function POST(request: NextRequest) {
           fileId: bucketFile.$id,
         });
       } catch {}
-      return NextResponse.json(
-        {
-          success: false,
-          result,
-          error: 'Failed to create file row',
-        },
-        { status: 500 }
+      return errorResponse(
+        error instanceof Error ? error : new Error('Failed to create file row'),
+        500,
+        { requestId }
       );
     }
 
@@ -233,182 +182,48 @@ export async function POST(request: NextRequest) {
     result.steps.push(
       'Step 4: Creating contract row in Contracts collection...'
     );
-    const contractsCollectionId = '6912e5a400789ef12345';
 
     if (!formData) {
       result.steps.push('⚠ No form data available, skipping contract creation');
-      return NextResponse.json({
-        success: true,
-        result,
+      return successResponse(result, {
+        requestId,
         message: 'File created but contract not created (no form data)',
       });
     }
 
     try {
-      // Prepare contract metadata similar to uploadFile function
-      const contractExpiryDate = formData.expiryDate
-        ? new Date(formData.expiryDate).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0];
-
-      // All contracts default to 'pending-review' and require review before activation
-      const status =
-        formData.lifecycleStatus === 'terminated'
-          ? 'action-required'
-          : 'pending-review';
-
-      // Get assigned managers names
-      const assignedManagers = await (async () => {
-        const managerIds = formData.assignedManagers || [];
-        if (managerIds.length === 0) return [];
-
-        const managerNames: string[] = [];
-        for (const managerId of managerIds) {
-          try {
-            const user = await getUserById(managerId);
-            if (user && user.fullName) {
-              managerNames.push(user.fullName);
-            } else {
-              managerNames.push(managerId);
-            }
-          } catch (error) {
-            console.error(`Failed to fetch manager ${managerId}:`, error);
-            managerNames.push(managerId);
-          }
-        }
-        return managerNames;
-      })();
-
-      // Map contract type
-      const contractTypeMapping: Record<string, string> = {
-        'Service Agreement': 'Service_Agreement',
-        'Professional Services': 'Consulting_Agreement',
-        'Purchase Agreement': 'Purchase_Order',
-        'Purchase Order': 'Purchase_Order',
-        'License Agreement': 'License_Agreement',
-        'Confidentiality/NDA': 'NDA_',
-        NDA: 'NDA_',
-        'Employment Contract': 'Employment_Contract',
-        'Vendor Contract': 'Vendor_Contract',
-        'Lease Agreement': 'Lease_Agreement',
-        'Consulting Agreement': 'Consulting_Agreement',
-        'Statement of Work (SOW)': 'Consulting_Agreement',
-        'Statement of Work': 'Consulting_Agreement',
-        'Master Agreement': 'Service_Agreement',
-        Amendment: 'Other',
-        Other: 'Other',
-      };
-
-      const mappedContractType =
-        contractTypeMapping[formData.contractType] || 'Other';
-
-      // Calculate days until expiry
-      const daysUntilExpiry = (() => {
-        if (contractExpiryDate) {
-          try {
-            const expiryDate = new Date(contractExpiryDate);
-            const today = new Date();
-            const timeDiff = expiryDate.getTime() - today.getTime();
-            return Math.ceil(timeDiff / (1000 * 3600 * 24));
-          } catch (error) {
-            return undefined;
-          }
-        }
-        return undefined;
-      })();
-
-      const contractDocument = sanitizePayload({
-        contractName: formData.contractName || processedFileData.name,
-        contractExpiryDate,
-        status,
-        startDate: formData.startDate
-          ? new Date(formData.startDate).toISOString()
-          : undefined,
-        executionDate: formData.executionDate
-          ? new Date(formData.executionDate).toISOString()
-          : undefined,
-        autoRenew: formData.autoRenew,
-        renewalNoticeDays: formData.renewalNoticeDays
-          ? parseInt(formData.renewalNoticeDays)
-          : undefined,
-        amount: formData.amount ? parseFloat(formData.amount) : undefined,
-        currencyCode: formData.currencyCode || 'USD',
-        notToExceedAmount: formData.notToExceedAmount
-          ? parseFloat(formData.notToExceedAmount)
-          : undefined,
-        paymentTerms: formData.paymentTerms,
-        paymentSchedule: formData.paymentSchedule,
-        budgetCode: formData.budgetCode,
-        costCenter: formData.costCenter,
-        daysUntilExpiry,
-        compliance:
-          formData.compliance ?? mapRiskToCompliance(formData.riskLevel),
-        assignedManagers,
-        department: formData.assignToDepartment || formData.department,
-        businessUnit: formData.businessUnit,
-        subDepartment: formData.subDepartment,
-        departmentOwner: formData.departmentOwner,
-        contractType: mappedContractType,
-        contractCategory: formData.contractCategory,
-        vendor: formData.vendor ?? formData.counterpartyLegalName,
-        contractNumber: formData.contractNumber,
-        priority: formData.priority ?? mapRiskToPriority(formData.riskLevel),
-        description: formData.description,
-        contractOwnerId: formData.contractOwnerId || ownerId,
-        lifecycleStatus: formData.lifecycleStatus || 'draft',
-        riskLevel: formData.riskLevel,
-        fileId: result.fileRow.$id,
-        fileRef: result.fileRow.$id,
-        orgId: defaultOrg.orgId,
-      });
-
-      const contract = await tablesDB.createRow({
-        databaseId: appwriteConfig.databaseId!,
-        tableId: contractsCollectionId,
-        rowId: ID.unique(),
-        data: contractDocument,
-      });
+      // Use ContractService to create contract
+      const contract = await ContractService.createContract(
+        ownerId,
+        result.fileRow.$id,
+        formData
+      );
 
       result.contractRow = { $id: contract.$id };
       result.steps.push(`✓ Contract row created: ${contract.$id}`);
 
       // Update file row with contract metadata
-      const fileUpdateData = sanitizePayload({
-        contractId: contract.$id,
-        contractExpiryDate,
-        status,
-        contractName: contractDocument.contractName,
-        contractType: contractDocument.contractType,
-        amount: contractDocument.amount,
-        vendor: contractDocument.vendor,
-        contractNumber: contractDocument.contractNumber,
-        priority: contractDocument.priority,
-        compliance: contractDocument.compliance,
-        department: contractDocument.department,
-        assignedManagers: contractDocument.assignedManagers,
-      });
-
-      await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId!,
-        tableId: filesCollectionId,
-        rowId: result.fileRow.$id,
-        data: fileUpdateData,
-      });
+      await ContractService.updateFileWithContractMetadata(
+        result.fileRow.$id,
+        contract
+      );
 
       result.steps.push(`✓ File row updated with contract metadata`);
     } catch (error: any) {
       result.steps.push(`✗ Failed to create contract row: ${error.message}`);
-      return NextResponse.json(
+      return errorResponse(
+        error instanceof Error
+          ? error
+          : new Error('Failed to create contract row'),
+        500,
         {
-          success: false,
-          result,
-          error: 'Failed to create contract row',
-          errorDetails: {
+          requestId,
+          details: {
             message: error.message,
             code: error.code,
             type: error.type,
           },
-        },
-        { status: 500 }
+        }
       );
     }
 
@@ -430,19 +245,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      result,
+    return successResponse(result, {
+      requestId,
       message: 'Draft processed successfully',
     });
   } catch (error: any) {
     console.error('Error processing draft:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to process draft',
-        message: error?.message || 'Unknown error',
-      },
-      { status: 500 }
+    return errorResponse(
+      error instanceof Error ? error : new Error('Failed to process draft'),
+      500,
+      { requestId }
     );
   }
 }

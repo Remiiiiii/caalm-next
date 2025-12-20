@@ -1,22 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useDocumentViewer } from '@/hooks/useDocumentViewer';
 import {
-  X,
   Send,
-  Download,
-  Share2,
   FileText,
   Calendar,
   Lightbulb,
-  Users,
-  Target,
-  Shield,
-  Bot,
-  AlertTriangle,
-  CheckCircle,
   Loader2,
   Minimize2,
-  ChevronsUp,
   Sparkles,
 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -852,32 +842,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="primary-btn px-3 sm:px-4"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isOpen && !isClosing) {
-                  const link = document.createElement('a');
-                  link.href = file.url;
-                  link.download = file.name;
-                  link.click();
-                }
-              }}
-              disabled={isClosing}
-            >
-              <Download className="w-4 h-4" />
-              Download
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="primary-btn px-3 sm:px-4"
-            >
-              <Share2 className="w-4 h-4" />
-              Share
-            </Button>
             <Button
               variant="outline"
               size="sm"
