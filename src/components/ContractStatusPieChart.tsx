@@ -177,10 +177,10 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
   );
 
   return (
-    <Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card hover:shadow-2xl transition-all duration-300 overflow-hidden">
+    <Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col">
       <div className="glass-card-cap" />
       {/* Header */}
-      <CardHeader className="pb-3 pt-6 px-4">
+      <CardHeader className="pb-3 pt-6 px-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-slate-600" />
           <CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -194,8 +194,8 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-2">
-        <div className="space-y-4">
+      <CardContent className="px-4 pb-2 flex-1 flex flex-col min-h-0">
+        <div className="space-y-4 flex-1">
           {/* Main chart display */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -278,15 +278,16 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
               </div>
             </div>
           </div>
-          {/* Contract status indicator */}
-          <div className="mt-3 border-t border-white/20">
-            <div className="flex items-center justify-center">
-              <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                <span className="text-xs text-slate-600 font-medium">
-                  Live Contract Data
-                </span>
-              </div>
+        </div>
+        {/* Contract status indicator */}
+        {/* Single source of truth for Live Data badge styling and width */}
+        <div className="mt-3 border-t border-white/20 flex-shrink-0 -translate-y-0.5">
+          <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20 min-w-[140px]">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+              <span className="text-xs text-slate-600 font-medium">
+                Live Contract Data
+              </span>
             </div>
           </div>
         </div>

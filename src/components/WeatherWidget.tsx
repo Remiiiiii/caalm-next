@@ -392,10 +392,10 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   if (!weatherData) return null;
 
   return (
-    <Card className="glass-card w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]">
+    <Card className="glass-card w-full h-[200px] sm:h-[250px] lg:h-[300px] flex flex-col overflow-hidden">
       <div className="glass-card-cap" />
       {/* Header with location and time */}
-      <CardHeader className="pb-3 pt-6 px-4">
+      <CardHeader className="pb-3 pt-6 px-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-1">
@@ -424,8 +424,8 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-2">
-        <div className="space-y-4">
+      <CardContent className="px-4 pb-2 flex-1 flex flex-col min-h-0">
+        <div className="space-y-4 flex-1">
           {/* Main temperature display */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -489,9 +489,10 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
         </div>
 
         {/* Weather condition indicator */}
-        <div className="border-t border-white/20 -mt-1">
+        {/* Using Live Contract Data as single source of truth for spacing, alignment, and width */}
+        <div className="mt-3 border-t border-white/20 flex-shrink-0 -translate-y-0.5">
           <div className="flex items-center justify-center">
-            <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
+            <div className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20 min-w-[140px]">
               <div
                 className={`w-2 h-2 rounded-full ${
                   isRefreshing
