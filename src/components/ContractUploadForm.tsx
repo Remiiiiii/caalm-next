@@ -1540,7 +1540,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       <DialogTrigger asChild>
         <Button
           className={cn(
-            'primary-btn h-10 px-4 shadow-drop-1 text-sm',
+            'primary-btn h-10 px-4 shadow-drop-1 text-sm gap-2',
             className
           )}
         >

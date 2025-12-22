@@ -210,14 +210,14 @@ export default function ContractsTopControls({
     <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
       {/* Search Input and Badges - Left */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Search contracts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 w-full sm:w-64 bg-white border-slate-200"
-          />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <Input
+          placeholder="Search contracts..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 w-full sm:w-64 bg-white border-slate-200"
+        />
         </div>
 
         {/* Status Badges - Right of Search */}

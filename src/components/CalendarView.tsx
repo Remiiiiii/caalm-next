@@ -589,7 +589,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       <div className="space-y-4">
         {/* Centered Calendar */}
         <div className="flex justify-center">
-          <Card className="bg-white/95 backdrop-blur border border-white/60 shadow-xl w-full">
+          <Card className="glass-card w-full">
+            <div className="glass-card-cap" />
             <CardContent className="mx-auto py-3">
               {isLoading && (
                 <div className="flex justify-center items-center py-4">

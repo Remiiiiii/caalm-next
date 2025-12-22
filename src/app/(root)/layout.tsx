@@ -45,9 +45,9 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
           </div>
         </div>
       ) : (
-        <main className="flex h-screen">
+        <main className="flex h-screen overflow-hidden">
           <Sidebar {...user} />
-          <section className="flex h-full w-full flex-1 flex-col">
+          <section className="flex h-full flex-1 flex-col min-w-0">
             <MobileNavigation {...user} />
             <DashboardHeader user={user} />
             <div className="main-content">

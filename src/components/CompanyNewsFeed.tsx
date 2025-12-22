@@ -182,8 +182,9 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({ limit = 5 }) => {
 
   if (loading) {
     return (
-      <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
-        <CardHeader className="pb-3 pt-4 px-4">
+      <Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+        <div className="glass-card-cap" />
+        <CardHeader className="pb-3 pt-6 px-4">
           <CardTitle className="text-sm font-semibold sidebar-gradient-text">
             Company News
           </CardTitle>
@@ -204,8 +205,9 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({ limit = 5 }) => {
 
   if (error && newsItems.length === 0) {
     return (
-      <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
-        <CardHeader className="pb-3 pt-4 px-4">
+      <Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+        <div className="glass-card-cap" />
+        <CardHeader className="pb-3 pt-6 px-4">
           <CardTitle className="text-sm font-semibold sidebar-gradient-text">
             Company News
           </CardTitle>
@@ -228,9 +230,10 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({ limit = 5 }) => {
   }
 
   return (
-    <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+    <Card className="glass-card w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]">
+      <div className="glass-card-cap" />
       {/* Header */}
-      <CardHeader className="pb-3 pt-4 px-4">
+      <CardHeader className="pb-3 pt-6 px-4">
         <div className="flex items-center gap-2">
           <Newspaper className="h-4 w-4 text-slate-600" />
           <CardTitle className="text-sm font-semibold sidebar-gradient-text">

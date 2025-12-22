@@ -284,7 +284,8 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+      <Card className="glass-card">
+        <div className="glass-card-cap" />
         <CardHeader>
           <CardTitle className="flex items-center justify-between text-lg font-bold sidebar-gradient-text">
             <span>User Management</span>
@@ -396,7 +397,7 @@ const UserManagement = () => {
               </div>
 
               {/* Users table styled like Executive Dashboard's Pending Invitations */}
-              <div className="overflow-x-auto border rounded">
+              <div className="glass-card-inner overflow-x-auto">
                 <table className="min-w-full text-xs">
                   <thead className="bg-gray-50 text-center">
                     <tr>

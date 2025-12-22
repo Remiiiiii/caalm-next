@@ -288,7 +288,8 @@ const ExecutiveMetricsDashboard: React.FC<ExecutiveMetricsDashboardProps> = ({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 shadow-lg">
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <PieChart className="h-5 w-5 text-blue-600" />
@@ -319,7 +320,8 @@ const ExecutiveMetricsDashboard: React.FC<ExecutiveMetricsDashboardProps> = ({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 shadow-lg">
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
@@ -344,7 +346,8 @@ const ExecutiveMetricsDashboard: React.FC<ExecutiveMetricsDashboardProps> = ({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 shadow-lg">
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5 text-purple-600" />

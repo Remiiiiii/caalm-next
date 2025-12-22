@@ -465,8 +465,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
   return (
     <div className="space-y-6">
       {/* Widget Carousel */}
-      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-        <CardContent className="p-3">
+      <Card className="glass-card">
+        <div className="glass-card-cap" />
+        <CardContent className="p-3 sm:p-4 lg:p-6">
           <Button
             variant="outline"
             size="sm"
@@ -485,41 +486,52 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
           </Button>
           <div
             ref={widgetScrollRef}
-            className="flex gap-4 overflow-x-hidden scrollbar-hide ml-10 px-1 py-2 rounded-lg"
+            className="flex gap-3 sm:gap-4 lg:gap-6 overflow-x-auto scrollbar-hide w-full py-2 rounded-lg"
             style={{
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
-              width: `${pageWidth}px`,
-              maxWidth: `${pageWidth}px`,
             }}
           >
-            <div className="flex gap-2 min-w-full">
-              <WeatherWidget />
-              <CompanyNewsFeed />
-              <ContractStatusPieChart />
+            <div className="flex gap-3 sm:gap-4 lg:gap-6 min-w-full flex-shrink-0">
+              <div className="flex-1 min-w-0">
+                <WeatherWidget />
+              </div>
+              <div className="flex-1 min-w-0">
+                <CompanyNewsFeed />
+              </div>
+              <div className="flex-1 min-w-0">
+                <ContractStatusPieChart />
+              </div>
             </div>
-            <div className="flex gap-2 min-w-full -ml-2">
-              <DepartmentPerformanceWidget />
-              {user && <QuickNotesWidget user={user as any} />}
-              <ContractExpiryAlertsWidget
-                maxVisible={2}
-                showSettings={false}
-                compact={true}
-              />
+            <div className="flex gap-3 sm:gap-4 lg:gap-6 min-w-full flex-shrink-0">
+              <div className="flex-1 min-w-0">
+                <DepartmentPerformanceWidget />
+              </div>
+              <div className="flex-1 min-w-0">
+                {user && <QuickNotesWidget user={user as any} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <ContractExpiryAlertsWidget
+                  maxVisible={2}
+                  showSettings={false}
+                  compact={true}
+                />
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="dashboard-grid">
         {isLoading || unifiedLoading ? (
           [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
         ) : (
           <>
             {/* Total Contracts */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-              <CardContent className="p-6">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-[#5B93FF]">
                     Total Contracts
@@ -535,8 +547,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
             </Card>
 
             {/* Expiring Soon */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-              <CardContent className="p-6">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-[#FF7474]">
                     Expiring Soon
@@ -552,8 +565,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
             </Card>
 
             {/* Active Users */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-              <CardContent className="p-6">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-[#5B93FF]">
                     Active Users
@@ -569,8 +583,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
             </Card>
 
             {/* Compliance Rate */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-              <CardContent className="p-6">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-[#3DD9B3]">
                     Compliance Rate
@@ -595,7 +610,8 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
           {/* Column 1: System Status & Activity Overview  */}
           <div className="grid grid-cols-2 gap-4">
             {/* System Status */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-bold sidebar-gradient-text">
                   System Status
@@ -641,7 +657,8 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
             </Card>
 
             {/* Activity Overview */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center text-sm font-bold sidebar-gradient-text">
                   <Activity className="h-4 w-4 mr-2" />
@@ -731,7 +748,8 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Column 1: Calendar - Full Height */}
           {user && (
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardContent className="p-4">
                 <CalendarView
                   user={user as any}
@@ -749,7 +767,8 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
           {/* Column 2: System Monitoring + Quick Actions */}
           <div className="space-y-6">
             {/* System Monitoring */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
                   <Server className="h-5 w-5 mr-2" />
@@ -807,7 +826,8 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
                   <Settings className="h-5 w-5 mr-2" />
@@ -1043,7 +1063,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto border rounded">
+          <div className="glass-card-inner overflow-x-auto">
             <table className="min-w-full text-xs">
               <thead className="bg-gray-50 text-center">
                 <tr>

@@ -62,9 +62,13 @@ const AuthenticatedLayout = ({
             email={currentUser.email}
             role={normalizedRole}
           />
-          <div className="flex justify-between items-center px-4">
-            <QuickActions user={currentUser} />
-            <DashboardHeader user={currentUser} />
+          <div className="flex justify-between items-center gap-2 px-3 sm:px-4 py-2 min-w-0">
+            <div className="flex-1 min-w-0">
+              <QuickActions user={currentUser} />
+            </div>
+            <div className="flex-shrink-0">
+              <DashboardHeader user={currentUser} />
+            </div>
           </div>
           <div className="main-content">{children}</div>
         </section>

@@ -332,7 +332,8 @@ const OrganizationAnalyticsDashboard = () => {
       </div>
 
       {/* Department Navigation */}
-      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+      <Card className="glass-card">
+        <div className="glass-card-cap" />
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="h2 sidebar-gradient-text">
@@ -658,7 +659,8 @@ const OrganizationAnalyticsDashboard = () => {
                 <div className="space-y-6">
                   {/* Department Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+                    <Card className="glass-card">
+                      <div className="glass-card-cap" />
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
@@ -674,7 +676,8 @@ const OrganizationAnalyticsDashboard = () => {
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+                    <Card className="glass-card">
+                      <div className="glass-card-cap" />
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
@@ -694,7 +697,8 @@ const OrganizationAnalyticsDashboard = () => {
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+                    <Card className="glass-card">
+                      <div className="glass-card-cap" />
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
@@ -710,7 +714,8 @@ const OrganizationAnalyticsDashboard = () => {
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+                    <Card className="glass-card">
+                      <div className="glass-card-cap" />
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
@@ -729,7 +734,8 @@ const OrganizationAnalyticsDashboard = () => {
                   </div>
 
                   {/* Divisions */}
-                  <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+                  <Card className="glass-card">
+                    <div className="glass-card-cap" />
                     <CardHeader>
                       <CardTitle className="h3 sidebar-gradient-text">
                         {dept.name} Divisions
@@ -849,7 +855,8 @@ const OrganizationAnalyticsDashboard = () => {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Budget Allocation */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader>
                 <CardTitle className="h3 sidebar-gradient-text">
                   Budget Allocation
@@ -886,7 +893,8 @@ const OrganizationAnalyticsDashboard = () => {
             </Card>
 
             {/* Monthly Expenses */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader>
                 <CardTitle className="h3 sidebar-gradient-text">
                   Monthly Expenses
@@ -1007,7 +1015,8 @@ const OrganizationAnalyticsDashboard = () => {
 
         {/* Compliance Tab */}
         <TabsContent value="compliance" className="space-y-6">
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
             <CardHeader>
               <CardTitle className="h3 sidebar-gradient-text">
                 License Compliance
@@ -1054,7 +1063,8 @@ const OrganizationAnalyticsDashboard = () => {
 
         {/* Trends Tab */}
         <TabsContent value="trends" className="space-y-6">
-          <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
             <CardHeader>
               <CardTitle className="h3 sidebar-gradient-text">
                 Contract Trends

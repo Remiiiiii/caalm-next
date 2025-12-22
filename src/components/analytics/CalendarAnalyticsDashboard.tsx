@@ -199,7 +199,8 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* Calendar Analytics Card */}
-      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+      <Card className="glass-card">
+        <div className="glass-card-cap" />
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="h2 sidebar-gradient-text">
@@ -238,7 +239,8 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
         <CardContent>
           {/* Key Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -254,7 +256,8 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -270,7 +273,8 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -288,7 +292,8 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -329,7 +334,8 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="resources" className="mt-6">
-              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <Card className="glass-card">
+                <div className="glass-card-cap" />
                 <CardHeader>
                   <CardTitle className="h3 text-navy">
                     Resource Utilization

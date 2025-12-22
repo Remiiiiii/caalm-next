@@ -323,7 +323,8 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader>
                 <CardTitle className="text-slate-700">Overview</CardTitle>
               </CardHeader>
@@ -337,7 +338,8 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
           </TabsContent>
 
           <TabsContent value="metrics" className="space-y-6">
-            <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader>
                 <CardTitle className="text-slate-700">
                   Executive Metrics
@@ -352,7 +354,8 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
           </TabsContent>
 
           <TabsContent value="compliance" className="space-y-6">
-            <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader>
                 <CardTitle className="text-slate-700">
                   Compliance Tracking
@@ -367,7 +370,8 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
           </TabsContent>
 
           <TabsContent value="trends" className="space-y-6">
-            <Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader>
                 <CardTitle className="text-slate-700">Trend Analysis</CardTitle>
               </CardHeader>

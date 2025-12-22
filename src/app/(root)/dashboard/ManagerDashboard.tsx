@@ -94,13 +94,14 @@ const ManagerDashboard = () => {
       ) : (
         <>
           {/* Header Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="dashboard-grid">
             {isLoading ? (
               [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
             ) : (
               <>
-                <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-                  <CardContent className="p-6">
+                <Card className="glass-card">
+                  <div className="glass-card-cap" />
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-slate-600">
@@ -115,8 +116,9 @@ const ManagerDashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-                  <CardContent className="p-6">
+                <Card className="glass-card">
+                  <div className="glass-card-cap" />
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-slate-600">
@@ -134,8 +136,9 @@ const ManagerDashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-                  <CardContent className="p-6">
+                <Card className="glass-card">
+                  <div className="glass-card-cap" />
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-slate-600">
@@ -153,8 +156,9 @@ const ManagerDashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-                  <CardContent className="p-6">
+                <Card className="glass-card">
+                  <div className="glass-card-cap" />
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-slate-600">
@@ -250,7 +254,7 @@ const ManagerDashboard = () => {
             <div className="space-y-6">
               {/* Contract Expiry Alerts */}
               <ContractExpiryAlertsWidget maxVisible={3} />
-              
+
               {/* Recent Activity */}
               <RecentActivity />
 

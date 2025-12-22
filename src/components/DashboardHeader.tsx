@@ -27,7 +27,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   const router = useRouter();
   const { logout } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
-  
+
   // Use SWR hook for instant updates
   const { unreadCount } = useUnreadCount(user?.$id);
 
@@ -50,9 +50,9 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   };
 
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-2 sm:gap-4 items-center min-w-0">
       <QuickActions user={user} />
-      <header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mt-6 md:px-9 sm:mr-7 rounded-full mb-6 ml-auto w-fit px-4">
+      <header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mt-6 md:px-9 sm:mr-7 rounded-full mb-6 ml-auto w-fit px-4 flex-shrink-0">
         <div className="flex items-center h-10">
           {/* Action buttons */}
           {user && (

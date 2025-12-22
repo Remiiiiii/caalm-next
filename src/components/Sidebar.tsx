@@ -738,7 +738,7 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
                             <span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl"></span>
                             <Link
                               href={item.url || ''}
-                              className="ml-4 lg:w-full flex items-start"
+                              className="ml-4 w-full flex items-start"
                               onMouseEnter={() => {
                                 // Prefetch analytics data on hover for better performance
                                 if (item.url?.includes('/analytics')) {

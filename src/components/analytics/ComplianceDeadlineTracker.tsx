@@ -59,9 +59,17 @@ export const ComplianceDeadlineTracker: React.FC<
           </Badge>
         );
       case 'at_risk':
-        return <Badge className="border-2 border-amber-400 bg-amber-100 text-amber-800">At Risk</Badge>;
+        return (
+          <Badge className="border-2 border-amber-400 bg-amber-100 text-amber-800">
+            At Risk
+          </Badge>
+        );
       case 'on_track':
-        return <Badge className="border-2 border-green-400 bg-green-100 text-green-800">On Track</Badge>;
+        return (
+          <Badge className="border-2 border-green-400 bg-green-100 text-green-800">
+            On Track
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">Unknown</Badge>;
     }
@@ -75,7 +83,8 @@ export const ComplianceDeadlineTracker: React.FC<
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -89,7 +98,8 @@ export const ComplianceDeadlineTracker: React.FC<
           </CardContent>
         </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -103,7 +113,8 @@ export const ComplianceDeadlineTracker: React.FC<
           </CardContent>
         </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -117,7 +128,8 @@ export const ComplianceDeadlineTracker: React.FC<
           </CardContent>
         </Card>
 
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -133,7 +145,8 @@ export const ComplianceDeadlineTracker: React.FC<
       </div>
 
       {/* Critical Deadlines */}
-      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+      <Card className="glass-card">
+        <div className="glass-card-cap" />
         <CardHeader>
           <CardTitle className="h3 text-navy">Critical Deadlines</CardTitle>
           <CardDescription>
@@ -196,7 +209,8 @@ export const ComplianceDeadlineTracker: React.FC<
 
       {/* All Upcoming Deadlines */}
       {data.upcoming.length > 0 && (
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
           <CardHeader>
             <CardTitle className="h3 text-navy">
               All Upcoming Deadlines

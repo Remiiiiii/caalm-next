@@ -141,31 +141,29 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   const { orgId } = useOrganization();
   const adminName = 'Executive'; // Replace with actual admin name
 
-  // Widget pagination functionality
+  // Widget pagination functionality - responsive
   const widgetScrollRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const widgetsPerPage = 3;
-  const widgetWidth = 240;
-  const widgetGap = 16;
-  const pageWidth =
-    widgetsPerPage * widgetWidth + (widgetsPerPage - 1) * widgetGap;
-
-  const scrollToPage = (pageNumber: number) => {
-    if (widgetScrollRef.current) {
-      const scrollAmount = pageNumber * pageWidth;
-      widgetScrollRef.current.scrollTo({
-        left: scrollAmount,
-        behavior: 'smooth',
-      });
-      setCurrentPage(pageNumber);
-    }
-  };
 
   const scrollWidgets = (direction: 'left' | 'right') => {
-    const newPage = direction === 'left' ? currentPage - 1 : currentPage + 1;
-    if (newPage >= 0 && newPage <= 1) {
-      // 0 = Page 1, 1 = Page 2
-      scrollToPage(newPage);
+    if (widgetScrollRef.current) {
+      const container = widgetScrollRef.current;
+      const scrollAmount = container.clientWidth;
+      const newScrollLeft =
+        direction === 'left'
+          ? container.scrollLeft - scrollAmount
+          : container.scrollLeft + scrollAmount;
+
+      container.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth',
+      });
+
+      // Update page based on scroll position
+      const newPage = Math.round(newScrollLeft / scrollAmount);
+      if (newPage >= 0 && newPage <= 1) {
+        setCurrentPage(newPage);
+      }
     }
   };
 
@@ -173,8 +171,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
   useEffect(() => {
     const handleScroll = () => {
       if (widgetScrollRef.current) {
-        const scrollLeft = widgetScrollRef.current.scrollLeft;
-        const newPage = Math.round(scrollLeft / pageWidth);
+        const container = widgetScrollRef.current;
+        const scrollLeft = container.scrollLeft;
+        const scrollAmount = container.clientWidth;
+        const newPage = Math.round(scrollLeft / scrollAmount);
         if (newPage !== currentPage && newPage >= 0 && newPage <= 1) {
           setCurrentPage(newPage);
         }
@@ -186,7 +186,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       scrollContainer.addEventListener('scroll', handleScroll);
       return () => scrollContainer.removeEventListener('scroll', handleScroll);
     }
-  }, [currentPage, pageWidth]);
+  }, [currentPage]);
 
   // Use unified dashboard data hook
   const {
@@ -706,7 +706,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
         <source src="/assets/video/wave.mp4" type="video/mp4" />
       </video>
       {/* Main Content Container */}
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
         {/* Dashboard Header */}
         <div className="flex items-center mb-4 gap-2">
           <div className="h2 font-bold sidebar-gradient-text">
@@ -722,8 +722,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             Last updated: <ClientTimestamp />
           </div>
         </div>
-        <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mb-6">
-          <CardContent className="p-3">
+        <Card className="glass-card mb-6">
+          <div className="glass-card-cap" />
+          <CardContent className="p-3 sm:p-4 lg:p-6">
             {/* Navigation Arrows */}
             <Button
               variant="outline"
@@ -746,30 +747,40 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             {/* Scrollable Widgets Container */}
             <div
               ref={widgetScrollRef}
-              className="flex gap-4 overflow-x-hidden scrollbar-hide ml-10 px-1 py-2 rounded-lg"
+              className="flex gap-3 sm:gap-4 lg:gap-6 overflow-x-auto scrollbar-hide w-full py-2 rounded-lg"
               style={{
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
-                width: `${pageWidth}px`,
-                maxWidth: `${pageWidth}px`,
               }}
             >
               {/* Page 1: Weather, Company News, Contract Status */}
-              <div className="flex gap-2 min-w-full">
-                <WeatherWidget />
-                <CompanyNewsFeed />
-                <ContractStatusPieChart />
+              <div className="flex gap-3 sm:gap-2 lg:gap-4 ml-8 min-w-full flex-shrink-0">
+                <div className="flex-1 min-w-0 max-w-[280px]">
+                  <WeatherWidget />
+                </div>
+                <div className="flex-1 min-w-0 max-w-[287px]">
+                  <ContractExpiryAlertsWidget
+                    maxVisible={2}
+                    showSettings={false}
+                    compact={true}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 max-w-[280px]">
+                  <ContractStatusPieChart />
+                </div>
               </div>
 
               {/* Page 2: Department Performance, Contract Expiry Alerts, Quick Notes */}
-              <div className="flex gap-2 min-w-full -ml-2">
-                <DepartmentPerformanceWidget />
-                <QuickNotesWidget user={user ?? undefined} />
-                <ContractExpiryAlertsWidget
-                  maxVisible={2}
-                  showSettings={false}
-                  compact={true}
-                />
+              <div className="flex gap-3 sm:gap-2 lg:gap-4 min-w-full -ml-6 flex-shrink-0">
+                <div className="flex-1 min-w-0 max-w-[267px]">
+                  <DepartmentPerformanceWidget />
+                </div>
+                <div className="flex-1 min-w-0 max-w-[300px]">
+                  <CompanyNewsFeed />
+                </div>
+                <div className="flex-1 min-w-0 max-w-[280px]">
+                  <QuickNotesWidget user={user ?? undefined} />
+                </div>
               </div>
             </div>
           </CardContent>
@@ -787,11 +798,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
           {unifiedLoading
             ? [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
             : stats.map((stat, index) => (
-                <Card
-                  key={index}
-                  className="bg-white/30 backdrop-blur border border-white/40 shadow-lg"
-                >
-                  <CardContent className="p-6">
+                <Card key={index} className="glass-card">
+                  <div className="glass-card-cap" />
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm  font-medium sidebar-gradient-text">
@@ -825,8 +834,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               </div>
 
               {/* Calendar View */}
-              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg lg:col-span-3">
-                <CardContent className="p-4">
+              <Card className="glass-card lg:col-span-3">
+                <div className="glass-card-cap" />
+                <CardContent className="p-4 sm:p-6">
                   <CalendarView
                     user={user}
                     onEventClick={(event) => {
@@ -853,7 +863,8 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             {/* Recent files uploaded and Pending Approvals */}
             <div className="grid lg:grid-cols-2 gap-6">
               {/* Recent files uploaded */}
-              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <Card className="glass-card">
+                <div className="glass-card-cap" />
                 <CardHeader>
                   <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
                     Recent Files Uploaded
@@ -867,7 +878,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                       ))}
                     </div>
                   ) : files && files.length > 0 ? (
-                    <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4">
+                    <div className="max-h-[400px] overflow-y-auto pr-2 space-y-3">
                       {(files as Models.Document[])
                         .slice(0, 10)
                         .map((file: Models.Document) => {
@@ -875,7 +886,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                           return (
                             <div
                               key={file.$id}
-                              className="border border-border rounded-lg p-4"
+                              className="bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-3 shadow-sm"
                             >
                               <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -885,20 +896,20 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                                     url={fileDoc.url}
                                   />
                                   <div className="flex flex-col gap-1 min-w-0 flex-1">
-                                    <h4 className="font-medium text-navy truncate max-w-[200px]">
+                                    <h4 className="font-medium text-slate-700 truncate max-w-[200px]">
                                       {fileDoc.name}
                                     </h4>
-                                    <p className="text-sm text-slate-dark">
+                                    <p className="text-xs text-slate-600 mt-1">
                                       <FormattedDateTime
                                         date={file.$createdAt}
-                                        className="text-xs text-slate-light"
+                                        className="text-xs text-slate-600"
                                       />
                                     </p>
                                   </div>
                                 </div>
                                 <div className="ml-3 flex-shrink-0">
                                   {/* <ActionDropdown
-                                file={file}
+                                file={file} 
                                 onStatusChange={refreshFiles}
                               /> */}
                                 </div>
@@ -923,49 +934,50 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               </Card>
 
               {/* Pending Approvals */}
-              <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+              <Card className="glass-card">
+                <div className="glass-card-cap" />
                 <CardHeader>
                   <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
                     Pending Approvals
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {pendingApprovals.map((approval) => (
                       <div
                         key={approval.id}
-                        className="border border-border rounded-lg p-4"
+                        className="bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-3 shadow-sm"
                       >
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-navy">
+                          <h4 className="font-medium text-slate-700">
                             {approval.type}
                           </h4>
                           <div className="flex space-x-2">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                              className="glass-card text-slate-700 hover:opacity-80"
                             >
                               Deny
                             </Button>
                             <Button
                               size="sm"
-                              className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                              className="glass-card text-slate-700 hover:opacity-80"
                             >
                               Approve
                             </Button>
                           </div>
                         </div>
-                        <p className="text-sm text-slate-dark">
+                        <p className="text-sm text-slate-600 mt-1">
                           {approval.requester || approval.title}
                         </p>
                         {approval.division && (
-                          <p className="text-xs text-slate-light">
+                          <p className="text-xs text-slate-500 mt-1">
                             Division: {approval.division}
                           </p>
                         )}
                         {approval.amount && (
-                          <p className="text-xs text-slate-light">
+                          <p className="text-xs text-slate-500 mt-1">
                             Amount: {approval.amount}
                           </p>
                         )}
@@ -977,7 +989,8 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             </div>
 
             {/* Invitation Management Section */}
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader>
                 <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
                   Send Invite Link to New Caalm User
@@ -996,7 +1009,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                         setInviteForm({ ...inviteForm, selectedUserId: value })
                       }
                       placeholder="Select a user"
-                      className=" bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+                      className="glass-card text-slate-700 w-full"
                     >
                       {(uninvitedUsers as UninvitedUser[]).map(
                         (user: UninvitedUser) => (
@@ -1021,7 +1034,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                       type="button"
                       onClick={handleRefreshUsers}
                       disabled={refreshLoading}
-                      className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+                      className="glass-card text-slate-700 hover:opacity-80"
                     >
                       <RefreshCw
                         className={`h-4 w-4 mr-2 ${
@@ -1113,16 +1126,17 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+            <Card className="glass-card">
+              <div className="glass-card-cap" />
               <CardHeader>
                 <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
                   Pending Invitations
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto border rounded">
+                <div className="glass-card-inner overflow-x-auto">
                   <table className="min-w-full text-xs">
-                    <thead className="bg-gray-50 text-center">
+                    <thead className="bg-white/40 backdrop-blur-md border-b border-white/30 text-center">
                       <tr>
                         <th className="text-slate-700 text-center px-4 py-2">
                           Name
@@ -1176,7 +1190,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                             <td className="pl-2 ">{inv.name}</td>
                             <td>{inv.email}</td>
                             <td>
-                              {inv.role ? (inv.role as string).charAt(0).toUpperCase() + (inv.role as string).slice(1).toLowerCase() : ''}
+                              {inv.role
+                                ? (inv.role as string).charAt(0).toUpperCase() +
+                                  (inv.role as string).slice(1).toLowerCase()
+                                : ''}
                             </td>
                             <td>
                               <ClientDate dateString={inv.$createdAt} />

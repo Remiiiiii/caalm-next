@@ -47,52 +47,57 @@ export const DeleteConfirmationDialog: React.FC<
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
+      <DialogContent className="glass-card max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+        {/* Professional Cap */}
+        <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+        {/* Header with gradient background */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+          <div className="flex items-center gap-3 px-6">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-[#0f5384]" />
+              <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
                 {title}
               </DialogTitle>
-              {description && (
-                <DialogDescription className="text-sm text-gray-600 mt-1">
-                  {description}
-                </DialogDescription>
-              )}
             </div>
           </div>
-        </DialogHeader>
+          {description && (
+            <p className="text-sm text-slate-600 mt-1 ml-14">{description}</p>
+          )}
+        </div>
 
-        <div className="py-4">
-          <p className="text-sm text-gray-700">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+          <p className="text-sm text-slate-700">
             Are you sure you want to delete{' '}
-            <span className="font-medium text-gray-900">"{itemName}"</span>?
+            <span className="font-medium text-slate-900">"{itemName}"</span>?
             This action cannot be undone.
           </p>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isLoading}
-            className="primary-btn px-3 sm:px-4 flex-1"
-          >
-            <Ban className="w-4 h-4" />
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            {isLoading ? 'Deleting...' : 'Delete'}
-          </Button>
-        </DialogFooter>
+        {/* Professional Footer */}
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <div className="text-xs text-slate-500"></div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoading}
+              className="primary-btn px-3 sm:px-4"
+            >
+              <Ban className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirm}
+              disabled={isLoading}
+              className="px-3 sm:px-4"
+            >
+              {isLoading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

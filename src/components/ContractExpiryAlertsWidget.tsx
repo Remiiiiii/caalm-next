@@ -137,7 +137,8 @@ const ContractExpiryAlertsWidget = ({
   if (compact) {
     if (isLoading) {
       return (
-        <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+        <Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+          <div className="glass-card-cap" />
           <CardHeader className="pb-3 pt-4 px-4">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-slate-600" />
@@ -155,8 +156,9 @@ const ContractExpiryAlertsWidget = ({
 
     if (error) {
       return (
-        <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-          <CardHeader className="pb-3 pt-4 px-4">
+        <Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+          <div className="glass-card-cap" />
+          <CardHeader className="pb-3 pt-6 px-4">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-red-500" />
               <CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -174,8 +176,9 @@ const ContractExpiryAlertsWidget = ({
     }
 
     return (
-      <Card className="w-[320px] h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-        <CardHeader className="pb-2 pt-4 px-4">
+      <Card className="glass-card w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]">
+        <div className="glass-card-cap" />
+        <CardHeader className="pb-2 pt-6 px-4">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="h-4 w-4 text-slate-600" />
             <CardTitle className="text-sm font-semibold sidebar-gradient-text">

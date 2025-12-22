@@ -40,7 +40,9 @@ const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
   });
 
   // Limit the activities to the specified limit
-  const activities = recentActivities.slice(0, limit);
+  const activities: RecentActivity[] = (recentActivities ||
+    []) as RecentActivity[];
+  const limitedActivities = activities.slice(0, limit);
 
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date();
@@ -85,7 +87,8 @@ const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
 
   if (isLoading) {
     return (
-      <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+      <Card className="glass-card">
+        <div className="glass-card-cap" />
         <CardHeader className="pb-3">
           <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
             Recent Activity
@@ -93,7 +96,7 @@ const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[400px] overflow-y-auto">
-            <div className="space-y-3 py-4">
+            <div className="space-y-3 py-2">
               {[1, 2, 3, 4, 5].map((i) => (
                 <ActivityItemSkeleton key={i} />
               ))}
@@ -105,7 +108,8 @@ const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
   }
 
   return (
-    <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
+    <Card className="glass-card">
+      <div className="glass-card-cap" />
       <CardHeader className="pb-3">
         <CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
           Recent Activity
@@ -113,28 +117,26 @@ const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
       </CardHeader>
       <CardContent className="pt-0">
         <div className="h-[400px] overflow-y-auto">
-          <div className="space-y-3 py-4">
-            {activities.length === 0 ? (
+          <div className="space-y-3 py-4 pr-2">
+            {limitedActivities.length === 0 ? (
               <div className="text-center text-slate-dark py-8">
                 <p className="text-sm">No recent activities</p>
               </div>
             ) : (
-              activities.map((activity: RecentActivity, index: number) => (
+              limitedActivities.map((activity, index) => (
                 <div
                   key={activity.$id}
-                  className={`flex justify-between mr-4 items-start border-b border-border pb-2 last:border-b-0 transition-all duration-300 ${
-                    index < 3 ? 'bg-blue-50/30 rounded p-2' : ''
-                  }`}
+                  className="flex justify-between items-start bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-3 shadow-sm transition-all duration-300"
                 >
                   <div>
-                    <p className="font-medium text-navy text-sm">
+                    <p className="font-medium text-slate-700 text-sm">
                       {activity.action}
                     </p>
-                    <p className="text-xs text-slate-dark">
+                    <p className="text-xs text-slate-600 mt-1">
                       {getActivityDisplayText(activity)}
                     </p>
                   </div>
-                  <span className="text-xs text-slate-light">
+                  <span className="text-xs text-slate-500 ml-4">
                     {formatTimeAgo(activity.timestamp)}
                   </span>
                 </div>

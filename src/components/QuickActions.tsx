@@ -28,13 +28,13 @@ const QuickActions = ({ user }: QuickActionsProps) => {
   const [reportOpen, setReportOpen] = useState(false);
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="quick-actions-container flex items-center gap-1.5 sm:gap-2 flex-nowrap min-w-0 overflow-x-auto remove-scrollbar">
       {user && (
         <>
           <ContractUploadForm
             ownerId={user.$id}
             accountId={user.$id}
-            className="primary-btn h-10 px-2 shadow-drop-1 text-sm"
+            className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2"
             onSuccess={() => {
               // Refresh data or show success message
               console.log('Contract uploaded successfully');
@@ -42,23 +42,23 @@ const QuickActions = ({ user }: QuickActionsProps) => {
           />
         </>
       )}
-      <Button className="primary-btn h-10 px-2 shadow-drop-1 text-sm">
-        <Calendar className="h-4 w-4" />
+      <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
+        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         Upload Audit
       </Button>
-      <Button className="primary-btn h-10 px-2 shadow-drop-1 text-sm">
-        <Calendar className="h-4 w-4" />
+      <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
+        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         Upload License
       </Button>
-      <Button className="primary-btn h-10 px-2 shadow-drop-1 text-sm">
-        <Calendar className="h-4 w-4" />
+      <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
+        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         Schedule Review
       </Button>
       <Button
-        className="primary-btn h-10 gap-2 px-2 shadow-drop-1 text-sm"
+        className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2"
         onClick={() => setReportOpen(true)}
       >
-        <TrendingUp className="h-4 w-4" />
+        <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         Generate Report
       </Button>
       <ReportGenerator
