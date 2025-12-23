@@ -1,5 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getContractsForManager } from '@/lib/actions/file.actions';
+import {
+  successResponse,
+  errorResponse,
+  generateRequestId,
+} from '@/lib/api/contracts/utils/response.util';
+import { requireAuth } from '@/lib/api/contracts/middleware/auth.middleware';
 
 export async function GET(
   request: NextRequest,

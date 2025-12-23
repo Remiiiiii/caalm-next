@@ -50,7 +50,9 @@ const CountdownTimer = ({
     }
 
     const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const hours = Math.floor(
+      (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+    );
     const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
@@ -159,13 +161,21 @@ const CountdownTimer = ({
   const sizeClasses = getSizeClasses();
   const urgency = getUrgencyLevel();
 
+  // Truncate contract name to 40 characters
+  const truncatedContractName =
+    contractName.length > 40
+      ? `${contractName.substring(0, 40)}...`
+      : contractName;
+
   const formatTimeUnit = (value: number, unit: string) => {
     return (
       <div className="text-center">
         <div className={`${sizeClasses.time} ${colors.accent}`}>
           {value.toString().padStart(2, '0')}
         </div>
-        <div className={`${sizeClasses.label} ${colors.text} uppercase tracking-wide`}>
+        <div
+          className={`${sizeClasses.label} ${colors.text} uppercase tracking-wide`}
+        >
           {unit}
         </div>
       </div>
@@ -173,20 +183,24 @@ const CountdownTimer = ({
   };
 
   return (
-    <div className={`rounded-lg border ${colors.bg} ${sizeClasses.container} ${className}`}>
+    <div
+      className={`rounded-lg border ${colors.bg} ${sizeClasses.container} ${className}`}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
           {showIcon && (
             <>
               {timeRemaining.isExpired ? (
-                <AlertTriangle className={`${sizeClasses.icon} ${colors.icon}`} />
+                <AlertTriangle
+                  className={`${sizeClasses.icon} ${colors.icon}`}
+                />
               ) : (
                 <Clock className={`${sizeClasses.icon} ${colors.icon}`} />
               )}
             </>
           )}
           <h3 className={`${sizeClasses.title} ${colors.text} truncate`}>
-            {contractName}
+            {truncatedContractName}
           </h3>
         </div>
         <Calendar className={`${sizeClasses.icon} ${colors.icon} opacity-60`} />
@@ -203,14 +217,14 @@ const CountdownTimer = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className="grid grid-cols-4 gap-2 mb-3 text-slate-700">
             {formatTimeUnit(timeRemaining.days, 'Days')}
             {formatTimeUnit(timeRemaining.hours, 'Hours')}
             {formatTimeUnit(timeRemaining.minutes, 'Min')}
             {formatTimeUnit(timeRemaining.seconds, 'Sec')}
           </div>
 
-          <div className="text-center">
+          <div className="text-center text-slate-500">
             <div className={`${sizeClasses.label} ${colors.text}`}>
               {urgency === 'critical' && 'Expires very soon!'}
               {urgency === 'warning' && 'Expires this week'}
@@ -227,22 +241,19 @@ const CountdownTimer = ({
           <div
             className={`h-2 rounded-full transition-all duration-1000 ${
               urgency === 'expired' || urgency === 'critical'
-                ? 'bg-red-500'
+                ? 'bg-destructive/10'
                 : urgency === 'warning'
-                ? 'bg-orange-500'
+                ? 'bg-[#FFEA99]'
                 : urgency === 'attention'
                 ? 'bg-yellow-500'
-                : 'bg-green-500'
+                : 'bg-green'
             }`}
             style={{
               width: timeRemaining.isExpired
                 ? '100%'
                 : `${Math.max(
                     10,
-                    Math.min(
-                      100,
-                      100 - (timeRemaining.days / 365) * 100
-                    )
+                    Math.min(100, 100 - (timeRemaining.days / 365) * 100)
                   )}%`,
             }}
           />

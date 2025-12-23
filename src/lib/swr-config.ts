@@ -45,7 +45,8 @@ export const swrKeys = {
   users: () => '/api/users',
   calendarEvents: (year: number, month: number) =>
     `/api/calendar/events?year=${year}&month=${month}`,
-  managerContracts: (userId: string) => `/api/contracts?userId=${userId}`,
+  managerContracts: (userId: string) => `/api/contracts/manager/${userId}`,
+  allContracts: () => '/api/contracts/all',
   recentActivities: (limit: number = 15) =>
     `/api/recent-activities?limit=${limit}`,
   adminStats: () => '/api/admin/stats',
