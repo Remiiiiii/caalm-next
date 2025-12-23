@@ -46,6 +46,7 @@ import {
   StepForward,
   AlertTriangle,
 } from 'lucide-react';
+import { SaveProgressCard } from '@/components/SaveProgressCard';
 import { cn } from '@/lib/utils';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -1066,10 +1067,68 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
   // Load saved drafts
   const loadSavedDrafts = useCallback(async () => {
     try {
-      const response = await fetch(`/api/contracts/drafts?ownerId=${ownerId}`);
+      if (!ownerId) {
+        console.warn('Cannot load drafts: ownerId is missing');
+        return;
+      }
+
+      const response = await fetch(`/api/contracts/drafts?ownerId=${ownerId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include cookies for authentication
+      });
+
       if (response.ok) {
-        const data = await response.json();
-        setSavedDrafts(data.drafts || []);
+        const result = await response.json();
+        // Handle both old and new response formats
+        const drafts = result.data?.drafts || result.drafts || [];
+        setSavedDrafts(drafts);
+      } else {
+        // Try to parse error response
+        let errorData: any = {};
+        let errorText = '';
+
+        try {
+          errorText = await response.text();
+          if (errorText) {
+            try {
+              errorData = JSON.parse(errorText);
+            } catch (parseError) {
+              // If JSON parsing fails, use the raw text
+              errorData = { error: errorText, raw: errorText };
+            }
+          }
+        } catch (textError) {
+          console.error('Failed to read error response text:', textError);
+          errorData = { error: 'Failed to read error response' };
+        }
+
+        // Log detailed error information
+        const errorMessage =
+          errorData.error ||
+          errorData.message ||
+          errorData.raw ||
+          'Unknown error';
+        console.error('Failed to load drafts:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorMessage,
+          fullError: errorData,
+          rawResponse: errorText,
+          ownerId: ownerId,
+          url: `/api/contracts/drafts?ownerId=${ownerId}`,
+        });
+
+        // Show user-friendly error message
+        if (response.status === 401) {
+          console.warn('Authentication failed - user may not be logged in');
+        } else if (response.status === 403) {
+          console.warn('Access denied - user may not have permission');
+        } else if (response.status === 400) {
+          console.warn('Validation error - check ownerId parameter');
+        }
       }
     } catch (error) {
       console.error('Error loading saved drafts:', error);
@@ -1302,9 +1361,16 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         subDepartment: sanitizeString(values.subDepartment),
         departmentOwner: sanitizeString(values.departmentOwner),
         contractOwnerId: values.contractOwnerId || ownerId,
-        contractExpiryDate: values.expiryDate?.toISOString(),
-        startDate: values.startDate?.toISOString(),
-        executionDate: values.executionDate?.toISOString(),
+        // Store dates as date-only strings (YYYY-MM-DD) to avoid timezone issues
+        contractExpiryDate: values.expiryDate
+          ? values.expiryDate.toISOString().split('T')[0]
+          : undefined,
+        startDate: values.startDate
+          ? values.startDate.toISOString().split('T')[0]
+          : undefined,
+        executionDate: values.executionDate
+          ? values.executionDate.toISOString().split('T')[0]
+          : undefined,
         autoRenew: values.autoRenew,
         renewalNoticeDays: parseIntegerInput(values.renewalNoticeDays),
         amount: amountAsNumber,
@@ -1328,8 +1394,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         counterpartyTaxId: sanitizeString(values.counterpartyTaxId),
         counterpartyDunsNumber: sanitizeString(values.counterpartyDunsNumber),
         insuranceRequired: values.insuranceRequired,
-        insuranceVerifiedDate: values.insuranceVerifiedDate?.toISOString(),
-        insuranceExpiryDate: values.insuranceExpiryDate?.toISOString(),
+        // Store as date-only strings (YYYY-MM-DD) to avoid timezone issues
+        insuranceVerifiedDate: values.insuranceVerifiedDate
+          ? values.insuranceVerifiedDate.toISOString().split('T')[0]
+          : undefined,
+        insuranceExpiryDate: values.insuranceExpiryDate
+          ? values.insuranceExpiryDate.toISOString().split('T')[0]
+          : undefined,
         indemnificationIncluded: values.indemnificationIncluded,
         hipaaRequired: values.hipaaRequired,
         dataPrivacyRequirements: sanitizeString(values.dataPrivacyRequirements),
@@ -2233,40 +2304,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -2515,40 +2556,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -2800,40 +2811,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -3407,40 +3388,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -3735,40 +3686,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -3905,40 +3826,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -4145,40 +4036,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -4312,40 +4173,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -4544,40 +4375,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}

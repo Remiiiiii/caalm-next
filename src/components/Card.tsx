@@ -497,6 +497,14 @@ const Card = ({
               }
             }}
             onRefresh={onRefresh}
+            onExpiryDateChange={(newExpiryDate: string) => {
+              // Optimistically update local state immediately
+              setContractExpiryDate(newExpiryDate);
+              // Also trigger refresh to sync with server
+              if (onRefresh) {
+                onRefresh();
+              }
+            }}
             userRole={userRole}
           />
           <span

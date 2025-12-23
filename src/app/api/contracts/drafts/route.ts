@@ -14,6 +14,11 @@ import {
   parsePaginationParams,
   buildPaginationMeta,
 } from '@/lib/api/contracts/utils/pagination.util';
+import { parseAndValidateQuery } from '@/lib/api/contracts/middleware/validation.middleware';
+import {
+  draftQuerySchema,
+  draftDeleteSchema,
+} from '@/lib/api/contracts/schemas/draft.schema';
 
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
@@ -96,11 +101,38 @@ export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
   try {
     // Validate query parameters
-    const query = parseAndValidateQuery(request, draftQuerySchema);
+    let query;
+    try {
+      query = parseAndValidateQuery(request, draftQuerySchema);
+    } catch (validationError: any) {
+      console.error('Draft query validation error:', {
+        message: validationError?.message,
+        stack: validationError?.stack,
+        url: request.url,
+      });
+      return validationErrorResponse(
+        validationError?.message ||
+          'Invalid query parameters: ownerId is required',
+        requestId
+      );
+    }
+
+    if (!query.ownerId) {
+      return validationErrorResponse(
+        'ownerId query parameter is required',
+        requestId
+      );
+    }
 
     // Authentication and authorization
     const authError = await requireAuthAndOwner(request, query.ownerId);
-    if (authError) return authError;
+    if (authError) {
+      console.error('Authentication error in drafts GET:', {
+        status: authError.status,
+        ownerId: query.ownerId,
+      });
+      return authError;
+    }
 
     if (
       !appwriteConfig.databaseId ||
@@ -112,12 +144,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Use cache for lightning-fast response
-    const cacheKey = CACHE_KEYS.contracts.drafts(ownerId);
+    const cacheKey = CACHE_KEYS.contracts.drafts(query.ownerId);
     const cachedData = await CacheManager.withCache(
       'contracts/drafts',
       cacheKey,
       async () => {
-        return await DraftService.getDrafts(ownerId);
+        return await DraftService.getDrafts(query.ownerId);
       },
       CACHE_TTLS.medium
     );
@@ -130,11 +162,25 @@ export async function GET(request: NextRequest) {
     response.headers.set('X-Cache', 'HIT');
     return response;
   } catch (error: any) {
-    console.error('Error fetching drafts:', error);
+    console.error('Error fetching drafts:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      requestId,
+    });
     return errorResponse(
       error instanceof Error ? error : new Error('Failed to fetch drafts'),
       500,
-      { requestId }
+      {
+        requestId,
+        details:
+          process.env.NODE_ENV === 'development'
+            ? {
+                message: error?.message,
+                stack: error?.stack,
+              }
+            : undefined,
+      }
     );
   }
 }

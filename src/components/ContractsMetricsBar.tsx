@@ -12,9 +12,21 @@ interface ContractsMetricsBarProps {
 export default function ContractsMetricsBar({
   files,
 }: ContractsMetricsBarProps) {
-  // Calculate expiring contracts
+  // Create a dependency key from expiry dates to ensure recalculation when dates change
+  const expiryDatesKey = useMemo(() => {
+    return files
+      .map((file) => file.contractExpiryDate || '')
+      .filter(Boolean)
+      .join('|');
+  }, [files]);
+
+  // Calculate expiring contracts with proper date handling
+  // Recalculates whenever files change OR expiry dates change
   const expiringContracts = useMemo(() => {
     const now = new Date();
+    // Set to start of day to avoid timezone issues
+    now.setHours(0, 0, 0, 0);
+
     const in30Days = new Date(now);
     in30Days.setDate(now.getDate() + 30);
     const in60Days = new Date(now);
@@ -25,21 +37,31 @@ export default function ContractsMetricsBar({
     return {
       in30: files.filter((file) => {
         if (!file.contractExpiryDate) return false;
-        const expiry = new Date(file.contractExpiryDate);
+        // Parse date-only strings (YYYY-MM-DD) using local timezone to avoid timezone issues
+        const expiryStr = file.contractExpiryDate.split('T')[0];
+        const [year, month, day] = expiryStr.split('-').map(Number);
+        const expiry = new Date(year, month - 1, day);
+        expiry.setHours(0, 0, 0, 0);
         return expiry >= now && expiry <= in30Days;
       }).length,
       in60: files.filter((file) => {
         if (!file.contractExpiryDate) return false;
-        const expiry = new Date(file.contractExpiryDate);
+        const expiryStr = file.contractExpiryDate.split('T')[0];
+        const [year, month, day] = expiryStr.split('-').map(Number);
+        const expiry = new Date(year, month - 1, day);
+        expiry.setHours(0, 0, 0, 0);
         return expiry > in30Days && expiry <= in60Days;
       }).length,
       in90: files.filter((file) => {
         if (!file.contractExpiryDate) return false;
-        const expiry = new Date(file.contractExpiryDate);
+        const expiryStr = file.contractExpiryDate.split('T')[0];
+        const [year, month, day] = expiryStr.split('-').map(Number);
+        const expiry = new Date(year, month - 1, day);
+        expiry.setHours(0, 0, 0, 0);
         return expiry > in60Days && expiry <= in90Days;
       }).length,
     };
-  }, [files]);
+  }, [files, expiryDatesKey]);
 
   // Calculate key metrics
   const metrics = useMemo(() => {
@@ -79,6 +101,11 @@ export default function ContractsMetricsBar({
 
   const totalExpiring =
     expiringContracts.in30 + expiringContracts.in60 + expiringContracts.in90;
+
+  // Check if any contracts have expiry dates
+  const hasContractsWithExpiryDates = useMemo(() => {
+    return files.some((file) => file.contractExpiryDate);
+  }, [files]);
 
   return (
     <section className="mb-6 w-full">
@@ -123,8 +150,8 @@ export default function ContractsMetricsBar({
           </CardContent>
         </Card>
 
-        {/* Expiring Soon Card */}
-        {totalExpiring > 0 && (
+        {/* Expiring Soon Card - Show if any contracts have expiry dates */}
+        {hasContractsWithExpiryDates && (
           <Card className="glass-card">
             {/* Professional Cap */}
             <div className="glass-card-cap" />
@@ -134,14 +161,35 @@ export default function ContractsMetricsBar({
                 <AlertTriangle className="h-3 w-3 text-slate-700" />
                 <p className="body-2 text-slate-700 text-sm">Expiring Soon</p>
               </div>
-              {/* Value Display Area */}
+              {/* Value Display Area - 3 sections horizontally */}
               <div className="glass-card-inner">
-                <p className="h3 text-navy font-bold text-center">
-                  {totalExpiring}
-                </p>
-                <p className="text-xs text-slate-600 text-center mt-1.5">
-                  Next 90 days
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  {/* Next 30 days */}
+                  <div className="flex-1 text-center">
+                    <p className="h3 text-navy font-bold">
+                      {expiringContracts.in30}
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1">Next 30 days</p>
+                  </div>
+                  {/* Divider */}
+                  <div className="h-12 w-px bg-slate-300" />
+                  {/* Next 60 days */}
+                  <div className="flex-1 text-center">
+                    <p className="h3 text-navy font-bold">
+                      {expiringContracts.in60}
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1">Next 60 days</p>
+                  </div>
+                  {/* Divider */}
+                  <div className="h-12 w-px bg-slate-300" />
+                  {/* Next 90 days */}
+                  <div className="flex-1 text-center">
+                    <p className="h3 text-navy font-bold">
+                      {expiringContracts.in90}
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1">Next 90 days</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

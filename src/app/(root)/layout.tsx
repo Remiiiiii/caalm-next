@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
@@ -28,6 +28,48 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user, loading, router]);
 
+  // Memoize sidebar props to prevent unnecessary re-renders
+  const sidebarProps = useMemo(() => {
+    if (!user) return null;
+    return {
+      name: user.name || 'Unknown User',
+      avatar:
+        (user as any).prefs?.avatar || '/assets/images/avatar-placeholder.png',
+      email: user.email,
+      role: (user as any).role || '',
+      division: (user as any).division || '',
+    };
+  }, [
+    user?.$id,
+    user?.email,
+    (user as any)?.name,
+    (user as any)?.prefs?.avatar,
+    (user as any)?.role,
+    (user as any)?.division,
+  ]);
+
+  // Memoize navigation props
+  const navigationProps = useMemo(() => {
+    if (!user) return null;
+    return {
+      $id: user.$id,
+      accountId: (user as any).accountId || user.$id,
+      fullName: (user as any).fullName || (user as any).name || 'Unknown User',
+      avatar:
+        (user as any).prefs?.avatar || '/assets/images/avatar-placeholder.png',
+      email: user.email,
+      role: (user as any).role || '',
+    };
+  }, [
+    user?.$id,
+    user?.email,
+    (user as any)?.accountId,
+    (user as any)?.fullName,
+    (user as any)?.name,
+    (user as any)?.prefs?.avatar,
+    (user as any)?.role,
+  ]);
+
   // Always render the same structure, but conditionally show content
   return (
     <>
@@ -46,9 +88,9 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
         </div>
       ) : (
         <main className="flex h-screen overflow-hidden">
-          <Sidebar {...user} />
+          {sidebarProps && <Sidebar {...sidebarProps} />}
           <section className="flex h-full flex-1 flex-col min-w-0">
-            <MobileNavigation {...user} />
+            {navigationProps && <MobileNavigation {...navigationProps} />}
             <DashboardHeader user={user} />
             <div className="main-content">
               <Suspense

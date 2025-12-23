@@ -167,11 +167,13 @@ const ActionDropdown = ({
   file,
   onStatusChange,
   onRefresh,
+  onExpiryDateChange,
   userRole,
 }: {
   file: UIFileDoc;
   onStatusChange?: () => void;
   onRefresh?: () => void;
+  onExpiryDateChange?: (newExpiryDate: string) => void;
   userRole?: string;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -612,7 +614,7 @@ const ActionDropdown = ({
                     className="animate-spin mr-2"
                   />
                 )}
-                <UserRoundCheck className="w-4 h-4 mr-2" />
+                <UserRoundCheck className="w-4 h-4" />
                 Assign Contract
               </Button>
             </div>
@@ -736,7 +738,11 @@ const ActionDropdown = ({
 
           {/* Content section with scroll */}
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-            <FileDetails file={file} />
+            <FileDetails
+              file={file}
+              onRefresh={onRefresh}
+              onExpiryDateChange={onExpiryDateChange}
+            />
           </div>
 
           {/* Professional Footer */}

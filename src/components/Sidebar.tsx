@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, memo } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import Avatar from '@/components/ui/avatar';
@@ -27,7 +27,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { memo } from 'react';
 import StorageProgressBar from '@/components/StorageProgressBar';
 
 interface TotalSpace {
@@ -189,7 +188,7 @@ const ITEM_ICONS: Record<
   },
 };
 
-const Sidebar = ({ name, avatar, email, role, division }: Props) => {
+const Sidebar = memo(({ name, avatar, email, role, division }: Props) => {
   const [totalSpace, setTotalSpace] = useState<TotalSpace | null>(null);
 
   // Fetch storage data
@@ -901,6 +900,8 @@ const Sidebar = ({ name, avatar, email, role, division }: Props) => {
       </div>
     </aside>
   );
-};
+});
+
+Sidebar.displayName = 'Sidebar';
 
 export default Sidebar;

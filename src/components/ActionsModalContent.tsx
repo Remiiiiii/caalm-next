@@ -104,7 +104,15 @@ const getStatusLabel = (status: string) => {
   }
 };
 
-export const FileDetails = ({ file }: { file: UIFileDoc }) => {
+export const FileDetails = ({
+  file,
+  onRefresh,
+  onExpiryDateChange,
+}: {
+  file: UIFileDoc;
+  onRefresh?: () => void;
+  onExpiryDateChange?: (newExpiryDate: string) => void;
+}) => {
   const { toast } = useToast();
   const [editing, setEditing] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
@@ -468,7 +476,8 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
     }
 
     try {
-      const expiryDateISO = selectedDate.toISOString();
+      // Store as date-only string (YYYY-MM-DD) to avoid timezone issues
+      const expiryDateISO = selectedDate.toISOString().split('T')[0];
 
       // Use server action to update expiry date (handles authentication properly)
       await updateContractExpiryDate(file.$id, expiryDateISO);
@@ -476,6 +485,16 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
       // Update local state to reflect the change immediately
       setDisplayExpiry(expiryDateISO);
       setEditing(false);
+
+      // Optimistically update the card component immediately
+      if (onExpiryDateChange) {
+        onExpiryDateChange(expiryDateISO);
+      }
+
+      // Trigger refresh to update card and table views with latest server data
+      if (onRefresh) {
+        onRefresh();
+      }
 
       toast({
         title: 'Success',
