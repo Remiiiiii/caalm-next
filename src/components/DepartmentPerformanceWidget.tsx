@@ -142,9 +142,7 @@ const DepartmentPerformanceWidget: React.FC<
           {/* Main performance display */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
-              </div>
+              <div className="relative"></div>
               <div>
                 <div className="text-3xl font-bold sidebar-gradient-text tracking-tight">
                   {performanceData.averageProductivity}%

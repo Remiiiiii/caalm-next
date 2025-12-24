@@ -220,7 +220,6 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
               </div>
               <div>
                 <div className="text-3xl font-bold sidebar-gradient-text tracking-tight">

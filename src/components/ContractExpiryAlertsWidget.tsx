@@ -303,8 +303,13 @@ const ContractExpiryAlertsWidget = ({
 
             <button
               onClick={() => setShowExpired(!showExpired)}
-              className="flex items-center justify-center gap-2 bg-white/50 rounded-full px-4 py-1 border border-white min-w-[140px] cursor-pointer hover:bg-white/80 transition-colors"
+              className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20 min-w-[140px] cursor-pointer hover:bg-white/30 transition-colors"
             >
+              {showExpired ? (
+                <EyeOff className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
+              ) : (
+                <Eye className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
+              )}
               <span className="text-xs text-slate-600 font-medium">
                 {showExpired ? 'Hide' : 'Show'} Expired
               </span>
@@ -515,6 +520,11 @@ const ContractExpiryAlertsWidget = ({
               onClick={() => setShowExpired(!showExpired)}
               className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20 min-w-[140px] cursor-pointer hover:bg-white/30 transition-colors"
             >
+              {showExpired ? (
+                <EyeOff className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
+              ) : (
+                <Eye className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
+              )}
               <span className="text-xs text-slate-600 font-medium">
                 {showExpired ? 'Hide' : 'Show'} Expired
               </span>
