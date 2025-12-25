@@ -1,11 +1,16 @@
+'use client';
+
 import React from 'react';
 import Image from 'next/image';
 import SplineCanvas from '@/components/SplineCanvas';
 import OrbitingBlocks from '@/components/OrbitingBlocks';
 import Link from 'next/link';
 import CountUp from '@/components/CountUp';
+import { useSplineWatermarkRemoval } from '@/hooks/useSplineWatermarkRemoval';
 
 const layout = ({ children }: { children: React.ReactNode }) => {
+  // Remove Spline watermark badges
+  useSplineWatermarkRemoval();
   return (
     <div className="flex min-h-screen bg-white relative overflow-hidden">
       {/* Video Background */}
@@ -53,12 +58,12 @@ const layout = ({ children }: { children: React.ReactNode }) => {
               </div>
 
               {/* Spline Component */}
-              <div className=" -mt-2 md:-mt-10 mb-2 relative w-full h-[500px] rounded-2xl overflow-hidden">
+              <div className=" -mt-2 md:-mt-10 mb-2 ml-10 relative w-full h-[500px] rounded-2xl overflow-hidden">
                 {/* Orbiting Blocks around Spline - positioned to orbit around the center */}
                 <OrbitingBlocks />
 
                 <SplineCanvas
-                  scene="https://prod.spline.design/JSDRNnN1k9dO-WXj/scene.splinecode"
+                  scene="/scene.splinecode"
                   className="w-full h-full relative z-10"
                   delayMs={1000}
                   durationMs={1000}

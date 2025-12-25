@@ -2,7 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { getSplineSceneUrl } from '@/lib/spline-config';
+import { Sparkles } from 'lucide-react';
+import { useSplineWatermarkRemoval } from '@/hooks/useSplineWatermarkRemoval';
 
 // Dynamically import Spline only on client side
 const Spline = dynamic(
@@ -28,36 +31,19 @@ export default function SplineExpiryScene({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  // Remove Spline watermark badges
+  useSplineWatermarkRemoval();
+
   useEffect(() => {
     const url = getSplineSceneUrl();
+    console.log('Spline scene URL:', url); // Debug: verify which URL is being used
     if (url) {
       setSceneUrl(url);
     } else {
-      console.warn(
-        'Spline scene URL not configured. Add NEXT_PUBLIC_SPLINE_SCENE_URL to .env.local'
-      );
-      setHasError(true);
-      setIsLoading(false);
+      // Fallback to local file
+      setSceneUrl('/scene.splinecode');
     }
   }, []);
-
-  // Disable pointer events on Spline canvas elements
-  useEffect(() => {
-    const disablePointerEvents = () => {
-      const canvases = document.querySelectorAll('canvas');
-      canvases.forEach((canvas) => {
-        if (canvas.style.pointerEvents !== 'none') {
-          canvas.style.pointerEvents = 'none';
-        }
-      });
-    };
-
-    // Run immediately and after a short delay to catch dynamically created canvases
-    disablePointerEvents();
-    const interval = setInterval(disablePointerEvents, 100);
-
-    return () => clearInterval(interval);
-  }, [sceneUrl, isLoading]);
 
   if (hasError || !sceneUrl) {
     // Fallback: subtle gradient background if Spline scene is not available
@@ -96,6 +82,27 @@ export default function SplineExpiryScene({
           <div className="text-slate-700 text-sm">Loading 3D scene...</div>
         </div>
       )}
+
+      {/* Using same backdrop as modal to blend seamlessly */}
+      {/* <div
+        className="rounded-md border glass-card absolute top-[50%] left-[19%] w-[138px] h-[39px] z-[10001] pointer-events-none flex items-center gap-2 px-3"
+        style={{
+          background: 'white',
+          backdropFilter: 'blur(4px)',
+          boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.2)',
+          border: '1px solid rgba(255, 255, 255, 0.5)',
+        }}
+      >
+        <Image
+          src="/assets/icons/sparkles.svg"
+          alt="Caalm AI"
+          width={24}
+          height={24}
+        />
+        <span className="text-slate-800 text-md sidebar-gradient-text">
+          Caalm AI
+        </span>
+      </div>  */}
     </div>
   );
 }

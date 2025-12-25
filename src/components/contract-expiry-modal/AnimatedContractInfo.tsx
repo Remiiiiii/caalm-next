@@ -91,7 +91,7 @@ export default function AnimatedContractInfo({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="relative z-20 space-y-6 ml-8"
+      className="relative z-20 space-y-6 ml-24"
     >
       {/* Contract Name - appears first (0-200ms) */}
       <motion.div variants={scaleVariants}>

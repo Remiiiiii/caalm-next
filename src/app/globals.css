@@ -1229,3 +1229,20 @@
 .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
   background-color: var(--rdp-background-color);
 }
+
+/* Hide Spline "Built with Spline" watermark badge - Aggressive CSS rules */
+a[href*='spline.design'],
+a[href*='splinetool.com'],
+a[href*='splinetool'],
+a[href*='spline'] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+}

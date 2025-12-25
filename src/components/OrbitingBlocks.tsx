@@ -25,11 +25,24 @@ const features = [
 
 const OrbitingBlocks = () => {
   const [rotation, setRotation] = useState(0);
-  const animationRef = useRef<number>();
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+  const animationRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number>(0);
 
   // Constant animation speed (degrees per millisecond)
   const ROTATION_SPEED = 0.02; // degrees per frame at 60fps
+
+  // Check screen size for md (768px) and lg (1024px) breakpoints
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsLargeScreen(window.innerWidth >= 768); // md breakpoint and above
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   useEffect(() => {
     const animate = (currentTime: number) => {
@@ -63,8 +76,8 @@ const OrbitingBlocks = () => {
         const angle = ((baseAngle - rotation) * Math.PI) / 180;
 
         // Orbit around the Spline component
-        const radiusX = 200; // Horizontal radius
-        const radiusY = 80; // Vertical radius for elliptical orbit
+        const radiusX = 220; // Horizontal radius
+        const radiusY = 40; // Vertical radius for elliptical orbit
 
         // Position calculation - center around Spline
         const x = Math.cos(angle) * radiusX;
@@ -93,8 +106,8 @@ const OrbitingBlocks = () => {
             key={i}
             style={{
               position: 'absolute',
-              left: `calc(50% + ${x}px)`,
-              top: `calc(50% + ${y}px)`,
+              left: isLargeScreen ? `calc(43% + ${x}px)` : `calc(50% + ${x}px)`,
+              top: `calc(60% + ${y}px)`,
               transform: `translate(-50%, -50%) scale(${finalScale})`,
               opacity: finalOpacity,
               zIndex,

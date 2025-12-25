@@ -33,7 +33,7 @@ export default function ContactDetails({ contract }: ContactDetailsProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1.8, duration: 0.5 }}
-      className="relative z-20 mt-8 glass-card p-6 w-[930px] ml-8"
+      className="relative z-20 mt-8 glass-card p-6 w-[930px] ml-24"
     >
       <div className="flex items-center gap-2 mb-4">
         <Building2 className="w-5 h-5 text-slate-700" />

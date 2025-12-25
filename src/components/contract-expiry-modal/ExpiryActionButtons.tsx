@@ -100,7 +100,7 @@ export default function ExpiryActionButtons({
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.5, duration: 0.5 }}
-        className="relative z-20 mt-8 flex flex-nowrap gap-3 w-fit ml-8"
+        className="relative z-20 mt-8 flex flex-nowrap gap-3 w-fit ml-24"
       >
         <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
           <Button
