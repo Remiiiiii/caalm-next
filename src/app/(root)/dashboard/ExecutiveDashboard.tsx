@@ -57,6 +57,9 @@ import CompanyNewsFeed from '@/components/CompanyNewsFeed';
 import ContractStatusPieChart from '@/components/ContractStatusPieChart';
 import DepartmentPerformanceWidget from '@/components/DepartmentPerformanceWidget';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useContractExpiryModal } from '@/hooks/useContractExpiryModal';
+import ContractExpiryModal from '@/components/contract-expiry-modal/ContractExpiryModal';
+import type { UIFileDoc } from '@/types/files';
 import { tablesDB } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'appwrite';
@@ -196,6 +199,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     isLoading: unifiedLoading,
     refresh: refreshUnified,
   } = useUnifiedDashboardData(orgId || 'default_organization');
+
+  // Contract expiry modal hook
+  const { contractsToShow, isModalOpen, closeModal, triggerTestModal } =
+    useContractExpiryModal((files as UIFileDoc[]) || []);
 
   // Debug logging
   console.log('ExecutiveDashboard Debug:', {
@@ -692,6 +699,13 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
   return (
     <div className="relative">
+      {/* Contract Expiry Modal */}
+      <ContractExpiryModal
+        contracts={contractsToShow}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onStatusChange={refreshUnified}
+      />
       <ContractExpiryNotifier contracts={expiryContracts} />
       {/* Background Video */}
       <video
@@ -716,8 +730,21 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               {`| ${user?.division || 'Unknown Division'}`}
             </span>
           </h1>
-          <div className="text-xs text-slate-500 ml-auto">
-            Last updated: <ClientTimestamp />
+          <div className="text-xs text-slate-500 ml-auto flex items-center gap-3">
+            <span>
+              Last updated: <ClientTimestamp />
+            </span>
+            {/* Test button for contract expiry modal - development only */}
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                onClick={triggerTestModal}
+                variant="outline"
+                size="sm"
+                className="bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300 text-xs"
+              >
+                🧪 Test Expiry Modal
+              </Button>
+            )}
           </div>
         </div>
         <Card className="glass-card mb-6">

@@ -21,9 +21,19 @@ export const fetcher = async (url: string) => {
 
     try {
       const errorData = await res.json();
-      errorMessage = errorData.message || errorMessage;
+      // Handle different error response formats
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      } else if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      } else {
+        errorMessage = res.statusText || errorMessage;
+      }
       errorDetails = errorData;
-    } catch (error) {
+    } catch (parseError) {
+      // If JSON parsing fails, use status text
       errorMessage = res.statusText || errorMessage;
     }
 
@@ -72,15 +82,34 @@ export const swrConfig: SWRConfiguration = {
   },
   onError: (error, key) => {
     // Log errors for monitoring with safe property access
-    const errorMessage =
-      error?.message || (error as any)?.error || 'Unknown error';
-    const status = (error as any).status || 'unknown';
+    let errorMessage = 'Unknown error';
+    let status: number | string = 'unknown';
+    let details: any = null;
+
+    // Handle different error types
+    if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error instanceof Error) {
+      errorMessage = error.message || 'Unknown error';
+      status = (error as any).status || 'unknown';
+      details = (error as any).details || null;
+    } else if (error && typeof error === 'object') {
+      errorMessage = (error as any).message || (error as any).error || 'Unknown error';
+      status = (error as any).status || 'unknown';
+      details = (error as any).details || null;
+    }
+
+    // Only log non-4xx errors to avoid noise from authentication/authorization issues
+    if (typeof status === 'number' && status < 400) {
+      return; // Don't log non-error responses
+    }
 
     console.error('SWR Error:', {
       key,
       error: errorMessage,
-      status: status,
-      details: (error as any).details || null,
+      status,
+      details,
+      errorType: typeof error,
     });
   },
 };
