@@ -82,6 +82,7 @@
     "date-fns-tz": "^3.2.0",
     "date-holidays": "^3.26.5",
     "dotenv": "^17.2.3",
+    "elevenlabs": "^1.59.0",
     "embla-carousel-react": "^8.6.0",
     "fluentreports": "^1.4.4",
     "form-data": "^4.0.5",

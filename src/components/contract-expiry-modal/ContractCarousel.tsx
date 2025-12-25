@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SplineExpiryScene from './SplineExpiryScene';
 import AnimatedContractInfo from './AnimatedContractInfo';
 import ExpiryActionButtons from './ExpiryActionButtons';
 import ContactDetails from './ContactDetails';
+import { useElevenLabsTTS } from '@/hooks/useElevenLabsTTS';
+import { formatContractForSpeech } from '@/lib/contract-speech';
+import { useAuth } from '@/contexts/AuthContext';
 import type { UIFileDoc } from '@/types/files';
 
 interface ContractCarouselProps {
@@ -22,23 +25,115 @@ export default function ContractCarousel({
   onStatusChange,
 }: ContractCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  if (contracts.length === 0) {
-    return null;
-  }
+  const { generateSpeech, play, pause, stop, isPlaying, isLoading } =
+    useElevenLabsTTS({ autoPlay: true });
+  const { user } = useAuth();
+  const generatedForRef = useRef<string | null>(null); // Track which contract we've generated for
 
   const currentContract = contracts[currentIndex];
 
+  // Get user's full name or name for speech
+  const userFullName =
+    (user as any)?.fullName || (user as any)?.name || user?.name || '';
+
+  // Stop audio when modal is dismissed (component unmount)
+  useEffect(() => {
+    return () => {
+      stop();
+      generatedForRef.current = null;
+    };
+  }, [stop]);
+
+  // Generate and play speech when modal opens or contract changes
+  useEffect(() => {
+    if (!currentContract) return;
+
+    const contractKey = `${currentContract.$id}-${currentIndex}`;
+
+    // Prevent duplicate generation for the same contract
+    if (generatedForRef.current === contractKey) {
+      return;
+    }
+
+    // Stop any existing audio first (synchronous)
+    stop();
+    generatedForRef.current = null;
+
+    // Format text immediately (no delay needed for cleanup - stop() is synchronous)
+    const text = formatContractForSpeech({
+      contract: currentContract,
+      contractIndex: currentIndex,
+      totalContracts: contracts.length,
+      userFullName,
+    });
+
+    // Start generating speech immediately
+    generateSpeech(text)
+      .then(() => {
+        generatedForRef.current = contractKey;
+      })
+      .catch((error) => {
+        generatedForRef.current = null; // Reset on error so it can retry
+        console.error('Failed to generate speech:', error);
+      });
+
+    return () => {
+      stop();
+    };
+  }, [
+    currentIndex,
+    currentContract?.$id,
+    contracts.length,
+    userFullName,
+    generateSpeech,
+    stop,
+  ]);
+
+  const handleToggleAudio = async () => {
+    if (isPlaying) {
+      pause();
+    } else {
+      // If audio exists, play it; otherwise generate new speech
+      try {
+        await play();
+      } catch {
+        // If play fails (no audio yet), generate new speech
+        if (currentContract) {
+          const text = formatContractForSpeech({
+            contract: currentContract,
+            contractIndex: currentIndex,
+            totalContracts: contracts.length,
+            userFullName,
+          });
+          await generateSpeech(text);
+        }
+      }
+    }
+  };
+
   const handlePrevious = () => {
+    stop(); // Stop audio before changing contract
+    generatedForRef.current = null; // Reset so new contract can generate
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : contracts.length - 1));
   };
 
   const handleNext = () => {
+    stop(); // Stop audio before changing contract
+    generatedForRef.current = null; // Reset so new contract can generate
     setCurrentIndex((prev) => (prev < contracts.length - 1 ? prev + 1 : 0));
   };
 
   const goToSlide = (index: number) => {
-    setCurrentIndex(index);
+    if (index !== currentIndex) {
+      stop(); // Stop audio before changing contract
+      generatedForRef.current = null; // Reset so new contract can generate
+      setCurrentIndex(index);
+    }
+  };
+
+  const handleDismiss = () => {
+    stop(); // Stop audio when modal is dismissed
+    onDismiss();
   };
 
   return (
@@ -67,7 +162,7 @@ export default function ContractCarousel({
               {/* Action Buttons */}
               <ExpiryActionButtons
                 contract={currentContract}
-                onDismiss={onDismiss}
+                onDismiss={handleDismiss}
                 onStatusChange={onStatusChange}
               />
             </div>
@@ -116,6 +211,24 @@ export default function ContractCarousel({
           </div>
         )}
 
+        {/* Audio Control Button - top left */}
+        <Button
+          onClick={handleToggleAudio}
+          variant="outline"
+          size="icon"
+          className="absolute top-8 left-8 glass-card text-slate-800 shadow-lg z-[10003]"
+          aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <div className="w-5 h-5 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
+          ) : isPlaying ? (
+            <VolumeX className="w-5 h-5" />
+          ) : (
+            <Volume2 className="w-5 h-5" />
+          )}
+        </Button>
+
         {/* Close Button and Contract Counter - grouped on the right */}
         <div className="absolute top-8 right-8 flex items-center gap-3 z-[10003]">
           {contracts.length > 1 && (
@@ -126,7 +239,7 @@ export default function ContractCarousel({
             </div>
           )}
           <Button
-            onClick={onDismiss}
+            onClick={handleDismiss}
             variant="outline"
             size="icon"
             className="glass-card text-slate-800 shadow-lg"
