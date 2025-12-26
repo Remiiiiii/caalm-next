@@ -102,19 +102,6 @@ const CONTRACT_TYPES = [
   'Other',
 ];
 
-const CONTRACT_CATEGORY_OPTIONS = [
-  { value: 'service_agreement', label: 'Service Agreement' },
-  { value: 'professional_services', label: 'Professional Services' },
-  { value: 'purchase_agreement', label: 'Purchase Agreement' },
-  { value: 'lease_agreement', label: 'Lease Agreement' },
-  { value: 'license_agreement', label: 'License Agreement' },
-  { value: 'employment_contract', label: 'Employment Contract' },
-  { value: 'confidentiality_nda', label: 'Confidentiality / NDA' },
-  { value: 'master_agreement', label: 'Master Agreement' },
-  { value: 'statement_of_work', label: 'Statement of Work (SOW)' },
-  { value: 'amendment', label: 'Amendment' },
-];
-
 const LIFECYCLE_STATUSES = [
   { value: 'draft', label: 'Draft' },
   { value: 'under_review', label: 'Under Review' },
@@ -389,7 +376,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
     defaultValues: {
       contractName: '',
       contractType: '',
-      contractCategory: CONTRACT_CATEGORY_OPTIONS[0].value,
       lifecycleStatus: 'draft',
       contractNumber: '',
       description: '',
@@ -1937,40 +1923,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                     {CONTRACT_TYPES.map((type) => (
                                       <SelectItem key={type} value={type}>
                                         {type}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="contractCategory"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm text-slate-700 mb-1 block">
-                                  Category{' '}
-                                  <span className="text-red-500">*</span>
-                                </FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="bg-white border-slate-300">
-                                      <SelectValue placeholder="Select category" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {CONTRACT_CATEGORY_OPTIONS.map((option) => (
-                                      <SelectItem
-                                        key={option.value}
-                                        value={option.value}
-                                      >
-                                        {option.label}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>

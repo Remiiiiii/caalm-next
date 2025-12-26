@@ -8,43 +8,90 @@ import { SWRConfiguration } from 'swr';
  * Default SWR fetcher with error handling
  */
 export const fetcher = async (url: string) => {
-  const res = await fetch(url, {
-    cache: 'no-store',
-    headers: {
-      'x-no-cache': '1',
-    },
-  });
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-  if (!res.ok) {
-    let errorMessage = 'An error occurred while fetching the data.';
-    let errorDetails: any = null;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'x-no-cache': '1',
+      },
+      signal: controller.signal,
+    });
 
-    try {
-      const errorData = await res.json();
-      // Handle different error response formats
-      if (errorData.error) {
-        errorMessage = errorData.error;
-      } else if (errorData.message) {
-        errorMessage = errorData.message;
-      } else if (typeof errorData === 'string') {
-        errorMessage = errorData;
-      } else {
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      let errorMessage = 'An error occurred while fetching the data.';
+      let errorDetails: any = null;
+
+      try {
+        const errorText = await res.text();
+        if (errorText) {
+          try {
+            const errorData = JSON.parse(errorText);
+            // Handle different error response formats
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            } else if (errorData.message) {
+              errorMessage = errorData.message;
+            } else if (typeof errorData === 'string') {
+              errorMessage = errorData;
+            } else {
+              errorMessage = res.statusText || errorMessage;
+            }
+            errorDetails = errorData;
+          } catch {
+            // Not JSON, use raw text
+            errorMessage = errorText || res.statusText || errorMessage;
+            errorDetails = { raw: errorText };
+          }
+        } else {
+          errorMessage = res.statusText || errorMessage;
+        }
+      } catch (parseError) {
+        // If reading response fails, use status text
         errorMessage = res.statusText || errorMessage;
       }
-      errorDetails = errorData;
-    } catch (parseError) {
-      // If JSON parsing fails, use status text
-      errorMessage = res.statusText || errorMessage;
+
+      const error = new Error(errorMessage);
+      (error as any).status = res.status;
+      (error as any).details = errorDetails;
+      (error as any).response = res;
+      throw error;
     }
 
-    const error = new Error(errorMessage);
-    (error as any).status = res.status;
-    (error as any).details = errorDetails;
-    (error as any).response = res;
-    throw error;
-  }
+    return res.json();
+  } catch (fetchError: any) {
+    // Handle network errors, timeouts, and other fetch failures
+    if (fetchError.name === 'AbortError') {
+      const timeoutError = new Error('Request timeout - the server took too long to respond');
+      (timeoutError as any).status = 408;
+      (timeoutError as any).isTimeout = true;
+      throw timeoutError;
+    }
 
-  return res.json();
+    if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
+      const networkError = new Error('Network error - please check your connection');
+      (networkError as any).status = 0;
+      (networkError as any).isNetworkError = true;
+      throw networkError;
+    }
+
+    // Re-throw if it's already an Error with status (from above)
+    if (fetchError.status) {
+      throw fetchError;
+    }
+
+    // Wrap unknown errors
+    const wrappedError = new Error(
+      fetchError?.message || 'An unexpected error occurred while fetching data'
+    );
+    (wrappedError as any).status = fetchError?.status || 500;
+    (wrappedError as any).originalError = fetchError;
+    throw wrappedError;
+  }
 };
 
 /**
@@ -81,22 +128,40 @@ export const swrConfig: SWRConfiguration = {
     return true;
   },
   onError: (error, key) => {
-    // Log errors for monitoring with safe property access
+    // Defensive error handling - handle edge cases where error might be malformed
     let errorMessage = 'Unknown error';
     let status: number | string = 'unknown';
     let details: any = null;
+    let errorType = typeof error;
 
-    // Handle different error types
-    if (typeof error === 'string') {
+    // Check if error is actually the key (edge case)
+    if (error === key || (typeof error === 'string' && error === key)) {
+      errorMessage = `Request failed for ${key}`;
+      errorType = 'key-as-error';
+    } else if (typeof error === 'string') {
+      // If error is a string but not the key, use it as message
       errorMessage = error;
     } else if (error instanceof Error) {
       errorMessage = error.message || 'Unknown error';
-      status = (error as any).status || 'unknown';
-      details = (error as any).details || null;
+      status = (error as any).status ?? 'unknown';
+      details = (error as any).details ?? null;
     } else if (error && typeof error === 'object') {
-      errorMessage = (error as any).message || (error as any).error || 'Unknown error';
-      status = (error as any).status || 'unknown';
-      details = (error as any).details || null;
+      // Safely extract error properties
+      try {
+        errorMessage =
+          (error as any).message ||
+          (error as any).error ||
+          (error as any).toString?.() ||
+          'Unknown error';
+        status = (error as any).status ?? 'unknown';
+        details = (error as any).details ?? null;
+      } catch (e) {
+        // If accessing properties fails, use fallback
+        errorMessage = 'Error object could not be parsed';
+      }
+    } else if (error === null || error === undefined) {
+      errorMessage = 'Error was null or undefined';
+      errorType = 'null-error';
     }
 
     // Only log non-4xx errors to avoid noise from authentication/authorization issues
@@ -104,13 +169,44 @@ export const swrConfig: SWRConfiguration = {
       return; // Don't log non-error responses
     }
 
-    console.error('SWR Error:', {
-      key,
-      error: errorMessage,
+    // Build error info object with safe values
+    const errorInfo: {
+      key: string;
+      error: string;
+      status: number | string;
+      details?: any;
+      errorType: string;
+      rawError?: any;
+    } = {
+      key: String(key || 'unknown-key'),
+      error: String(errorMessage || 'Unknown error'),
       status,
-      details,
-      errorType: typeof error,
-    });
+      errorType: String(errorType || 'unknown'),
+    };
+
+    // Only add details if they exist and are not circular
+    if (details !== null && details !== undefined) {
+      try {
+        // Try to serialize to check if it's safe
+        JSON.stringify(details);
+        errorInfo.details = details;
+      } catch {
+        // If serialization fails, don't include details
+        errorInfo.details = '[Non-serializable details]';
+      }
+    }
+
+    // Only include raw error in development
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        JSON.stringify(error);
+        errorInfo.rawError = error;
+      } catch {
+        errorInfo.rawError = '[Non-serializable error]';
+      }
+    }
+
+    console.error('SWR Error:', errorInfo);
   },
 };
 

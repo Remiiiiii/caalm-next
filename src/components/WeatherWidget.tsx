@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Cloud,
   Sun,
+  Moon,
   CloudRain,
   CloudSnow,
   Wind,
@@ -229,15 +230,26 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
     return () => clearInterval(interval);
   }, [location, latitude, longitude, isVisible]);
 
-  const getWeatherIcon = (weatherMain: string) => {
+  const getWeatherIcon = (weatherMain: string, iconCode: string) => {
     const iconClass = 'h-10 w-10';
+    const isNight = iconCode?.endsWith('n') ?? false;
 
     switch (weatherMain.toLowerCase()) {
       case 'clear':
         return (
           <div className="relative">
-            <Sun className={`${iconClass} text-amber-400 drop-shadow-sm`} />
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-200/20 to-amber-300/20 rounded-full blur-sm"></div>
+            {isNight ? (
+              <Moon className={`${iconClass} text-slate-400 drop-shadow-sm`} />
+            ) : (
+              <Sun className={`${iconClass} text-amber-400 drop-shadow-sm`} />
+            )}
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${
+                isNight
+                  ? 'from-slate-800/20 to-slate-900/20'
+                  : 'from-yellow-200/20 to-amber-300/20'
+              } rounded-full blur-sm bg-none`}
+            ></div>
           </div>
         );
       case 'clouds':
@@ -430,7 +442,10 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="relative">
-                {getWeatherIcon(weatherData.weather[0].main)}
+                {getWeatherIcon(
+                  weatherData.weather[0].main,
+                  weatherData.weather[0].icon
+                )}
               </div>
               <div>
                 <div className="text-3xl font-bold sidebar-gradient-text tracking-tight">

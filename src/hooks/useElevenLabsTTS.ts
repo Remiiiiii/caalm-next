@@ -81,21 +81,60 @@ export function useElevenLabsTTS(
         });
 
         if (!response.ok) {
-          const errorText = await response.text().catch(() => 'Unknown error');
-          let errorData;
+          let errorText = '';
           try {
-            errorData = JSON.parse(errorText);
-          } catch {
-            errorData = { error: errorText || 'Failed to generate speech' };
+            errorText = await response.text();
+          } catch (textError) {
+            errorText = 'Failed to read error response';
           }
-          console.error('TTS API error:', {
+
+          // Build error information object with guaranteed fields
+          const errorInfo: {
+            status: number;
+            statusText: string;
+            responseBody: string;
+            parsedError?: Record<string, unknown>;
+          } = {
             status: response.status,
             statusText: response.statusText,
-            error: errorData,
-          });
-          throw new Error(
-            errorData.error || errorData.message || 'Failed to generate speech'
-          );
+            responseBody: errorText || '(empty response body)',
+          };
+
+          // Try to parse JSON error response
+          if (errorText && errorText.trim()) {
+            try {
+              const parsed = JSON.parse(errorText);
+              if (parsed && typeof parsed === 'object') {
+                errorInfo.parsedError = parsed;
+              }
+            } catch {
+              // Not JSON, that's fine - we have the raw text
+            }
+          }
+
+          // Extract error message from parsed error or use defaults
+          let errorMessage = 'Failed to generate speech';
+          if (errorInfo.parsedError) {
+            errorMessage =
+              (errorInfo.parsedError.error as string) ||
+              (errorInfo.parsedError.message as string) ||
+              (errorInfo.parsedError.details as string) ||
+              errorMessage;
+          }
+
+          // Fallback to HTTP status if no message found
+          if (errorMessage === 'Failed to generate speech' && errorText) {
+            errorMessage = errorText;
+          }
+
+          // Final fallback to HTTP status
+          if (errorMessage === 'Failed to generate speech') {
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          }
+
+          console.error('TTS API error:', errorInfo);
+
+          throw new Error(errorMessage);
         }
 
         // Get blob immediately without extensive validation (faster)
