@@ -58,6 +58,7 @@ import ContractStatusPieChart from '@/components/ContractStatusPieChart';
 import DepartmentPerformanceWidget from '@/components/DepartmentPerformanceWidget';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useContractExpiryModal } from '@/hooks/useContractExpiryModal';
+import { useContractsExpiring } from '@/hooks/useContractsExpiring';
 import ContractExpiryModal from '@/components/contract-expiry-modal/ContractExpiryModal';
 import type { UIFileDoc } from '@/types/files';
 import { tablesDB } from '@/lib/appwrite/client';
@@ -200,9 +201,28 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     refresh: refreshUnified,
   } = useUnifiedDashboardData(orgId || 'default_organization');
 
-  // Contract expiry modal hook
-  const { contractsToShow, isModalOpen, closeModal, triggerTestModal } =
-    useContractExpiryModal((files as UIFileDoc[]) || []);
+  // Fetch contracts from /api/contracts/all endpoint
+  const {
+    contracts: contractsFromApi,
+    isLoading: contractsLoading,
+    refresh: refreshContracts,
+  } = useContractsExpiring();
+
+  // Contract expiry modal hook - uses contracts from /api/contracts/all
+  const {
+    contractsToShow,
+    contractsWithDays,
+    isModalOpen,
+    closeModal,
+    triggerTestModal,
+    shouldPlaySpeech,
+  } = useContractExpiryModal(contractsFromApi || []);
+
+  // Handle contract status change - refresh both unified data and contracts
+  const handleContractStatusChange = () => {
+    refreshUnified();
+    refreshContracts();
+  };
 
   // Debug logging
   console.log('ExecutiveDashboard Debug:', {
@@ -702,9 +722,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
       {/* Contract Expiry Modal */}
       <ContractExpiryModal
         contracts={contractsToShow}
+        contractsWithDays={contractsWithDays}
         isOpen={isModalOpen}
         onClose={closeModal}
-        onStatusChange={refreshUnified}
+        onStatusChange={handleContractStatusChange}
+        shouldPlaySpeech={shouldPlaySpeech}
       />
       <ContractExpiryNotifier contracts={expiryContracts} />
       {/* Background Video */}

@@ -33,7 +33,7 @@ function calculateDaysUntilExpiry(
 }
 
 /**
- * Hook to detect contracts expiring in exactly 30 days
+ * Hook to detect contracts expiring in the next 30 days
  * Tracks shown contracts in sessionStorage to prevent re-triggering
  */
 export function useContractExpiryModal(files: UIFileDoc[]) {
@@ -62,25 +62,71 @@ export function useContractExpiryModal(files: UIFileDoc[]) {
     }
   }, []);
 
-  // Filter contracts that expire in exactly 30 days and haven't been shown
+  // Filter contracts that expire in the next 30 days (0-30 days) and haven't been shown
   const contractsToShow = useMemo(() => {
     // In test mode, return test contracts
     if (testMode && testContracts.length > 0) {
-      return testContracts;
+      return testContracts.map((file) => ({
+        file,
+        days: calculateDaysUntilExpiry(file.contractExpiryDate),
+      }));
     }
 
-    return files
+    // Ensure files is always an array
+    const filesArray = Array.isArray(files) ? files : [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return filesArray
       .map((file) => {
         const days = calculateDaysUntilExpiry(file.contractExpiryDate);
-        return { file, days };
+        // Check if contract is snoozed
+        const snoozedUntil = (file as any).snoozedUntil;
+        let isSnoozed = false;
+        if (snoozedUntil) {
+          try {
+            const snoozeDate = new Date(snoozedUntil);
+            snoozeDate.setHours(0, 0, 0, 0);
+            isSnoozed = snoozeDate > today;
+          } catch {
+            // Invalid date, treat as not snoozed
+          }
+        }
+        return { file, days, isSnoozed };
       })
       .filter(
-        (item): item is { file: UIFileDoc; days: number } =>
-          item.days !== null && item.days === 30
+        (item): item is { file: UIFileDoc; days: number; isSnoozed: boolean } =>
+          item.days !== null && item.days >= 0 && item.days <= 30 && !item.isSnoozed
       )
       .filter((item) => !shownContractIds.has(item.file.$id))
-      .map((item) => item.file);
+      .map((item) => ({ file: item.file, days: item.days }));
   }, [files, shownContractIds, testMode, testContracts]);
+
+  // Determine if speech should play based on days until expiry
+  const shouldPlaySpeech = useMemo(() => {
+    if (contractsToShow.length === 0) return false;
+    
+    // Get the first contract's days (assuming all contracts in the list have similar days)
+    const firstContract = contractsToShow[0];
+    const days = firstContract.days;
+
+    if (days === null) return false;
+
+    // Play speech at 30, 15, 10 days, and 24 hours
+    // Don't play speech from 9-2 days (unless 24 hours remain)
+    if (days === 30 || days === 15 || days === 10) {
+      return true;
+    }
+    if (days <= 1) {
+      return true; // 24 hours or less
+    }
+    if (days >= 2 && days <= 9) {
+      return false; // No speech from 9-2 days
+    }
+
+    return true; // Default to playing speech
+  }, [contractsToShow]);
 
   // Auto-open modal when contracts are detected
   useEffect(() => {
@@ -89,85 +135,56 @@ export function useContractExpiryModal(files: UIFileDoc[]) {
     }
   }, [contractsToShow.length, isModalOpen, testMode]);
 
-  // Test function to trigger modal with mock data (development only)
-  const triggerTestModal = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const testExpiryDate = new Date(today);
-    testExpiryDate.setDate(today.getDate() + 30);
-
-    const mockContract = {
-      $id: 'test-contract-1',
-      $collectionId: '',
-      $databaseId: '',
-      $createdAt: new Date().toISOString(),
-      $updatedAt: new Date().toISOString(),
-      $permissions: [],
-      $sequence: 0,
-      type: 'contract',
-      extension: 'pdf',
-      url: '',
-      name: 'Test Contract - Vendor Services Agreement',
-      size: 0,
-      owner: 'Test User',
-      users: [],
-      contractName: 'Test Contract - Vendor Services Agreement',
-      contractExpiryDate: testExpiryDate.toISOString().split('T')[0],
-      status: 'active',
-      contractType: 'Service Agreement',
-      amount: 125000,
-      vendor: 'Test Vendor Inc.',
-      counterpartyLegalName: 'Test Vendor Inc.',
-      counterpartyContactTitle: 'VP of Operations',
-      counterpartyContactEmail: 'contact@testvendor.com',
-      counterpartyContactPhone: '+1-555-0123',
-      counterpartyAddress: '123 Business St, Suite 100, Miami, FL 33101',
-    } as unknown as UIFileDoc & {
-      counterpartyLegalName: string;
-      counterpartyContactTitle: string;
-      counterpartyContactEmail: string;
-      counterpartyContactPhone: string;
-      counterpartyAddress: string;
-    };
-
-    const mockContract2 = {
-      $id: 'test-contract-2',
-      $collectionId: '',
-      $databaseId: '',
-      $createdAt: new Date().toISOString(),
-      $updatedAt: new Date().toISOString(),
-      $permissions: [],
-      $sequence: 0,
-      type: 'contract',
-      extension: 'docx',
-      url: '',
-      name: 'Test Contract - Software License Agreement',
-      size: 0,
-      owner: 'Another User',
-      users: [],
-      contractName: 'Test Contract - Software License Agreement',
-      contractExpiryDate: testExpiryDate.toISOString().split('T')[0],
-      status: 'pending-review',
-      contractType: 'Software License',
-      amount: 85000,
-      vendor: 'Tech Solutions LLC',
-      counterpartyLegalName: 'Tech Solutions LLC',
-      counterpartyContactTitle: 'Head of Partnerships',
-      counterpartyContactEmail: 'partnerships@techsolutions.com',
-      counterpartyContactPhone: '+1-555-5678',
-      counterpartyAddress:
-        '456 Innovation Drive, Suite 200, San Jose, CA 95110',
-    } as unknown as UIFileDoc & {
-      counterpartyLegalName: string;
-      counterpartyContactTitle: string;
-      counterpartyContactEmail: string;
-      counterpartyContactPhone: string;
-      counterpartyAddress: string;
-    };
-
-    setTestContracts([mockContract, mockContract2]);
-    setTestMode(true);
-    setIsModalOpen(true);
+  // Test function to trigger modal with real contracts from database
+  const triggerTestModal = async () => {
+    try {
+      // Fetch contracts directly from the API to ensure we have the latest data
+      const response = await fetch('/api/contracts/all');
+      if (!response.ok) {
+        throw new Error('Failed to fetch contracts');
+      }
+      const result = await response.json();
+      const fetchedContracts: UIFileDoc[] = result.data || [];
+      
+      // Use real contracts from the database
+      // Filter to get contracts expiring in the next 30-60 days for testing
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const testContracts = fetchedContracts
+        .filter((contract) => {
+          if (!contract.contractExpiryDate) return false;
+          const days = calculateDaysUntilExpiry(contract.contractExpiryDate);
+          // Get contracts expiring in 30-60 days for testing
+          return days !== null && days >= 30 && days <= 60;
+        })
+        .slice(0, 2); // Limit to 2 contracts for testing
+      
+      if (testContracts.length === 0) {
+        // If no contracts in the 30-60 day range, use any contracts expiring in the next 90 days
+        const fallbackContracts = fetchedContracts
+          .filter((contract) => {
+            if (!contract.contractExpiryDate) return false;
+            const days = calculateDaysUntilExpiry(contract.contractExpiryDate);
+            return days !== null && days >= 0 && days <= 90;
+          })
+          .slice(0, 2);
+        
+        if (fallbackContracts.length === 0) {
+          console.warn('No contracts found in database for test modal');
+          return;
+        }
+        
+        setTestContracts(fallbackContracts);
+      } else {
+        setTestContracts(testContracts);
+      }
+      
+      setTestMode(true);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch contracts for test modal:', error);
+    }
   };
 
   const closeModal = () => {
@@ -204,9 +221,11 @@ export function useContractExpiryModal(files: UIFileDoc[]) {
   };
 
   return {
-    contractsToShow,
+    contractsToShow: contractsToShow.map((item) => item.file),
+    contractsWithDays: contractsToShow,
     isModalOpen,
     closeModal,
     triggerTestModal,
+    shouldPlaySpeech,
   };
 }

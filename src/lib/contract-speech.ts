@@ -7,6 +7,7 @@ interface FormatContractForSpeechOptions {
   totalContracts?: number;
   userName?: string;
   userFullName?: string;
+  daysUntilExpiry?: number | null;
 }
 
 /**
@@ -62,6 +63,7 @@ export function formatContractForSpeech({
   totalContracts = 1,
   userName,
   userFullName,
+  daysUntilExpiry,
 }: FormatContractForSpeechOptions): string {
   const parts: string[] = [];
 
@@ -74,19 +76,71 @@ export function formatContractForSpeech({
     parts.push(`${greeting.charAt(0).toUpperCase() + greeting.slice(1)}!`);
   }
 
-  // Contract count notification
-  if (totalContracts === 1) {
-    parts.push(
-      "Just a heads-up—you've got a contract coming up for renewal in the next 30 days."
-    );
-  } else if (totalContracts >= 2 && totalContracts <= 3) {
-    parts.push(
-      "Just a heads-up—you've got a few contracts coming up for renewal in the next 30 days."
-    );
+  // Contract name (declare once at the top)
+  const contractName =
+    contract.contractName || contract.name || 'Untitled Contract';
+
+  // Contract count notification based on days until expiry
+  const days = daysUntilExpiry ?? null;
+
+  if (days !== null && days <= 1) {
+    // 24 hours or less
+    if (totalContracts === 1) {
+      parts.push(
+        `Urgent: ${contractName} expires in 24 hours. Immediate action required.`
+      );
+    } else {
+      parts.push(
+        `Urgent: You have ${totalContracts} contracts expiring in 24 hours. Immediate action required.`
+      );
+    }
+  } else if (days !== null && days >= 2 && days <= 9) {
+    // 9-2 days: No speech (handled by shouldPlaySpeech flag)
+    // This case should not be reached if shouldPlaySpeech is false, but include fallback
+    if (totalContracts === 1) {
+      parts.push(`Reminder: ${contractName} expires in ${days} days.`);
+    } else {
+      parts.push(
+        `Reminder: You have ${totalContracts} contracts expiring in ${days} days.`
+      );
+    }
+  } else if (days !== null && days === 10) {
+    // 10 days
+    if (totalContracts === 1) {
+      parts.push(
+        `Important reminder: ${contractName} expires in 10 days. Please take action soon.`
+      );
+    } else {
+      parts.push(
+        `Important reminder: You have ${totalContracts} contracts expiring in 10 days. Please take action soon.`
+      );
+    }
+  } else if (days !== null && days === 15) {
+    // 15 days
+    if (totalContracts === 1) {
+      parts.push(
+        "Just a heads-up—you've got a contract coming up for renewal in the next 15 days."
+      );
+    } else {
+      parts.push(
+        "Just a heads-up—you've got a few contracts coming up for renewal in the next 15 days."
+      );
+    }
   } else {
-    parts.push(
-      `Looks like you have ${totalContracts} contracts expiring soon, within the next month.`
-    );
+    // 30 days (default)
+    if (totalContracts === 1) {
+      parts.push(
+        "Just a heads-up—you've got a contract coming up for renewal in the next 30 days."
+      );
+    } else if (totalContracts >= 2 && totalContracts <= 3) {
+      parts.push(
+        "Just a heads-up—you've got a few contracts coming up for renewal in the next 30 days."
+      );
+    } else {
+      parts.push(
+        `Looks like you have ${totalContracts} contracts expiring soon, within the next month.`
+      );
+    }
   }
 
   // If multiple contracts, introduce which one we're talking about
@@ -96,9 +150,7 @@ export function formatContractForSpeech({
     );
   }
 
-  // Contract name and expiry date
-  const contractName =
-    contract.contractName || contract.name || 'Untitled Contract';
+  // Contract expiry date
   let expiryDateText = '';
   if (contract.contractExpiryDate) {
     try {

@@ -7,16 +7,20 @@ import type { UIFileDoc } from '@/types/files';
 
 interface ContractExpiryModalProps {
   contracts: UIFileDoc[];
+  contractsWithDays?: Array<{ file: UIFileDoc; days: number | null }>;
   isOpen: boolean;
   onClose: () => void;
   onStatusChange?: () => void;
+  shouldPlaySpeech?: boolean;
 }
 
 export default function ContractExpiryModal({
   contracts,
+  contractsWithDays,
   isOpen,
   onClose,
   onStatusChange,
+  shouldPlaySpeech = true,
 }: ContractExpiryModalProps) {
   const [isDesktop, setIsDesktop] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -154,6 +158,7 @@ export default function ContractExpiryModal({
                   contracts={contracts}
                   onDismiss={onClose}
                   onStatusChange={onStatusChange}
+                  shouldPlaySpeech={shouldPlaySpeech}
                 />
               </div>
 

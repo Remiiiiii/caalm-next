@@ -1,0 +1,236 @@
+'use client';
+
+import { useState, useRef } from 'react';
+import SignatureCanvas from 'react-signature-canvas';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { FileText, X } from 'lucide-react';
+import type { UIFileDoc } from '@/types/files';
+
+interface ContractDismissalSignatureModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  contract: UIFileDoc;
+  onSuccess: () => void;
+}
+
+export default function ContractDismissalSignatureModal({
+  isOpen,
+  onClose,
+  contract,
+  onSuccess,
+}: ContractDismissalSignatureModalProps) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const signatureRef = useRef<SignatureCanvas>(null);
+  const [signatureDate, setSignatureDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleClear = () => {
+    signatureRef.current?.clear();
+  };
+
+  const handleSubmit = async () => {
+    if (!signatureRef.current || signatureRef.current.isEmpty()) {
+      toast({
+        title: 'Signature required',
+        description: 'Please provide your signature before submitting.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!isConfirmed) {
+      toast({
+        title: 'Confirmation required',
+        description: 'Please confirm that the signature is yours.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const signatureData = signatureRef.current.toDataURL();
+      const contractName = contract.contractName || contract.name || 'Untitled Contract';
+
+      // Create notification
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.$id,
+          title: `Contract Dismissal - ${contractName}`,
+          message: `Contract dismissed on ${new Date(signatureDate).toLocaleDateString()} with signature confirmation`,
+          type: 'contract_dismissal',
+          metadata: {
+            contractId: contract.$id,
+            contractName: contractName,
+            signatureDate: signatureDate,
+            dismissedAt: new Date().toISOString(),
+            signatureData: signatureData,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create notification');
+      }
+
+      toast({
+        title: 'Contract dismissed',
+        description: 'The contract has been dismissed and a notification has been created.',
+      });
+
+      // Reset form
+      signatureRef.current.clear();
+      setIsConfirmed(false);
+      setSignatureDate(new Date().toISOString().split('T')[0]);
+
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error('Failed to dismiss contract:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to dismiss contract. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isSignatureEmpty = signatureRef.current?.isEmpty() ?? true;
+  const canSubmit = !isSignatureEmpty && isConfirmed && !isSubmitting;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+        {/* Professional Cap */}
+        <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+        {/* Header with gradient background */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+          <div className="flex items-center gap-3 px-6">
+            <div className="flex items-center gap-3">
+              <FileText className="w-5 h-5 text-[#0f5384]" />
+              <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+                Dismiss Contract
+              </DialogTitle>
+            </div>
+          </div>
+          <p className="text-sm text-slate-600 mt-1 ml-14">
+            Please provide your signature and confirmation to dismiss this contract
+          </p>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+          <div className="space-y-6">
+            {/* Contract Info */}
+            <div className="bg-white rounded-lg p-4 border border-slate-200">
+              <h3 className="font-semibold text-slate-900 mb-2">
+                {contract.contractName || contract.name || 'Untitled Contract'}
+              </h3>
+              {contract.contractExpiryDate && (
+                <p className="text-sm text-slate-600">
+                  Expires: {new Date(contract.contractExpiryDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+
+            {/* Signature Canvas */}
+            <div className="space-y-2">
+              <Label htmlFor="signature" className="text-sm font-medium text-slate-700">
+                Electronic Signature
+              </Label>
+              <div className="bg-white rounded-lg border-2 border-slate-200 p-4">
+                <SignatureCanvas
+                  ref={signatureRef}
+                  canvasProps={{
+                    className: 'w-full h-48 border border-slate-300 rounded',
+                  }}
+                  backgroundColor="white"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClear}
+                  className="mt-2"
+                >
+                  Clear Signature
+                </Button>
+              </div>
+            </div>
+
+            {/* Date Input */}
+            <div className="space-y-2">
+              <Label htmlFor="signatureDate" className="text-sm font-medium text-slate-700">
+                Date
+              </Label>
+              <Input
+                id="signatureDate"
+                type="date"
+                value={signatureDate}
+                onChange={(e) => setSignatureDate(e.target.value)}
+                className="bg-white"
+                required
+              />
+            </div>
+
+            {/* Confirmation Checkbox */}
+            <div className="flex items-start space-x-3 bg-white rounded-lg p-4 border border-slate-200">
+              <Checkbox
+                id="confirmation"
+                checked={isConfirmed}
+                onCheckedChange={(checked) => setIsConfirmed(checked === true)}
+                className="mt-1"
+              />
+              <Label
+                htmlFor="confirmation"
+                className="text-sm text-slate-700 leading-relaxed cursor-pointer"
+              >
+                I hereby confirm that I am the sole author of this signature and it was executed by me
+              </Label>
+            </div>
+          </div>
+        </div>
+
+        {/* Professional Footer */}
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <div className="text-xs text-slate-500"></div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="primary-btn px-3 sm:px-4"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              className="primary-btn px-3 sm:px-4"
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

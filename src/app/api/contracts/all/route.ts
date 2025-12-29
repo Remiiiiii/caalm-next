@@ -30,22 +30,45 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    // Map contracts to include all necessary fields
+    // Map contracts to include all necessary fields for UIFileDoc compatibility
     const contracts = contractsResult.rows.map((contract: any) => ({
+      // Appwrite document fields
       $id: contract.$id,
-      contractName: contract.contractName || 'Unnamed Contract',
+      $createdAt: contract.$createdAt || new Date().toISOString(),
+      $updatedAt: contract.$updatedAt || new Date().toISOString(),
+      $permissions: contract.$permissions || [],
+      $collectionId: contract.$collectionId || '',
+      $databaseId: contract.$databaseId || '',
+      $sequence: contract.$sequence || 0,
+      
+      // Core file properties
+      type: 'contract',
+      extension: 'pdf', // Default extension
+      url: contract.url || '',
       name: contract.contractName || 'Unnamed Contract',
+      size: contract.size || 0,
+      owner: contract.contractOwnerId || contract.owner || '',
+      users: contract.users || [],
+      
+      // Contract-specific fields
+      contractId: contract.$id,
+      contractName: contract.contractName || 'Unnamed Contract',
+      contractOwnerId: contract.contractOwnerId,
       contractExpiryDate: contract.contractExpiryDate,
-      daysUntilExpiry: contract.daysUntilExpiry,
       status: contract.status,
+      contractType: contract.contractType,
       amount: contract.amount,
-      compliance: contract.compliance,
-      assignedManagers: contract.assignedManagers || [],
-      fileId: contract.fileId,
       vendor: contract.vendor,
       contractNumber: contract.contractNumber,
       department: contract.department,
-      contractType: contract.contractType,
+      assignedManagers: contract.assignedManagers || [],
+      compliance: contract.compliance,
+      priority: contract.priority,
+      riskLevel: contract.riskLevel,
+      description: contract.description,
+      bucketFileId: contract.bucketFileId,
+      fileId: contract.fileId,
+      snoozedUntil: contract.snoozedUntil || null,
     }));
 
     return successResponse(contracts, { requestId });

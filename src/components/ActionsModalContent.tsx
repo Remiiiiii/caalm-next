@@ -121,6 +121,21 @@ export const FileDetails = ({
   const [displayExpiry, setDisplayExpiry] = React.useState<string | undefined>(
     file.contractExpiryDate
   );
+  const [lastSavedExpiry, setLastSavedExpiry] = React.useState<
+    string | undefined
+  >(undefined);
+
+  // Sync displayExpiry when file.contractExpiryDate changes (e.g., after refresh)
+  // But don't overwrite if we just saved a new date
+  React.useEffect(() => {
+    if (file.contractExpiryDate) {
+      // Only update if we haven't just saved a different date
+      // This prevents the stale file prop from overwriting our local update
+      if (!lastSavedExpiry || file.contractExpiryDate === lastSavedExpiry) {
+        setDisplayExpiry(file.contractExpiryDate);
+      }
+    }
+  }, [file.contractExpiryDate, lastSavedExpiry]);
   const [assignedManagerUsers, setAssignedManagerUsers] = React.useState<
     AppUser[]
   >([]);
@@ -238,10 +253,50 @@ export const FileDetails = ({
     fullFile: file,
   });
 
+  // Helper function to parse date string as local date (avoiding timezone issues)
+  const parseLocalDate = (dateString: string | undefined): Date | undefined => {
+    if (!dateString) return undefined;
+
+    // If it's a date-only string (YYYY-MM-DD), parse it as local date
+    const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      // Create date in local timezone (month is 0-indexed)
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+
+    // For ISO strings with time, extract date part and parse as local
+    const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+
+    // Fallback to standard Date parsing
+    return new Date(dateString);
+  };
+
+  // Helper function to format date for display (avoiding timezone issues)
+  const formatDateForDisplay = (dateString: string | undefined): string => {
+    if (!dateString) return 'N/A';
+
+    const date = parseLocalDate(dateString);
+    if (!date || isNaN(date.getTime())) return 'N/A';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   // Initialize selectedDate with current expiry date when editing starts
   React.useEffect(() => {
     if (editing && displayExpiry) {
-      setSelectedDate(new Date(displayExpiry));
+      const parsedDate = parseLocalDate(displayExpiry);
+      if (parsedDate && !isNaN(parsedDate.getTime())) {
+        setSelectedDate(parsedDate);
+      }
     }
   }, [editing, displayExpiry]);
 
@@ -362,6 +417,38 @@ export const FileDetails = ({
 
     if (type === 'date' && value) {
       try {
+        // Parse as local date to avoid timezone issues
+        const dateString = String(value);
+        const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (dateOnlyMatch) {
+          const [, year, month, day] = dateOnlyMatch;
+          const localDate = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day)
+          );
+          return localDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+        }
+        // Fallback for ISO strings
+        const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+        if (isoMatch) {
+          const [, year, month, day] = isoMatch;
+          const localDate = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day)
+          );
+          return localDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+        }
+        // Last resort: use standard Date parsing
         return new Date(value).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
@@ -454,12 +541,13 @@ export const FileDetails = ({
   );
 
   const saveExpiry = async () => {
-    if (!selectedDate) return;
-    const now = new Date();
-    if (selectedDate <= now) {
+    console.log('saveExpiry called', { selectedDate, file: file.$id });
+
+    if (!selectedDate) {
+      console.warn('No date selected');
       toast({
-        title: 'Invalid Date',
-        description: 'Expiry date must be in the future.',
+        title: 'No Date Selected',
+        description: 'Please select a date before saving.',
         variant: 'destructive',
       });
       return;
@@ -467,6 +555,7 @@ export const FileDetails = ({
 
     // Validate file ID exists
     if (!file.$id || typeof file.$id !== 'string' || file.$id.trim() === '') {
+      console.error('Invalid file ID:', file.$id);
       toast({
         title: 'Error',
         description: 'File document ID is missing or invalid.',
@@ -476,15 +565,66 @@ export const FileDetails = ({
     }
 
     try {
-      // Store as date-only string (YYYY-MM-DD) to avoid timezone issues
-      const expiryDateISO = selectedDate.toISOString().split('T')[0];
+      // Normalize the date to midnight local time to avoid timezone issues
+      // Create a new date at midnight local time using the selected date's components
+      const normalizedDate = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate()
+      );
+
+      // Extract date components from normalized date (ensures local timezone)
+      const year = normalizedDate.getFullYear();
+      const month = String(normalizedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(normalizedDate.getDate()).padStart(2, '0');
+      const expiryDateISO = `${year}-${month}-${day}`;
+
+      console.log('Date conversion:', {
+        selectedDate,
+        normalizedDate,
+        year,
+        month,
+        day,
+        expiryDateISO,
+        selectedDateLocalString: selectedDate.toLocaleDateString('en-US'),
+        normalizedDateLocalString: normalizedDate.toLocaleDateString('en-US'),
+      });
+
+      // Determine the correct document ID to use
+      // When file comes from contracts collection (via /api/contracts/all), file.$id IS the contract ID
+      // When file has contractId set, use that
+      // Otherwise, use file.$id (which should be the contract ID for contracts)
+      const documentId = (file as any).contractId || file.$id;
+
+      console.log('Updating expiry date:', {
+        documentId,
+        expiryDateISO,
+        fileId: file.$id,
+        contractId: (file as any).contractId,
+        currentExpiryDate: file.contractExpiryDate,
+        fileObject: file,
+      });
 
       // Use server action to update expiry date (handles authentication properly)
-      await updateContractExpiryDate(file.$id, expiryDateISO);
+      console.log('Calling updateContractExpiryDate...');
+      const result = await updateContractExpiryDate(documentId, expiryDateISO);
+      console.log('updateContractExpiryDate result:', result);
+
+      if (!result || !result.success) {
+        console.error('Update did not return success:', result);
+        throw new Error('Update did not return success');
+      }
+
+      console.log('✅ Expiry date update completed successfully');
 
       // Update local state to reflect the change immediately
       setDisplayExpiry(expiryDateISO);
+      setLastSavedExpiry(expiryDateISO); // Track what we just saved
       setEditing(false);
+      setSelectedDate(undefined); // Reset selected date after save
+
+      // Update the file object's contractExpiryDate property directly
+      (file as any).contractExpiryDate = expiryDateISO;
 
       // Optimistically update the card component immediately
       if (onExpiryDateChange) {
@@ -492,24 +632,35 @@ export const FileDetails = ({
       }
 
       // Trigger refresh to update card and table views with latest server data
-      if (onRefresh) {
-        onRefresh();
-      }
+      // Use a longer delay to ensure the database has been updated and cached data is cleared
+      setTimeout(() => {
+        if (onRefresh) {
+          console.log('🔄 Calling onRefresh callback to update parent data');
+          onRefresh();
+        }
+      }, 1000);
 
       toast({
         title: 'Success',
-        description: 'Expiry date updated successfully.',
+        description: `Expiry date updated to ${selectedDate.toLocaleDateString()}.`,
       });
     } catch (error: any) {
-      console.error('Failed to update expiry date:', error);
+      console.error('❌ Failed to update expiry date:', {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        selectedDate,
+        fileId: file.$id,
+        contractId: (file as any).contractId,
+      });
       toast({
         title: 'Update Failed',
         description:
           error?.message ||
-          'An unexpected error occurred while updating the expiry date.',
+          'An unexpected error occurred while updating the expiry date. Please check the console for details.',
         variant: 'destructive',
       });
-      // Don't close editing mode on error
+      // Don't close editing mode on error so user can try again
     }
   };
 
@@ -714,16 +865,7 @@ export const FileDetails = ({
                           Expiry Date
                         </p>
                         <p className="text-slate-800 font-semibold">
-                          {displayExpiry
-                            ? new Date(displayExpiry).toLocaleDateString(
-                                'en-US',
-                                {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                }
-                              )
-                            : 'N/A'}
+                          {formatDateForDisplay(displayExpiry)}
                         </p>
                       </div>
                       {!editing ? (
@@ -758,7 +900,28 @@ export const FileDetails = ({
                                 className="text-slate-700"
                                 mode="single"
                                 selected={selectedDate}
-                                onSelect={setSelectedDate}
+                                onSelect={(date) => {
+                                  console.log('Calendar date selected:', date);
+                                  // Normalize the date to midnight local time to avoid timezone issues
+                                  if (date) {
+                                    const normalized = new Date(
+                                      date.getFullYear(),
+                                      date.getMonth(),
+                                      date.getDate()
+                                    );
+                                    console.log('Normalized date:', {
+                                      original: date,
+                                      normalized,
+                                      originalLocal:
+                                        date.toLocaleDateString('en-US'),
+                                      normalizedLocal:
+                                        normalized.toLocaleDateString('en-US'),
+                                    });
+                                    setSelectedDate(normalized);
+                                  } else {
+                                    setSelectedDate(undefined);
+                                  }
+                                }}
                                 disabled={(date) => {
                                   const today = new Date();
                                   today.setHours(0, 0, 0, 0);
@@ -770,9 +933,17 @@ export const FileDetails = ({
                           </Popover>
                           <ShadButton
                             size="sm"
-                            onClick={saveExpiry}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('Save button clicked', {
+                                selectedDate,
+                              });
+                              saveExpiry();
+                            }}
                             disabled={!selectedDate}
                             className="primary-btn px-3 sm:px-4"
+                            type="button"
                           >
                             <Save className="w-4 h-4" />
                             Save

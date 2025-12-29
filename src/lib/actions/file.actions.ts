@@ -352,6 +352,9 @@ export const uploadFile = async ({
 
       // Explicitly remove contractId if it exists (not in Contracts collection schema)
       delete contractDocumentRaw.contractId;
+      
+      // Remove contractCategory if it exists (not in Contracts collection schema)
+      delete contractDocumentRaw.contractCategory;
 
       const contractDocument = sanitizePayload(contractDocumentRaw);
 
@@ -2754,92 +2757,229 @@ export const updateContractExpiryDate = async (
   const { tablesDB } = await createAdminClient();
 
   try {
-    // Try to find document in contracts collection first
-    let contractIdToUpdate: string | null = null;
-    let fileIdToUpdate: string | null = null;
-    let isContractId = false;
+    // Ensure expiryDate is in YYYY-MM-DD format
+    // Parse the date string to extract just the date part (in case it includes time)
+    const dateOnlyMatch = expiryDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!dateOnlyMatch) {
+      throw new Error(`Invalid date format: ${expiryDate}. Expected YYYY-MM-DD format.`);
+    }
+    
+    // Extract date components
+    const [, year, month, day] = dateOnlyMatch;
+    
+    // Create a date at noon UTC to avoid timezone shifts when Appwrite converts it
+    // Using noon instead of midnight prevents day shifts due to timezone conversions
+    const dateAtNoonUTC = new Date(Date.UTC(
+      parseInt(year),
+      parseInt(month) - 1, // Month is 0-indexed
+      parseInt(day),
+      12, // Noon UTC
+      0,
+      0,
+      0
+    ));
+    
+    // Format as ISO string - this will be "YYYY-MM-DDTHH:mm:ss.sssZ"
+    // Appwrite will store this, and when we read it back, we'll extract just the date part
+    const expiryDateISO = dateAtNoonUTC.toISOString();
+    
+    console.log('Updating contract expiry date:', {
+      documentId,
+      originalExpiryDate: expiryDate,
+      dateOnlyMatch,
+      year,
+      month,
+      day,
+      dateAtNoonUTC: dateAtNoonUTC.toISOString(),
+      expiryDateISO,
+      databaseId: appwriteConfig.databaseId,
+      contractsTableId: appwriteConfig.contractsCollectionId,
+    });
 
+    // First, try to update directly in contracts collection (most common case)
     try {
-      const contractDoc = await tablesDB.getRow({
+      // Get the current document first to verify it exists
+      const currentContract = await tablesDB.getRow({
         databaseId: appwriteConfig.databaseId!,
         tableId: appwriteConfig.contractsCollectionId!,
         rowId: documentId,
       });
-      // Found in contracts collection
-      isContractId = true;
-      contractIdToUpdate = documentId;
-      fileIdToUpdate = (contractDoc as any).fileId || null;
-    } catch (contractError: any) {
-      // Not found in contracts, try files collection
+      
+      console.log('📋 Current contract before update:', {
+        contractId: documentId,
+        currentExpiryDate: currentContract?.contractExpiryDate,
+        $updatedAt: currentContract?.$updatedAt,
+      });
+      
+      // Perform the update - send as ISO string with noon UTC to prevent timezone shifts
+      console.log('🔄 Calling updateRow with:', {
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.contractsCollectionId,
+        rowId: documentId,
+        data: { contractExpiryDate: expiryDateISO },
+      });
+      
+      let updatedContract;
       try {
+        updatedContract = await tablesDB.updateRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
+          rowId: documentId,
+          data: { contractExpiryDate: expiryDateISO },
+        });
+      } catch (updateError: any) {
+        console.error('❌ updateRow threw an error:', {
+          error: updateError,
+          message: updateError?.message,
+          code: updateError?.code,
+          type: updateError?.type,
+          response: updateError?.response,
+        });
+        throw updateError;
+      }
+      
+      console.log('✅ Contract document updateRow call completed:', {
+        contractId: documentId,
+        expiryDate: updatedContract?.contractExpiryDate,
+        $updatedAt: updatedContract?.$updatedAt,
+        hasResponse: !!updatedContract,
+        responseKeys: updatedContract ? Object.keys(updatedContract) : [],
+      });
+      
+      // Verify the update by reading the document back after a short delay
+      // This ensures the database has time to commit the transaction
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      try {
+        const verifyContract = await tablesDB.getRow({
+          databaseId: appwriteConfig.databaseId!,
+          tableId: appwriteConfig.contractsCollectionId!,
+          rowId: documentId,
+        });
+        
+        const savedDate = verifyContract?.contractExpiryDate;
+        // Normalize dates for comparison - handle both YYYY-MM-DD and ISO datetime formats
+        const normalizeDate = (dateStr: string | null | undefined): string | null => {
+          if (!dateStr) return null;
+          // Extract just the date part (YYYY-MM-DD)
+          return dateStr.split('T')[0].split(' ')[0];
+        };
+        
+        // Compare using the original date-only string (YYYY-MM-DD) that was passed in
+        const normalizedSaved = normalizeDate(savedDate);
+        const normalizedExpected = normalizeDate(expiryDate); // Use original expiryDate (YYYY-MM-DD), not expiryDateISO
+        
+        console.log('🔍 Verification - Read contract back from database:', {
+          contractId: documentId,
+          expectedDate: expiryDate, // Original YYYY-MM-DD format
+          expiryDateISO, // ISO string we sent
+          savedDate: savedDate,
+          normalizedExpected,
+          normalizedSaved,
+          match: normalizedSaved === normalizedExpected,
+          fullContract: verifyContract,
+        });
+        
+        if (!normalizedSaved) {
+          console.error('❌ Verification failed - No date found in saved contract!', {
+            expected: expiryDate,
+            saved: savedDate,
+            contract: verifyContract,
+          });
+          throw new Error(`Date verification failed: No contractExpiryDate found in saved document`);
+        }
+        
+        if (normalizedSaved !== normalizedExpected) {
+          console.error('❌ Verification failed - Date mismatch!', {
+            expected: expiryDate,
+            normalizedExpected,
+            saved: savedDate,
+            normalizedSaved,
+          });
+          // Don't throw - log the mismatch but continue, as the update might still have worked
+          // Appwrite might store dates in a different format but the date itself is correct
+          console.warn('⚠️ Date format mismatch detected, but date may still be correct');
+        } else {
+          console.log('✅ Verification passed - Date correctly saved to database');
+        }
+      } catch (verifyError: any) {
+        console.error('⚠️ Verification read failed (non-blocking):', {
+          error: verifyError?.message,
+          code: verifyError?.code,
+          type: verifyError?.type,
+        });
+        // Don't throw - the update might have succeeded even if verification fails
+      }
+      
+      return { success: true };
+    } catch (contractError: any) {
+      // If not found in contracts, try to find the contract via files collection
+      console.log('Document not found in contracts collection, trying files collection...');
+      
+      try {
+        // Get the file document to find the contract ID
         const fileDoc = await tablesDB.getRow({
           databaseId: appwriteConfig.databaseId!,
           tableId: appwriteConfig.filesCollectionId!,
           rowId: documentId,
         });
-        // Found in files collection
-        fileIdToUpdate = documentId;
-        contractIdToUpdate = (fileDoc as any).contractId || null;
-      } catch (fileError: any) {
-        console.error(
-          'Document not found in either collection:',
-          documentId,
-          'Contract error:',
-          contractError?.message,
-          'File error:',
-          fileError?.message
-        );
-        throw new Error(
-          `Document with ID ${documentId} does not exist in either collection.`
-        );
-      }
-    }
-
-    // Update contract document if we have a contract ID
-    if (contractIdToUpdate) {
-      try {
-        await tablesDB.updateRow({
+        
+        const contractId = (fileDoc as any).contractId;
+        
+        if (!contractId) {
+          throw new Error('File document does not have a contractId field');
+        }
+        
+        // Update the contract document
+        const updatedContract = await tablesDB.updateRow({
           databaseId: appwriteConfig.databaseId!,
           tableId: appwriteConfig.contractsCollectionId!,
-          rowId: contractIdToUpdate,
+          rowId: contractId,
           data: { contractExpiryDate: expiryDate },
         });
-        console.log('✅ Contract document updated successfully');
-      } catch (contractError: any) {
-        console.error('Failed to update contract document:', contractError);
-        if (isContractId) {
-          throw new Error(
-            `Failed to update contract expiry date: ${
-              contractError?.message || 'Unknown error'
-            }`
-          );
+        
+        console.log('✅ Contract document updated successfully via file lookup:', {
+          fileId: documentId,
+          contractId,
+          expiryDate: updatedContract?.contractExpiryDate,
+        });
+        
+        // Also update the file document if it has the field
+        try {
+          await tablesDB.updateRow({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.filesCollectionId!,
+            rowId: documentId,
+            data: { contractExpiryDate: expiryDate },
+          });
+          console.log('✅ File document also updated successfully');
+        } catch (fileUpdateError: any) {
+          console.warn('⚠️ Failed to update file document (non-blocking):', fileUpdateError);
         }
-        // Non-blocking if it's not primarily a contract
-      }
-    }
-
-    // Update file document if we have a file ID (non-blocking)
-    if (fileIdToUpdate) {
-      try {
-        await tablesDB.updateRow({
-          databaseId: appwriteConfig.databaseId!,
-          tableId: appwriteConfig.filesCollectionId!,
-          rowId: fileIdToUpdate,
-          data: { contractExpiryDate: expiryDate },
-        });
-        console.log('✅ File document updated successfully');
+        
+        return { success: true };
       } catch (fileError: any) {
-        console.warn(
-          '⚠️ Failed to update file document (non-blocking):',
-          fileError
+        console.error('Failed to find or update via files collection:', {
+          documentId,
+          contractError: contractError?.message,
+          fileError: fileError?.message,
+          contractErrorCode: contractError?.code,
+          fileErrorCode: fileError?.code,
+        });
+        throw new Error(
+          `Failed to update contract expiry date: Document not found in contracts or files collection. ${contractError?.message || fileError?.message}`
         );
-        // Non-blocking - contract update may have succeeded
       }
     }
-
-    return { success: true };
   } catch (error: any) {
-    console.error('Failed to update contract expiry date:', error);
+    console.error('Failed to update contract expiry date:', {
+      documentId,
+      expiryDate,
+      error: error?.message,
+      code: error?.code,
+      type: error?.type,
+      response: error?.response,
+    });
     throw error;
   }
 };

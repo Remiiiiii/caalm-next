@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,20 +17,42 @@ interface ContractCarouselProps {
   contracts: UIFileDoc[];
   onDismiss: () => void;
   onStatusChange?: () => void;
+  shouldPlaySpeech?: boolean;
 }
 
 export default function ContractCarousel({
   contracts,
   onDismiss,
   onStatusChange,
+  daysUntilExpiry,
+  shouldPlaySpeech = true,
 }: ContractCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { generateSpeech, play, pause, stop, isPlaying, isLoading } =
     useElevenLabsTTS({ autoPlay: true });
   const { user } = useAuth();
   const generatedForRef = useRef<string | null>(null); // Track which contract we've generated for
+  const playedContractsRef = useRef<Set<string>>(new Set()); // Track contracts that have been played
 
   const currentContract = contracts[currentIndex];
+
+  // Calculate days until expiry for current contract
+  const currentContractDays = useMemo(() => {
+    if (!currentContract?.contractExpiryDate) return null;
+
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const expiryStr = currentContract.contractExpiryDate.split('T')[0];
+      const [year, month, day] = expiryStr.split('-').map(Number);
+      const expiry = new Date(year, month - 1, day);
+      expiry.setHours(0, 0, 0, 0);
+      const diffTime = expiry.getTime() - today.getTime();
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    } catch {
+      return null;
+    }
+  }, [currentContract?.contractExpiryDate]);
 
   // Get user's full name or name for speech
   const userFullName =
@@ -41,17 +63,23 @@ export default function ContractCarousel({
     return () => {
       stop();
       generatedForRef.current = null;
+      playedContractsRef.current.clear();
     };
   }, [stop]);
 
   // Generate and play speech when modal opens or contract changes
   useEffect(() => {
-    if (!currentContract) return;
+    if (!currentContract || !shouldPlaySpeech) return;
 
     const contractKey = `${currentContract.$id}-${currentIndex}`;
 
     // Prevent duplicate generation for the same contract
     if (generatedForRef.current === contractKey) {
+      return;
+    }
+
+    // Prevent re-playing speech for contracts already heard
+    if (playedContractsRef.current.has(currentContract.$id)) {
       return;
     }
 
@@ -65,12 +93,14 @@ export default function ContractCarousel({
       contractIndex: currentIndex,
       totalContracts: contracts.length,
       userFullName,
+      daysUntilExpiry: currentContractDays,
     });
 
     // Start generating speech immediately
     generateSpeech(text)
       .then(() => {
         generatedForRef.current = contractKey;
+        playedContractsRef.current.add(currentContract.$id);
       })
       .catch((error) => {
         generatedForRef.current = null; // Reset on error so it can retry
@@ -87,6 +117,8 @@ export default function ContractCarousel({
     userFullName,
     generateSpeech,
     stop,
+    shouldPlaySpeech,
+    currentContractDays,
   ]);
 
   const handleToggleAudio = async () => {
@@ -104,6 +136,7 @@ export default function ContractCarousel({
             contractIndex: currentIndex,
             totalContracts: contracts.length,
             userFullName,
+            daysUntilExpiry: currentContractDays,
           });
           await generateSpeech(text);
         }
@@ -112,13 +145,13 @@ export default function ContractCarousel({
   };
 
   const handlePrevious = () => {
-    stop(); // Stop audio before changing contract
+    stop(); // Stop current contract speech
     generatedForRef.current = null; // Reset so new contract can generate
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : contracts.length - 1));
   };
 
   const handleNext = () => {
-    stop(); // Stop audio before changing contract
+    stop(); // Stop current contract speech before playing next
     generatedForRef.current = null; // Reset so new contract can generate
     setCurrentIndex((prev) => (prev < contracts.length - 1 ? prev + 1 : 0));
   };
@@ -164,6 +197,7 @@ export default function ContractCarousel({
                 contract={currentContract}
                 onDismiss={handleDismiss}
                 onStatusChange={onStatusChange}
+                daysUntilExpiry={currentContractDays}
               />
             </div>
           </motion.div>
