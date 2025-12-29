@@ -1,7 +1,6 @@
 export interface ContractEnterpriseMetadata {
   contractId?: string;
   orgId?: string;
-  contractOwnerName?: string;
   counterpartyContactName?: string;
   counterpartyContactTitle?: string;
   erpReference?: string;

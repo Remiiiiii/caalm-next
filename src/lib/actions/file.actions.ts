@@ -159,7 +159,27 @@ export const uploadFile = async ({
       let status = 'pending-review';
 
       if (metadata?.contractExpiryDate) {
-        contractExpiryDate = metadata.contractExpiryDate;
+        // Normalize the date to prevent timezone shifts
+        // If it's already in YYYY-MM-DD format, convert to ISO with noon UTC
+        const dateStr = metadata.contractExpiryDate;
+        const dateOnlyMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (dateOnlyMatch) {
+          // Extract date components and create date at noon UTC to avoid timezone shifts
+          const [, year, month, day] = dateOnlyMatch;
+          const dateAtNoonUTC = new Date(Date.UTC(
+            parseInt(year),
+            parseInt(month) - 1, // Month is 0-indexed
+            parseInt(day),
+            12, // Noon UTC
+            0,
+            0,
+            0
+          ));
+          contractExpiryDate = dateAtNoonUTC.toISOString();
+        } else {
+          // If it's already an ISO string, use it as-is
+          contractExpiryDate = dateStr;
+        }
         // Keep status as 'pending-review' - contracts must be reviewed before activation
         // Only set to 'action-required' if explicitly terminated
         if (metadata.lifecycleStatus === 'terminated') {
@@ -355,8 +375,20 @@ export const uploadFile = async ({
       
       // Remove contractCategory if it exists (not in Contracts collection schema)
       delete contractDocumentRaw.contractCategory;
+      
+      // Remove contractOwnerName if it exists (not in Contracts collection schema)
+      // contractOwnerName belongs in enterpriseMetadata collection, not Contracts collection
+      delete contractDocumentRaw.contractOwnerName;
+      
+      // Also remove enterpriseMetadata if it was accidentally spread (should be nested)
+      delete contractDocumentRaw.enterpriseMetadata;
 
       const contractDocument = sanitizePayload(contractDocumentRaw);
+      
+      // Final safety check: ensure contractOwnerName is not in the sanitized document
+      if ('contractOwnerName' in contractDocument) {
+        delete (contractDocument as any).contractOwnerName;
+      }
 
       if (!appwriteConfig.contractsCollectionId) {
         throw new Error('Contracts collection ID is not configured');

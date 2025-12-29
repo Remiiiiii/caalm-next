@@ -363,14 +363,14 @@ export const FileDetails = ({
       }
       if (Array.isArray(assignedManagers) && assignedManagers.length > 0) {
         return (
-          <span className="text-slate-800 font-semibold">
+          <span className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
             {assignedManagers.join(', ')}
           </span>
         );
       }
       if (typeof assignedManagers === 'string') {
         return (
-          <span className="text-slate-800 font-semibold">
+          <span className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
             {assignedManagers}
           </span>
         );
@@ -513,12 +513,14 @@ export const FileDetails = ({
       | 'boolean'
       | 'array'
   ) => (
-    <div className="bg-white rounded-lg p-3 border border-slate-200">
-      <p className="text-sm text-slate-500 font-medium mb-1">{label}</p>
+    <div className="bg-white rounded-lg p-3 border border-slate-200 overflow-hidden">
+      <p className="text-sm text-slate-500 font-medium mb-1 break-words">
+        {label}
+      </p>
       {type === 'priority' && value ? (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 min-w-0">
           <span
-            className={`w-3 h-3 rounded-full ${
+            className={`w-3 h-3 rounded-full flex-shrink-0 ${
               value === 'Urgent'
                 ? 'bg-red-500'
                 : value === 'High'
@@ -528,12 +530,12 @@ export const FileDetails = ({
                 : 'bg-green-500'
             }`}
           ></span>
-          <span className="text-slate-800 font-semibold">
+          <span className="text-slate-800 font-semibold break-words min-w-0">
             {formatDisplayValue(value, type)}
           </span>
         </div>
       ) : (
-        <p className="text-slate-800 font-semibold">
+        <p className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
           {formatDisplayValue(value, type)}
         </p>
       )}
@@ -858,13 +860,13 @@ export const FileDetails = ({
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-3 pt-2">
-                  <div className="bg-white rounded-lg p-3 border border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-500 font-medium mb-1">
+                  <div className="bg-white rounded-lg p-3 border border-slate-200 overflow-hidden">
+                    <div className="flex items-center justify-between min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-slate-500 font-medium mb-1 break-words">
                           Expiry Date
                         </p>
-                        <p className="text-slate-800 font-semibold">
+                        <p className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
                           {formatDateForDisplay(displayExpiry)}
                         </p>
                       </div>
@@ -1326,8 +1328,8 @@ export const FileDetails = ({
               <AccordionContent>
                 <div className="space-y-3 pt-2">
                   {assignedManagers && assignedManagers.length > 0 && (
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
-                      <p className="text-sm text-slate-500 font-medium mb-2">
+                    <div className="bg-white rounded-lg p-3 border border-slate-200 overflow-hidden">
+                      <p className="text-sm text-slate-500 font-medium mb-2 break-words">
                         Assigned To
                       </p>
                       {renderAssignedManagers()}
@@ -1472,42 +1474,48 @@ export const ShareInput = ({
           </Label>
 
           {/* Format */}
-          <div className="bg-white rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 font-medium">Format</span>
-              <span className="text-sm text-slate-800 font-semibold">
+          <div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between min-w-0">
+              <span className="text-sm text-slate-600 font-medium break-words min-w-0">
+                Format
+              </span>
+              <span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
                 {file.extension}
               </span>
             </div>
           </div>
 
           {/* Size */}
-          <div className="bg-white rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 font-medium">Size</span>
-              <span className="text-sm text-slate-800 font-semibold">
+          <div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between min-w-0">
+              <span className="text-sm text-slate-600 font-medium break-words min-w-0">
+                Size
+              </span>
+              <span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
                 {convertFileSize({ sizeInBytes: file.size })}
               </span>
             </div>
           </div>
 
           {/* Owner */}
-          <div className="bg-white rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 font-medium">Owner</span>
-              <span className="text-sm text-slate-800 font-semibold">
+          <div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between min-w-0">
+              <span className="text-sm text-slate-600 font-medium break-words min-w-0">
+                Owner
+              </span>
+              <span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
                 {ownerName}
               </span>
             </div>
           </div>
 
           {/* Last Modified */}
-          <div className="bg-white rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 font-medium">
+          <div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between min-w-0">
+              <span className="text-sm text-slate-600 font-medium break-words min-w-0">
                 Last Modified
               </span>
-              <span className="text-sm text-slate-800 font-semibold">
+              <span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
                 {formatDateTime(file.$updatedAt)}
               </span>
             </div>

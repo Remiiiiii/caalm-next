@@ -10,7 +10,7 @@ export const contractSchema = z.object({
     .min(1, 'Contract title is required')
     .max(200, 'Keep the title under 200 characters'),
   contractType: z.string().min(1, 'Contract type is required'),
-  contractCategory: z.string().min(1, 'Contract category is required'),
+  contractCategory: z.string().optional(), // Category field removed from UI, made optional
   lifecycleStatus: z.string().min(1, 'Lifecycle status is required'),
   contractNumber: z.string().min(1, 'Contract number is required'),
   description: z.string().optional(),
@@ -21,7 +21,6 @@ export const contractSchema = z.object({
   subDepartment: z.string().optional(),
   departmentOwner: z.string().optional(),
   contractOwnerId: z.string().min(1, 'Owner is required'),
-  contractOwnerName: z.string().optional(),
   startDate: z.date().optional(),
   executionDate: z.date().optional(),
   expiryDate: z

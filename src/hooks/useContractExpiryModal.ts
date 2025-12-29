@@ -43,6 +43,7 @@ export function useContractExpiryModal(files: UIFileDoc[]) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [testMode, setTestMode] = useState(false);
   const [testContracts, setTestContracts] = useState<UIFileDoc[]>([]);
+  const [wasManuallyClosed, setWasManuallyClosed] = useState(false);
 
   // Load shown contract IDs from sessionStorage on mount
   useEffect(() => {
@@ -128,16 +129,19 @@ export function useContractExpiryModal(files: UIFileDoc[]) {
     return true; // Default to playing speech
   }, [contractsToShow]);
 
-  // Auto-open modal when contracts are detected
+  // Auto-open modal when contracts are detected (but not if it was manually closed)
   useEffect(() => {
-    if (contractsToShow.length > 0 && !isModalOpen && !testMode) {
+    if (contractsToShow.length > 0 && !isModalOpen && !testMode && !wasManuallyClosed) {
       setIsModalOpen(true);
     }
-  }, [contractsToShow.length, isModalOpen, testMode]);
+  }, [contractsToShow.length, isModalOpen, testMode, wasManuallyClosed]);
 
   // Test function to trigger modal with real contracts from database
   const triggerTestModal = async () => {
     try {
+      // Reset manual close flag when triggering test modal
+      setWasManuallyClosed(false);
+      
       // Fetch contracts directly from the API to ensure we have the latest data
       const response = await fetch('/api/contracts/all');
       if (!response.ok) {
@@ -189,6 +193,7 @@ export function useContractExpiryModal(files: UIFileDoc[]) {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setWasManuallyClosed(true); // Mark as manually closed to prevent auto-reopening
 
     // Mark contracts as shown in sessionStorage (only if not in test mode)
     if (
@@ -198,12 +203,14 @@ export function useContractExpiryModal(files: UIFileDoc[]) {
     ) {
       try {
         const currentShown = Array.from(shownContractIds);
+        const contractIds = contractsToShow.map((item) => item.file.$id);
         const newShown = [
           ...currentShown,
-          ...contractsToShow.map((file) => file.$id),
+          ...contractIds,
         ];
         const uniqueShown = Array.from(new Set(newShown));
         sessionStorage.setItem('expiryModalShown', JSON.stringify(uniqueShown));
+        // Update state immediately to prevent contracts from showing again
         setShownContractIds(new Set(uniqueShown));
       } catch (error) {
         console.error(

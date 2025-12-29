@@ -24,7 +24,6 @@ export function useContractForm() {
       subDepartment: '',
       departmentOwner: '',
       contractOwnerId: '',
-      contractOwnerName: '',
       startDate: undefined,
       executionDate: undefined,
       expiryDate: undefined,

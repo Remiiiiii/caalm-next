@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+
 import {
   Select,
   SelectContent,
@@ -48,6 +49,14 @@ import {
 } from 'lucide-react';
 import { SaveProgressCard } from '@/components/SaveProgressCard';
 import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from '@/hooks/use-toast';
@@ -198,7 +207,7 @@ const contractSchema = z.object({
     .min(1, 'Contract title is required')
     .max(200, 'Keep the title under 200 characters'),
   contractType: z.string().min(1, 'Contract type is required'),
-  contractCategory: z.string().min(1, 'Contract category is required'),
+  contractCategory: z.string().optional(), // Category field removed from UI, made optional
   lifecycleStatus: z.string().min(1, 'Lifecycle status is required'),
   contractNumber: z.string().min(1, 'Contract number is required'),
   description: z.string().optional(),
@@ -209,7 +218,6 @@ const contractSchema = z.object({
   subDepartment: z.string().optional(),
   departmentOwner: z.string().optional(),
   contractOwnerId: z.string().min(1, 'Owner is required'),
-  contractOwnerName: z.string().optional(),
   startDate: z.date().optional(),
   executionDate: z.date().optional(),
   expiryDate: z
@@ -384,7 +392,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       subDepartment: '',
       departmentOwner: '',
       contractOwnerId: ownerId,
-      contractOwnerName: '',
       startDate: undefined,
       executionDate: undefined,
       expiryDate: undefined,
@@ -619,7 +626,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         return [
           'contractName',
           'contractType',
-          'contractCategory',
+          // 'contractCategory', // Removed - field no longer exists in UI
           'lifecycleStatus',
           'contractNumber',
           'assignToDepartment',
@@ -729,10 +736,65 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                 counterpartyLegalName:
                   (extracted.counterpartyLegalName as string) || '',
                 expiryDate: extracted.expiryDate
-                  ? new Date(extracted.expiryDate as string)
+                  ? (() => {
+                      // Parse date string as local date to avoid timezone issues
+                      const dateStr = extracted.expiryDate as string;
+                      const dateOnlyMatch = dateStr.match(
+                        /^(\d{4})-(\d{2})-(\d{2})/
+                      );
+                      if (dateOnlyMatch) {
+                        const [, year, month, day] = dateOnlyMatch;
+                        // Create date in local timezone (month is 0-indexed)
+                        return new Date(
+                          parseInt(year),
+                          parseInt(month) - 1,
+                          parseInt(day)
+                        );
+                      }
+                      // Fallback for ISO strings
+                      const isoMatch = dateStr.match(
+                        /^(\d{4})-(\d{2})-(\d{2})T/
+                      );
+                      if (isoMatch) {
+                        const [, year, month, day] = isoMatch;
+                        return new Date(
+                          parseInt(year),
+                          parseInt(month) - 1,
+                          parseInt(day)
+                        );
+                      }
+                      // Last resort: use standard Date parsing
+                      return new Date(dateStr);
+                    })()
                   : undefined,
                 startDate: extracted.startDate
-                  ? new Date(extracted.startDate as string)
+                  ? (() => {
+                      // Parse date string as local date to avoid timezone issues
+                      const dateStr = extracted.startDate as string;
+                      const dateOnlyMatch = dateStr.match(
+                        /^(\d{4})-(\d{2})-(\d{2})/
+                      );
+                      if (dateOnlyMatch) {
+                        const [, year, month, day] = dateOnlyMatch;
+                        return new Date(
+                          parseInt(year),
+                          parseInt(month) - 1,
+                          parseInt(day)
+                        );
+                      }
+                      const isoMatch = dateStr.match(
+                        /^(\d{4})-(\d{2})-(\d{2})T/
+                      );
+                      if (isoMatch) {
+                        const [, year, month, day] = isoMatch;
+                        return new Date(
+                          parseInt(year),
+                          parseInt(month) - 1,
+                          parseInt(day)
+                        );
+                      }
+                      return new Date(dateStr);
+                    })()
                   : undefined,
                 amount:
                   (extracted.amount as string) ||
@@ -1348,14 +1410,49 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         departmentOwner: sanitizeString(values.departmentOwner),
         contractOwnerId: values.contractOwnerId || ownerId,
         // Store dates as date-only strings (YYYY-MM-DD) to avoid timezone issues
+        // Normalize the date to extract local date components, not UTC
         contractExpiryDate: values.expiryDate
-          ? values.expiryDate.toISOString().split('T')[0]
+          ? (() => {
+              // Normalize to midnight local time to avoid timezone shifts
+              const normalized = new Date(
+                values.expiryDate.getFullYear(),
+                values.expiryDate.getMonth(),
+                values.expiryDate.getDate()
+              );
+              // Extract date components from normalized date (ensures local timezone)
+              const year = normalized.getFullYear();
+              const month = String(normalized.getMonth() + 1).padStart(2, '0');
+              const day = String(normalized.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            })()
           : undefined,
         startDate: values.startDate
-          ? values.startDate.toISOString().split('T')[0]
+          ? (() => {
+              // Normalize to midnight local time to avoid timezone shifts
+              const normalized = new Date(
+                values.startDate.getFullYear(),
+                values.startDate.getMonth(),
+                values.startDate.getDate()
+              );
+              const year = normalized.getFullYear();
+              const month = String(normalized.getMonth() + 1).padStart(2, '0');
+              const day = String(normalized.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            })()
           : undefined,
         executionDate: values.executionDate
-          ? values.executionDate.toISOString().split('T')[0]
+          ? (() => {
+              // Normalize to midnight local time to avoid timezone shifts
+              const normalized = new Date(
+                values.executionDate.getFullYear(),
+                values.executionDate.getMonth(),
+                values.executionDate.getDate()
+              );
+              const year = normalized.getFullYear();
+              const month = String(normalized.getMonth() + 1).padStart(2, '0');
+              const day = String(normalized.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            })()
           : undefined,
         autoRenew: values.autoRenew,
         renewalNoticeDays: parseIntegerInput(values.renewalNoticeDays),
@@ -1418,7 +1515,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       };
 
       const enterpriseMetadata = {
-        contractOwnerName: sanitizeString(values.contractOwnerName),
         counterpartyContactName: sanitizeString(values.counterpartyContactName),
         counterpartyContactTitle: sanitizeString(
           values.counterpartyContactTitle
@@ -1989,26 +2085,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                           <FormField
                             control={form.control}
-                            name="contractOwnerName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm text-slate-700 mb-1 block">
-                                  Contract Owner / Administrator
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="e.g., Michael DiTomasso"
-                                    {...field}
-                                    className="bg-white border-slate-300"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
                             name="assignToDepartment"
                             render={({ field }) => (
                               <FormItem>
@@ -2134,7 +2210,19 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                 <FormControl>
                                   <DatePicker
                                     selected={field.value}
-                                    onChange={(date) => field.onChange(date)}
+                                    onChange={(date) => {
+                                      // Normalize the date to midnight local time to avoid timezone issues
+                                      if (date) {
+                                        const normalized = new Date(
+                                          date.getFullYear(),
+                                          date.getMonth(),
+                                          date.getDate()
+                                        );
+                                        field.onChange(normalized);
+                                      } else {
+                                        field.onChange(undefined);
+                                      }
+                                    }}
                                     dateFormat="MM/dd/yyyy"
                                     className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
                                     placeholderText="Select start date"
@@ -2156,7 +2244,19 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                 <FormControl>
                                   <DatePicker
                                     selected={field.value}
-                                    onChange={(date) => field.onChange(date)}
+                                    onChange={(date) => {
+                                      // Normalize the date to midnight local time to avoid timezone issues
+                                      if (date) {
+                                        const normalized = new Date(
+                                          date.getFullYear(),
+                                          date.getMonth(),
+                                          date.getDate()
+                                        );
+                                        field.onChange(normalized);
+                                      } else {
+                                        field.onChange(undefined);
+                                      }
+                                    }}
                                     dateFormat="MM/dd/yyyy"
                                     className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
                                     placeholderText="Select execution date"
@@ -2177,14 +2277,51 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <span className="text-red-500">*</span>
                                 </FormLabel>
                                 <FormControl>
-                                  <DatePicker
-                                    selected={field.value}
-                                    onChange={(date) => field.onChange(date)}
-                                    dateFormat="MM/dd/yyyy"
-                                    minDate={new Date()}
-                                    className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-                                    placeholderText="Select expiry date"
-                                  />
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-start text-left font-normal bg-white border-slate-300"
+                                      >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {field.value ? (
+                                          format(field.value, 'PPP')
+                                        ) : (
+                                          <span className="text-slate-500">
+                                            Select expiry date
+                                          </span>
+                                        )}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                      className="w-auto p-0"
+                                      align="start"
+                                    >
+                                      <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={(date) => {
+                                          // Normalize the date to midnight local time to avoid timezone issues
+                                          if (date) {
+                                            const normalized = new Date(
+                                              date.getFullYear(),
+                                              date.getMonth(),
+                                              date.getDate()
+                                            );
+                                            field.onChange(normalized);
+                                          } else {
+                                            field.onChange(undefined);
+                                          }
+                                        }}
+                                        disabled={(date) => {
+                                          const today = new Date();
+                                          today.setHours(0, 0, 0, 0);
+                                          return date < today;
+                                        }}
+                                        initialFocus
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>

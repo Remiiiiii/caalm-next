@@ -326,7 +326,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       };
 
       const enterpriseMetadata = {
-        contractOwnerName: sanitizeString(values.contractOwnerName),
         counterpartyContactName: sanitizeString(values.counterpartyContactName),
         counterpartyContactTitle: sanitizeString(
           values.counterpartyContactTitle

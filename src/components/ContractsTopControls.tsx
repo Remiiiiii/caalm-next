@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import ContractsFilter from './ContractsFilter';
 import { useContractsFilter } from './ContractsView';
+import ContractsExpiryModalTestButton from './ContractsExpiryModalTestButton';
 import type { UIFileDoc } from '@/types/files';
 
 interface ContractsTopControlsProps {
@@ -264,6 +265,10 @@ export default function ContractsTopControls({
           <Download className="w-4 h-4" />
           <span className="hidden sm:inline">Export</span>
         </Button>
+        {/* Test button for contract expiry modal - development only */}
+        {process.env.NODE_ENV === 'development' && (
+          <ContractsExpiryModalTestButton />
+        )}
       </div>
     </div>
   );

@@ -137,8 +137,17 @@ export const formatDate = (isoString: string | null | undefined) => {
     // Date-only format: parse manually to use local timezone
     const [year, month, day] = isoString.split('-').map(Number);
     date = new Date(year, month - 1, day);
+  } else if (isoString.match(/^\d{4}-\d{2}-\d{2}T/)) {
+    // ISO string with time: extract date part and parse as local date to avoid timezone shifts
+    const dateOnlyMatch = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    } else {
+      date = new Date(isoString);
+    }
   } else {
-    // ISO string with time: use standard parsing
+    // Fallback: use standard parsing
     date = new Date(isoString);
   }
 
