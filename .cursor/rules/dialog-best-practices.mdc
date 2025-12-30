@@ -163,6 +163,80 @@ Example structure:
 - ALWAYS use consistent spacing and padding throughout
 - ALWAYS apply transition effects for interactive elements
 
+## Glass Card Design
+
+All cards and dialogs should use the glass-card style for a modern, professional appearance:
+
+### Glass Card Structure
+
+```tsx
+<Card className="glass-card">
+  <div className="glass-card-cap" />
+  <CardHeader>
+    <CardTitle>Title</CardTitle>
+  </CardHeader>
+  <CardContent>{/* Content */}</CardContent>
+</Card>
+```
+
+### Glass Card CSS Classes
+
+- **`.glass-card`**: Main container with backdrop blur, white background with opacity, border, and shadow
+
+  - Applied to: `<Card className="glass-card">`
+  - Provides: `background: rgba(255, 255, 255, 0.1)`, `backdrop-filter: blur(12px)`, border and shadow effects
+
+- **`.glass-card-cap`**: Decorative cap at the top of the card
+
+  - Applied to: `<div className="glass-card-cap" />` (placed immediately after Card opening tag)
+  - Provides: Thin horizontal bar at the top with `background: #d6d7d8` and `opacity: 0.7`
+
+- **`.glass-card-inner`**: Inner content wrapper for nested glass effects
+  - Applied to: Nested content areas that need additional blur effect
+  - Provides: Enhanced backdrop blur for layered content
+
+### When to Use Glass Cards
+
+- **ALWAYS** use glass-card for:
+
+  - Dashboard cards and widgets
+  - Audit log cards
+  - Stat/metric cards
+  - Content cards in dialogs
+  - Widget components (RecentActivity, QuickNotes, WeatherWidget, etc.)
+
+- **ALWAYS** include the glass-card-cap div immediately after the Card opening tag
+- **ALWAYS** apply glass-card class to Card components in audit logs, dashboards, and widgets
+
+### Glass Card Examples
+
+```tsx
+// Stat Card
+<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+  <div className="glass-card-cap" />
+  <CardContent className="p-6">
+    {/* Content */}
+  </CardContent>
+</Card>
+
+// Widget Card
+<Card className="glass-card w-full h-[200px] sm:h-[250px] lg:h-[300px]">
+  <div className="glass-card-cap" />
+  <CardHeader className="pb-3 pt-6 px-4">
+    <CardTitle>Widget Title</CardTitle>
+  </CardHeader>
+  <CardContent className="px-4 pb-2">
+    {/* Content */}
+  </CardContent>
+</Card>
+
+// Dialog with Glass Card
+<DialogContent className="glass-card max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+  <div className="glass-card-cap" />
+  {/* Dialog content */}
+</DialogContent>
+```
+
 ## Examples in Codebase
 
 Reference these components for correct implementation:
@@ -171,3 +245,7 @@ Reference these components for correct implementation:
 - `OutlookStyleCalendar.tsx` - OverflowDialog
 - `OutlookStyleCalendar.tsx` - Event Review Dialog
 - `OutlookStyleCalendar.tsx` - Delete Confirmation Modal
+- `RecentActivity.tsx` - Glass card implementation
+- `QuickNotesWidget.tsx` - Glass card with cap
+- `WeatherWidget.tsx` - Glass card structure
+- `src/app/(root)/audits/audit/page.tsx` - Audit logs with glass cards

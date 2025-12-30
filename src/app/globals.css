@@ -991,6 +991,14 @@
   background-clip: text;
 }
 
+/* Apply gradient text to active tabs */
+button[data-state='active'] > span {
+  background: linear-gradient(135deg, #12477d 0%, #03afbf 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* 3D paper rise effect for Insights metrics wrapper */
 .paper-3d {
   transform-origin: center;

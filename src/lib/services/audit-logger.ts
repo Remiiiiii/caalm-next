@@ -51,6 +51,28 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
     // Use default organization if orgId is not provided
     const orgId = entry.orgId || 'default_organization';
 
+    // Ensure metadata doesn't exceed 1000 character limit
+    let metadataString: string | null = null;
+    if (entry.metadata) {
+      metadataString = JSON.stringify(entry.metadata);
+      if (metadataString.length > 1000) {
+        console.warn(
+          `Audit log metadata exceeds 1000 characters (${metadataString.length}). Truncating...`
+        );
+        // Try to keep only essential fields if metadata is too long
+        const essentialMetadata: Record<string, any> = {};
+        if (entry.metadata.contractId) essentialMetadata.contractId = entry.metadata.contractId;
+        if (entry.metadata.notificationId) essentialMetadata.notificationId = entry.metadata.notificationId;
+        if (entry.metadata.eventId) essentialMetadata.eventId = entry.metadata.eventId;
+        
+        metadataString = JSON.stringify(essentialMetadata);
+        // If still too long, truncate the string itself
+        if (metadataString.length > 1000) {
+          metadataString = metadataString.substring(0, 997) + '...';
+        }
+      }
+    }
+
     const auditData = {
       event_id: entry.event_id,
       event_title: entry.event_title,
@@ -65,7 +87,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
       reason: entry.reason || null,
       status: entry.status,
       error_message: entry.error_message || null,
-      metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
+      metadata: metadataString,
     };
 
     // Log the data being sent for debugging

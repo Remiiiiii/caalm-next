@@ -40,21 +40,31 @@ import {
   BarChart3,
   FileText,
   Eye,
+  EyeOff,
   ChevronDown,
   ChevronUp,
   FileCheck,
   Building2,
   Settings,
   Users,
+  BookOpen,
+  BookCheck,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import useSWR from 'swr';
+import Image from 'next/image';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface AuditLog {
   event_id: string;
   event_title: string;
-  action: 'delete' | 'sync_delete' | 'restore';
+  action:
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'sync_delete'
+    | 'restore'
+    | 'approval_decided';
   source: 'caalm' | 'outlook';
   user_id: string;
   user_name: string;
@@ -88,7 +98,7 @@ interface Filters {
 
 const AuditLogsPage = () => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('calendar');
+  const [activeTab, setActiveTab] = useState('all');
   const [filters, setFilters] = useState<Filters>({
     startDate: '',
     endDate: '',
@@ -133,6 +143,28 @@ const AuditLogsPage = () => {
 
   const auditLogs: AuditLog[] = logsData?.logs || [];
   const auditStats: AuditStats = statsData?.stats;
+
+  // Filter contract-related audit logs
+  const contractAuditLogs = auditLogs.filter((log) => {
+    // Check if event title contains "Contract" or metadata has contractId
+    return (
+      log.event_title.toLowerCase().includes('contract') ||
+      log.metadata?.contractId ||
+      (log.metadata && 'contractId' in log.metadata)
+    );
+  });
+
+  // Filter calendar-related audit logs
+  const calendarAuditLogs = auditLogs.filter((log) => {
+    // Check if event title contains calendar-related terms or source is calendar-related
+    return (
+      log.event_title.toLowerCase().includes('calendar') ||
+      log.event_title.toLowerCase().includes('event') ||
+      log.source === 'outlook' ||
+      (log.metadata &&
+        ('eventId' in log.metadata || 'calendarId' in log.metadata))
+    );
+  });
 
   const handleFilterChange = (key: keyof Filters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -306,6 +338,36 @@ const AuditLogsPage = () => {
             Restore
           </Badge>
         );
+      case 'update':
+        return (
+          <Badge
+            variant="default"
+            className="bg-blue-100 text-blue-800 border-blue-200"
+          >
+            <FileText className="w-3 h-3 mr-1" />
+            Update
+          </Badge>
+        );
+      case 'create':
+        return (
+          <Badge
+            variant="default"
+            className="bg-emerald-100 text-emerald-800 border-emerald-200"
+          >
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Create
+          </Badge>
+        );
+      case 'approval_decided':
+        return (
+          <Badge
+            variant="default"
+            className="bg-purple-100 text-purple-800 border-purple-200"
+          >
+            <FileCheck className="w-3 h-3 mr-1" />
+            Approval
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{action}</Badge>;
     }
@@ -315,7 +377,8 @@ const AuditLogsPage = () => {
     return (
       <div className="main-content">
         <div className="flex items-center justify-center min-h-[400px]">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md glass-card">
+            <div className="glass-card-cap" />
             <CardContent className="p-8 text-center">
               <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
               <h3 className="h3 text-red-600 mb-2">Error Loading Audit Logs</h3>
@@ -366,43 +429,104 @@ const AuditLogsPage = () => {
 
       {/* Tabs for different audit types */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7 mb-6 bg-white border border-slate-200">
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Calendar Events
+        <TabsList className="grid w-full grid-cols-8 mb-6 bg-white border border-slate-200">
+          <TabsTrigger
+            value="all"
+            className="flex items-center gap-2 tabs-underline [&[data-state=active]>span]:sidebar-gradient-text"
+          >
+            {activeTab === 'all' ? (
+              <BookCheck className="w-4 h-4 text-[#0f5384]" />
+            ) : (
+              <BookCheck className="w-4 h-4" />
+            )}
+            <span>All Events</span>
           </TabsTrigger>
-          <TabsTrigger value="contracts" className="flex items-center gap-2">
-            <FileCheck className="w-4 h-4" />
-            Contracts
+          <TabsTrigger
+            value="calendar"
+            className="flex items-center gap-2 tabs-underline [&[data-state=active]>span]:sidebar-gradient-text"
+          >
+            {activeTab === 'calendar' ? (
+              <Calendar className="w-4 h-4 text-[#0f5384]" />
+            ) : (
+              <Calendar className="w-4 h-4" />
+            )}
+            <span>Calendar Events</span>
           </TabsTrigger>
-          <TabsTrigger value="licenses" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Licenses
+          <TabsTrigger
+            value="contracts"
+            className="flex items-center gap-2 tabs-underline [&[data-state=active]>span]:sidebar-gradient-text"
+          >
+            {activeTab === 'contracts' ? (
+              <FileCheck className="w-4 h-4 text-[#0f5384]" />
+            ) : (
+              <FileCheck className="w-4 h-4" />
+            )}
+            <span>Contracts</span>
           </TabsTrigger>
-          <TabsTrigger value="documents" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Documents
+          <TabsTrigger
+            value="licenses"
+            className="flex items-center gap-2 tabs-underline [&[data-state=active]>span]:sidebar-gradient-text"
+          >
+            {activeTab === 'licenses' ? (
+              <FileText className="w-4 h-4 text-[#0f5384]" />
+            ) : (
+              <FileText className="w-4 h-4" />
+            )}
+            <span>Licenses</span>
           </TabsTrigger>
-          <TabsTrigger value="team" className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Team
+          <TabsTrigger
+            value="documents"
+            className="flex items-center gap-2 tabs-underline [&[data-state=active]>span]:sidebar-gradient-text"
+          >
+            {activeTab === 'documents' ? (
+              <FileText className="w-4 h-4 text-[#0f5384]" />
+            ) : (
+              <FileText className="w-4 h-4" />
+            )}
+            <span>Documents</span>
           </TabsTrigger>
-          <TabsTrigger value="reports" className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Reports & Analytics
+          <TabsTrigger
+            value="team"
+            className="flex items-center gap-2 tabs-underline [&[data-state=active]>span]:sidebar-gradient-text"
+          >
+            {activeTab === 'team' ? (
+              <Users className="w-4 h-4 text-[#0f5384]" />
+            ) : (
+              <Users className="w-4 h-4" />
+            )}
+            <span>Team</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Settings
+          <TabsTrigger
+            value="reports"
+            className="flex items-center gap-2 tabs-underline [&[data-state=active]>span]:sidebar-gradient-text"
+          >
+            {activeTab === 'reports' ? (
+              <BarChart3 className="w-4 h-4 text-[#0f5384]" />
+            ) : (
+              <BarChart3 className="w-4 h-4" />
+            )}
+            <span>Reports & Analytics</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="settings"
+            className="flex items-center gap-2 tabs-underline [&[data-state=active]>span]:sidebar-gradient-text"
+          >
+            {activeTab === 'settings' ? (
+              <Settings className="w-4 h-4 text-[#0f5384]" />
+            ) : (
+              <Settings className="w-4 h-4" />
+            )}
+            <span>Settings</span>
           </TabsTrigger>
         </TabsList>
 
-        {/* Calendar Events Tab */}
-        <TabsContent value="calendar" className="space-y-8">
+        {/* All Events Tab */}
+        <TabsContent value="all" className="space-y-8">
           {/* Professional Stats Cards */}
           {auditStats && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
+              <Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+                <div className="glass-card-cap" />
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -420,7 +544,8 @@ const AuditLogsPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
+              <Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+                <div className="glass-card-cap" />
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -436,7 +561,8 @@ const AuditLogsPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
+              <Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+                <div className="glass-card-cap" />
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -452,7 +578,8 @@ const AuditLogsPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="dashboard-summary-card hover:shadow-drop-3 transition-all duration-300">
+              <Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+                <div className="glass-card-cap" />
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -473,7 +600,8 @@ const AuditLogsPage = () => {
           )}
 
           {/* Professional Filters */}
-          <Card className="mb-8 shadow-drop-1">
+          <Card className="mb-8 glass-card">
+            <div className="glass-card-cap" />
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 h3 text-slate-700">
@@ -620,12 +748,13 @@ const AuditLogsPage = () => {
           </Card>
 
           {/* Professional Audit Logs Table */}
-          <Card className="shadow-drop-1">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 h3 text-slate-700">
                   <BarChart3 className="w-5 h-5 text-[#0f5384]" />
-                  Audit Logs
+                  All Audit Logs
                   <Badge
                     variant="secondary"
                     className="ml-2 bg-slate-100 text-slate-700"
@@ -710,10 +839,18 @@ const AuditLogsPage = () => {
                             </TableCell>
                             <TableCell className="py-4">
                               <Badge
-                                variant="outline"
-                                className="capitalize bg-slate-50 text-slate-700 border-slate-200"
+                                variant={
+                                  log.source === 'caalm'
+                                    ? 'default'
+                                    : 'secondary'
+                                }
+                                className={
+                                  log.source === 'caalm'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-purple-100 text-purple-800'
+                                }
                               >
-                                {log.source}
+                                {log.source.toUpperCase()}
                               </Badge>
                             </TableCell>
                             <TableCell className="py-4">
@@ -741,7 +878,11 @@ const AuditLogsPage = () => {
                                 onClick={() => toggleRowExpansion(log.event_id)}
                                 className="flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                               >
-                                <Eye className="w-4 h-4" />
+                                {expandedRows.has(log.event_id) ? (
+                                  <EyeOff className="w-4 h-4" />
+                                ) : (
+                                  <Eye className="w-4 h-4" />
+                                )}
                                 {expandedRows.has(log.event_id)
                                   ? 'Hide'
                                   : 'Show'}
@@ -808,13 +949,15 @@ const AuditLogsPage = () => {
                                           <Label className="body-2 text-slate-600">
                                             Metadata
                                           </Label>
-                                          <pre className="mt-1 p-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 overflow-x-auto">
-                                            {JSON.stringify(
-                                              log.metadata,
-                                              null,
-                                              2
-                                            )}
-                                          </pre>
+                                          <div className="mt-1 p-3 bg-white border border-slate-200 rounded-lg">
+                                            <pre className="text-xs text-slate-900 overflow-x-auto">
+                                              {JSON.stringify(
+                                                log.metadata,
+                                                null,
+                                                2
+                                              )}
+                                            </pre>
+                                          </div>
                                         </div>
                                       )}
                                     </div>
@@ -833,9 +976,195 @@ const AuditLogsPage = () => {
           </Card>
         </TabsContent>
 
+        {/* Calendar Events Tab */}
+        <TabsContent value="calendar" className="space-y-8">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 h3">
+                <Calendar className="w-5 h-5 text-slate-600" />
+                Calendar Event Logs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {calendarAuditLogs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                    <Calendar className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="h4 text-slate-600 mb-2">
+                    No Calendar Event Logs
+                  </h3>
+                  <p className="body-1 text-slate-500">
+                    Calendar event audit logs will appear here once calendar
+                    operations are tracked
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Timestamp</TableHead>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Details</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {calendarAuditLogs.map((log) => (
+                        <React.Fragment
+                          key={`${log.event_id}-${log.created_at}`}
+                        >
+                          <TableRow className="hover:bg-slate-50 transition-colors">
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-slate-400" />
+                                <span className="body-2 text-slate-700">
+                                  {format(
+                                    new Date(log.created_at),
+                                    'MMM dd, yyyy HH:mm'
+                                  )}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <div className="font-medium text-slate-900 max-w-[200px] truncate">
+                                {log.event_title}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              {getActionBadge(log.action)}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100">
+                                  <User className="w-4 h-4 text-slate-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-slate-900 text-sm">
+                                    {log.user_name}
+                                  </div>
+                                  <div className="text-xs text-slate-500">
+                                    {log.user_email}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              {getStatusBadge(log.status)}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleRowExpansion(log.event_id)}
+                                className="flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                              >
+                                {expandedRows.has(log.event_id) ? (
+                                  <EyeOff className="w-4 h-4" />
+                                ) : (
+                                  <Eye className="w-4 h-4" />
+                                )}
+                                {expandedRows.has(log.event_id)
+                                  ? 'Hide'
+                                  : 'Show'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          {expandedRows.has(log.event_id) && (
+                            <TableRow>
+                              <TableCell
+                                colSpan={6}
+                                className="bg-slate-50 p-0"
+                              >
+                                <div className="p-6 border-t border-slate-200">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          Event ID
+                                        </Label>
+                                        <p className="font-mono text-sm text-slate-900 bg-white p-2 rounded border">
+                                          {log.event_id}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          IP Address
+                                        </Label>
+                                        <p className="text-sm text-slate-900">
+                                          {log.ip_address || 'N/A'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          Reason
+                                        </Label>
+                                        <p className="text-sm text-slate-900">
+                                          {log.reason || 'N/A'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          User Agent
+                                        </Label>
+                                        <p className="text-sm text-slate-900 break-all">
+                                          {log.user_agent || 'N/A'}
+                                        </p>
+                                      </div>
+                                      {log.error_message && (
+                                        <div>
+                                          <Label className="body-2 text-red-600">
+                                            Error Message
+                                          </Label>
+                                          <div className="mt-1 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                            <p className="text-sm text-red-800">
+                                              {log.error_message}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {log.metadata && (
+                                        <div>
+                                          <Label className="body-2 text-slate-600">
+                                            Metadata
+                                          </Label>
+                                          <div className="mt-1 p-3 bg-white border border-slate-200 rounded-lg">
+                                            <pre className="text-xs text-slate-900 overflow-x-auto">
+                                              {JSON.stringify(
+                                                log.metadata,
+                                                null,
+                                                2
+                                              )}
+                                            </pre>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Contracts Tab */}
         <TabsContent value="contracts" className="space-y-8">
-          <Card className="shadow-drop-1">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
             <CardHeader>
               <CardTitle className="flex items-center gap-2 h3">
                 <FileCheck className="w-5 h-5 text-slate-600" />
@@ -843,25 +1172,206 @@ const AuditLogsPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-                  <FileCheck className="w-8 h-8 text-slate-400" />
+              {contractAuditLogs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                    <FileCheck className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="h4 text-slate-600 mb-2">
+                    No Contract Audit Logs
+                  </h3>
+                  <p className="body-1 text-slate-500">
+                    Contract audit logs will appear here once contract
+                    operations are tracked
+                  </p>
                 </div>
-                <h3 className="h4 text-slate-600 mb-2">
-                  No Contract Audit Logs
-                </h3>
-                <p className="body-1 text-slate-500">
-                  Contract audit logs will appear here once contract operations
-                  are tracked
-                </p>
-              </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Timestamp</TableHead>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Details</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {contractAuditLogs.map((log) => (
+                        <React.Fragment
+                          key={`${log.event_id}-${log.created_at}`}
+                        >
+                          <TableRow className="hover:bg-slate-50 transition-colors">
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-slate-400" />
+                                <span className="body-2 text-slate-700">
+                                  {format(
+                                    new Date(log.created_at),
+                                    'MMM dd, yyyy HH:mm'
+                                  )}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <div className="font-medium text-slate-900 max-w-[200px] truncate">
+                                {log.event_title}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              {getActionBadge(log.action)}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100">
+                                  <User className="w-4 h-4 text-slate-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-slate-900 text-sm">
+                                    {log.user_name}
+                                  </div>
+                                  <div className="text-xs text-slate-500">
+                                    {log.user_email}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4">
+                              {getStatusBadge(log.status)}
+                            </TableCell>
+                            <TableCell className="py-4">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleRowExpansion(log.event_id)}
+                                className="flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                              >
+                                {expandedRows.has(log.event_id) ? (
+                                  <EyeOff className="w-4 h-4" />
+                                ) : (
+                                  <Eye className="w-4 h-4" />
+                                )}
+                                {expandedRows.has(log.event_id)
+                                  ? 'Hide'
+                                  : 'Show'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          {expandedRows.has(log.event_id) && (
+                            <TableRow>
+                              <TableCell
+                                colSpan={6}
+                                className="bg-slate-50 p-0"
+                              >
+                                <div className="p-6 border-t border-slate-200">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          Event ID
+                                        </Label>
+                                        <p className="font-mono text-sm text-slate-900 bg-white p-2 rounded border">
+                                          {log.event_id}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          IP Address
+                                        </Label>
+                                        <p className="text-sm text-slate-900">
+                                          {log.ip_address || 'N/A'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          Reason
+                                        </Label>
+                                        <p className="text-sm text-slate-900">
+                                          {log.reason || 'N/A'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="body-2 text-slate-600">
+                                          User Agent
+                                        </Label>
+                                        <p className="text-sm text-slate-900 break-all">
+                                          {log.user_agent || 'N/A'}
+                                        </p>
+                                      </div>
+                                      {log.error_message && (
+                                        <div>
+                                          <Label className="body-2 text-red-600">
+                                            Error Message
+                                          </Label>
+                                          <div className="mt-1 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                            <p className="text-sm text-red-800">
+                                              {log.error_message}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {log.metadata && (
+                                        <div>
+                                          <Label className="body-2 text-slate-600">
+                                            Metadata
+                                          </Label>
+                                          <div className="mt-1 p-3 bg-white border border-slate-200 rounded-lg">
+                                            {/* Display signature image if available */}
+                                            {log.metadata.signatureFileId && (
+                                              <div className="mb-3">
+                                                <Label className="body-2 text-slate-600 mb-2 block">
+                                                  Electronic Signature
+                                                </Label>
+                                                <div className="border border-slate-300 rounded bg-white p-2 flex items-center justify-center min-h-[100px]">
+                                                  <Image
+                                                    src={
+                                                      log.metadata
+                                                        .signatureFileUrl ||
+                                                      `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_BUCKET}/files/${log.metadata.signatureFileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`
+                                                    }
+                                                    alt="Contract dismissal signature"
+                                                    width={400}
+                                                    height={100}
+                                                    className="max-w-full h-auto max-h-32 object-contain"
+                                                    unoptimized
+                                                  />
+                                                </div>
+                                              </div>
+                                            )}
+                                            <pre className="text-xs text-slate-900 overflow-x-auto">
+                                              {JSON.stringify(
+                                                log.metadata,
+                                                null,
+                                                2
+                                              )}
+                                            </pre>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Licenses Tab */}
         <TabsContent value="licenses" className="space-y-8">
-          <Card className="shadow-drop-1">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
             <CardHeader>
               <CardTitle className="flex items-center gap-2 h3">
                 <FileText className="w-5 h-5 text-slate-600" />
@@ -887,7 +1397,8 @@ const AuditLogsPage = () => {
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-8">
-          <Card className="shadow-drop-1">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
             <CardHeader>
               <CardTitle className="flex items-center gap-2 h3">
                 <FileText className="w-5 h-5 text-slate-600" />
@@ -913,7 +1424,8 @@ const AuditLogsPage = () => {
 
         {/* Team Tab */}
         <TabsContent value="team" className="space-y-8">
-          <Card className="shadow-drop-1">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
             <CardHeader>
               <CardTitle className="flex items-center gap-2 h3">
                 <Users className="w-5 h-5 text-slate-600" />
@@ -937,7 +1449,8 @@ const AuditLogsPage = () => {
 
         {/* Reports & Analytics Tab */}
         <TabsContent value="reports" className="space-y-8">
-          <Card className="shadow-drop-1">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
             <CardHeader>
               <CardTitle className="flex items-center gap-2 h3">
                 <BarChart3 className="w-5 h-5 text-slate-600" />
@@ -963,7 +1476,8 @@ const AuditLogsPage = () => {
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-8">
-          <Card className="shadow-drop-1">
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
             <CardHeader>
               <CardTitle className="flex items-center gap-2 h3">
                 <Settings className="w-5 h-5 text-slate-600" />
