@@ -23,8 +23,30 @@ export default function ContractExpiryModal({
   shouldPlaySpeech = true,
 }: ContractExpiryModalProps) {
   const [isDesktop, setIsDesktop] = useState(false);
+  const [dismissedContractIds, setDismissedContractIds] = useState<Set<string>>(
+    new Set()
+  );
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  // Filter out dismissed contracts
+  const activeContracts = contracts.filter(
+    (contract) => !dismissedContractIds.has(contract.$id)
+  );
+
+  // Handle contract dismissal - remove from list instead of closing modal
+  const handleContractDismissed = (contractId: string) => {
+    setDismissedContractIds((prev) => new Set(prev).add(contractId));
+    onStatusChange?.();
+    
+    // Only close modal if all contracts are dismissed
+    const remainingContracts = contracts.filter(
+      (c) => c.$id !== contractId && !dismissedContractIds.has(c.$id)
+    );
+    if (remainingContracts.length === 0) {
+      onClose();
+    }
+  };
 
   // Desktop-only check
   useEffect(() => {
@@ -115,7 +137,7 @@ export default function ContractExpiryModal({
     return null;
   }
 
-  if (!isOpen || contracts.length === 0) {
+  if (!isOpen || activeContracts.length === 0) {
     return null;
   }
 
@@ -155,8 +177,9 @@ export default function ContractExpiryModal({
               {/* Carousel Container */}
               <div className="w-full h-full">
                 <ContractCarousel
-                  contracts={contracts}
+                  contracts={activeContracts}
                   onDismiss={onClose}
+                  onContractDismissed={handleContractDismissed}
                   onStatusChange={onStatusChange}
                   shouldPlaySpeech={shouldPlaySpeech}
                 />
@@ -167,11 +190,11 @@ export default function ContractExpiryModal({
                 Contract Expiry Notification
               </h2>
               <p id="contract-expiry-modal-description" className="sr-only">
-                {contracts.length === 1
+                {activeContracts.length === 1
                   ? `Contract "${
-                      contracts[0].contractName || 'Untitled'
+                      activeContracts[0].contractName || 'Untitled'
                     }" expires in 30 days.`
-                  : `${contracts.length} contracts expire in 30 days.`}
+                  : `${activeContracts.length} contracts expire in 30 days.`}
               </p>
             </motion.div>
           </div>

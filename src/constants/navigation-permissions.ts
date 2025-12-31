@@ -182,6 +182,15 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
         viewerReadOnly: true,
         viewerFullAccess: true,
       },
+      {
+        name: 'Rate Limit Monitoring',
+        icon: '/assets/icons/shield.svg',
+        url: '/dashboard/admin/rate-limits',
+        permissions: [PERMISSIONS.AUDIT.VIEW],
+        // Only for admins with audit view permission
+        hiddenForRoles: ['Department Manager', 'Viewer'],
+        requiresElevated: true,
+      },
     ],
   },
   {

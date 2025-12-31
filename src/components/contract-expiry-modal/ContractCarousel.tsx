@@ -16,6 +16,7 @@ import type { UIFileDoc } from '@/types/files';
 interface ContractCarouselProps {
   contracts: UIFileDoc[];
   onDismiss: () => void;
+  onContractDismissed?: (contractId: string) => void;
   onStatusChange?: () => void;
   shouldPlaySpeech?: boolean;
 }
@@ -23,11 +24,24 @@ interface ContractCarouselProps {
 export default function ContractCarousel({
   contracts,
   onDismiss,
+  onContractDismissed,
   onStatusChange,
-  daysUntilExpiry,
   shouldPlaySpeech = true,
 }: ContractCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Reset to first contract if current index is out of bounds (e.g., when a contract is dismissed)
+  useEffect(() => {
+    if (contracts.length > 0) {
+      if (currentIndex >= contracts.length) {
+        // If current index is beyond the list, go to the last contract
+        setCurrentIndex(Math.max(0, contracts.length - 1));
+      }
+    } else {
+      // If no contracts left, reset index
+      setCurrentIndex(0);
+    }
+  }, [contracts.length, currentIndex]);
   const { generateSpeech, play, pause, stop, isPlaying, isLoading } =
     useElevenLabsTTS({ autoPlay: true });
   const { user } = useAuth();
@@ -195,7 +209,18 @@ export default function ContractCarousel({
               {/* Action Buttons */}
               <ExpiryActionButtons
                 contract={currentContract}
-                onDismiss={handleDismiss}
+                onDismiss={() => {
+                  // When contract is dismissed, notify parent to remove it from the list
+                  if (onContractDismissed) {
+                    const dismissedId = currentContract.$id;
+                    onContractDismissed(dismissedId);
+                    // The parent will filter out this contract, and useEffect will adjust the index
+                    // If this was the last contract, the modal will close automatically
+                  } else {
+                    // Fallback: close modal if no dismissal handler
+                    handleDismiss();
+                  }
+                }}
                 onStatusChange={onStatusChange}
                 daysUntilExpiry={currentContractDays}
               />
