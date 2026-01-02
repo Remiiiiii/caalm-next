@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserRoles } from '@/lib/rbac/permissions';
 import { getOrgIdFromRequest } from '@/lib/rbac/middleware';
+import { getHighestPriorityRole } from '@/lib/utils/role-priority';
 
 /**
  * Get role display name(s) for a user
  * Returns the actual role name(s) from the database
+ * When a user has multiple roles, returns the highest priority role
  */
 export async function GET(
   request: NextRequest,
@@ -18,8 +20,8 @@ export async function GET(
     const userRoles = await getUserRoles(userId, orgId);
     
     if (userRoles.length > 0) {
-      // Return the first role name (users typically have one primary role)
-      const roleName = userRoles[0]?.roleName;
+      // Get highest priority role (IT > Department Manager, etc.)
+      const roleName = getHighestPriorityRole(userRoles);
       if (roleName) {
         return NextResponse.json({
           success: true,

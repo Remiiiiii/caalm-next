@@ -178,6 +178,15 @@ export async function proxy(request: NextRequest) {
 
   const isProtectedPath = protectedPrefixes.some((p) => pathname.startsWith(p));
 
+  // Dashboard route protection - check role-based access for all dashboard routes
+  if (pathname.startsWith('/dashboard')) {
+    const { redirectIfNotAuthorizedForDashboard } = await import('@/lib/auth/dashboard-guards');
+    const dashboardCheck = await redirectIfNotAuthorizedForDashboard(request);
+    if (dashboardCheck) {
+      return dashboardCheck;
+    }
+  }
+
   if (isProtectedPath) {
     const hasCompleted2FA = request.cookies.get('2fa_completed');
     const session = request.cookies.get('appwrite-session');

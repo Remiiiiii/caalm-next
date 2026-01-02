@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import StorageProgressBar from '@/components/StorageProgressBar';
+import ITSidebar from '@/components/ITSidebar';
 
 interface TotalSpace {
   document: { size: number; latestDate: string };
@@ -189,7 +190,13 @@ const ITEM_ICONS: Record<
 };
 
 const Sidebar = memo(({ name, avatar, email, role, division }: Props) => {
+  // CRITICAL: ALL HOOKS MUST BE CALLED UNCONDITIONALLY BEFORE ANY RETURNS
   const [totalSpace, setTotalSpace] = useState<TotalSpace | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
+  const { permissions, loading: permissionsLoading } = usePermissions();
+  const { roles: userRoles, loading: rolesLoading } = useUserRoles();
 
   // Fetch storage data
   useEffect(() => {
@@ -264,21 +271,17 @@ const Sidebar = memo(({ name, avatar, email, role, division }: Props) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const router = useRouter();
-  const pathname = usePathname();
-  const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
-  const { permissions, loading: permissionsLoading } = usePermissions();
-  const { roles: userRoles, loading: rolesLoading } = useUserRoles();
-
   // Memoize viewer check and primary role to avoid unnecessary recalculations
-  const { isViewer, primaryRole } = useMemo(() => {
+  const { isViewer, primaryRole, isITUser } = useMemo(() => {
     if (userRoles.length === 0) {
-      return { isViewer: false, primaryRole: null };
+      return { isViewer: false, primaryRole: null, isITUser: false };
     }
     const viewerRole = userRoles.find((r) => r.roleName === 'Viewer');
+    const itRole = userRoles.find((r) => r.roleName === 'IT');
     return {
       isViewer: !!viewerRole,
       primaryRole: userRoles[0]?.roleName || null,
+      isITUser: !!itRole,
     };
   }, [userRoles]);
 
@@ -381,6 +384,10 @@ const Sidebar = memo(({ name, avatar, email, role, division }: Props) => {
           PERMISSIONS.CALENDAR.VIEW_OWN,
           PERMISSIONS.CONTRACTS.VIEW,
         ],
+      },
+      IT: {
+        url: '/dashboard/it',
+        permissions: [PERMISSIONS.IT.VIEW_MONITORING],
       },
     };
 
@@ -584,6 +591,12 @@ const Sidebar = memo(({ name, avatar, email, role, division }: Props) => {
     rolesLoading,
     primaryRole,
   ]);
+
+  // IMPORTANT: Check for IT user AFTER all hooks have been called
+  // This prevents "Rendered fewer hooks" error
+  if (isITUser) {
+    return <ITSidebar name={name} avatar={avatar} email={email} />;
+  }
 
   return (
     <aside className="sidebar">

@@ -104,8 +104,9 @@ const nextConfig: NextConfig = {
     },
   }),
 
-  // Enable static page generation for faster initial loads
-  output: 'standalone',
+  // Note: 'output: standalone' removed - not needed for Vercel deployment
+  // Vercel handles build optimization automatically and doesn't use standalone output
+  // Standalone output is only for Docker/Kubernetes container deployments
 
   // Optimize production builds
   // Note: swcMinify is now default in Next.js 16, removed deprecated option

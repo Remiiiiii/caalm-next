@@ -28,9 +28,17 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user, loading, router]);
 
-  // Memoize sidebar props to prevent unnecessary re-renders
+  // Memoize sidebar props - always return an object to ensure consistent rendering
   const sidebarProps = useMemo(() => {
-    if (!user) return null;
+    if (!user) {
+      return {
+        name: 'Loading...',
+        avatar: '/assets/images/avatar-placeholder.png',
+        email: '',
+        role: '',
+        division: '',
+      };
+    }
     return {
       name: user.name || 'Unknown User',
       avatar:
@@ -48,9 +56,18 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
     (user as any)?.division,
   ]);
 
-  // Memoize navigation props
+  // Memoize navigation props - always return an object to ensure consistent rendering
   const navigationProps = useMemo(() => {
-    if (!user) return null;
+    if (!user) {
+      return {
+        $id: '',
+        accountId: '',
+        fullName: 'Loading...',
+        avatar: '/assets/images/avatar-placeholder.png',
+        email: '',
+        role: '',
+      };
+    }
     return {
       $id: user.$id,
       accountId: (user as any).accountId || user.$id,
@@ -88,9 +105,9 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
         </div>
       ) : (
         <main className="flex h-screen overflow-hidden">
-          {sidebarProps && <Sidebar {...sidebarProps} />}
+          <Sidebar {...sidebarProps} />
           <section className="flex h-full flex-1 flex-col min-w-0">
-            {navigationProps && <MobileNavigation {...navigationProps} />}
+            <MobileNavigation {...navigationProps} />
             <DashboardHeader user={user} />
             <div className="main-content">
               <Suspense

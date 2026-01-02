@@ -120,6 +120,8 @@ export const getUserByAccountId = async (
       calendarRole = 'approver';
     } else if (roleName === 'Viewer') {
       calendarRole = 'viewer';
+    } else if (roleName === 'IT') {
+      calendarRole = 'admin'; // IT staff get admin-level calendar access
     }
 
     return {
@@ -630,6 +632,8 @@ export const getCurrentUser = async () => {
       calendarRole = 'approver';
     } else if (roleName === 'Viewer') {
       calendarRole = 'viewer';
+    } else if (roleName === 'IT') {
+      calendarRole = 'admin'; // IT staff get admin-level calendar access
     }
 
     return parseStringify({

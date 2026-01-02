@@ -802,21 +802,21 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             >
               {/* Page 1: Weather, Company News, Contract Status */}
               <div className="flex gap-3 sm:gap-2 lg:gap-3 xl:gap-3 2xl:gap-3 3xl:gap-3 4xl:gap-3 ml-8 min-w-full flex-shrink-0 mx-auto">
-                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[455px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
+                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[400px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
                   <WeatherWidget
                     location="Miami"
                     latitude={25.7617}
                     longitude={-80.1918}
                   />
                 </div>
-                <div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[450px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0">
+                <div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[535px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0">
                   <ContractExpiryAlertsWidget
                     maxVisible={2}
                     showSettings={false}
                     compact={true}
                   />
                 </div>
-                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[455px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
+                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[425px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
                   <ContractStatusPieChart />
                 </div>
               </div>

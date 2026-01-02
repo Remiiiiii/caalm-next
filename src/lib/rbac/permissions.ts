@@ -4,6 +4,8 @@
  * Optimized with Redis caching and parallel queries
  */
 
+'use server';
+
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';

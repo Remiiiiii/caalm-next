@@ -72,6 +72,20 @@ export const PERMISSIONS = {
     VIEW: 'audit.view',
     EXPORT: 'audit.export',
   },
+  
+  // IT/Software Engineering Permissions
+  IT: {
+    VIEW_RATE_LIMITS: 'it.view_rate_limits',
+    VIEW_SYSTEM_LOGS: 'it.view_system_logs',
+    MANAGE_API_KEYS: 'it.manage_api_keys',
+    VIEW_ANALYTICS: 'it.view_analytics',
+    MANAGE_DEPLOYMENTS: 'it.manage_deployments',
+    VIEW_MONITORING: 'it.view_monitoring',
+    MANAGE_CI_CD: 'it.manage_ci_cd',
+    VIEW_SECURITY: 'it.view_security',
+    MANAGE_DATABASE: 'it.manage_database',
+    VIEW_INCIDENTS: 'it.view_incidents',
+  },
 } as const;
 
 // Flatten all permissions into a single array
@@ -132,6 +146,18 @@ export const PERMISSION_DEFINITIONS = [
   // Audit
   { key: PERMISSIONS.AUDIT.VIEW, name: 'View Audit Logs', category: 'audit', description: 'View audit logs' },
   { key: PERMISSIONS.AUDIT.EXPORT, name: 'Export Audit Logs', category: 'audit', description: 'Export audit logs' },
+  
+  // IT/Software Engineering
+  { key: PERMISSIONS.IT.VIEW_RATE_LIMITS, name: 'View Rate Limits', category: 'it', description: 'Access to rate limit monitoring dashboard' },
+  { key: PERMISSIONS.IT.VIEW_SYSTEM_LOGS, name: 'View System Logs', category: 'it', description: 'Access to system logs' },
+  { key: PERMISSIONS.IT.MANAGE_API_KEYS, name: 'Manage API Keys', category: 'it', description: 'Manage API keys' },
+  { key: PERMISSIONS.IT.VIEW_ANALYTICS, name: 'View Analytics', category: 'it', description: 'Access to analytics dashboard' },
+  { key: PERMISSIONS.IT.MANAGE_DEPLOYMENTS, name: 'Manage Deployments', category: 'it', description: 'Manage deployments' },
+  { key: PERMISSIONS.IT.VIEW_MONITORING, name: 'View Monitoring', category: 'it', description: 'View monitoring dashboards' },
+  { key: PERMISSIONS.IT.MANAGE_CI_CD, name: 'Manage CI/CD', category: 'it', description: 'Manage CI/CD pipelines' },
+  { key: PERMISSIONS.IT.VIEW_SECURITY, name: 'View Security', category: 'it', description: 'View security dashboard' },
+  { key: PERMISSIONS.IT.MANAGE_DATABASE, name: 'Manage Database', category: 'it', description: 'Database administration' },
+  { key: PERMISSIONS.IT.VIEW_INCIDENTS, name: 'View Incidents', category: 'it', description: 'View incident management' },
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];

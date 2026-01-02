@@ -89,14 +89,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (typeof typedSessionUser.role === 'string') {
               typedSessionUser.role = normalizeUserRole(typedSessionUser.role);
             }
-            setUser(typedSessionUser);
+            // Ensure complete serialization by parsing and stringifying
+            const serializedUser = JSON.parse(JSON.stringify(typedSessionUser)) as AuthenticatedUser;
+            setUser(serializedUser);
           setIsSessionValid(true);
           
           // Cache user data for faster subsequent loads
           if (typeof window !== 'undefined') {
             try {
               localStorage.setItem('cached_user', JSON.stringify({
-                user: typedSessionUser,
+                user: serializedUser,
                 timestamp: Date.now(),
               }));
             } catch {
@@ -204,7 +206,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 status: true,
               };
 
-              setUser(convertedUser);
+              // Ensure complete serialization by parsing and stringifying
+              const serializedUser = JSON.parse(JSON.stringify(convertedUser)) as AuthenticatedUser;
+              setUser(serializedUser);
               setIsSessionValid(true);
               
               // Cache user data for faster subsequent loads
@@ -293,7 +297,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             registration: new Date().toISOString(),
             status: true,
           };
-          setUser(convertedUser);
+          // Ensure complete serialization by parsing and stringifying
+          const serializedUser = JSON.parse(JSON.stringify(convertedUser)) as AuthenticatedUser;
+          setUser(serializedUser);
         }
       } else {
         // For session-based user
@@ -341,16 +347,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     window.location.href = redirectUrl;
   };
 
-  // Always render the same structure, but conditionally show content
+  // Always render the same structure to maintain consistent hook calls
   return (
     <AuthContext.Provider
       value={{ user, setUser, loading, logout, isSessionValid, refreshUser }}
     >
-      {!mounted ? (
-        <div style={{ visibility: 'hidden' }}>{children}</div>
-      ) : (
-        children
-      )}
+      {children}
     </AuthContext.Provider>
   );
 };

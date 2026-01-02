@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear User Cache - CAALM Solutions</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button.success {
+            background: #48bb78;
+        }
+        button.success:hover {
+            background: #38a169;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            display: block;
+        }
+        .status.info {
+            background: #bee3f8;
+            color: #2c5282;
+            display: block;
+        }
+        code {
+            background: #f7fafc;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        ul {
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🧹 Clear User Cache</h1>
+        <p>This page will help you clear all cached user data to fix role routing issues.</p>
+        
+        <h3>What will be cleared:</h3>
+        <ul>
+            <li><code>localStorage.cached_user</code> - Cached user profile</li>
+            <li><code>localStorage.session</code> - Session data</li>
+            <li><code>sessionStorage</code> - All temporary data</li>
+            <li>All cookies for this domain</li>
+        </ul>
+
+        <button onclick="clearAllCache()">🗑️ Clear All Cache</button>
+        <button onclick="goToLogin()" style="background: #48bb78;">✅ Go to Login Page</button>
+
+        <div id="status" class="status"></div>
+
+        <h3 style="margin-top: 30px;">Manual Steps (if needed):</h3>
+        <ol style="line-height: 1.8;">
+            <li>Press <code>F12</code> to open Developer Tools</li>
+            <li>Go to the <strong>Application</strong> tab</li>
+            <li>Under <strong>Storage</strong>, click <strong>Clear site data</strong></li>
+            <li>Press <code>Ctrl + Shift + R</code> (hard refresh)</li>
+            <li>Sign in again</li>
+        </ol>
+    </div>
+
+    <script>
+        function clearAllCache() {
+            const status = document.getElementById('status');
+            
+            try {
+                // Clear localStorage
+                localStorage.removeItem('cached_user');
+                localStorage.removeItem('session');
+                localStorage.clear();
+                
+                // Clear sessionStorage
+                sessionStorage.clear();
+                
+                // Clear cookies
+                const cookies = document.cookie.split(";");
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i];
+                    const eqPos = cookie.indexOf("=");
+                    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+                }
+                
+                status.className = 'status success';
+                status.innerHTML = '✅ <strong>Success!</strong> All cache has been cleared. You can now sign in again.';
+                
+                console.log('✅ Cache cleared successfully');
+            } catch (error) {
+                status.className = 'status info';
+                status.innerHTML = '⚠️ Partial clear. Please use the manual steps below.';
+                console.error('Error clearing cache:', error);
+            }
+        }
+
+        function goToLogin() {
+            // Clear first, then redirect
+            clearAllCache();
+            setTimeout(() => {
+                window.location.href = '/sign-in';
+            }, 1000);
+        }
+
+        // Show info on load
+        window.addEventListener('load', () => {
+            const status = document.getElementById('status');
+            status.className = 'status info';
+            status.innerHTML = '💡 Click the button above to clear all cached data, then sign in again.';
+        });
+    </script>
+</body>
+</html>

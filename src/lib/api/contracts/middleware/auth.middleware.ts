@@ -13,13 +13,18 @@ import {
 export async function requireAuth(
   request: NextRequest
 ): Promise<ReturnType<typeof unauthorizedResponse> | null> {
-  const user = await getCurrentUser();
+  try {
+    const user = await getCurrentUser();
 
-  if (!user) {
-    return unauthorizedResponse('Authentication required');
+    if (!user) {
+      return unauthorizedResponse('Authentication required');
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error in requireAuth middleware:', error);
+    return unauthorizedResponse('Authentication failed');
   }
-
-  return null;
 }
 
 /**

@@ -2,6 +2,8 @@
  * Utility functions for dashboard redirects based on user roles
  */
 
+import { getHighestPriorityRole } from '@/lib/utils/role-priority';
+
 /**
  * Map role names to dashboard URLs
  */
@@ -10,6 +12,7 @@ const ROLE_TO_DASHBOARD_MAP: Record<string, string> = {
   'Organization Admin': '/dashboard/organizationadmin',
   'Department Manager': '/dashboard/departmentmanager',
   Viewer: '/dashboard/viewer',
+  IT: '/dashboard/it',
 };
 
 // Client-side cache for dashboard URLs (5 minute TTL)
@@ -53,19 +56,12 @@ export async function getDashboardUrlForUser(
 
     let dashboardUrl = '/dashboard';
     if (data.success && data.data?.roles && data.data.roles.length > 0) {
-      // Get the first role name (users typically have one primary role)
-      const roleName = data.data.roles[0]?.name;
+      // Convert role objects to the format expected by getHighestPriorityRole
+      const roles = data.data.roles.map((r: any) => ({ roleName: r.name }));
+      const selectedRole = getHighestPriorityRole(roles);
 
-      if (roleName && ROLE_TO_DASHBOARD_MAP[roleName]) {
-        dashboardUrl = ROLE_TO_DASHBOARD_MAP[roleName];
-      } else {
-        // If role name doesn't match, try to find any matching role
-        for (const role of data.data.roles) {
-          if (role.name && ROLE_TO_DASHBOARD_MAP[role.name]) {
-            dashboardUrl = ROLE_TO_DASHBOARD_MAP[role.name];
-            break;
-          }
-        }
+      if (selectedRole && ROLE_TO_DASHBOARD_MAP[selectedRole]) {
+        dashboardUrl = ROLE_TO_DASHBOARD_MAP[selectedRole];
       }
     }
 

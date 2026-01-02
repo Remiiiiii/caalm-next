@@ -48,11 +48,14 @@ export const evaluateCalendarPermission = async ({
     };
   }
 
-  // Get user's role from database
+  // Get user's role from database (prioritize highest role)
   const defaultOrg = await getUserDefaultOrganization(user.$id);
   const userRoles = defaultOrg ? await getUserRoles(user.$id, defaultOrg.orgId) : [];
-  const roleName = userRoles[0]?.roleName || '';
   
+  // Import role priority helper
+  const { getHighestPriorityRole } = await import('@/lib/utils/role-priority');
+  const roleName = getHighestPriorityRole(userRoles) || '';
+
   // Map new RBAC roles to legacy calendar roles for compatibility
   // This is temporary until calendar permissions are fully migrated
   let calendarRole: UserRole = 'viewer';

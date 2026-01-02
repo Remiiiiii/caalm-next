@@ -383,7 +383,13 @@ class NotificationService {
       };
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
-      throw new Error('Failed to fetch notifications');
+      // Return empty result instead of throwing to prevent API failures
+      return {
+        data: [],
+        total: 0,
+        page,
+        limit,
+      };
     }
   }
 
@@ -816,14 +822,43 @@ class NotificationService {
   async getNotificationStats(userId: string): Promise<NotificationStats> {
     try {
       const tablesDB = await this.getTablesDB();
-      // Get all notifications for the user
-      const allNotifications = await tablesDB.listRows({
+      
+      // Resolve both docId and accountId (same as getNotifications)
+      const { docId, accountId } = await this.resolveUserIds(userId);
+      
+      // Get all notifications for the user with docId
+      const docIdResponse = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: appwriteConfig.notificationsCollectionId || 'notifications',
-        queries: [Query.equal('userId', userId)],
+        queries: [Query.equal('userId', docId)],
       });
 
-      const notifications = allNotifications.rows as unknown as Notification[];
+      let allNotifications = [...(docIdResponse.rows || [])];
+      
+      // If we have an accountId that's different from docId, also query for it
+      if (accountId && accountId !== docId) {
+        try {
+          const accountIdResponse = await tablesDB.listRows({
+            databaseId: appwriteConfig.databaseId || 'default-db',
+            tableId: appwriteConfig.notificationsCollectionId || 'notifications',
+            queries: [Query.equal('userId', accountId)],
+          });
+          
+          // Merge and deduplicate
+          const existingIds = new Set(allNotifications.map((n: any) => n.$id));
+          const uniqueAccountIdNotifications = (accountIdResponse.rows || []).filter(
+            (n: any) => !existingIds.has(n.$id)
+          );
+          allNotifications = [...allNotifications, ...uniqueAccountIdNotifications];
+        } catch (accountIdError) {
+          console.warn(
+            '[SERVER] Could not query notification stats by accountId:',
+            accountIdError
+          );
+        }
+      }
+
+      const notifications = allNotifications as unknown as Notification[];
 
       // Calculate stats
       const total = notifications.length;
@@ -853,7 +888,19 @@ class NotificationService {
       };
     } catch (error) {
       console.error('Failed to get notification stats:', error);
-      throw new Error('Failed to get notification stats');
+      // Return empty stats instead of throwing to prevent API failures
+      return {
+        total: 0,
+        read: 0,
+        unread: 0,
+        byPriority: {
+          urgent: 0,
+          high: 0,
+          medium: 0,
+          low: 0,
+        },
+        byType: {},
+      };
     }
   }
 

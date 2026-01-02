@@ -483,7 +483,16 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const accountId = await getCurrentUserId();
+    let accountId: string;
+    try {
+      accountId = await getCurrentUserId();
+    } catch (authError) {
+      console.error('Error getting current user ID:', authError);
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
     if (!accountId) {
       return NextResponse.json(
@@ -493,7 +502,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user by account ID to get the user's $id (userId)
-    const user = await getUserByAccountId(accountId);
+    let user;
+    try {
+      user = await getUserByAccountId(accountId);
+    } catch (userError) {
+      console.error('Error getting user by account ID:', userError);
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
     if (!user) {
       return NextResponse.json(
         { success: false, message: 'User not found' },

@@ -59,10 +59,16 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 
 export const useOrganization = () => {
   const context = useContext(OrganizationContext);
-  if (!context) {
-    throw new Error(
-      'useOrganization must be used within an OrganizationProvider'
-    );
+  
+  // Always return the same structure to ensure consistent hook calls
+  // Don't throw - return default values instead
+  if (context) {
+    return context;
   }
-  return context;
+  
+  return {
+    orgId: null,
+    setOrgId: () => undefined,
+    loading: true,
+  };
 };

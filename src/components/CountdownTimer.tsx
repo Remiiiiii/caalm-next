@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertTriangle, Calendar } from 'lucide-react';
+import { AlarmClock, AlertTriangle, Calendar } from 'lucide-react';
 
 interface CountdownTimerProps {
   targetDate: string; // ISO date string
@@ -195,7 +195,7 @@ const CountdownTimer = ({
                   className={`${sizeClasses.icon} ${colors.icon}`}
                 />
               ) : (
-                <Clock className={`${sizeClasses.icon} ${colors.icon}`} />
+                <AlarmClock className={`${sizeClasses.icon} ${colors.icon}`} />
               )}
             </>
           )}

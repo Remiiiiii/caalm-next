@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
     const { tablesDB } = await createAdminClient();
 
     // Fetch all contracts from the database with daysUntilExpiry
-    const contractsResult = await tablesDB.listRows({
+    let contractsResult;
+    try {
+      contractsResult = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId!,
       tableId: appwriteConfig.contractsCollectionId!,
       queries: [
@@ -29,6 +31,11 @@ export async function GET(request: NextRequest) {
         Query.orderAsc('contractExpiryDate'),
       ],
     });
+    } catch (dbError) {
+      console.error('Error querying contracts from database:', dbError);
+      // Return empty array instead of error to prevent API failures
+      return successResponse([], { requestId });
+    }
 
     // Map contracts to include all necessary fields for UIFileDoc compatibility
     const contracts = contractsResult.rows.map((contract: any) => ({
@@ -55,6 +62,7 @@ export async function GET(request: NextRequest) {
       contractName: contract.contractName || 'Unnamed Contract',
       contractOwnerId: contract.contractOwnerId,
       contractExpiryDate: contract.contractExpiryDate,
+      isExpired: contract.isExpired || false, // Include isExpired from database
       status: contract.status,
       contractType: contract.contractType,
       amount: contract.amount,
