@@ -8,8 +8,6 @@ import {
   AlertTriangle,
   Clock,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   Settings,
   Eye,
   EyeOff,
@@ -51,7 +49,7 @@ interface ContractExpiryAlertsWidgetProps {
 
 const ContractExpiryAlertsWidget = ({
   className = '',
-  maxVisible = 3,
+  maxVisible = 2,
   showSettings = true,
   compact = false,
   contracts: propsContracts,
@@ -118,8 +116,6 @@ const ContractExpiryAlertsWidget = ({
     updateExpiredContracts();
   }, []); // Empty dependency array - only run once on mount
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [showExpired, setShowExpired] = useState(true);
   const [filterDays, setFilterDays] = useState(30); // Default: Show contracts expiring within 30 days
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -183,7 +179,8 @@ const ContractExpiryAlertsWidget = ({
     }
   }, []);
 
-  // Filter and sort contracts by expiry urgency
+  // Filter contracts to show those expiring within the selected filter period
+  // Implement infinite scroll - show all filtered contracts
   const filteredContracts = useMemo(() => {
     if (!contracts || contracts.length === 0) return [];
 
@@ -199,35 +196,49 @@ const ContractExpiryAlertsWidget = ({
 
         // Calculate days until expiry once
         const daysUntilExpiry = getDaysUntilExpiry(contract);
-        
-        // Check if contract is expired using isExpired from database or date calculation
-        // A contract is expired if days <= 0 (includes contracts expiring today)
-        const isContractExpired =
-          contract.isExpired !== undefined
-            ? contract.isExpired === true
-            : daysUntilExpiry <= 0;
 
-        // Exclude expired contracts if showExpired is false
-        if (isContractExpired && !showExpired) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[ContractExpiryAlertsWidget] Filtering out expired contract:', {
-              id: contract.$id,
-              name: contract.contractName,
-              isExpired: contract.isExpired,
-              daysUntilExpiry,
-              showExpired,
-            });
-          }
+        // Check if contract is expired - ONLY use database flag
+        // Ignore date calculation to avoid inconsistencies with database state
+        const isExpired = contract.isExpired === true;
+
+        // Special filter value -1 means "Expired" filter is selected
+        if (filterDays === -1) {
+          // Only show expired contracts
+          return isExpired;
+        }
+
+        // For all other filter values, exclude expired contracts
+        if (isExpired) {
           return false;
         }
 
-        // Filter by days threshold for non-expired contracts
-        // Expired contracts are always included if showExpired is true
-        if (!isContractExpired) {
-          if (daysUntilExpiry > filterDays) return false;
+        // Tiered filter ranges:
+        // 30 days: 0-30 days
+        // 60 days: 31-60 days
+        // 90 days: 61-90 days
+        // 180 days (6 months): 91-180 days
+        // 365 days (1 year): 181-365 days
+        let minDays = 0;
+        let maxDays = filterDays;
+
+        if (filterDays === 30) {
+          minDays = 0;
+          maxDays = 30;
+        } else if (filterDays === 60) {
+          minDays = 31;
+          maxDays = 60;
+        } else if (filterDays === 90) {
+          minDays = 61;
+          maxDays = 90;
+        } else if (filterDays === 180) {
+          minDays = 91;
+          maxDays = 180;
+        } else if (filterDays === 365) {
+          minDays = 181;
+          maxDays = 365;
         }
 
-        return true;
+        return daysUntilExpiry >= minDays && daysUntilExpiry <= maxDays;
       })
       .sort((a: Contract, b: Contract) => {
         const daysA = getDaysUntilExpiry(a);
@@ -238,52 +249,63 @@ const ContractExpiryAlertsWidget = ({
     // Debug logging in development
     if (process.env.NODE_ENV === 'development') {
       const expiredInList = filtered.filter((c: Contract) => {
-        const isExpired = c.isExpired !== undefined
-          ? c.isExpired === true
-          : getDaysUntilExpiry(c) <= 0;
-        return isExpired;
+        const days = getDaysUntilExpiry(c);
+        const isExpiredByDate = days < 0;
+        const isExplicitlyExpired = c.isExpired === true;
+        return isExpiredByDate || isExplicitlyExpired;
+      });
+      const expiringInList = filtered.filter((c: Contract) => {
+        const days = getDaysUntilExpiry(c);
+        const isExpiredByDate = days < 0;
+        const isExplicitlyExpired = c.isExpired === true;
+        const isExpired = isExpiredByDate || isExplicitlyExpired;
+        return !isExpired && days >= 0 && days <= filterDays;
       });
       console.log('[ContractExpiryAlertsWidget] Filtered contracts:', {
         total: contracts.length,
         filtered: filtered.length,
         expiredInFiltered: expiredInList.length,
-        showExpired,
-        expiredContracts: expiredInList.map((c: Contract) => ({
+        expiringInFiltered: expiringInList.length,
+        filterDays,
+        allContracts: contracts.map((c: Contract) => ({
           id: c.$id,
           name: c.contractName,
+          days: getDaysUntilExpiry(c),
           isExpired: c.isExpired,
-          daysUntilExpiry: getDaysUntilExpiry(c),
-          contractExpiryDate: c.contractExpiryDate,
+          isExpiredByDate: getDaysUntilExpiry(c) < 0,
+          isInFilterRange:
+            getDaysUntilExpiry(c) >= 0 && getDaysUntilExpiry(c) <= filterDays,
+        })),
+        filteredContracts: filtered.map((c: Contract) => ({
+          id: c.$id,
+          name: c.contractName,
+          days: getDaysUntilExpiry(c),
+          isExpired: c.isExpired,
         })),
       });
     }
 
     return filtered;
-  }, [contracts, showExpired, filterDays, getDaysUntilExpiry]);
+  }, [contracts, filterDays, getDaysUntilExpiry]);
 
-  // Calculate expired count from ALL contracts using isExpired from database
-  // This shows the total expired count regardless of visibility filter
+  // Calculate expired count from ALL contracts
+  // ONLY use database isExpired flag as the source of truth
   const expiredCountFromAll = useMemo(() => {
     if (!contracts || contracts.length === 0) return 0;
     return contracts.filter((contract: Contract) => {
-      // Use isExpired from database if available, otherwise fallback to date calculation
-      if (contract.isExpired !== undefined) {
-        return contract.isExpired === true;
-      }
-      // Fallback: calculate from expiry date if isExpired is not set
-      // A contract is expired if days <= 0 (includes contracts expiring today)
-      const days = getDaysUntilExpiry(contract);
-      return days <= 0;
+      // Only count contracts explicitly marked as expired in the database
+      return contract.isExpired === true;
     }).length;
-  }, [contracts, getDaysUntilExpiry]);
+  }, [contracts]);
 
-  // Calculate expiring count from ALL contracts (respects filterDays setting)
-  // This shows contracts expiring within the selected filter period (e.g., 30 days)
+  // Calculate expiring count from ALL contracts
+  // This shows contracts expiring within the selected filter period
   // Excludes contracts that have already expired
   const expiringCountFromFiltered = useMemo(() => {
     if (!contracts || contracts.length === 0) return 0;
-    return contracts.filter((contract: Contract) => {
-      // Must have expiry date
+
+    const expiringContracts = contracts.filter((contract: Contract) => {
+      // Must have expiry date or daysUntilExpiry
       if (
         !contract.contractExpiryDate &&
         contract.daysUntilExpiry === undefined
@@ -291,86 +313,86 @@ const ContractExpiryAlertsWidget = ({
         return false;
       }
 
-      // Check if contract is expired using isExpired from database or date calculation
-      // A contract is expired if days <= 0 (includes contracts expiring today)
-      const isContractExpired =
-        contract.isExpired !== undefined
-          ? contract.isExpired === true
-          : getDaysUntilExpiry(contract) <= 0;
+      // Calculate days until expiry
+      const daysUntilExpiry = getDaysUntilExpiry(contract);
+
+      // Skip contracts with invalid expiry dates (Infinity means no valid date)
+      if (daysUntilExpiry === Infinity || daysUntilExpiry === -Infinity) {
+        return false;
+      }
+
+      // Check if contract is expired - ONLY use database flag
+      // Ignore date calculation to avoid inconsistencies with database state
+      const isExpired = contract.isExpired === true;
 
       // Skip expired contracts
-      if (isContractExpired) return false;
+      if (isExpired) {
+        return false;
+      }
 
-      // Count contracts that are expiring (not expired) within the filter period
-      // Must have days > 0 (not expired, not expiring today) and <= filterDays
-      const days = getDaysUntilExpiry(contract);
-      return days > 0 && days <= filterDays;
-    }).length;
+      // Tiered filter ranges:
+      // 30 days: 0-30 days
+      // 60 days: 31-60 days
+      // 90 days: 61-90 days
+      // 180 days (6 months): 91-180 days
+      // 365 days (1 year): 181-365 days
+      let minDays = 0;
+      let maxDays = filterDays;
+
+      if (filterDays === 30) {
+        minDays = 0;
+        maxDays = 30;
+      } else if (filterDays === 60) {
+        minDays = 31;
+        maxDays = 60;
+      } else if (filterDays === 90) {
+        minDays = 61;
+        maxDays = 90;
+      } else if (filterDays === 180) {
+        minDays = 91;
+        maxDays = 180;
+      } else if (filterDays === 365) {
+        minDays = 181;
+        maxDays = 365;
+      }
+
+      return daysUntilExpiry >= minDays && daysUntilExpiry <= maxDays;
+    });
+
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ContractExpiryAlertsWidget] Expiring count calculation:', {
+        totalContracts: contracts.length,
+        filterDays,
+        expiringCount: expiringContracts.length,
+        contracts: contracts.map((c: Contract) => {
+          const days = getDaysUntilExpiry(c);
+          const isExpiredByDate = days < 0;
+          const isExpired = c.isExpired === true;
+          const hasValidDate = days !== Infinity && days !== -Infinity;
+          const isInRange = hasValidDate && days >= 0 && days <= filterDays;
+          const willBeIncluded = hasValidDate && !isExpired && isInRange;
+
+          return {
+            id: c.$id,
+            name: c.contractName,
+            contractExpiryDate: c.contractExpiryDate,
+            daysUntilExpiry: days,
+            isExpiredDB: c.isExpired,
+            isExpiredByDate,
+            isExpired,
+            hasValidDate,
+            isInRange,
+            willBeIncluded,
+          };
+        }),
+      });
+    }
+
+    return expiringContracts.length;
   }, [contracts, filterDays, getDaysUntilExpiry]);
 
-  // Debug logging (remove in production) - after all calculations
-  useEffect(() => {
-    if (
-      process.env.NODE_ENV === 'development' &&
-      contracts &&
-      contracts.length > 0
-    ) {
-      const sampleContract = contracts[0];
-      console.log('ContractExpiryAlertsWidget - Debug:', {
-        totalContracts: contracts.length,
-        expiredCountFromAll,
-        expiringCountFromFiltered,
-        sampleContract: sampleContract
-          ? {
-              id: sampleContract.$id,
-              name: sampleContract.contractName,
-              expiryDate: sampleContract.contractExpiryDate,
-              isExpired: sampleContract.isExpired,
-              daysUntilExpiry: getDaysUntilExpiry(sampleContract),
-            }
-          : null,
-      });
-    }
-  }, [
-    contracts,
-    expiredCountFromAll,
-    expiringCountFromFiltered,
-    getDaysUntilExpiry,
-  ]);
-
-  // Get contracts to display based on pagination
-  const visibleContracts = useMemo(() => {
-    const start = currentIndex;
-    const end = start + maxVisible;
-    return filteredContracts.slice(start, end);
-  }, [filteredContracts, currentIndex, maxVisible]);
-
-  // Reset pagination when filters change
-  useEffect(() => {
-    setCurrentIndex(0);
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[ContractExpiryAlertsWidget] Filter changed:', {
-        showExpired,
-        filterDays,
-        filteredContractsCount: filteredContracts.length,
-      });
-    }
-  }, [showExpired, filterDays, filteredContracts.length]);
-
-  const canGoNext = currentIndex + maxVisible < filteredContracts.length;
-  const canGoPrev = currentIndex > 0;
-
-  const handleNext = () => {
-    if (canGoNext) {
-      setCurrentIndex(currentIndex + maxVisible);
-    }
-  };
-
-  const handlePrev = () => {
-    if (canGoPrev) {
-      setCurrentIndex(Math.max(0, currentIndex - maxVisible));
-    }
-  };
+  // No pagination - show all filtered contracts in infinite scroll
 
   const getUrgencyStats = () => {
     const stats = {
@@ -381,17 +403,17 @@ const ContractExpiryAlertsWidget = ({
     };
 
     filteredContracts.forEach((contract: Contract) => {
-      // Use isExpired from database if available, otherwise calculate from date
-      // A contract is expired if days <= 0 (includes contracts expiring today)
-      const isContractExpired =
-        contract.isExpired !== undefined
-          ? contract.isExpired === true
-          : getDaysUntilExpiry(contract) <= 0;
+      // Check if contract is expired - prioritize date calculation
+      // Contracts expiring today (days = 0) should be counted as expiring, not expired
+      const days = getDaysUntilExpiry(contract);
+      const isContractExpired = days < 0; // Only truly expired if days < 0
+      const isExplicitlyExpired = contract.isExpired === true;
+      const isExpired = isContractExpired || isExplicitlyExpired;
 
-      if (isContractExpired) {
+      if (isExpired) {
         stats.expired++;
       } else {
-        const days = getDaysUntilExpiry(contract);
+        // Include contracts expiring today (days = 0) in the urgency stats
         if (days <= 7) stats.critical++;
         else if (days <= 30) stats.warning++;
         else stats.attention++;
@@ -446,40 +468,16 @@ const ContractExpiryAlertsWidget = ({
     }
 
     return (
-      <Card className="glass-card w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]">
+      <Card className="glass-card w-full h-[200px] sm:h-[250px] lg:h-[300px] flex flex-col overflow-hidden">
         <div className="glass-card-cap" />
-        <CardHeader className="pb-2 pt-6 px-4">
-          <div className="flex items-center gap-2 mb-3 relative">
+        <CardHeader className="pb-2 pt-6 px-4 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-3">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-slate-600" />
               <CardTitle className="text-sm font-semibold sidebar-gradient-text">
                 Contract Expiry Alerts
               </CardTitle>
             </div>
-            {/* Alarm Controls - positioned absolutely to not affect layout */}
-            {isPlaying && (
-              <div className="absolute right-0 flex items-center gap-1 bg-white/20 rounded-full px-2 py-1 backdrop-blur-sm border border-white/20">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => silenceAlarm()}
-                  className="h-7 bg-white/90 hover:bg-white/100 rounded-full px-2 py-1 backdrop-blur-md border border-white/20"
-                  title="Silence alarm for 1 hour"
-                >
-                  <VolumeOff className="h-3 w-3 text-red" />
-                  <span className="text-xs text-slate-600">Silence</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={dismissAlarm}
-                  className="h-7 w-7 p-0 bg-white/90 hover:bg-white/100 rounded-full px-2 py-1 backdrop-blur-md border border-white/20"
-                  title="Dismiss alarm for 24 hours"
-                >
-                  <Minimize2 className="h-3 w-3 text-slate-600" />
-                </Button>
-              </div>
-            )}
           </div>
 
           {/* Filter Controls */}
@@ -498,37 +496,15 @@ const ContractExpiryAlertsWidget = ({
                 <option value={90}>90 days</option>
                 <option value={180}>6 months</option>
                 <option value={365}>1 year</option>
+                <option value={-1}>Expired</option>
               </select>
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  const newValue = !showExpired;
-                  setShowExpired(newValue);
-                  if (process.env.NODE_ENV === 'development') {
-                    console.log('[ContractExpiryAlertsWidget] Toggling showExpired:', {
-                      from: showExpired,
-                      to: newValue,
-                    });
-                  }
-                }}
-                className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20 min-w-[140px] cursor-pointer hover:bg-white/30 transition-colors"
-              >
-                {showExpired ? (
-                  <EyeOff className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
-                ) : (
-                  <Eye className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
-                )}
-                <span className="text-xs text-slate-600 font-medium">
-                  {showExpired ? 'Hide' : 'Show'} Expired
-                </span>
-              </button>
-
               {/* Contract Status Display */}
               <div className="flex items-center gap-2">
-                {expiringCountFromFiltered > 0 && (
-                  <div className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-2 py-1 backdrop-blur-sm border border-white/20  cursor-pointer hover:bg-white/30 transition-colors">
+                {expiringCountFromFiltered > 0 && filterDays !== -1 && (
+                  <div className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-2 py-1 backdrop-blur-sm border border-white/20  hover:bg-white/30 transition-colors">
                     <Bell
                       className={`h-3.5 w-3.5 flex-shrink-0 ${
                         isPlaying ? 'text-orange animate-pulse' : 'text-orange'
@@ -548,24 +524,65 @@ const ContractExpiryAlertsWidget = ({
                   </div>
                 )}
               </div>
+
+              {/* Alarm Controls - positioned to the right of expired count */}
+              {isPlaying && (
+                <div className="flex items-center gap-1 bg-white/20 rounded-full px-2 py-1 backdrop-blur-sm border border-white/20">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => silenceAlarm()}
+                    className="h-7 bg-white/90 hover:bg-white/100 rounded-full px-2 py-1 backdrop-blur-md border border-white/20"
+                    title="Silence alarm for 1 hour"
+                  >
+                    <VolumeOff className="h-3 w-3 text-red" />
+                    <span className="text-xs text-slate-600">Silence</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={dismissAlarm}
+                    className="h-7 w-7 p-0 bg-white/90 hover:bg-white/100 rounded-full px-2 py-1 backdrop-blur-md border border-white/20"
+                    title="Dismiss alarm for 24 hours"
+                  >
+                    <Minimize2 className="h-3 w-3 text-slate-600" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="px-4 pb-2">
+        <CardContent className="px-4 pb-2 flex-1 flex flex-col min-h-0 overflow-hidden">
           {filteredContracts.length === 0 ? (
-            <div className="text-center py-6">
+            <div className="text-center py-6 flex-1 flex flex-col items-center justify-center">
               <Calendar className="h-8 w-8 text-slate-300 mx-auto mb-2" />
               <p className="text-sm text-slate-500 mb-1">
-                No contracts expiring soon
+                {filterDays === -1
+                  ? 'No expired contracts'
+                  : `No contracts expiring ${
+                      filterDays === 30
+                        ? 'within 30 days'
+                        : filterDays === 60
+                        ? 'in 31-60 days'
+                        : filterDays === 90
+                        ? 'in 61-90 days'
+                        : filterDays === 180
+                        ? 'in 91-180 days (6 months)'
+                        : filterDays === 365
+                        ? 'in 181-365 days (1 year)'
+                        : `within ${filterDays} days`
+                    }`}
               </p>
               <p className="text-xs text-slate-400">
-                All contracts are within safe periods
+                {filterDays === -1
+                  ? 'All contracts are active'
+                  : 'All contracts are within safe periods'}
               </p>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[190px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-              {visibleContracts.map((contract: Contract) => (
+            <div className="space-y-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent min-h-0">
+              {filteredContracts.map((contract: Contract) => (
                 <div
                   key={contract.$id}
                   className="bg-white/20 rounded-lg p-2 backdrop-blur-sm border border-white/20 hover:bg-white/30 transition-colors duration-200"
@@ -578,50 +595,6 @@ const ContractExpiryAlertsWidget = ({
                   />
                 </div>
               ))}
-
-              {/* Pagination indicator */}
-              {filteredContracts.length > maxVisible && (
-                <div className="text-center pt-1">
-                  <span className="text-xs text-slate-500">
-                    {Math.min(
-                      currentIndex + maxVisible,
-                      filteredContracts.length
-                    )}{' '}
-                    of {filteredContracts.length}
-                  </span>
-                  <div className="flex justify-center space-x-1 mt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setCurrentIndex(Math.max(0, currentIndex - maxVisible))
-                      }
-                      disabled={currentIndex === 0}
-                      className="h-5 w-5 p-0"
-                    >
-                      <ChevronLeft className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setCurrentIndex(
-                          Math.min(
-                            filteredContracts.length - maxVisible,
-                            currentIndex + maxVisible
-                          )
-                        )
-                      }
-                      disabled={
-                        currentIndex + maxVisible >= filteredContracts.length
-                      }
-                      className="h-5 w-5 p-0"
-                    >
-                      <ChevronRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </CardContent>
@@ -760,24 +733,11 @@ const ContractExpiryAlertsWidget = ({
                 <option value={90}>90 days</option>
                 <option value={180}>6 months</option>
                 <option value={365}>1 year</option>
+                <option value={-1}>Expired</option>
               </select>
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowExpired(!showExpired)}
-                className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-2 py-1 backdrop-blur-sm border border-white/20 min-w-[140px] cursor-pointer hover:bg-white/30 transition-colors"
-              >
-                {showExpired ? (
-                  <EyeOff className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
-                ) : (
-                  <Eye className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
-                )}
-                <span className="text-xs text-slate-600 font-medium">
-                  {showExpired ? 'Hide' : 'Show'} Expired
-                </span>
-              </button>
-
               {/* Alarm Controls */}
               {isPlaying && (
                 <div className="flex items-center gap-1">
@@ -804,7 +764,7 @@ const ContractExpiryAlertsWidget = ({
               )}
               {/* Contract Status Display */}
               <div className="flex items-center gap-2">
-                {expiringCountFromFiltered > 0 && (
+                {expiringCountFromFiltered > 0 && filterDays !== -1 && (
                   <div className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
                     <Bell
                       className={`h-3.5 w-3.5 flex-shrink-0 ${
@@ -836,63 +796,28 @@ const ContractExpiryAlertsWidget = ({
             <div className="text-center py-8">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500 text-sm">
-                No contracts expiring soon
+                {filterDays === -1
+                  ? 'No expired contracts'
+                  : 'No contracts expiring soon'}
               </p>
               <p className="text-gray-400 text-xs mt-1">
-                All contracts are within safe expiry periods
+                {filterDays === -1
+                  ? 'All contracts are active'
+                  : 'All contracts are within safe expiry periods'}
               </p>
             </div>
           ) : (
-            <>
-              {/* Countdown Timers */}
-              <div className="space-y-4">
-                {visibleContracts.map((contract: Contract) => (
-                  <CountdownTimer
-                    key={contract.$id}
-                    targetDate={contract.contractExpiryDate || ''}
-                    contractName={contract.contractName}
-                    size="sm"
-                    className="transition-all duration-200 hover:shadow-md"
-                  />
-                ))}
-              </div>
-
-              {/* Pagination Controls */}
-              {filteredContracts.length > maxVisible && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/20">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handlePrev}
-                    disabled={!canGoPrev}
-                    className="h-8 px-2"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
-                  </Button>
-
-                  <span className="text-xs text-slate-600">
-                    {currentIndex + 1}-
-                    {Math.min(
-                      currentIndex + maxVisible,
-                      filteredContracts.length
-                    )}{' '}
-                    of {filteredContracts.length}
-                  </span>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleNext}
-                    disabled={!canGoNext}
-                    className="h-8 px-2"
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              )}
-            </>
+            <div className="space-y-4 h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+              {filteredContracts.map((contract: Contract) => (
+                <CountdownTimer
+                  key={contract.$id}
+                  targetDate={contract.contractExpiryDate || ''}
+                  contractName={contract.contractName}
+                  size="sm"
+                  className="transition-all duration-200 hover:shadow-md"
+                />
+              ))}
+            </div>
           )}
         </CardContent>
       )}

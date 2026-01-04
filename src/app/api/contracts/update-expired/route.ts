@@ -43,8 +43,9 @@ async function updateExpiredContracts() {
       const expiryDate = new Date(year, month - 1, day);
       expiryDate.setHours(0, 0, 0, 0);
 
-      // Check if contract has expired (expiry date is in the past)
-      const isExpired = expiryDate < now;
+      // Check if contract has expired (expiry date is today or in the past)
+      // days <= 0 means the contract has expired
+      const isExpired = expiryDate <= now;
 
       if (isExpired && contract.isExpired !== true) {
         // Update the contract to mark it as expired
