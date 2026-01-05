@@ -1,8 +1,9 @@
+import { test } from '@playwright/test';
 import fs from 'fs';
 
 const authFile = 'tests/.auth/user.json';
 
-setup('authenticate', async ({ page }) => {
+test('authenticate', async ({ page }) => {
   // Navigate to the sign-in page
   await page.goto('/sign-in');
 
