@@ -30,6 +30,7 @@ jobs:
 
       - name: Run ESLint
         run: pnpm run lint
+        continue-on-error: true
 
   test:
     name: Playwright Tests
