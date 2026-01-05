@@ -10,7 +10,7 @@
     "build:prod": "NODE_ENV=production next build",
     "start": "next start",
     "start:prod": "NODE_ENV=production next start",
-    "lint": "eslint .",
+    "lint": "next lint",
     "test": "playwright test",
     "test:clean": "playwright test --reporter=html && rm -rf test-results",
     "test:ui": "playwright test --ui",
