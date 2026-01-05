@@ -6,7 +6,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: process.env.CI
+    ? [['html'], ['github']] // GitHub Actions reporter for CI
+    : 'html', // HTML reporter for local development
 
   // Reduce timeouts for faster feedback
   timeout: 15000, // 15s instead of default 30s
@@ -43,7 +45,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev',
+    command: 'pnpm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
