@@ -47,13 +47,30 @@ export const createSessionClient = async () => {
   };
 };
 
+/**
+ * Check if Appwrite configuration is complete
+ */
+export const isAppwriteConfigured = (): boolean => {
+  return !!(
+    appwriteConfig.endpointUrl &&
+    appwriteConfig.projectId &&
+    appwriteConfig.secretKey
+  );
+};
+
 export const createAdminClient = async () => {
-  if (
-    !appwriteConfig.endpointUrl ||
-    !appwriteConfig.projectId ||
-    !appwriteConfig.secretKey
-  ) {
-    throw new Error('Appwrite configuration is incomplete');
+  if (!isAppwriteConfigured()) {
+    const error = new Error('Appwrite configuration is incomplete');
+    // Add helpful context in test/CI environments
+    if (process.env.CI || process.env.NODE_ENV === 'test') {
+      (error as any).isTestEnvironment = true;
+      (error as any).missingConfig = {
+        endpointUrl: !appwriteConfig.endpointUrl,
+        projectId: !appwriteConfig.projectId,
+        secretKey: !appwriteConfig.secretKey,
+      };
+    }
+    throw error;
   }
 
   const client = new Client()
