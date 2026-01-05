@@ -9,7 +9,7 @@ import {
   Avatars,
   Messaging,
 } from 'node-appwrite';
-import { appwriteConfig } from './config';
+import { appwriteConfig, isAppwriteConfigured } from './config';
 import { cookies } from 'next/headers';
 
 export const createSessionClient = async () => {
@@ -45,17 +45,6 @@ export const createSessionClient = async () => {
       return new TablesDB(client);
     },
   };
-};
-
-/**
- * Check if Appwrite configuration is complete
- */
-export const isAppwriteConfigured = (): boolean => {
-  return !!(
-    appwriteConfig.endpointUrl &&
-    appwriteConfig.projectId &&
-    appwriteConfig.secretKey
-  );
 };
 
 export const createAdminClient = async () => {

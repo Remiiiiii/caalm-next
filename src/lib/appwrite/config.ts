@@ -109,3 +109,14 @@ export const appwriteConfig = {
   resourceBookingsCollectionId:
     getTestFallback('NEXT_PUBLIC_APPWRITE_RESOURCE_BOOKINGS_COLLECTION', 'test-resource-bookings'),
 };
+
+/**
+ * Check if Appwrite configuration is complete
+ */
+export const isAppwriteConfigured = (): boolean => {
+  return !!(
+    appwriteConfig.endpointUrl &&
+    appwriteConfig.projectId &&
+    appwriteConfig.secretKey
+  );
+};
