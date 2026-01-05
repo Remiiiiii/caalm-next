@@ -69,7 +69,7 @@ jobs:
 
       - name: Run Playwright tests
         run: pnpm test
-          env:
+        env:
           CI: true
           NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
           NEXT_PUBLIC_APPWRITE_PROJECT: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT }}
@@ -151,7 +151,7 @@ jobs:
 
       - name: Build application
         run: pnpm run build
-          env:
+        env:
           NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
           NEXT_PUBLIC_APPWRITE_PROJECT: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT }}
           NEXT_PUBLIC_APPWRITE_DATABASE: ${{ secrets.NEXT_PUBLIC_APPWRITE_DATABASE }}
