@@ -2,11 +2,8 @@
  * Integration tests for rate limiting middleware
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-// Note: This test requires the middleware to be exported
-// For now, we'll test the middleware logic indirectly
-// In a real scenario, you would import and test the middleware function
 
 // Mock dependencies
 vi.mock('@/lib/services/rate-limiter', () => ({
@@ -16,7 +13,11 @@ vi.mock('@/lib/services/rate-limiter', () => ({
 }));
 
 vi.mock('@/lib/api/rate-limit/identifier.util', () => ({
-  extractRateLimitIdentifier: vi.fn(),
+  extractRateLimitIdentifier: vi.fn(() => ({
+    type: 'ip',
+    value: '127.0.0.1',
+    priority: 1,
+  })),
   shouldBypassRateLimit: vi.fn(() => false),
 }));
 
@@ -26,20 +27,32 @@ vi.mock('@/lib/actions/user.actions', () => ({
 
 vi.mock('@/lib/services/rate-limiter-penalties', () => ({
   penaltyService: {
-    recordViolation: vi.fn(),
+    recordViolation: vi.fn(() => Promise.resolve()),
   },
 }));
 
 vi.mock('@/lib/services/rate-limit-monitoring', () => ({
   rateLimitMonitoring: {
-    recordCheck: vi.fn(),
-    logViolation: vi.fn(),
+    recordCheck: vi.fn(() => Promise.resolve()),
+    logViolation: vi.fn(() => Promise.resolve()),
   },
 }));
 
 describe('Rate Limit Middleware', () => {
-  beforeEach(() => {
+  let middleware: (request: NextRequest) => Promise<Response>;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    // Set environment variables before importing middleware
+    process.env.RATE_LIMIT_ENABLED = 'true';
+    process.env.NODE_ENV = 'production';
+    // Re-import middleware to pick up new env vars
+    const proxyModule = await import('@/proxy');
+    middleware = proxyModule.proxy;
+  });
+
+  afterEach(() => {
+    vi.resetModules();
   });
 
   it('should bypass non-API routes', async () => {

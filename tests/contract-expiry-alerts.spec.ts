@@ -52,7 +52,8 @@ test.describe('Contract Expiry Alerts Widget', () => {
       testInfo.skip();
       return;
     }
-    // Mock the contracts API endpoint
+
+    // Mock API endpoints BEFORE navigation
     await page.route('/api/contracts/all', async (route) => {
       await route.fulfill({
         status: 200,
@@ -64,7 +65,6 @@ test.describe('Contract Expiry Alerts Widget', () => {
       });
     });
 
-    // Mock the update-expired endpoint
     await page.route('/api/contracts/update-expired', async (route) => {
       await route.fulfill({
         status: 200,
@@ -73,9 +73,28 @@ test.describe('Contract Expiry Alerts Widget', () => {
       });
     });
 
-    // Navigate to a specific dashboard page that has the widget
-    // Using executive dashboard as it has the widget in both compact and full modes
-    await page.goto('/dashboard/superadmin', {
+    // Mock auth context by setting localStorage before navigation
+    // This simulates an authenticated user session
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        'cached_user',
+        JSON.stringify({
+          user: {
+            $id: 'test-user-id',
+            email: 'test@example.com',
+            name: 'Test User',
+            role: 'executive',
+          },
+          timestamp: Date.now(),
+        })
+      );
+      window.localStorage.setItem('auth-token', 'test-auth-token');
+      window.localStorage.setItem('user-email', 'test@example.com');
+      sessionStorage.setItem('authenticated', 'true');
+    });
+
+    // Navigate to real dashboard page
+    await page.goto('/dashboard/executive', {
       waitUntil: 'domcontentloaded',
       timeout: 30000,
     });
@@ -83,15 +102,30 @@ test.describe('Contract Expiry Alerts Widget', () => {
     // Wait for page to be interactive
     await page.waitForLoadState('domcontentloaded');
 
-    // Wait for authentication to complete (check for user-specific elements)
-    await page.waitForTimeout(1000);
+    // Wait a bit for React hydration and component rendering
+    await page.waitForTimeout(2000);
 
-    // Wait for the widget to appear with a more flexible selector
-    // The widget title appears in both compact and full modes
-    await page.waitForSelector('text=Contract Expiry Alerts', {
-      timeout: 15000,
-      state: 'visible',
-    });
+    // Wait for the widget to appear with retry logic
+    const widgetLocator = page.locator('text=Contract Expiry Alerts').first();
+
+    // Wait for widget to be attached to DOM first
+    await widgetLocator
+      .waitFor({
+        state: 'attached',
+        timeout: 15000,
+      })
+      .catch(() => {
+        // If not found, wait a bit more and try again
+        return page.waitForTimeout(2000);
+      });
+
+    // Scroll widget into view if needed
+    await widgetLocator
+      .scrollIntoViewIfNeeded({ timeout: 5000 })
+      .catch(() => {});
+
+    // Now wait for it to be visible
+    await expect(widgetLocator).toBeVisible({ timeout: 10000 });
   });
 
   test('should render contract expiry alerts widget', async ({ page }) => {

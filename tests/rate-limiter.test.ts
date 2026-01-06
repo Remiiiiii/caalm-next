@@ -4,11 +4,12 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RateLimiter } from '@/lib/services/rate-limiter';
-import { tokenBucketRefill, slidingWindowIncrement } from '@/lib/services/redis-rate-limit';
+import { tokenBucketConsume, slidingWindowIncrement } from '@/lib/services/redis-rate-limit';
 
 // Mock Redis operations
 vi.mock('@/lib/services/redis-rate-limit', () => ({
   tokenBucketRefill: vi.fn(),
+  tokenBucketConsume: vi.fn(),
   slidingWindowIncrement: vi.fn(),
   isBanned: vi.fn(() => Promise.resolve(false)),
 }));
@@ -36,10 +37,11 @@ describe('RateLimiter', () => {
 
   describe('Token Bucket Algorithm', () => {
     it('should allow requests when tokens are available', async () => {
-      const mockTokenBucketRefill = tokenBucketRefill as any;
-      mockTokenBucketRefill.mockResolvedValue({
-        tokens: 10,
-        lastRefill: Date.now(),
+      const mockTokenBucketConsume = tokenBucketConsume as any;
+      mockTokenBucketConsume.mockResolvedValue({
+        allowed: true,
+        remaining: 10,
+        resetTime: Math.floor(Date.now() / 1000) + 60,
       });
 
       const result = await rateLimiter.checkRateLimit({
@@ -55,10 +57,11 @@ describe('RateLimiter', () => {
     });
 
     it('should deny requests when no tokens available', async () => {
-      const mockTokenBucketRefill = tokenBucketRefill as any;
-      mockTokenBucketRefill.mockResolvedValue({
-        tokens: 0,
-        lastRefill: Date.now(),
+      const mockTokenBucketConsume = tokenBucketConsume as any;
+      mockTokenBucketConsume.mockResolvedValue({
+        allowed: false,
+        remaining: 0,
+        resetTime: Math.floor(Date.now() / 1000) + 60,
       });
 
       const result = await rateLimiter.checkRateLimit({
@@ -74,19 +77,20 @@ describe('RateLimiter', () => {
     });
 
     it('should refill tokens over time', async () => {
-      const now = Date.now();
-      const mockTokenBucketRefill = tokenBucketRefill as any;
+      const mockTokenBucketConsume = tokenBucketConsume as any;
       
       // Initial state: no tokens
-      mockTokenBucketRefill.mockResolvedValueOnce({
-        tokens: 0,
-        lastRefill: now - 2000, // 2 seconds ago
+      mockTokenBucketConsume.mockResolvedValueOnce({
+        allowed: false,
+        remaining: 0,
+        resetTime: Math.floor(Date.now() / 1000) + 60,
       });
 
       // After refill: should have tokens
-      mockTokenBucketRefill.mockResolvedValueOnce({
-        tokens: 5,
-        lastRefill: now,
+      mockTokenBucketConsume.mockResolvedValueOnce({
+        allowed: true,
+        remaining: 5,
+        resetTime: Math.floor(Date.now() / 1000) + 60,
       });
 
       const result1 = await rateLimiter.checkRateLimit({
@@ -158,13 +162,14 @@ describe('RateLimiter', () => {
 
   describe('Hybrid Approach', () => {
     it('should use both algorithms and take most restrictive result', async () => {
-      const mockTokenBucketRefill = tokenBucketRefill as any;
+      const mockTokenBucketConsume = tokenBucketConsume as any;
       const mockSlidingWindowIncrement = slidingWindowIncrement as any;
 
       // Token bucket allows
-      mockTokenBucketRefill.mockResolvedValue({
-        tokens: 10,
-        lastRefill: Date.now(),
+      mockTokenBucketConsume.mockResolvedValue({
+        allowed: true,
+        remaining: 10,
+        resetTime: Math.floor(Date.now() / 1000) + 60,
       });
 
       // Sliding window denies
