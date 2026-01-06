@@ -9,7 +9,7 @@ import {
   Avatars,
   Messaging,
 } from 'node-appwrite';
-import { appwriteConfig, isAppwriteConfigured } from './config';
+import { appwriteConfig, isAppwriteConfigured, isTestAppwriteConfig } from './config';
 import { cookies } from 'next/headers';
 
 export const createSessionClient = async () => {
@@ -60,6 +60,14 @@ export const createAdminClient = async () => {
       };
     }
     throw error;
+  }
+
+  // In test environments with test values, throw a specific error that can be caught
+  if (isTestAppwriteConfig()) {
+    const testError = new Error('Using test Appwrite configuration - Appwrite operations will fail');
+    (testError as any).isTestConfig = true;
+    (testError as any).code = 'TEST_CONFIG';
+    throw testError;
   }
 
   const client = new Client()

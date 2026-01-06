@@ -120,3 +120,20 @@ export const isAppwriteConfigured = (): boolean => {
     appwriteConfig.secretKey
   );
 };
+
+/**
+ * Check if using test/CI Appwrite configuration values
+ */
+export const isTestAppwriteConfig = (): boolean => {
+  if (!(process.env.CI || process.env.NODE_ENV === 'test')) {
+    return false;
+  }
+  
+  // Check if project ID or secret key are test values
+  return (
+    appwriteConfig.projectId === 'test-project-id' ||
+    appwriteConfig.secretKey === 'test-api-key-for-ci' ||
+    appwriteConfig.projectId?.startsWith('test-') ||
+    appwriteConfig.secretKey?.startsWith('test-')
+  );
+};
