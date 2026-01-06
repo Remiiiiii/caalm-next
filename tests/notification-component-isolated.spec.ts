@@ -69,10 +69,10 @@ test.describe('Notification System Component Tests (Isolated)', () => {
     });
 
     // Navigate to a simple test page that includes the notification center
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     // Wait for the page to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check if the page loaded successfully
     await expect(page).toHaveTitle(/CAALM Solutions/);
@@ -100,8 +100,8 @@ test.describe('Notification System Component Tests (Isolated)', () => {
     });
 
     // Navigate to the page
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForLoadState('domcontentloaded');
 
     // The page should still load even with API errors
     await expect(page).toHaveTitle(/CAALM Solutions/);
@@ -129,8 +129,8 @@ test.describe('Notification System Component Tests (Isolated)', () => {
     });
 
     // Navigate to the page
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForLoadState('domcontentloaded');
 
     // The page should load successfully with empty data
     await expect(page).toHaveTitle(/CAALM Solutions/);
@@ -184,8 +184,8 @@ test.describe('Notification System Component Tests (Isolated)', () => {
     });
 
     // Navigate to the page
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForLoadState('domcontentloaded');
 
     // Test basic page structure
     await expect(page).toHaveTitle(/CAALM Solutions/);

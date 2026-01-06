@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Debug Dashboard Elements', () => {
+  // Use authenticated project - dashboard requires authentication
+  test.use({ projectName: 'chromium' });
+
   test('inspect dashboard structure', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
     
     // Quick load check with shorter timeout
     await page.waitForSelector('main, [data-testid="dashboard"], body', { timeout: 5000 });

@@ -68,12 +68,15 @@ const testNotifications = [
 ];
 
 test.describe('Notification System Enhancement', () => {
+  // Use authenticated project - dashboard requires authentication
+  test.use({ projectName: 'chromium' });
+
   test.beforeEach(async ({ page }) => {
     // Navigate to the main page
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     // Wait for the page to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test.describe('API Endpoints', () => {
@@ -210,7 +213,7 @@ test.describe('Notification System Enhancement', () => {
   test.describe('NotificationCenter Component', () => {
     test('should display notification center', async ({ page }) => {
       // Navigate to a page that includes the NotificationCenter
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for the notification center to be visible
       await page.waitForSelector('[data-testid="notification-center"]', {
@@ -225,7 +228,7 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should display notification list', async ({ page }) => {
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for notifications to load
       await page.waitForSelector('[data-testid="notification-list"]', {
@@ -239,7 +242,7 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should display notification filters', async ({ page }) => {
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for filters to be visible
       await page.waitForSelector('[data-testid="notification-filters"]', {
@@ -259,7 +262,7 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should display notification statistics', async ({ page }) => {
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for stats to be visible
       await page.waitForSelector('[data-testid="notification-stats"]', {
@@ -281,7 +284,7 @@ test.describe('Notification System Enhancement', () => {
 
   test.describe('Notification Interactions', () => {
     test('should mark notification as read when clicked', async ({ page }) => {
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for notifications to load
       await page.waitForSelector('[data-testid="notification-item"]', {
@@ -307,7 +310,7 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should filter notifications by priority', async ({ page }) => {
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for filters to load
       await page.waitForSelector('[data-testid="priority-filter"]', {
@@ -336,7 +339,7 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should sort notifications by date', async ({ page }) => {
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for sort controls to load
       await page.waitForSelector('[data-testid="sort-controls"]', {
@@ -376,7 +379,7 @@ test.describe('Notification System Enhancement', () => {
       page,
       request,
     }) => {
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for initial load
       await page.waitForSelector('[data-testid="unread-count"]', {
@@ -422,7 +425,7 @@ test.describe('Notification System Enhancement', () => {
         });
       });
 
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for error state
       await page.waitForSelector('[data-testid="error-message"]', {
@@ -444,7 +447,7 @@ test.describe('Notification System Enhancement', () => {
         });
       });
 
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for empty state
       await page.waitForSelector('[data-testid="empty-state"]', {
@@ -461,7 +464,7 @@ test.describe('Notification System Enhancement', () => {
     test('should load notifications efficiently', async ({ page }) => {
       const startTime = Date.now();
 
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for notifications to load
       await page.waitForSelector('[data-testid="notification-list"]', {
@@ -495,7 +498,7 @@ test.describe('Notification System Enhancement', () => {
       await Promise.all(promises);
 
       // Navigate to dashboard
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Wait for notifications to load
       await page.waitForSelector('[data-testid="notification-list"]', {

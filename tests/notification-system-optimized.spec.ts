@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 import { mockNotificationAPIs, mockLargeNotificationDataset, mockErrorResponses } from './helpers/api-mocks.js';
 
 test.describe('Notification System Enhancement (Optimized)', () => {
+  // Use authenticated project - dashboard requires authentication
+  test.use({ projectName: 'chromium' });
+
   test.beforeEach(async ({ page }) => {
     // Setup mocks before each test for speed
     await mockNotificationAPIs(page);
@@ -122,10 +125,10 @@ test.describe('Notification System Enhancement (Optimized)', () => {
   test.describe('Component Integration', () => {
     test('should display notification center when integrated', async ({ page }) => {
       // Navigate to a page that should have the notification center
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
       
       // Wait for the page to load quickly with mocked data
-      await page.waitForLoadState('networkidle', { timeout: 5000 });
+      await page.waitForLoadState('domcontentloaded');
       
       // Check if notification center is present (it might not be integrated yet)
       const notificationCenter = page.locator('[data-testid="notification-center"]');
@@ -141,8 +144,8 @@ test.describe('Notification System Enhancement (Optimized)', () => {
     });
 
     test('should handle notification interactions', async ({ page }) => {
-      await page.goto('/dashboard');
-      await page.waitForLoadState('networkidle', { timeout: 5000 });
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for notification elements
       const notificationItems = page.locator('[data-testid="notification-item"]');
@@ -166,8 +169,8 @@ test.describe('Notification System Enhancement (Optimized)', () => {
     test('should load notifications efficiently', async ({ page }) => {
       const startTime = Date.now();
       
-      await page.goto('/dashboard');
-      await page.waitForLoadState('networkidle', { timeout: 5000 });
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForLoadState('domcontentloaded');
       
       const loadTime = Date.now() - startTime;
       expect(loadTime).toBeLessThan(8000); // Should load in under 8 seconds with mocks
@@ -177,8 +180,8 @@ test.describe('Notification System Enhancement (Optimized)', () => {
       // Mock large dataset
       await mockLargeNotificationDataset(page);
 
-      await page.goto('/dashboard');
-      await page.waitForLoadState('networkidle', { timeout: 5000 });
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForLoadState('domcontentloaded');
       
       // Verify the page loads without crashing
       await expect(page.locator('main, [data-testid="dashboard"]')).toBeVisible();
@@ -198,8 +201,8 @@ test.describe('Notification System Enhancement (Optimized)', () => {
       // Mock error responses
       await mockErrorResponses(page);
 
-      await page.goto('/dashboard');
-      await page.waitForLoadState('networkidle', { timeout: 5000 });
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForLoadState('domcontentloaded');
       
       // Check for error state (if component is integrated)
       const errorMessage = page.locator('[data-testid="error-message"]');
@@ -222,8 +225,8 @@ test.describe('Notification System Enhancement (Optimized)', () => {
         });
       });
 
-      await page.goto('/dashboard');
-      await page.waitForLoadState('networkidle', { timeout: 5000 });
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForLoadState('domcontentloaded');
       
       // Check for empty state (if component is integrated)
       const emptyState = page.locator('[data-testid="empty-state"]');

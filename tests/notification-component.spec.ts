@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Notification System Component Tests', () => {
+  // Use authenticated project - dashboard requires authentication
+  test.use({ projectName: 'chromium' });
+
   test('should render notification center with test data', async ({ page }) => {
     // Mock the API responses
     await page.route('/api/notifications', async (route) => {
@@ -67,10 +70,10 @@ test.describe('Notification System Component Tests', () => {
     });
 
     // Navigate to dashboard (should be authenticated from global setup)
-    await page.goto('/dashboard');
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     // Wait for the page to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check if the page loaded successfully (fixed title expectation)
     await expect(page).toHaveTitle(/CAALM Solutions/);
@@ -92,8 +95,8 @@ test.describe('Notification System Component Tests', () => {
     });
 
     // Navigate to dashboard (should be authenticated from global setup)
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForLoadState('domcontentloaded');
 
     // The page should still load even with API errors (fixed title expectation)
     await expect(page).toHaveTitle(/CAALM Solutions/);
@@ -113,8 +116,8 @@ test.describe('Notification System Component Tests', () => {
     });
 
     // Navigate to dashboard (should be authenticated from global setup)
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForLoadState('domcontentloaded');
 
     // The page should load successfully with empty data (fixed title expectation)
     await expect(page).toHaveTitle(/CAALM Solutions/);

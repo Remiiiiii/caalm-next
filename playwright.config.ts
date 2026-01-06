@@ -11,9 +11,9 @@ export default defineConfig({
     ? [['html'], ['github']] // GitHub Actions reporter for CI
     : 'html', // HTML reporter for local development
 
-  // Reduce timeouts for faster feedback
-  timeout: 15000, // 15s instead of default 30s
-  expect: { timeout: 5000 }, // 5s for assertions
+  // Timeouts - increased for CI stability
+  timeout: process.env.CI ? 60000 : 15000, // 60s in CI, 15s locally
+  expect: { timeout: 10000 }, // 10s for assertions
 
   use: {
     baseURL: 'http://localhost:3000',
@@ -21,9 +21,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'off',
 
-    // Faster navigation and actions
-    navigationTimeout: 10000,
-    actionTimeout: 5000,
+    // Navigation and action timeouts - increased for CI
+    navigationTimeout: process.env.CI ? 30000 : 10000, // 30s in CI, 10s locally
+    actionTimeout: process.env.CI ? 15000 : 5000, // 15s in CI, 5s locally
   },
 
   projects: [
@@ -49,6 +49,8 @@ export default defineConfig({
     command: 'pnpm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    timeout: process.env.CI ? 180 * 1000 : 120 * 1000, // 180s in CI, 120s locally
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 });

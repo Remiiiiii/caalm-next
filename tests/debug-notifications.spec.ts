@@ -1,15 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Debug Notification System', () => {
+  // Use authenticated project - dashboard requires authentication
+  test.use({ projectName: 'chromium' });
+
   test('inspect dashboard page structure', async ({ page }) => {
     console.log('=== Starting Dashboard Debug ===');
 
     // Navigate to dashboard
-    await page.goto('/dashboard');
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
     console.log('Navigated to:', await page.url());
 
     // Wait for page to load
-    await page.waitForLoadState('domcontentloaded', { timeout: 5000 });
+    await page.waitForLoadState('domcontentloaded');
     console.log('Page loaded');
 
     // Check if we're redirected (authentication issue)
@@ -183,10 +186,10 @@ test.describe('Debug Notification System', () => {
   test('inspect sign-in page structure', async ({ page }) => {
     console.log('=== Starting Sign-in Page Debug ===');
 
-    await page.goto('/sign-in');
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded', timeout: 30000 });
     console.log('Navigated to:', await page.url());
 
-    await page.waitForLoadState('domcontentloaded', { timeout: 5000 });
+    await page.waitForLoadState('domcontentloaded');
 
     const title = await page.title();
     console.log('Page Title:', title);
@@ -244,7 +247,7 @@ test.describe('Debug Notification System', () => {
     console.log('=== Starting Navigation Debug ===');
 
     // Start from home page
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
     console.log('Home page URL:', await page.url());
     console.log('Home page title:', await page.title());
 
