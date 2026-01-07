@@ -30,9 +30,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  let body: Omit<NotificationType, '$id' | '$createdAt' | '$updatedAt'> | null = null;
+  
   try {
-    const body: Omit<NotificationType, '$id' | '$createdAt' | '$updatedAt'> =
-      await request.json();
+    body = await request.json();
 
     // Validate required fields
     if (!body.type_key || !body.label || !body.priority) {
@@ -65,7 +66,11 @@ export async function POST(request: NextRequest) {
         {
           data: {
             $id: 'test-notification-type-id',
-            ...body,
+            ...(body || {
+              type_key: 'test',
+              label: 'Test Notification',
+              priority: 'medium',
+            }),
             $createdAt: new Date().toISOString(),
             $updatedAt: new Date().toISOString(),
           },

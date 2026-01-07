@@ -139,3 +139,14 @@ playwright-report/
 # Feature documentation
 docs/
 .vercel
+
+*.ps1
+uploads/
+document/
+*.csv
+*.html
+mcpjson.txt
+*.backup
+*.tmp
+*.old
+*.bak

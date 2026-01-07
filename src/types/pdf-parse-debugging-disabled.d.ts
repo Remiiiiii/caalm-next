@@ -1,4 +1,4 @@
-declare module 'pdf-parse' {
+declare module 'pdf-parse-debugging-disabled' {
   interface PDFData {
     text: string;
     numpages: number;

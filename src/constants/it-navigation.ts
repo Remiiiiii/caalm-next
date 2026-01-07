@@ -43,6 +43,12 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
         url: '/dashboard/it/system-overview',
         permission: PERMISSIONS.IT.VIEW_MONITORING,
       },
+      {
+        name: 'Storage Metrics',
+        icon: '/assets/icons/database.svg',
+        url: '/dashboard/it/storage',
+        permission: PERMISSIONS.IT.VIEW_MONITORING,
+      },
     ],
   },
   {
