@@ -167,7 +167,9 @@ test.describe('Notification System Enhancement', () => {
       expect(unreadResponse.status()).toBe(200);
       const data = await unreadResponse.json();
       expect(data.success).toBe(true);
-      expect(data.data.read === false || data.data.is_read === false).toBe(true);
+      expect(data.data.read === false || data.data.is_read === false).toBe(
+        true
+      );
     });
 
     test('should get notification statistics', async ({ request }) => {
