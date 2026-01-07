@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       limit
     );
 
-    return NextResponse.json({ data: notifications });
+    return NextResponse.json({ success: true, data: notifications });
   } catch (error: any) {
     console.error('Failed to get recent notifications:', error);
     
@@ -32,11 +32,12 @@ export async function GET(request: NextRequest) {
       error?.message?.includes('Project with the requested ID could not be found') ||
       error?.message?.includes('AppwriteException')
     ) {
-      return NextResponse.json({ data: [] }, { status: 200 });
+      return NextResponse.json({ success: true, data: [] }, { status: 200 });
     }
     
     return NextResponse.json(
       {
+        success: false,
         error:
           error instanceof Error
             ? error.message

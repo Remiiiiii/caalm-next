@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const stats = await notificationService.getNotificationStats(userId);
 
-    return NextResponse.json({ data: stats });
+    return NextResponse.json({ success: true, data: stats });
   } catch (error: any) {
     console.error('Failed to fetch notification stats:', error);
     
@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     ) {
       return NextResponse.json(
         {
+          success: true,
           data: {
             total: 0,
             unread: 0,
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(
       {
+        success: false,
         error:
           error instanceof Error
             ? error.message

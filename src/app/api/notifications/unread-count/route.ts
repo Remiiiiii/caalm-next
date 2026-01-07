@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const count = await notificationService.getUnreadCount(userId);
 
-    return NextResponse.json({ count });
+    return NextResponse.json({ success: true, data: { count } });
   } catch (error: any) {
     console.error('Failed to get unread count:', error);
     
@@ -28,11 +28,12 @@ export async function GET(request: NextRequest) {
       error?.message?.includes('Project with the requested ID could not be found') ||
       error?.message?.includes('AppwriteException')
     ) {
-      return NextResponse.json({ count: 0 }, { status: 200 });
+      return NextResponse.json({ success: true, data: { count: 0 } }, { status: 200 });
     }
     
     return NextResponse.json(
       {
+        success: false,
         error:
           error instanceof Error ? error.message : 'Failed to get unread count',
       },

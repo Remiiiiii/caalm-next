@@ -4,48 +4,45 @@ import { test, expect } from '@playwright/test';
 const testNotificationTypes = [
   {
     type_key: 'contract_expiry',
-    name: 'Contract Expiry',
+    label: 'Contract Expiry',
     description: 'Notifications for contract expiration',
     icon: 'Calendar',
     priority: 'high',
-    category: 'contracts',
-    is_active: true,
-    default_enabled: true,
-    auto_trigger: true,
-    template: {
-      title: 'Contract Expiring Soon',
-      message: 'Contract {contract_name} expires on {expiry_date}',
-      action_url: '/contracts/{contract_id}',
-    },
+    enabled: true,
+    color_classes: 'text-red-600',
+    bg_color_classes: 'bg-red-50',
   },
   {
     type_key: 'document_upload',
-    name: 'Document Upload',
+    label: 'Document Upload',
     description: 'Notifications for document uploads',
     icon: 'FileText',
     priority: 'medium',
-    category: 'documents',
-    is_active: true,
-    default_enabled: true,
-    auto_trigger: true,
-    template: {
-      title: 'New Document Uploaded',
-      message: 'Document {document_name} has been uploaded',
-      action_url: '/documents/{document_id}',
-    },
+    enabled: true,
+    color_classes: 'text-blue-600',
+    bg_color_classes: 'bg-blue-50',
+  },
+  {
+    type_key: 'info',
+    label: 'Information',
+    description: 'General information notifications',
+    icon: 'Info',
+    priority: 'low',
+    enabled: true,
+    color_classes: 'text-gray-600',
+    bg_color_classes: 'bg-gray-50',
   },
 ];
 
 // Test data for notifications
 const testNotifications = [
   {
+    userId: 'test-user-1',
     title: 'Test Contract Expiring',
     message: 'Contract Test Contract expires on 2024-12-31',
-    type_key: 'contract_expiry',
+    type: 'contract_expiry',
     priority: 'high',
-    user_id: 'test-user-1',
-    is_read: false,
-    action_url: '/contracts/test-contract-1',
+    actionUrl: '/contracts/test-contract-1',
     metadata: {
       contract_id: 'test-contract-1',
       contract_name: 'Test Contract',
@@ -53,13 +50,12 @@ const testNotifications = [
     },
   },
   {
+    userId: 'test-user-1',
     title: 'Test Document Uploaded',
     message: 'Document Test Document has been uploaded',
-    type_key: 'document_upload',
+    type: 'document_upload',
     priority: 'medium',
-    user_id: 'test-user-1',
-    is_read: true,
-    action_url: '/documents/test-document-1',
+    actionUrl: '/documents/test-document-1',
     metadata: {
       document_id: 'test-document-1',
       document_name: 'Test Document',
@@ -68,9 +64,6 @@ const testNotifications = [
 ];
 
 test.describe('Notification System Enhancement', () => {
-  // Use authenticated project - dashboard requires authentication
-  test.use({ projectName: 'chromium' });
-
   test.beforeEach(async ({ page }) => {
     // Navigate to the main page
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -128,9 +121,11 @@ test.describe('Notification System Enhancement', () => {
 
       // Verify filters are applied
       data.data.forEach((notification: any) => {
-        expect(notification.user_id).toBe('test-user-1');
+        expect(notification.userId || notification.user_id).toBe('test-user-1');
         expect(notification.priority).toBe('high');
-        expect(notification.is_read).toBe(false);
+        expect(
+          notification.read === false || notification.is_read === false
+        ).toBe(true);
       });
     });
 
@@ -149,15 +144,20 @@ test.describe('Notification System Enhancement', () => {
       expect(readResponse.status()).toBe(200);
       const data = await readResponse.json();
       expect(data.success).toBe(true);
-      expect(data.data.is_read).toBe(true);
+      expect(data.data.read === true || data.data.is_read === true).toBe(true);
     });
 
     test('should mark notification as unread', async ({ request }) => {
       // First create a notification
       const createResponse = await request.post('/api/notifications', {
-        data: { ...testNotifications[0], is_read: true },
+        data: testNotifications[0],
       });
       const createdNotification = await createResponse.json();
+
+      // Mark as read first
+      await request.put(
+        `/api/notifications/${createdNotification.data.$id}/read`
+      );
 
       // Mark as unread
       const unreadResponse = await request.put(
@@ -167,7 +167,7 @@ test.describe('Notification System Enhancement', () => {
       expect(unreadResponse.status()).toBe(200);
       const data = await unreadResponse.json();
       expect(data.success).toBe(true);
-      expect(data.data.is_read).toBe(false);
+      expect(data.data.read === false || data.data.is_read === false).toBe(true);
     });
 
     test('should get notification statistics', async ({ request }) => {
@@ -213,7 +213,10 @@ test.describe('Notification System Enhancement', () => {
   test.describe('NotificationCenter Component', () => {
     test('should display notification center', async ({ page }) => {
       // Navigate to a page that includes the NotificationCenter
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for the notification center to be visible
       await page.waitForSelector('[data-testid="notification-center"]', {
@@ -228,7 +231,10 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should display notification list', async ({ page }) => {
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for notifications to load
       await page.waitForSelector('[data-testid="notification-list"]', {
@@ -242,7 +248,10 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should display notification filters', async ({ page }) => {
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for filters to be visible
       await page.waitForSelector('[data-testid="notification-filters"]', {
@@ -262,7 +271,10 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should display notification statistics', async ({ page }) => {
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for stats to be visible
       await page.waitForSelector('[data-testid="notification-stats"]', {
@@ -284,7 +296,10 @@ test.describe('Notification System Enhancement', () => {
 
   test.describe('Notification Interactions', () => {
     test('should mark notification as read when clicked', async ({ page }) => {
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for notifications to load
       await page.waitForSelector('[data-testid="notification-item"]', {
@@ -310,7 +325,10 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should filter notifications by priority', async ({ page }) => {
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for filters to load
       await page.waitForSelector('[data-testid="priority-filter"]', {
@@ -339,7 +357,10 @@ test.describe('Notification System Enhancement', () => {
     });
 
     test('should sort notifications by date', async ({ page }) => {
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for sort controls to load
       await page.waitForSelector('[data-testid="sort-controls"]', {
@@ -379,7 +400,10 @@ test.describe('Notification System Enhancement', () => {
       page,
       request,
     }) => {
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for initial load
       await page.waitForSelector('[data-testid="unread-count"]', {
@@ -425,7 +449,10 @@ test.describe('Notification System Enhancement', () => {
         });
       });
 
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for error state
       await page.waitForSelector('[data-testid="error-message"]', {
@@ -447,7 +474,10 @@ test.describe('Notification System Enhancement', () => {
         });
       });
 
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for empty state
       await page.waitForSelector('[data-testid="empty-state"]', {
@@ -464,7 +494,10 @@ test.describe('Notification System Enhancement', () => {
     test('should load notifications efficiently', async ({ page }) => {
       const startTime = Date.now();
 
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for notifications to load
       await page.waitForSelector('[data-testid="notification-list"]', {
@@ -498,7 +531,10 @@ test.describe('Notification System Enhancement', () => {
       await Promise.all(promises);
 
       // Navigate to dashboard
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
 
       // Wait for notifications to load
       await page.waitForSelector('[data-testid="notification-list"]', {
