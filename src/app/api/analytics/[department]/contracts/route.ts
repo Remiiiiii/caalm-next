@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { Query } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 function mapRouteToDbDepartment(routeDept: string): string {
   const mapping: Record<string, string> = {
@@ -22,39 +24,50 @@ export async function GET(
   try {
     const resolvedParams = await params;
     const dbDept = mapRouteToDbDepartment(resolvedParams.department);
-    const { tablesDB } = await createAdminClient();
 
-    // First, let's check what contracts exist in the database
-    const allDocuments = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
-      queries: [Query.limit(200)],
-    });
+    // Cache key for department contracts
+    const cacheKey = CACHE_KEYS.analytics.contracts(dbDept);
 
-    console.log(`Total contracts in database: ${allDocuments.total}`);
-    console.log(
-      'Sample contract departments:',
-      allDocuments.rows.slice(0, 5).map((d: any) => ({
-        id: d.$id,
-        name: d.contractName,
-        department: d.department,
-      }))
+    // Fetch department contracts with caching (15 minutes TTL)
+    const data = await CacheManager.withCache(
+      'analytics/contracts',
+      cacheKey,
+      async () => {
+        const { tablesDB } = await createAdminClient();
+
+        // First, let's check what contracts exist in the database
+        const allDocuments = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.contractsCollectionId,
+          queries: [Query.limit(200)],
+        });
+
+        console.log(`Total contracts in database: ${allDocuments.total}`);
+        console.log(
+          'Sample contract departments:',
+          allDocuments.rows.slice(0, 5).map((d: any) => ({
+            id: d.$id,
+            name: d.contractName,
+            department: d.department,
+          }))
+        );
+
+        const documents = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.contractsCollectionId,
+          queries: [Query.equal('department', dbDept), Query.limit(200)],
+        });
+
+        return documents.rows.map((d: any) => ({
+          id: d.$id,
+          name: d.contractName,
+          amount: d.amount ?? 0,
+          status: d.status,
+          compliance: d.compliance,
+          expiryDate: d.contractExpiryDate,
+        }));
+      }
     );
-
-    const documents = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
-      queries: [Query.equal('department', dbDept), Query.limit(200)],
-    });
-
-    const data = documents.rows.map((d: any) => ({
-      id: d.$id,
-      name: d.contractName,
-      amount: d.amount ?? 0,
-      status: d.status,
-      compliance: d.compliance,
-      expiryDate: d.contractExpiryDate,
-    }));
 
     return Response.json({ data });
   } catch (error: any) {

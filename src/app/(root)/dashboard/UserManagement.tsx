@@ -25,7 +25,8 @@ import { Trash, ListFilter, Pencil, Trash2, Ban } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { UserRoleDisplay } from '@/components/UserRoleDisplay';
 
-// Map user status to badge colors to mirror Executive Dashboard invitations table
+// Map user status to badge colors
+// Now uses the same enum as contracts: ['active', 'inactive', 'pending-review', 'action-required']
 const getUserStatusBadgeClasses = (status: string): string => {
   const normalized = status?.toLowerCase?.() ?? '';
   switch (normalized) {
@@ -33,8 +34,11 @@ const getUserStatusBadgeClasses = (status: string): string => {
       return 'bg-[#ccf3e9] text-[#3dd9b3] text-xs rounded';
     case 'inactive':
       return 'bg-[#fff1f1] text-[#fe8787] text-xs rounded';
-    case 'pending':
+    case 'pending-review':
+    case 'pending': // Legacy support
       return 'bg-[#fef6f0] text-[#ebc620] text-xs rounded';
+    case 'action-required':
+      return 'bg-[#fff1f1] text-[#fe8787] text-xs rounded';
     default:
       return 'bg-gray-100 text-gray-600 text-xs rounded';
   }

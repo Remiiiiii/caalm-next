@@ -53,6 +53,8 @@ const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
 });
 
+import type { ContractStatus } from '@/constants/status';
+
 interface Invitation {
   $id: string;
   name: string;
@@ -60,7 +62,7 @@ interface Invitation {
   role: string;
   token: string;
   expiresAt: string;
-  status: string;
+  status: ContractStatus;
   revoked: boolean;
   $createdAt: string;
 }

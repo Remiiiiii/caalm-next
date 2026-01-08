@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listPendingInvitations } from '@/lib/actions/user.actions';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,8 +15,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch pending invitations
-    const invitations = await listPendingInvitations({ orgId });
+    // Cache key for invitations
+    const cacheKey = CACHE_KEYS.dashboard.invitations(orgId);
+
+    // Fetch pending invitations with caching (5 minutes TTL)
+    const invitations = await CacheManager.withCache(
+      'dashboard/invitations',
+      cacheKey,
+      async () => await listPendingInvitations({ orgId })
+    );
 
     return NextResponse.json({ data: invitations });
   } catch (error: any) {

@@ -15,14 +15,12 @@ async function updateExpiredContracts() {
       throw new Error('Database or collection ID not configured');
     }
 
-  // Get all contracts with expiry dates that are not yet marked as expired
+  // Get all contracts with expiry dates to update daysUntilExpiry and expired status
   const contracts = await tablesDB.listRows({
     databaseId: appwriteConfig.databaseId,
     tableId: appwriteConfig.contractsCollectionId,
     queries: [
       Query.isNotNull('contractExpiryDate'),
-      // Only get contracts that are not already marked as expired
-      Query.notEqual('isExpired', true),
       Query.limit(1000), // Process in batches
     ],
   });
@@ -48,20 +46,41 @@ async function updateExpiredContracts() {
       // days <= 0 means the contract has expired
       const isExpired = expiryDate <= now;
 
-      if (isExpired && contract.isExpired !== true) {
-        // Update the contract to mark it as expired
+      // Calculate daysUntilExpiry: contractExpiryDate - today
+      const timeDiff = expiryDate.getTime() - now.getTime();
+      const daysUntilExpiry = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      
+      // Check if update is needed (expired status, isExpired flag, or daysUntilExpiry mismatch)
+      const needsStatusUpdate = isExpired && (contract.isExpired !== true || contract.status?.toLowerCase() !== 'expired');
+      const needsDaysUpdate = contract.daysUntilExpiry !== daysUntilExpiry;
+      
+      if (needsStatusUpdate || needsDaysUpdate) {
+        // Update the contract to mark it as expired and set status to 'expired', and update daysUntilExpiry
+        const updateData: any = {
+          daysUntilExpiry,
+        };
+        
+        if (isExpired) {
+          updateData.isExpired = true;
+          // Only update status if it's not already 'expired'
+          if (contract.status?.toLowerCase() !== 'expired') {
+            updateData.status = 'expired';
+          }
+        }
+        
         await tablesDB.updateRow({
           databaseId: appwriteConfig.databaseId,
           tableId: appwriteConfig.contractsCollectionId,
           rowId: contract.$id,
-          data: {
-            isExpired: true,
-          },
+          data: updateData,
         });
 
         updatedCount++;
+        const updateReasons = [];
+        if (needsStatusUpdate) updateReasons.push('status');
+        if (needsDaysUpdate) updateReasons.push('daysUntilExpiry');
         console.log(
-          `✓ Marked contract "${contract.contractName}" (${contract.$id}) as expired`
+          `✓ Updated contract "${contract.contractName}" (${contract.$id}) - ${updateReasons.join(', ')} (daysUntilExpiry: ${daysUntilExpiry})`
         );
       }
     } catch (error: any) {

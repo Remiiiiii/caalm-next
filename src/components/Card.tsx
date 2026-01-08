@@ -12,7 +12,22 @@ import { fetchUserNamesByIds, type AppUser } from '@/lib/actions/user.actions';
 import ManagerAvatars from './ManagerAvatars';
 
 // Map contract status to badge color and label
-const statusBadge = (status: string) => {
+const statusBadge = (status: string, isExpired?: boolean, contractExpiryDate?: string) => {
+  // Check if contract is expired (priority: status > isExpired flag > expiry date)
+  const isContractExpired = 
+    status?.toLowerCase() === 'expired' ||
+    isExpired ||
+    (contractExpiryDate && new Date(contractExpiryDate) < new Date());
+
+  // If expired, always show Expired badge
+  if (isContractExpired) {
+    return (
+      <span className="inline-block px-2 py-1 border-2 border-purple-600 bg-purple-50 text-purple-900 text-xs rounded-xl font-medium mr-auto">
+        Expired
+      </span>
+    );
+  }
+
   let color = '';
   let label = status;
   switch (status) {
@@ -522,9 +537,43 @@ const Card = ({
       </div>
       <div className="file-card-details">
         <p className="subtitle-2 line-clamp-1">{file.name}</p>
-        {(contractStatus || riskLevel) && (
+        {(contractStatus || riskLevel || contractExpiryDate) && (
           <div className="mb-1 flex items-center gap-2 flex-wrap">
-            {contractStatus && <div>{statusBadge(contractStatus)}</div>}
+            {/* Always check for expiration, even if status is missing */}
+            {(() => {
+              const isExpired = 
+                contractStatus?.toLowerCase() === 'expired' ||
+                file.isExpired ||
+                (contractExpiryDate && new Date(contractExpiryDate) < new Date());
+              
+              // If expired, always show Expired badge (even if status is missing)
+              if (isExpired) {
+                return (
+                  <div>
+                    {statusBadge(
+                      contractStatus || 'expired',
+                      file.isExpired,
+                      contractExpiryDate
+                    )}
+                  </div>
+                );
+              }
+              
+              // Otherwise, show status badge if status exists
+              if (contractStatus) {
+                return (
+                  <div>
+                    {statusBadge(
+                      contractStatus,
+                      file.isExpired,
+                      contractExpiryDate
+                    )}
+                  </div>
+                );
+              }
+              
+              return null;
+            })()}
             {riskLevel && <div>{riskLevelBadge(riskLevel)}</div>}
           </div>
         )}

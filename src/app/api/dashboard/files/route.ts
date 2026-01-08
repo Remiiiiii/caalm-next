@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
 import { parseStringify } from '@/lib/utils';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,19 +14,31 @@ export async function GET(request: NextRequest) {
       ? parseInt(searchParams.get('limit')!)
       : 10;
 
-    const { tablesDB } = await createAdminClient();
+    // Cache key for dashboard files
+    const cacheKey = CACHE_KEYS.dashboard.files(undefined, limit);
 
-    // Fetch all recent files (not filtered by owner for dashboard)
-    const files = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: appwriteConfig.filesCollectionId || 'files',
-      queries: [
-        Query.limit(limit),
-        Query.orderDesc('$createdAt'), // Most recent first
-      ],
-    });
+    // Fetch recent files with caching (5 minutes TTL)
+    const files = await CacheManager.withCache(
+      'dashboard/files',
+      cacheKey,
+      async () => {
+        const { tablesDB } = await createAdminClient();
 
-    return NextResponse.json({ data: parseStringify(files).rows || [] });
+        // Fetch all recent files (not filtered by owner for dashboard)
+        const result = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.filesCollectionId || 'files',
+          queries: [
+            Query.limit(limit),
+            Query.orderDesc('$createdAt'), // Most recent first
+          ],
+        });
+
+        return parseStringify(result).rows || [];
+      }
+    );
+
+    return NextResponse.json({ data: files });
   } catch (error: any) {
     console.error('Failed to fetch dashboard files:', error);
     

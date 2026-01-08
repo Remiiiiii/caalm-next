@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserRoles } from '@/lib/rbac/permissions';
 import { getOrgIdFromRequest } from '@/lib/rbac/middleware';
 import { getHighestPriorityRole } from '@/lib/utils/role-priority';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 /**
  * Get role display name(s) for a user
@@ -16,26 +18,38 @@ export async function GET(
     const { userId } = await params;
     const orgId = await getOrgIdFromRequest(request) || 'default_organization';
     
-    // Get user's roles from database
-    const userRoles = await getUserRoles(userId, orgId);
-    
-    if (userRoles.length > 0) {
-      // Get highest priority role (IT > Department Manager, etc.)
-      const roleName = getHighestPriorityRole(userRoles);
-      if (roleName) {
-        return NextResponse.json({
-          success: true,
-          roleName,
-          roles: userRoles.map(ur => ur.roleName).filter(Boolean),
-        });
-      }
-    }
+    // Cache key for user role
+    const cacheKey = CACHE_KEYS.users.roleByUserId(userId, orgId);
 
-    return NextResponse.json({
-      success: true,
-      roleName: '',
-      roles: [],
-    });
+    // Fetch user role with caching (15 minutes TTL)
+    const result = await CacheManager.withCache(
+      'users/role',
+      cacheKey,
+      async () => {
+        // Get user's roles from database
+        const userRoles = await getUserRoles(userId, orgId);
+        
+        if (userRoles.length > 0) {
+          // Get highest priority role (IT > Department Manager, etc.)
+          const roleName = getHighestPriorityRole(userRoles);
+          if (roleName) {
+            return {
+              success: true,
+              roleName,
+              roles: userRoles.map(ur => ur.roleName).filter(Boolean),
+            };
+          }
+        }
+
+        return {
+          success: true,
+          roleName: '',
+          roles: [],
+        };
+      }
+    );
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching user role:', error);
     return NextResponse.json(

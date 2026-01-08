@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { notificationService } from '@/lib/services/notificationService';
 import { NotificationType } from '@/types/notifications';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET() {
   try {
-    const notificationTypes = await notificationService.getNotificationTypes();
+    // Cache key for notification types
+    const cacheKey = CACHE_KEYS.notifications.types();
+
+    // Fetch notification types with caching (15 minutes TTL)
+    const notificationTypes = await CacheManager.withCache(
+      'notifications/types',
+      cacheKey,
+      async () => await notificationService.getNotificationTypes()
+    );
+
     return NextResponse.json({ success: true, data: notificationTypes });
   } catch (error: any) {
     console.error('Failed to fetch notification types:', error);

@@ -84,6 +84,8 @@ const getStatusBadgeClasses = (status: string) => {
       return 'border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
     case 'inactive':
       return 'border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium';
+    case 'expired':
+      return 'border-2 border-purple-600 bg-purple-50 text-purple-900 text-xs rounded-xl font-medium';
     default:
       return 'border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
   }
@@ -99,6 +101,8 @@ const getStatusLabel = (status: string) => {
       return 'Active';
     case 'inactive':
       return 'Inactive';
+    case 'expired':
+      return 'Expired';
     default:
       return status.charAt(0).toUpperCase() + status.slice(1);
   }
@@ -870,17 +874,30 @@ export const FileDetails = ({
                           {formatDateForDisplay(displayExpiry)}
                         </p>
                       </div>
-                      {!editing ? (
-                        <ShadButton
-                          onClick={() => setEditing(true)}
-                          variant="outline"
-                          size="sm"
-                          className="primary-btn px-3 sm:px-4"
-                        >
-                          <SquarePen className="w-4 h-4" />
-                          Edit Date
-                        </ShadButton>
-                      ) : (
+                      {(() => {
+                        // Check if contract is expired
+                        const isContractExpired =
+                          file.status?.toLowerCase() === 'expired' ||
+                          file.isExpired ||
+                          (file.contractExpiryDate &&
+                            new Date(file.contractExpiryDate) < new Date());
+
+                        // Don't show Edit Date button if contract is expired
+                        if (isContractExpired) {
+                          return null;
+                        }
+
+                        return !editing ? (
+                          <ShadButton
+                            onClick={() => setEditing(true)}
+                            variant="outline"
+                            size="sm"
+                            className="primary-btn px-3 sm:px-4"
+                          >
+                            <SquarePen className="w-4 h-4" />
+                            Edit Date
+                          </ShadButton>
+                        ) : (
                         <div className="flex items-center space-x-2">
                           <Popover>
                             <PopoverTrigger asChild>
@@ -963,7 +980,8 @@ export const FileDetails = ({
                             Cancel
                           </ShadButton>
                         </div>
-                      )}
+                      );
+                    })()}
                     </div>
                   </div>
                   {renderField(

@@ -4,6 +4,8 @@ import {
   getExpiringContractsCount,
 } from '@/lib/actions/file.actions';
 import { getActiveUsersCount } from '@/lib/actions/user.actions';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,19 +19,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch dashboard stats in parallel
-    const [totalContracts, expiringContracts, activeUsers] = await Promise.all([
-      getTotalContractsCount(),
-      getExpiringContractsCount(),
-      getActiveUsersCount(),
-    ]);
+    // Cache key for dashboard stats
+    const cacheKey = CACHE_KEYS.dashboard.stats(orgId);
 
-    const stats = {
-      totalContracts,
-      expiringContracts,
-      activeUsers,
-      complianceRate: '95%', // This could be calculated based on actual data
-    };
+    // Fetch dashboard stats with caching (5 minutes TTL)
+    const stats = await CacheManager.withCache(
+      'dashboard/stats',
+      cacheKey,
+      async () => {
+        // Fetch dashboard stats in parallel
+        const [totalContracts, expiringContracts, activeUsers] = await Promise.all([
+          getTotalContractsCount(),
+          getExpiringContractsCount(),
+          getActiveUsersCount(),
+        ]);
+
+        return {
+          totalContracts,
+          expiringContracts,
+          activeUsers,
+          complianceRate: '95%', // This could be calculated based on actual data
+        };
+      }
+    );
 
     return NextResponse.json({ data: stats });
   } catch (error: any) {

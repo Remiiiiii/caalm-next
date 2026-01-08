@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUninvitedUsers } from '@/lib/actions/user.actions';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   try {
-    const uninvitedUsers = await getUninvitedUsers();
+    // Cache key for uninvited users
+    const cacheKey = CACHE_KEYS.users.uninvited();
+
+    // Fetch uninvited users with caching (15 minutes TTL)
+    const uninvitedUsers = await CacheManager.withCache(
+      'users/uninvited',
+      cacheKey,
+      async () => await getUninvitedUsers()
+    );
 
     return NextResponse.json({
       data: uninvitedUsers,

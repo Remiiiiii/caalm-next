@@ -76,6 +76,8 @@ const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
 });
 
+import type { ContractStatus } from '@/constants/status';
+
 // Add Invitation type
 interface Invitation {
   $id: string;
@@ -84,7 +86,7 @@ interface Invitation {
   role: string;
   token: string;
   expiresAt: string;
-  status: string;
+  status: ContractStatus;
   revoked: boolean;
   $createdAt: string;
 }
@@ -125,15 +127,21 @@ interface ExecutiveDashboardProps {
 }
 
 // Map invitation status to badge colors
+// Now uses the same enum as contracts: ['active', 'inactive', 'pending-review', 'action-required']
 const getInvitationStatusBadgeClasses = (status: string): string => {
   const normalizedStatus = status?.toLowerCase?.() ?? '';
   switch (normalizedStatus) {
-    case 'pending':
+    case 'pending-review':
+    case 'pending': // Legacy support
       return 'bg-[#fef6f0] text-[#ebc620]';
-    case 'revoked':
+    case 'action-required':
       return 'bg-[#fff1f1] text-[#fe8787]';
-    case 'accepted':
+    case 'active':
+    case 'accepted': // Legacy support
       return 'bg-[#ccf3e9] text-[#3dd9b3]';
+    case 'inactive':
+    case 'revoked': // Legacy support
+      return 'bg-gray-100 text-gray-600';
     default:
       return 'bg-gray-100 text-gray-600';
   }

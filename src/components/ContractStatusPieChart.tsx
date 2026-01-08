@@ -8,7 +8,7 @@ import { useContractsExpiring } from '@/hooks/useContractsExpiring';
 import type { UIFileDoc } from '@/types/files';
 
 interface ContractData {
-  status: 'active' | 'expiring' | 'completed';
+  status: 'active' | 'expiring' | 'expired';
   count: number;
   percentage: number;
   color: string;
@@ -36,8 +36,9 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
       return propData;
     }
 
-    // If no contracts, return empty data
-    if (!contracts || contracts.length === 0) {
+    // Don't process data while still loading (wait for first load to complete)
+    if (isLoading && contracts === undefined) {
+      // Return empty data structure while loading (will be replaced once data loads)
       return [
         {
           status: 'active' as const,
@@ -52,7 +53,63 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
           color: '#F59E0B',
         },
         {
-          status: 'completed' as const,
+          status: 'expired' as const,
+          count: 0,
+          percentage: 0,
+          color: '#6B7280',
+        },
+      ];
+    }
+
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ContractStatusPieChart] Contracts data:', {
+        contractsLength: contracts?.length || 0,
+        contracts: contracts?.slice(0, 3) || [],
+        isLoading,
+        error: contractsError,
+        contractsIsUndefined: contracts === undefined,
+      });
+      // Log all status values to see what we're working with
+      const statusCounts =
+        contracts?.reduce((acc: Record<string, number>, c) => {
+          const status = c.status || '(no status)';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {}) || {};
+      console.log(
+        '[ContractStatusPieChart] Status value counts:',
+        statusCounts
+      );
+    }
+
+    // If no contracts after loading completes, return empty data
+    if (!contracts || contracts.length === 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          '[ContractStatusPieChart] No contracts found, returning empty data',
+          {
+            isLoading,
+            contractsIsUndefined: contracts === undefined,
+            contractsIsArray: Array.isArray(contracts),
+          }
+        );
+      }
+      return [
+        {
+          status: 'active' as const,
+          count: 0,
+          percentage: 0,
+          color: '#10B981',
+        },
+        {
+          status: 'expiring' as const,
+          count: 0,
+          percentage: 0,
+          color: '#F59E0B',
+        },
+        {
+          status: 'expired' as const,
           count: 0,
           percentage: 0,
           color: '#6B7280',
@@ -69,47 +126,118 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
     let expiringCount = 0;
     let completedCount = 0;
 
+    // Track categorization details for debugging
+    const categorizationDetails: Array<{
+      id: string;
+      status: string | undefined;
+      statusLower: string;
+      expiryDate: string | null;
+      isExpired: boolean;
+      isPastExpiry: boolean | null;
+      categorizedAs: string;
+      reason: string;
+    }> = [];
+
     contracts.forEach((contract: UIFileDoc) => {
-      const status = contract.status?.toLowerCase() || '';
+      // Normalize status: trim whitespace and convert to lowercase
+      const status = contract.status?.trim().toLowerCase() || '';
       const expiryDate = contract.contractExpiryDate
         ? new Date(contract.contractExpiryDate)
         : null;
       const isExpired = contract.isExpired || false;
-
-      // Determine contract category
-      if (status === 'active' && !isExpired) {
-        // Check if expiring soon (within 90 days)
-        if (
-          expiryDate &&
-          expiryDate <= ninetyDaysFromNow &&
-          expiryDate >= now
-        ) {
-          expiringCount++;
-        } else {
-          activeCount++;
+      const hasNoStatus = !contract.status || status === '';
+      
+      // Use daysUntilExpiry from contract if available, otherwise calculate from date
+      let daysUntilExpiry: number | undefined = (contract as any).daysUntilExpiry;
+      if (daysUntilExpiry === undefined && expiryDate) {
+        const expiryStr = contract.contractExpiryDate?.split('T')[0];
+        if (expiryStr) {
+          const [year, month, day] = expiryStr.split('-').map(Number);
+          const expiry = new Date(year, month - 1, day);
+          expiry.setHours(0, 0, 0, 0);
+          const timeDiff = expiry.getTime() - now.getTime();
+          daysUntilExpiry = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
         }
-      } else if (
-        status === 'inactive' ||
-        isExpired ||
-        (expiryDate && expiryDate < now)
-      ) {
-        completedCount++;
-      } else if (
-        expiryDate &&
-        expiryDate <= ninetyDaysFromNow &&
-        expiryDate >= now
-      ) {
-        // Contract expiring soon regardless of status
-        expiringCount++;
-      } else if (status === 'active') {
-        activeCount++;
-      } else {
-        // Default to completed for unknown statuses
-        completedCount++;
       }
+      
+      const isPastExpiry = daysUntilExpiry !== undefined && daysUntilExpiry < 0;
+      const isExpiringSoon =
+        daysUntilExpiry !== undefined && daysUntilExpiry >= 0 && daysUntilExpiry <= 90;
+
+      let categorizedAs = '';
+      let reason = '';
+
+      // Priority 1: Expired contracts - check status="expired" first, then isExpired flag, then past expiry
+      if (status === 'expired' || isExpired || isPastExpiry) {
+        completedCount++;
+        categorizedAs = 'expired';
+        reason = `Status: '${status}', isExpired: ${isExpired}, isPastExpiry: ${isPastExpiry}`;
+      }
+      // Priority 2: Check if contract is expiring soon (within 90 days)
+      // This takes priority over status - if a contract is expiring, it's "expiring" regardless of status
+      else if (isExpiringSoon) {
+        expiringCount++;
+        categorizedAs = 'expiring';
+        reason = `Status: '${status}', expiring within 90 days (expiry: ${expiryDate?.toISOString()})`;
+      }
+      // Priority 3: Contracts with status="active" are counted as active (if not expired and not expiring)
+      else if (status === 'active') {
+        activeCount++;
+        categorizedAs = 'active';
+        reason = `Status is 'active' and not expired/expiring`;
+      }
+      // Priority 4: All other contracts (pending-review, inactive without expiry, etc.)
+      // If no expiry date or expiry is far in future, consider active
+      // If status is inactive and no expiry info, consider expired
+      else if (status === 'inactive' && !expiryDate) {
+        completedCount++;
+        categorizedAs = 'expired';
+        reason = `Status: 'inactive' with no expiry date`;
+      }
+      else {
+        activeCount++;
+        categorizedAs = 'active';
+        reason = `Status: '${status}' (default to active)`;
+      }
+
+      // Store categorization details for debugging
+      categorizationDetails.push({
+        id: contract.$id,
+        status: contract.status,
+        statusLower: status,
+        expiryDate: contract.contractExpiryDate || null,
+        isExpired,
+        isPastExpiry,
+        categorizedAs,
+        reason,
+      });
     });
 
     const total = activeCount + expiringCount + completedCount;
+
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ContractStatusPieChart] Calculated counts:', {
+        activeCount,
+        expiringCount,
+        completedCount,
+        total,
+        contractsProcessed: contracts.length,
+      });
+      // Log all contract categorizations with detailed reasons
+      console.log(
+        '[ContractStatusPieChart] All contract categorizations:',
+        categorizationDetails
+      );
+      // Log contracts with status="active" specifically
+      const activeStatusContracts = categorizationDetails.filter(
+        (d) => d.statusLower === 'active'
+      );
+      console.log(
+        '[ContractStatusPieChart] Contracts with status="active":',
+        activeStatusContracts
+      );
+    }
 
     // Calculate percentages
     const activePercentage =
@@ -133,13 +261,13 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
         color: '#F59E0B', // Amber
       },
       {
-        status: 'completed' as const,
+        status: 'expired' as const,
         count: completedCount,
         percentage: completedPercentage,
         color: '#6B7280', // Gray
       },
     ];
-  }, [contracts, propData]);
+  }, [contracts, propData, isLoading]);
 
   const loading = isLoading;
   const error = contractsError;
@@ -150,7 +278,7 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'expiring':
         return <AlertTriangle className="h-4 w-4 text-amber-600" />;
-      case 'completed':
+      case 'expired':
         return <FileText className="h-4 w-4 text-slate-600" />;
       default:
         return <FileText className="h-4 w-4 text-slate-500" />;
@@ -163,8 +291,8 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
         return 'Active';
       case 'expiring':
         return 'Expiring';
-      case 'completed':
-        return 'Completed';
+      case 'expired':
+        return 'Expired';
       default:
         return status;
     }
@@ -340,10 +468,10 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 font-medium">
-                    Completed
+                    Expired
                   </div>
                   <div className="text-sm font-bold text-slate-700">
-                    {contractData.find((item) => item.status === 'completed')
+                    {contractData.find((item) => item.status === 'expired')
                       ?.count || 0}
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { parsePaginationParams, buildPaginationMeta } from '@/lib/api/contracts/utils/pagination.util';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
@@ -8,6 +9,8 @@ import {
   generateRequestId,
 } from '@/lib/api/contracts/utils/response.util';
 import { requireAuth } from '@/lib/api/contracts/middleware/auth.middleware';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
@@ -15,18 +18,28 @@ export async function GET(request: NextRequest) {
     // Parse pagination parameters
     const { limit, offset } = parsePaginationParams(request);
 
-    const { tablesDB } = await createAdminClient();
+    // Cache key including pagination params
+    const cacheKey = CACHE_KEYS.contracts.database(limit, offset);
 
-    // Fetch contracts from database with pagination
-    const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: appwriteConfig.contractsCollectionId || 'contracts',
-      queries: [
-        Query.select(['$id', 'contractName', 'contractType', 'vendor']),
-        Query.limit(limit),
-        Query.offset(offset),
-      ],
-    });
+    // Fetch contracts with caching (10 minutes TTL)
+    const contracts = await CacheManager.withCache(
+      'contracts/database',
+      cacheKey,
+      async () => {
+        const { tablesDB } = await createAdminClient();
+
+        // Fetch contracts from database with pagination
+        return await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.contractsCollectionId || 'contracts',
+          queries: [
+            Query.select(['$id', 'contractName', 'contractType', 'vendor']),
+            Query.limit(limit),
+            Query.offset(offset),
+          ],
+        });
+      }
+    );
 
     // Map contracts to simple format for dropdown
     const contractList = contracts.rows.map((contract: any) => ({

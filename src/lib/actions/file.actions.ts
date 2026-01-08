@@ -264,10 +264,17 @@ export const uploadFile = async ({
         daysUntilExpiry: (() => {
           if (contractExpiryDate) {
             try {
-              const expiryDate = new Date(contractExpiryDate);
+              // Parse date-only strings (YYYY-MM-DD) using local timezone to avoid timezone issues
+              const expiryStr = contractExpiryDate.split('T')[0];
+              const [year, month, day] = expiryStr.split('-').map(Number);
+              const expiryDate = new Date(year, month - 1, day);
+              expiryDate.setHours(0, 0, 0, 0);
+              
               const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              
               const timeDiff = expiryDate.getTime() - today.getTime();
-              return Math.ceil(timeDiff / (1000 * 3600 * 24));
+              return Math.floor(timeDiff / (1000 * 60 * 60 * 24));
             } catch (error) {
               console.error('Error calculating days until expiry:', error);
               return undefined;
@@ -2095,7 +2102,17 @@ export const getContractStatusEnums = async () => {
   const tableId = appwriteConfig.contractsCollectionId;
 
   if (!databaseId || !tableId) {
-    throw new Error('Database or contracts collection ID is not configured');
+    console.warn(
+      'Database or contracts collection ID is not configured, using fallback status enums'
+    );
+    // Fallback to constants if config is missing
+    return [
+      'active',
+      'inactive',
+      'pending-review',
+      'action-required',
+      'expired',
+    ];
   }
 
   const attrKey = 'status';
@@ -2107,9 +2124,35 @@ export const getContractStatusEnums = async () => {
       key: attrKey,
     })) as { elements?: string[] };
 
-    return attr.elements || [];
+    const elements = attr.elements || [];
+    
+    // If we got elements from the database, return them
+    if (elements.length > 0) {
+      return elements;
+    }
+    
+    // Fallback to constants if database returns empty array
+    console.warn(
+      'Database returned empty status enum elements, using fallback constants'
+    );
+    return [
+      'active',
+      'inactive',
+      'pending-review',
+      'action-required',
+      'expired',
+    ];
   } catch (error) {
-    handleError(error, 'Failed to fetch contract status enums');
+    console.error('Failed to fetch contract status enums from database:', error);
+    // Fallback to constants on error instead of throwing
+    console.warn('Using fallback status enums due to database error');
+    return [
+      'active',
+      'inactive',
+      'pending-review',
+      'action-required',
+      'expired',
+    ];
   }
 };
 
@@ -2879,12 +2922,27 @@ export const updateContractExpiryDate = async (
         $updatedAt: currentContract?.$updatedAt,
       });
       
+      // Calculate daysUntilExpiry based on the new expiry date
+      const expiryStr = expiryDate.split('T')[0];
+      const [year, month, day] = expiryStr.split('-').map(Number);
+      const expiryDateObj = new Date(year, month - 1, day);
+      expiryDateObj.setHours(0, 0, 0, 0);
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const timeDiff = expiryDateObj.getTime() - today.getTime();
+      const daysUntilExpiry = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      
       // Perform the update - send as ISO string with noon UTC to prevent timezone shifts
       console.log('🔄 Calling updateRow with:', {
         databaseId: appwriteConfig.databaseId,
         tableId: appwriteConfig.contractsCollectionId,
         rowId: documentId,
-        data: { contractExpiryDate: expiryDateISO },
+        data: { 
+          contractExpiryDate: expiryDateISO,
+          daysUntilExpiry,
+        },
       });
       
       let updatedContract;
@@ -2893,7 +2951,10 @@ export const updateContractExpiryDate = async (
           databaseId: appwriteConfig.databaseId!,
           tableId: appwriteConfig.contractsCollectionId!,
           rowId: documentId,
-          data: { contractExpiryDate: expiryDateISO },
+          data: { 
+            contractExpiryDate: expiryDateISO,
+            daysUntilExpiry,
+          },
         });
       } catch (updateError: any) {
         console.error('❌ updateRow threw an error:', {

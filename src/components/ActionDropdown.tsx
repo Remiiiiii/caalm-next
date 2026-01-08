@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -99,6 +99,8 @@ const getStatusDialogBadgeClasses = (status: string): string => {
       return '!font-medium border-2 border-red-400 bg-destructive/10 text-destructive';
     case 'inactive':
       return '!font-medium border-2 border-slate-500 bg-[#D3D3D3] text-[#878787]';
+    case 'expired':
+      return '!font-medium border-2 border-red-600 bg-red-100 text-red-800';
     default:
       return '!font-medium border-2 border-slate-200 bg-slate-100 text-slate-800';
   }
@@ -117,6 +119,8 @@ const getStatusLabel = (status: string): string => {
       return 'Active';
     case 'inactive':
       return 'Inactive';
+    case 'expired':
+      return 'Expired';
     default:
       return status.replace(/-/g, ' ');
   }
@@ -198,9 +202,30 @@ const ActionDropdown = ({
     }
   }, [action?.value, file.users]);
 
-  const [selectedStatus, setSelectedStatus] = useState<string>(
-    file?.status || ''
-  );
+  // Check if contract is expired
+  const isContractExpired = React.useMemo(() => {
+    if (file?.status?.toLowerCase() === 'expired') return true;
+    if (file?.isExpired) return true;
+    if (file?.contractExpiryDate) {
+      const expiryDate = new Date(file.contractExpiryDate);
+      const now = new Date();
+      return expiryDate < now;
+    }
+    return false;
+  }, [file?.status, file?.isExpired, file?.contractExpiryDate]);
+
+  // Initialize selectedStatus - auto-select expired if contract is expired
+  const [selectedStatus, setSelectedStatus] = useState<string>(() => {
+    if (isContractExpired) return 'expired';
+    return file?.status || '';
+  });
+
+  // Update selectedStatus when dialog opens if contract is expired
+  useEffect(() => {
+    if (action?.value === 'status' && isContractExpired) {
+      setSelectedStatus('expired');
+    }
+  }, [action?.value, isContractExpired]);
   const {
     departmentEnums,
     filteredManagers,
@@ -962,35 +987,66 @@ const ActionDropdown = ({
                   </div>
                 )}
                 <div className="space-y-2">
-                  {statusOptions.map((option) => (
-                    <label
-                      key={option}
-                      className="flex items-center gap-3 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-3 rounded-lg border-2 border-slate-200 bg-white group shadow-sm hover:shadow-md"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        type="radio"
-                        name="contract-status"
-                        value={option}
-                        checked={selectedStatus === option}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          setSelectedStatus(option);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        disabled={isLoading}
-                        className="cursor-pointer w-4 h-4 text-blue-600"
-                      />
-                      <Badge
-                        variant="outline"
-                        className={`${getStatusDialogBadgeClasses(
-                          option
-                        )} transition-all duration-200 shadow-sm`}
-                      >
-                        {getStatusLabel(option)}
-                      </Badge>
-                    </label>
-                  ))}
+                  {statusOptions.map((option) => {
+                    const isOptionExpired = option.toLowerCase() === 'expired';
+                    const isMuted = isContractExpired && !isOptionExpired;
+                    const showWarning = !isContractExpired && isOptionExpired && selectedStatus === 'expired';
+                    
+                    return (
+                      <div key={option}>
+                        <label
+                          className={`flex items-center gap-3 transition-all duration-200 p-3 rounded-lg border-2 bg-white group shadow-sm ${
+                            isMuted
+                              ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                              : 'border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-300 hover:shadow-md'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!isMuted) {
+                              setSelectedStatus(option);
+                            }
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="contract-status"
+                            value={option}
+                            checked={selectedStatus === option}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              if (!isMuted) {
+                                setSelectedStatus(option);
+                              }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isMuted) {
+                                e.preventDefault();
+                              }
+                            }}
+                            disabled={isLoading || isMuted}
+                            className={`w-4 h-4 ${isMuted ? 'cursor-not-allowed opacity-50' : 'cursor-pointer text-blue-600'}`}
+                          />
+                          <Badge
+                            variant="outline"
+                            className={`${getStatusDialogBadgeClasses(
+                              option
+                            )} transition-all duration-200 shadow-sm`}
+                          >
+                            {getStatusLabel(option)}
+                          </Badge>
+                        </label>
+                        {showWarning && (
+                          <div className="mt-2 ml-7 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                            <p className="font-medium mb-1">⚠️ Warning: Marking contract as expired</p>
+                            <p className="text-xs">
+                              This action will mark the contract as expired. Please review the contract details and click "Update Status" to confirm this change.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1132,6 +1188,13 @@ const ActionDropdown = ({
   if (!isContractFile) {
     filteredActions = filteredActions.filter(
       (action) => !['assign', 'status'].includes(action.value)
+    );
+  }
+
+  // If contract is expired, only show: Delete, Details, Download, Status
+  if (isContractExpired) {
+    filteredActions = filteredActions.filter((action) =>
+      ['delete', 'details', 'download', 'status'].includes(action.value)
     );
   }
 

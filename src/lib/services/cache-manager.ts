@@ -43,10 +43,15 @@ export class CacheManager {
    */
   static async invalidateDashboard(
     orgId: string,
-    userId: string
+    userId?: string
   ): Promise<void> {
-    await cache.del(CACHE_KEYS.dashboard.unified(orgId, userId));
+    if (userId) {
+      await cache.del(CACHE_KEYS.dashboard.unified(orgId, userId));
+    }
     await cache.del(CACHE_KEYS.dashboard.stats(orgId));
+    await cache.del(CACHE_KEYS.dashboard.invitations(orgId));
+    // Clear all dashboard files caches (with different limits)
+    await cache.clear(`^dashboard:files:${orgId}:`);
   }
 
   /**
@@ -114,12 +119,18 @@ export class CacheManager {
   /**
    * Invalidate contracts cache
    */
-  static async invalidateContracts(userId?: string): Promise<void> {
+  static async invalidateContracts(userId?: string, contractId?: string): Promise<void> {
     if (userId) {
       await cache.del(CACHE_KEYS.contracts.user(userId));
+      await cache.del(CACHE_KEYS.contracts.manager(userId));
+    }
+    if (contractId) {
+      await cache.del(CACHE_KEYS.contracts.details(contractId));
     }
     await cache.del(CACHE_KEYS.contracts.all());
     await cache.del(CACHE_KEYS.contracts.expirations());
+    // Clear all contract database caches (pagination variations)
+    await cache.clear('^contracts:database:');
   }
 
   /**
@@ -147,6 +158,9 @@ export class CacheManager {
     }
     if (userId) {
       await cache.del(CACHE_KEYS.users.single(userId));
+      // Clear role caches for this user
+      await cache.clear(`^users:role:${userId}`);
+      await cache.clear(`^users:roleName:${userId}`);
     }
     if (accountId) {
       await cache.del(CACHE_KEYS.users.byAccountId(accountId));
@@ -160,7 +174,8 @@ export class CacheManager {
    * Invalidate recent activities cache
    */
   static async invalidateRecentActivities(): Promise<void> {
-    await cache.del(CACHE_KEYS.recentActivities());
+    // Clear all recent activities with any limit
+    await cache.clear('^recent-activities');
   }
 
   /**
@@ -197,6 +212,32 @@ export class CacheManager {
     } else {
       // Invalidate all RBAC caches
       await cache.clear('^rbac:');
+    }
+  }
+
+  /**
+   * Invalidate storage cache
+   */
+  static async invalidateStorage(): Promise<void> {
+    await cache.del(CACHE_KEYS.storage.usage());
+    await cache.del(CACHE_KEYS.it.storageMetrics());
+  }
+
+  /**
+   * Invalidate analytics cache for a department
+   */
+  static async invalidateAnalytics(department?: string): Promise<void> {
+    if (department) {
+      await cache.del(CACHE_KEYS.analytics.contracts(department));
+      await cache.del(CACHE_KEYS.analytics.stats(department));
+      await cache.del(CACHE_KEYS.analytics.performance(department));
+      await cache.del(CACHE_KEYS.analytics.compliance(department));
+    } else {
+      // Clear all analytics caches
+      await cache.clear('^analytics:contracts:');
+      await cache.clear('^analytics:stats:');
+      await cache.clear('^analytics:performance:');
+      await cache.clear('^analytics:compliance:');
     }
   }
 

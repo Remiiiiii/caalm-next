@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUSHolidaysForMonth } from '@/lib/utils/holidays';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 /**
  * GET /api/calendar/holidays
@@ -11,7 +13,15 @@ export async function GET(request: NextRequest) {
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
     const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString());
 
-    const holidays = getUSHolidaysForMonth(year, month);
+    // Cache key for holidays
+    const cacheKey = CACHE_KEYS.calendar.holidays();
+
+    // Fetch holidays with caching (1 hour TTL - holidays are static)
+    const holidays = await CacheManager.withCache(
+      'calendar/holidays',
+      cacheKey,
+      async () => getUSHolidaysForMonth(year, month)
+    );
 
     const response = NextResponse.json({
       success: true,

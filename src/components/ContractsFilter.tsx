@@ -25,15 +25,11 @@ import {
 } from '@/components/contract-upload/constants';
 import { useContractsFilter, type ContractFilters } from './ContractsView';
 
-const CONTRACT_STATUS_OPTIONS = [
-  { value: 'pending-review', label: 'Pending Review' },
-  { value: 'action-required', label: 'Action Required' },
-  { value: 'inactive', label: 'Inactive' },
-  ...LIFECYCLE_STATUSES,
-].filter(
-  (status, index, self) =>
-    index === self.findIndex((s) => s.value === status.value)
-);
+import { CONTRACT_STATUS_OPTIONS } from '@/constants/status';
+
+// Use the centralized status enum from constants
+// Note: LIFECYCLE_STATUSES are separate and used for lifecycle tracking,
+// while CONTRACT_STATUS_OPTIONS are the actual database enum values
 
 const COMMON_DEPARTMENTS = [
   'IT',

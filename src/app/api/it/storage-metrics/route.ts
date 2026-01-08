@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readdir, stat } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 /**
  * Calculate directory size recursively
@@ -65,14 +67,22 @@ function formatBytes(bytes: number): { size: number; unit: string } {
 
 export async function GET(request: NextRequest) {
   try {
-    const projectRoot = process.cwd();
+    // Cache key for IT storage metrics
+    const cacheKey = CACHE_KEYS.it.storageMetrics();
 
-    // Calculate sizes for different components
-    const sourceCodeSize = await getDirectorySize(join(projectRoot, 'src'));
-    const testsSize = await getDirectorySize(join(projectRoot, 'tests'));
-    const publicAssetsSize = await getDirectorySize(join(projectRoot, 'public'));
-    const nodeModulesSize = await getDirectorySize(join(projectRoot, 'node_modules'));
-    const buildArtifactsSize = await getDirectorySize(join(projectRoot, '.next'));
+    // Fetch storage metrics with caching (5 minutes TTL)
+    const metrics = await CacheManager.withCache(
+      'it/storage-metrics',
+      cacheKey,
+      async () => {
+        const projectRoot = process.cwd();
+
+        // Calculate sizes for different components
+        const sourceCodeSize = await getDirectorySize(join(projectRoot, 'src'));
+        const testsSize = await getDirectorySize(join(projectRoot, 'tests'));
+        const publicAssetsSize = await getDirectorySize(join(projectRoot, 'public'));
+        const nodeModulesSize = await getDirectorySize(join(projectRoot, 'node_modules'));
+        const buildArtifactsSize = await getDirectorySize(join(projectRoot, '.next'));
     
     // Get lock file size
     let lockFileSize = 0;
@@ -155,16 +165,20 @@ export async function GET(request: NextRequest) {
       },
     ].filter(item => item.size > 0);
 
-    return NextResponse.json({
-      sourceCode,
-      dependencies,
-      buildArtifacts,
-      publicAssets,
-      lockFile,
-      total,
-      platformBreakdown,
-      componentBreakdown,
-    });
+        return {
+          sourceCode,
+          dependencies,
+          buildArtifacts,
+          publicAssets,
+          lockFile,
+          total,
+          platformBreakdown,
+          componentBreakdown,
+        };
+      }
+    );
+
+    return NextResponse.json(metrics);
   } catch (error) {
     console.error('Error calculating storage metrics:', error);
     return NextResponse.json(
