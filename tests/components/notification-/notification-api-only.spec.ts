@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockNotificationAPIs } from './helpers/api-mocks.js';
+import { mockNotificationAPIs } from '../../helpers/api-mocks.js';
 
 test.describe('Notification System API Tests (Working Endpoints Only)', () => {
   test.beforeEach(async ({ page }) => {

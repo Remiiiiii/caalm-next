@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { FileText, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { FileText, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useContractsExpiring } from '@/hooks/useContractsExpiring';
+import type { UIFileDoc } from '@/types/files';
 
 interface ContractData {
   status: 'active' | 'expiring' | 'completed';
@@ -20,56 +22,127 @@ interface ContractStatusPieChartProps {
 const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
   data: propData,
 }) => {
-  const [contractData, setContractData] = useState<ContractData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Fetch contracts using the hook
+  const {
+    contracts,
+    isLoading,
+    error: contractsError,
+  } = useContractsExpiring();
 
-  // Mock data for development
-  const mockData: ContractData[] = [
-    {
-      status: 'active',
-      count: 45,
-      percentage: 60,
-      color: '#10B981', // Green
-    },
-    {
-      status: 'expiring',
-      count: 18,
-      percentage: 24,
-      color: '#F59E0B', // Amber
-    },
-    {
-      status: 'completed',
-      count: 12,
-      percentage: 16,
-      color: '#6B7280', // Gray
-    },
-  ];
+  // Transform contracts into pie chart data
+  const contractData = useMemo(() => {
+    // If prop data is provided, use it (for testing/override)
+    if (propData) {
+      return propData;
+    }
 
-  useEffect(() => {
-    const fetchContractData = async () => {
-      try {
-        setLoading(true);
+    // If no contracts, return empty data
+    if (!contracts || contracts.length === 0) {
+      return [
+        {
+          status: 'active' as const,
+          count: 0,
+          percentage: 0,
+          color: '#10B981',
+        },
+        {
+          status: 'expiring' as const,
+          count: 0,
+          percentage: 0,
+          color: '#F59E0B',
+        },
+        {
+          status: 'completed' as const,
+          count: 0,
+          percentage: 0,
+          color: '#6B7280',
+        },
+      ];
+    }
 
-        // In production, this would fetch from your API
-        // const response = await fetch('/api/contracts/status');
-        // const data = await response.json();
+    const now = new Date();
+    const ninetyDaysFromNow = new Date(
+      now.getTime() + 90 * 24 * 60 * 60 * 1000
+    );
 
-        // For now, use mock data
-        setContractData(propData || mockData);
-        setError(null);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load contract data'
-        );
-        setContractData(mockData); // Fallback to mock data
-      } finally {
-        setLoading(false);
+    let activeCount = 0;
+    let expiringCount = 0;
+    let completedCount = 0;
+
+    contracts.forEach((contract: UIFileDoc) => {
+      const status = contract.status?.toLowerCase() || '';
+      const expiryDate = contract.contractExpiryDate
+        ? new Date(contract.contractExpiryDate)
+        : null;
+      const isExpired = contract.isExpired || false;
+
+      // Determine contract category
+      if (status === 'active' && !isExpired) {
+        // Check if expiring soon (within 90 days)
+        if (
+          expiryDate &&
+          expiryDate <= ninetyDaysFromNow &&
+          expiryDate >= now
+        ) {
+          expiringCount++;
+        } else {
+          activeCount++;
+        }
+      } else if (
+        status === 'inactive' ||
+        isExpired ||
+        (expiryDate && expiryDate < now)
+      ) {
+        completedCount++;
+      } else if (
+        expiryDate &&
+        expiryDate <= ninetyDaysFromNow &&
+        expiryDate >= now
+      ) {
+        // Contract expiring soon regardless of status
+        expiringCount++;
+      } else if (status === 'active') {
+        activeCount++;
+      } else {
+        // Default to completed for unknown statuses
+        completedCount++;
       }
-    };
+    });
 
-    fetchContractData();
-  }, [propData]);
+    const total = activeCount + expiringCount + completedCount;
+
+    // Calculate percentages
+    const activePercentage =
+      total > 0 ? Math.round((activeCount / total) * 100) : 0;
+    const expiringPercentage =
+      total > 0 ? Math.round((expiringCount / total) * 100) : 0;
+    const completedPercentage =
+      total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+    return [
+      {
+        status: 'active' as const,
+        count: activeCount,
+        percentage: activePercentage,
+        color: '#10B981', // Green
+      },
+      {
+        status: 'expiring' as const,
+        count: expiringCount,
+        percentage: expiringPercentage,
+        color: '#F59E0B', // Amber
+      },
+      {
+        status: 'completed' as const,
+        count: completedCount,
+        percentage: completedPercentage,
+        color: '#6B7280', // Gray
+      },
+    ];
+  }, [contracts, propData]);
+
+  const loading = isLoading;
+  const error = contractsError;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -146,7 +219,7 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
     );
   }
 
-  if (error && contractData.length === 0) {
+  if (error && (!contracts || contracts.length === 0)) {
     return (
       <Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
         <CardHeader className="pb-3 pt-6 px-4">

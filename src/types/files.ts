@@ -16,6 +16,7 @@ export interface UIFileDoc extends Models.Document {
   contractName?: string;
   contractOwnerId?: string;
   contractExpiryDate?: string;
+  isExpired?: boolean;
   status?: string;
   contractType?: string;
   amount?: number;

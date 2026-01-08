@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { mockNotificationAPIs, mockLargeNotificationDataset, mockErrorResponses } from './helpers/api-mocks.js';
+import {
+  mockNotificationAPIs,
+  mockLargeNotificationDataset,
+  mockErrorResponses,
+} from '../../helpers/api-mocks.js';
 
 test.describe('Notification System Enhancement (Optimized)', () => {
   // Use authenticated project - dashboard requires authentication
@@ -13,7 +17,7 @@ test.describe('Notification System Enhancement (Optimized)', () => {
   test.describe('API Endpoints', () => {
     test('should fetch notification types', async ({ request }) => {
       const response = await request.get('/api/notification-types');
-      
+
       expect(response.status()).toBe(200);
       const result = await response.json();
       expect(result).toHaveProperty('success', true);
@@ -33,11 +37,11 @@ test.describe('Notification System Enhancement (Optimized)', () => {
         icon: 'info',
         color_classes: 'text-blue-600',
         bg_color_classes: 'bg-blue-50',
-        description: 'Test notification type'
+        description: 'Test notification type',
       };
 
       const response = await request.post('/api/notification-types', {
-        data: notificationType
+        data: notificationType,
       });
 
       expect(response.status()).toBe(201);
@@ -67,11 +71,11 @@ test.describe('Notification System Enhancement (Optimized)', () => {
         title: 'Test Notification',
         message: 'Test message content',
         type: 'info',
-        priority: 'medium'
+        priority: 'medium',
       };
 
       const response = await request.post('/api/notifications', {
-        data: notification
+        data: notification,
       });
 
       expect(response.status()).toBe(201);
@@ -90,16 +94,17 @@ test.describe('Notification System Enhancement (Optimized)', () => {
           title: 'Test Notification',
           message: 'Test message',
           type: 'info',
-          priority: 'medium'
-        }
+          priority: 'medium',
+        },
       });
-      
+
       // Handle both success and test environment fallback
       let notificationId = 'test-notification-id';
       if (createResponse.ok()) {
         try {
           const createResult = await createResponse.json();
-          notificationId = createResult.data?.$id || createResult.$id || notificationId;
+          notificationId =
+            createResult.data?.$id || createResult.$id || notificationId;
         } catch (e) {
           // If JSON parsing fails, use default test ID
         }
@@ -116,7 +121,9 @@ test.describe('Notification System Enhancement (Optimized)', () => {
     });
 
     test('should get notification statistics', async ({ request }) => {
-      const response = await request.get('/api/notifications/stats?user_id=test-user-1');
+      const response = await request.get(
+        '/api/notifications/stats?user_id=test-user-1'
+      );
 
       expect(response.status()).toBe(200);
       const result = await response.json();
@@ -128,7 +135,9 @@ test.describe('Notification System Enhancement (Optimized)', () => {
     });
 
     test('should get unread count', async ({ request }) => {
-      const response = await request.get('/api/notifications/unread-count?user_id=test-user-1');
+      const response = await request.get(
+        '/api/notifications/unread-count?user_id=test-user-1'
+      );
 
       expect(response.status()).toBe(200);
       const result = await response.json();
@@ -139,7 +148,9 @@ test.describe('Notification System Enhancement (Optimized)', () => {
     });
 
     test('should get recent notifications', async ({ request }) => {
-      const response = await request.get('/api/notifications/recent?user_id=test-user-1&limit=5');
+      const response = await request.get(
+        '/api/notifications/recent?user_id=test-user-1&limit=5'
+      );
 
       expect(response.status()).toBe(200);
       const result = await response.json();
@@ -150,52 +161,72 @@ test.describe('Notification System Enhancement (Optimized)', () => {
   });
 
   test.describe('Component Integration', () => {
-    test('should display notification center when integrated', async ({ page }) => {
+    test('should display notification center when integrated', async ({
+      page,
+    }) => {
       // Navigate to a page that should have the notification center
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
-      
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
+
       // Wait for the page to load quickly with mocked data
       await page.waitForLoadState('domcontentloaded');
-      
+
       // Check if we were redirected to sign-in (auth required)
       const currentUrl = page.url();
       if (currentUrl.includes('sign-in')) {
-        console.log('Dashboard requires authentication - skipping component integration test');
+        console.log(
+          'Dashboard requires authentication - skipping component integration test'
+        );
         return; // Skip test if auth is required
       }
-      
+
       // Check if notification center is present (it might not be integrated yet)
-      const notificationCenter = page.locator('[data-testid="notification-center"]');
-      
+      const notificationCenter = page.locator(
+        '[data-testid="notification-center"]'
+      );
+
       if (await notificationCenter.isVisible()) {
         await expect(notificationCenter).toBeVisible();
         await expect(page.getByText('Test Notification')).toBeVisible();
       } else {
         // If not integrated, test that the page loads without errors
-        const mainElement = page.locator('main, [data-testid="dashboard"], body');
+        const mainElement = page.locator(
+          'main, [data-testid="dashboard"], body'
+        );
         await expect(mainElement).toBeVisible();
         console.log('Notification center not yet integrated into dashboard');
       }
     });
 
     test('should handle notification interactions', async ({ page }) => {
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
       await page.waitForLoadState('domcontentloaded');
 
       // Look for notification elements
-      const notificationItems = page.locator('[data-testid="notification-item"]');
-      
-      if (await notificationItems.count() > 0) {
+      const notificationItems = page.locator(
+        '[data-testid="notification-item"]'
+      );
+
+      if ((await notificationItems.count()) > 0) {
         // Test notification interactions
         await expect(notificationItems.first()).toBeVisible();
-        
+
         // Test clicking on a notification
         await notificationItems.first().click();
-        
+
         // Verify interaction worked (e.g., marked as read)
-        await expect(page.locator('[data-testid="notification-read"]')).toBeVisible();
+        await expect(
+          page.locator('[data-testid="notification-read"]')
+        ).toBeVisible();
       } else {
-        console.log('No notification items found - component may not be integrated');
+        console.log(
+          'No notification items found - component may not be integrated'
+        );
       }
     });
   });
@@ -203,10 +234,13 @@ test.describe('Notification System Enhancement (Optimized)', () => {
   test.describe('Performance', () => {
     test('should load notifications efficiently', async ({ page }) => {
       const startTime = Date.now();
-      
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
       await page.waitForLoadState('domcontentloaded');
-      
+
       const loadTime = Date.now() - startTime;
       expect(loadTime).toBeLessThan(8000); // Should load in under 8 seconds with mocks
     });
@@ -215,25 +249,34 @@ test.describe('Notification System Enhancement (Optimized)', () => {
       // Mock large dataset
       await mockLargeNotificationDataset(page);
 
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
       await page.waitForLoadState('domcontentloaded');
-      
+
       // Check if we were redirected to sign-in (auth required)
       const currentUrl = page.url();
       if (currentUrl.includes('sign-in')) {
-        console.log('Dashboard requires authentication - skipping large notification list test');
+        console.log(
+          'Dashboard requires authentication - skipping large notification list test'
+        );
         return; // Skip test if auth is required
       }
-      
+
       // Verify the page loads without crashing
       const mainElement = page.locator('main, [data-testid="dashboard"], body');
       await expect(mainElement).toBeVisible();
-      
+
       // Check if notifications are loaded (if component is integrated)
-      const notificationList = page.locator('[data-testid="notification-list"]');
+      const notificationList = page.locator(
+        '[data-testid="notification-list"]'
+      );
       if (await notificationList.isVisible()) {
         // Verify pagination or virtualization works
-        const visibleNotifications = await page.locator('[data-testid="notification-item"]').count();
+        const visibleNotifications = await page
+          .locator('[data-testid="notification-item"]')
+          .count();
         expect(visibleNotifications).toBeLessThanOrEqual(50); // Assuming some form of pagination
       }
     });
@@ -244,16 +287,21 @@ test.describe('Notification System Enhancement (Optimized)', () => {
       // Mock error responses
       await mockErrorResponses(page);
 
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
       await page.waitForLoadState('domcontentloaded');
-      
+
       // Check if we were redirected to sign-in (auth required)
       const currentUrl = page.url();
       if (currentUrl.includes('sign-in')) {
-        console.log('Dashboard requires authentication - skipping API error handling test');
+        console.log(
+          'Dashboard requires authentication - skipping API error handling test'
+        );
         return; // Skip test if auth is required
       }
-      
+
       // Check for error state (if component is integrated)
       const errorMessage = page.locator('[data-testid="error-message"]');
       if (await errorMessage.isVisible()) {
@@ -261,31 +309,38 @@ test.describe('Notification System Enhancement (Optimized)', () => {
         await expect(page.getByText('Something went wrong')).toBeVisible();
       } else {
         // If not integrated, verify page still loads
-        const mainElement = page.locator('main, [data-testid="dashboard"], body');
+        const mainElement = page.locator(
+          'main, [data-testid="dashboard"], body'
+        );
         await expect(mainElement).toBeVisible();
       }
     });
 
     test('should handle empty notification list', async ({ page }) => {
       // Mock empty response
-      await page.route('**/api/notifications**', async route => {
+      await page.route('**/api/notifications**', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ notifications: [], total: 0 })
+          body: JSON.stringify({ notifications: [], total: 0 }),
         });
       });
 
-      await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto('/dashboard', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
       await page.waitForLoadState('domcontentloaded');
-      
+
       // Check if we were redirected to sign-in (auth required)
       const currentUrl = page.url();
       if (currentUrl.includes('sign-in')) {
-        console.log('Dashboard requires authentication - skipping empty notification list test');
+        console.log(
+          'Dashboard requires authentication - skipping empty notification list test'
+        );
         return; // Skip test if auth is required
       }
-      
+
       // Check for empty state (if component is integrated)
       const emptyState = page.locator('[data-testid="empty-state"]');
       if (await emptyState.isVisible()) {
@@ -293,7 +348,9 @@ test.describe('Notification System Enhancement (Optimized)', () => {
         await expect(page.getByText(/no notifications/i)).toBeVisible();
       } else {
         // If not integrated, verify page still loads
-        const mainElement = page.locator('main, [data-testid="dashboard"], body');
+        const mainElement = page.locator(
+          'main, [data-testid="dashboard"], body'
+        );
         await expect(mainElement).toBeVisible();
       }
     });
