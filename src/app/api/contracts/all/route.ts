@@ -20,14 +20,13 @@ export async function GET(request: NextRequest) {
     try {
       const { tablesDB } = await createAdminClient();
 
-      // Fetch all contracts from the database with daysUntilExpiry
+      // Fetch all contracts from the database
       contractsResult = await tablesDB.listRows({
         databaseId: appwriteConfig.databaseId!,
         tableId: appwriteConfig.contractsCollectionId!,
         queries: [
-          // Only fetch contracts that have an expiry date
-          Query.isNotNull('contractExpiryDate'),
-          // Order by expiry date ascending (soonest first)
+          // Order by expiry date ascending (soonest first), nulls last
+          // Note: Contracts without expiry dates will appear at the end
           Query.orderAsc('contractExpiryDate'),
         ],
       });
