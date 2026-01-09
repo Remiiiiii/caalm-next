@@ -188,7 +188,9 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
       if (shouldMarkAsExpired) {
         completedCount++;
         categories.push('expired');
-        reasons.push(`Status: '${status}', isExpired: ${isExpired}, isPastExpiry: ${isPastExpiry}, daysUntilExpiry: ${daysUntilExpiry}`);
+        reasons.push(
+          `Status: '${status}', isExpired: ${isExpired}, isPastExpiry: ${isPastExpiry}, daysUntilExpiry: ${daysUntilExpiry}`
+        );
       }
 
       // Category 2: Contracts with status="active" are ALWAYS counted as active
@@ -196,7 +198,9 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
       if (status === 'active' && !shouldMarkAsExpired) {
         activeCount++;
         categories.push('active');
-        reasons.push(`Status is 'active' (daysUntilExpiry: ${daysUntilExpiry}, isExpired: ${isExpired})`);
+        reasons.push(
+          `Status is 'active' (daysUntilExpiry: ${daysUntilExpiry}, isExpired: ${isExpired})`
+        );
       }
 
       // Category 3: Check if contract is expiring soon (within 90 days)
@@ -205,7 +209,9 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
       if (isExpiringSoon && !shouldMarkAsExpired) {
         expiringCount++;
         categories.push('expiring');
-        reasons.push(`Expiring within 90 days (daysUntilExpiry: ${daysUntilExpiry}, expiry: ${expiryDate?.toISOString()})`);
+        reasons.push(
+          `Expiring within 90 days (daysUntilExpiry: ${daysUntilExpiry}, expiry: ${expiryDate?.toISOString()})`
+        );
       }
 
       // Category 4: All other contracts (pending-review, inactive without expiry, etc.)
@@ -221,7 +227,9 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
           // Default: count as active for contracts without explicit status or with other statuses
           activeCount++;
           categories.push('active');
-          reasons.push(`Status: '${status}' (default to active, daysUntilExpiry: ${daysUntilExpiry})`);
+          reasons.push(
+            `Status: '${status}' (default to active, daysUntilExpiry: ${daysUntilExpiry})`
+          );
         }
       }
 

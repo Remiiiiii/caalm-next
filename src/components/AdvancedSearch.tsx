@@ -266,7 +266,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 space-y-4">
+    <div className="w-full space-y-4">
       {/* Search Header */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">

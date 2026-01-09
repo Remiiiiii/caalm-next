@@ -400,7 +400,7 @@ const AuditLogsPage = () => {
   }
 
   return (
-    <div className="main-content">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
       {/* Professional Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">

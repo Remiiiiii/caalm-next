@@ -8,7 +8,7 @@
 export default function PipelinesPage() {
 
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
       <div className="glass-card w-full overflow-hidden">
         <div className="glass-card-cap" />
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">

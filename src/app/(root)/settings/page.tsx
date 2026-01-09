@@ -35,9 +35,10 @@ const SettingsPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/dashboard">
             <Button
@@ -144,6 +145,7 @@ const SettingsPage = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

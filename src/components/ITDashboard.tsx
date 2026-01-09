@@ -75,13 +75,14 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
   const recentAlerts = dashboard?.recentAlerts || [];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight sidebar-gradient-text">
-            IT Dashboard
-          </h2>
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight sidebar-gradient-text">
+              IT Dashboard
+            </h2>
           <p className="text-muted-foreground">
             System overview and real-time monitoring
           </p>
@@ -282,6 +283,7 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 };

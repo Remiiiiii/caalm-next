@@ -23,7 +23,7 @@ export default function RateLimitsPage() {
 
   // Always render to maintain hook consistency
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
       <RateLimitMonitoring />
     </div>
   );

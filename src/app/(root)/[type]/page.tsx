@@ -234,7 +234,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
     type.toLowerCase() === 'contracts' ? contractDocuments.length : 0;
 
   return (
-    <div className="page-container">
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
       <div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
         <h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
       </div>
