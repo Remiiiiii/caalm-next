@@ -146,9 +146,10 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
         : null;
       const isExpired = contract.isExpired || false;
       const hasNoStatus = !contract.status || status === '';
-      
+
       // Use daysUntilExpiry from contract if available, otherwise calculate from date
-      let daysUntilExpiry: number | undefined = (contract as any).daysUntilExpiry;
+      let daysUntilExpiry: number | undefined = (contract as any)
+        .daysUntilExpiry;
       if (daysUntilExpiry === undefined && expiryDate) {
         const expiryStr = contract.contractExpiryDate?.split('T')[0];
         if (expiryStr) {
@@ -159,46 +160,74 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
           daysUntilExpiry = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
         }
       }
-      
+
+      // Determine if contract is expired or expiring
+      // Only consider expired if explicitly marked or past expiry date
       const isPastExpiry = daysUntilExpiry !== undefined && daysUntilExpiry < 0;
+      // Only consider expiring if we have a valid daysUntilExpiry between 0-90
       const isExpiringSoon =
-        daysUntilExpiry !== undefined && daysUntilExpiry >= 0 && daysUntilExpiry <= 90;
+        daysUntilExpiry !== undefined &&
+        daysUntilExpiry >= 0 &&
+        daysUntilExpiry <= 90;
 
-      let categorizedAs = '';
-      let reason = '';
+      // Contracts can be in multiple categories (e.g., active AND expiring)
+      // Track which categories this contract belongs to
+      const categories: string[] = [];
+      const reasons: string[] = [];
 
-      // Priority 1: Expired contracts - check status="expired" first, then isExpired flag, then past expiry
-      if (status === 'expired' || isExpired || isPastExpiry) {
+      // Category 1: Expired contracts
+      // Only mark as expired if:
+      // - Status is explicitly "expired", OR
+      // - isExpired flag is true AND status is not "active" (trust active status from API), OR
+      // - Past expiry date AND status is not "active" (trust active status from API)
+      const shouldMarkAsExpired =
+        status === 'expired' ||
+        (isExpired && status !== 'active') ||
+        (isPastExpiry && status !== 'active');
+
+      if (shouldMarkAsExpired) {
         completedCount++;
-        categorizedAs = 'expired';
-        reason = `Status: '${status}', isExpired: ${isExpired}, isPastExpiry: ${isPastExpiry}`;
+        categories.push('expired');
+        reasons.push(`Status: '${status}', isExpired: ${isExpired}, isPastExpiry: ${isPastExpiry}, daysUntilExpiry: ${daysUntilExpiry}`);
       }
-      // Priority 2: Check if contract is expiring soon (within 90 days)
-      // This takes priority over status - if a contract is expiring, it's "expiring" regardless of status
-      else if (isExpiringSoon) {
-        expiringCount++;
-        categorizedAs = 'expiring';
-        reason = `Status: '${status}', expiring within 90 days (expiry: ${expiryDate?.toISOString()})`;
-      }
-      // Priority 3: Contracts with status="active" are counted as active (if not expired and not expiring)
-      else if (status === 'active') {
+
+      // Category 2: Contracts with status="active" are ALWAYS counted as active
+      // This applies regardless of expiry status (contracts can be active AND expiring)
+      if (status === 'active' && !shouldMarkAsExpired) {
         activeCount++;
-        categorizedAs = 'active';
-        reason = `Status is 'active' and not expired/expiring`;
+        categories.push('active');
+        reasons.push(`Status is 'active' (daysUntilExpiry: ${daysUntilExpiry}, isExpired: ${isExpired})`);
       }
-      // Priority 4: All other contracts (pending-review, inactive without expiry, etc.)
+
+      // Category 3: Check if contract is expiring soon (within 90 days)
+      // This applies to ALL contracts (including active) that are expiring
+      // Only if we have a valid daysUntilExpiry value (not undefined) and not expired
+      if (isExpiringSoon && !shouldMarkAsExpired) {
+        expiringCount++;
+        categories.push('expiring');
+        reasons.push(`Expiring within 90 days (daysUntilExpiry: ${daysUntilExpiry}, expiry: ${expiryDate?.toISOString()})`);
+      }
+
+      // Category 4: All other contracts (pending-review, inactive without expiry, etc.)
       // If no expiry date or expiry is far in future, consider active
       // If status is inactive and no expiry info, consider expired
-      else if (status === 'inactive' && !expiryDate) {
-        completedCount++;
-        categorizedAs = 'expired';
-        reason = `Status: 'inactive' with no expiry date`;
+      if (categories.length === 0) {
+        // No category assigned yet - determine default category
+        if (status === 'inactive' && !expiryDate) {
+          completedCount++;
+          categories.push('expired');
+          reasons.push(`Status: 'inactive' with no expiry date`);
+        } else {
+          // Default: count as active for contracts without explicit status or with other statuses
+          activeCount++;
+          categories.push('active');
+          reasons.push(`Status: '${status}' (default to active, daysUntilExpiry: ${daysUntilExpiry})`);
+        }
       }
-      else {
-        activeCount++;
-        categorizedAs = 'active';
-        reason = `Status: '${status}' (default to active)`;
-      }
+
+      // For debugging: use primary category (first one) as the main categorization
+      const categorizedAs = categories[0] || 'unknown';
+      const reason = reasons.join('; ');
 
       // Store categorization details for debugging
       categorizationDetails.push({
@@ -213,7 +242,9 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
       });
     });
 
-    const total = activeCount + expiringCount + completedCount;
+    // Total should be the number of unique contracts, not the sum of categories
+    // (since contracts can be in multiple categories)
+    const total = contracts.length;
 
     // Debug logging in development
     if (process.env.NODE_ENV === 'development') {
@@ -234,8 +265,21 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
         (d) => d.statusLower === 'active'
       );
       console.log(
-        '[ContractStatusPieChart] Contracts with status="active":',
-        activeStatusContracts
+        '[ContractStatusPieChart] Contracts with status="active" (all should be counted as active):',
+        activeStatusContracts.map((d) => ({
+          id: d.id,
+          categorizedAs: d.categorizedAs,
+          expiryDate: d.expiryDate,
+          reason: d.reason,
+        }))
+      );
+      // Log contracts categorized as active (regardless of status)
+      const categorizedAsActive = categorizationDetails.filter(
+        (d) => d.categorizedAs === 'active'
+      );
+      console.log(
+        '[ContractStatusPieChart] Contracts categorized as "active":',
+        categorizedAsActive
       );
     }
 
@@ -372,10 +416,9 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
     );
   }
 
-  const totalContracts = contractData.reduce(
-    (sum, item) => sum + item.count,
-    0
-  );
+  // Total should be the number of unique contracts, not the sum of category counts
+  // (since contracts can be in multiple categories like active AND expiring)
+  const totalContracts = contracts?.length || 0;
 
   return (
     <Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col">
