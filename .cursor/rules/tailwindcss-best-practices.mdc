@@ -1,13 +1,27 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
+name: tailwindcss-best-practices
 description: Best practices for styling with Tailwind CSS
 globs: **/*.{ts,tsx,css}
 ---
 
+**Note**: This file is part of the comprehensive style guide. For the complete single source of truth, see `global-style-guide.mdc`.
+
 - Use utility-first classes for rapid UI development.
 - Create custom themes using Tailwind's configuration file.
-
 - Utilize `@apply` for reusable styles in your CSS files.
+
+## Custom Colors
+
+- Use custom colors defined in `tailwind.config.ts` without intermediate suffixes (100, 200, etc.).
+- Custom colors available: `red`, `green`, `blue`, `pink`, `orange`, `brand`, `light`, `dark`, `navy`, `coral`.
+- Apply opacity modifiers with `/` syntax: `bg-blue/10`, `text-red/80`, `border-green/20`.
+- For colors with variants (like `light`, `dark`, `coral`, `brand`), use the dash notation: `bg-light-300`, `text-dark-100`, `bg-coral-500`.
+- Avoid using standard Tailwind color suffixes (e.g., `blue-100`, `red-800`) for custom colors.
+
+### Examples:
+- ✅ `bg-blue/10 text-blue border-blue/20`
+- ✅ `bg-green/10 text-green`
+- ✅ `bg-light-300 text-light-100`
+- ✅ `bg-coral-500 text-white`
+- ❌ `bg-blue-100 text-blue-800` (don't use intermediate suffixes for custom colors)
+- ❌ `bg-red-500` (use `bg-red` or `bg-red/50` instead)

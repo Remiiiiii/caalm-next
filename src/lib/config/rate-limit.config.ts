@@ -120,6 +120,13 @@ export const RATE_LIMIT_CONFIG: Record<string, EndpointRateLimit> = {
   '^/api/sam/': {
     authenticated: { requests: 50, window: 60, burst: 75 },
   },
+
+  // AI Image Generation - strict limits to control costs
+  '^/api/ai-image-generate$': {
+    anonymous: { requests: 0, window: 3600 }, // No anonymous access
+    authenticated: { requests: 10, window: 3600, burst: 15 }, // 10 per hour
+    premium: { requests: 50, window: 3600, burst: 75 }, // 50 per hour for premium
+  },
 };
 
 /**

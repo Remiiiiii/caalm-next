@@ -65,6 +65,7 @@ export const PERMISSIONS = {
     CHAT: 'ai.chat',
     DOCUMENT_ANALYSIS: 'ai.document_analysis',
     MEETING_PREP: 'ai.meeting_prep',
+    IMAGE_GENERATE: 'ai.image_generate',
   },
   
   // Audit Permissions
@@ -85,6 +86,15 @@ export const PERMISSIONS = {
     VIEW_SECURITY: 'it.view_security',
     MANAGE_DATABASE: 'it.manage_database',
     VIEW_INCIDENTS: 'it.view_incidents',
+  },
+  
+  // News Permissions
+  NEWS: {
+    CREATE: 'news.create',
+    READ: 'news.read',
+    UPDATE: 'news.update',
+    DELETE: 'news.delete',
+    PUBLISH: 'news.publish',
   },
 } as const;
 
@@ -158,6 +168,16 @@ export const PERMISSION_DEFINITIONS = [
   { key: PERMISSIONS.IT.VIEW_SECURITY, name: 'View Security', category: 'it', description: 'View security dashboard' },
   { key: PERMISSIONS.IT.MANAGE_DATABASE, name: 'Manage Database', category: 'it', description: 'Database administration' },
   { key: PERMISSIONS.IT.VIEW_INCIDENTS, name: 'View Incidents', category: 'it', description: 'View incident management' },
+  
+  // News
+  { key: PERMISSIONS.NEWS.CREATE, name: 'Create News Articles', category: 'news', description: 'Create new news articles for the company feed' },
+  { key: PERMISSIONS.NEWS.READ, name: 'View News Articles', category: 'news', description: 'View news articles including drafts' },
+  { key: PERMISSIONS.NEWS.UPDATE, name: 'Edit News Articles', category: 'news', description: 'Edit existing news articles' },
+  { key: PERMISSIONS.NEWS.DELETE, name: 'Delete News Articles', category: 'news', description: 'Delete news articles' },
+  { key: PERMISSIONS.NEWS.PUBLISH, name: 'Publish News Articles', category: 'news', description: 'Publish or unpublish news articles' },
+  
+  // AI Image Generation
+  { key: PERMISSIONS.AI.IMAGE_GENERATE, name: 'Generate AI Images', category: 'ai', description: 'Access to AI image generation feature for news thumbnails' },
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];

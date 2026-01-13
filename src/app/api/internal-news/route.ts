@@ -1,4 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/actions/user.actions';
+import {
+  getUserPermissions,
+  getUserDefaultOrganization,
+} from '@/lib/rbac/permissions';
+import { PERMISSIONS } from '@/constants/permissions';
+import {
+  createNewsArticle,
+  listNewsArticles,
+} from '@/lib/database/news-articles';
+import { createNewsVersion } from '@/lib/database/news-versions';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface NewsItem {
   id: string;
@@ -9,6 +21,10 @@ interface NewsItem {
   type: 'announcement' | 'update' | 'alert' | 'info';
   priority: 'high' | 'medium' | 'low';
   department?: string;
+  image?: string;
+  status?: 'draft' | 'published' | 'archived';
+  viewCount?: number;
+  scheduledAt?: string;
 }
 
 // Mock data - in production, this would come from your database
@@ -23,6 +39,7 @@ const mockNewsItems: NewsItem[] = [
     type: 'announcement',
     priority: 'high',
     department: 'HR',
+    image: '/assets/images/genImage.png',
   },
   {
     id: '2',
@@ -34,6 +51,7 @@ const mockNewsItems: NewsItem[] = [
     type: 'alert',
     priority: 'high',
     department: 'IT',
+    image: '/assets/images/genImage.png',
   },
   {
     id: '3',
@@ -56,6 +74,7 @@ const mockNewsItems: NewsItem[] = [
     type: 'update',
     priority: 'low',
     department: 'HR',
+    image: '/assets/images/genImage.png',
   },
   {
     id: '5',
@@ -78,6 +97,7 @@ const mockNewsItems: NewsItem[] = [
     type: 'announcement',
     priority: 'high',
     department: 'HR',
+    image: '/assets/images/genImage.png',
   },
   {
     id: '7',
@@ -156,77 +176,260 @@ export async function GET(request: NextRequest) {
     const priority = searchParams.get('priority');
     const department = searchParams.get('department');
     const search = searchParams.get('search');
+    const status = searchParams.get('status') || 'published'; // Default to published for public feed
 
-    let filteredNews = [...mockNewsItems];
-
-    // Filter by search query
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredNews = filteredNews.filter(
-        (item) =>
-          item.title.toLowerCase().includes(searchLower) ||
-          item.content.toLowerCase().includes(searchLower) ||
-          item.author.toLowerCase().includes(searchLower)
-      );
+    // Get user's organization for filtering
+    const user = await getCurrentUser();
+    let orgId: string | undefined;
+    if (user) {
+      const defaultOrg = await getUserDefaultOrganization(user.$id);
+      orgId = defaultOrg?.orgId;
     }
 
-    // Filter by type
-    if (
-      type &&
-      type !== 'all' &&
-      ['announcement', 'update', 'alert', 'info'].includes(type)
-    ) {
-      filteredNews = filteredNews.filter((item) => item.type === type);
-    }
+    // Fetch from database (filtered by organization)
+    const { articles, total } = await listNewsArticles({
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+      type: type || undefined,
+      priority: priority || undefined,
+      department: department || undefined,
+      status: status === 'all' ? undefined : status || undefined,
+      search: search || undefined,
+      orgId: orgId,
+    });
 
-    // Filter by priority
-    if (
-      priority &&
-      priority !== 'all' &&
-      ['high', 'medium', 'low'].includes(priority)
-    ) {
-      filteredNews = filteredNews.filter((item) => item.priority === priority);
-    }
+    // Transform to NewsItem format for compatibility
+    const filteredNews: NewsItem[] = articles.map((article) => ({
+      id: article.$id,
+      title: article.title,
+      content: article.content,
+      author: article.author || 'Unknown',
+      date: article.publishedAt || article.$createdAt,
+      type: article.type,
+      priority: article.priority,
+      department: article.department,
+      image: article.thumbnailUrl,
+      status: article.status,
+      viewCount: article.viewCount,
+      scheduledAt: article.scheduledAt,
+    }));
 
-    // Filter by department
-    if (department && department !== 'all') {
-      filteredNews = filteredNews.filter((item) =>
-        item.department?.toLowerCase().includes(department.toLowerCase())
-      );
-    }
-
-    // Sort by date (newest first)
-    filteredNews.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-
-    // Store total count before pagination
-    const totalCount = filteredNews.length;
-
-    // Apply pagination
+    // Pagination values
     const offsetNum = offset ? parseInt(offset, 10) : 0;
     const limitNum = limit ? parseInt(limit, 10) : 9; // Default to 9 items per page
 
-    if (!isNaN(offsetNum) && offsetNum >= 0) {
-      filteredNews = filteredNews.slice(offsetNum);
-    }
-
-    if (!isNaN(limitNum) && limitNum > 0) {
-      filteredNews = filteredNews.slice(0, limitNum);
-    }
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       items: filteredNews,
-      total: totalCount,
+      total: total,
       limit: limitNum,
       offset: offsetNum,
     });
+
+    // Cache published articles for 5 minutes
+    if (status === 'published') {
+      response.headers.set(
+        'Cache-Control',
+        'public, s-maxage=300, stale-while-revalidate=600'
+      );
+    }
+
+    return response;
   } catch (error) {
     console.error('Failed to fetch internal news:', error);
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+
     return NextResponse.json(
       {
+        success: false,
         error: 'Failed to fetch internal news',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: errorMessage,
+        items: [],
+        total: 0,
+        limit: 0,
+        offset: 0,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Check authentication
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check permissions
+    const userPermissions = await getUserPermissions(user.$id);
+    if (!userPermissions.includes(PERMISSIONS.NEWS.CREATE)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Permission denied. You need news.create permission.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Parse request body
+    const body = await request.json();
+    const {
+      title,
+      content,
+      type,
+      priority,
+      department,
+      status,
+      thumbnailUrl,
+      thumbnailPrompt,
+      tags,
+      scheduledAt,
+      expiresAt,
+    } = body;
+
+    // Validate required fields
+    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Title is required' },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !content ||
+      typeof content !== 'string' ||
+      content.trim().length === 0
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Content is required' },
+        { status: 400 }
+      );
+    }
+
+    if (title.length > 200) {
+      return NextResponse.json(
+        { success: false, error: 'Title too long (max 200 characters)' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize HTML content
+    const sanitizedContent = DOMPurify.sanitize(content, {
+      ALLOWED_TAGS: [
+        'p',
+        'br',
+        'strong',
+        'em',
+        'u',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'ul',
+        'ol',
+        'li',
+        'a',
+      ],
+      ALLOWED_ATTR: ['href', 'target'],
+    });
+
+    // Validate type
+    const validTypes = ['announcement', 'update', 'alert', 'info'];
+    if (type && !validTypes.includes(type)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invalid type. Must be one of: ${validTypes.join(', ')}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate priority
+    const validPriorities = ['high', 'medium', 'low'];
+    if (priority && !validPriorities.includes(priority)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invalid priority. Must be one of: ${validPriorities.join(
+            ', '
+          )}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Get user's organization
+    const defaultOrg = await getUserDefaultOrganization(user.$id);
+    const orgId = defaultOrg?.orgId;
+    if (!orgId) {
+      return NextResponse.json(
+        { success: false, error: 'User organization not found' },
+        { status: 400 }
+      );
+    }
+
+    // Create article
+    const article = await createNewsArticle({
+      title: title.trim(),
+      content: sanitizedContent,
+      authorId: user.$id,
+      author: user.fullName || user.email || 'Unknown',
+      department: department || user.department || '',
+      type: type || 'info',
+      priority: priority || 'medium',
+      status: status || 'draft',
+      thumbnailUrl: thumbnailUrl || '',
+      thumbnailPrompt: thumbnailPrompt || '',
+      tags: Array.isArray(tags) ? tags : [],
+      scheduledAt: scheduledAt || undefined,
+      expiresAt: expiresAt || undefined,
+      orgId: orgId,
+    });
+
+    // Create initial version entry
+    try {
+      await createNewsVersion({
+        newsId: article.$id,
+        content: sanitizedContent,
+        modifiedBy: user.$id,
+        changeDescription: 'Initial version',
+        orgId: orgId,
+      });
+    } catch (versionError) {
+      // Log but don't fail - versioning is optional
+      console.warn('Failed to create initial version:', versionError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      article: {
+        id: article.$id,
+        title: article.title,
+        content: article.content,
+        author: article.author,
+        date: article.$createdAt,
+        type: article.type,
+        priority: article.priority,
+        department: article.department,
+        image: article.thumbnailUrl,
+        status: article.status,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error creating news article:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || 'Failed to create news article',
       },
       { status: 500 }
     );
