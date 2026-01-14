@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStableDiffusionService } from '@/lib/ai-image-service';
+import { getImagineArtService } from '@/lib/ai-image-service';
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { getUserPermissions } from '@/lib/rbac/permissions';
 import { PERMISSIONS } from '@/constants/permissions';
@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate prompt length (enhanced prompts can be longer)
-    const maxLength = options?.enhancePrompt === false ? 2000 : 1000;
+    // Validate prompt length
+    const maxLength = 2000;
     if (prompt.length > maxLength) {
       return NextResponse.json(
         {
@@ -67,22 +67,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check API health (skip for Replicate as it's always available if token is set)
-    const service = getStableDiffusionService();
-    const provider = service.getProvider();
+    // Check API health
+    const service = getImagineArtService();
+    const isHealthy = await service.healthCheck();
 
-    if (provider === 'docker') {
-      const isHealthy = await service.healthCheck();
-      if (!isHealthy) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              'Image generation service is unavailable. Please check Docker container status.',
-          },
-          { status: 503 }
-        );
-      }
+    if (!isHealthy) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Image generation service is unavailable. Please check API key configuration.',
+        },
+        { status: 503 }
+      );
     }
 
     // Generate image
@@ -119,7 +116,7 @@ export async function POST(request: NextRequest) {
 // Health check endpoint
 export async function GET(request: NextRequest) {
   try {
-    const service = getStableDiffusionService();
+    const service = getImagineArtService();
     const provider = service.getProvider();
     const isHealthy = await service.healthCheck();
 
@@ -127,22 +124,18 @@ export async function GET(request: NextRequest) {
     const diagnostic =
       process.env.NODE_ENV === 'development'
         ? {
-            hasToken: !!process.env.REPLICATE_API_TOKEN,
-            tokenLength: process.env.REPLICATE_API_TOKEN?.length || 0,
-            tokenPrefix:
-              process.env.REPLICATE_API_TOKEN?.substring(0, 4) || 'none',
+            hasApiKey: !!process.env.IMAGINE_ART_API_KEY,
+            apiKeyLength: process.env.IMAGINE_ART_API_KEY?.length || 0,
+            apiKeyPrefix:
+              process.env.IMAGINE_ART_API_KEY?.substring(0, 4) || 'none',
           }
         : undefined;
 
     return NextResponse.json({
       healthy: isHealthy,
       provider,
-      service:
-        provider === 'replicate' ? 'replicate-api' : 'stable-diffusion-docker',
-      baseUrl:
-        provider === 'replicate'
-          ? 'https://api.replicate.com/v1'
-          : process.env.STABLE_DIFFUSION_API_URL || 'http://localhost:8000',
+      service: 'imagine-art-1.5',
+      baseUrl: 'https://api.vyro.ai/v2/image/generations',
       ...(diagnostic && { diagnostic }),
     });
   } catch (error: any) {

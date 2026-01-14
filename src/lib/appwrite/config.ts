@@ -195,11 +195,14 @@ export const appwriteConfig = {
     'newsversions'
   ),
 
-  // Stable Diffusion API (Self-hosted Docker)
+  // Imagine Art API (AI Image Generation)
+  imagineArtApiKey: process.env.IMAGINE_ART_API_KEY,
+
+  // Legacy: Stable Diffusion API (deprecated - kept for reference)
   stableDiffusionApiUrl:
     process.env.STABLE_DIFFUSION_API_URL || 'http://localhost:8000',
 
-  // Replicate API (Cloud alternative - no Docker needed)
+  // Legacy: Replicate API (deprecated - kept for reference)
   replicateApiToken: process.env.REPLICATE_API_TOKEN,
   replicateModel:
     process.env.REPLICATE_MODEL ||
