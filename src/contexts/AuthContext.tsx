@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // First try to get session-based user
         const sessionUser = await getSessionUser();
-        
+
         // Only log in development
         if (process.env.NODE_ENV === 'development') {
           console.log(
@@ -81,24 +81,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           );
         }
 
-          if (sessionUser) {
+        if (sessionUser) {
           if (process.env.NODE_ENV === 'development') {
             console.log('AuthContext: Using session-based user');
           }
-            const typedSessionUser = sessionUser as AuthenticatedUser;
-            if (typeof typedSessionUser.role === 'string') {
-              typedSessionUser.role = normalizeUserRole(typedSessionUser.role);
-            }
-            setUser(typedSessionUser);
+          const typedSessionUser = sessionUser as AuthenticatedUser;
+          if (typeof typedSessionUser.role === 'string') {
+            typedSessionUser.role = normalizeUserRole(typedSessionUser.role);
+          }
+          // Ensure complete serialization by parsing and stringifying
+          const serializedUser = JSON.parse(
+            JSON.stringify(typedSessionUser)
+          ) as AuthenticatedUser;
+          setUser(serializedUser);
           setIsSessionValid(true);
-          
+
           // Cache user data for faster subsequent loads
           if (typeof window !== 'undefined') {
             try {
-              localStorage.setItem('cached_user', JSON.stringify({
-                user: typedSessionUser,
-                timestamp: Date.now(),
-              }));
+              localStorage.setItem(
+                'cached_user',
+                JSON.stringify({
+                  user: serializedUser,
+                  timestamp: Date.now(),
+                })
+              );
             } catch {
               // localStorage might be full, ignore
             }
@@ -121,7 +128,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               pathname.startsWith('/others') ||
               pathname.startsWith('/audits') ||
               pathname.startsWith('/team') ||
-              pathname.startsWith('/calendar'));
+              pathname.startsWith('/calendar') ||
+              pathname.startsWith('/company-news'));
           const isAuthRoute =
             pathname &&
             (pathname.startsWith('/sign-in') ||
@@ -186,7 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
 
               // Convert the custom user object to match the expected format
-              const convertedUser: AuthenticatedUser = {
+              const convertedUser = {
                 $id: twoFAUser.$id,
                 name: twoFAUser.fullName,
                 email: twoFAUser.email,
@@ -202,18 +210,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 },
                 registration: new Date().toISOString(),
                 status: true,
-              };
+                $createdAt: new Date().toISOString(),
+                $updatedAt: new Date().toISOString(),
+                labels: [],
+                passwordUpdate: new Date().toISOString(),
+                phone: '',
+                accessedAt: new Date().toISOString(),
+                mfa: false,
+                targets: [],
+              } as AuthenticatedUser;
 
-              setUser(convertedUser);
+              // Ensure complete serialization by parsing and stringifying
+              const serializedUser = JSON.parse(
+                JSON.stringify(convertedUser)
+              ) as AuthenticatedUser;
+              setUser(serializedUser);
               setIsSessionValid(true);
-              
+
               // Cache user data for faster subsequent loads
               if (typeof window !== 'undefined') {
                 try {
-                  localStorage.setItem('cached_user', JSON.stringify({
-                    user: convertedUser,
-                    timestamp: Date.now(),
-                  }));
+                  localStorage.setItem(
+                    'cached_user',
+                    JSON.stringify({
+                      user: convertedUser,
+                      timestamp: Date.now(),
+                    })
+                  );
                 } catch {
                   // localStorage might be full, ignore
                 }
@@ -276,7 +299,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
 
-          const convertedUser: AuthenticatedUser = {
+          const convertedUser = {
             $id: twoFAUser.$id,
             name: twoFAUser.fullName,
             email: twoFAUser.email,
@@ -292,8 +315,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             },
             registration: new Date().toISOString(),
             status: true,
-          };
-          setUser(convertedUser);
+            $createdAt: new Date().toISOString(),
+            $updatedAt: new Date().toISOString(),
+            labels: [],
+            passwordUpdate: new Date().toISOString(),
+            phone: '',
+            accessedAt: new Date().toISOString(),
+            mfa: false,
+            targets: [],
+          } as AuthenticatedUser;
+          // Ensure complete serialization by parsing and stringifying
+          const serializedUser = JSON.parse(
+            JSON.stringify(convertedUser)
+          ) as AuthenticatedUser;
+          setUser(serializedUser);
         }
       } else {
         // For session-based user
@@ -318,10 +353,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.clear();
 
     // Redirect immediately without waiting for API call
-    const redirectUrl = reason === 'inactivity' 
-      ? '/sign-in?reason=inactivity' 
-      : '/sign-in';
-    
+    const redirectUrl =
+      reason === 'inactivity' ? '/sign-in?reason=inactivity' : '/sign-in';
+
     // Fire and forget - don't wait for API response
     fetch('/api/auth/logout', {
       method: 'POST',
@@ -341,16 +375,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     window.location.href = redirectUrl;
   };
 
-  // Always render the same structure, but conditionally show content
+  // Always render the same structure to maintain consistent hook calls
   return (
     <AuthContext.Provider
       value={{ user, setUser, loading, logout, isSessionValid, refreshUser }}
     >
-      {!mounted ? (
-        <div style={{ visibility: 'hidden' }}>{children}</div>
-      ) : (
-        children
-      )}
+      {children}
     </AuthContext.Provider>
   );
 };

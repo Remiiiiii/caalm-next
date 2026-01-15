@@ -43,6 +43,12 @@ const PERMISSION_ID_MAP: Record<string, string> = {
   'ai.meeting_prep': 'perm_ai_meeting_prep',
   'audit.view': 'perm_audit_view',
   'audit.export': 'perm_audit_export',
+  'licenses.view': 'perm_licenses_view',
+  'licenses.create': 'perm_licenses_create',
+  'licenses.edit': 'perm_licenses_edit',
+  'licenses.delete': 'perm_licenses_delete',
+  'licenses.allocate': 'perm_licenses_allocate',
+  'licenses.renew': 'perm_licenses_renew',
 };
 
 // Role ID mapping

@@ -4,11 +4,5 @@
     "@next/next/no-img-element": "off",
     "react/no-unescaped-entities": "off"
   },
-  "ignorePatterns": [
-    "node_modules/",
-    ".next/",
-    "out/",
-    "build/",
-    "dist/"
-  ]
+  "ignorePatterns": ["node_modules/", ".next/", "out/", "build/", "dist/"]
 }

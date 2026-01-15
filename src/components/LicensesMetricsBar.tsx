@@ -1,0 +1,232 @@
+'use client';
+
+import React, { useMemo } from 'react';
+import { DollarSign, FileText, AlertTriangle, CheckCircle, Key } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import type { License } from '@/types/licenses';
+
+interface LicensesMetricsBarProps {
+  licenses: License[];
+}
+
+export default function LicensesMetricsBar({
+  licenses,
+}: LicensesMetricsBarProps) {
+  const expiryDatesKey = useMemo(() => {
+    return licenses
+      .map((license) => license.licenseExpiryDate || license.expirationDate || '')
+      .filter(Boolean)
+      .join('|');
+  }, [licenses]);
+
+  const expiringLicenses = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const in30Days = new Date(now);
+    in30Days.setDate(now.getDate() + 30);
+    const in60Days = new Date(now);
+    in60Days.setDate(now.getDate() + 60);
+    const in90Days = new Date(now);
+    in90Days.setDate(now.getDate() + 90);
+
+    return {
+      in30: licenses.filter((license) => {
+        const expiryDate = license.licenseExpiryDate || license.expirationDate;
+        if (!expiryDate) return false;
+        const expiryStr = expiryDate.split('T')[0];
+        const [year, month, day] = expiryStr.split('-').map(Number);
+        const expiry = new Date(year, month - 1, day);
+        expiry.setHours(0, 0, 0, 0);
+        return expiry >= now && expiry <= in30Days;
+      }).length,
+      in60: licenses.filter((license) => {
+        const expiryDate = license.licenseExpiryDate || license.expirationDate;
+        if (!expiryDate) return false;
+        const expiryStr = expiryDate.split('T')[0];
+        const [year, month, day] = expiryStr.split('-').map(Number);
+        const expiry = new Date(year, month - 1, day);
+        expiry.setHours(0, 0, 0, 0);
+        return expiry > in30Days && expiry <= in60Days;
+      }).length,
+      in90: licenses.filter((license) => {
+        const expiryDate = license.licenseExpiryDate || license.expirationDate;
+        if (!expiryDate) return false;
+        const expiryStr = expiryDate.split('T')[0];
+        const [year, month, day] = expiryStr.split('-').map(Number);
+        const expiry = new Date(year, month - 1, day);
+        expiry.setHours(0, 0, 0, 0);
+        return expiry > in60Days && expiry <= in90Days;
+      }).length,
+    };
+  }, [licenses, expiryDatesKey]);
+
+  const metrics = useMemo(() => {
+    let totalCost = 0;
+    let activeCount = 0;
+    let expiredCount = 0;
+    let pendingRenewalCount = 0;
+    let totalQuantity = 0;
+    let usedQuantity = 0;
+
+    licenses.forEach((license) => {
+      const status = license.status || 'unknown';
+
+      if (license.cost) {
+        totalCost += license.cost;
+      }
+
+      if (status === 'active') {
+        activeCount++;
+      }
+
+      if (status === 'expired') {
+        expiredCount++;
+      }
+
+      if (status === 'pending_renewal') {
+        pendingRenewalCount++;
+      }
+
+      if (license.quantity) {
+        totalQuantity += license.quantity;
+      }
+
+      if (license.quantity && license.availableQuantity !== undefined) {
+        usedQuantity += license.quantity - license.availableQuantity;
+      }
+    });
+
+    const utilizationRate =
+      totalQuantity > 0 ? (usedQuantity / totalQuantity) * 100 : 0;
+
+    return {
+      totalCost,
+      activeCount,
+      expiredCount,
+      pendingRenewalCount,
+      totalLicenses: licenses.length,
+      totalQuantity,
+      usedQuantity,
+      utilizationRate,
+    };
+  }, [licenses]);
+
+  const totalExpiring =
+    expiringLicenses.in30 + expiringLicenses.in60 + expiringLicenses.in90;
+
+  return (
+    <section className="mb-6 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Cost Card */}
+        {metrics.totalCost > 0 && (
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium sidebar-gradient-text">
+                    Total Cost
+                  </p>
+                  <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                    <span>${metrics.totalCost.toLocaleString()}</span>
+                    <span className="inline-block ml-2 pb-1">
+                      <DollarSign className="h-8 w-8 text-slate-600" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Total Licenses Card */}
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium sidebar-gradient-text">
+                  Total Licenses
+                </p>
+                <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                  <span>{metrics.totalLicenses.toLocaleString()}</span>
+                  <span className="inline-block ml-2 pb-1">
+                    <Key className="h-8 w-8 text-slate-600" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Licenses Card */}
+        <Card className="glass-card">
+          <div className="glass-card-cap" />
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium sidebar-gradient-text">
+                  Active
+                </p>
+                <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                  <span>{metrics.activeCount.toLocaleString()}</span>
+                  <span className="inline-block ml-2 pb-1">
+                    <CheckCircle className="h-8 w-8 text-green" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Expiring Soon Card */}
+        {totalExpiring > 0 && (
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium sidebar-gradient-text">
+                    Expiring Soon
+                  </p>
+                  <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                    <span>{totalExpiring.toLocaleString()}</span>
+                    <span className="inline-block ml-2 pb-1">
+                      <AlertTriangle className="h-8 w-8 text-orange" />
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    {expiringLicenses.in30} in 30 days, {expiringLicenses.in60} in 60 days, {expiringLicenses.in90} in 90 days
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Utilization Rate Card */}
+        {metrics.totalQuantity > 0 && (
+          <Card className="glass-card">
+            <div className="glass-card-cap" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium sidebar-gradient-text">
+                    Utilization
+                  </p>
+                  <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+                    <span>{metrics.utilizationRate.toFixed(1)}%</span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    {metrics.usedQuantity} / {metrics.totalQuantity} used
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </section>
+  );
+}

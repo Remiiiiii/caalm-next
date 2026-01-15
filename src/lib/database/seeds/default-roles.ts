@@ -54,6 +54,24 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
       PERMISSIONS.CONTRACTS.VIEW,
     ],
   },
+  {
+    name: 'IT',
+    description: 'IT/Software Engineering staff with access to monitoring, CI/CD, security, and system administration',
+    isSystemRole: true,
+    permissions: [
+      PERMISSIONS.IT.VIEW_RATE_LIMITS,
+      PERMISSIONS.IT.VIEW_SYSTEM_LOGS,
+      PERMISSIONS.IT.MANAGE_API_KEYS,
+      PERMISSIONS.IT.VIEW_ANALYTICS,
+      PERMISSIONS.IT.MANAGE_DEPLOYMENTS,
+      PERMISSIONS.IT.VIEW_MONITORING,
+      PERMISSIONS.IT.MANAGE_CI_CD,
+      PERMISSIONS.IT.VIEW_SECURITY,
+      PERMISSIONS.IT.MANAGE_DATABASE,
+      PERMISSIONS.IT.VIEW_INCIDENTS,
+      PERMISSIONS.AUDIT.VIEW,
+    ],
+  },
 ];
 
 /**

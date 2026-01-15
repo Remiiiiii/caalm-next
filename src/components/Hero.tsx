@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useInView } from 'react-intersection-observer';
 import { useEffect, useState } from 'react';
-// import Spline from '@splinetool/react-spline';
 
 const Hero = () => {
   const { ref, inView } = useInView({

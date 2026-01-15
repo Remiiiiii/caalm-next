@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 /**
  * Server-side API route for weather data
@@ -26,13 +28,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build API URL
+    // Build cache key based on location type
+    let cacheKey: string;
     let apiUrl: string;
+    
     if (lat && lon) {
       // Use coordinates for more accurate weather data
+      cacheKey = CACHE_KEYS.weather.byCoords(lat, lon);
       apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=imperial`;
     } else if (city) {
       // Use city name
+      cacheKey = CACHE_KEYS.weather.byCity(city);
       apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
         city
       )}&appid=${apiKey}&units=imperial`;
@@ -47,36 +53,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Fetch weather data with caching (10 minutes TTL)
+    const result = await CacheManager.withCache(
+      'weather',
+      cacheKey,
+      async () => {
+        const response = await fetch(apiUrl, {
+          next: { revalidate: 600 }, // Cache for 10 minutes
+        });
 
-    const response = await fetch(apiUrl, {
-      next: { revalidate: 600 }, // Cache for 10 minutes
-    });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[SERVER] Weather API] OpenWeatherMap API error:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+          });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('[SERVER] Weather API] OpenWeatherMap API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorData,
-      });
+          throw new Error(errorData.message || 'Weather service unavailable');
+        }
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to fetch weather data',
-          message: errorData.message || 'Weather service unavailable',
-          status: response.status,
-        },
-        { status: response.status }
-      );
-    }
+        const data = await response.json();
+        return {
+          success: true,
+          data,
+        };
+      }
+    );
 
-    const data = await response.json();
-
-    return NextResponse.json({
-      success: true,
-      data,
-    });
+    return NextResponse.json(result);
   } catch (error) {
     console.error('[SERVER] Weather API] Error fetching weather:', error);
     return NextResponse.json(

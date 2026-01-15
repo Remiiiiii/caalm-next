@@ -3534,10 +3534,11 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Calendar Title and Outlook Status */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold sidebar-gradient-text">Calendar</h1>
+    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
+      <div className="space-y-6">
+        {/* Calendar Title and Outlook Status */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold sidebar-gradient-text">Calendar</h1>
         {outlookConnected && (
           <div className="flex items-center border border-green-200 rounded-full gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm">
             <CheckCircle className="h-4 w-4 text-green" />
@@ -6673,6 +6674,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
           }
         }}
       />
+      </div>
     </div>
   );
 };

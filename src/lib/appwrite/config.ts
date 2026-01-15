@@ -1,75 +1,159 @@
+// Test/CI fallback values when secrets are not configured
+const getTestFallback = (
+  key: string,
+  defaultValue?: string
+): string | undefined => {
+  if (process.env.CI || process.env.NODE_ENV === 'test') {
+    // In CI/test, use test values if env var is not set
+    return (
+      process.env[key] ||
+      defaultValue ||
+      `test-${key
+        .toLowerCase()
+        .replace(/next_public_/g, '')
+        .replace(/_/g, '-')}`
+    );
+  }
+  return process.env[key] || defaultValue;
+};
+
 export const appwriteConfig = {
   endpointUrl:
     process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ||
-    'https://fra.cloud.appwrite.io/v1',
+    (process.env.CI || process.env.NODE_ENV === 'test'
+      ? 'https://cloud.appwrite.io/v1'
+      : 'https://fra.cloud.appwrite.io/v1'),
 
-  projectId: process.env.NEXT_PUBLIC_APPWRITE_PROJECT,
+  projectId: getTestFallback('NEXT_PUBLIC_APPWRITE_PROJECT', 'test-project-id'),
 
-  databaseId: process.env.NEXT_PUBLIC_APPWRITE_DATABASE,
+  databaseId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_DATABASE',
+    'test-database-id'
+  ),
 
-  usersCollectionId: process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION,
+  usersCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_USERS_COLLECTION',
+    'test-users'
+  ),
 
-  filesCollectionId: process.env.NEXT_PUBLIC_APPWRITE_FILES_COLLECTION,
+  filesCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_FILES_COLLECTION',
+    'test-files'
+  ),
 
-  contractsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_CONTRACTS_COLLECTION,
+  contractsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_CONTRACTS_COLLECTION',
+    'test-contracts'
+  ),
 
-  contractsEnterpriseMetadataCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CONTRACTS_ENTERPRISE_METADATA_COLLECTION,
+  contractsEnterpriseMetadataCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_CONTRACTS_ENTERPRISE_METADATA_COLLECTION',
+    'test-contracts-enterprise-metadata'
+  ),
 
-  contractExtensionsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_EXTENSIONS_COLLECTION,
+  contractExtensionsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_CONTRACT_EXTENSIONS_COLLECTION',
+    'test-contract-extensions'
+  ),
 
-  contractDraftsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_DRAFTS_COLLECTION,
+  contractDraftsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_CONTRACT_DRAFTS_COLLECTION',
+    'test-contract-drafts'
+  ),
 
-  calendarEventsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_EVENTS_COLLECTION,
+  calendarEventsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_CALENDAR_EVENTS_COLLECTION',
+    'test-calendar-events'
+  ),
 
-  recentActivityCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_RECENT_ACTIVITIES_COLLECTION,
+  recentActivityCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_RECENT_ACTIVITIES_COLLECTION',
+    'test-recent-activities'
+  ),
 
-  invitationsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_INVITATIONS_COLLECTION,
+  invitationsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_INVITATIONS_COLLECTION',
+    'test-invitations'
+  ),
 
-  reportsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_REPORTS_COLLECTION,
+  reportsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_REPORTS_COLLECTION',
+    'test-reports'
+  ),
 
-  licensesCollectionId: process.env.NEXT_PUBLIC_APPWRITE_LICENSES_COLLECTION,
+  licensesCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_LICENSES_COLLECTION',
+    'test-licenses'
+  ),
 
-  otpTokensCollectionId: process.env.NEXT_PUBLIC_APPWRITE_OTPTOKENS_COLLECTION,
+  permissionsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION',
+    'test-permissions'
+  ),
 
-  notificationsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATIONS_COLLECTION,
+  otpTokensCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_OTPTOKENS_COLLECTION',
+    'test-otp-tokens'
+  ),
 
-  notificationTypesCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_TYPES_COLLECTION,
+  notificationsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_NOTIFICATIONS_COLLECTION',
+    'test-notifications'
+  ),
 
-  notificationSettingsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_SETTINGS_COLLECTION,
+  notificationTypesCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_NOTIFICATION_TYPES_COLLECTION',
+    'test-notification-types'
+  ),
 
-  smsFormSubmissionsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_SMS_FORM_SUBMISSIONS_COLLECTION,
+  notificationSettingsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_NOTIFICATION_SETTINGS_COLLECTION',
+    'test-notification-settings'
+  ),
 
-  notificationDigestQueueCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_DIGEST_QUEUE_COLLECTION,
+  smsFormSubmissionsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_SMS_FORM_SUBMISSIONS_COLLECTION',
+    'test-sms-form-submissions'
+  ),
 
-  notesCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NOTES_COLLECTION,
+  notificationDigestQueueCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_NOTIFICATION_DIGEST_QUEUE_COLLECTION',
+    'test-notification-digest-queue'
+  ),
 
-  calendarApprovalRequestsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_APPROVALS_COLLECTION,
+  notesCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_NOTES_COLLECTION',
+    'test-notes'
+  ),
 
-  calendarPermissionOverridesCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_PERMISSION_OVERRIDES_COLLECTION,
+  calendarApprovalRequestsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_CALENDAR_APPROVALS_COLLECTION',
+    'test-calendar-approvals'
+  ),
 
-  bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET,
+  calendarPermissionOverridesCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_CALENDAR_PERMISSION_OVERRIDES_COLLECTION',
+    'test-calendar-permission-overrides'
+  ),
 
-  profilePicturesBucketId:
-    process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET,
+  bucketId: getTestFallback('NEXT_PUBLIC_APPWRITE_BUCKET', 'test-bucket'),
 
-  auditLogsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_AUDIT_LOGS_COLLECTION,
+  profilePicturesBucketId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET',
+    'test-profile-pictures-bucket'
+  ),
 
-  auditsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_AUDITS_COLLECTION,
+  auditLogsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_AUDIT_LOGS_COLLECTION',
+    'test-audit-logs'
+  ),
 
-  secretKey: process.env.NEXT_APPWRITE_API_KEY,
+  auditsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_AUDITS_COLLECTION',
+    'test-audits'
+  ),
+
+  secretKey: getTestFallback('NEXT_APPWRITE_API_KEY', 'test-api-key-for-ci'),
 
   govApiKey: process.env.GOV_API_KEY,
 
@@ -85,16 +169,75 @@ export const appwriteConfig = {
   microsoftRedirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI,
 
   // Calendar Integrations Collection
-  calendarIntegrationsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION,
+  calendarIntegrationsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_CALENDAR_INTEGRATIONS_COLLECTION',
+    'test-calendar-integrations'
+  ),
 
   // Shared Calendars
-  sharedCalendarsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_SHARED_CALENDARS_COLLECTION,
+  sharedCalendarsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_SHARED_CALENDARS_COLLECTION',
+    'test-shared-calendars'
+  ),
 
   // Resource Management
-  calendarResourcesCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_RESOURCES_COLLECTION,
-  resourceBookingsCollectionId:
-    process.env.NEXT_PUBLIC_APPWRITE_RESOURCE_BOOKINGS_COLLECTION,
+  calendarResourcesCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_CALENDAR_RESOURCES_COLLECTION',
+    'test-calendar-resources'
+  ),
+  resourceBookingsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_RESOURCE_BOOKINGS_COLLECTION',
+    'test-resource-bookings'
+  ),
+
+  // News Articles
+  newsArticlesCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_NEWS_ARTICLES_COLLECTION',
+    'newsarticles'
+  ),
+  newsVersionsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_NEWS_VERSIONS_COLLECTION',
+    'newsversions'
+  ),
+
+  // Imagine Art API (AI Image Generation)
+  imagineArtApiKey: process.env.IMAGINE_ART_API_KEY,
+
+  // Legacy: Stable Diffusion API (deprecated - kept for reference)
+  stableDiffusionApiUrl:
+    process.env.STABLE_DIFFUSION_API_URL || 'http://localhost:8000',
+
+  // Legacy: Replicate API (deprecated - kept for reference)
+  replicateApiToken: process.env.REPLICATE_API_TOKEN,
+  replicateModel:
+    process.env.REPLICATE_MODEL ||
+    'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b',
+};
+
+/**
+ * Check if Appwrite configuration is complete
+ */
+export const isAppwriteConfigured = (): boolean => {
+  return !!(
+    appwriteConfig.endpointUrl &&
+    appwriteConfig.projectId &&
+    appwriteConfig.secretKey
+  );
+};
+
+/**
+ * Check if using test/CI Appwrite configuration values
+ */
+export const isTestAppwriteConfig = (): boolean => {
+  if (!(process.env.CI || process.env.NODE_ENV === 'test')) {
+    return false;
+  }
+
+  // Check if project ID or secret key are test values
+  return (
+    appwriteConfig.projectId === 'test-project-id' ||
+    appwriteConfig.secretKey === 'test-api-key-for-ci' ||
+    (appwriteConfig.projectId?.startsWith('test-') ?? false) ||
+    (appwriteConfig.secretKey?.startsWith('test-') ?? false)
+  );
 };

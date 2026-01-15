@@ -991,6 +991,14 @@
   background-clip: text;
 }
 
+/* Apply gradient text to active tabs */
+button[data-state='active'] > span {
+  background: linear-gradient(135deg, #12477d 0%, #03afbf 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* 3D paper rise effect for Insights metrics wrapper */
 .paper-3d {
   transform-origin: center;
@@ -1228,4 +1236,21 @@
 
 .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
   background-color: var(--rdp-background-color);
+}
+
+/* Hide Spline "Built with Spline" watermark badge - Aggressive CSS rules */
+a[href*='spline.design'],
+a[href*='splinetool.com'],
+a[href*='splinetool'],
+a[href*='spline'] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
 }

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+
 import {
   Select,
   SelectContent,
@@ -46,7 +47,16 @@ import {
   StepForward,
   AlertTriangle,
 } from 'lucide-react';
+import { SaveProgressCard } from '@/components/SaveProgressCard';
 import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from '@/hooks/use-toast';
@@ -99,19 +109,6 @@ const CONTRACT_TYPES = [
   'Statement of Work (SOW)',
   'Amendment',
   'Other',
-];
-
-const CONTRACT_CATEGORY_OPTIONS = [
-  { value: 'service_agreement', label: 'Service Agreement' },
-  { value: 'professional_services', label: 'Professional Services' },
-  { value: 'purchase_agreement', label: 'Purchase Agreement' },
-  { value: 'lease_agreement', label: 'Lease Agreement' },
-  { value: 'license_agreement', label: 'License Agreement' },
-  { value: 'employment_contract', label: 'Employment Contract' },
-  { value: 'confidentiality_nda', label: 'Confidentiality / NDA' },
-  { value: 'master_agreement', label: 'Master Agreement' },
-  { value: 'statement_of_work', label: 'Statement of Work (SOW)' },
-  { value: 'amendment', label: 'Amendment' },
 ];
 
 const LIFECYCLE_STATUSES = [
@@ -210,7 +207,7 @@ const contractSchema = z.object({
     .min(1, 'Contract title is required')
     .max(200, 'Keep the title under 200 characters'),
   contractType: z.string().min(1, 'Contract type is required'),
-  contractCategory: z.string().min(1, 'Contract category is required'),
+  contractCategory: z.string().optional(), // Category field removed from UI, made optional
   lifecycleStatus: z.string().min(1, 'Lifecycle status is required'),
   contractNumber: z.string().min(1, 'Contract number is required'),
   description: z.string().optional(),
@@ -221,7 +218,6 @@ const contractSchema = z.object({
   subDepartment: z.string().optional(),
   departmentOwner: z.string().optional(),
   contractOwnerId: z.string().min(1, 'Owner is required'),
-  contractOwnerName: z.string().optional(),
   startDate: z.date().optional(),
   executionDate: z.date().optional(),
   expiryDate: z
@@ -388,7 +384,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
     defaultValues: {
       contractName: '',
       contractType: '',
-      contractCategory: CONTRACT_CATEGORY_OPTIONS[0].value,
       lifecycleStatus: 'draft',
       contractNumber: '',
       description: '',
@@ -397,7 +392,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       subDepartment: '',
       departmentOwner: '',
       contractOwnerId: ownerId,
-      contractOwnerName: '',
       startDate: undefined,
       executionDate: undefined,
       expiryDate: undefined,
@@ -632,7 +626,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         return [
           'contractName',
           'contractType',
-          'contractCategory',
+          // 'contractCategory', // Removed - field no longer exists in UI
           'lifecycleStatus',
           'contractNumber',
           'assignToDepartment',
@@ -742,10 +736,65 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                 counterpartyLegalName:
                   (extracted.counterpartyLegalName as string) || '',
                 expiryDate: extracted.expiryDate
-                  ? new Date(extracted.expiryDate as string)
+                  ? (() => {
+                      // Parse date string as local date to avoid timezone issues
+                      const dateStr = extracted.expiryDate as string;
+                      const dateOnlyMatch = dateStr.match(
+                        /^(\d{4})-(\d{2})-(\d{2})/
+                      );
+                      if (dateOnlyMatch) {
+                        const [, year, month, day] = dateOnlyMatch;
+                        // Create date in local timezone (month is 0-indexed)
+                        return new Date(
+                          parseInt(year),
+                          parseInt(month) - 1,
+                          parseInt(day)
+                        );
+                      }
+                      // Fallback for ISO strings
+                      const isoMatch = dateStr.match(
+                        /^(\d{4})-(\d{2})-(\d{2})T/
+                      );
+                      if (isoMatch) {
+                        const [, year, month, day] = isoMatch;
+                        return new Date(
+                          parseInt(year),
+                          parseInt(month) - 1,
+                          parseInt(day)
+                        );
+                      }
+                      // Last resort: use standard Date parsing
+                      return new Date(dateStr);
+                    })()
                   : undefined,
                 startDate: extracted.startDate
-                  ? new Date(extracted.startDate as string)
+                  ? (() => {
+                      // Parse date string as local date to avoid timezone issues
+                      const dateStr = extracted.startDate as string;
+                      const dateOnlyMatch = dateStr.match(
+                        /^(\d{4})-(\d{2})-(\d{2})/
+                      );
+                      if (dateOnlyMatch) {
+                        const [, year, month, day] = dateOnlyMatch;
+                        return new Date(
+                          parseInt(year),
+                          parseInt(month) - 1,
+                          parseInt(day)
+                        );
+                      }
+                      const isoMatch = dateStr.match(
+                        /^(\d{4})-(\d{2})-(\d{2})T/
+                      );
+                      if (isoMatch) {
+                        const [, year, month, day] = isoMatch;
+                        return new Date(
+                          parseInt(year),
+                          parseInt(month) - 1,
+                          parseInt(day)
+                        );
+                      }
+                      return new Date(dateStr);
+                    })()
                   : undefined,
                 amount:
                   (extracted.amount as string) ||
@@ -1066,10 +1115,68 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
   // Load saved drafts
   const loadSavedDrafts = useCallback(async () => {
     try {
-      const response = await fetch(`/api/contracts/drafts?ownerId=${ownerId}`);
+      if (!ownerId) {
+        console.warn('Cannot load drafts: ownerId is missing');
+        return;
+      }
+
+      const response = await fetch(`/api/contracts/drafts?ownerId=${ownerId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include cookies for authentication
+      });
+
       if (response.ok) {
-        const data = await response.json();
-        setSavedDrafts(data.drafts || []);
+        const result = await response.json();
+        // Handle both old and new response formats
+        const drafts = result.data?.drafts || result.drafts || [];
+        setSavedDrafts(drafts);
+      } else {
+        // Try to parse error response
+        let errorData: any = {};
+        let errorText = '';
+
+        try {
+          errorText = await response.text();
+          if (errorText) {
+            try {
+              errorData = JSON.parse(errorText);
+            } catch (parseError) {
+              // If JSON parsing fails, use the raw text
+              errorData = { error: errorText, raw: errorText };
+            }
+          }
+        } catch (textError) {
+          console.error('Failed to read error response text:', textError);
+          errorData = { error: 'Failed to read error response' };
+        }
+
+        // Log detailed error information
+        const errorMessage =
+          errorData.error ||
+          errorData.message ||
+          errorData.raw ||
+          'Unknown error';
+        console.error('Failed to load drafts:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorMessage,
+          fullError: errorData,
+          rawResponse: errorText,
+          ownerId: ownerId,
+          url: `/api/contracts/drafts?ownerId=${ownerId}`,
+        });
+
+        // Show user-friendly error message
+        if (response.status === 401) {
+          console.warn('Authentication failed - user may not be logged in');
+        } else if (response.status === 403) {
+          console.warn('Access denied - user may not have permission');
+        } else if (response.status === 400) {
+          console.warn('Validation error - check ownerId parameter');
+        }
       }
     } catch (error) {
       console.error('Error loading saved drafts:', error);
@@ -1302,9 +1409,51 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         subDepartment: sanitizeString(values.subDepartment),
         departmentOwner: sanitizeString(values.departmentOwner),
         contractOwnerId: values.contractOwnerId || ownerId,
-        contractExpiryDate: values.expiryDate?.toISOString(),
-        startDate: values.startDate?.toISOString(),
-        executionDate: values.executionDate?.toISOString(),
+        // Store dates as date-only strings (YYYY-MM-DD) to avoid timezone issues
+        // Normalize the date to extract local date components, not UTC
+        contractExpiryDate: values.expiryDate
+          ? (() => {
+              // Normalize to midnight local time to avoid timezone shifts
+              const normalized = new Date(
+                values.expiryDate.getFullYear(),
+                values.expiryDate.getMonth(),
+                values.expiryDate.getDate()
+              );
+              // Extract date components from normalized date (ensures local timezone)
+              const year = normalized.getFullYear();
+              const month = String(normalized.getMonth() + 1).padStart(2, '0');
+              const day = String(normalized.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            })()
+          : undefined,
+        startDate: values.startDate
+          ? (() => {
+              // Normalize to midnight local time to avoid timezone shifts
+              const normalized = new Date(
+                values.startDate.getFullYear(),
+                values.startDate.getMonth(),
+                values.startDate.getDate()
+              );
+              const year = normalized.getFullYear();
+              const month = String(normalized.getMonth() + 1).padStart(2, '0');
+              const day = String(normalized.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            })()
+          : undefined,
+        executionDate: values.executionDate
+          ? (() => {
+              // Normalize to midnight local time to avoid timezone shifts
+              const normalized = new Date(
+                values.executionDate.getFullYear(),
+                values.executionDate.getMonth(),
+                values.executionDate.getDate()
+              );
+              const year = normalized.getFullYear();
+              const month = String(normalized.getMonth() + 1).padStart(2, '0');
+              const day = String(normalized.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            })()
+          : undefined,
         autoRenew: values.autoRenew,
         renewalNoticeDays: parseIntegerInput(values.renewalNoticeDays),
         amount: amountAsNumber,
@@ -1328,8 +1477,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         counterpartyTaxId: sanitizeString(values.counterpartyTaxId),
         counterpartyDunsNumber: sanitizeString(values.counterpartyDunsNumber),
         insuranceRequired: values.insuranceRequired,
-        insuranceVerifiedDate: values.insuranceVerifiedDate?.toISOString(),
-        insuranceExpiryDate: values.insuranceExpiryDate?.toISOString(),
+        // Store as date-only strings (YYYY-MM-DD) to avoid timezone issues
+        insuranceVerifiedDate: values.insuranceVerifiedDate
+          ? values.insuranceVerifiedDate.toISOString().split('T')[0]
+          : undefined,
+        insuranceExpiryDate: values.insuranceExpiryDate
+          ? values.insuranceExpiryDate.toISOString().split('T')[0]
+          : undefined,
         indemnificationIncluded: values.indemnificationIncluded,
         hipaaRequired: values.hipaaRequired,
         dataPrivacyRequirements: sanitizeString(values.dataPrivacyRequirements),
@@ -1361,7 +1515,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
       };
 
       const enterpriseMetadata = {
-        contractOwnerName: sanitizeString(values.contractOwnerName),
         counterpartyContactName: sanitizeString(values.counterpartyContactName),
         counterpartyContactTitle: sanitizeString(
           values.counterpartyContactTitle
@@ -1877,40 +2030,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                           <FormField
                             control={form.control}
-                            name="contractCategory"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm text-slate-700 mb-1 block">
-                                  Category{' '}
-                                  <span className="text-red-500">*</span>
-                                </FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="bg-white border-slate-300">
-                                      <SelectValue placeholder="Select category" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {CONTRACT_CATEGORY_OPTIONS.map((option) => (
-                                      <SelectItem
-                                        key={option.value}
-                                        value={option.value}
-                                      >
-                                        {option.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
                             name="lifecycleStatus"
                             render={({ field }) => (
                               <FormItem>
@@ -1955,26 +2074,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                 <FormControl>
                                   <Input
                                     placeholder="e.g., KHME2-01-47"
-                                    {...field}
-                                    className="bg-white border-slate-300"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="contractOwnerName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm text-slate-700 mb-1 block">
-                                  Contract Owner / Administrator
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="e.g., Michael DiTomasso"
                                     {...field}
                                     className="bg-white border-slate-300"
                                   />
@@ -2111,7 +2210,19 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                 <FormControl>
                                   <DatePicker
                                     selected={field.value}
-                                    onChange={(date) => field.onChange(date)}
+                                    onChange={(date) => {
+                                      // Normalize the date to midnight local time to avoid timezone issues
+                                      if (date) {
+                                        const normalized = new Date(
+                                          date.getFullYear(),
+                                          date.getMonth(),
+                                          date.getDate()
+                                        );
+                                        field.onChange(normalized);
+                                      } else {
+                                        field.onChange(undefined);
+                                      }
+                                    }}
                                     dateFormat="MM/dd/yyyy"
                                     className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
                                     placeholderText="Select start date"
@@ -2133,7 +2244,19 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                 <FormControl>
                                   <DatePicker
                                     selected={field.value}
-                                    onChange={(date) => field.onChange(date)}
+                                    onChange={(date) => {
+                                      // Normalize the date to midnight local time to avoid timezone issues
+                                      if (date) {
+                                        const normalized = new Date(
+                                          date.getFullYear(),
+                                          date.getMonth(),
+                                          date.getDate()
+                                        );
+                                        field.onChange(normalized);
+                                      } else {
+                                        field.onChange(undefined);
+                                      }
+                                    }}
                                     dateFormat="MM/dd/yyyy"
                                     className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
                                     placeholderText="Select execution date"
@@ -2154,14 +2277,51 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                   <span className="text-red-500">*</span>
                                 </FormLabel>
                                 <FormControl>
-                                  <DatePicker
-                                    selected={field.value}
-                                    onChange={(date) => field.onChange(date)}
-                                    dateFormat="MM/dd/yyyy"
-                                    minDate={new Date()}
-                                    className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-                                    placeholderText="Select expiry date"
-                                  />
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-start text-left font-normal bg-white border-slate-300"
+                                      >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {field.value ? (
+                                          format(field.value, 'PPP')
+                                        ) : (
+                                          <span className="text-slate-500">
+                                            Select expiry date
+                                          </span>
+                                        )}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                      className="w-auto p-0"
+                                      align="start"
+                                    >
+                                      <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={(date) => {
+                                          // Normalize the date to midnight local time to avoid timezone issues
+                                          if (date) {
+                                            const normalized = new Date(
+                                              date.getFullYear(),
+                                              date.getMonth(),
+                                              date.getDate()
+                                            );
+                                            field.onChange(normalized);
+                                          } else {
+                                            field.onChange(undefined);
+                                          }
+                                        }}
+                                        disabled={(date) => {
+                                          const today = new Date();
+                                          today.setHours(0, 0, 0, 0);
+                                          return date < today;
+                                        }}
+                                        initialFocus
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -2233,40 +2393,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -2515,40 +2645,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -2800,40 +2900,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -3407,40 +3477,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -3735,40 +3775,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -3905,40 +3915,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -4145,40 +4125,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -4312,40 +4262,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}
@@ -4544,40 +4464,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                         {/* Save and Resume Later */}
                         {processedFileData && (
-                          <Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-                            <CardContent className="pt-6">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-700 mb-1">
-                                    Save and Resume Later
-                                  </p>
-                                  <p className="text-xs text-slate-500 max-w-[70%]">
-                                    Even though auto-save is on you can still
-                                    save your progress to continue filling out
-                                    this form at a later time
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  onClick={handleManualSave}
-                                  disabled={isSaving}
-                                  className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="h-4 w-4" />
-                                      Save Progress
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
                         )}
                       </div>
                     )}

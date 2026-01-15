@@ -363,3 +363,11 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* Signature canvas must have pointer events enabled */
+.signature-canvas-interactive {
+  pointer-events: auto !important;
+  touch-action: none !important;
+  cursor: crosshair !important;
+  user-select: none !important;
+}

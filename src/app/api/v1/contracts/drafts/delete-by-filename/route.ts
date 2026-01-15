@@ -2,13 +2,24 @@ import { NextRequest } from 'next/server';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS } from '@/lib/services/cache-keys';
+import {
+  successResponse,
+  errorResponse,
+  generateRequestId,
+} from '@/lib/api/contracts/utils/response.util';
+import { requireAuthAndOwner } from '@/lib/api/contracts/middleware/auth.middleware';
+import { DraftService } from '@/lib/api/contracts/services/DraftService';
+import { parseAndValidateBody } from '@/lib/api/contracts/middleware/validation.middleware';
+import { z } from 'zod';
+
+const deleteByFilenameSchema = z.object({
+  ownerId: z.string().min(1, 'Owner ID is required'),
+  fileName: z.string().min(1, 'File name is required'),
+});
 
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
   try {
-    const body = await request.json();
-    const { ownerId, fileName } = body;
-
     // Validate request body
     const body = await parseAndValidateBody(request, deleteByFilenameSchema);
     const { ownerId, fileName } = body;
@@ -21,11 +32,9 @@ export async function POST(request: NextRequest) {
       !appwriteConfig.databaseId ||
       !appwriteConfig.contractDraftsCollectionId
     ) {
-      return errorResponse(
-        new Error('Database configuration missing'),
-        500,
-        { requestId }
-      );
+      return errorResponse(new Error('Database configuration missing'), 500, {
+        requestId,
+      });
     }
 
     // Find all drafts with matching file name
@@ -82,18 +91,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

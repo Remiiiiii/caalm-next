@@ -1,0 +1,6 @@
+# API route files that should not be auto-formatted
+src/app/api/collections/**/route.ts
+
+# Documentation files
+bnsf-tech-assessment-solution.md
+

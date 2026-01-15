@@ -9,7 +9,7 @@ import {
   Avatars,
   Messaging,
 } from 'node-appwrite';
-import { appwriteConfig } from './config';
+import { appwriteConfig, isAppwriteConfigured, isTestAppwriteConfig } from './config';
 import { cookies } from 'next/headers';
 
 export const createSessionClient = async () => {
@@ -48,12 +48,26 @@ export const createSessionClient = async () => {
 };
 
 export const createAdminClient = async () => {
-  if (
-    !appwriteConfig.endpointUrl ||
-    !appwriteConfig.projectId ||
-    !appwriteConfig.secretKey
-  ) {
-    throw new Error('Appwrite configuration is incomplete');
+  if (!isAppwriteConfigured()) {
+    const error = new Error('Appwrite configuration is incomplete');
+    // Add helpful context in test/CI environments
+    if (process.env.CI || process.env.NODE_ENV === 'test') {
+      (error as any).isTestEnvironment = true;
+      (error as any).missingConfig = {
+        endpointUrl: !appwriteConfig.endpointUrl,
+        projectId: !appwriteConfig.projectId,
+        secretKey: !appwriteConfig.secretKey,
+      };
+    }
+    throw error;
+  }
+
+  // In test environments with test values, throw a specific error that can be caught
+  if (isTestAppwriteConfig()) {
+    const testError = new Error('Using test Appwrite configuration - Appwrite operations will fail');
+    (testError as any).isTestConfig = true;
+    (testError as any).code = 'TEST_CONFIG';
+    throw testError;
   }
 
   const client = new Client()

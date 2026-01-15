@@ -1,8 +1,122 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import {
+  extractRateLimitIdentifier,
+  shouldBypassRateLimit,
+} from '@/lib/api/rate-limit/identifier.util';
+import {
+  createRateLimitResponse,
+  addRateLimitHeaders,
+} from '@/lib/api/rate-limit/response.util';
+import {
+  shouldBypassRateLimit as shouldBypassConfig,
+  getUserTier,
+} from '@/lib/config/rate-limit.config';
+import { rateLimiter } from '@/lib/services/rate-limiter';
+import { penaltyService } from '@/lib/services/rate-limiter-penalties';
+import { rateLimitMonitoring } from '@/lib/services/rate-limit-monitoring';
+
+// Check if rate limiting is enabled
+const RATE_LIMIT_ENABLED =
+  process.env.RATE_LIMIT_ENABLED !== 'false' &&
+  process.env.NODE_ENV === 'production';
+
+// Log mode: log violations without blocking
+const RATE_LIMIT_LOG_MODE = process.env.RATE_LIMIT_LOG_MODE === 'true';
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Rate limiting for API routes (Edge-compatible)
+  if (pathname.startsWith('/api')) {
+    // Check if rate limiting is enabled
+    if (RATE_LIMIT_ENABLED || RATE_LIMIT_LOG_MODE) {
+      // Check if endpoint should bypass rate limiting
+      if (!shouldBypassRateLimit(request) && !shouldBypassConfig(pathname)) {
+        try {
+          // Extract identifier (Edge-compatible - no Node.js modules)
+          const identifier = extractRateLimitIdentifier(request);
+
+          // Determine authentication status from cookies (Edge-compatible)
+          const session = request.cookies.get('appwrite-session');
+          const isAuthenticated = !!session?.value;
+          const isPremium = false; // TODO: Check premium status from cookie if available
+
+          // Check rate limit
+          const startTime = Date.now();
+          const result = await rateLimiter.check(
+            pathname,
+            identifier.value,
+            isAuthenticated,
+            isPremium
+          );
+          const latency = Date.now() - startTime;
+
+          // Record check for monitoring (async, don't block)
+          rateLimitMonitoring
+            .recordCheck(pathname, identifier.value, result.allowed, latency)
+            .catch((error) => {
+              console.error('Error recording rate limit check:', error);
+            });
+
+          // Log rate limit check (for monitoring)
+          if (process.env.NODE_ENV === 'development' || RATE_LIMIT_LOG_MODE) {
+            console.log(
+              `[Rate Limit] ${pathname} - ${identifier.type}:${identifier.value} - Allowed: ${result.allowed}, Remaining: ${result.remaining}, Latency: ${latency}ms`
+            );
+          }
+
+          // If rate limit exceeded
+          if (!result.allowed) {
+            // Record violation for progressive penalties (async)
+            const tier = getUserTier(isAuthenticated, isPremium);
+            penaltyService
+              .recordViolation(identifier.value, pathname, tier)
+              .catch((error) => {
+                console.error('Error recording violation:', error);
+              });
+
+            // Log violation for monitoring (async)
+            rateLimitMonitoring
+              .logViolation({
+                timestamp: Date.now(),
+                endpoint: pathname,
+                identifier: identifier.value,
+                identifierType: identifier.type,
+                tier,
+                limit: result.limit,
+                remaining: result.remaining,
+                retryAfter: result.retryAfter,
+              })
+              .catch((error) => {
+                console.error('Error logging violation:', error);
+              });
+
+            if (RATE_LIMIT_LOG_MODE) {
+              // In log mode, allow the request but log it
+              console.warn(
+                `[Rate Limit Violation] ${pathname} - ${identifier.type}:${identifier.value} - Would be blocked`
+              );
+            } else {
+              // Return rate limit error response
+              return createRateLimitResponse(
+                result,
+                `Rate limit exceeded for ${pathname}. Please try again in ${result.retryAfter} seconds.`
+              );
+            }
+          } else {
+            // Request allowed - add rate limit headers to response
+            const response = NextResponse.next();
+            addRateLimitHeaders(response, result);
+            return response;
+          }
+        } catch (error) {
+          // On error, log and allow request (fail open)
+          console.error('[Rate Limit Error]', error);
+        }
+      }
+    }
+  }
 
   // Coming Soon Mode - redirect to coming soon page in production
   if (
@@ -64,6 +178,15 @@ export async function proxy(request: NextRequest) {
 
   const isProtectedPath = protectedPrefixes.some((p) => pathname.startsWith(p));
 
+  // Dashboard route protection - check role-based access for all dashboard routes
+  if (pathname.startsWith('/dashboard')) {
+    const { redirectIfNotAuthorizedForDashboard } = await import('@/lib/auth/dashboard-guards');
+    const dashboardCheck = await redirectIfNotAuthorizedForDashboard(request);
+    if (dashboardCheck) {
+      return dashboardCheck;
+    }
+  }
+
   if (isProtectedPath) {
     const hasCompleted2FA = request.cookies.get('2fa_completed');
     const session = request.cookies.get('appwrite-session');
@@ -116,11 +239,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * Note: API routes are now included for rate limiting
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

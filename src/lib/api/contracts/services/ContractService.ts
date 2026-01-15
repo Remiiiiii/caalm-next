@@ -68,10 +68,17 @@ export class ContractService {
   ): number | undefined {
     if (!expiryDate) return undefined;
     try {
-      const expiry = new Date(expiryDate);
+      // Parse date-only strings (YYYY-MM-DD) using local timezone to avoid timezone issues
+      const expiryStr = expiryDate.split('T')[0];
+      const [year, month, day] = expiryStr.split('-').map(Number);
+      const expiry = new Date(year, month - 1, day);
+      expiry.setHours(0, 0, 0, 0);
+      
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
       const timeDiff = expiry.getTime() - today.getTime();
-      return Math.ceil(timeDiff / (1000 * 3600 * 24));
+      return Math.floor(timeDiff / (1000 * 60 * 60 * 24));
     } catch (error) {
       return undefined;
     }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { notificationService } from '@/lib/services/notificationService';
 import { addUserSmsTarget } from '@/lib/actions/user.actions';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +15,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const settings = await notificationService.getNotificationSettings(userId);
+    // Cache key for notification settings
+    const cacheKey = CACHE_KEYS.notifications.settings(userId);
+
+    // Fetch notification settings with caching (10 minutes TTL)
+    const settings = await CacheManager.withCache(
+      'notifications/settings',
+      cacheKey,
+      async () => await notificationService.getNotificationSettings(userId)
+    );
+
     return NextResponse.json({ data: settings });
   } catch (error) {
     console.error('Failed to get notification settings:', error);
@@ -42,6 +53,10 @@ export async function PUT(request: NextRequest) {
       notificationTypes: body.notificationTypes,
       frequency: body.frequency,
     });
+
+    // Invalidate notification settings cache for this user
+    const cacheKey = CACHE_KEYS.notifications.settings(body.userId);
+    await CacheManager.invalidate(cacheKey);
 
     // If a phoneNumber was provided and appears valid E.164, add/update Auth SMS target
     if (

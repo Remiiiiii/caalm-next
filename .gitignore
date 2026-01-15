@@ -79,6 +79,9 @@ web_modules/
 .env.test.local
 .env.local.backup
 
+# Ignore all files ending with .mcp.json
+*.mcp.json
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
@@ -139,3 +142,14 @@ playwright-report/
 # Feature documentation
 docs/
 .vercel
+
+*.ps1
+uploads/
+document/
+*.csv
+*.html
+mcpjson.txt
+*.backup
+*.tmp
+*.old
+*.bak

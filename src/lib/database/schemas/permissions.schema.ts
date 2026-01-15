@@ -22,6 +22,7 @@ export const PERMISSION_CATEGORIES = [
   'settings',
   'ai',
   'audit',
+  'news',
 ] as const;
 
 export type PermissionCategory = (typeof PERMISSION_CATEGORIES)[number];

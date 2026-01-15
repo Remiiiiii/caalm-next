@@ -25,7 +25,22 @@ import { useToast } from '@/hooks/use-toast';
 import ManagerAvatars from './ManagerAvatars';
 
 // Map contract status to badge color and label (same as Card component)
-const statusBadge = (status: string) => {
+const statusBadge = (status: string, isExpired?: boolean, contractExpiryDate?: string) => {
+  // Check if contract is expired (priority: status > isExpired flag > expiry date)
+  const isContractExpired =
+    status?.toLowerCase() === 'expired' ||
+    isExpired ||
+    (contractExpiryDate && new Date(contractExpiryDate) < new Date());
+
+  // If expired, always show Expired badge
+  if (isContractExpired) {
+    return (
+      <span className="inline-block px-2 py-1 border-2 border-purple-600 bg-purple-50 text-purple-900 text-xs rounded-xl font-medium">
+        Expired
+      </span>
+    );
+  }
+
   let color = '';
   let label = status;
   switch (status) {
@@ -496,7 +511,12 @@ export default function ContractsTableView({
                     </div>
                   </TableCell>
                   <TableCell className="py-4 whitespace-nowrap">
-                    {file.status && statusBadge(file.status)}
+                    {file.status &&
+                      statusBadge(
+                        file.status,
+                        file.isExpired,
+                        file.contractExpiryDate
+                      )}
                   </TableCell>
                   <TableCell className="py-4 text-slate-700 whitespace-nowrap">
                     {convertFileSize({ sizeInBytes: file.size || 0 })}

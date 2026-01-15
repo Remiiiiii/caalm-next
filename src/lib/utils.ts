@@ -130,7 +130,26 @@ export const formatDateTime = (isoString: string | null | undefined) => {
 export const formatDate = (isoString: string | null | undefined) => {
   if (!isoString) return '—';
 
-  const date = new Date(isoString);
+  let date: Date;
+
+  // Handle date-only strings (YYYY-MM-DD) by parsing manually to avoid timezone issues
+  if (isoString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    // Date-only format: parse manually to use local timezone
+    const [year, month, day] = isoString.split('-').map(Number);
+    date = new Date(year, month - 1, day);
+  } else if (isoString.match(/^\d{4}-\d{2}-\d{2}T/)) {
+    // ISO string with time: extract date part and parse as local date to avoid timezone shifts
+    const dateOnlyMatch = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    } else {
+      date = new Date(isoString);
+    }
+  } else {
+    // Fallback: use standard parsing
+    date = new Date(isoString);
+  }
 
   // Get hours and adjust for 12-hour format
   // let hours = date.getHours();

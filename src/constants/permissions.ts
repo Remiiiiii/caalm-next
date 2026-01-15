@@ -65,12 +65,46 @@ export const PERMISSIONS = {
     CHAT: 'ai.chat',
     DOCUMENT_ANALYSIS: 'ai.document_analysis',
     MEETING_PREP: 'ai.meeting_prep',
+    IMAGE_GENERATE: 'ai.image_generate',
   },
   
   // Audit Permissions
   AUDIT: {
     VIEW: 'audit.view',
     EXPORT: 'audit.export',
+  },
+  
+  // IT/Software Engineering Permissions
+  IT: {
+    VIEW_RATE_LIMITS: 'it.view_rate_limits',
+    VIEW_SYSTEM_LOGS: 'it.view_system_logs',
+    MANAGE_API_KEYS: 'it.manage_api_keys',
+    VIEW_ANALYTICS: 'it.view_analytics',
+    MANAGE_DEPLOYMENTS: 'it.manage_deployments',
+    VIEW_MONITORING: 'it.view_monitoring',
+    MANAGE_CI_CD: 'it.manage_ci_cd',
+    VIEW_SECURITY: 'it.view_security',
+    MANAGE_DATABASE: 'it.manage_database',
+    VIEW_INCIDENTS: 'it.view_incidents',
+  },
+  
+  // News Permissions
+  NEWS: {
+    CREATE: 'news.create',
+    READ: 'news.read',
+    UPDATE: 'news.update',
+    DELETE: 'news.delete',
+    PUBLISH: 'news.publish',
+  },
+  
+  // License Permissions
+  LICENSES: {
+    VIEW: 'licenses.view',
+    CREATE: 'licenses.create',
+    EDIT: 'licenses.edit',
+    DELETE: 'licenses.delete',
+    ALLOCATE: 'licenses.allocate',
+    RENEW: 'licenses.renew',
   },
 } as const;
 
@@ -132,6 +166,36 @@ export const PERMISSION_DEFINITIONS = [
   // Audit
   { key: PERMISSIONS.AUDIT.VIEW, name: 'View Audit Logs', category: 'audit', description: 'View audit logs' },
   { key: PERMISSIONS.AUDIT.EXPORT, name: 'Export Audit Logs', category: 'audit', description: 'Export audit logs' },
+  
+  // IT/Software Engineering
+  { key: PERMISSIONS.IT.VIEW_RATE_LIMITS, name: 'View Rate Limits', category: 'it', description: 'Access to rate limit monitoring dashboard' },
+  { key: PERMISSIONS.IT.VIEW_SYSTEM_LOGS, name: 'View System Logs', category: 'it', description: 'Access to system logs' },
+  { key: PERMISSIONS.IT.MANAGE_API_KEYS, name: 'Manage API Keys', category: 'it', description: 'Manage API keys' },
+  { key: PERMISSIONS.IT.VIEW_ANALYTICS, name: 'View Analytics', category: 'it', description: 'Access to analytics dashboard' },
+  { key: PERMISSIONS.IT.MANAGE_DEPLOYMENTS, name: 'Manage Deployments', category: 'it', description: 'Manage deployments' },
+  { key: PERMISSIONS.IT.VIEW_MONITORING, name: 'View Monitoring', category: 'it', description: 'View monitoring dashboards' },
+  { key: PERMISSIONS.IT.MANAGE_CI_CD, name: 'Manage CI/CD', category: 'it', description: 'Manage CI/CD pipelines' },
+  { key: PERMISSIONS.IT.VIEW_SECURITY, name: 'View Security', category: 'it', description: 'View security dashboard' },
+  { key: PERMISSIONS.IT.MANAGE_DATABASE, name: 'Manage Database', category: 'it', description: 'Database administration' },
+  { key: PERMISSIONS.IT.VIEW_INCIDENTS, name: 'View Incidents', category: 'it', description: 'View incident management' },
+  
+  // News
+  { key: PERMISSIONS.NEWS.CREATE, name: 'Create News Articles', category: 'news', description: 'Create new news articles for the company feed' },
+  { key: PERMISSIONS.NEWS.READ, name: 'View News Articles', category: 'news', description: 'View news articles including drafts' },
+  { key: PERMISSIONS.NEWS.UPDATE, name: 'Edit News Articles', category: 'news', description: 'Edit existing news articles' },
+  { key: PERMISSIONS.NEWS.DELETE, name: 'Delete News Articles', category: 'news', description: 'Delete news articles' },
+  { key: PERMISSIONS.NEWS.PUBLISH, name: 'Publish News Articles', category: 'news', description: 'Publish or unpublish news articles' },
+  
+  // AI Image Generation
+  { key: PERMISSIONS.AI.IMAGE_GENERATE, name: 'Generate AI Images', category: 'ai', description: 'Access to AI image generation feature for news thumbnails' },
+  
+  // Licenses
+  { key: PERMISSIONS.LICENSES.VIEW, name: 'View Licenses', category: 'licenses', description: 'View licenses' },
+  { key: PERMISSIONS.LICENSES.CREATE, name: 'Create Licenses', category: 'licenses', description: 'Create new licenses' },
+  { key: PERMISSIONS.LICENSES.EDIT, name: 'Edit Licenses', category: 'licenses', description: 'Edit licenses' },
+  { key: PERMISSIONS.LICENSES.DELETE, name: 'Delete Licenses', category: 'licenses', description: 'Delete licenses' },
+  { key: PERMISSIONS.LICENSES.ALLOCATE, name: 'Allocate Licenses', category: 'licenses', description: 'Allocate licenses to users or departments' },
+  { key: PERMISSIONS.LICENSES.RENEW, name: 'Renew Licenses', category: 'licenses', description: 'Renew licenses' },
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];

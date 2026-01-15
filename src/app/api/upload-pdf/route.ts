@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Extract text from the PDF
     try {
-      const pdfParse = (await import('pdf-parse')).default;
+      const pdfParse = (await import('pdf-parse-debugging-disabled')).default;
       const data = await pdfParse(buffer);
 
       return NextResponse.json({
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         text: data.text,
         pages: data.numpages,
         info: data.info,
-        method: 'pdf-parse',
+        method: 'pdf-parse-debugging-disabled',
       });
     } catch (extractError) {
       console.error('PDF extraction error:', extractError);

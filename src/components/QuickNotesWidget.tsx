@@ -78,6 +78,7 @@ interface QuickNotesWidgetProps {
 // Tiptap editor configuration
 const editorExtensions = [
   StarterKit.configure({
+    link: false, // Disable default link extension to avoid duplicate
     bulletList: {
       keepMarks: true,
       keepAttributes: false,

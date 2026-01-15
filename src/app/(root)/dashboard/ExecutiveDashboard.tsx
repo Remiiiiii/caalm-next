@@ -56,7 +56,13 @@ import WeatherWidget from '@/components/WeatherWidget';
 import CompanyNewsFeed from '@/components/CompanyNewsFeed';
 import ContractStatusPieChart from '@/components/ContractStatusPieChart';
 import DepartmentPerformanceWidget from '@/components/DepartmentPerformanceWidget';
+import LicenseStatusPieChart from '@/components/LicenseStatusPieChart';
+import LicenseExpiryAlertsWidget from '@/components/LicenseExpiryAlertsWidget';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useContractExpiryModal } from '@/hooks/useContractExpiryModal';
+import { useContractsExpiring } from '@/hooks/useContractsExpiring';
+import ContractExpiryModal from '@/components/contract-expiry-modal/ContractExpiryModal';
+import type { UIFileDoc } from '@/types/files';
 import { tablesDB } from '@/lib/appwrite/client';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'appwrite';
@@ -72,6 +78,8 @@ const ClientDate = dynamic(() => import('@/components/ClientDate'), {
   ssr: false,
 });
 
+import type { ContractStatus } from '@/constants/status';
+
 // Add Invitation type
 interface Invitation {
   $id: string;
@@ -80,7 +88,7 @@ interface Invitation {
   role: string;
   token: string;
   expiresAt: string;
-  status: string;
+  status: ContractStatus;
   revoked: boolean;
   $createdAt: string;
 }
@@ -121,15 +129,21 @@ interface ExecutiveDashboardProps {
 }
 
 // Map invitation status to badge colors
+// Now uses the same enum as contracts: ['active', 'inactive', 'pending-review', 'action-required']
 const getInvitationStatusBadgeClasses = (status: string): string => {
   const normalizedStatus = status?.toLowerCase?.() ?? '';
   switch (normalizedStatus) {
-    case 'pending':
+    case 'pending-review':
+    case 'pending': // Legacy support
       return 'bg-[#fef6f0] text-[#ebc620]';
-    case 'revoked':
+    case 'action-required':
       return 'bg-[#fff1f1] text-[#fe8787]';
-    case 'accepted':
+    case 'active':
+    case 'accepted': // Legacy support
       return 'bg-[#ccf3e9] text-[#3dd9b3]';
+    case 'inactive':
+    case 'revoked': // Legacy support
+      return 'bg-gray-100 text-gray-600';
     default:
       return 'bg-gray-100 text-gray-600';
   }
@@ -192,11 +206,33 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
     stats: dashboardStats,
     files,
     invitations,
-    authUsers,
     uninvitedUsers,
     isLoading: unifiedLoading,
     refresh: refreshUnified,
   } = useUnifiedDashboardData(orgId || 'default_organization');
+
+  // Fetch contracts from /api/contracts/all endpoint
+  const {
+    contracts: contractsFromApi,
+    isLoading: contractsLoading,
+    refresh: refreshContracts,
+  } = useContractsExpiring();
+
+  // Contract expiry modal hook - uses contracts from /api/contracts/all
+  const {
+    contractsToShow,
+    contractsWithDays,
+    isModalOpen,
+    closeModal,
+    triggerTestModal,
+    shouldPlaySpeech,
+  } = useContractExpiryModal(contractsFromApi || []);
+
+  // Handle contract status change - refresh both unified data and contracts
+  const handleContractStatusChange = () => {
+    refreshUnified();
+    refreshContracts();
+  };
 
   // Debug logging
   console.log('ExecutiveDashboard Debug:', {
@@ -693,6 +729,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
   return (
     <div className="relative">
+      {/* Contract Expiry Modal */}
+      <ContractExpiryModal
+        contracts={contractsToShow}
+        contractsWithDays={contractsWithDays}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onStatusChange={handleContractStatusChange}
+        shouldPlaySpeech={shouldPlaySpeech}
+      />
       <ContractExpiryNotifier contracts={expiryContracts} />
       {/* Background Video */}
       <video
@@ -717,8 +762,21 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
               {`| ${user?.division || 'Unknown Division'}`}
             </span>
           </h1>
-          <div className="text-xs text-slate-500 ml-auto">
-            Last updated: <ClientTimestamp />
+          <div className="text-xs text-slate-500 ml-auto flex items-center gap-3">
+            <span>
+              Last updated: <ClientTimestamp />
+            </span>
+            {/* Test button for contract expiry modal - development only */}
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                onClick={triggerTestModal}
+                variant="outline"
+                size="sm"
+                className="bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300 text-xs"
+              >
+                🧪 Test Expiry Modal
+              </Button>
+            )}
           </div>
         </div>
         <Card className="glass-card mb-6">
@@ -754,17 +812,21 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
             >
               {/* Page 1: Weather, Company News, Contract Status */}
               <div className="flex gap-3 sm:gap-2 lg:gap-3 xl:gap-3 2xl:gap-3 3xl:gap-3 4xl:gap-3 ml-8 min-w-full flex-shrink-0 mx-auto">
-                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[455px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
-                  <WeatherWidget />
+                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[400px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
+                  <WeatherWidget
+                    location="Miami"
+                    latitude={25.7617}
+                    longitude={-80.1918}
+                  />
                 </div>
-                <div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[450px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0">
+                <div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[535px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0">
                   <ContractExpiryAlertsWidget
                     maxVisible={2}
                     showSettings={false}
                     compact={true}
                   />
                 </div>
-                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[455px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
+                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[425px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
                   <ContractStatusPieChart />
                 </div>
               </div>
@@ -779,6 +841,19 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 </div>
                 <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[455px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
                   <QuickNotesWidget user={user ?? undefined} />
+                </div>
+              </div>
+
+              {/* Page 3: License Status, License Expiry Alerts */}
+              <div className="flex gap-3 sm:gap-2 lg:gap-3 xl:gap-3 2xl:gap-3 3xl:gap-3 4xl:gap-3 min-w-full -ml-6 flex-shrink-0 mx-auto">
+                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[425px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
+                  <LicenseStatusPieChart />
+                </div>
+                <div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[535px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0">
+                  <LicenseExpiryAlertsWidget
+                    maxVisible={2}
+                    compact={true}
+                  />
                 </div>
               </div>
             </div>

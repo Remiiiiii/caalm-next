@@ -23,10 +23,13 @@ interface DashboardHeaderProps {
     | null;
 }
 
-const DashboardHeader = ({ user }: DashboardHeaderProps) => {
+const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user: userFromContext } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
+
+  // Use user from context if prop is not provided (avoids serialization issues)
+  const user = userProp || userFromContext;
 
   // Use SWR hook for instant updates
   const { unreadCount } = useUnreadCount(user?.$id);

@@ -4,7 +4,7 @@
  */
 
 const CACHE_PREFIX = 'caalm_cache_';
-const CACHE_VERSION = '1.0';
+const CACHE_VERSION = '1.1';
 
 interface CachedData<T> {
   data: T;
@@ -135,6 +135,21 @@ export function clearCache(): void {
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error clearing cache:', error);
+    }
+  }
+}
+
+/**
+ * Clear cached data for a specific key
+ */
+export function clearCachedData(key: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    sessionStorage.removeItem(`${CACHE_PREFIX}${key}`);
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error clearing cached data:', error);
     }
   }
 }

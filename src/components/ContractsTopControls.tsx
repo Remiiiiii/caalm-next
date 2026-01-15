@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import ContractsFilter from './ContractsFilter';
 import { useContractsFilter } from './ContractsView';
+import ContractsExpiryModalTestButton from './ContractsExpiryModalTestButton';
 import type { UIFileDoc } from '@/types/files';
+import type { ContractStatus } from '@/constants/status';
 
 interface ContractsTopControlsProps {
   files: UIFileDoc[];
@@ -165,15 +167,17 @@ export default function ContractsTopControls({
     let pendingCount = 0;
     let actionRequiredCount = 0;
     let inactiveCount = 0;
+    let expiredCount = 0;
 
     files.forEach((file) => {
-      const status = file.status || 'unknown';
+      const status: ContractStatus | 'unknown' =
+        (file.status as ContractStatus) || 'unknown';
 
       if (status === 'active') {
         activeCount++;
       }
 
-      if (status === 'pending-review' || status === 'under_review') {
+      if (status === 'pending-review') {
         pendingCount++;
       }
 
@@ -184,6 +188,10 @@ export default function ContractsTopControls({
       if (status === 'inactive') {
         inactiveCount++;
       }
+
+      if (status === 'expired') {
+        expiredCount++;
+      }
     });
 
     return {
@@ -191,6 +199,7 @@ export default function ContractsTopControls({
       pendingCount,
       actionRequiredCount,
       inactiveCount,
+      expiredCount,
     };
   }, [files]);
 
@@ -210,14 +219,14 @@ export default function ContractsTopControls({
     <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
       {/* Search Input and Badges - Left */}
       <div className="flex items-center gap-3 flex-wrap">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          placeholder="Search contracts..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 w-full sm:w-64 bg-white border-slate-200"
-        />
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Search contracts..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 w-full sm:w-64 bg-white border-slate-200"
+          />
         </div>
 
         {/* Status Badges - Right of Search */}
@@ -246,6 +255,12 @@ export default function ContractsTopControls({
           >
             Inactive ({metrics.inactiveCount})
           </Badge>
+          <Badge
+            variant="outline"
+            className="!font-medium border-2 border-purple-600 bg-purple-50 text-purple-900 hover:bg-purple-100 hover:border-purple-700 transition-all duration-200 shadow-sm"
+          >
+            Expired ({metrics.expiredCount})
+          </Badge>
         </div>
       </div>
 
@@ -264,6 +279,10 @@ export default function ContractsTopControls({
           <Download className="w-4 h-4" />
           <span className="hidden sm:inline">Export</span>
         </Button>
+        {/* Test button for contract expiry modal - development only */}
+        {process.env.NODE_ENV === 'development' && (
+          <ContractsExpiryModalTestButton />
+        )}
       </div>
     </div>
   );

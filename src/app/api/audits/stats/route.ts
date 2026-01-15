@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuditStats } from '@/lib/services/audit-logger';
 import { requirePermission } from '@/lib/rbac/middleware';
 import { PERMISSIONS } from '@/constants/permissions';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +16,15 @@ export async function GET(request: NextRequest) {
       return permissionCheck;
     }
 
-    const stats = await getAuditStats();
+    // Cache key for audit stats
+    const cacheKey = CACHE_KEYS.audits.stats();
+
+    // Fetch audit stats with caching (10 minutes TTL)
+    const stats = await CacheManager.withCache(
+      'audits/stats',
+      cacheKey,
+      async () => await getAuditStats()
+    );
 
     return NextResponse.json({
       success: true,

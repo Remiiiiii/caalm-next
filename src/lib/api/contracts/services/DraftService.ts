@@ -206,7 +206,11 @@ export class DraftService {
   /**
    * Get drafts for owner
    */
-  static async getDrafts(ownerId: string) {
+  static async getDrafts(
+    ownerId: string,
+    limit: number = 100,
+    offset: number = 0
+  ) {
     const { tablesDB } = await createAdminClient();
 
     if (
@@ -240,17 +244,45 @@ export class DraftService {
       ],
     });
 
-    // Parse JSON fields
-    return drafts.rows.map((draft: any) => ({
-      ...draft,
-      formData: draft.formData ? JSON.parse(draft.formData) : null,
-      processedFileData: draft.processedFileData
-        ? JSON.parse(draft.processedFileData)
-        : null,
-      extractedData: draft.extractedData
-        ? JSON.parse(draft.extractedData)
-        : null,
-    }));
+    // Parse JSON fields safely
+    return drafts.rows.map((draft: any) => {
+      let formData = null;
+      let processedFileData = null;
+      let extractedData = null;
+
+      try {
+        formData = draft.formData ? JSON.parse(draft.formData) : null;
+      } catch (e) {
+        console.warn('Failed to parse formData for draft:', draft.$id, e);
+      }
+
+      try {
+        processedFileData = draft.processedFileData
+          ? JSON.parse(draft.processedFileData)
+          : null;
+      } catch (e) {
+        console.warn(
+          'Failed to parse processedFileData for draft:',
+          draft.$id,
+          e
+        );
+      }
+
+      try {
+        extractedData = draft.extractedData
+          ? JSON.parse(draft.extractedData)
+          : null;
+      } catch (e) {
+        console.warn('Failed to parse extractedData for draft:', draft.$id, e);
+      }
+
+      return {
+        ...draft,
+        formData,
+        processedFileData,
+        extractedData,
+      };
+    });
   }
 
   /**

@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { FileText, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { FileText, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useContractsExpiring } from '@/hooks/useContractsExpiring';
+import type { UIFileDoc } from '@/types/files';
 
 interface ContractData {
-  status: 'active' | 'expiring' | 'completed';
+  status: 'active' | 'expiring' | 'expired';
   count: number;
   percentage: number;
   color: string;
@@ -20,56 +22,307 @@ interface ContractStatusPieChartProps {
 const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
   data: propData,
 }) => {
-  const [contractData, setContractData] = useState<ContractData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Fetch contracts using the hook
+  const {
+    contracts,
+    isLoading,
+    error: contractsError,
+  } = useContractsExpiring();
 
-  // Mock data for development
-  const mockData: ContractData[] = [
-    {
-      status: 'active',
-      count: 45,
-      percentage: 60,
-      color: '#10B981', // Green
-    },
-    {
-      status: 'expiring',
-      count: 18,
-      percentage: 24,
-      color: '#F59E0B', // Amber
-    },
-    {
-      status: 'completed',
-      count: 12,
-      percentage: 16,
-      color: '#6B7280', // Gray
-    },
-  ];
+  // Transform contracts into pie chart data
+  const contractData = useMemo(() => {
+    // If prop data is provided, use it (for testing/override)
+    if (propData) {
+      return propData;
+    }
 
-  useEffect(() => {
-    const fetchContractData = async () => {
-      try {
-        setLoading(true);
+    // Don't process data while still loading (wait for first load to complete)
+    if (isLoading && contracts === undefined) {
+      // Return empty data structure while loading (will be replaced once data loads)
+      return [
+        {
+          status: 'active' as const,
+          count: 0,
+          percentage: 0,
+          color: '#10B981',
+        },
+        {
+          status: 'expiring' as const,
+          count: 0,
+          percentage: 0,
+          color: '#F59E0B',
+        },
+        {
+          status: 'expired' as const,
+          count: 0,
+          percentage: 0,
+          color: '#6B7280',
+        },
+      ];
+    }
 
-        // In production, this would fetch from your API
-        // const response = await fetch('/api/contracts/status');
-        // const data = await response.json();
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ContractStatusPieChart] Contracts data:', {
+        contractsLength: contracts?.length || 0,
+        contracts: contracts?.slice(0, 3) || [],
+        isLoading,
+        error: contractsError,
+        contractsIsUndefined: contracts === undefined,
+      });
+      // Log all status values to see what we're working with
+      const statusCounts =
+        contracts?.reduce((acc: Record<string, number>, c) => {
+          const status = c.status || '(no status)';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {}) || {};
+      console.log(
+        '[ContractStatusPieChart] Status value counts:',
+        statusCounts
+      );
+    }
 
-        // For now, use mock data
-        setContractData(propData || mockData);
-        setError(null);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load contract data'
+    // If no contracts after loading completes, return empty data
+    if (!contracts || contracts.length === 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          '[ContractStatusPieChart] No contracts found, returning empty data',
+          {
+            isLoading,
+            contractsIsUndefined: contracts === undefined,
+            contractsIsArray: Array.isArray(contracts),
+          }
         );
-        setContractData(mockData); // Fallback to mock data
-      } finally {
-        setLoading(false);
       }
-    };
+      return [
+        {
+          status: 'active' as const,
+          count: 0,
+          percentage: 0,
+          color: '#10B981',
+        },
+        {
+          status: 'expiring' as const,
+          count: 0,
+          percentage: 0,
+          color: '#F59E0B',
+        },
+        {
+          status: 'expired' as const,
+          count: 0,
+          percentage: 0,
+          color: '#6B7280',
+        },
+      ];
+    }
 
-    fetchContractData();
-  }, [propData]);
+    const now = new Date();
+    const ninetyDaysFromNow = new Date(
+      now.getTime() + 90 * 24 * 60 * 60 * 1000
+    );
+
+    let activeCount = 0;
+    let expiringCount = 0;
+    let completedCount = 0;
+
+    // Track categorization details for debugging
+    const categorizationDetails: Array<{
+      id: string;
+      status: string | undefined;
+      statusLower: string;
+      expiryDate: string | null;
+      isExpired: boolean;
+      isPastExpiry: boolean | null;
+      categorizedAs: string;
+      reason: string;
+    }> = [];
+
+    contracts.forEach((contract: UIFileDoc) => {
+      // Normalize status: trim whitespace and convert to lowercase
+      const status = contract.status?.trim().toLowerCase() || '';
+      const expiryDate = contract.contractExpiryDate
+        ? new Date(contract.contractExpiryDate)
+        : null;
+      const isExpired = contract.isExpired || false;
+      const hasNoStatus = !contract.status || status === '';
+
+      // Use daysUntilExpiry from contract if available, otherwise calculate from date
+      let daysUntilExpiry: number | undefined = (contract as any)
+        .daysUntilExpiry;
+      if (daysUntilExpiry === undefined && expiryDate) {
+        const expiryStr = contract.contractExpiryDate?.split('T')[0];
+        if (expiryStr) {
+          const [year, month, day] = expiryStr.split('-').map(Number);
+          const expiry = new Date(year, month - 1, day);
+          expiry.setHours(0, 0, 0, 0);
+          const timeDiff = expiry.getTime() - now.getTime();
+          daysUntilExpiry = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+        }
+      }
+
+      // Determine if contract is expired or expiring
+      // Only consider expired if explicitly marked or past expiry date
+      const isPastExpiry = daysUntilExpiry !== undefined && daysUntilExpiry < 0;
+      // Only consider expiring if we have a valid daysUntilExpiry between 0-90
+      const isExpiringSoon =
+        daysUntilExpiry !== undefined &&
+        daysUntilExpiry >= 0 &&
+        daysUntilExpiry <= 90;
+
+      // Contracts can be in multiple categories (e.g., active AND expiring)
+      // Track which categories this contract belongs to
+      const categories: string[] = [];
+      const reasons: string[] = [];
+
+      // Category 1: Expired contracts
+      // Only mark as expired if:
+      // - Status is explicitly "expired", OR
+      // - isExpired flag is true AND status is not "active" (trust active status from API), OR
+      // - Past expiry date AND status is not "active" (trust active status from API)
+      const shouldMarkAsExpired =
+        status === 'expired' ||
+        (isExpired && status !== 'active') ||
+        (isPastExpiry && status !== 'active');
+
+      if (shouldMarkAsExpired) {
+        completedCount++;
+        categories.push('expired');
+        reasons.push(
+          `Status: '${status}', isExpired: ${isExpired}, isPastExpiry: ${isPastExpiry}, daysUntilExpiry: ${daysUntilExpiry}`
+        );
+      }
+
+      // Category 2: Contracts with status="active" are ALWAYS counted as active
+      // This applies regardless of expiry status (contracts can be active AND expiring)
+      if (status === 'active' && !shouldMarkAsExpired) {
+        activeCount++;
+        categories.push('active');
+        reasons.push(
+          `Status is 'active' (daysUntilExpiry: ${daysUntilExpiry}, isExpired: ${isExpired})`
+        );
+      }
+
+      // Category 3: Check if contract is expiring soon (within 90 days)
+      // This applies to ALL contracts (including active) that are expiring
+      // Only if we have a valid daysUntilExpiry value (not undefined) and not expired
+      if (isExpiringSoon && !shouldMarkAsExpired) {
+        expiringCount++;
+        categories.push('expiring');
+        reasons.push(
+          `Expiring within 90 days (daysUntilExpiry: ${daysUntilExpiry}, expiry: ${expiryDate?.toISOString()})`
+        );
+      }
+
+      // Category 4: All other contracts (pending-review, inactive without expiry, etc.)
+      // If no expiry date or expiry is far in future, consider active
+      // If status is inactive and no expiry info, consider expired
+      if (categories.length === 0) {
+        // No category assigned yet - determine default category
+        if (status === 'inactive' && !expiryDate) {
+          completedCount++;
+          categories.push('expired');
+          reasons.push(`Status: 'inactive' with no expiry date`);
+        } else {
+          // Default: count as active for contracts without explicit status or with other statuses
+          activeCount++;
+          categories.push('active');
+          reasons.push(
+            `Status: '${status}' (default to active, daysUntilExpiry: ${daysUntilExpiry})`
+          );
+        }
+      }
+
+      // For debugging: use primary category (first one) as the main categorization
+      const categorizedAs = categories[0] || 'unknown';
+      const reason = reasons.join('; ');
+
+      // Store categorization details for debugging
+      categorizationDetails.push({
+        id: contract.$id,
+        status: contract.status,
+        statusLower: status,
+        expiryDate: contract.contractExpiryDate || null,
+        isExpired,
+        isPastExpiry,
+        categorizedAs,
+        reason,
+      });
+    });
+
+    // Total should be the number of unique contracts, not the sum of categories
+    // (since contracts can be in multiple categories)
+    const total = contracts.length;
+
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ContractStatusPieChart] Calculated counts:', {
+        activeCount,
+        expiringCount,
+        completedCount,
+        total,
+        contractsProcessed: contracts.length,
+      });
+      // Log all contract categorizations with detailed reasons
+      console.log(
+        '[ContractStatusPieChart] All contract categorizations:',
+        categorizationDetails
+      );
+      // Log contracts with status="active" specifically
+      const activeStatusContracts = categorizationDetails.filter(
+        (d) => d.statusLower === 'active'
+      );
+      console.log(
+        '[ContractStatusPieChart] Contracts with status="active" (all should be counted as active):',
+        activeStatusContracts.map((d) => ({
+          id: d.id,
+          categorizedAs: d.categorizedAs,
+          expiryDate: d.expiryDate,
+          reason: d.reason,
+        }))
+      );
+      // Log contracts categorized as active (regardless of status)
+      const categorizedAsActive = categorizationDetails.filter(
+        (d) => d.categorizedAs === 'active'
+      );
+      console.log(
+        '[ContractStatusPieChart] Contracts categorized as "active":',
+        categorizedAsActive
+      );
+    }
+
+    // Calculate percentages
+    const activePercentage =
+      total > 0 ? Math.round((activeCount / total) * 100) : 0;
+    const expiringPercentage =
+      total > 0 ? Math.round((expiringCount / total) * 100) : 0;
+    const completedPercentage =
+      total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+    return [
+      {
+        status: 'active' as const,
+        count: activeCount,
+        percentage: activePercentage,
+        color: '#10B981', // Green
+      },
+      {
+        status: 'expiring' as const,
+        count: expiringCount,
+        percentage: expiringPercentage,
+        color: '#F59E0B', // Amber
+      },
+      {
+        status: 'expired' as const,
+        count: completedCount,
+        percentage: completedPercentage,
+        color: '#6B7280', // Gray
+      },
+    ];
+  }, [contracts, propData, isLoading]);
+
+  const loading = isLoading;
+  const error = contractsError;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -77,7 +330,7 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'expiring':
         return <AlertTriangle className="h-4 w-4 text-amber-600" />;
-      case 'completed':
+      case 'expired':
         return <FileText className="h-4 w-4 text-slate-600" />;
       default:
         return <FileText className="h-4 w-4 text-slate-500" />;
@@ -90,8 +343,8 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
         return 'Active';
       case 'expiring':
         return 'Expiring';
-      case 'completed':
-        return 'Completed';
+      case 'expired':
+        return 'Expired';
       default:
         return status;
     }
@@ -146,7 +399,7 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
     );
   }
 
-  if (error && contractData.length === 0) {
+  if (error && (!contracts || contracts.length === 0)) {
     return (
       <Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
         <CardHeader className="pb-3 pt-6 px-4">
@@ -171,10 +424,9 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
     );
   }
 
-  const totalContracts = contractData.reduce(
-    (sum, item) => sum + item.count,
-    0
-  );
+  // Total should be the number of unique contracts, not the sum of category counts
+  // (since contracts can be in multiple categories like active AND expiring)
+  const totalContracts = contracts?.length || 0;
 
   return (
     <Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col">
@@ -220,7 +472,6 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
               </div>
               <div>
                 <div className="text-3xl font-bold sidebar-gradient-text tracking-tight">
@@ -268,10 +519,10 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 font-medium">
-                    Completed
+                    Expired
                   </div>
                   <div className="text-sm font-bold text-slate-700">
-                    {contractData.find((item) => item.status === 'completed')
+                    {contractData.find((item) => item.status === 'expired')
                       ?.count || 0}
                   </div>
                 </div>

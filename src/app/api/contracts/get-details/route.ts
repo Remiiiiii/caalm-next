@@ -12,6 +12,8 @@ import {
 import { requireAuth } from '@/lib/api/contracts/middleware/auth.middleware';
 import { parseAndValidateQuery } from '@/lib/api/contracts/middleware/validation.middleware';
 import { contractQuerySchema } from '@/lib/api/contracts/schemas/contract.schema';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
@@ -23,66 +25,79 @@ export async function GET(request: NextRequest) {
       return validationErrorResponse('Contract ID is required', requestId);
     }
 
-    const { tablesDB } = await createAdminClient();
+    // Cache key for specific contract
+    const cacheKey = CACHE_KEYS.contracts.details(contractId);
 
-    // Fetch contract from database
-    const contract = await tablesDB.getRow({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: appwriteConfig.contractsCollectionId || 'contracts',
-      rowId: contractId,
-    });
+    // Fetch contract details with caching (5 minutes TTL)
+    const contractData = await CacheManager.withCache(
+      'contracts/details',
+      cacheKey,
+      async () => {
+        const { tablesDB } = await createAdminClient();
 
-    if (!contract) {
+        // Fetch contract from database
+        const contract = await tablesDB.getRow({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.contractsCollectionId || 'contracts',
+          rowId: contractId,
+        });
+
+        if (!contract) {
+          return null;
+        }
+
+        let fileUrl = '';
+        let fileExtension = 'pdf';
+
+        // If contract has fileId, fetch file details
+        if (contract.fileId) {
+          try {
+            const fileDoc = await tablesDB.getRow({
+              databaseId: appwriteConfig.databaseId || 'default-db',
+              tableId: appwriteConfig.filesCollectionId || 'files',
+              rowId: contract.fileId,
+              queries: [],
+            });
+
+            if (fileDoc && fileDoc.url) {
+              fileUrl = fileDoc.url;
+            }
+            if (fileDoc && fileDoc.extension) {
+              fileExtension = fileDoc.extension;
+            }
+          } catch (fileError) {
+            console.warn('Failed to fetch file details:', fileError);
+            // Try to construct file URL from storage if fileId is a storage file ID
+            try {
+              fileUrl = constructFileUrl(contract.fileId);
+            } catch (storageError) {
+              console.warn('Failed to construct file URL:', storageError);
+            }
+          }
+        }
+
+        return {
+          contractId: contract.$id,
+          contractName: contract.contractName || 'Unnamed Contract',
+          description: contract.description || '',
+          contractType: contract.contractType || '',
+          vendor: contract.vendor || '',
+          amount: contract.amount || '',
+          contractNumber: contract.contractNumber || '',
+          contractExpiryDate: contract.contractExpiryDate || '',
+          status: contract.status || '',
+          fileId: contract.fileId || '',
+          fileUrl: fileUrl,
+          fileExtension: fileExtension,
+        };
+      }
+    );
+
+    if (!contractData) {
       return notFoundResponse('Contract', requestId);
     }
 
-    let fileUrl = '';
-    let fileExtension = 'pdf';
-
-    // If contract has fileId, fetch file details
-    if (contract.fileId) {
-      try {
-        const fileDoc = await tablesDB.getRow({
-          databaseId: appwriteConfig.databaseId || 'default-db',
-          tableId: appwriteConfig.filesCollectionId || 'files',
-          rowId: contract.fileId,
-          queries: [],
-        });
-
-        if (fileDoc && fileDoc.url) {
-          fileUrl = fileDoc.url;
-        }
-        if (fileDoc && fileDoc.extension) {
-          fileExtension = fileDoc.extension;
-        }
-      } catch (fileError) {
-        console.warn('Failed to fetch file details:', fileError);
-        // Try to construct file URL from storage if fileId is a storage file ID
-        try {
-          fileUrl = constructFileUrl(contract.fileId);
-        } catch (storageError) {
-          console.warn('Failed to construct file URL:', storageError);
-        }
-      }
-    }
-
-    return successResponse(
-      {
-        contractId: contract.$id,
-        contractName: contract.contractName || 'Unnamed Contract',
-        description: contract.description || '',
-        contractType: contract.contractType || '',
-        vendor: contract.vendor || '',
-        amount: contract.amount || '',
-        contractNumber: contract.contractNumber || '',
-        contractExpiryDate: contract.contractExpiryDate || '',
-        status: contract.status || '',
-        fileId: contract.fileId || '',
-        fileUrl: fileUrl,
-        fileExtension: fileExtension,
-      },
-      { requestId }
-    );
+    return successResponse(contractData, { requestId });
   } catch (error) {
     console.error('Error fetching contract details:', error);
     return errorResponse(

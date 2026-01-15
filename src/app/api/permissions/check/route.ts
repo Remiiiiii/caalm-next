@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/actions/user.actions';
 import { getUserPermissions } from '@/lib/rbac/permissions';
 import { parseStringify } from '@/lib/utils';
 import { deduplicateRequest } from '@/lib/utils/request-deduplication';
+import CacheManager from '@/lib/services/cache-manager';
+import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,11 +19,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId') || undefined;
 
-    // Deduplicate concurrent requests for the same user/org
-    const cacheKey = `permissions:${user.$id}:${orgId || 'default'}`;
+    // Cache key for permissions check
+    const cacheKey = CACHE_KEYS.rbac.check(user.$id, orgId);
     
+    // Fetch permissions with caching (15 minutes TTL) + request deduplication
     const permissions = await deduplicateRequest(cacheKey, async () => {
-      return getUserPermissions(user.$id, orgId);
+      return CacheManager.withCache(
+        'rbac/check',
+        cacheKey,
+        async () => getUserPermissions(user.$id, orgId)
+      );
     });
 
     return NextResponse.json({

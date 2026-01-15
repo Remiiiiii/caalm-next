@@ -70,7 +70,7 @@ export function errorResponse(
   options?: {
     requestId?: string;
     details?: unknown;
-    errorCode?: ErrorCode;
+    errorCode?: string;
   }
 ): NextResponse<ApiResponse> {
   const errorMessage = error instanceof Error ? error.message : error;
@@ -79,7 +79,7 @@ export function errorResponse(
     (error instanceof Error && 'code' in error
       ? (error as any).code
       : undefined) ||
-    ErrorCode.INTERNAL_ERROR;
+    'INTERNAL_ERROR';
   const finalStatus =
     error instanceof Error && 'status' in error
       ? (error as any).status
@@ -102,9 +102,9 @@ export function errorResponse(
     (response as any).details = options.details;
   }
 
-  // Add validation details if available
-  if (error instanceof ValidationError && error.details) {
-    (response as any).validationErrors = error.details;
+  // Add validation details if available (check for details property on error)
+  if (error instanceof Error && 'details' in error && (error as any).details) {
+    (response as any).validationErrors = (error as any).details;
   }
 
   // Log error with context
@@ -148,7 +148,7 @@ export function notFoundResponse(
 ): NextResponse<ApiResponse> {
   return errorResponse(`${resource} not found`, 404, {
     requestId,
-    errorCode: ErrorCode.NOT_FOUND,
+    errorCode: 'NOT_FOUND',
   });
 }
 
@@ -171,6 +171,6 @@ export function forbiddenResponse(
 ): NextResponse<ApiResponse> {
   return errorResponse(message, 403, {
     requestId,
-    errorCode: ErrorCode.FORBIDDEN,
+    errorCode: 'FORBIDDEN',
   });
 }

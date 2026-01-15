@@ -4,6 +4,8 @@
  * Optimized with Redis caching and parallel queries
  */
 
+'use server';
+
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
@@ -144,7 +146,7 @@ export async function getUserPermissions(
           return [];
         }
 
-        rolePermissionQueries.push(Query.limit(100));
+        rolePermissionQueries.push(Query.limit(200)); // Increased to handle users with multiple roles
 
         const rolePermissions = await tablesDB.listRows({
           databaseId: appwriteConfig.databaseId || 'default-db',
@@ -160,29 +162,36 @@ export async function getUserPermissions(
           return [];
         }
 
-        // Get permission keys
-        const permissionQueries = [];
-        if (permissionIds.length === 1) {
-          permissionQueries.push(Query.equal('$id', permissionIds[0]));
-        } else if (permissionIds.length > 1) {
-          permissionQueries.push(
-            Query.or(permissionIds.map((permId) => Query.equal('$id', permId)))
-          );
+        // Get permission keys - batch queries to avoid Query.or() limit and string length limit
+
+        const allPermissions: any[] = [];
+        // Batch size of 50 to avoid Appwrite's 4096 character query string limit
+        const BATCH_SIZE = 50;
+
+        // Process in batches
+        for (let i = 0; i < permissionIds.length; i += BATCH_SIZE) {
+          const batch = permissionIds.slice(i, i + BATCH_SIZE);
+          const permissionQueries = [];
+          
+          if (batch.length === 1) {
+            permissionQueries.push(Query.equal('$id', batch[0]));
+          } else {
+            permissionQueries.push(
+              Query.or(batch.map((permId) => Query.equal('$id', permId)))
+            );
+          }
+          permissionQueries.push(Query.limit(BATCH_SIZE));
+
+          const permissions = await tablesDB.listRows({
+            databaseId: appwriteConfig.databaseId || 'default-db',
+            tableId: appwriteConfig.permissionsCollectionId || 'permissions',
+            queries: permissionQueries,
+          });
+
+          allPermissions.push(...permissions.rows);
         }
 
-        if (permissionQueries.length === 0) {
-          return [];
-        }
-
-        permissionQueries.push(Query.limit(100));
-
-        const permissions = await tablesDB.listRows({
-          databaseId: appwriteConfig.databaseId || 'default-db',
-          tableId: 'permissions',
-          queries: permissionQueries,
-        });
-
-        return permissions.rows.map((p: any) => p.key) as PermissionKey[];
+        return allPermissions.map((p: any) => p.key) as PermissionKey[];
       } catch (error) {
         console.error('[getUserPermissions] Error fetching permissions:', error);
         return [];

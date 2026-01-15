@@ -84,6 +84,8 @@ const getStatusBadgeClasses = (status: string) => {
       return 'border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
     case 'inactive':
       return 'border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium';
+    case 'expired':
+      return 'border-2 border-purple-600 bg-purple-50 text-purple-900 text-xs rounded-xl font-medium';
     default:
       return 'border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
   }
@@ -99,12 +101,22 @@ const getStatusLabel = (status: string) => {
       return 'Active';
     case 'inactive':
       return 'Inactive';
+    case 'expired':
+      return 'Expired';
     default:
       return status.charAt(0).toUpperCase() + status.slice(1);
   }
 };
 
-export const FileDetails = ({ file }: { file: UIFileDoc }) => {
+export const FileDetails = ({
+  file,
+  onRefresh,
+  onExpiryDateChange,
+}: {
+  file: UIFileDoc;
+  onRefresh?: () => void;
+  onExpiryDateChange?: (newExpiryDate: string) => void;
+}) => {
   const { toast } = useToast();
   const [editing, setEditing] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
@@ -113,6 +125,21 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
   const [displayExpiry, setDisplayExpiry] = React.useState<string | undefined>(
     file.contractExpiryDate
   );
+  const [lastSavedExpiry, setLastSavedExpiry] = React.useState<
+    string | undefined
+  >(undefined);
+
+  // Sync displayExpiry when file.contractExpiryDate changes (e.g., after refresh)
+  // But don't overwrite if we just saved a new date
+  React.useEffect(() => {
+    if (file.contractExpiryDate) {
+      // Only update if we haven't just saved a different date
+      // This prevents the stale file prop from overwriting our local update
+      if (!lastSavedExpiry || file.contractExpiryDate === lastSavedExpiry) {
+        setDisplayExpiry(file.contractExpiryDate);
+      }
+    }
+  }, [file.contractExpiryDate, lastSavedExpiry]);
   const [assignedManagerUsers, setAssignedManagerUsers] = React.useState<
     AppUser[]
   >([]);
@@ -230,10 +257,50 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
     fullFile: file,
   });
 
+  // Helper function to parse date string as local date (avoiding timezone issues)
+  const parseLocalDate = (dateString: string | undefined): Date | undefined => {
+    if (!dateString) return undefined;
+
+    // If it's a date-only string (YYYY-MM-DD), parse it as local date
+    const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      // Create date in local timezone (month is 0-indexed)
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+
+    // For ISO strings with time, extract date part and parse as local
+    const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+
+    // Fallback to standard Date parsing
+    return new Date(dateString);
+  };
+
+  // Helper function to format date for display (avoiding timezone issues)
+  const formatDateForDisplay = (dateString: string | undefined): string => {
+    if (!dateString) return 'N/A';
+
+    const date = parseLocalDate(dateString);
+    if (!date || isNaN(date.getTime())) return 'N/A';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   // Initialize selectedDate with current expiry date when editing starts
   React.useEffect(() => {
     if (editing && displayExpiry) {
-      setSelectedDate(new Date(displayExpiry));
+      const parsedDate = parseLocalDate(displayExpiry);
+      if (parsedDate && !isNaN(parsedDate.getTime())) {
+        setSelectedDate(parsedDate);
+      }
     }
   }, [editing, displayExpiry]);
 
@@ -300,14 +367,14 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
       }
       if (Array.isArray(assignedManagers) && assignedManagers.length > 0) {
         return (
-          <span className="text-slate-800 font-semibold">
+          <span className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
             {assignedManagers.join(', ')}
           </span>
         );
       }
       if (typeof assignedManagers === 'string') {
         return (
-          <span className="text-slate-800 font-semibold">
+          <span className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
             {assignedManagers}
           </span>
         );
@@ -354,6 +421,38 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
 
     if (type === 'date' && value) {
       try {
+        // Parse as local date to avoid timezone issues
+        const dateString = String(value);
+        const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (dateOnlyMatch) {
+          const [, year, month, day] = dateOnlyMatch;
+          const localDate = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day)
+          );
+          return localDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+        }
+        // Fallback for ISO strings
+        const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+        if (isoMatch) {
+          const [, year, month, day] = isoMatch;
+          const localDate = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day)
+          );
+          return localDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+        }
+        // Last resort: use standard Date parsing
         return new Date(value).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
@@ -418,12 +517,14 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
       | 'boolean'
       | 'array'
   ) => (
-    <div className="bg-white rounded-lg p-3 border border-slate-200">
-      <p className="text-sm text-slate-500 font-medium mb-1">{label}</p>
+    <div className="bg-white rounded-lg p-3 border border-slate-200 overflow-hidden">
+      <p className="text-sm text-slate-500 font-medium mb-1 break-words">
+        {label}
+      </p>
       {type === 'priority' && value ? (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 min-w-0">
           <span
-            className={`w-3 h-3 rounded-full ${
+            className={`w-3 h-3 rounded-full flex-shrink-0 ${
               value === 'Urgent'
                 ? 'bg-red-500'
                 : value === 'High'
@@ -433,12 +534,12 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
                 : 'bg-green-500'
             }`}
           ></span>
-          <span className="text-slate-800 font-semibold">
+          <span className="text-slate-800 font-semibold break-words min-w-0">
             {formatDisplayValue(value, type)}
           </span>
         </div>
       ) : (
-        <p className="text-slate-800 font-semibold">
+        <p className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
           {formatDisplayValue(value, type)}
         </p>
       )}
@@ -446,12 +547,13 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
   );
 
   const saveExpiry = async () => {
-    if (!selectedDate) return;
-    const now = new Date();
-    if (selectedDate <= now) {
+    console.log('saveExpiry called', { selectedDate, file: file.$id });
+
+    if (!selectedDate) {
+      console.warn('No date selected');
       toast({
-        title: 'Invalid Date',
-        description: 'Expiry date must be in the future.',
+        title: 'No Date Selected',
+        description: 'Please select a date before saving.',
         variant: 'destructive',
       });
       return;
@@ -459,6 +561,7 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
 
     // Validate file ID exists
     if (!file.$id || typeof file.$id !== 'string' || file.$id.trim() === '') {
+      console.error('Invalid file ID:', file.$id);
       toast({
         title: 'Error',
         description: 'File document ID is missing or invalid.',
@@ -468,29 +571,102 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
     }
 
     try {
-      const expiryDateISO = selectedDate.toISOString();
+      // Normalize the date to midnight local time to avoid timezone issues
+      // Create a new date at midnight local time using the selected date's components
+      const normalizedDate = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate()
+      );
+
+      // Extract date components from normalized date (ensures local timezone)
+      const year = normalizedDate.getFullYear();
+      const month = String(normalizedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(normalizedDate.getDate()).padStart(2, '0');
+      const expiryDateISO = `${year}-${month}-${day}`;
+
+      console.log('Date conversion:', {
+        selectedDate,
+        normalizedDate,
+        year,
+        month,
+        day,
+        expiryDateISO,
+        selectedDateLocalString: selectedDate.toLocaleDateString('en-US'),
+        normalizedDateLocalString: normalizedDate.toLocaleDateString('en-US'),
+      });
+
+      // Determine the correct document ID to use
+      // When file comes from contracts collection (via /api/contracts/all), file.$id IS the contract ID
+      // When file has contractId set, use that
+      // Otherwise, use file.$id (which should be the contract ID for contracts)
+      const documentId = (file as any).contractId || file.$id;
+
+      console.log('Updating expiry date:', {
+        documentId,
+        expiryDateISO,
+        fileId: file.$id,
+        contractId: (file as any).contractId,
+        currentExpiryDate: file.contractExpiryDate,
+        fileObject: file,
+      });
 
       // Use server action to update expiry date (handles authentication properly)
-      await updateContractExpiryDate(file.$id, expiryDateISO);
+      console.log('Calling updateContractExpiryDate...');
+      const result = await updateContractExpiryDate(documentId, expiryDateISO);
+      console.log('updateContractExpiryDate result:', result);
+
+      if (!result || !result.success) {
+        console.error('Update did not return success:', result);
+        throw new Error('Update did not return success');
+      }
+
+      console.log('✅ Expiry date update completed successfully');
 
       // Update local state to reflect the change immediately
       setDisplayExpiry(expiryDateISO);
+      setLastSavedExpiry(expiryDateISO); // Track what we just saved
       setEditing(false);
+      setSelectedDate(undefined); // Reset selected date after save
+
+      // Update the file object's contractExpiryDate property directly
+      (file as any).contractExpiryDate = expiryDateISO;
+
+      // Optimistically update the card component immediately
+      if (onExpiryDateChange) {
+        onExpiryDateChange(expiryDateISO);
+      }
+
+      // Trigger refresh to update card and table views with latest server data
+      // Use a longer delay to ensure the database has been updated and cached data is cleared
+      setTimeout(() => {
+        if (onRefresh) {
+          console.log('🔄 Calling onRefresh callback to update parent data');
+          onRefresh();
+        }
+      }, 1000);
 
       toast({
         title: 'Success',
-        description: 'Expiry date updated successfully.',
+        description: `Expiry date updated to ${selectedDate.toLocaleDateString()}.`,
       });
     } catch (error: any) {
-      console.error('Failed to update expiry date:', error);
+      console.error('❌ Failed to update expiry date:', {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        selectedDate,
+        fileId: file.$id,
+        contractId: (file as any).contractId,
+      });
       toast({
         title: 'Update Failed',
         description:
           error?.message ||
-          'An unexpected error occurred while updating the expiry date.',
+          'An unexpected error occurred while updating the expiry date. Please check the console for details.',
         variant: 'destructive',
       });
-      // Don't close editing mode on error
+      // Don't close editing mode on error so user can try again
     }
   };
 
@@ -688,36 +864,40 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-3 pt-2">
-                  <div className="bg-white rounded-lg p-3 border border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-500 font-medium mb-1">
+                  <div className="bg-white rounded-lg p-3 border border-slate-200 overflow-hidden">
+                    <div className="flex items-center justify-between min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-slate-500 font-medium mb-1 break-words">
                           Expiry Date
                         </p>
-                        <p className="text-slate-800 font-semibold">
-                          {displayExpiry
-                            ? new Date(displayExpiry).toLocaleDateString(
-                                'en-US',
-                                {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                }
-                              )
-                            : 'N/A'}
+                        <p className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
+                          {formatDateForDisplay(displayExpiry)}
                         </p>
                       </div>
-                      {!editing ? (
-                        <ShadButton
-                          onClick={() => setEditing(true)}
-                          variant="outline"
-                          size="sm"
-                          className="primary-btn px-3 sm:px-4"
-                        >
-                          <SquarePen className="w-4 h-4" />
-                          Edit Date
-                        </ShadButton>
-                      ) : (
+                      {(() => {
+                        // Check if contract is expired
+                        const isContractExpired =
+                          file.status?.toLowerCase() === 'expired' ||
+                          file.isExpired ||
+                          (file.contractExpiryDate &&
+                            new Date(file.contractExpiryDate) < new Date());
+
+                        // Don't show Edit Date button if contract is expired
+                        if (isContractExpired) {
+                          return null;
+                        }
+
+                        return !editing ? (
+                          <ShadButton
+                            onClick={() => setEditing(true)}
+                            variant="outline"
+                            size="sm"
+                            className="primary-btn px-3 sm:px-4"
+                          >
+                            <SquarePen className="w-4 h-4" />
+                            Edit Date
+                          </ShadButton>
+                        ) : (
                         <div className="flex items-center space-x-2">
                           <Popover>
                             <PopoverTrigger asChild>
@@ -739,7 +919,28 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
                                 className="text-slate-700"
                                 mode="single"
                                 selected={selectedDate}
-                                onSelect={setSelectedDate}
+                                onSelect={(date) => {
+                                  console.log('Calendar date selected:', date);
+                                  // Normalize the date to midnight local time to avoid timezone issues
+                                  if (date) {
+                                    const normalized = new Date(
+                                      date.getFullYear(),
+                                      date.getMonth(),
+                                      date.getDate()
+                                    );
+                                    console.log('Normalized date:', {
+                                      original: date,
+                                      normalized,
+                                      originalLocal:
+                                        date.toLocaleDateString('en-US'),
+                                      normalizedLocal:
+                                        normalized.toLocaleDateString('en-US'),
+                                    });
+                                    setSelectedDate(normalized);
+                                  } else {
+                                    setSelectedDate(undefined);
+                                  }
+                                }}
                                 disabled={(date) => {
                                   const today = new Date();
                                   today.setHours(0, 0, 0, 0);
@@ -751,9 +952,17 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
                           </Popover>
                           <ShadButton
                             size="sm"
-                            onClick={saveExpiry}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('Save button clicked', {
+                                selectedDate,
+                              });
+                              saveExpiry();
+                            }}
                             disabled={!selectedDate}
                             className="primary-btn px-3 sm:px-4"
+                            type="button"
                           >
                             <Save className="w-4 h-4" />
                             Save
@@ -771,7 +980,8 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
                             Cancel
                           </ShadButton>
                         </div>
-                      )}
+                      );
+                    })()}
                     </div>
                   </div>
                   {renderField(
@@ -1136,8 +1346,8 @@ export const FileDetails = ({ file }: { file: UIFileDoc }) => {
               <AccordionContent>
                 <div className="space-y-3 pt-2">
                   {assignedManagers && assignedManagers.length > 0 && (
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
-                      <p className="text-sm text-slate-500 font-medium mb-2">
+                    <div className="bg-white rounded-lg p-3 border border-slate-200 overflow-hidden">
+                      <p className="text-sm text-slate-500 font-medium mb-2 break-words">
                         Assigned To
                       </p>
                       {renderAssignedManagers()}
@@ -1282,42 +1492,48 @@ export const ShareInput = ({
           </Label>
 
           {/* Format */}
-          <div className="bg-white rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 font-medium">Format</span>
-              <span className="text-sm text-slate-800 font-semibold">
+          <div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between min-w-0">
+              <span className="text-sm text-slate-600 font-medium break-words min-w-0">
+                Format
+              </span>
+              <span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
                 {file.extension}
               </span>
             </div>
           </div>
 
           {/* Size */}
-          <div className="bg-white rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 font-medium">Size</span>
-              <span className="text-sm text-slate-800 font-semibold">
+          <div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between min-w-0">
+              <span className="text-sm text-slate-600 font-medium break-words min-w-0">
+                Size
+              </span>
+              <span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
                 {convertFileSize({ sizeInBytes: file.size })}
               </span>
             </div>
           </div>
 
           {/* Owner */}
-          <div className="bg-white rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 font-medium">Owner</span>
-              <span className="text-sm text-slate-800 font-semibold">
+          <div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between min-w-0">
+              <span className="text-sm text-slate-600 font-medium break-words min-w-0">
+                Owner
+              </span>
+              <span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
                 {ownerName}
               </span>
             </div>
           </div>
 
           {/* Last Modified */}
-          <div className="bg-white rounded-lg p-4 border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 font-medium">
+          <div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between min-w-0">
+              <span className="text-sm text-slate-600 font-medium break-words min-w-0">
                 Last Modified
               </span>
-              <span className="text-sm text-slate-800 font-semibold">
+              <span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
                 {formatDateTime(file.$updatedAt)}
               </span>
             </div>

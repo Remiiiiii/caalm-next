@@ -1,0 +1,481 @@
+---
+name: global-style-guide
+description: Single source of truth for all UI/UX styling standards, page structure, and component patterns
+globs: **/*.{ts,tsx,js,jsx,css}
+alwaysApply: true
+---
+
+# Global Style Guide
+
+This is the **single source of truth** for all styling, page structure, and component patterns in the application. All new pages, components, dialogs, and cards must follow these standards.
+
+## Table of Contents
+
+1. [Page Structure](#page-structure)
+2. [Glass Card Design](#glass-card-design)
+3. [Dialog & Modal Standards](#dialog--modal-standards)
+4. [Tailwind CSS Best Practices](#tailwind-css-best-practices)
+5. [Color Palette](#color-palette)
+6. [Typography](#typography)
+7. [Spacing & Layout](#spacing--layout)
+8. [Interactive Elements](#interactive-elements)
+
+---
+
+## Page Structure
+
+### Page Container
+
+**ALWAYS** use the standard container wrapper:
+
+```tsx
+<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
+  {/* Page content */}
+</div>
+```
+
+### Page Header
+
+**Standard pattern for all pages:**
+
+```tsx
+{/* Header */}
+<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
+  <h1 className="h1 capitalize sidebar-gradient-text">Page Title</h1>
+</div>
+```
+
+**Action buttons** should be in a separate row:
+
+```tsx
+<div className="mb-6 flex items-center justify-end">
+  <Button className="primary-btn">
+    <Icon className="h-4 w-4" />
+    Action
+  </Button>
+</div>
+```
+
+**Reference examples:**
+- `src/app/(root)/dashboard/content-creator/ContentCreatorDashboard.tsx`
+- `src/app/(root)/[type]/page.tsx` (contracts page)
+
+---
+
+## Glass Card Design
+
+### Glass Card Structure
+
+**ALL cards** must use the glass-card style:
+
+```tsx
+<Card className="glass-card">
+  <div className="glass-card-cap" />
+  <CardContent className="p-4 sm:p-6">
+    {/* Content */}
+  </CardContent>
+</Card>
+```
+
+### Glass Card CSS Classes
+
+- **`.glass-card`**: Main container with backdrop blur, white background with opacity, border, and shadow
+  - Applied to: `<Card className="glass-card">`
+  - Provides: `background: rgba(255, 255, 255, 0.1)`, `backdrop-filter: blur(12px)`, border and shadow effects
+
+- **`.glass-card-cap`**: Decorative cap at the top of the card
+  - Applied to: `<div className="glass-card-cap" />` (placed immediately after Card opening tag)
+  - Provides: Thin horizontal bar at the top with `background: #d6d7d8` and `opacity: 0.7`
+
+- **`.glass-card-inner`**: Inner content wrapper for nested glass effects
+  - Applied to: Nested content areas that need additional blur effect
+  - Provides: Enhanced backdrop blur for layered content
+
+### When to Use Glass Cards
+
+**ALWAYS** use glass-card for:
+- Dashboard cards and widgets
+- Audit log cards
+- Stat/metric cards
+- Content cards in dialogs
+- Widget components (RecentActivity, QuickNotes, WeatherWidget, etc.)
+
+**ALWAYS** include the glass-card-cap div immediately after the Card opening tag
+
+### Stat Cards (Dashboard Pattern)
+
+**CRITICAL**: Stat cards on dashboard pages do **NOT** use `CardHeader`. Content goes directly in `CardContent`:
+
+```tsx
+<Card className="glass-card">
+  <div className="glass-card-cap" />
+  <CardContent className="p-4 sm:p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium sidebar-gradient-text">
+          Stat Title
+        </p>
+        <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+          <span>Value</span>
+          <span className="inline-block ml-2 pb-1">
+            <Icon className="h-8 w-8 text-slate-600" />
+          </span>
+        </div>
+        <p className="text-xs text-slate-600 mt-1">Description</p>
+      </div>
+    </div>
+  </CardContent>
+</Card>
+```
+
+**Key Rules for Stat Cards:**
+- ❌ **NO** `CardHeader` or `CardTitle`
+- ❌ **NO** `bg-slate-50` in `CardContent` (only in dialogs)
+- ✅ Padding: `p-4 sm:p-6` (responsive)
+- ✅ Title: `text-sm font-medium sidebar-gradient-text`
+- ✅ Value: `text-3xl font-bold text-slate-700`
+- ✅ Icon: `h-8 w-8 text-slate-600` inline with value
+- ✅ Description: `text-xs text-slate-600 mt-1`
+
+**Reference examples:**
+- `src/app/(root)/dashboard/ExecutiveDashboard.tsx` (lines 860-882)
+- `src/app/(root)/dashboard/content-creator/ContentCreatorDashboard.tsx` (lines 123-201)
+
+### Stat Cards Grid
+
+**Standard grid layout:**
+
+```tsx
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+  {/* Stat cards */}
+</div>
+```
+
+- Grid gap: `gap-6` (NOT `gap-4`)
+- Responsive: 1 column mobile, 2 columns tablet, 4 columns desktop
+- Bottom margin: `mb-6`
+
+### Content Cards
+
+For content cards (like article lists, tables, etc.):
+
+```tsx
+<Card className="glass-card">
+  <div className="glass-card-cap" />
+  <CardContent className="p-4 sm:p-6">
+    {/* Content directly here, no CardHeader */}
+  </CardContent>
+</Card>
+```
+
+---
+
+## Dialog & Modal Standards
+
+### Standard Dialog Structure
+
+**ALL dialogs** must follow this structure:
+
+```tsx
+<Dialog open={isOpen} onOpenChange={setIsOpen}>
+  <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+    {/* Professional Cap */}
+    <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+    {/* Header with gradient background */}
+    <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+      <div className="flex items-center gap-3 px-6">
+        <div className="flex items-center gap-3">
+          <IconComponent className="w-5 h-5 text-[#0f5384]" />
+          <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+            Dialog Title
+          </DialogTitle>
+        </div>
+      </div>
+      <p className="text-sm text-slate-600 mt-1 ml-14">
+        Optional subtitle or description
+      </p>
+    </div>
+
+    {/* Scrollable Content */}
+    <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+      {/* Main content here */}
+    </div>
+
+    {/* Professional Footer */}
+    <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+      <div className="text-xs text-slate-500">Optional footer text</div>
+      <div className="flex items-center gap-3">
+        <Button variant="outline" className="primary-btn px-3 sm:px-4">
+          Cancel
+        </Button>
+        <Button className="primary-btn px-3 sm:px-4">Action</Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+```
+
+### Dialog Requirements
+
+**ALWAYS:**
+- Include professional cap bar at the top
+- Use gradient header (`bg-gradient-to-r from-blue-50 to-indigo-50`)
+- Add `mt-4` to header div to account for cap bar
+- Use `bg-slate-50` for scrollable content area
+- Place icons directly next to title with `gap-3` and `text-[#0f5384]`
+- Use `ml-14` on subtitle paragraphs to align with title text
+- Include footer with `bg-slate-50` and border-top
+
+**NEVER:**
+- Use plain DialogContent without the professional structure
+- Skip the cap bar at the top
+- Use flat backgrounds in headers
+- Use circular icon backgrounds in dialog headers
+- Use `bg-white` for main dialog content areas (use `bg-slate-50`)
+
+**Reference examples:**
+- `src/components/ActionDropdown.tsx` - Re-assign dialog
+- `src/components/news/ArticleEditor.tsx` - Article editor dialog
+
+---
+
+## Tailwind CSS Best Practices
+
+### Custom Colors
+
+Use custom colors defined in `tailwind.config.ts` without intermediate suffixes (100, 200, etc.).
+
+**Available custom colors:** `red`, `green`, `blue`, `pink`, `orange`, `brand`, `light`, `dark`, `navy`, `coral`
+
+**Opacity modifiers:** Use `/` syntax: `bg-blue/10`, `text-red/80`, `border-green/20`
+
+**Color variants:** For colors with variants (like `light`, `dark`, `coral`, `brand`), use dash notation: `bg-light-300`, `text-dark-100`, `bg-coral-500`
+
+**Examples:**
+- ✅ `bg-blue/10 text-blue border-blue/20`
+- ✅ `bg-green/10 text-green`
+- ✅ `bg-light-300 text-light-100`
+- ✅ `bg-coral-500 text-white`
+- ❌ `bg-blue-100 text-blue-800` (don't use intermediate suffixes for custom colors)
+- ❌ `bg-red-500` (use `bg-red` or `bg-red/50` instead)
+
+### Utility-First Approach
+
+- Use utility-first classes for rapid UI development
+- Create custom themes using Tailwind's configuration file
+- Utilize `@apply` for reusable styles in CSS files
+
+---
+
+## Color Palette
+
+### Primary Colors
+
+- **Brand Blue**: `#0f5384` (use `text-[#0f5384]` for icons and accents)
+- **Gradient**: `bg-gradient-to-r from-blue-50 to-indigo-50` (for headers)
+
+### Background Colors
+
+- **Main content areas (dialogs/cards)**: `bg-slate-50` (ALWAYS use in dialog/popover/card content sections)
+- **Nested content cards**: `bg-white` (for contrast against slate-50)
+- **Footer sections**: `bg-slate-50`
+- **Glass cards**: Use `.glass-card` class (no explicit background needed)
+
+### Border Colors
+
+- **Standard borders**: `border-slate-200`
+- **Hover borders**: `border-blue-300`
+
+### Text Colors
+
+- **Primary text**: `text-slate-900`
+- **Secondary text**: `text-slate-600`
+- **Muted text**: `text-slate-500`
+- **Headers**: `sidebar-gradient-text` (brand colors)
+- **Accents**: `text-[#0f5384]` (brand blue), `text-blue-600`, `text-green`, `text-purple-600`
+
+---
+
+## Typography
+
+### Headings
+
+- **Page Title**: `h1 capitalize sidebar-gradient-text`
+- **Section Title**: `text-xl font-semibold sidebar-gradient-text`
+- **Card Title**: `text-sm font-medium sidebar-gradient-text`
+- **Stat Value**: `text-3xl font-bold text-slate-700`
+
+### Body Text
+
+- **Primary**: `text-slate-900`
+- **Secondary**: `text-slate-600`
+- **Muted**: `text-slate-500`
+- **Small**: `text-xs text-slate-600`
+
+---
+
+## Spacing & Layout
+
+### Padding
+
+- **Card content**: `p-4 sm:p-6` (responsive padding)
+- **Dialog content**: `p-6` (or `p-4` for smaller dialogs)
+- **Dialog header**: `py-4 px-6`
+- **Dialog footer**: `px-6 py-4`
+
+### Margins
+
+- **Page header bottom**: `mb-4`
+- **Action button row bottom**: `mb-6`
+- **Stat cards grid bottom**: `mb-6`
+- **Section spacing**: `space-y-6` or `mb-6`
+
+### Grid Gaps
+
+- **Stat cards grid**: `gap-6` (NOT `gap-4`)
+- **Content grid**: `gap-6` (standard)
+- **Smaller grids**: `gap-3` or `gap-4` (for compact layouts)
+
+### Container Widths
+
+- **Page container**: `w-full px-4 sm:px-6 lg:px-8 xl:px-12`
+- **Dialog max width**: `max-w-[600px]` (standard), `max-w-7xl` (large dialogs)
+- **Dialog max height**: `max-h-[90vh]`
+
+---
+
+## Interactive Elements
+
+### Buttons
+
+**Primary buttons:**
+```tsx
+<Button className="primary-btn px-3 sm:px-4">
+  <Icon className="h-4 w-4" />
+  Button Text
+</Button>
+```
+
+- Include icons in buttons when appropriate
+- Use consistent spacing: `gap-3` between buttons
+- Responsive padding: `px-3 sm:px-4`
+
+### Icons
+
+- **Header icons**: `w-5 h-5 text-[#0f5384]` (placed directly next to title)
+- **Button icons**: `h-4 w-4`
+- **Stat card icons**: `h-8 w-8 text-slate-600` (inline with value)
+- **Small icons**: `h-3 w-3` or `h-4 w-4`
+
+### Hover Effects
+
+**Cards:**
+```tsx
+className="hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+```
+
+**With shadow:**
+```tsx
+className="shadow-sm hover:shadow-md transition-all duration-200"
+```
+
+**Group hover:**
+```tsx
+<div className="group">
+  {/* Parent */}
+  <div className="group-hover:bg-blue-50">
+    {/* Child */}
+  </div>
+</div>
+```
+
+---
+
+## Consistency Checklist
+
+When creating a new page or component, verify:
+
+- [ ] Page uses standard container: `w-full px-4 sm:px-6 lg:px-8 xl:px-12`
+- [ ] Page header uses: `h1 capitalize sidebar-gradient-text`
+- [ ] All cards use: `glass-card` class with `glass-card-cap` div
+- [ ] Stat cards do NOT use `CardHeader` (content directly in `CardContent`)
+- [ ] Stat cards use: `p-4 sm:p-6` padding (NO `bg-slate-50`)
+- [ ] Stat cards grid uses: `gap-6` (NOT `gap-4`)
+- [ ] Dialogs use professional structure with cap bar, gradient header, and `bg-slate-50` content
+- [ ] Custom colors use opacity syntax: `bg-blue/10` (NOT `bg-blue-100`)
+- [ ] Icons use brand color: `text-[#0f5384]` for headers
+- [ ] Buttons use: `primary-btn px-3 sm:px-4`
+- [ ] All interactive elements have transition effects
+
+---
+
+## Reference Examples
+
+### Pages
+- `src/app/(root)/dashboard/content-creator/ContentCreatorDashboard.tsx` - Complete page structure
+- `src/app/(root)/dashboard/ExecutiveDashboard.tsx` - Stat cards pattern
+- `src/app/(root)/[type]/page.tsx` - Contracts page header pattern
+
+### Components
+- `src/components/ContractsMetricsBar.tsx` - Stat cards with glass-card-inner
+- `src/components/ActionDropdown.tsx` - Dialog structure
+- `src/components/news/ArticleEditor.tsx` - Large dialog with tabs
+
+### Dialogs
+- `src/components/ActionDropdown.tsx` - Re-assign dialog (primary reference)
+- `src/components/OutlookStyleCalendar.tsx` - OverflowDialog, Event Review Dialog
+
+### Cards
+- `src/components/RecentActivity.tsx` - Glass card implementation
+- `src/components/QuickNotesWidget.tsx` - Glass card with cap
+- `src/components/WeatherWidget.tsx` - Glass card structure
+
+---
+
+## Quick Reference
+
+### Stat Card Template
+```tsx
+<Card className="glass-card">
+  <div className="glass-card-cap" />
+  <CardContent className="p-4 sm:p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium sidebar-gradient-text">Title</p>
+        <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+          <span>Value</span>
+          <span className="inline-block ml-2 pb-1">
+            <Icon className="h-8 w-8 text-slate-600" />
+          </span>
+        </div>
+        <p className="text-xs text-slate-600 mt-1">Description</p>
+      </div>
+    </div>
+  </CardContent>
+</Card>
+```
+
+### Page Template
+```tsx
+<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
+  {/* Header */}
+  <div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
+    <h1 className="h1 capitalize sidebar-gradient-text">Page Title</h1>
+  </div>
+  
+  {/* Action Buttons */}
+  <div className="mb-6 flex items-center justify-end">
+    <Button className="primary-btn">Action</Button>
+  </div>
+  
+  {/* Content */}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    {/* Stat cards */}
+  </div>
+</div>
+```
+
+---
+
+**Last Updated**: Based on ContentCreatorDashboard, ExecutiveDashboard, and ContractsMetricsBar patterns (January 2026)

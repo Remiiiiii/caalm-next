@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Calendar, TrendingUp } from 'lucide-react';
 import ReportGenerator from '@/components/ReportGenerator';
 import { Models } from 'appwrite';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 // Lazy load ContractUploadForm for better performance
 const ContractUploadForm = dynamic(
@@ -26,10 +27,17 @@ interface QuickActionsProps {
 
 const QuickActions = ({ user }: QuickActionsProps) => {
   const [reportOpen, setReportOpen] = useState(false);
+  const { roles: userRoles } = useUserRoles();
+
+  // Check if user has IT role
+  const isITUser = useMemo(() => {
+    return userRoles.some((r) => r.roleName === 'IT');
+  }, [userRoles]);
 
   return (
     <div className="quick-actions-container flex items-center gap-1.5 sm:gap-2 flex-nowrap min-w-0 overflow-x-auto remove-scrollbar">
-      {user && (
+      {/* IT users only see Schedule Review and Generate Report */}
+      {!isITUser && user && (
         <>
           <ContractUploadForm
             ownerId={user.$id}
@@ -42,14 +50,18 @@ const QuickActions = ({ user }: QuickActionsProps) => {
           />
         </>
       )}
-      <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
-        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        Upload Audit
-      </Button>
-      <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
-        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        Upload License
-      </Button>
+      {!isITUser && (
+        <>
+          <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Upload Audit
+          </Button>
+          <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Upload License
+          </Button>
+        </>
+      )}
       <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
         <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         Schedule Review

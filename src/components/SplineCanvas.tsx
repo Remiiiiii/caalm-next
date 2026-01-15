@@ -2,6 +2,7 @@
 
 import Spline from '@splinetool/react-spline';
 import { useEffect, useState } from 'react';
+import { useSplineWatermarkRemoval } from '@/hooks/useSplineWatermarkRemoval';
 
 type SplineCanvasProps = {
   scene: string;
@@ -20,6 +21,9 @@ export default function SplineCanvas({
   const [hasError, setHasError] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
+
+  // Remove Spline watermark badges
+  useSplineWatermarkRemoval();
 
   useEffect(() => {
     // Check screen size
@@ -96,7 +100,16 @@ export default function SplineCanvas({
       <Spline
         scene={scene}
         className="w-full h-full"
-        onLoad={() => setHasError(false)}
+        onLoad={() => {
+          setHasError(false);
+          // Force watermark removal after load
+          setTimeout(() => {
+            const watermarkLinks = document.querySelectorAll<HTMLAnchorElement>(
+              'a[href*="spline"], a[href*="splinetool"]'
+            );
+            watermarkLinks.forEach((link) => link.remove());
+          }, 100);
+        }}
         onError={() => setHasError(true)}
       />
     </div>
