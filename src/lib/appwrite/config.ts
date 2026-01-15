@@ -86,6 +86,11 @@ export const appwriteConfig = {
     'test-licenses'
   ),
 
+  permissionsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION',
+    'test-permissions'
+  ),
+
   otpTokensCollectionId: getTestFallback(
     'NEXT_PUBLIC_APPWRITE_OTPTOKENS_COLLECTION',
     'test-otp-tokens'

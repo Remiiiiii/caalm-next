@@ -62,6 +62,16 @@ export const CACHE_KEYS = {
     manager: (userId: string) => `contracts:manager:${userId}`,
   },
 
+  // Licenses
+  licenses: {
+    all: () => `licenses:all`,
+    expiring: (days: number) => `licenses:expiring:${days}`,
+    database: (limit: number, offset: number) =>
+      `licenses:database:${limit}:${offset}`,
+    details: (licenseId: string) => `licenses:details:${licenseId}`,
+    reports: (type: string) => `licenses:reports:${type}`,
+  },
+
   // Reports
   reports: {
     user: (userId: string) => `reports:user:${userId}`,
@@ -190,6 +200,14 @@ export const getTTLForRoute = (route: string): number => {
     'contracts/manager': CACHE_TTLS.medium, // 5 minutes
     'contracts/check-expirations': CACHE_TTLS.static,
     'contracts/drafts': CACHE_TTLS.medium,
+    
+    // Licenses
+    licenses: CACHE_TTLS.long,
+    'licenses/all': CACHE_TTLS.long, // 10 minutes
+    'licenses/database': CACHE_TTLS.long, // 10 minutes
+    'licenses/details': CACHE_TTLS.medium, // 5 minutes
+    'licenses/expiring': CACHE_TTLS.medium, // 5 minutes
+    'licenses/reports': CACHE_TTLS.veryLong, // 15 minutes
     
     // Reports
     reports: CACHE_TTLS.veryLong, // 15 minutes

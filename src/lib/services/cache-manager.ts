@@ -204,9 +204,12 @@ export class CacheManager {
         await cache.del(CACHE_KEYS.rbac.permissions(userId, orgId));
         await cache.del(CACHE_KEYS.rbac.userRoles(userId, orgId));
       } else {
-        // Invalidate all orgs for this user
-        await cache.clear(`^rbac:permissions:${userId}:`);
-        await cache.clear(`^rbac:userRoles:${userId}:`);
+        // Invalidate all orgs for this user (including no-orgId keys)
+        // Pattern matches: rbac:permissions:userId and rbac:permissions:userId:orgId
+        await cache.del(CACHE_KEYS.rbac.permissions(userId)); // Clear no-orgId key
+        await cache.clear(`^rbac:permissions:${userId}:`); // Clear all orgId variations
+        await cache.del(CACHE_KEYS.rbac.userRoles(userId)); // Clear no-orgId key
+        await cache.clear(`^rbac:userRoles:${userId}:`); // Clear all orgId variations
       }
       await cache.del(CACHE_KEYS.rbac.userWithRoles(userId));
     } else {

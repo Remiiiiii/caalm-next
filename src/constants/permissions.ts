@@ -96,6 +96,16 @@ export const PERMISSIONS = {
     DELETE: 'news.delete',
     PUBLISH: 'news.publish',
   },
+  
+  // License Permissions
+  LICENSES: {
+    VIEW: 'licenses.view',
+    CREATE: 'licenses.create',
+    EDIT: 'licenses.edit',
+    DELETE: 'licenses.delete',
+    ALLOCATE: 'licenses.allocate',
+    RENEW: 'licenses.renew',
+  },
 } as const;
 
 // Flatten all permissions into a single array
@@ -178,6 +188,14 @@ export const PERMISSION_DEFINITIONS = [
   
   // AI Image Generation
   { key: PERMISSIONS.AI.IMAGE_GENERATE, name: 'Generate AI Images', category: 'ai', description: 'Access to AI image generation feature for news thumbnails' },
+  
+  // Licenses
+  { key: PERMISSIONS.LICENSES.VIEW, name: 'View Licenses', category: 'licenses', description: 'View licenses' },
+  { key: PERMISSIONS.LICENSES.CREATE, name: 'Create Licenses', category: 'licenses', description: 'Create new licenses' },
+  { key: PERMISSIONS.LICENSES.EDIT, name: 'Edit Licenses', category: 'licenses', description: 'Edit licenses' },
+  { key: PERMISSIONS.LICENSES.DELETE, name: 'Delete Licenses', category: 'licenses', description: 'Delete licenses' },
+  { key: PERMISSIONS.LICENSES.ALLOCATE, name: 'Allocate Licenses', category: 'licenses', description: 'Allocate licenses to users or departments' },
+  { key: PERMISSIONS.LICENSES.RENEW, name: 'Renew Licenses', category: 'licenses', description: 'Renew licenses' },
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];

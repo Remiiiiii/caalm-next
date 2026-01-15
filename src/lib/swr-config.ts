@@ -138,9 +138,11 @@ export const swrConfig: SWRConfiguration = {
     if (error === key || (typeof error === 'string' && error === key)) {
       errorMessage = `Request failed for ${key}`;
       errorType = 'key-as-error';
+      status = 'unknown';
     } else if (typeof error === 'string') {
       // If error is a string but not the key, use it as message
       errorMessage = error;
+      status = 'unknown';
     } else if (error instanceof Error) {
       errorMessage = error.message || 'Unknown error';
       status = (error as any).status ?? 'unknown';
@@ -148,20 +150,38 @@ export const swrConfig: SWRConfiguration = {
     } else if (error && typeof error === 'object') {
       // Safely extract error properties
       try {
-        errorMessage =
-          (error as any).message ||
-          (error as any).error ||
-          (error as any).toString?.() ||
-          'Unknown error';
-        status = (error as any).status ?? 'unknown';
-        details = (error as any).details ?? null;
+        const errorObj = error as any;
+        // Check if all properties are the same string (malformed error object)
+        const props = Object.keys(errorObj);
+        if (props.length > 0) {
+          const firstValue = errorObj[props[0]];
+          const allSame = props.every(prop => errorObj[prop] === firstValue);
+          if (allSame && typeof firstValue === 'string' && firstValue === key) {
+            // Malformed error object where all properties are the key
+            errorMessage = `Request failed for ${key}`;
+            errorType = 'malformed-error-object';
+            status = 'unknown';
+          } else {
+            errorMessage =
+              errorObj.message ||
+              errorObj.error ||
+              errorObj.toString?.() ||
+              'Unknown error';
+            status = errorObj.status ?? 'unknown';
+            details = errorObj.details ?? null;
+          }
+        } else {
+          errorMessage = 'Empty error object';
+        }
       } catch (e) {
         // If accessing properties fails, use fallback
         errorMessage = 'Error object could not be parsed';
+        status = 'unknown';
       }
     } else if (error === null || error === undefined) {
       errorMessage = 'Error was null or undefined';
       errorType = 'null-error';
+      status = 'unknown';
     }
 
     // Only log non-4xx errors to avoid noise from authentication/authorization issues
@@ -169,7 +189,7 @@ export const swrConfig: SWRConfiguration = {
       return; // Don't log non-error responses
     }
 
-    // Build error info object with safe values
+    // Build error info object with safe values - ensure no field is the key string
     const errorInfo: {
       key: string;
       error: string;
@@ -179,8 +199,8 @@ export const swrConfig: SWRConfiguration = {
       rawError?: any;
     } = {
       key: String(key || 'unknown-key'),
-      error: String(errorMessage || 'Unknown error'),
-      status,
+      error: errorMessage !== key ? String(errorMessage || 'Unknown error') : 'Request failed',
+      status: status !== key ? status : 'unknown',
       errorType: String(errorType || 'unknown'),
     };
 

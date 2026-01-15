@@ -1,0 +1,186 @@
+---
+name: security-rbac
+description: Strict RBAC, authentication, and authorization rules - NO BYPASSES ALLOWED
+globs: **/*.{ts,tsx,js,jsx}
+alwaysApply: true
+---
+
+# Security, RBAC, Authentication & Authorization Rules
+
+**CRITICAL**: These rules are MANDATORY and must be followed for ALL security-related code.
+
+## Core Principles
+
+1. **NO BYPASSES**: Never implement role-based or permission-based bypasses in code
+2. **STRICT RBAC**: All access control must be based on actual permissions assigned to roles
+3. **PERMISSION-BASED ACCESS**: Navigation, features, and data access must check actual user permissions
+4. **DATABASE-DRIVEN**: Permissions must be stored in and retrieved from the database, not hardcoded
+
+## Authentication Rules
+
+- **Always verify user authentication** before checking permissions
+- **Never skip authentication checks** for any user, regardless of role
+- **Use Appwrite session management** for authentication state
+- **Validate session tokens** on all protected routes and API endpoints
+
+## Authorization Rules
+
+### Permission Checks
+
+- **ALWAYS check permissions** before allowing access to features, routes, or data
+- **Use `hasNavigationPermission()`** function for navigation items
+- **Use `requirePermission()` middleware** for API routes
+- **Check permissions at the data level**, not just UI level
+
+### Role-Based Access Control (RBAC)
+
+- **Roles define permission sets** - users inherit permissions through their roles
+- **Never hardcode role checks** that bypass permission validation
+- **Super Admin and Organization Admin** must have all permissions explicitly assigned in the database
+- **Do NOT create special cases** like `if (role === 'Super Admin') { return true }` - check actual permissions instead
+
+### Navigation & UI Access
+
+- **Sidebar navigation** must use `hasNavigationPermission(permissions, item)` for each item
+- **Page access** must be protected by route guards that check permissions
+- **Button visibility** must be based on permission checks, not role checks
+- **Feature flags** should be permission-based, not role-based
+
+### Data Access
+
+- **API endpoints** must use `requirePermission()` middleware
+- **Database queries** must filter based on user permissions and organization context
+- **Never return all data** for privileged roles without permission checks
+- **Row-level security** should be enforced where applicable
+
+## Prohibited Patterns
+
+### ❌ NEVER DO THIS:
+
+```typescript
+// ❌ BAD: Role-based bypass
+if (userRole === 'Super Admin' || hasPermission(permission)) {
+  // allow access
+}
+
+// ❌ BAD: Hardcoded role check
+if (isSuperAdmin) {
+  return allData; // bypasses permission checks
+}
+
+// ❌ BAD: Special case for privileged roles
+if (primaryRole === 'Super Admin') {
+  showAllItems(); // bypasses permission filtering
+}
+```
+
+### ✅ ALWAYS DO THIS:
+
+```typescript
+// ✅ GOOD: Permission-based check only
+if (hasNavigationPermission(permissions, item)) {
+  // allow access
+}
+
+// ✅ GOOD: Check actual permissions
+if (permissions.includes(PERMISSIONS.LICENSES.VIEW)) {
+  return licenseData;
+}
+
+// ✅ GOOD: Permission-based filtering
+const accessibleItems = items.filter((item) =>
+  hasNavigationPermission(permissions, item)
+);
+```
+
+## Database Requirements
+
+### Permission Assignment
+
+- **All roles must have permissions explicitly assigned** in the `role_permissions` collection
+- **Super Admin must have ALL permissions** assigned (not bypassed)
+- **When adding new permissions**, ensure Super Admin and Organization Admin roles are updated
+- **Use MCP tools** to assign permissions to roles in the database
+
+### Permission Structure
+
+- **Permissions are stored** in the `permissions` collection (alphanumeric ID: `685ed87c0009d8189fc8`)
+- **Role-permission mappings** are stored in the `role_permissions` collection
+- **User-role assignments** are stored in the `user_roles` collection
+- **Permissions are fetched** via `getUserPermissions()` which queries the database
+
+## Implementation Guidelines
+
+### Sidebar Navigation
+
+```typescript
+// ✅ CORRECT: Permission-based filtering
+const accessibleItems = items.filter((item) =>
+  hasNavigationPermission(permissions, item)
+);
+
+// ❌ WRONG: Role-based bypass
+const accessibleItems = isSuperAdmin 
+  ? items 
+  : items.filter((item) => hasNavigationPermission(permissions, item));
+```
+
+### API Routes
+
+```typescript
+// ✅ CORRECT: Permission middleware
+export async function GET(request: NextRequest) {
+  const permissionCheck = await requirePermission(request, {
+    permission: PERMISSIONS.LICENSES.VIEW,
+  });
+  
+  if (permissionCheck) {
+    return permissionCheck; // Returns 403 if no permission
+  }
+  
+  // Proceed with authorized access
+}
+
+// ❌ WRONG: Role-based bypass
+if (userRole === 'Super Admin') {
+  // skip permission check
+}
+```
+
+### Component Access Control
+
+```typescript
+// ✅ CORRECT: Permission-based rendering
+{permissions.includes(PERMISSIONS.LICENSES.VIEW) && (
+  <LicensesSection />
+)}
+
+// ❌ WRONG: Role-based rendering
+{isSuperAdmin && (
+  <LicensesSection />
+)}
+```
+
+## Testing Requirements
+
+- **Test permission checks** for all roles, including Super Admin
+- **Verify Super Admin has all permissions** assigned in the database
+- **Test that missing permissions** prevent access correctly
+- **Never test with bypasses** - test actual permission assignments
+
+## Maintenance
+
+- **When adding new features**, define required permissions first
+- **Update role permission assignments** when permissions change
+- **Review code regularly** to ensure no bypasses are introduced
+- **Document permission requirements** for each feature
+
+## Summary
+
+**Remember**: 
+- ✅ Check permissions, not roles
+- ✅ Assign permissions in the database
+- ✅ Use permission-based access control functions
+- ❌ Never bypass permission checks
+- ❌ Never use role-based shortcuts
+- ❌ Never hardcode special cases for privileged roles

@@ -22,6 +22,42 @@ When creating new pages, components, dialogs, or cards, always reference the Glo
 - Never try to start the app itself (I have it running in a separate terminal), instead, if you need to restart the server on localhost:3000 first use the `taskkill` command and then the `pnpm run dev` command.
 - Always clean up resources (event listeners, timers, subscriptions) in the cleanup function to prevent memory leaks and ensure your app performs well!
 
+## Troubleshooting & Cleanup
+
+**CRITICAL**: After troubleshooting efforts succeed in resolving an issue, **automatically perform cleanup**:
+
+1. **Remove debug code**:
+   - Remove all `console.log()`, `console.error()`, and `console.warn()` statements added for debugging
+   - Remove temporary debug logging in development mode
+   - Remove verbose comments explaining temporary fixes
+
+2. **Clean up temporary fixes**:
+   - Remove duplicate code or redundant checks added during troubleshooting
+   - Simplify verbose comments to concise, production-ready notes
+   - Remove TODO/FIXME comments unless they represent actual future work
+
+3. **Keep functional improvements**:
+   - Preserve bug fixes, performance optimizations, and architectural improvements
+   - Keep query batching, cache improvements, and error handling enhancements
+   - Maintain diagnostic tools and utilities that provide ongoing value
+
+4. **Verify code quality**:
+   - Ensure no debug code remains in production code paths
+   - Confirm all comments are clear and necessary
+   - Verify code follows established patterns and style guidelines
+
+**When to clean up**: Immediately after confirming the issue is resolved and the solution is working correctly.
+
 ## Database Updates
 
 - **Database Updates**: Always use MCP tools (mcp_caalm_databases_*) for database operations. Do NOT create or use scripts for database updates unless explicitly requested by the user.
+
+## Security & RBAC
+
+**CRITICAL**: All security, authentication, and authorization must follow strict RBAC rules:
+- **Primary Reference**: `.cursor/rules/security-rbac.mdc` - Strict RBAC, authentication, and authorization rules
+- **NO BYPASSES**: Never implement role-based or permission-based bypasses in code
+- **Permission-Based Access**: All access control must check actual user permissions from the database
+- **Database-Driven**: Permissions must be assigned in the database, not hardcoded or bypassed
+
+When implementing security features, authentication checks, or authorization logic, always reference the Security & RBAC rules first.

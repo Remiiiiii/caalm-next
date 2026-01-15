@@ -56,6 +56,8 @@ import WeatherWidget from '@/components/WeatherWidget';
 import CompanyNewsFeed from '@/components/CompanyNewsFeed';
 import ContractStatusPieChart from '@/components/ContractStatusPieChart';
 import DepartmentPerformanceWidget from '@/components/DepartmentPerformanceWidget';
+import LicenseStatusPieChart from '@/components/LicenseStatusPieChart';
+import LicenseExpiryAlertsWidget from '@/components/LicenseExpiryAlertsWidget';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useContractExpiryModal } from '@/hooks/useContractExpiryModal';
 import { useContractsExpiring } from '@/hooks/useContractsExpiring';
@@ -839,6 +841,19 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
                 </div>
                 <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[455px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
                   <QuickNotesWidget user={user ?? undefined} />
+                </div>
+              </div>
+
+              {/* Page 3: License Status, License Expiry Alerts */}
+              <div className="flex gap-3 sm:gap-2 lg:gap-3 xl:gap-3 2xl:gap-3 3xl:gap-3 4xl:gap-3 min-w-full -ml-6 flex-shrink-0 mx-auto">
+                <div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[425px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0">
+                  <LicenseStatusPieChart />
+                </div>
+                <div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[535px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0">
+                  <LicenseExpiryAlertsWidget
+                    maxVisible={2}
+                    compact={true}
+                  />
                 </div>
               </div>
             </div>

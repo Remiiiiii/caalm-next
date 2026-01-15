@@ -199,7 +199,7 @@ export async function assignPermissionsToRole(
     // Get permission IDs from keys
     const permissions = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: 'permissions',
+      tableId: appwriteConfig.permissionsCollectionId || 'permissions',
       queries: [Query.equal('key', permissionKeys)],
     });
 
@@ -250,7 +250,7 @@ export async function getRolePermissions(roleId: string): Promise<PermissionKey[
     const rolePermissions = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: 'role_permissions',
-      queries: [Query.equal('roleId', roleId)],
+      queries: [Query.equal('roleId', roleId), Query.limit(200)],
     });
 
     const permissionIds = rolePermissions.rows.map((rp: any) => rp.permissionId);
@@ -259,13 +259,36 @@ export async function getRolePermissions(roleId: string): Promise<PermissionKey[
       return [];
     }
 
-    const permissions = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: 'permissions',
-      queries: [Query.equal('$id', permissionIds)],
-    });
+    // Build query for permission IDs - batch queries to avoid Query.or() limit and string length limit
 
-    return permissions.rows.map((p: any) => p.key) as PermissionKey[];
+    const allPermissions: any[] = [];
+    // Batch size of 50 to avoid Appwrite's 4096 character query string limit
+    const BATCH_SIZE = 50;
+
+    // Process in batches
+    for (let i = 0; i < permissionIds.length; i += BATCH_SIZE) {
+      const batch = permissionIds.slice(i, i + BATCH_SIZE);
+      const permissionQueries = [];
+      
+      if (batch.length === 1) {
+        permissionQueries.push(Query.equal('$id', batch[0]));
+      } else {
+        permissionQueries.push(
+          Query.or(batch.map((permId) => Query.equal('$id', permId)))
+        );
+      }
+      permissionQueries.push(Query.limit(BATCH_SIZE));
+
+      const permissions = await tablesDB.listRows({
+        databaseId: appwriteConfig.databaseId || 'default-db',
+        tableId: appwriteConfig.permissionsCollectionId || 'permissions',
+        queries: permissionQueries,
+      });
+
+      allPermissions.push(...permissions.rows);
+    }
+
+    return allPermissions.map((p: any) => p.key) as PermissionKey[];
   } catch (error) {
     console.error('[getRolePermissions] Error:', error);
     return [];

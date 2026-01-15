@@ -100,7 +100,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
         name: 'All Licenses',
         icon: '/assets/icons/license.svg',
         url: '/licenses',
-        permissions: [PERMISSIONS.CONTRACTS.VIEW],
+        permissions: [PERMISSIONS.LICENSES.VIEW],
         // Hidden for Department Manager, visible for Viewer (read-only)
         hiddenForRoles: ['Department Manager'],
         viewerReadOnly: true,
@@ -109,7 +109,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
         name: 'Department Licenses',
         icon: '/assets/icons/department.svg',
         url: '/licenses/department',
-        permissions: [PERMISSIONS.CONTRACTS.VIEW],
+        permissions: [PERMISSIONS.LICENSES.VIEW],
         viewerReadOnly: true,
       },
       {
@@ -117,8 +117,8 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
         icon: '/assets/icons/edit.svg',
         url: '/licenses/approvals',
         permissions: [
-          PERMISSIONS.CONTRACTS.APPROVE,
-          PERMISSIONS.CONTRACTS.REVIEW,
+          PERMISSIONS.LICENSES.EDIT,
+          PERMISSIONS.LICENSES.RENEW,
         ],
         requiresElevated: true,
         viewerReadOnly: true,

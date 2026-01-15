@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const { tablesDB } = await createAdminClient();
     const result = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: 'permissions',
+      tableId: appwriteConfig.permissionsCollectionId || 'permissions',
       queries: [Query.limit(1000)],
     });
 
