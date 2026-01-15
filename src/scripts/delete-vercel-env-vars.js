@@ -30,7 +30,9 @@ function getAllEnvironmentVariables() {
     const output = runCommand(command);
 
     if (!output) {
-      console.warn(`⚠️  Failed to get ${env} environment variables (might be empty)`);
+      console.warn(
+        `⚠️  Failed to get ${env} environment variables (might be empty)`
+      );
       continue;
     }
 
@@ -92,15 +94,15 @@ function getAllEnvironmentVariables() {
     }
   });
 
-  console.log(`\n📊 Total unique environment variables found: ${uniqueEnvVars.length}`);
+  console.log(
+    `\n📊 Total unique environment variables found: ${uniqueEnvVars.length}`
+  );
   return uniqueEnvVars;
 }
 
 function deleteEnvironmentVariable(envVar) {
   const command = `vercel env rm ${envVar.name} ${envVar.environment} --yes`;
-  console.log(
-    `🗑️  Deleting: ${envVar.name} (${envVar.environment})`
-  );
+  console.log(`🗑️  Deleting: ${envVar.name} (${envVar.environment})`);
 
   if (DRY_RUN) {
     console.log(`   [DRY RUN] Would run: ${command}`);
@@ -122,7 +124,9 @@ function cleanupEnvironmentVariables() {
   console.log('===============================================\n');
 
   if (DRY_RUN) {
-    console.log('⚠️  DRY RUN MODE - No environment variables will actually be deleted');
+    console.log(
+      '⚠️  DRY RUN MODE - No environment variables will actually be deleted'
+    );
     console.log('   Set DRY_RUN = false to perform actual deletions\n');
   }
 
@@ -172,7 +176,9 @@ function cleanupEnvironmentVariables() {
   console.log(`   ❌ Failed to delete: ${failedCount}`);
 
   if (DRY_RUN) {
-    console.log('\n⚠️  This was a DRY RUN. To actually delete environment variables:');
+    console.log(
+      '\n⚠️  This was a DRY RUN. To actually delete environment variables:'
+    );
     console.log('   1. Set DRY_RUN = false in this script');
     console.log('   2. Run the script again');
   } else {
