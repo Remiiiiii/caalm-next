@@ -26,6 +26,7 @@
     "deps:update": "pnpm update --latest",
     "deps:check": "pnpm outdated",
     "test:redis": "node scripts/test-redis.js",
+    "vercel:delete-env": "node src/scripts/delete-vercel-env-vars.js",
     "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {
