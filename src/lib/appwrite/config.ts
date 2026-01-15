@@ -86,6 +86,11 @@ export const appwriteConfig = {
     'test-licenses'
   ),
 
+  licenseDraftsCollectionId: getTestFallback(
+    'NEXT_PUBLIC_APPWRITE_LICENSE_DRAFTS_COLLECTION',
+    'test-license-drafts'
+  ),
+
   permissionsCollectionId: getTestFallback(
     'NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION',
     'test-permissions'

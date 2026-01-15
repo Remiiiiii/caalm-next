@@ -1,5 +1,5 @@
 /**
- * Step 1: File Upload and Saved Drafts
+ * Step 1: File Upload for License Upload Form
  */
 
 'use client';
@@ -46,6 +46,8 @@ export default function Step1FileUpload({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
         ['.docx'],
       'text/plain': ['.txt'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
     },
     multiple: false,
   } as DropzoneOptions);
@@ -56,7 +58,7 @@ export default function Step1FileUpload({
       <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold sidebar-gradient-text">
-            1. Upload Contract File
+            1. Upload License File
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -88,11 +90,11 @@ export default function Step1FileUpload({
               <div>
                 <p className="text-lg font-medium text-navy">
                   {isDragActive
-                    ? 'Drop the contract here'
-                    : 'Drag & drop contract file here'}
+                    ? 'Drop the license file here'
+                    : 'Drag & drop license file here'}
                 </p>
                 <p className="text-sm text-light-200 mt-2">
-                  Supports PDF, DOC, DOCX, TXT (Max 50MB)
+                  Supports PDF, DOC, DOCX, TXT, PNG, JPG (Max 50MB)
                 </p>
               </div>
             )}
@@ -101,7 +103,7 @@ export default function Step1FileUpload({
               <div className="mt-4 flex items-center justify-center space-x-2">
                 <Loader2 className="h-4 w-4 animate-spin text-brand" />
                 <span className="text-sm text-light-200">
-                  Extracting contract data...
+                  Extracting license data...
                 </span>
               </div>
             )}
@@ -133,7 +135,7 @@ export default function Step1FileUpload({
                   >
                     <div className="flex-1">
                       <h3 className="text-sm font-medium text-slate-700 mb-1 max-w-[600px]">
-                        {formData?.contractName || 'Untitled Contract'}
+                        {formData?.licenseName || 'Untitled License'}
                       </h3>
                       <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
                         <span>

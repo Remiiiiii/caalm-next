@@ -43,7 +43,7 @@ export default function StepIndicator({
                 'bg-gradient-to-r from-[#0f5384] to-[#03B1C1] text-white scale-110 shadow-lg',
               isCompleted &&
                 !isActive &&
-                'bg-green/10 text-green border-2 border-green hover:scale-105',
+                'bg-green text-green border-2 border-green hover:scale-105',
               !isActive &&
                 !isCompleted &&
                 isAccessible &&

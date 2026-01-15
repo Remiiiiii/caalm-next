@@ -1787,7 +1787,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                 return (
                   <React.Fragment key={stepNum}>
-                    <button
+                    <Button
                       type="button"
                       onClick={() => isAccessible && goToStep(stepNum)}
                       disabled={!isAccessible}
@@ -1796,7 +1796,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                         isActive
                           ? 'bg-[#e1f3ff] border border-[#a0c4db] text-[#6c8ba1] font-semibold'
                           : isCompleted
-                          ? 'bg-none'
+                          ? 'bg-green/10 text-green border-green/20'
                           : isAccessible
                           ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                           : 'bg-slate-50 text-slate-400 cursor-not-allowed'
@@ -1808,7 +1808,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                       ) : (
                         <div className="truncate">{stepNum}</div>
                       )}
-                    </button>
+                    </Button>
                     {showLine && (
                       <div
                         className="flex-shrink-0 rounded-full"
@@ -1816,8 +1816,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           backgroundColor: '#3DD9B3',
                           height: '0.5px',
                           width: '60px',
-                          marginLeft: '-6px',
-                          marginRight: '-6px',
+                          marginLeft: '-4px',
+                          marginRight: '-4px',
                         }}
                         aria-hidden="true"
                       />
@@ -1914,46 +1914,48 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           className="flex items-center justify-between p-3 bg-white rounded-md border border-slate-200 hover:border-slate-300 transition-colors"
                         >
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-medium text-slate-700">
-                                {draft.formData?.contractName ||
-                                  'Untitled Contract'}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className="text-xs bg-green/10 text-green border-green/20"
-                              >
-                                {draft.progressPercentage}% Complete
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-slate-500">
+                            <h3 className="text-sm font-medium text-slate-700 mb-1 max-w-[600px]">
+                              {draft.formData?.contractName ||
+                                'Untitled Contract'}
+                            </h3>
+                            <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
                               <span>
                                 Step {draft.currentStep}:{' '}
                                 {stepTitles[draft.currentStep - 1]}
                               </span>
                               <span>•</span>
                               <span>
-                                {new Date(draft.lastSavedAt).toLocaleString()}
+                                Saved{' '}
+                                {new Date(
+                                  draft.lastSavedAt
+                                ).toLocaleDateString()}
                               </span>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            <Button
-                              size="sm"
+                            <Badge
                               variant="outline"
-                              onClick={() => resumeDraft(draft)}
-                              className="h-8 text-xs primary-btn sm:px-4 px-3 shimmer-hover"
+                              className="text-xs bg-green/10 text-green border-green/20 w-fit px-2.5 py-0.5"
                             >
-                              <StepForward className="h-4 w-4" />
-                              Continue
+                              {draft.progressPercentage}% Complete
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => resumeDraft(draft)}
+                              className="primary-btn sm:px-4 px-3 shimmer-hover"
+                            >
+                              <StepForward className="h-3 w-3" />
+                              Resume
                             </Button>
                             <Button
-                              size="sm"
                               variant="ghost"
+                              size="sm"
                               onClick={() => handleDeleteClick(draft.$id)}
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-red-500"
+                              className="primary-btn h-8 px-3"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3 w-3" />
+                              Delete
                             </Button>
                           </div>
                         </div>

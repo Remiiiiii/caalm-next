@@ -18,6 +18,8 @@ import {
 } from '@/lib/utils/notificationTriggers';
 import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
 import { ContractMetadataPayload } from '@/types/contracts';
+import { LicenseMetadataPayload } from '@/types/licenses';
+import { LicenseService } from '@/lib/api/licenses/services/LicenseService';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS } from '@/lib/services/cache-keys';
 
@@ -70,9 +72,11 @@ export const uploadFile = async ({
   accountId,
   path: revalidatePathArg,
   contractMetadata,
+  licenseMetadata,
   draftId,
 }: UploadFileProps & {
   contractMetadata?: ContractMetadataPayload;
+  licenseMetadata?: LicenseMetadataPayload;
   draftId?: string; // Optional draft ID to link the contract to the draft
 }) => {
   const { storage, tablesDB } = await createAdminClient();
@@ -850,6 +854,79 @@ export const uploadFile = async ({
           );
           // Don't throw error here as the contract creation was successful
         }
+      }
+    }
+
+    // Handle license metadata - create license in licenses collection
+    if (licenseMetadata) {
+      try {
+        const defaultOrg = await getUserDefaultOrganization(ownerId);
+        const resolvedOrgId = licenseMetadata.orgId || defaultOrg?.orgId;
+
+        if (!resolvedOrgId) {
+          throw new Error(
+            'Unable to determine the organization for this license upload.'
+          );
+        }
+
+        // Convert assignedManagers IDs to names
+        const assignedManagers = await (async () => {
+          const managerIds = licenseMetadata.assignedManagers || [];
+          if (managerIds.length === 0) return [];
+
+          const managerNames: string[] = [];
+          for (const managerId of managerIds) {
+            try {
+              const user = await getUserById(managerId);
+              if (user && user.fullName) {
+                managerNames.push(user.fullName);
+              } else {
+                managerNames.push(managerId);
+              }
+            } catch (error) {
+              console.error(`Failed to fetch manager ${managerId}:`, error);
+              managerNames.push(managerId);
+            }
+          }
+          return managerNames;
+        })();
+
+        // Create license using LicenseService
+        const licenseData = {
+          ...licenseMetadata,
+          orgId: resolvedOrgId,
+          assignedManagers,
+          fileId: newFile.$id,
+          fileRef: newFile.$id,
+          licenseOwnerId: ownerId,
+          createdBy: ownerId,
+        };
+
+        const license = await LicenseService.createLicense(ownerId, licenseData);
+
+        console.log('✅ License created successfully:', license.$id);
+
+        // Update file document with license reference
+        try {
+          await tablesDB.updateRow({
+            databaseId: appwriteConfig.databaseId!,
+            tableId: appwriteConfig.filesCollectionId!,
+            rowId: newFile.$id,
+            data: {
+              licenseId: license.$id,
+            },
+          });
+        } catch (updateError: any) {
+          // LicenseId might not be in files collection schema - that's okay
+          console.warn(
+            'Could not update file with licenseId (attribute may not exist):',
+            updateError.message
+          );
+        }
+      } catch (licenseError: any) {
+        console.error('Failed to create license:', licenseError);
+        // Don't throw error here as the file upload was successful
+        // License creation failure shouldn't prevent file upload
       }
     }
 

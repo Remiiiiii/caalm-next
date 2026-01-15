@@ -1,7 +1,13 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { DollarSign, FileText, AlertTriangle, CheckCircle, Key } from 'lucide-react';
+import {
+  DollarSign,
+  FileText,
+  AlertTriangle,
+  CheckCircle,
+  IdCard,
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { License } from '@/types/licenses';
 
@@ -14,7 +20,9 @@ export default function LicensesMetricsBar({
 }: LicensesMetricsBarProps) {
   const expiryDatesKey = useMemo(() => {
     return licenses
-      .map((license) => license.licenseExpiryDate || license.expirationDate || '')
+      .map(
+        (license) => license.licenseExpiryDate || license.expirationDate || ''
+      )
       .filter(Boolean)
       .join('|');
   }, [licenses]);
@@ -152,7 +160,7 @@ export default function LicensesMetricsBar({
                 <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
                   <span>{metrics.totalLicenses.toLocaleString()}</span>
                   <span className="inline-block ml-2 pb-1">
-                    <Key className="h-8 w-8 text-slate-600" />
+                    <IdCard className="h-8 w-8 text-slate-600" />
                   </span>
                 </div>
               </div>
@@ -197,7 +205,8 @@ export default function LicensesMetricsBar({
                     </span>
                   </div>
                   <p className="text-xs text-slate-600 mt-1">
-                    {expiringLicenses.in30} in 30 days, {expiringLicenses.in60} in 60 days, {expiringLicenses.in90} in 90 days
+                    {expiringLicenses.in30} in 30 days, {expiringLicenses.in60}{' '}
+                    in 60 days, {expiringLicenses.in90} in 90 days
                   </p>
                 </div>
               </div>

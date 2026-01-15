@@ -1,9 +1,10 @@
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';
 import LicensesMetricsBar from '@/components/LicensesMetricsBar';
-import LicenseList from '@/components/licenses/LicenseList';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { LicensesViewProvider } from '@/components/LicensesView';
+import LicensesTopControls from '@/components/LicensesTopControls';
+import LicensesControlBar from '@/components/LicensesControlBar';
+import LicensesViewClient from '@/components/LicensesViewClient';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
@@ -36,11 +37,28 @@ const Page = async () => {
       ],
     });
 
-    licenses = result.rows as License[];
+    licenses = result.rows as unknown as License[];
   } catch (error) {
     console.error('Error fetching licenses:', error);
     licenses = [];
   }
+
+  // Extract unique departments and assigned managers for filters
+  const uniqueDepartments = Array.from(
+    new Set(
+      licenses
+        .map((l) => l.division || l.department)
+        .filter((d): d is string => !!d)
+    )
+  ).sort();
+
+  const uniqueAssignedManagers = Array.from(
+    new Set(
+      licenses
+        .flatMap((l) => l.assignedManagers || [])
+        .filter((m): m is string => !!m)
+    )
+  ).sort();
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -52,24 +70,32 @@ const Page = async () => {
         <LicenseForm />
       </div>
 
-      <section className="w-full">
-        <LicensesMetricsBar licenses={licenses} />
-      </section>
-
-      {licenses.length > 0 ? (
-        <LicenseList licenses={licenses} />
-      ) : (
-        <div className="text-center py-12">
-          <Image
-            src="/assets/icons/no-data.svg"
-            alt="No licenses found"
-            width={250}
-            height={250}
-            className="mb-4 opacity-60"
+      <LicensesViewProvider>
+        <section className="w-full">
+          <LicensesMetricsBar licenses={licenses} />
+          <LicensesTopControls
+            licenses={licenses}
+            departments={uniqueDepartments}
+            assignedManagers={uniqueAssignedManagers}
           />
-          <p className="body-1 text-slate-700">No licenses found</p>
-        </div>
-      )}
+          <LicensesControlBar />
+        </section>
+
+        {licenses.length > 0 ? (
+          <LicensesViewClient licenses={licenses} user={user} />
+        ) : (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] py-12">
+            <Image
+              src="/assets/icons/no-data.svg"
+              alt="No licenses found"
+              width={250}
+              height={250}
+              className="mb-4 opacity-60"
+            />
+            <p className="body-1 text-slate-700">No licenses found</p>
+          </div>
+        )}
+      </LicensesViewProvider>
     </div>
   );
 };

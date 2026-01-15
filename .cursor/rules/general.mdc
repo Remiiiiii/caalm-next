@@ -48,9 +48,18 @@ When creating new pages, components, dialogs, or cards, always reference the Glo
 
 **When to clean up**: Immediately after confirming the issue is resolved and the solution is working correctly.
 
-## Database Updates
+## Database Operations
 
-- **Database Updates**: Always use MCP tools (mcp_caalm_databases_*) for database operations. Do NOT create or use scripts for database updates unless explicitly requested by the user.
+**CRITICAL**: All database operations (reading, writing, schema changes) must use MCP tools. Do NOT create scripts to interact with the database.
+
+- **Always use MCP tools** (`mcp_caalm_databases_*`) for:
+  - Reading collection attributes and schema information
+  - Creating or modifying database attributes
+  - Querying collections and documents
+  - Any database inspection or comparison operations
+- **Do NOT create scripts** (`.ts`, `.js`, `.sh`, etc.) for database operations unless explicitly requested by the user
+- **MCP tools available**: Use `mcp_caalm_databases_list_attributes`, `mcp_caalm_databases_get_collection`, `mcp_caalm_databases_create_*_attribute`, etc.
+- If MCP tools are unavailable, provide clear instructions for manual operations via Appwrite Console UI
 
 ## Security & RBAC
 
