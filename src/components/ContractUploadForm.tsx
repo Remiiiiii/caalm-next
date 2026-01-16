@@ -1787,14 +1787,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
                 return (
                   <React.Fragment key={stepNum}>
-                    <Button
+                    <button
                       type="button"
                       onClick={() => isAccessible && goToStep(stepNum)}
                       disabled={!isAccessible}
                       className={cn(
                         'flex-1 text-xs px-2 py-1 rounded-md transition-all flex items-center justify-center',
                         isActive
-                          ? 'bg-[#e1f3ff] border border-[#a0c4db] text-[#6c8ba1] font-semibold'
+                          ? 'bg-[#e1f3ff] hover:bg-green/10 border border-[#a0c4db] text-[#6c8ba1] font-semibold'
                           : isCompleted
                           ? 'bg-green/10 text-green border-green/20'
                           : isAccessible
@@ -1808,7 +1808,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                       ) : (
                         <div className="truncate">{stepNum}</div>
                       )}
-                    </Button>
+                    </button>
                     {showLine && (
                       <div
                         className="flex-shrink-0 rounded-full"

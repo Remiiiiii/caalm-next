@@ -456,14 +456,24 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
                 )}
 
                 {/* Step 2: License Details */}
-                {currentStep === 2 && <Step2LicenseDetails form={form} />}
-
-                {/* Save Progress Card */}
-                {currentStep > 1 && processedFileData && (
-                  <SaveProgressCard
-                    onSave={handleManualSave}
-                    isSaving={isSaving}
-                  />
+                {currentStep === 2 && (
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-slate-700">
+                        2. License Details
+                      </h3>
+                    </div>
+                    <div className="space-y-6">
+                      <Step2LicenseDetails form={form} />
+                      {/* Save Progress Card */}
+                      {processedFileData && (
+                        <SaveProgressCard
+                          onSave={handleManualSave}
+                          isSaving={isSaving}
+                        />
+                      )}
+                    </div>
+                  </div>
                 )}
               </form>
             </Form>

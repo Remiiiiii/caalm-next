@@ -24,10 +24,10 @@ export default function SaveProgressCard({
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <p className="text-sm font-medium text-slate-700 mb-1">
-              Save and Resume Later
+              Save and resume later
             </p>
             <p className="text-xs text-slate-500">
-              Even though auto-save is on you can still save your progress to
+              Even though auto-save is on you can manually save your progress to
               continue filling out this form at a later time
             </p>
           </div>

@@ -70,18 +70,21 @@ export default function Step2LicenseDetails({
     <div className="space-y-6">
       {/* Basic Information */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold sidebar-gradient-text">
-          Basic Information
-        </h3>
 
         <FormField
           control={form.control}
           name="licenseName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>License Name *</FormLabel>
+              <FormLabel className="text-sm text-slate-700 mb-1 block">
+                License Name <span className="text-red-500">*</span>
+              </FormLabel>
               <FormControl>
-                <Input placeholder="Enter license name" {...field} />
+                <Input
+                  placeholder="Enter license name"
+                  {...field}
+                  className="bg-white border-slate-300"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -94,9 +97,15 @@ export default function Step2LicenseDetails({
             name="licenseNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>License Number</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  License Number
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="License number" {...field} />
+                  <Input
+                    placeholder="License number"
+                    {...field}
+                    className="bg-white border-slate-300"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -108,10 +117,12 @@ export default function Step2LicenseDetails({
             name="status"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Status *</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Status <span className="text-red-500">*</span>
+                </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-white border-slate-300">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                   </FormControl>
@@ -135,10 +146,12 @@ export default function Step2LicenseDetails({
             name="licenseType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>License Type *</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  License Type <span className="text-red-500">*</span>
+                </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-white border-slate-300">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                   </FormControl>
@@ -162,13 +175,15 @@ export default function Step2LicenseDetails({
             name="category"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Category</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Category
+                </FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   value={field.value || ''}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-white border-slate-300">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                   </FormControl>
@@ -191,9 +206,6 @@ export default function Step2LicenseDetails({
 
       {/* Vendor & Product */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold sidebar-gradient-text">
-          Vendor & Product
-        </h3>
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
@@ -201,9 +213,15 @@ export default function Step2LicenseDetails({
             name="vendor"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Vendor</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Vendor
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="Vendor name" {...field} />
+                  <Input
+                    placeholder="Vendor name"
+                    {...field}
+                    className="bg-white border-slate-300"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -215,9 +233,15 @@ export default function Step2LicenseDetails({
             name="product"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Product</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Product
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="Product name" {...field} />
+                  <Input
+                    placeholder="Product name"
+                    {...field}
+                    className="bg-white border-slate-300"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -228,9 +252,6 @@ export default function Step2LicenseDetails({
 
       {/* Dates */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold sidebar-gradient-text">
-          Important Dates
-        </h3>
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
@@ -238,13 +259,15 @@ export default function Step2LicenseDetails({
             name="issueDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Issue Date</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Issue Date
+                </FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
                         variant="outline"
-                        className="w-full justify-start text-left font-normal"
+                        className="w-full justify-start text-left font-normal bg-white border-slate-300"
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {field.value ? (
@@ -274,13 +297,15 @@ export default function Step2LicenseDetails({
             name="licenseExpiryDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Expiry Date *</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Expiry Date <span className="text-red-500">*</span>
+                </FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
                         variant="outline"
-                        className="w-full justify-start text-left font-normal"
+                        className="w-full justify-start text-left font-normal bg-white border-slate-300"
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {field.value ? (
@@ -311,9 +336,15 @@ export default function Step2LicenseDetails({
           name="issuingAuthority"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Issuing Authority</FormLabel>
+              <FormLabel className="text-sm text-slate-700 mb-1 block">
+                Issuing Authority
+              </FormLabel>
               <FormControl>
-                <Input placeholder="Issuing authority" {...field} />
+                <Input
+                  placeholder="Issuing authority"
+                  {...field}
+                  className="bg-white border-slate-300"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -323,9 +354,6 @@ export default function Step2LicenseDetails({
 
       {/* Financial Information */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold sidebar-gradient-text">
-          Financial Information
-        </h3>
 
         <div className="grid grid-cols-3 gap-4">
           <FormField
@@ -333,13 +361,16 @@ export default function Step2LicenseDetails({
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Quantity</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Quantity
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="text"
                     placeholder="0"
                     {...field}
                     value={field.value || ''}
+                    className="bg-white border-slate-300"
                   />
                 </FormControl>
                 <FormMessage />
@@ -352,13 +383,16 @@ export default function Step2LicenseDetails({
             name="cost"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Cost</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Cost
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="text"
                     placeholder="0.00"
                     {...field}
                     value={field.value || ''}
+                    className="bg-white border-slate-300"
                   />
                 </FormControl>
                 <FormMessage />
@@ -371,13 +405,15 @@ export default function Step2LicenseDetails({
             name="currencyCode"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Currency</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Currency
+                </FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   value={field.value || 'USD'}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-white border-slate-300">
                       <SelectValue />
                     </SelectTrigger>
                   </FormControl>
@@ -398,9 +434,6 @@ export default function Step2LicenseDetails({
 
       {/* Organization & Assignment */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold sidebar-gradient-text">
-          Organization & Assignment
-        </h3>
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
@@ -408,13 +441,15 @@ export default function Step2LicenseDetails({
             name="division"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Division</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Division
+                </FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   value={field.value || ''}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-white border-slate-300">
                       <SelectValue placeholder="Select division" />
                     </SelectTrigger>
                   </FormControl>
@@ -438,9 +473,15 @@ export default function Step2LicenseDetails({
             name="department"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Department</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Department
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="Department" {...field} />
+                  <Input
+                    placeholder="Department"
+                    {...field}
+                    className="bg-white border-slate-300"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -451,28 +492,23 @@ export default function Step2LicenseDetails({
 
       {/* Renewal Settings */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold sidebar-gradient-text">
-          Renewal Settings
-        </h3>
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="autoRenew"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">Auto Renew</FormLabel>
-                  <div className="text-sm text-slate-500">
-                    Automatically renew this license
-                  </div>
-                </div>
+              <FormItem className="space-y-2">
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Auto-Renew
+                </FormLabel>
                 <FormControl>
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
                   />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -482,13 +518,16 @@ export default function Step2LicenseDetails({
             name="renewalNoticeDays"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Renewal Notice (Days)</FormLabel>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Renewal Notice (Days)
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="text"
                     placeholder="30"
                     {...field}
                     value={field.value || ''}
+                    className="bg-white border-slate-300"
                   />
                 </FormControl>
                 <FormMessage />
@@ -505,11 +544,13 @@ export default function Step2LicenseDetails({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel className="text-sm text-slate-700 mb-1 block">
+                Description
+              </FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Enter license description..."
-                  className="resize-none"
+                  className="resize-none bg-white border-slate-300"
                   rows={4}
                   {...field}
                 />
