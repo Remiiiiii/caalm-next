@@ -52,7 +52,7 @@ const Step2LicenseDetails = dynamic(
   () => import('./license-upload/steps/Step2LicenseDetails'),
   {
     loading: () => (
-      <div className="flex justify-center p-8">
+      <div className="flex justify-center p-8 ">
         <Loader2 className="animate-spin" />
       </div>
     ),

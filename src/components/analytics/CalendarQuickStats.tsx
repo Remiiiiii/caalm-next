@@ -55,7 +55,7 @@ export const CalendarQuickStats: React.FC = () => {
       <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
         <CardContent className="pt-6">
           <div className="text-center py-4">
-            <AlertCircle className="h-6 w-6 text-red-500 mx-auto mb-2" />
+            <AlertCircle className="h-6 w-6 text-red mx-auto mb-2" />
             <p className="text-sm text-slate-600">Failed to load calendar stats</p>
           </div>
         </CardContent>

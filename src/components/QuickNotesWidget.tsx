@@ -402,14 +402,14 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
         <div className="glass-card-cap" />
         <CardHeader className="pb-3 pt-4 px-4">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertTriangle className="h-4 w-4 text-red" />
             <CardTitle className="text-sm font-semibold sidebar-gradient-text">
               Quick Notes
             </CardTitle>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-2 flex flex-col items-center justify-center h-full">
-          <div className="text-sm text-red-500 text-center mb-2">
+          <div className="text-sm text-red text-center mb-2">
             Failed to load notes
           </div>
           <div className="text-xs text-slate-500 text-center">{error}</div>
@@ -444,7 +444,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
         <CardContent className="px-4 pb-2">
           {error ? (
-            <div className="text-sm text-red-500 text-center py-4">{error}</div>
+            <div className="text-sm text-red text-center py-4">{error}</div>
           ) : notes.length === 0 ? (
             <div className="text-center py-8">
               <StickyNote className="h-8 w-8 text-slate-300 mx-auto mb-2" />

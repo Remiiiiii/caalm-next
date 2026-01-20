@@ -380,7 +380,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-500">Status</p>
-              <p className="text-xs text-red-500 font-medium">Offline</p>
+              <p className="text-xs text-red font-medium">Offline</p>
             </div>
           </div>
         </CardHeader>

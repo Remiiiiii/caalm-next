@@ -140,7 +140,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
         <Card className="bg-red-50 border-red-200">
           <CardContent className="pt-6">
             <div className="flex items-center space-x-3">
-              <AlertCircle className="h-6 w-6 text-red-500" />
+              <AlertCircle className="h-6 w-6 text-red" />
               <div>
                 <h3 className="text-lg font-semibold text-red-800">
                   Error Loading Calendar Analytics

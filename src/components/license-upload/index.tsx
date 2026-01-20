@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
-import { Upload, Loader2, ChevronLeft, ChevronRight, Ban } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Upload, Loader2, ChevronLeft, ChevronRight, Ban, CheckCircle, FileCheck } from 'lucide-react';
 import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname } from 'next/navigation';
@@ -86,6 +87,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   // Initialize form
   const { form, processFileSynchronously, extractLicenseData } =
@@ -117,6 +119,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
     savedDrafts,
     setSavedDrafts,
     isSaving,
+    lastSavedAt,
     currentDraftId,
     setCurrentDraftId,
     autoSaveDraft,
@@ -141,7 +144,16 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
   });
 
   // Step navigation
-  const nextStep = () => {
+  const nextStep = async () => {
+    // Validate current step before proceeding
+    setIsValidating(true);
+    const isValid = await validateStep();
+    setIsValidating(false);
+    
+    if (!isValid) {
+      return; // Don't proceed if validation fails
+    }
+    
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep((prev) => prev + 1);
     }
@@ -227,6 +239,53 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
       setCurrentDraftId,
     ]
   );
+
+  // Step validation - defines required fields for each step
+  const getRequiredFieldsForStep = (step: number): string[] => {
+    switch (step) {
+      case 1: // File Upload - file required
+        return []; // Handled separately by processedFileData check
+      case 2: // License Basics
+        return ['licenseName', 'licenseType', 'status', 'vendor', 'product'];
+      case 3: // License Details
+        return ['issueDate', 'licenseExpiryDate', 'issuingAuthority'];
+      case 4: // Financial Details
+        return ['cost', 'currencyCode', 'quantity'];
+      case 5: // Department & Ownership
+        return ['division', 'department', 'assignedManager'];
+      default:
+        return [];
+    }
+  };
+
+  // Validate current step before proceeding
+  const validateStep = async (): Promise<boolean> => {
+    const requiredFields = getRequiredFieldsForStep(currentStep);
+
+    if (requiredFields.length === 0) {
+      return true; // No required fields for this step
+    }
+
+    // Trigger validation for required fields only
+    const result = await form.trigger(requiredFields as any);
+
+    if (!result) {
+      // Show error toast with specific missing fields
+      const errors = form.formState.errors;
+      const missingFields = requiredFields.filter(
+        (field) => errors[field as keyof typeof errors]
+      );
+
+      toast({
+        title: 'Required Fields Missing',
+        description: `Please complete all required fields before proceeding to the next step.`,
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    return true;
+  };
 
   // Handle form submission
   const handleSubmit = async (values: any) => {
@@ -406,10 +465,59 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 
           {/* Sticky Header */}
           <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-cyan-50 py-4 border-b border-slate-200">
-            <div className="px-6">
-              <h2 className="text-2xl font-bold sidebar-gradient-text mb-3">
-                Upload New License
-              </h2>
+            <div className="px-6 py-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Upload className="w-5 h-5 text-[#0f5384]" />
+                </div>
+                <div className="flex-1">
+                <h2 className="text-xl font-semibold sidebar-gradient-text">
+                  Upload New License
+                </h2>
+                <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-600 mt-0.5">
+                  Step {currentStep} of {TOTAL_STEPS}:{' '}
+                  {STEP_TITLES[currentStep - 1]}
+                </p>
+                  <div className="flex items-center gap-2">
+                    {extractedData && (
+                      <Badge className=" sidebar-gradient-text border-sidebar-gradient-text">
+                        <CheckCircle className="h-3 w-3 mr-1 text-[#0f5384]" />
+                        Data extracted automatically
+                      </Badge>
+                    )}
+                    {isSaving && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs sidebar-gradient-text"
+                      >
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Saving...
+                      </Badge>
+                    )}
+                    {lastSavedAt && !isSaving && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs text-slate-600 border-slate-300"
+                      >
+                        <FileCheck className="h-3 w-3 mr-1 text-green" />
+                        Saved{' '}
+                        {(() => {
+                          const seconds = Math.round(
+                            (new Date().getTime() - lastSavedAt.getTime()) / 1000
+                          );
+                          if (seconds >= 60) {
+                            const minutes = Math.round(seconds / 60);
+                            return `${minutes} min ago`;
+                          }
+                          return `${seconds} s ago`;
+                        })()}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              </div>
               <StepIndicator
                 currentStep={currentStep}
                 onGoToStep={goToStep}
@@ -479,7 +587,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
                   variant="outline"
                   onClick={prevStep}
                   disabled={isUploading}
-                  className="flex items-center gap-2"
+                  className="primary-btn sm:px-4 px-3 shimmer-hover"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -490,11 +598,20 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
                 <Button
                   type="button"
                   onClick={nextStep}
-                  disabled={currentStep === 1 && !processedFileData}
+                  disabled={currentStep === 1 && !processedFileData || isValidating}
                   className="primary-btn flex items-center gap-2"
                 >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
+                  {isValidating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Validating...
+                    </>
+                  ) : (
+                    <>
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               ) : (
                 <Button

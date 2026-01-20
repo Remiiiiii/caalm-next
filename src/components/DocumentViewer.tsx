@@ -867,7 +867,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             {previewError ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
-                  <div className="text-red-500 mb-2">{previewError}</div>
+                  <div className="text-red mb-2">{previewError}</div>
                   <Button
                     onClick={(e) => {
                       e.preventDefault();

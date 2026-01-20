@@ -95,14 +95,14 @@ const CountdownTimer = ({
           bg: 'bg-red-50 border-red-200',
           text: 'text-red-800',
           accent: 'text-red-600',
-          icon: 'text-red-500',
+          icon: 'text-red',
         };
       case 'critical':
         return {
           bg: 'bg-red-50 border-red-200',
           text: 'text-red-800',
           accent: 'text-red-600',
-          icon: 'text-red-500',
+          icon: 'text-red',
         };
       case 'warning':
         return {

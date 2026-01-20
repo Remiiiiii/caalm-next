@@ -135,7 +135,7 @@ const TwoFactorVerificationModal = ({
         </InputOTP>
 
         {error && (
-          <div className="text-red-500 text-center text-sm">{error}</div>
+          <div className="text-red text-center text-sm">{error}</div>
         )}
 
         {attempts > 0 && (

@@ -137,7 +137,7 @@ export const swrConfig: SWRConfiguration = {
     // Check if error is actually the key (edge case)
     if (error === key || (typeof error === 'string' && error === key)) {
       errorMessage = `Request failed for ${key}`;
-      errorType = 'key-as-error';
+      errorType = 'object';
       status = 'unknown';
     } else if (typeof error === 'string') {
       // If error is a string but not the key, use it as message
@@ -156,10 +156,10 @@ export const swrConfig: SWRConfiguration = {
         if (props.length > 0) {
           const firstValue = errorObj[props[0]];
           const allSame = props.every(prop => errorObj[prop] === firstValue);
-          if (allSame && typeof firstValue === 'string' && firstValue === key) {
-            // Malformed error object where all properties are the key
-            errorMessage = `Request failed for ${key}`;
-            errorType = 'malformed-error-object';
+          if (allSame && typeof firstValue === 'string') {
+            // Malformed error object where all properties are the same string
+            errorMessage = `Request failed for ${key}: ${firstValue}`;
+            errorType = 'object';
             status = 'unknown';
           } else {
             errorMessage =
@@ -180,7 +180,7 @@ export const swrConfig: SWRConfiguration = {
       }
     } else if (error === null || error === undefined) {
       errorMessage = 'Error was null or undefined';
-      errorType = 'null-error';
+      errorType = 'object';
       status = 'unknown';
     }
 

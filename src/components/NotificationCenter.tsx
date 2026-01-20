@@ -616,7 +616,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                       <p className="text-lg font-semibold text-red-600 mb-1">
                       Error loading notifications
                     </p>
-                    <p className="text-sm text-red-500">{error}</p>
+                    <p className="text-sm text-red">{error}</p>
                   </div>
                 ) : paginated.length === 0 ? (
                   <div

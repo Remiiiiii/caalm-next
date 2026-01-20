@@ -245,7 +245,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
                 placeholder="Your answer"
               />
               {errors.firstName && (
-                <p className="text-xs text-red-500">{errors.firstName}</p>
+                <p className="text-xs text-red">{errors.firstName}</p>
               )}
             </div>
 
@@ -267,7 +267,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
                 placeholder="Your answer"
               />
               {errors.lastName && (
-                <p className="text-xs text-red-500">{errors.lastName}</p>
+                <p className="text-xs text-red">{errors.lastName}</p>
               )}
             </div>
 
@@ -289,7 +289,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
                 placeholder="Your answer"
               />
               {errors.email && (
-                <p className="text-xs text-red-500">{errors.email}</p>
+                <p className="text-xs text-red">{errors.email}</p>
               )}
             </div>
 
@@ -322,7 +322,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
               />
               <p className="text-xs text-slate-500">Enter your phone number</p>
               {errors.phoneNumber && (
-                <p className="text-xs text-red-500">{errors.phoneNumber}</p>
+                <p className="text-xs text-red">{errors.phoneNumber}</p>
               )}
             </div>
 
@@ -382,7 +382,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
                     <span className="text-red">*</span>
                   </p>
                   {errors.consent && (
-                    <p className="text-xs text-red-500">{errors.consent}</p>
+                    <p className="text-xs text-red">{errors.consent}</p>
                   )}
                 </div>
               </div>

@@ -275,8 +275,8 @@ ${contractDetails.attachments
     const diffInMs = due.getTime() - now.getTime();
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-    if (diffInDays < 0) return { color: 'text-red-500', text: 'Overdue' };
-    if (diffInDays <= 1) return { color: 'text-red-500', text: 'Due today' };
+    if (diffInDays < 0) return { color: 'text-red', text: 'Overdue' };
+    if (diffInDays <= 1) return { color: 'text-red', text: 'Due today' };
     if (diffInDays <= 3) return { color: 'text-yellow-500', text: 'Due soon' };
     if (diffInDays <= 7)
       return { color: 'text-blue-500', text: 'Due this week' };
@@ -288,7 +288,7 @@ ${contractDetails.attachments
     const extension = fileName.split('.').pop()?.toLowerCase();
     switch (extension) {
       case 'pdf':
-        return <FileText className="h-5 w-5 text-red-500" />;
+        return <FileText className="h-5 w-5 text-red" />;
       case 'doc':
       case 'docx':
         return <FileText className="h-5 w-5 text-blue-500" />;

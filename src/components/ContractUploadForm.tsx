@@ -1714,11 +1714,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
         <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-cyan-50 py-4 border-b border-slate-200">
           <div className="px-6">
             <div className="flex items-center gap-3 mb-3">
-              {/* Icon with circular background */}
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <Upload className="w-5 h-5 text-[#0f5384]" />
               </div>
-
               {/* Title */}
               <div className="flex-1">
                 <h2 className="text-xl font-semibold sidebar-gradient-text">
@@ -1752,10 +1750,16 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                       >
                         <FileCheck className="h-3 w-3 mr-1 text-green" />
                         Saved{' '}
-                        {Math.round(
-                          (new Date().getTime() - lastSavedAt.getTime()) / 1000
-                        )}{' '}
-                        s ago
+                        {(() => {
+                          const seconds = Math.round(
+                            (new Date().getTime() - lastSavedAt.getTime()) / 1000
+                          );
+                          if (seconds >= 60) {
+                            const minutes = Math.round(seconds / 60);
+                            return `${minutes} min ago`;
+                          }
+                          return `${seconds} s ago`;
+                        })()}
                       </Badge>
                     )}
                   </div>
@@ -1815,7 +1819,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                         style={{
                           backgroundColor: '#3DD9B3',
                           height: '0.5px',
-                          width: '60px',
+                          width: '40px',
                           marginLeft: '-4px',
                           marginRight: '-4px',
                         }}
@@ -1967,7 +1971,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
               {/* Steps 2-10: Contract Details Sections */}
               {currentStep >= 2 && currentStep <= 10 && (
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <div className="">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-slate-700">
                       {currentStep}. {stepTitles[currentStep - 1]}
@@ -1977,7 +1981,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                     {/* Step 2: Contract Basics & Timeline */}
                     {currentStep === 2 && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-1  gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="contractName"
@@ -1985,7 +1989,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                                   Contract Title / Description{' '}
-                                  <span className="text-red-500">*</span>
+                                  <span className="text-red">*</span>
                                 </FormLabel>
                                 <FormControl>
                                   <Input
@@ -1998,7 +2002,28 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               </FormItem>
                             )}
                           />
-
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+                          <FormField
+                            control={form.control}
+                            name="contractNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                                  Contract Number{' '}
+                                  <span className="text-red">*</span>
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="e.g., KHME2-01-47"
+                                    {...field}
+                                    className="bg-white border-slate-300"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                           />
                           <FormField
                             control={form.control}
                             name="contractType"
@@ -2006,7 +2031,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                                   Contract Type{' '}
-                                  <span className="text-red-500">*</span>
+                                  <span className="text-red">*</span>
                                 </FormLabel>
                                 <Select
                                   onValueChange={field.onChange}
@@ -2029,7 +2054,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               </FormItem>
                             )}
                           />
-
+                          
+                         
+                           </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="lifecycleStatus"
@@ -2037,7 +2065,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                                   Lifecycle Status{' '}
-                                  <span className="text-red-500">*</span>
+                                  <span className="text-red">*</span>
                                 </FormLabel>
                                 <Select
                                   onValueChange={field.onChange}
@@ -2063,28 +2091,28 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               </FormItem>
                             )}
                           />
-
                           <FormField
                             control={form.control}
-                            name="contractNumber"
+                            name="attachmentReferences"
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
-                                  Contract Number{' '}
-                                  <span className="text-red-500">*</span>
+                                  Attachment References
                                 </FormLabel>
                                 <FormControl>
-                                  <Input
-                                    placeholder="e.g., KHME2-01-47"
+                                  <Textarea
+                                    rows={2}
+                                    placeholder="Exhibit A, Attachment B..."
                                     {...field}
-                                    className="bg-white border-slate-300"
+                                    className="bg-white border-slate-300 resize-none"
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-
+                           </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="assignToDepartment"
@@ -2092,7 +2120,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                                   Business Unit / Department{' '}
-                                  <span className="text-red-500">*</span>
+                                  <span className="text-red">*</span>
                                 </FormLabel>
                                 <Select
                                   onValueChange={(value) => {
@@ -2137,7 +2165,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               </FormItem>
                             )}
                           />
-
+                       </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="subDepartment"
@@ -2177,30 +2206,12 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               </FormItem>
                             )}
                           />
-
-                          <FormField
-                            control={form.control}
-                            name="attachmentReferences"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm text-slate-700 mb-1 block">
-                                  Attachment References
-                                </FormLabel>
-                                <FormControl>
-                                  <Textarea
-                                    rows={2}
-                                    placeholder="Exhibit A, Attachment B..."
-                                    {...field}
-                                    className="bg-white border-slate-300 resize-none"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+                         
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="startDate"
@@ -2276,7 +2287,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                                   Expiry Date{' '}
-                                  <span className="text-red-500">*</span>
+                                  <span className="text-red">*</span>
                                 </FormLabel>
                                 <FormControl>
                                   <Popover>
@@ -2331,7 +2342,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="autoRenew"
@@ -2370,8 +2381,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               </FormItem>
                             )}
                           />
-                        </div>
-
+                    
                         <FormField
                           control={form.control}
                           name="description"
@@ -2392,21 +2402,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             </FormItem>
                           )}
                         />
-
-                        {/* Save and Resume Later */}
-                        {processedFileData && (
-                          <SaveProgressCard
-                            onSave={handleManualSave}
-                            isSaving={isSaving}
-                          />
-                        )}
                       </div>
+                    </div>
                     )}
 
                     {/* Step 3: Parties & Key Contacts */}
                     {currentStep === 3 && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="counterpartyLegalName"
@@ -2414,7 +2417,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                                   Counterparty Legal Name{' '}
-                                  <span className="text-red-500">*</span>
+                                  <span className="text-red">*</span>
                                 </FormLabel>
                                 <FormControl>
                                   <Input
@@ -2448,6 +2451,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
 
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="counterpartyContactTitle"
@@ -2488,6 +2493,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
 
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="counterpartyContactPhone"
@@ -2541,6 +2548,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
 
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="counterpartyTaxId"
@@ -2581,7 +2590,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
                         </div>
-
+                        <div className="grid grid-cols-1 md:grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                         <FormField
                           control={form.control}
                           name="counterpartyAddress"
@@ -2602,8 +2611,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             </FormItem>
                           )}
                         />
+                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="primaryInternalContactId"
@@ -2645,20 +2655,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        {/* Save and Resume Later */}
-                        {processedFileData && (
-                          <SaveProgressCard
-                            onSave={handleManualSave}
-                            isSaving={isSaving}
-                          />
-                        )}
+                       
                       </div>
                     )}
 
                     {/* Step 4: Financials & Payment Terms */}
                     {currentStep === 4 && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="amount"
@@ -2666,7 +2670,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                                   Contract Amount{' '}
-                                  <span className="text-red-500">*</span>
+                                  <span className="text-red">*</span>
                                 </FormLabel>
                                 <FormControl>
                                   <Input
@@ -2687,7 +2691,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                                   Currency{' '}
-                                  <span className="text-red-500">*</span>
+                                  <span className="text-red">*</span>
                                 </FormLabel>
                                 <Select
                                   onValueChange={field.onChange}
@@ -2838,7 +2842,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="projectMatterId"
@@ -2900,20 +2904,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        {/* Save and Resume Later */}
-                        {processedFileData && (
-                          <SaveProgressCard
-                            onSave={handleManualSave}
-                            isSaving={isSaving}
-                          />
-                        )}
+                       
                       </div>
                     )}
 
                     {/* Step 5: Risk & Compliance */}
                     {currentStep === 5 && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="riskLevel"
@@ -2921,7 +2919,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               <FormItem>
                                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                                   Risk Level{' '}
-                                  <span className="text-red-500">*</span>
+                                  <span className="text-red">*</span>
                                 </FormLabel>
                                 <Select
                                   onValueChange={field.onChange}
@@ -2970,7 +2968,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="insuranceRequired"
@@ -3031,7 +3029,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="insuranceVerifiedDate"
@@ -3195,7 +3193,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           )}
                         />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="keyObligations"
@@ -3239,7 +3237,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="performanceMetrics"
@@ -3283,7 +3281,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="terminationNoticeDays"
@@ -3345,7 +3343,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="milestones"
@@ -3389,7 +3387,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="slaPenalties"
@@ -3433,7 +3431,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="escalationProcedures"
@@ -3476,14 +3474,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
                         </div>
-
-                        {/* Save and Resume Later */}
-                        {processedFileData && (
-                          <SaveProgressCard
-                            onSave={handleManualSave}
-                            isSaving={isSaving}
-                          />
-                        )}
                       </div>
                     )}
 
@@ -3646,7 +3636,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           )}
                         />
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="approvalWorkflowTemplate"
@@ -3731,7 +3721,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           )}
                         />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="approvalEscalationContactIds"
@@ -3774,21 +3764,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
                         </div>
-
-                        {/* Save and Resume Later */}
-                        {processedFileData && (
-                          <SaveProgressCard
-                            onSave={handleManualSave}
-                            isSaving={isSaving}
-                          />
-                        )}
                       </div>
                     )}
 
                     {/* Step 7: Notifications & Renewal Alerts */}
                     {currentStep === 7 && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="alertRecipientIds"
@@ -3832,7 +3814,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="alertLeadTimes"
@@ -3914,21 +3896,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             </FormItem>
                           )}
                         />
-
-                        {/* Save and Resume Later */}
-                        {processedFileData && (
-                          <SaveProgressCard
-                            onSave={handleManualSave}
-                            isSaving={isSaving}
-                          />
-                        )}
                       </div>
                     )}
 
                     {/* Step 7: Notifications & Renewal Alerts */}
                     {currentStep === 7 && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="alertRecipientIds"
@@ -3956,7 +3930,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                     {/* Step 8: Documents, Attachments & Metadata */}
                     {currentStep === 8 && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="versionNumber"
@@ -4018,7 +3992,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="relatedDocumentIds"
@@ -4083,7 +4057,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           )}
                         />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="tags"
@@ -4124,21 +4098,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
                         </div>
-
-                        {/* Save and Resume Later */}
-                        {processedFileData && (
-                          <SaveProgressCard
-                            onSave={handleManualSave}
-                            isSaving={isSaving}
-                          />
-                        )}
                       </div>
                     )}
 
                     {/* Step 9: Legal & Governance */}
                     {currentStep === 9 && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="governingLaw"
@@ -4180,7 +4146,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="disputeResolutionMethod"
@@ -4261,21 +4227,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
                         </div>
-
-                        {/* Save and Resume Later */}
-                        {processedFileData && (
-                          <SaveProgressCard
-                            onSave={handleManualSave}
-                            isSaving={isSaving}
-                          />
-                        )}
                       </div>
                     )}
 
                     {/* Step 10: Digital Signatures & Access Controls */}
                     {currentStep === 10 && (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="digitalSignatureRequired"
@@ -4346,7 +4304,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="digitalSignatureCompletedAt"
@@ -4420,7 +4378,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="signatureRecipientIds"
@@ -4464,19 +4422,18 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                           />
                         </div>
 
-                        {/* Save and Resume Later */}
-                        {processedFileData && (
-                          <SaveProgressCard
-                            onSave={handleManualSave}
-                            isSaving={isSaving}
-                          />
-                        )}
                       </div>
                     )}
                   </div>
                 </div>
               )}
-
+                {/* Save and Resume Later */}
+                {processedFileData && (
+                          <SaveProgressCard
+                            onSave={handleManualSave}
+                            isSaving={isSaving}
+                          />
+                        )}
               {/* Upload Progress */}
               {isUploading && (
                 <Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">

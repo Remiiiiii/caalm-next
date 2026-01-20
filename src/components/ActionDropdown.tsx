@@ -982,7 +982,7 @@ const ActionDropdown = ({
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
               <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
                 {statusError && (
-                  <div className="text-red-500 mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                  <div className="text-red mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
                     {statusError}
                   </div>
                 )}

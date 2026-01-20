@@ -241,7 +241,7 @@ const OTPModal = ({
             className={`text-center p-3 rounded-lg mb-4 ${
               (error || lastError).includes('sent!')
                 ? 'text-green-500 bg-green-50 border border-green-200'
-                : 'text-red-500 bg-red-50 border border-red-200'
+                : 'text-red bg-red-50 border border-red-200'
             }`}
           >
             <p

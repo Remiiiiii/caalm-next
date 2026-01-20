@@ -86,7 +86,7 @@ export class ITDashboardErrorBoundary extends Component<Props, State> {
           </div>
           <CardContent className="pt-6 bg-slate-50">
             <div className="text-center py-8 px-6">
-              <AlertTriangle className="h-16 w-16 mx-auto text-red-500 mb-4" />
+              <AlertTriangle className="h-16 w-16 mx-auto text-red mb-4" />
               <h3 className="text-2xl font-semibold mb-2 text-slate-900">
                 Something went wrong
               </h3>

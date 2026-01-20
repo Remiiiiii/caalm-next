@@ -22,7 +22,7 @@ export default function StepIndicator({
 
   return (
     <div className="flex items-center justify-center gap-2 px-4 overflow-x-auto relative">
-      <span className="text-red-500 font-bold">TEST</span>
+      <span className="text-red font-bold">TEST</span>
       {steps.flatMap((stepNum, index) => {
         const isCompleted = stepNum < currentStep;
         const isActive = stepNum === currentStep;
