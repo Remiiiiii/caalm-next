@@ -29,11 +29,13 @@ import { TOTAL_STEPS, STEP_TITLES } from './license-upload/constants';
 import { useLicenseForm } from './license-upload/hooks/useLicenseForm';
 import { useManagers } from './license-upload/hooks/useManagers';
 import { useDraftManagement } from './license-upload/hooks/useDraftManagement';
+import { getContractDepartmentEnums } from '@/lib/actions/database.actions';
 import {
   parseCurrencyInput,
   parseIntegerInput,
   sanitizeString,
 } from './license-upload/utils';
+import type { Step2LicenseDetailsProps } from './license-upload/steps/Step2LicenseDetails';
 
 // Lazy load components
 const Step1FileUpload = dynamic(
@@ -103,6 +105,7 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<string[]>([]);
 
   // Initialize form
   const { form, processFileSynchronously, extractLicenseData } =
@@ -395,7 +398,16 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
     }
   }, [isOpen, loadSavedDrafts]);
 
-  // Watch department changes
+  // Fetch departments from database when dialog opens
+  useEffect(() => {
+    if (isOpen && departments.length === 0) {
+      getContractDepartmentEnums()
+        .then((list) => setDepartments(list || []))
+        .catch(() => setDepartments([]));
+    }
+  }, [isOpen, departments.length]);
+
+  // Watch department changes to load managers for that department
   const watchedDepartment = form.watch('department');
   useEffect(() => {
     if (watchedDepartment) {
@@ -464,7 +476,14 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
                       </h3>
                     </div>
                     <div className="space-y-6">
-                      <Step2LicenseDetails form={form} />
+                      <Step2LicenseDetails
+                        form={form}
+                        departments={departments}
+                        filteredManagers={filteredManagers}
+                        selectedManagers={selectedManagers}
+                        setSelectedManagers={setSelectedManagers}
+                        fetchDepartmentManagers={fetchDepartmentManagers}
+                      />
                       {/* Save Progress Card */}
                       {processedFileData && (
                         <SaveProgressCard

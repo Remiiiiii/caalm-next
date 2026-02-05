@@ -6,23 +6,11 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { Key } from 'lucide-react';
 import type { License } from '@/types/licenses';
 import useSWR from 'swr';
+import { fetcher } from '@/lib/swr-config';
 
 interface LicenseStatusPieChartProps {
   licenses?: License[];
 }
-
-const fetcher = async (url: string) => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Failed to fetch' }));
-    const error = new Error(errorData.error || errorData.message || 'Failed to fetch');
-    (error as any).status = response.status;
-    (error as any).response = errorData;
-    throw error;
-  }
-  const data = await response.json();
-  return data.success ? data.data : data;
-};
 
 const COLORS = {
   active: '#10B981',
@@ -44,7 +32,7 @@ export default function LicenseStatusPieChart({
     }
   );
 
-  const licenses = propsLicenses || data?.licenses || [];
+  const licenses = propsLicenses ?? data?.data?.licenses ?? data?.licenses ?? [];
 
   const chartData = useMemo(() => {
     const statusCounts: Record<string, number> = {};

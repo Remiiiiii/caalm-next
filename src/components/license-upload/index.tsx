@@ -13,13 +13,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Loader2, ChevronLeft, ChevronRight, Ban, CheckCircle, FileCheck } from 'lucide-react';
+import { Upload, Loader2, ChevronLeft, ChevronRight, Ban, CheckCircle, FileCheck, Trash2, AlertTriangle } from 'lucide-react';
 import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
 import { useToast } from '@/hooks/use-toast';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { uploadFile } from '@/lib/actions/file.actions';
 import type { LicenseUploadFormProps, ProcessedFileData } from './types';
 import { TOTAL_STEPS, STEP_TITLES } from './constants';
@@ -72,6 +80,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
   onSuccess,
 }) => {
   const path = usePathname();
+  const router = useRouter();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -331,7 +340,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
         file: fileForUpload,
         ownerId,
         accountId,
-        path: path || '/',
+        path: '/licenses',
         licenseMetadata: {
           licenseName: values.licenseName,
           licenseNumber: values.licenseNumber || `LIC-${Date.now()}`,
@@ -386,12 +395,18 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
       // Reset form
       resetForm();
       setIsOpen(false);
+      
+      // Route to licenses page after successful upload
+      router.push('/licenses');
+      
       onSuccess?.();
-    } catch (error) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'There was an error uploading your license.';
       console.error('Upload failed:', error);
       toast({
         title: 'Upload Failed',
-        description: 'There was an error uploading your license.',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -644,6 +659,60 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
         onOpenChange={setCancelDialogOpen}
         onConfirm={handleCancelConfirm}
       />
+
+      {/* Delete Draft Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+          <AlertDialogTitle className="sr-only">Delete Draft</AlertDialogTitle>
+          <div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
+          <div className="px-6 py-4 bg-white border-b border-slate-200">
+            <div className="flex gap-2">
+              <AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+              <h2 className="text-base font-semibold sidebar-gradient-text">
+                Delete Draft
+              </h2>
+            </div>
+            <AlertDialogDescription className="text-sm text-slate-600 mt-1 ml-7">
+              Are you sure you want to delete this draft? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </div>
+          <div className="px-6 py-5 space-y-3 bg-white">
+            <p className="text-sm text-slate-600">
+              Your decision to delete is irreversible, so please make sure you
+              want to continue.
+            </p>
+          </div>
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="text-xs text-slate-500">This action is permanent.</div>
+            <div className="flex items-center gap-3">
+              <AlertDialogCancel
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setDraftToDelete(null);
+                }}
+                className="primary-btn px-3 sm:px-4"
+              >
+                <Ban className="h-4 w-4" />
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  if (draftToDelete) {
+                    await deleteDraft(draftToDelete);
+                    setDraftToDelete(null);
+                    setDeleteDialogOpen(false);
+                  }
+                }}
+                className="primary-btn px-3 sm:px-4"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Draft
+              </AlertDialogAction>
+            </div>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

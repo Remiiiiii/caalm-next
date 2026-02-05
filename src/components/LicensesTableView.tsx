@@ -15,13 +15,14 @@ import Avatar from '@/components/ui/avatar';
 import LicenseActionDropdown from './licenses/LicenseActionDropdown';
 import FormattedDateTime from './FormattedDateTime';
 import { FormattedDate } from './FormattedDateTime';
+import { convertFileSize } from '@/lib/utils';
 import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
 import type { License } from '@/types/licenses';
 import type { AppUser } from '@/lib/actions/user.actions';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import ManagerAvatars from './ManagerAvatars';
-import { Key, Calendar, DollarSign } from 'lucide-react';
+import Thumbnail from './Thumbnail';
 
 // Map license status to badge color and label
 const statusBadge = (status: string) => {
@@ -90,6 +91,10 @@ export default function LicensesTableView({
   onRefresh,
 }: LicensesTableViewProps) {
   const { toast } = useToast();
+  const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
+  const [loadingOwners, setLoadingOwners] = useState<Record<string, boolean>>(
+    {}
+  );
   const [assignedManagerUsers, setAssignedManagerUsers] = useState<
     Record<string, AppUser[]>
   >({});
@@ -102,6 +107,82 @@ export default function LicensesTableView({
   const [failedProfileImages, setFailedProfileImages] = useState<Set<string>>(
     new Set()
   );
+
+  // Fetch owner names (createdBy) for all licenses
+  useEffect(() => {
+    const fetchAllOwnerNames = async () => {
+      const ownerIds = new Set<string>();
+      const ownerIdToLicenseId = new Map<string, string[]>();
+
+      licenses.forEach((license) => {
+        const userId = license.createdBy?.trim();
+        if (userId && userId.length > 0 && !ownerNames[license.$id]) {
+          ownerIds.add(userId);
+          if (!ownerIdToLicenseId.has(userId)) {
+            ownerIdToLicenseId.set(userId, []);
+          }
+          ownerIdToLicenseId.get(userId)!.push(license.$id);
+        }
+      });
+
+      if (ownerIds.size === 0) return;
+
+      const userIdsArray = Array.from(ownerIds);
+      setLoadingOwners((prev) => {
+        const newLoading = { ...prev };
+        userIdsArray.forEach((id) => {
+          ownerIdToLicenseId.get(id)?.forEach((licenseId) => {
+            newLoading[licenseId] = true;
+          });
+        });
+        return newLoading;
+      });
+
+      try {
+        const users = await fetchUserNamesByIds(userIdsArray);
+        const namesMap: Record<string, string> = {};
+        users.forEach((user) => {
+          if (user.$id) namesMap[user.$id] = user.fullName || 'Unknown';
+          if (user.accountId)
+            namesMap[user.accountId] = user.fullName || 'Unknown';
+        });
+
+        const newOwnerNames: Record<string, string> = {};
+        userIdsArray.forEach((userId) => {
+          const name = namesMap[userId] || 'Unknown';
+          ownerIdToLicenseId.get(userId)?.forEach((licenseId) => {
+            newOwnerNames[licenseId] = name;
+          });
+        });
+
+        setOwnerNames((prev) => ({ ...prev, ...newOwnerNames }));
+      } catch (error) {
+        console.error('Failed to fetch owner names:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load license owner information.',
+          variant: 'destructive',
+        });
+        userIdsArray.forEach((userId) => {
+          ownerIdToLicenseId.get(userId)?.forEach((licenseId) => {
+            setOwnerNames((prev) => ({ ...prev, [licenseId]: 'Unknown' }));
+          });
+        });
+      } finally {
+        setLoadingOwners((prev) => {
+          const newLoading = { ...prev };
+          userIdsArray.forEach((id) => {
+            ownerIdToLicenseId.get(id)?.forEach((licenseId) => {
+              newLoading[licenseId] = false;
+            });
+          });
+          return newLoading;
+        });
+      }
+    };
+
+    fetchAllOwnerNames();
+  }, [licenses, toast]);
 
   // Fetch assigned manager user data
   useEffect(() => {
@@ -247,6 +328,12 @@ export default function LicensesTableView({
     }).format(amount);
   };
 
+  const getOwnerName = (license: License): string => {
+    if (ownerNames[license.$id]) return ownerNames[license.$id];
+    if (loadingOwners[license.$id]) return 'Loading...';
+    return 'Unknown';
+  };
+
   const truncateLicenseName = (name: string): string => {
     if (!name) return 'Untitled License';
     if (name.length <= 20) return name;
@@ -329,13 +416,10 @@ export default function LicensesTableView({
                   Status
                 </TableHead>
                 <TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
-                  Type
+                  Size
                 </TableHead>
                 <TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
-                  Vendor
-                </TableHead>
-                <TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
-                  Issued On
+                  Uploaded On
                 </TableHead>
                 <TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
                   Expires On
@@ -345,6 +429,9 @@ export default function LicensesTableView({
                 </TableHead>
                 <TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
                   Assigned To
+                </TableHead>
+                <TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+                  Uploaded By
                 </TableHead>
                 <TableHead className="font-semibold text-slate-700 py-4 text-right whitespace-nowrap">
                   Actions
@@ -359,7 +446,13 @@ export default function LicensesTableView({
                 >
                   <TableCell className="py-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <Key className="h-5 w-5 text-[#0f5384] flex-shrink-0" />
+                      <Thumbnail
+                        type="application/pdf"
+                        extension="pdf"
+                        url=""
+                        className="!size-10 flex-shrink-0"
+                        imageClassName="!size-8"
+                      />
                       <div className="min-w-0">
                         <p
                           className="subtitle-2 text-slate-700 whitespace-nowrap truncate"
@@ -379,21 +472,15 @@ export default function LicensesTableView({
                     {license.status && statusBadge(license.status)}
                   </TableCell>
                   <TableCell className="py-4 text-slate-700 whitespace-nowrap">
-                    {license.licenseType
-                      ? license.licenseType.replace(/_/g, ' ').replace(/\b\w/g, (l) =>
-                          l.toUpperCase()
-                        )
-                      : '-'}
+                    {convertFileSize({
+                      sizeInBytes: license.fileSize ?? 0,
+                    })}
                   </TableCell>
                   <TableCell className="py-4 text-slate-700 whitespace-nowrap">
-                    {license.vendor || '-'}
-                  </TableCell>
-                  <TableCell className="py-4 text-slate-700 whitespace-nowrap">
-                    {license.issueDate ? (
-                      <FormattedDate date={license.issueDate} className="body-2" />
-                    ) : (
-                      <span className="body-2 text-slate-400">-</span>
-                    )}
+                    <FormattedDateTime
+                      date={license.$createdAt}
+                      className="body-2"
+                    />
                   </TableCell>
                   <TableCell className="py-4 text-slate-700 whitespace-nowrap">
                     {license.licenseExpiryDate ? (
@@ -412,6 +499,14 @@ export default function LicensesTableView({
                   </TableCell>
                   <TableCell className="py-4 text-slate-700 whitespace-nowrap">
                     {renderAssignedManagers(license)}
+                  </TableCell>
+                  <TableCell className="py-4 text-slate-700 whitespace-nowrap">
+                    <span
+                      className="body-2 truncate block"
+                      title={getOwnerName(license)}
+                    >
+                      {getOwnerName(license)}
+                    </span>
                   </TableCell>
                   <TableCell className="py-4 text-right">
                     <LicenseActionDropdown

@@ -897,7 +897,8 @@ export const uploadFile = async ({
           orgId: resolvedOrgId,
           assignedManagers,
           fileId: newFile.$id,
-          fileRef: newFile.$id,
+          fileSize:
+            (newFile as { size?: number }).size ?? bucketFile.sizeOriginal,
           licenseOwnerId: ownerId,
           createdBy: ownerId,
         };
@@ -923,10 +924,49 @@ export const uploadFile = async ({
             updateError.message
           );
         }
+
+        // Delete license draft after successful upload (by draftId or by fileId)
+        if (appwriteConfig.licenseDraftsCollectionId) {
+          const draftsToDelete: { $id: string }[] = [];
+          if (draftId) {
+            draftsToDelete.push({ $id: draftId });
+          }
+          if (draftsToDelete.length === 0) {
+            try {
+              const byFileId = await tablesDB.listRows({
+                databaseId: appwriteConfig.databaseId!,
+                tableId: appwriteConfig.licenseDraftsCollectionId!,
+                queries: [
+                  Query.equal('fileId', newFile.$id),
+                  Query.limit(10),
+                ],
+              });
+              draftsToDelete.push(
+                ...byFileId.rows.map((r: any) => ({ $id: r.$id }))
+              );
+            } catch (_) {
+              // fileId may not exist on drafts
+            }
+          }
+          for (const draft of draftsToDelete) {
+            try {
+              await tablesDB.deleteRow({
+                databaseId: appwriteConfig.databaseId!,
+                tableId: appwriteConfig.licenseDraftsCollectionId!,
+                rowId: draft.$id,
+              });
+              console.log(
+                `Deleted license draft ${draft.$id} after successful upload`
+              );
+            } catch (delErr: any) {
+              console.warn(`Failed to delete license draft ${draft.$id}:`, delErr?.message);
+            }
+          }
+        }
       } catch (licenseError: any) {
         console.error('Failed to create license:', licenseError);
-        // Don't throw error here as the file upload was successful
-        // License creation failure shouldn't prevent file upload
+        // Rethrow so client shows "Upload Failed" and does not clear form or delete draft
+        throw licenseError;
       }
     }
 

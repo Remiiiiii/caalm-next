@@ -39,6 +39,7 @@ export interface License {
   licenseUrl?: string;
   fileId?: string; // DB field name (maps from certificateFileId in forms)
   fileRef?: string; // Relationship to files collection
+  fileSize?: number; // File size in bytes (for card display)
 
   // Optional - Software license fields
   vendor?: string;

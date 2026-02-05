@@ -97,17 +97,27 @@ export const licenseQuerySchema = z.object({
 });
 
 /**
- * Schema for license list query parameters
+ * Schema for license list query parameters.
+ * Accepts null/undefined from URL searchParams and coerces to safe defaults.
  */
 export const licenseListQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(1000).optional().default(1000),
-  offset: z.coerce.number().int().min(0).optional().default(0),
-  search: z.string().optional(),
-  vendor: z.string().optional(),
-  licenseType: z.string().optional(),
-  status: z.string().optional(),
-  department: z.string().optional(),
-  expiringSoon: z.coerce.boolean().optional(),
+  limit: z
+    .union([z.string(), z.number(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === '' ? 1000 : Number(v)))
+    .pipe(z.number().int().min(1).max(1000)),
+  offset: z
+    .union([z.string(), z.number(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === '' ? 0 : Number(v)))
+    .pipe(z.number().int().min(0)),
+  search: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
+  vendor: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
+  licenseType: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
+  status: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
+  department: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
+  expiringSoon: z
+    .union([z.string(), z.boolean(), z.null(), z.undefined()])
+    .optional()
+    .transform((v) => (v == null || v === '' ? undefined : v === 'true' || v === true)),
 });
 
 /**

@@ -147,7 +147,7 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-96 max-h-[70vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl p-0"
+        className="w-96 max-h-[50vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl p-0"
         sideOffset={10}
       >
         {/* Professional Cap */}
@@ -215,9 +215,9 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
                   <SelectItem value="all">All types</SelectItem>
                   {LICENSE_TYPES.map((type) => (
                     <SelectItem key={type} value={type}>
-                      {type.replace(/_/g, ' ').replace(/\b\w/g, (l) =>
-                        l.toUpperCase()
-                      )}
+                      {type
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, (l) => l.toUpperCase())}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -240,9 +240,9 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
                   <SelectItem value="all">All categories</SelectItem>
                   {CATEGORIES.map((category) => (
                     <SelectItem key={category} value={category}>
-                      {category.replace(/_/g, ' ').replace(/\b\w/g, (l) =>
-                        l.toUpperCase()
-                      )}
+                      {category
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, (l) => l.toUpperCase())}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -379,7 +379,10 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
               <Select
                 value={filters.assignedTo || 'all'}
                 onValueChange={(value) =>
-                  updateFilter('assignedTo', value === 'all' ? undefined : value)
+                  updateFilter(
+                    'assignedTo',
+                    value === 'all' ? undefined : value
+                  )
                 }
               >
                 <SelectTrigger className="bg-white">

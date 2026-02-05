@@ -18,13 +18,10 @@ const ContractUploadForm = dynamic(
 );
 
 // Lazy load LicenseUploadForm for better performance
-const LicenseUploadForm = dynamic(
-  () => import('@/components/license-upload'),
-  {
-    ssr: false,
-    loading: () => null, // No loader for trigger button
-  }
-);
+const LicenseUploadForm = dynamic(() => import('@/components/license-upload'), {
+  ssr: false,
+  loading: () => null, // No loader for trigger button
+});
 
 interface QuickActionsProps {
   user?:
@@ -61,19 +58,19 @@ const QuickActions = ({ user }: QuickActionsProps) => {
       )}
       {!isITUser && (
         <>
-          <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
-            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Upload Audit
-          </Button>
           <LicenseUploadForm
-            ownerId={user.$id}
-            accountId={user.$id}
+            ownerId={user?.$id || ''}
+            accountId={user?.$id || ''}
             className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2"
             onSuccess={() => {
               // Refresh data or show success message
               console.log('License uploaded successfully');
             }}
           />
+          <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Upload Audit
+          </Button>
         </>
       )}
       <Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">

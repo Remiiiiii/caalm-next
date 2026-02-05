@@ -178,7 +178,7 @@ export default function LicensesView({
         </>
       ) : (
         <>
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <section className="file-list">
             {paginatedLicenses.map((license: License) => (
               <LicenseCard
                 key={license.$id}

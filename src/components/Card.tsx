@@ -12,9 +12,13 @@ import { fetchUserNamesByIds, type AppUser } from '@/lib/actions/user.actions';
 import ManagerAvatars from './ManagerAvatars';
 
 // Map contract status to badge color and label
-const statusBadge = (status: string, isExpired?: boolean, contractExpiryDate?: string) => {
+const statusBadge = (
+  status: string,
+  isExpired?: boolean,
+  contractExpiryDate?: string
+) => {
   // Check if contract is expired (priority: status > isExpired flag > expiry date)
-  const isContractExpired = 
+  const isContractExpired =
     status?.toLowerCase() === 'expired' ||
     isExpired ||
     (contractExpiryDate && new Date(contractExpiryDate) < new Date());
@@ -90,6 +94,7 @@ const riskLevelBadge = (risk: string) => {
 };
 
 import type { UIFileDoc } from '@/types/files';
+import { Building2, Calendar, UserCheck } from 'lucide-react';
 
 interface CardProps {
   file: UIFileDoc;
@@ -541,11 +546,12 @@ const Card = ({
           <div className="mb-1 flex items-center gap-2 flex-wrap">
             {/* Always check for expiration, even if status is missing */}
             {(() => {
-              const isExpired = 
+              const isExpired =
                 contractStatus?.toLowerCase() === 'expired' ||
                 file.isExpired ||
-                (contractExpiryDate && new Date(contractExpiryDate) < new Date());
-              
+                (contractExpiryDate &&
+                  new Date(contractExpiryDate) < new Date());
+
               // If expired, always show Expired badge (even if status is missing)
               if (isExpired) {
                 return (
@@ -558,7 +564,7 @@ const Card = ({
                   </div>
                 );
               }
-              
+
               // Otherwise, show status badge if status exists
               if (contractStatus) {
                 return (
@@ -571,7 +577,7 @@ const Card = ({
                   </div>
                 );
               }
-              
+
               return null;
             })()}
             {riskLevel && <div>{riskLevelBadge(riskLevel)}</div>}
@@ -591,6 +597,7 @@ const Card = ({
             }}
           >
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+              <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
               <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                 Uploaded on:
               </p>
@@ -615,6 +622,7 @@ const Card = ({
               }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
                 <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                   Expires on:
                 </p>
@@ -640,6 +648,7 @@ const Card = ({
               }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                <UserCheck className="h-4 w-4 text-slate-500 flex-shrink-0" />
                 <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                   Assigned To:
                 </p>
@@ -662,6 +671,7 @@ const Card = ({
               }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                <Building2 className="h-4 w-4 text-slate-500 flex-shrink-0" />
                 <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                   Department:
                 </p>
@@ -684,8 +694,8 @@ const Card = ({
               (typeof file.owner === 'object' && file.owner?.fullName
                 ? file.owner.fullName
                 : typeof file.owner === 'string'
-                ? 'Unknown'
-                : 'Unknown')}
+                  ? 'Unknown'
+                  : 'Unknown')}
         </p>
       </div>
     </div>

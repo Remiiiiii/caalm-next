@@ -125,7 +125,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-96 max-h-[70vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl p-0"
+        className="w-96 max-h-[55vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl p-0"
         sideOffset={10}
       >
         {/* Professional Cap */}

@@ -341,26 +341,33 @@ export async function clear(pattern: string): Promise<void> {
 }
 
 /**
- * Get or set pattern with automatic caching
+ * Get or set pattern with automatic caching.
+ * If Redis is unavailable (e.g. ENOTFOUND, ECONNRESET), falls back to fetchFn only.
  */
 export async function getOrSet<T>(
   key: string,
   fetchFn: () => Promise<T>,
   ttl?: number
 ): Promise<T> {
-  // Try to get from cache
-  const cached = await get<T>(key);
-  if (cached !== null) {
-    return cached;
+  try {
+    const cached = await get<T>(key);
+    if (cached !== null) {
+      return cached;
+    }
+
+    const fresh = await fetchFn();
+
+    try {
+      await set(key, fresh, ttl);
+    } catch {
+      // Cache write failed (e.g. Redis down); return fresh data anyway
+    }
+
+    return fresh;
+  } catch {
+    // Cache read failed or fetchFn threw; fall back to fetch only so the app keeps working
+    return fetchFn();
   }
-
-  // Fetch fresh data
-  const fresh = await fetchFn();
-
-  // Store in cache
-  await set(key, fresh, ttl);
-
-  return fresh;
 }
 
 /**

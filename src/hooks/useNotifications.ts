@@ -28,12 +28,12 @@ const fetcher = async (url: string) => {
   if (Array.isArray(data)) {
     return data;
   }
-  // If response has data property, use it
-  if (data.data && Array.isArray(data.data)) {
+  // API returns { success: true, data: [...] }
+  if (data?.data !== undefined && Array.isArray(data.data)) {
     return data.data;
   }
   // If response has rows property (Appwrite format), use it
-  if (data.rows && Array.isArray(data.rows)) {
+  if (data?.rows && Array.isArray(data.rows)) {
     return data.rows;
   }
   console.warn('[CLIENT] Unexpected notification response format:', data);
@@ -415,7 +415,11 @@ const unreadCountFetcher = async (url: string) => {
     );
   }
   const data = await response.json();
-  // The unread-count API returns { count: number }
+  // API returns { success: true, data: { count } }
+  if (data?.data && typeof data.data.count === 'number') {
+    return { count: data.data.count };
+  }
+  // The unread-count API may return { count: number } directly
   if (data && typeof data.count === 'number') {
     return data;
   }

@@ -226,6 +226,19 @@ export const swrConfig: SWRConfiguration = {
       }
     }
 
+    // Never log the key string in any field (SWR can pass key as error in edge cases)
+    const keyStr = String(key || 'unknown-key');
+    const isKey = (v: unknown) => v === keyStr || v === key;
+    if (isKey(errorInfo.error)) errorInfo.error = 'Request failed';
+    if (isKey(errorInfo.status)) errorInfo.status = 'unknown';
+    if (isKey(errorInfo.errorType)) errorInfo.errorType = 'unknown';
+    if (errorInfo.details !== undefined && isKey(errorInfo.details)) {
+      errorInfo.details = '[omitted]';
+    }
+    if (errorInfo.rawError !== undefined && isKey(errorInfo.rawError)) {
+      errorInfo.rawError = '[omitted]';
+    }
+
     console.error('SWR Error:', errorInfo);
   },
 };

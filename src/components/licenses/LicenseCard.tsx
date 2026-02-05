@@ -1,13 +1,71 @@
 'use client';
 
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Key, Calendar, Users, Building2 } from 'lucide-react';
-import type { License } from '@/types/licenses';
+import React, { useEffect, useState } from 'react';
+import Thumbnail from '@/components/Thumbnail';
+import { convertFileSize } from '@/lib/utils';
+import { FormattedDate } from '@/components/FormattedDateTime';
+import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
 import LicenseActionDropdown from './LicenseActionDropdown';
-import FormattedDateTime from '../FormattedDateTime';
-import { FormattedDate } from '../FormattedDateTime';
+import type { License } from '@/types/licenses';
+import { Building2, Calendar } from 'lucide-react';
+
+// Match contract card status badge styling from Card.tsx
+function statusBadge(
+  status: string | undefined,
+  licenseExpiryDate?: string
+): React.ReactNode {
+  const isExpired =
+    status?.toLowerCase() === 'expired' ||
+    (licenseExpiryDate && new Date(licenseExpiryDate) < new Date());
+
+  if (isExpired) {
+    return (
+      <span className="inline-block px-2 py-1 border-2 border-purple-600 bg-purple-50 text-purple-900 text-xs rounded-xl font-medium mr-auto">
+        Expired
+      </span>
+    );
+  }
+
+  switch (status) {
+    case 'pending-review':
+      return (
+        <span className="inline-block px-2 py-1 border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium mr-auto">
+          Pending Review
+        </span>
+      );
+    case 'action-required':
+      return (
+        <span className="inline-block px-2 py-1 border-2 border-red-400 bg-destructive/10 border-destructive/50 text-destructive text-xs rounded-xl font-medium mr-auto">
+          Action Required
+        </span>
+      );
+    case 'active':
+      return (
+        <span className="inline-block px-2 py-1 border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium">
+          Active
+        </span>
+      );
+    case 'inactive':
+      return (
+        <span className="inline-block px-2 py-1 border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium mr-auto">
+          Inactive
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-block px-2 py-1 border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium">
+          {status || 'Unknown'}
+        </span>
+      );
+  }
+}
+
+const detailBoxStyle = {
+  background: 'rgba(255, 255, 255, 0.3)',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)' as const,
+  border: '1px solid rgba(255, 255, 255, 0.5)',
+};
 
 interface LicenseCardProps {
   license: License;
@@ -20,137 +78,212 @@ export default function LicenseCard({
   onClick,
   onRefresh,
 }: LicenseCardProps) {
-  const getStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'active':
-        return (
-          <Badge className="border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium">
-            Active
-          </Badge>
-        );
-      case 'expired':
-        return (
-          <Badge className="border-2 border-purple-600 bg-purple-50 text-purple-900 text-xs rounded-xl font-medium">
-            Expired
-          </Badge>
-        );
-      case 'pending_renewal':
-      case 'pending-review':
-        return (
-          <Badge className="border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium">
-            Pending
-          </Badge>
-        );
-      case 'action-required':
-        return (
-          <Badge className="border-2 border-red-400 bg-destructive/10 text-destructive text-xs rounded-xl font-medium">
-            Action Required
-          </Badge>
-        );
-      case 'inactive':
-        return (
-          <Badge className="border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium">
-            Inactive
-          </Badge>
-        );
-      case 'suspended':
-        return (
-          <Badge className="border-2 border-slate-400 bg-slate-300 text-slate-700 text-xs rounded-xl font-medium">
-            Suspended
-          </Badge>
-        );
-      case 'archived':
-        return (
-          <Badge className="border-2 border-slate-300 bg-slate-200 text-slate-600 text-xs rounded-xl font-medium">
-            Archived
-          </Badge>
-        );
-      default:
-        return (
-          <Badge className="border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium">
-            Unknown
-          </Badge>
-        );
+  const [uploaderName, setUploaderName] = useState<string | null>(null);
+  const [loadingUploader, setLoadingUploader] = useState(false);
+  const [assignedNames, setAssignedNames] = useState<string[]>([]);
+  const [loadingAssigned, setLoadingAssigned] = useState(false);
+
+  useEffect(() => {
+    const createdBy = license.createdBy;
+    if (!createdBy) {
+      setUploaderName(null);
+      return;
     }
+    setLoadingUploader(true);
+    fetchUserNamesByIds([createdBy])
+      .then((users) => {
+        const user =
+          users?.find(
+            (u) => u?.$id === createdBy || u?.accountId === createdBy
+          ) ?? users?.[0];
+        setUploaderName(user?.fullName ?? 'Unknown');
+      })
+      .catch(() => setUploaderName('Unknown'))
+      .finally(() => setLoadingUploader(false));
+  }, [license.createdBy]);
+
+  const managerIds = Array.isArray(license.assignedManagers)
+    ? license.assignedManagers
+    : license.assignedManagers
+      ? [license.assignedManagers]
+      : [];
+  useEffect(() => {
+    if (managerIds.length === 0) {
+      setAssignedNames([]);
+      return;
+    }
+    setLoadingAssigned(true);
+    fetchUserNamesByIds(managerIds)
+      .then((users) => {
+        const names = managerIds.map(
+          (id) =>
+            users?.find((u) => u?.$id === id || u?.accountId === id)
+              ?.fullName ?? id
+        );
+        setAssignedNames(names);
+      })
+      .catch(() => setAssignedNames(managerIds))
+      .finally(() => setLoadingAssigned(false));
+  }, [managerIds.join(',')]);
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClick?.();
   };
 
-  return (
-    <Card
-      className="glass-card hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
-      onClick={onClick}
-    >
-      <div className="glass-card-cap" />
-      <CardContent className="p-4 sm:p-6">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Key className="h-5 w-5 text-[#0f5384] flex-shrink-0" />
-            <h3 className="font-semibold text-slate-900 truncate">
-              {license.licenseName}
-            </h3>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {getStatusBadge(license.status)}
-            <div onClick={(e) => e.stopPropagation()}>
-              <LicenseActionDropdown
-                license={license}
-                onRefresh={onRefresh}
-              />
-            </div>
-          </div>
-        </div>
+  const expiryDate = license.licenseExpiryDate || license.expirationDate;
+  const issueDate = license.issueDate || license.purchaseDate;
+  const divisionLabel =
+    license.division || license.department
+      ? String(license.division || license.department).replace(/-/g, ' ')
+      : null;
 
-        {license.licenseNumber && (
-          <p className="text-sm text-slate-600 mb-3">#{license.licenseNumber}</p>
+  return (
+    <div className="file-card relative" onClick={handleCardClick}>
+      {/* Professional cap (same as contract card) */}
+      <div
+        className="absolute top-0 left-0 right-0 h-4 rounded-t-[18px]"
+        style={{
+          background: 'rgba(214, 215, 216, 0.5)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+        }}
+      />
+
+      <div className="flex justify-between text-slate-700 mt-2">
+        <Thumbnail
+          type="application/pdf"
+          extension="pdf"
+          url={license.licenseUrl ?? ''}
+          className="!size-20"
+          imageClassName="!size-11"
+        />
+        <div className="flex flex-col items-end justify-between">
+          <div onClick={(e) => e.stopPropagation()}>
+            <LicenseActionDropdown license={license} onRefresh={onRefresh} />
+          </div>
+          <span
+            className="inline-block px-2 py-1 text-slate-800 text-xs rounded-xl font-medium"
+            style={detailBoxStyle}
+          >
+            {license.fileSize != null && license.fileSize > 0
+              ? convertFileSize({ sizeInBytes: license.fileSize })
+              : '—'}
+          </span>
+        </div>
+      </div>
+
+      <div className="file-card-details">
+        <p className="subtitle-2 line-clamp-1">{license.licenseName}</p>
+        {(license.status || expiryDate) && (
+          <>
+            <div className="mb-1 flex items-center gap-2 flex-wrap">
+              {statusBadge(license.status, expiryDate)}
+            </div>
+            <hr className="border-slate-200 my-1" />
+          </>
         )}
 
-        <div className="space-y-2 text-sm">
-          {license.issueDate && (
-            <div className="flex items-center gap-2 text-slate-700">
-              <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
-              <span className="text-xs">
-                Issued:{' '}
-                <FormattedDate date={license.issueDate} className="inline" />
-              </span>
-            </div>
-          )}
-
-          {(license.licenseExpiryDate || license.expirationDate) && (
-            <div className="flex items-center gap-2 text-slate-700">
-              <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
-              <span className="text-xs">
-                Expires:{' '}
-                <FormattedDate
-                  date={license.licenseExpiryDate || license.expirationDate}
-                  className="inline"
-                />
-              </span>
-            </div>
-          )}
-
-          {license.assignedManagers &&
-            Array.isArray(license.assignedManagers) &&
-            license.assignedManagers.length > 0 && (
-              <div className="flex items-center gap-2 text-slate-700">
-                <Users className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                <span className="text-xs truncate">
-                  {license.assignedManagers.length}{' '}
-                  {license.assignedManagers.length === 1
-                    ? 'manager'
-                    : 'managers'}
-                </span>
+        <div className="flex flex-col gap-3">
+          {/* License number */}
+          {license.licenseNumber && (
+            <div className="rounded-lg p-2" style={detailBoxStyle}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
+                  License number:
+                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="body-2 text-slate-700 break-words">
+                    {license.licenseNumber}
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
+          )}
 
-          {(license.division || license.department) && (
-            <div className="flex items-center gap-2 text-slate-600">
-              <Building2 className="h-4 w-4 text-slate-500 flex-shrink-0" />
-              <span className="text-xs">
-                {license.division || license.department}
-              </span>
+          {/* Issued */}
+          {issueDate && (
+            <div className="rounded-lg p-2" style={detailBoxStyle}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
+                  Issued:
+                </p>
+                <div className="min-w-0 flex-1">
+                  <FormattedDate
+                    date={issueDate}
+                    className="body-2 text-slate-700 break-words"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Expires */}
+          {expiryDate && (
+            <div className="rounded-lg p-2" style={detailBoxStyle}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
+                  Expires:
+                </p>
+                <div className="min-w-0 flex-1">
+                  <FormattedDate
+                    date={expiryDate}
+                    className="body-2 text-slate-700 break-words"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Division */}
+          {divisionLabel && (
+            <div className="rounded-lg p-2" style={detailBoxStyle}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                <Building2 className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
+                  Division:
+                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="body-2 text-slate-700 break-words capitalize">
+                    {divisionLabel}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Assigned To */}
+          {(managerIds.length > 0 || loadingAssigned) && (
+            <div className="rounded-lg p-2" style={detailBoxStyle}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
+                  Assigned To:
+                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="body-2 text-slate-700 break-words">
+                    {loadingAssigned
+                      ? 'Loading...'
+                      : assignedNames.length > 0
+                        ? assignedNames.join(', ')
+                        : '—'}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+
+        <hr className="my-1 border-white/30" />
+        <p className="caption line-clamp-1 text-light-200">
+          By:{' '}
+          {loadingUploader
+            ? 'Loading...'
+            : (uploaderName ?? (license.createdBy ? 'Unknown' : '—'))}
+        </p>
+      </div>
+    </div>
   );
 }

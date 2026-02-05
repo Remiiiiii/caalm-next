@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   CheckCircle,
   IdCard,
+  ChartColumnIncreasing,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { License } from '@/types/licenses';
@@ -126,23 +127,22 @@ export default function LicensesMetricsBar({
   return (
     <section className="mb-6 w-full">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Cost Card */}
+        {/* Total Value Card */}
         {metrics.totalCost > 0 && (
           <Card className="glass-card">
+            {/* Professional Cap */}
             <div className="glass-card-cap" />
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium sidebar-gradient-text">
-                    Total Cost
-                  </p>
-                  <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-                    <span>${metrics.totalCost.toLocaleString()}</span>
-                    <span className="inline-block ml-2 pb-1">
-                      <DollarSign className="h-8 w-8 text-slate-600" />
-                    </span>
-                  </div>
-                </div>
+            <CardContent className="p-4 pt-5">
+              {/* Label with Icon */}
+              <div className="flex items-center gap-1.5 mb-2">
+                <DollarSign className="h-3 w-3 text-slate-700" />
+                <p className="body-2 text-slate-700 text-sm">Total Value</p>
+              </div>
+              {/* Value Display Area */}
+              <div className="glass-card-inner">
+                <p className="h3 text-navy font-bold text-center">
+                  ${metrics.totalCost.toLocaleString()}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -150,40 +150,45 @@ export default function LicensesMetricsBar({
 
         {/* Total Licenses Card */}
         <Card className="glass-card">
+          {/* Professional Cap */}
           <div className="glass-card-cap" />
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium sidebar-gradient-text">
-                  Total Licenses
-                </p>
-                <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-                  <span>{metrics.totalLicenses.toLocaleString()}</span>
-                  <span className="inline-block ml-2 pb-1">
-                    <IdCard className="h-8 w-8 text-slate-600" />
-                  </span>
-                </div>
-              </div>
+          <CardContent className="p-4 pt-5">
+            {/* Label with Icon */}
+            <div className="flex items-center gap-1.5 mb-2">
+              <FileText className="h-3 w-3 text-slate-700" />
+              <p className="body-2 text-slate-700 text-sm">Total Licenses</p>
+            </div>
+            {/* Value Display Area */}
+            <div className="glass-card-inner">
+              <p className="h3 text-navy font-bold text-center">
+                {metrics.totalLicenses.toLocaleString()}
+              </p>
             </div>
           </CardContent>
         </Card>
 
         {/* Active Licenses Card */}
         <Card className="glass-card">
+          {/* Professional Cap */}
           <div className="glass-card-cap" />
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium sidebar-gradient-text">
-                  Active
-                </p>
-                <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-                  <span>{metrics.activeCount.toLocaleString()}</span>
-                  <span className="inline-block ml-2 pb-1">
-                    <CheckCircle className="h-8 w-8 text-green" />
-                  </span>
-                </div>
-              </div>
+          <CardContent className="p-4 pt-5">
+            {/* Label with Icon */}
+            <div className="flex items-center gap-1.5 mb-2">
+              <CheckCircle className="h-3 w-3 text-slate-700" />
+              <p className="body-2 text-slate-700 text-sm">Active</p>
+            </div>
+            {/* Value Display Area */}
+            <div className="glass-card-inner">
+              <p className="h3 text-navy font-bold text-center">
+                {metrics.activeCount}
+              </p>
+              <p className="text-xs text-slate-600 text-center mt-1.5">
+                {metrics.totalLicenses > 0
+                  ? `${Math.round(
+                      (metrics.activeCount / metrics.totalLicenses) * 100
+                    )}% of total`
+                  : 'No contracts'}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -218,19 +223,17 @@ export default function LicensesMetricsBar({
         {metrics.totalQuantity > 0 && (
           <Card className="glass-card">
             <div className="glass-card-cap" />
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium sidebar-gradient-text">
-                    Utilization
-                  </p>
-                  <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-                    <span>{metrics.utilizationRate.toFixed(1)}%</span>
-                  </div>
-                  <p className="text-xs text-slate-600 mt-1">
-                    {metrics.usedQuantity} / {metrics.totalQuantity} used
-                  </p>
-                </div>
+            <CardContent className="p-4 pt-5">
+              {/* Label with Icon */}
+              <div className="flex items-center gap-1.5 mb-2">
+                <ChartColumnIncreasing className="h-3 w-3 text-slate-700" />
+                <p className="body-2 text-slate-700 text-sm">Utilization</p>
+              </div>
+              {/* Value Display Area */}
+              <div className="glass-card-inner">
+                <p className="h3 text-navy font-bold text-center">
+                  {metrics.utilizationRate.toFixed(1)}%
+                </p>
               </div>
             </CardContent>
           </Card>

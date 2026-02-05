@@ -83,21 +83,21 @@ const SECTION_ICONS: Record<
   { src: string; width: number; height: number }
 > = {
   Calendar: { src: '/assets/icons/calendar2.svg', width: 24, height: 24 },
-  Contracts: { src: '/assets/icons/contracts.svg', width: 24, height: 24 },
-  Licenses: { src: '/assets/icons/license.svg', width: 24, height: 24 },
-  Documents: { src: '/assets/icons/documents.svg', width: 20, height: 20 },
-  Audits: { src: '/assets/icons/audit.svg', width: 24, height: 24 },
-  Team: { src: '/assets/icons/team.svg', width: 24, height: 24 },
+  Contracts: { src: '/assets/icons/contracts.svg', width: 30, height: 30 },
+  Licenses: { src: '/assets/icons/license.svg', width: 28, height: 28 },
+  Documents: { src: '/assets/icons/documents.svg', width: 24, height: 24 },
+  Audits: { src: '/assets/icons/audit.svg', width: 28, height: 28 },
+  Team: { src: '/assets/icons/team.svg', width: 28, height: 28 },
   'Reports & Analytics': {
     src: '/assets/icons/reports-analytics.svg',
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
   },
-  Settings: { src: '/assets/icons/settings.svg', width: 24, height: 24 },
+  Settings: { src: '/assets/icons/settings.svg', width: 28, height: 28 },
   'My Roles & Permissions': {
     src: '/assets/icons/shield.svg',
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
   },
 };
 
@@ -676,8 +676,8 @@ const Sidebar = memo(({ name, avatar, email, role, division }: Props) => {
                         <span className="flex items-center gap-2">
                           <span className="text-[#03AFBF]">
                             <svg
-                              width="24"
-                              height="24"
+                              width="28"
+                              height="28"
                               viewBox="0 0 26 26"
                               fill="none"
                               xmlns="http://www.w3.org/2000/svg"

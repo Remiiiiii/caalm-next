@@ -3875,34 +3875,28 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
                         </div>
+                        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+                          <FormField
+                            control={form.control}
+                            name="alertNotes"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="shad-form-label">
+                                  Alert Notes
+                                </FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    rows={2}
+                                    placeholder="Include context for who needs to know what and when"
+                                    {...field}
+                                    className="bg-white border-slate-300 resize-none"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                        <FormField
-                          control={form.control}
-                          name="alertNotes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="shad-form-label">
-                                Alert Notes
-                              </FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  rows={2}
-                                  placeholder="Include context for who needs to know what and when"
-                                  {...field}
-                                  className="bg-white border-slate-300 resize-none"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    )}
-
-                    {/* Step 7: Notifications & Renewal Alerts */}
-                    {currentStep === 7 && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
                             name="alertRecipientIds"
@@ -3922,7 +3916,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                                 <FormMessage />
                               </FormItem>
                             )}
-                          />
+                            />
                         </div>
                       </div>
                     )}
@@ -4035,7 +4029,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             )}
                           />
                         </div>
-
+                    <div className="grid grid-cols-1 md:grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                         <FormField
                           control={form.control}
                           name="businessPurpose"
@@ -4056,7 +4050,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                             </FormItem>
                           )}
                         />
-
+                      </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
                           <FormField
                             control={form.control}
@@ -4077,7 +4071,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               </FormItem>
                             )}
                           />
-
                           <FormField
                             control={form.control}
                             name="searchKeywords"
@@ -4097,8 +4090,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
                               </FormItem>
                             )}
                           />
+                          </div>
                         </div>
-                      </div>
                     )}
 
                     {/* Step 9: Legal & Governance */}

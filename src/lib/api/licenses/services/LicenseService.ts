@@ -227,7 +227,9 @@ export class LicenseService {
       assignedManagers: mappedData.assignedManagers || [],
       licenseUrl: mappedData.licenseUrl,
       fileId: mappedData.fileId,
-      fileRef: mappedData.fileRef,
+      fileSize: mappedData.fileSize
+        ? parseInt(String(mappedData.fileSize), 10)
+        : undefined,
 
       // Optional - Software licenses
       vendor: mappedData.vendor,
@@ -354,7 +356,6 @@ export class LicenseService {
       assignedManagers: mappedData.assignedManagers,
       licenseUrl: mappedData.licenseUrl,
       fileId: mappedData.fileId,
-      fileRef: mappedData.fileRef,
 
       // Optional - Software licenses
       vendor: mappedData.vendor,

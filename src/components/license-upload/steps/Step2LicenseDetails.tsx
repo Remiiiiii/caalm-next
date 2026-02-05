@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
+import type { Manager } from '../types';
 import {
   FormField,
   FormItem,
@@ -59,13 +60,24 @@ const DIVISIONS = [
   'cins-fins-snap',
 ];
 
-interface Step2LicenseDetailsProps {
+export interface Step2LicenseDetailsProps {
   form: UseFormReturn<LicenseUploadFormData>;
+  departments: string[];
+  filteredManagers: Manager[];
+  selectedManagers: string[];
+  setSelectedManagers: (ids: string[]) => void;
+  fetchDepartmentManagers: (department: string) => Promise<void>;
 }
 
 export default function Step2LicenseDetails({
   form,
+  departments,
+  filteredManagers,
+  selectedManagers,
+  setSelectedManagers,
+  fetchDepartmentManagers,
 }: Step2LicenseDetailsProps) {
+  const selectedDepartment = form.watch('department');
   return (
     <div className="space-y-4">
       {/* Basic Information */}
@@ -483,17 +495,62 @@ export default function Step2LicenseDetails({
                 <FormLabel className="text-sm text-slate-700 mb-1 block">
                   Department
                 </FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Department"
-                    {...field}
-                    className="bg-white border-slate-300"
-                  />
-                </FormControl>
+                <Select
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    fetchDepartmentManagers(value);
+                    setSelectedManagers([]);
+                  }}
+                  value={field.value || ''}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-white border-slate-300">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
+        </div>
+
+        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <FormLabel className="text-sm text-slate-700 mb-1 block">
+            Assigned To
+          </FormLabel>
+          {!selectedDepartment ? (
+            <p className="text-sm text-slate-500">
+              Select a department first to see managers.
+            </p>
+          ) : filteredManagers.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              No managers in the selected department.
+            </p>
+          ) : (
+            <Select
+              value={selectedManagers[0] || ''}
+              onValueChange={(value) => setSelectedManagers(value ? [value] : [])}
+            >
+              <SelectTrigger className="bg-white border-slate-300 mt-1">
+                <SelectValue placeholder="Select manager" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredManagers.map((manager) => (
+                  <SelectItem key={manager.$id} value={manager.$id}>
+                    {manager.fullName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 

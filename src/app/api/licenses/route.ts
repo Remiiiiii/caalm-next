@@ -28,15 +28,17 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    // Normalize null/empty to undefined so Zod optional/default apply (avoids "expected string, received null" and limit too_small)
+    const q = (name: string) => searchParams.get(name) ?? undefined;
     const queryParams = {
-      limit: searchParams.get('limit'),
-      offset: searchParams.get('offset'),
-      search: searchParams.get('search'),
-      vendor: searchParams.get('vendor'),
-      licenseType: searchParams.get('licenseType'),
-      status: searchParams.get('status'),
-      department: searchParams.get('department'),
-      expiringSoon: searchParams.get('expiringSoon'),
+      limit: q('limit') || undefined,
+      offset: q('offset') || undefined,
+      search: q('search') || undefined,
+      vendor: q('vendor') || undefined,
+      licenseType: q('licenseType') || undefined,
+      status: q('status') || undefined,
+      department: q('department') || undefined,
+      expiringSoon: q('expiringSoon') || undefined,
     };
 
     const validatedParams = licenseListQuerySchema.parse(queryParams);

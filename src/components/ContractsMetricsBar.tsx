@@ -81,7 +81,10 @@ export default function ContractsMetricsBar({
         activeCount++;
       }
 
-      if (status === 'pending-review' || status === 'under_review') {
+      if (
+        status === 'pending-review' ||
+        (status as string) === 'under_review'
+      ) {
         pendingCount++;
       }
 
@@ -109,7 +112,7 @@ export default function ContractsMetricsBar({
 
   return (
     <section className="mb-6 w-full">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Value Card */}
         {metrics.totalValue > 0 && (
           <Card className="glass-card">
