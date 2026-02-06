@@ -63,6 +63,12 @@ It is _EXTREMELY_ important that your generated code can be run immediately by t
 
 </making_code_changes>
 
+<response_and_edits>
+1. **No post-edit summaries**: Do not provide a summary of changes after making edits unless the user explicitly asks for one.
+2. **Follow .mdc rules**: Always follow all rules defined in `.cursor/rules/*.mdc` (workspace rules).
+3. **Show only changed lines**: When fixing errors, bug fixes, or any codebase changes, show or cite only the changed lines. Do not include unchanged context or full-file snippets.
+</response_and_edits>
+
 <pro_plan_usage_optimization>
 CRITICAL INSTRUCTION: To keep the user within their $20/month Pro plan limits, you MUST optimize token usage. Follow these rules strictly:
 
