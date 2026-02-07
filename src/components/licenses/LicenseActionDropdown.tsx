@@ -1,11 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
 import Image from 'next/image';
 
@@ -196,7 +192,7 @@ const LicenseActionDropdown = ({
       //   status: selectedStatus,
       //   path,
       // });
-      
+
       toast({
         title: 'Success',
         description: 'License status updated successfully',
@@ -260,11 +256,33 @@ const LicenseActionDropdown = ({
         return;
       }
 
-      // TODO: Implement download API call
-      // const response = await fetch(`/api/licenses/${license.$id}/download`);
-      // if (!response.ok) throw new Error('Download failed');
-      // const blob = await response.blob();
-      // ... download logic
+      const params = new URLSearchParams();
+      params.append('fileId', license.fileId);
+      const response = await fetch(`/api/files/download?${params.toString()}`);
+      if (!response.ok) throw new Error('Download failed');
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = license.licenseName || 'license-download';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename\*?=['"]?([^'";\n]+)/);
+        if (match?.[1]) {
+          filename = decodeURIComponent(match[1].replace(/^UTF-8''/, ''));
+        }
+      }
+      if (!filename.toLowerCase().endsWith('.pdf')) filename = `${filename}.pdf`;
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
 
       toast({
         title: 'Download',
@@ -328,7 +346,9 @@ const LicenseActionDropdown = ({
       case 'action-required':
         return 'Action Required';
       default:
-        return status.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+        return status
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, (l) => l.toUpperCase());
     }
   };
 
@@ -382,7 +402,7 @@ const LicenseActionDropdown = ({
                 <DropdownMenuItem
                   key={actionItem.value}
                   className="shad-dropdown-item"
-                  onClick={() => {
+                  onSelect={() => {
                     setAction(actionItem);
                     if (actionItem.value === 'details') {
                       setShowDetail(true);
@@ -427,12 +447,15 @@ const LicenseActionDropdown = ({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* View Details Dialog */}
+      {/* View Details Dialog - matches ActionDropdown Details */}
       {showDetail && (
         <Dialog open={showDetail} onOpenChange={setShowDetail}>
           <DialogContent className="max-w-[800px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+            <VisuallyHiddenPrimitive.Root>
+              <DialogTitle>License Details</DialogTitle>
+            </VisuallyHiddenPrimitive.Root>
             <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-            <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
               <div className="flex items-center justify-between ml-6">
                 <div className="flex items-center">
                   <div>
@@ -442,7 +465,7 @@ const LicenseActionDropdown = ({
                         License Details
                       </h2>
                     </div>
-                    <p className="text-sm text-slate-600 mt-1 ml-7">
+                    <p className="text-sm text-slate-600 mt-1 ml-14">
                       View license information
                     </p>
                   </div>
@@ -455,14 +478,6 @@ const LicenseActionDropdown = ({
                 onEdit={() => {
                   setShowDetail(false);
                   setShowEdit(true);
-                }}
-                onAllocate={() => {
-                  setShowDetail(false);
-                  setShowAllocate(true);
-                }}
-                onRenew={() => {
-                  setShowDetail(false);
-                  setShowRenew(true);
                 }}
               />
             </div>
@@ -500,28 +515,32 @@ const LicenseActionDropdown = ({
         />
       )}
 
-      {/* Allocate Dialog */}
+      {/* Allocate Dialog - controlled so no trigger on card */}
       {showAllocate && (
         <LicenseAllocationDialog
           license={license}
+          open={showAllocate}
+          onOpenChange={(open) => {
+            if (!open) setShowAllocate(false);
+          }}
           onSuccess={() => {
             setShowAllocate(false);
-            if (onRefresh) {
-              onRefresh();
-            }
+            if (onRefresh) onRefresh();
           }}
         />
       )}
 
-      {/* Renew Dialog */}
+      {/* Renew Dialog - controlled so no trigger on card */}
       {showRenew && (
         <LicenseRenewalDialog
           license={license}
+          open={showRenew}
+          onOpenChange={(open) => {
+            if (!open) setShowRenew(false);
+          }}
           onSuccess={() => {
             setShowRenew(false);
-            if (onRefresh) {
-              onRefresh();
-            }
+            if (onRefresh) onRefresh();
           }}
         />
       )}

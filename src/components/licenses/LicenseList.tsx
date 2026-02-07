@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Key, Calendar, DollarSign } from 'lucide-react';
+import { MoreVertical, Key, Calendar, Info, Minimize2 } from 'lucide-react';
 import type { License } from '@/types/licenses';
 import {
   DropdownMenu,
@@ -23,11 +23,9 @@ import {
 import LicenseForm from './LicenseForm';
 import LicenseAllocationDialog from './LicenseAllocationDialog';
 import LicenseRenewalDialog from './LicenseRenewalDialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import LicenseDetailView from './LicenseDetailView';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
 import { useState } from 'react';
 
 interface LicenseListProps {
@@ -49,13 +47,21 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
       case 'expired':
         return <Badge className="bg-red/10 text-red">Expired</Badge>;
       case 'pending_renewal':
-        return <Badge className="bg-orange/10 text-orange">Pending Renewal</Badge>;
+        return (
+          <Badge className="bg-orange/10 text-orange">Pending Renewal</Badge>
+        );
       case 'suspended':
-        return <Badge className="bg-slate-400/10 text-slate-600">Suspended</Badge>;
+        return (
+          <Badge className="bg-slate-400/10 text-slate-600">Suspended</Badge>
+        );
       case 'archived':
-        return <Badge className="bg-slate-300/10 text-slate-500">Archived</Badge>;
+        return (
+          <Badge className="bg-slate-300/10 text-slate-500">Archived</Badge>
+        );
       default:
-        return <Badge className="bg-slate-200/10 text-slate-600">Unknown</Badge>;
+        return (
+          <Badge className="bg-slate-200/10 text-slate-600">Unknown</Badge>
+        );
     }
   };
 
@@ -154,13 +160,20 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
                       {license.licenseType || 'N/A'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-4">{getStatusBadge(license.status)}</TableCell>
+                  <TableCell className="py-4">
+                    {getStatusBadge(license.status)}
+                  </TableCell>
                   <TableCell className="py-4 text-slate-700">
                     {license.quantity !== undefined ? (
                       <div>
-                        <span>{license.availableQuantity ?? license.quantity}</span>
+                        <span>
+                          {license.availableQuantity ?? license.quantity}
+                        </span>
                         {license.quantity > 0 && (
-                          <span className="text-slate-500"> / {license.quantity}</span>
+                          <span className="text-slate-500">
+                            {' '}
+                            / {license.quantity}
+                          </span>
                         )}
                       </div>
                     ) : (
@@ -174,7 +187,9 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
                     <div className="flex items-center gap-1.5">
                       <Calendar className="h-3 w-3 text-slate-500" />
                       <span className="text-slate-700">
-                        {formatDate(license.licenseExpiryDate || license.expirationDate)}
+                        {formatDate(
+                          license.licenseExpiryDate || license.expirationDate
+                        )}
                       </span>
                     </div>
                   </TableCell>
@@ -184,7 +199,11 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
                   <TableCell className="py-4 text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -221,7 +240,9 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
                         >
                           Renew
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red">Delete</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red">
+                          Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -236,23 +257,44 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
         <>
           {showDetail && (
             <Dialog open={showDetail} onOpenChange={setShowDetail}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogTitle>License Details</DialogTitle>
-                <LicenseDetailView
-                  license={selectedLicense}
-                  onEdit={() => {
-                    setShowDetail(false);
-                    setShowEdit(true);
-                  }}
-                  onAllocate={() => {
-                    setShowDetail(false);
-                    setShowAllocate(true);
-                  }}
-                  onRenew={() => {
-                    setShowDetail(false);
-                    setShowRenew(true);
-                  }}
-                />
+              <DialogContent className="max-w-[800px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+                <VisuallyHiddenPrimitive.Root>
+                  <DialogTitle>License Details</DialogTitle>
+                </VisuallyHiddenPrimitive.Root>
+                <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+                  <div className="flex items-center gap-2 px-6">
+                    <Info className="h-5 w-5 text-[#0f5384]" />
+                    <h2 className="text-xl font-semibold sidebar-gradient-text">
+                      License Details
+                    </h2>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1 ml-14">
+                    View license information
+                  </p>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
+                  <LicenseDetailView
+                    license={selectedLicense}
+                    onEdit={() => {
+                      setShowDetail(false);
+                      setShowEdit(true);
+                    }}
+                  />
+                </div>
+                <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between">
+                  <div className="text-xs text-slate-500">
+                    License details and metadata
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDetail(false)}
+                    className="primary-btn px-3 sm:px-4"
+                  >
+                    <Minimize2 className="w-4 h-4" />
+                    Close
+                  </Button>
+                </div>
               </DialogContent>
             </Dialog>
           )}
@@ -271,6 +313,13 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
           {showAllocate && (
             <LicenseAllocationDialog
               license={selectedLicense}
+              open={showAllocate}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setShowAllocate(false);
+                  setSelectedLicense(null);
+                }
+              }}
               onSuccess={() => {
                 setShowAllocate(false);
                 setSelectedLicense(null);
@@ -282,6 +331,13 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
           {showRenew && (
             <LicenseRenewalDialog
               license={selectedLicense}
+              open={showRenew}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setShowRenew(false);
+                  setSelectedLicense(null);
+                }
+              }}
               onSuccess={() => {
                 setShowRenew(false);
                 setSelectedLicense(null);

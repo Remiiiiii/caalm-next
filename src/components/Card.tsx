@@ -94,11 +94,20 @@ const riskLevelBadge = (risk: string) => {
 };
 
 import type { UIFileDoc } from '@/types/files';
-import { Building2, Calendar, UserCheck } from 'lucide-react';
+import {
+  Banknote,
+  Building2,
+  Calendar,
+  DollarSign,
+  Handshake,
+  UserCheck,
+} from 'lucide-react';
 
 interface CardProps {
   file: UIFileDoc;
   status?: string;
+  amount?: number;
+  vendor?: string;
   expirationDate?: string;
   assignedTo?: string;
   assignedToDepartment?: string;
@@ -110,6 +119,8 @@ interface CardProps {
 const Card = ({
   file,
   status,
+  amount,
+  vendor,
   expirationDate,
   assignedTo: propAssignedTo,
   assignedToDepartment: propAssignedToDepartment,
@@ -119,6 +130,18 @@ const Card = ({
   const [contractStatus, setContractStatus] = useState<string | undefined>(
     status || file.status
   );
+  const [contractAmount, setContractAmount] = useState<number | undefined>(
+    amount || file.amount
+  );
+  const [contractVendor, setContractVendor] = useState<string | undefined>(
+    vendor || file.vendor
+  );
+  const formattedContractAmount = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2, // Ensure at least two decimal places (e.g., .00)
+    maximumFractionDigits: 2, // Limit to two decimal places
+    useGrouping: true, // Automatically adds commas for thousands
+  }).format(contractAmount || 0);
+
   const [contractExpiryDate, setContractExpiryDate] = useState<
     string | undefined
   >(expirationDate || file.contractExpiryDate);
@@ -275,6 +298,10 @@ const Card = ({
               setContractStatus(contract.status);
             }
 
+            if (contract.amount) {
+              setContractAmount(contract.amount);
+            }
+
             if (contract.contractExpiryDate) {
               setContractExpiryDate(contract.contractExpiryDate);
             }
@@ -285,6 +312,10 @@ const Card = ({
 
             if (contract.assignedToDepartment) {
               setAssignedToDepartment(contract.assignedToDepartment);
+            }
+
+            if (contract.vendor) {
+              setContractVendor(contract.vendor);
             }
 
             // Store riskLevel from contract (prefer contract data over file prop)
@@ -585,6 +616,43 @@ const Card = ({
         )}
         {/* Horizontal divider between status and details */}
         <hr className="border-slate-200 my-1" />
+        <div
+          className="rounded-lg p-2"
+          style={{
+            background: 'rgba(255, 255, 255, 0.3)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 255, 255, 0.5)',
+          }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+            <Banknote className="h-4 w-4 text-slate-500 flex-shrink-0" />
+            <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
+              Value:
+            </p>
+            <div className="min-w-0 flex-1">${formattedContractAmount} USD</div>
+          </div>
+        </div>
+        {/* Vendor section */}
+        {contractVendor && (
+          <div
+            className="rounded-lg p-2"
+            style={{
+              background: 'rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.5)',
+            }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+              <Handshake className="h-4 w-4 text-slate-500 flex-shrink-0" />
+              <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
+                Vendor:
+              </p>
+              <div className="min-w-0 flex-1">{contractVendor}</div>
+            </div>
+          </div>
+        )}
         <div className="flex flex-col gap-3">
           {/* Uploaded on section */}
           <div
@@ -611,30 +679,38 @@ const Card = ({
           </div>
 
           {/* Expires on section */}
-          {contractExpiryDate && (
-            <div
-              className="rounded-lg p-2"
-              style={{
-                background: 'rgba(255, 255, 255, 0.3)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.5)',
-              }}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-                <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
-                  Expires on:
-                </p>
-                <div className="min-w-0 flex-1">
-                  <FormattedDate
-                    date={contractExpiryDate}
-                    className="body-2 text-slate-700 break-words"
-                  />
+          {contractExpiryDate &&
+            (() => {
+              const isExpired = new Date(contractExpiryDate) < new Date();
+              return (
+                <div
+                  className="rounded-lg p-2"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.3)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255, 255, 255, 0.5)',
+                  }}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                    <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
+
+                    <p
+                      className={`body-2 font-medium whitespace-nowrap ${isExpired ? '!text-[#E5252A]' : 'text-slate-700'}`}
+                    >
+                      {isExpired ? 'Expired on:' : 'Expires on:'}
+                    </p>
+
+                    <div className="min-w-0 flex-1">
+                      <FormattedDate
+                        date={contractExpiryDate}
+                        className={`body-2 break-words ${isExpired ? '!text-[#E5252A]' : 'text-slate-700'}`}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              );
+            })()}
 
           {/* Assigned To section */}
           {(assignedTo || assignedManagerUsers.length > 0) && (

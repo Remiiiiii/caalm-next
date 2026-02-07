@@ -7,7 +7,7 @@ import { FormattedDate } from '@/components/FormattedDateTime';
 import { fetchUserNamesByIds } from '@/lib/actions/user.actions';
 import LicenseActionDropdown from './LicenseActionDropdown';
 import type { License } from '@/types/licenses';
-import { Building2, Calendar } from 'lucide-react';
+import { Building2, Calendar, ScrollText } from 'lucide-react';
 
 // Match contract card status badge styling from Card.tsx
 function statusBadge(
@@ -190,6 +190,7 @@ export default function LicenseCard({
           {license.licenseNumber && (
             <div className="rounded-lg p-2" style={detailBoxStyle}>
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                <ScrollText className="h-4 w-4 text-slate-500 flex-shrink-0" />
                 <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                   License number:
                 </p>

@@ -29,13 +29,20 @@ import type { License } from '@/types/licenses';
 interface LicenseAllocationDialogProps {
   license: License;
   onSuccess?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export default function LicenseAllocationDialog({
   license,
   onSuccess,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: LicenseAllocationDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined && controlledOnOpenChange !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? controlledOnOpenChange! : setInternalOpen;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -89,13 +96,15 @@ export default function LicenseAllocationDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="primary-btn">
-          <Users className="h-4 w-4 mr-2" />
-          Allocate
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" className="primary-btn">
+            <Users className="h-4 w-4 mr-2" />
+            Allocate
+          </Button>
+        </DialogTrigger>
+      )}
+      <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
         <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
         <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
           <div className="flex items-center gap-3 px-6">
@@ -114,7 +123,8 @@ export default function LicenseAllocationDialog({
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="mb-4 p-4 bg-white rounded-lg border border-slate-200">
                 <p className="text-sm font-medium text-slate-700 mb-2">
-                  Available: {license.availableQuantity ?? license.quantity ?? 0}
+                  Available:{' '}
+                  {license.availableQuantity ?? license.quantity ?? 0}
                 </p>
                 <p className="text-xs text-slate-500">
                   Total: {license.quantity ?? 0} licenses
@@ -150,7 +160,9 @@ export default function LicenseAllocationDialog({
                 name="userIds"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assign to Users (User IDs, comma-separated)</FormLabel>
+                    <FormLabel>
+                      Assign to Users (User IDs, comma-separated)
+                    </FormLabel>
                     <FormControl>
                       <Input
                         placeholder="user-id-1, user-id-2"
@@ -174,7 +186,9 @@ export default function LicenseAllocationDialog({
                 name="departments"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assign to Departments (comma-separated)</FormLabel>
+                    <FormLabel>
+                      Assign to Departments (comma-separated)
+                    </FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Engineering, Sales"
@@ -182,7 +196,9 @@ export default function LicenseAllocationDialog({
                         onChange={(e) =>
                           field.onChange(
                             e.target.value
-                              ? e.target.value.split(',').map((dept) => dept.trim())
+                              ? e.target.value
+                                  .split(',')
+                                  .map((dept) => dept.trim())
                               : []
                           )
                         }
@@ -197,7 +213,9 @@ export default function LicenseAllocationDialog({
         </div>
 
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          <div className="text-xs text-slate-500">Allocate licenses to users or departments</div>
+          <div className="text-xs text-slate-500">
+            Allocate licenses to users or departments
+          </div>
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
@@ -211,7 +229,9 @@ export default function LicenseAllocationDialog({
               onClick={form.handleSubmit(onSubmit)}
               disabled={isSubmitting}
             >
-              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isSubmitting && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
               Allocate
             </Button>
           </div>

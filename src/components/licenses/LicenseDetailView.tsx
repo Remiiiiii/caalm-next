@@ -1,257 +1,183 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Key,
-  Calendar,
-  DollarSign,
-  Building,
-  Tag,
-  FileText,
-  Users,
-  RefreshCw,
-} from 'lucide-react';
+import { Key, FileText } from 'lucide-react';
 import type { License } from '@/types/licenses';
-import LicenseForm from './LicenseForm';
-import LicenseAllocationDialog from './LicenseAllocationDialog';
-import LicenseRenewalDialog from './LicenseRenewalDialog';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { convertFileSize } from '@/lib/utils';
+import FormattedDateTime from '@/components/FormattedDateTime';
 
 interface LicenseDetailViewProps {
   license: License;
   onEdit?: () => void;
-  onAllocate?: () => void;
-  onRenew?: () => void;
 }
 
-export default function LicenseDetailView({
-  license,
-  onEdit,
-  onAllocate,
-  onRenew,
-}: LicenseDetailViewProps) {
-  const getStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-green/10 text-green">Active</Badge>;
-      case 'expired':
-        return <Badge className="bg-red/10 text-red">Expired</Badge>;
-      case 'pending_renewal':
-        return <Badge className="bg-orange/10 text-orange">Pending Renewal</Badge>;
-      case 'suspended':
-        return <Badge className="bg-slate-400/10 text-slate-600">Suspended</Badge>;
-      case 'archived':
-        return <Badge className="bg-slate-300/10 text-slate-500">Archived</Badge>;
-      default:
-        return <Badge className="bg-slate-200/10 text-slate-600">Unknown</Badge>;
-    }
-  };
+function formatDate(dateString?: string): string {
+  if (!dateString) return 'N/A';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return 'N/A';
+  }
+}
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return 'N/A';
-    }
-  };
+function formatCurrency(amount?: number, currency?: string): string {
+  if (!amount) return 'N/A';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency || 'USD',
+  }).format(amount);
+}
 
-  const formatCurrency = (amount?: number, currency?: string) => {
-    if (!amount) return 'N/A';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'USD',
-    }).format(amount);
-  };
+function renderField(
+  label: string,
+  value: string | number | undefined | null
+): React.ReactNode {
+  const display =
+    value === undefined || value === null || value === '' ? 'N/A' : String(value);
+  return (
+    <div className="bg-white rounded-lg p-3 border border-slate-200 overflow-hidden">
+      <p className="text-sm text-slate-500 font-medium mb-1 break-words">{label}</p>
+      <p className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
+        {display}
+      </p>
+    </div>
+  );
+}
+
+function getStatusBadge(status?: string): React.ReactNode {
+  switch (status) {
+    case 'active':
+      return <Badge className="bg-green/10 text-green">Active</Badge>;
+    case 'expired':
+      return <Badge className="bg-red/10 text-red">Expired</Badge>;
+    case 'pending_renewal':
+    case 'pending-review':
+      return (
+        <Badge className="border-2 border-amber-400 bg-[#FFEA99] text-[#E86100]">
+          Pending Review
+        </Badge>
+      );
+    case 'suspended':
+      return <Badge className="bg-slate-400/10 text-slate-600">Suspended</Badge>;
+    case 'archived':
+      return <Badge className="bg-slate-300/10 text-slate-500">Archived</Badge>;
+    case 'action-required':
+      return <Badge className="bg-destructive/10 text-destructive">Action Required</Badge>;
+    default:
+      return <Badge className="bg-slate-200/10 text-slate-600">{status || 'Unknown'}</Badge>;
+  }
+}
+
+export default function LicenseDetailView({ license, onEdit }: LicenseDetailViewProps) {
+  const fileSizeStr =
+    license.fileSize != null && license.fileSize > 0
+      ? convertFileSize({ sizeInBytes: license.fileSize })
+      : 'N/A';
 
   return (
     <div className="space-y-6">
-      <Card className="glass-card">
-        <div className="glass-card-cap" />
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Key className="h-5 w-5 text-[#0f5384]" />
-                <h2 className="text-xl font-semibold sidebar-gradient-text">
-                  {license.licenseName}
-                </h2>
-              </div>
-              {license.licenseNumber && (
-                <p className="text-sm text-slate-600">#{license.licenseNumber}</p>
+      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
+          <Key className="h-6 w-6 text-[#0f5384]" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-slate-900 font-semibold break-words">{license.licenseName}</p>
+          {license.$createdAt && (
+            <p className="text-sm text-slate-600 mt-0.5">
+              <FormattedDateTime date={license.$createdAt} />
+            </p>
+          )}
+          <p className="text-xs text-slate-500 mt-0.5">{fileSizeStr}</p>
+        </div>
+        <div className="flex-shrink-0">{getStatusBadge(license.status)}</div>
+      </div>
+
+      <Accordion
+        type="multiple"
+        className="w-full space-y-4"
+        defaultValue={['file-info', 'license-info']}
+      >
+        <AccordionItem
+          value="file-info"
+          className="bg-white rounded-lg border border-slate-200 px-4 shadow-sm"
+        >
+          <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline py-4">
+            <FileText className="w-4 h-4 text-[#0f5384]" />
+            File Information
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="grid grid-cols-3 gap-3 pt-2 pb-4">
+              {renderField('Owner', license.createdBy ?? 'N/A')}
+              {renderField('Created', license.$createdAt ? formatDate(license.$createdAt) : 'N/A')}
+              {renderField('Last Modified', license.$updatedAt ? formatDate(license.$updatedAt) : 'N/A')}
+              {renderField('File ID', license.fileId ?? 'N/A')}
+              {renderField('Extension', 'pdf')}
+              {renderField('Size', fileSizeStr)}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem
+          value="license-info"
+          className="bg-white rounded-lg border border-slate-200 px-4 shadow-sm"
+        >
+          <AccordionTrigger className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:no-underline py-4">
+            <FileText className="w-4 h-4 text-[#0f5384]" />
+            License Information
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="grid grid-cols-3 gap-3 pt-2 pb-4">
+              {renderField('License Number', license.licenseNumber)}
+              {renderField('Vendor', license.vendor)}
+              {renderField('Product', license.product)}
+              {renderField(
+                'License Type',
+                license.licenseType?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
               )}
+              {renderField(
+                'Category',
+                license.category?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+              )}
+              {renderField(
+                'Quantity',
+                license.quantity !== undefined
+                  ? `${license.availableQuantity ?? license.quantity} / ${license.quantity}`
+                  : undefined
+              )}
+              {renderField('Cost', formatCurrency(license.cost, license.currencyCode))}
+              {renderField('Issue Date', formatDate(license.issueDate || license.purchaseDate))}
+              {renderField(
+                'Expiration Date',
+                formatDate(license.licenseExpiryDate || license.expirationDate)
+              )}
+              {renderField('Issuing Authority', license.issuingAuthority)}
+              {renderField('Renewal Date', formatDate(license.renewalDate))}
+              {renderField('Auto Renew', license.autoRenew ? 'Yes' : 'No')}
+              {renderField('Division', license.division || license.department)}
+              {renderField('Business Unit', license.businessUnit)}
+              {renderField('Compliance', license.compliance)}
             </div>
-            {getStatusBadge(license.status)}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Vendor</p>
-              <p className="text-sm text-slate-900">{license.vendor || 'N/A'}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Product</p>
-              <p className="text-sm text-slate-900">{license.product || 'N/A'}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">License Type</p>
-              <p className="text-sm text-slate-900">
-                {license.licenseType
-                  ? license.licenseType.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-                  : 'N/A'}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Category</p>
-              <p className="text-sm text-slate-900">
-                {license.category
-                  ? license.category.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-                  : 'N/A'}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Quantity</p>
-              <p className="text-sm text-slate-900">
-                {license.quantity !== undefined ? (
-                  <>
-                    {license.availableQuantity ?? license.quantity} / {license.quantity}
-                  </>
-                ) : (
-                  'N/A'
-                )}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Cost</p>
-              <p className="text-sm text-slate-900">
-                {formatCurrency(license.cost, license.currencyCode)}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Issue Date</p>
-              <p className="text-sm text-slate-900">{formatDate(license.issueDate || license.purchaseDate)}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Expiration Date</p>
-              <p className="text-sm text-slate-900">{formatDate(license.licenseExpiryDate || license.expirationDate)}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Issuing Authority</p>
-              <p className="text-sm text-slate-900">{license.issuingAuthority || 'N/A'}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Renewal Date</p>
-              <p className="text-sm text-slate-900">{formatDate(license.renewalDate)}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Auto Renew</p>
-              <p className="text-sm text-slate-900">{license.autoRenew ? 'Yes' : 'No'}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Division</p>
-              <p className="text-sm text-slate-900">{license.division || license.department || 'N/A'}</p>
-            </div>
-
-            {license.compliance && (
-              <div>
-                <p className="text-xs text-slate-500 mb-1">Compliance</p>
-                <p className="text-sm text-slate-900">{license.compliance}</p>
-              </div>
+            {license.description && (
+              <div className="mt-3">{renderField('Description', license.description)}</div>
             )}
-
-            {license.licenseUrl && (
-              <div>
-                <p className="text-xs text-slate-500 mb-1">License URL</p>
-                <a href={license.licenseUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                  {license.licenseUrl}
-                </a>
-              </div>
+            {license.notes && (
+              <div className="mt-3">{renderField('Notes', license.notes)}</div>
             )}
-
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Business Unit</p>
-              <p className="text-sm text-slate-900">{license.businessUnit || 'N/A'}</p>
-            </div>
-          </div>
-
-          {license.description && (
-            <div className="mt-4">
-              <p className="text-xs text-slate-500 mb-1">Description</p>
-              <p className="text-sm text-slate-900">{license.description}</p>
-            </div>
-          )}
-
-          {license.notes && (
-            <div className="mt-4">
-              <p className="text-xs text-slate-500 mb-1">Notes</p>
-              <p className="text-sm text-slate-900">{license.notes}</p>
-            </div>
-          )}
-
-          {license.tags && license.tags.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs text-slate-500 mb-2">Tags</p>
-              <div className="flex flex-wrap gap-2">
-                {license.tags.map((tag, index) => (
-                  <Badge key={index} variant="outline">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-200">
-            {onEdit && (
-              <LicenseForm
-                license={license}
-                trigger={
-                  <Button variant="outline" className="primary-btn">
-                    Edit
-                  </Button>
-                }
-                onSuccess={() => {
-                  onEdit();
-                }}
-              />
-            )}
-            {onAllocate && (
-              <LicenseAllocationDialog
-                license={license}
-                onSuccess={() => {
-                  onAllocate();
-                }}
-              />
-            )}
-            {onRenew && (
-              <LicenseRenewalDialog
-                license={license}
-                onSuccess={() => {
-                  onRenew();
-                }}
-              />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
