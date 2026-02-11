@@ -71,9 +71,7 @@ const STATUSES = [
   'inactive',
   'expired',
   'pending-review',
-  'pending_renewal',
   'suspended',
-  'archived',
   'action-required',
 ];
 

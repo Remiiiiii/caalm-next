@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/appwrite/admin';
 import { appwriteConfig } from '@/lib/appwrite/config';
-import { Query, ID } from 'appwrite';
+import { Query, ID } from 'node-appwrite';
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);

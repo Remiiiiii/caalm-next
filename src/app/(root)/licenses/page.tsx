@@ -2,9 +2,9 @@ import { getCurrentUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';
 import LicensesMetricsBar from '@/components/LicensesMetricsBar';
 import { LicensesViewProvider } from '@/components/LicensesView';
-import LicensesTopControls from '@/components/LicensesTopControls';
 import LicensesControlBar from '@/components/LicensesControlBar';
 import LicensesViewClient from '@/components/LicensesViewClient';
+import LicensesHeaderActions from '@/components/LicensesHeaderActions';
 import { createAdminClient } from '@/lib/appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { Query } from 'node-appwrite';
@@ -62,23 +62,23 @@ const Page = async () => {
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-      <div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
-        <h1 className="h1 capitalize sidebar-gradient-text">Licenses</h1>
-      </div>
-
-      <div className="mb-6 flex items-center justify-end">
-        <LicenseForm />
-      </div>
-
       <LicensesViewProvider>
-        <section className="w-full">
-          <LicensesMetricsBar licenses={licenses} />
-          <LicensesTopControls
+        <div className="flex items-center gap-4 mb-4 justify-between w-full">
+          <h1 className="h1 capitalize sidebar-gradient-text">Licenses</h1>
+          <LicensesHeaderActions
             licenses={licenses}
             departments={uniqueDepartments}
             assignedManagers={uniqueAssignedManagers}
           />
-          <LicensesControlBar />
+        </div>
+
+        <div className="mb-6 flex items-center justify-end">
+          <LicenseForm />
+        </div>
+
+        <section className="w-full">
+          <LicensesMetricsBar licenses={licenses} />
+          <LicensesControlBar licenses={licenses} />
         </section>
 
         {licenses.length > 0 ? (

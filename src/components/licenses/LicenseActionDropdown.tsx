@@ -127,6 +127,12 @@ const LicenseActionDropdown = ({
   );
   const [emails, setEmails] = useState<string[]>([]);
 
+  useEffect(() => {
+    if (showStatus) {
+      setSelectedStatus(license.status || 'active');
+    }
+  }, [showStatus, license.status]);
+
   const path = usePathname() || '';
   const router = useRouter();
   const { toast } = useToast();
@@ -186,12 +192,16 @@ const LicenseActionDropdown = ({
   const handleStatusChange = async () => {
     setIsLoading(true);
     try {
-      // TODO: Implement status update API call
-      // const success = await updateLicenseStatus({
-      //   licenseId: license.$id,
-      //   status: selectedStatus,
-      //   path,
-      // });
+      const res = await fetch(`/api/licenses/${license.$id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: selectedStatus }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || 'Update failed');
+      }
 
       toast({
         title: 'Success',
@@ -202,10 +212,12 @@ const LicenseActionDropdown = ({
         onRefresh();
       }
     } catch (error) {
-      console.error('Status update failed:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update license status',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to update license status',
         variant: 'destructive',
       });
     } finally {
@@ -270,7 +282,8 @@ const LicenseActionDropdown = ({
           filename = decodeURIComponent(match[1].replace(/^UTF-8''/, ''));
         }
       }
-      if (!filename.toLowerCase().endsWith('.pdf')) filename = `${filename}.pdf`;
+      if (!filename.toLowerCase().endsWith('.pdf'))
+        filename = `${filename}.pdf`;
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -306,9 +319,7 @@ const LicenseActionDropdown = ({
       'inactive',
       'expired',
       'pending-review',
-      'pending_renewal',
       'suspended',
-      'archived',
       'action-required',
     ];
   };
@@ -319,8 +330,6 @@ const LicenseActionDropdown = ({
       case 'active':
         return '!font-medium border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D]';
       case 'pending-review':
-      case 'pending_renewal':
-        return '!font-medium border-2 border-amber-400 bg-[#FFEA99] text-[#E86100]';
       case 'action-required':
         return '!font-medium border-2 border-red-400 bg-destructive/10 text-destructive';
       case 'inactive':
@@ -329,8 +338,6 @@ const LicenseActionDropdown = ({
         return '!font-medium border-2 border-purple-600 bg-purple-50 text-purple-900';
       case 'suspended':
         return '!font-medium border-2 border-slate-400 bg-slate-300 text-slate-700';
-      case 'archived':
-        return '!font-medium border-2 border-slate-300 bg-slate-200 text-slate-600';
       default:
         return '!font-medium border-2 border-slate-200 bg-slate-100 text-slate-800';
     }
@@ -341,8 +348,6 @@ const LicenseActionDropdown = ({
     switch (normalized) {
       case 'pending-review':
         return 'Pending Review';
-      case 'pending_renewal':
-        return 'Pending Renewal';
       case 'action-required':
         return 'Action Required';
       default:

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/appwrite/admin';
 import { appwriteConfig } from '@/lib/appwrite/config';
-import { Query } from 'appwrite';
+import { Query } from 'node-appwrite';
 import { CONTRACT_DEPARTMENTS } from '@/constants';
 import CacheManager from '@/lib/services/cache-manager';
 import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';

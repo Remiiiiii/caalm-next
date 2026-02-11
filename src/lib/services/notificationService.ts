@@ -12,7 +12,7 @@ import {
   NotificationSettingsDoc,
   UpsertNotificationSettingsRequest,
 } from '@/types/notifications';
-import { Query } from 'appwrite';
+import { Query } from 'node-appwrite';
 import { CacheManager } from '@/lib/services/cache-manager';
 import type { appwriteMessagingService as AppwriteMessagingServiceInstance } from './appwriteMessagingService';
 

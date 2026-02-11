@@ -1,4 +1,4 @@
-import { ID } from 'appwrite';
+import { ID } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite';
 
 interface SMSNotificationData {

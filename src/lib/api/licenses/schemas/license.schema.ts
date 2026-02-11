@@ -18,9 +18,7 @@ export const licenseCreateSchema = z.object({
       'inactive',
       'expired',
       'pending-review',
-      'pending_renewal',
       'suspended',
-      'archived',
       'action-required',
     ])
     .optional()
@@ -109,15 +107,27 @@ export const licenseListQuerySchema = z.object({
     .union([z.string(), z.number(), z.null(), z.undefined()])
     .transform((v) => (v == null || v === '' ? 0 : Number(v)))
     .pipe(z.number().int().min(0)),
-  search: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
-  vendor: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
-  licenseType: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
-  status: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
-  department: z.union([z.string(), z.null(), z.undefined()]).transform((v) => (v == null || v === '' ? undefined : v)),
+  search: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === '' ? undefined : v)),
+  vendor: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === '' ? undefined : v)),
+  licenseType: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === '' ? undefined : v)),
+  status: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === '' ? undefined : v)),
+  department: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === '' ? undefined : v)),
   expiringSoon: z
     .union([z.string(), z.boolean(), z.null(), z.undefined()])
     .optional()
-    .transform((v) => (v == null || v === '' ? undefined : v === 'true' || v === true)),
+    .transform((v) =>
+      v == null || v === '' ? undefined : v === 'true' || v === true
+    ),
 });
 
 /**

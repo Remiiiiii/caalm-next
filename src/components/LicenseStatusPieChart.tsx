@@ -2,7 +2,14 @@
 
 import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+} from 'recharts';
 import { Key } from 'lucide-react';
 import type { License } from '@/types/licenses';
 import useSWR from 'swr';
@@ -15,9 +22,7 @@ interface LicenseStatusPieChartProps {
 const COLORS = {
   active: '#10B981',
   expired: '#EF4444',
-  pending_renewal: '#F59E0B',
   suspended: '#6B7280',
-  archived: '#9CA3AF',
 };
 
 export default function LicenseStatusPieChart({
@@ -32,12 +37,13 @@ export default function LicenseStatusPieChart({
     }
   );
 
-  const licenses = propsLicenses ?? data?.data?.licenses ?? data?.licenses ?? [];
+  const licenses =
+    propsLicenses ?? data?.data?.licenses ?? data?.licenses ?? [];
 
   const chartData = useMemo(() => {
     const statusCounts: Record<string, number> = {};
 
-    licenses.forEach((license) => {
+    licenses.forEach((license: License) => {
       const status = license.status || 'unknown';
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
@@ -126,7 +132,7 @@ export default function LicenseStatusPieChart({
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ name, percentage }) => `${name}: ${percentage}%`}
+              label={({ name, value }) => `${name}: ${value}%`}
               outerRadius={80}
               fill="#8884d8"
               dataKey="value"
@@ -141,7 +147,10 @@ export default function LicenseStatusPieChart({
         </ResponsiveContainer>
         <div className="mt-4 space-y-2">
           {chartData.map((item) => (
-            <div key={item.name} className="flex items-center justify-between text-sm">
+            <div
+              key={item.name}
+              className="flex items-center justify-between text-sm"
+            >
               <div className="flex items-center gap-2">
                 <div
                   className="w-3 h-3 rounded-full"

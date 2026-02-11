@@ -41,9 +41,7 @@ export async function GET(request: NextRequest) {
         const expiredLicenses = allLicenses.licenses.filter(
           (l: any) => l.status === 'expired'
         ).length;
-        const pendingRenewal = allLicenses.licenses.filter(
-          (l: any) => l.status === 'pending_renewal'
-        ).length;
+
         const totalCost = allLicenses.licenses.reduce(
           (sum: number, l: any) => sum + (l.cost || 0),
           0
@@ -53,7 +51,6 @@ export async function GET(request: NextRequest) {
           totalLicenses,
           activeLicenses,
           expiredLicenses,
-          pendingRenewal,
           totalCost,
         };
         break;

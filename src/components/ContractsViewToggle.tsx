@@ -9,7 +9,6 @@ export function ContractsViewToggle() {
 
   return (
     <div className="flex items-center">
-      <p className="body-1 hidden text-slate-700 sm:block mr-2 font-medium">View:</p>
       <div className="inline-flex items-center rounded-lg border-2 border-slate-200 bg-white p-1 shadow-sm">
         <button
           onClick={() => handleViewChange('card')}
@@ -19,11 +18,11 @@ export function ContractsViewToggle() {
             'disabled:pointer-events-none disabled:opacity-50',
             view === 'card'
               ? 'bg-[#03afbf] text-white shadow-md hover:bg-[#02a0af]'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              : 'text-slate-600 hover:bg-slate-50'
           )}
           aria-label="Card view"
         >
-          <LayoutGrid className="h-4 w-4" />
+          <LayoutGrid className="h-5 w-5" />
         </button>
         <button
           onClick={() => handleViewChange('table')}
@@ -33,11 +32,11 @@ export function ContractsViewToggle() {
             'disabled:pointer-events-none disabled:opacity-50',
             view === 'table'
               ? 'bg-[#03afbf] text-white shadow-md hover:bg-[#02a0af]'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              : 'text-slate-600 hover:bg-slate-50'
           )}
           aria-label="Table view"
         >
-          <Table className="h-4 w-4" />
+          <Table className="h-5 w-5" />
         </button>
       </div>
     </div>

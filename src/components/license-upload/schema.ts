@@ -18,9 +18,7 @@ export const licenseUploadSchema = z.object({
       'inactive',
       'expired',
       'pending-review',
-      'pending_renewal',
       'suspended',
-      'archived',
       'action-required',
     ])
     .default('active'),

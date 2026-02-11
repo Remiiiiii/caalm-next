@@ -41,9 +41,7 @@ const LICENSE_STATUS_OPTIONS = [
   { value: 'inactive', label: 'Inactive' },
   { value: 'expired', label: 'Expired' },
   { value: 'pending-review', label: 'Pending Review' },
-  { value: 'pending_renewal', label: 'Pending Renewal' },
   { value: 'suspended', label: 'Suspended' },
-  { value: 'archived', label: 'Archived' },
   { value: 'action-required', label: 'Action Required' },
 ];
 
@@ -82,25 +80,24 @@ export default function Step2LicenseDetails({
     <div className="space-y-4">
       {/* Basic Information */}
       <div className="space-y-4">
-
         <FormField
           control={form.control}
           name="licenseName"
           render={({ field }) => (
             <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-            <FormItem>
-              <FormLabel className="text-sm text-slate-700 mb-1 block">
-                License Name <span className="text-red">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Enter license name"
-                  {...field}
-                  className="bg-white border-slate-300"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+              <FormItem>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  License Name <span className="text-red">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Enter license name"
+                    {...field}
+                    className="bg-white border-slate-300"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             </div>
           )}
         />
@@ -159,29 +156,29 @@ export default function Step2LicenseDetails({
             control={form.control}
             name="licenseType"
             render={({ field }) => (
-                <div className="">
-              <FormItem>
-                <FormLabel className="text-sm text-slate-700 mb-1 block">
-                  License Type <span className="text-red">*</span>
-                </FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="bg-white border-slate-300">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {LICENSE_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type
-                          .replace(/_/g, ' ')
-                          .replace(/\b\w/g, (l) => l.toUpperCase())}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
+              <div className="">
+                <FormItem>
+                  <FormLabel className="text-sm text-slate-700 mb-1 block">
+                    License Type <span className="text-red">*</span>
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-white border-slate-300">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {LICENSE_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type
+                            .replace(/_/g, ' ')
+                            .replace(/\b\w/g, (l) => l.toUpperCase())}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               </div>
             )}
           />
@@ -222,7 +219,6 @@ export default function Step2LicenseDetails({
 
       {/* Vendor & Product */}
       <div className="space-y-4">
-
         <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
           <FormField
             control={form.control}
@@ -268,7 +264,6 @@ export default function Step2LicenseDetails({
 
       {/* Dates */}
       <div className="space-y-4">
-
         <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
           <FormField
             control={form.control}
@@ -348,32 +343,30 @@ export default function Step2LicenseDetails({
         </div>
 
         <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-        <FormField
-          control={form.control}
-          name="issuingAuthority"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-sm text-slate-700 mb-1 block">
-                Issuing Authority
-              </FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Issuing authority"
-                  {...field}
-                  className="bg-white border-slate-300"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+          <FormField
+            control={form.control}
+            name="issuingAuthority"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-slate-700 mb-1 block">
+                  Issuing Authority
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Issuing authority"
+                    {...field}
+                    className="bg-white border-slate-300"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       </div>
 
       {/* Financial Information */}
       <div className="space-y-4">
-
         <div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
           <FormField
             control={form.control}
@@ -453,7 +446,6 @@ export default function Step2LicenseDetails({
 
       {/* Organization & Assignment */}
       <div className="space-y-4">
-
         <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
           <FormField
             control={form.control}
@@ -537,7 +529,9 @@ export default function Step2LicenseDetails({
           ) : (
             <Select
               value={selectedManagers[0] || ''}
-              onValueChange={(value) => setSelectedManagers(value ? [value] : [])}
+              onValueChange={(value) =>
+                setSelectedManagers(value ? [value] : [])
+              }
             >
               <SelectTrigger className="bg-white border-slate-300 mt-1">
                 <SelectValue placeholder="Select manager" />
@@ -556,7 +550,6 @@ export default function Step2LicenseDetails({
 
       {/* Renewal Settings */}
       <div className="space-y-4">
-
         <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
           <FormField
             control={form.control}

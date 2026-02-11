@@ -402,16 +402,31 @@ export const useNotificationTypeConfig = (typeKey: string) => {
 
 // Fetcher specifically for unread count API
 const unreadCountFetcher = async (url: string) => {
-  const response = await fetch(url);
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (networkError) {
+    const message =
+      networkError instanceof Error ? networkError.message : String(networkError);
+    console.error(
+      `[CLIENT] Failed to fetch unread count from ${url}: network error`,
+      message
+    );
+    throw new Error(`Failed to fetch unread count: ${message}`);
+  }
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`[CLIENT] Failed to fetch unread count from ${url}:`, {
+    const details = {
       status: response.status,
       statusText: response.statusText,
-      error: errorText,
-    });
+      body: errorText || '(empty)',
+    };
+    console.error(
+      `[CLIENT] Failed to fetch unread count from ${url}:`,
+      JSON.stringify(details)
+    );
     throw new Error(
-      `Failed to fetch unread count: ${response.status} ${response.statusText}`
+      `Failed to fetch unread count: ${response.status} ${response.statusText}${errorText ? ` — ${errorText}` : ''}`
     );
   }
   const data = await response.json();

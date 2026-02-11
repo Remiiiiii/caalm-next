@@ -12,13 +12,13 @@ import { ContractsViewToggle } from '@/components/ContractsViewToggle';
 import { ContractsViewProvider } from '@/components/ContractsView';
 import ContractsControlBar from '@/components/ContractsControlBar';
 import ContractsMetricsBar from '@/components/ContractsMetricsBar';
-import ContractsTopControls from '@/components/ContractsTopControls';
+import ContractsHeaderActions from '@/components/ContractsHeaderActions';
 import StorageProgressBar from '@/components/StorageProgressBar';
 
 type FileType = 'image' | 'video' | 'audio' | 'document' | 'other';
 import { createAdminClient } from '@/lib/appwrite/admin';
 import { appwriteConfig } from '@/lib/appwrite/config';
-import { Query } from 'appwrite';
+import { Query } from 'node-appwrite';
 
 interface SearchParamProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -54,10 +54,10 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
         sortBy === '$createdAt'
           ? '$createdAt'
           : sortBy === 'name'
-          ? 'contractName'
-          : sortBy === 'size'
-          ? 'amount'
-          : sortBy;
+            ? 'contractName'
+            : sortBy === 'size'
+              ? 'amount'
+              : sortBy;
 
       if (orderBy === 'asc') {
         queries.push(Query.orderAsc(contractSortField));
@@ -235,25 +235,19 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-      <div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
-        <h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
-      </div>
-      {/* File Usage Overview Section - Only show on uploads page */}
-      {(!type || type.toLowerCase() === 'uploads') && (
-        <section className="mb-8 w-full">
-          <FileUsageOverview totalSpace={totalSpace} user={user} />
-        </section>
-      )}
       {type.toLowerCase() === 'contracts' ? (
         <ContractsViewProvider>
-          <section className="w-full">
-            <ContractsMetricsBar files={contractDocuments} />
-            <ContractsTopControls
+          <div className="flex items-center gap-4 mb-4 justify-between w-full">
+            <h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
+            <ContractsHeaderActions
               files={contractDocuments}
               departments={uniqueDepartments}
               assignedManagers={uniqueAssignedManagers}
             />
-            <ContractsControlBar />
+          </div>
+          <section className="w-full">
+            <ContractsMetricsBar files={contractDocuments} />
+            <ContractsControlBar files={contractDocuments} />
           </section>
 
           {/* Render the files */}
@@ -274,6 +268,15 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
         </ContractsViewProvider>
       ) : (
         <>
+          <div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
+            <h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
+          </div>
+          {/* File Usage Overview Section - Only show on uploads page */}
+          {(!type || type.toLowerCase() === 'uploads') && (
+            <section className="mb-8 w-full">
+              <FileUsageOverview totalSpace={totalSpace} user={user} />
+            </section>
+          )}
           <section className="w-full">
             <div className="total-size-section">
               <p className="body-1">
@@ -284,7 +287,6 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
                 <p className="body-1 hidden text-light-200 sm:block">
                   Sort by:
                 </p>
-
                 <Sort />
               </div>
             </div>

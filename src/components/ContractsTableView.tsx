@@ -25,7 +25,11 @@ import { useToast } from '@/hooks/use-toast';
 import ManagerAvatars from './ManagerAvatars';
 
 // Map contract status to badge color and label (same as Card component)
-const statusBadge = (status: string, isExpired?: boolean, contractExpiryDate?: string) => {
+const statusBadge = (
+  status: string,
+  isExpired?: boolean,
+  contractExpiryDate?: string
+) => {
   // Check if contract is expired (priority: status > isExpired flag > expiry date)
   const isContractExpired =
     status?.toLowerCase() === 'expired' ||
@@ -45,7 +49,8 @@ const statusBadge = (status: string, isExpired?: boolean, contractExpiryDate?: s
   let label = status;
   switch (status) {
     case 'pending-review':
-      color = 'border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium';
+      color =
+        'border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium';
       label = 'Pending Review';
       break;
     case 'action-required':
@@ -54,15 +59,18 @@ const statusBadge = (status: string, isExpired?: boolean, contractExpiryDate?: s
       label = 'Action Required';
       break;
     case 'active':
-      color = 'border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
+      color =
+        'border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium';
       label = 'Active';
       break;
     case 'inactive':
-      color = 'border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium';
+      color =
+        'border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium';
       label = 'Inactive';
       break;
     default:
-      color = 'border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
+      color =
+        'border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium';
       label = status;
   }
   return <span className={`inline-block px-2 py-1 ${color}`}>{label}</span>;
@@ -448,7 +456,8 @@ export default function ContractsTableView({
   }
 
   return (
-    <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg w-[99.5%]">
+    <Card className="bg-white/30 backdrop-blur border mt-6 border-white/40 shadow-lg w-[99.5%]">
+      <div className="glass-card-cap" />
       <CardContent className="p-6">
         <div className="w-full overflow-x-auto">
           <Table>
@@ -495,7 +504,7 @@ export default function ContractsTableView({
                         type={file.type}
                         extension={file.extension}
                         url={file.url}
-                        className="!size-10 flex-shrink-0"
+                        className="size-10! shrink-0"
                         imageClassName="!size-8"
                       />
                       <p

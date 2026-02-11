@@ -46,7 +46,6 @@ export type AppUser = {
 
 export const getUserByEmail = async (email: string) => {
   try {
-    // Check cache first for faster lookups during sign-in
     const cacheKey = `user:email:${email.toLowerCase()}`;
     const cachedUser = await CacheManager.withCache(
       'users',
@@ -95,7 +94,7 @@ export const getUserByAccountId = async (
     const result = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: appwriteConfig.usersCollectionId || 'users',
-      queries: [Query.equal('accountId', accountId)],
+      queries: [sdk.Query.equal('accountId', accountId)],
     });
 
     if (!result.rows.length) {
@@ -177,7 +176,7 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
         Query.equal('email', email),
         Query.equal('used', false),
         Query.greaterThan('expiresAt', now.toISOString()),
-        Query.limit(1), // Only need to check if one exists
+        Query.limit(1),
       ],
     });
 
@@ -223,7 +222,6 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
     // Return a dummy userId for compatibility with existing code
     return ID.unique();
   } catch (error) {
-    // Handle specific errors with user-friendly messages
     if (error instanceof Error) {
       if (
         error.message.includes('Invalid email') ||
@@ -247,15 +245,11 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
       } else if (error.message.includes('Failed to send email')) {
         throw new Error('Failed to send verification code. Please try again.');
       } else {
-        // Log the original error for debugging but return a user-friendly message
         console.error('Email OTP error:', error);
         throw new Error('Failed to send verification code. Please try again.');
       }
     }
-
-    // Fallback for unknown error types
-    console.error('Unknown email OTP error:', error);
-    throw new Error('An unexpected error occurred. Please try again.');
+    throw error;
   }
 };
 
@@ -430,7 +424,7 @@ export const verifyOTP = async ({
         Query.equal('email', email),
         Query.equal('otp', otp),
         Query.equal('used', false),
-        Query.limit(1), // Only need one result
+        Query.limit(1),
       ],
     });
 
@@ -600,7 +594,7 @@ export const getCurrentUser = async () => {
     const user = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: appwriteConfig.usersCollectionId || 'users',
-      queries: [Query.equal('accountId', result.$id)],
+      queries: [sdk.Query.equal('accountId', result.$id)],
     });
 
     if (process.env.NODE_ENV === 'development') {
@@ -1124,7 +1118,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   const result = await tablesDB.listRows({
     databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
-    queries: [Query.equal('token', token)],
+    queries: [sdk.Query.equal('token', token)],
   });
   if (result.total === 0) throw new Error('Invalid invitation token');
   const invite = result.rows[0];
@@ -1212,7 +1206,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
   const rolesResult = await tablesDB.listRows({
     databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: 'roles',
-    queries: [Query.equal('name', invite.role)],
+    queries: [sdk.Query.equal('name', invite.role)],
   });
 
   if (rolesResult.total > 0) {
@@ -1225,9 +1219,9 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
         databaseId: appwriteConfig.databaseId || 'default-db',
         tableId: 'user_roles',
         queries: [
-          Query.equal('userId', user.$id),
-          Query.equal('orgId', defaultOrg.orgId),
-          Query.equal('roleId', roleId),
+          sdk.Query.equal('userId', user.$id),
+          sdk.Query.equal('orgId', defaultOrg.orgId),
+          sdk.Query.equal('roleId', roleId),
         ],
       });
 
@@ -1286,7 +1280,7 @@ export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
   const result = await tablesDB.listRows({
     databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
-    queries: [Query.equal('token', token)],
+    queries: [sdk.Query.equal('token', token)],
   });
   if (result.total === 0) throw new Error('Invalid invitation token');
   const invite = result.rows[0];
@@ -1304,7 +1298,7 @@ export const deleteInvitation = async ({ token }: RevokeInvitationParams) => {
   const result = await tablesDB.listRows({
     databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
-    queries: [Query.equal('token', token)],
+    queries: [sdk.Query.equal('token', token)],
   });
   if (result.total === 0) throw new Error('Invalid invitation token');
   const invite = result.rows[0];
@@ -1325,9 +1319,9 @@ export const listPendingInvitations = async ({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: INVITATIONS_COLLECTION,
       queries: [
-        Query.equal('orgId', orgId),
-        Query.equal('status', 'pending'),
-        Query.equal('revoked', false),
+        sdk.Query.equal('orgId', orgId),
+        sdk.Query.equal('status', 'pending'),
+        sdk.Query.equal('revoked', false),
       ],
     });
     return result.rows;
@@ -1472,7 +1466,7 @@ export const getInvitationByToken = async (token: string) => {
   const result = await tablesDB.listRows({
     databaseId: appwriteConfig.databaseId || 'default-db',
     tableId: INVITATIONS_COLLECTION,
-    queries: [Query.equal('token', token)],
+    queries: [sdk.Query.equal('token', token)],
   });
   return result.total > 0 ? result.rows[0] : null;
 };
@@ -1487,7 +1481,7 @@ export const resendInvitation = async ({ token }: { token: string }) => {
     const result = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId!,
       tableId: INVITATIONS_COLLECTION,
-      queries: [Query.equal('token', token)],
+      queries: [sdk.Query.equal('token', token)],
     });
 
     if (result.rows.length === 0) {
@@ -1567,7 +1561,7 @@ export const updateUserProfile = async ({
     const userList = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: appwriteConfig.usersCollectionId || 'users',
-      queries: [Query.equal('accountId', accountId)],
+      queries: [sdk.Query.equal('accountId', accountId)],
     });
     if (userList.total === 0) throw new Error('User not found');
     const userDoc = userList.rows[0];
@@ -1680,7 +1674,7 @@ export const getActiveUsersCount = async () => {
     const result = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: appwriteConfig.usersCollectionId || 'users',
-      queries: [Query.equal('status', 'active')],
+      queries: [sdk.Query.equal('status', 'active')],
     });
     return result.total;
   } catch (error: any) {
@@ -1740,7 +1734,7 @@ export const getUnreadNotificationsCount = async (userId: string) => {
     const res = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: 'notifications',
-      queries: [Query.equal('userId', userId), Query.equal('read', false)],
+      queries: [sdk.Query.equal('userId', userId), sdk.Query.equal('read', false)],
     });
     return res.total;
   } catch (error) {
@@ -1794,7 +1788,7 @@ export const getUninvitedUsers = async () => {
     const pendingInvitations = await tablesDB.listRows({
       databaseId: appwriteConfig.databaseId || 'default-db',
       tableId: INVITATIONS_COLLECTION,
-      queries: [Query.equal('status', 'pending')],
+      queries: [sdk.Query.equal('status', 'pending')],
     });
 
     // Filter out users who are already in the users collection or have pending invitations

@@ -67,12 +67,11 @@ export class LicenseService {
     // Map database status values to code status values (for display)
     if (mapped.status) {
       const statusMap: Record<string, string> = {
-        'pending-review': 'pending_renewal', // Map to code value for display
+        'pending-review': 'pending-review', // Map to code value for display
         'action-required': 'action-required',
         inactive: 'inactive',
         expired: 'expired',
         suspended: 'suspended',
-        archived: 'archived',
         active: 'active',
       };
       // Keep both values for compatibility
@@ -134,11 +133,9 @@ export class LicenseService {
       // Map code status values to database status values
       const statusMap: Record<string, string> = {
         expired: 'expired',
-        pending_renewal: 'pending-review', // Map to database value
+        'pending-review': 'pending-review', // Map to database value
         suspended: 'suspended',
-        archived: 'archived',
         inactive: 'inactive',
-        'pending-review': 'pending-review',
         'action-required': 'action-required',
         active: 'active',
       };

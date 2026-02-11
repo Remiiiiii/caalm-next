@@ -45,10 +45,14 @@ function renderField(
   value: string | number | undefined | null
 ): React.ReactNode {
   const display =
-    value === undefined || value === null || value === '' ? 'N/A' : String(value);
+    value === undefined || value === null || value === ''
+      ? 'N/A'
+      : String(value);
   return (
     <div className="bg-white rounded-lg p-3 border border-slate-200 overflow-hidden">
-      <p className="text-sm text-slate-500 font-medium mb-1 break-words">{label}</p>
+      <p className="text-sm text-slate-500 font-medium mb-1 break-words">
+        {label}
+      </p>
       <p className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
         {display}
       </p>
@@ -62,7 +66,6 @@ function getStatusBadge(status?: string): React.ReactNode {
       return <Badge className="bg-green/10 text-green">Active</Badge>;
     case 'expired':
       return <Badge className="bg-red/10 text-red">Expired</Badge>;
-    case 'pending_renewal':
     case 'pending-review':
       return (
         <Badge className="border-2 border-amber-400 bg-[#FFEA99] text-[#E86100]">
@@ -70,17 +73,28 @@ function getStatusBadge(status?: string): React.ReactNode {
         </Badge>
       );
     case 'suspended':
-      return <Badge className="bg-slate-400/10 text-slate-600">Suspended</Badge>;
-    case 'archived':
-      return <Badge className="bg-slate-300/10 text-slate-500">Archived</Badge>;
+      return (
+        <Badge className="bg-slate-400/10 text-slate-600">Suspended</Badge>
+      );
     case 'action-required':
-      return <Badge className="bg-destructive/10 text-destructive">Action Required</Badge>;
+      return (
+        <Badge className="bg-destructive/10 text-destructive">
+          Action Required
+        </Badge>
+      );
     default:
-      return <Badge className="bg-slate-200/10 text-slate-600">{status || 'Unknown'}</Badge>;
+      return (
+        <Badge className="bg-slate-200/10 text-slate-600">
+          {status || 'Unknown'}
+        </Badge>
+      );
   }
 }
 
-export default function LicenseDetailView({ license, onEdit }: LicenseDetailViewProps) {
+export default function LicenseDetailView({
+  license,
+  onEdit,
+}: LicenseDetailViewProps) {
   const fileSizeStr =
     license.fileSize != null && license.fileSize > 0
       ? convertFileSize({ sizeInBytes: license.fileSize })
@@ -93,7 +107,9 @@ export default function LicenseDetailView({ license, onEdit }: LicenseDetailView
           <Key className="h-6 w-6 text-[#0f5384]" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-slate-900 font-semibold break-words">{license.licenseName}</p>
+          <p className="text-slate-900 font-semibold break-words">
+            {license.licenseName}
+          </p>
           {license.$createdAt && (
             <p className="text-sm text-slate-600 mt-0.5">
               <FormattedDateTime date={license.$createdAt} />
@@ -120,8 +136,14 @@ export default function LicenseDetailView({ license, onEdit }: LicenseDetailView
           <AccordionContent>
             <div className="grid grid-cols-3 gap-3 pt-2 pb-4">
               {renderField('Owner', license.createdBy ?? 'N/A')}
-              {renderField('Created', license.$createdAt ? formatDate(license.$createdAt) : 'N/A')}
-              {renderField('Last Modified', license.$updatedAt ? formatDate(license.$updatedAt) : 'N/A')}
+              {renderField(
+                'Created',
+                license.$createdAt ? formatDate(license.$createdAt) : 'N/A'
+              )}
+              {renderField(
+                'Last Modified',
+                license.$updatedAt ? formatDate(license.$updatedAt) : 'N/A'
+              )}
               {renderField('File ID', license.fileId ?? 'N/A')}
               {renderField('Extension', 'pdf')}
               {renderField('Size', fileSizeStr)}
@@ -144,11 +166,15 @@ export default function LicenseDetailView({ license, onEdit }: LicenseDetailView
               {renderField('Product', license.product)}
               {renderField(
                 'License Type',
-                license.licenseType?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+                license.licenseType
+                  ?.replace(/_/g, ' ')
+                  .replace(/\b\w/g, (l) => l.toUpperCase())
               )}
               {renderField(
                 'Category',
-                license.category?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+                license.category
+                  ?.replace(/_/g, ' ')
+                  .replace(/\b\w/g, (l) => l.toUpperCase())
               )}
               {renderField(
                 'Quantity',
@@ -156,8 +182,14 @@ export default function LicenseDetailView({ license, onEdit }: LicenseDetailView
                   ? `${license.availableQuantity ?? license.quantity} / ${license.quantity}`
                   : undefined
               )}
-              {renderField('Cost', formatCurrency(license.cost, license.currencyCode))}
-              {renderField('Issue Date', formatDate(license.issueDate || license.purchaseDate))}
+              {renderField(
+                'Cost',
+                formatCurrency(license.cost, license.currencyCode)
+              )}
+              {renderField(
+                'Issue Date',
+                formatDate(license.issueDate || license.purchaseDate)
+              )}
               {renderField(
                 'Expiration Date',
                 formatDate(license.licenseExpiryDate || license.expirationDate)
@@ -170,7 +202,9 @@ export default function LicenseDetailView({ license, onEdit }: LicenseDetailView
               {renderField('Compliance', license.compliance)}
             </div>
             {license.description && (
-              <div className="mt-3">{renderField('Description', license.description)}</div>
+              <div className="mt-3">
+                {renderField('Description', license.description)}
+              </div>
             )}
             {license.notes && (
               <div className="mt-3">{renderField('Notes', license.notes)}</div>

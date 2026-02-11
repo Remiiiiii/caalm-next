@@ -16,9 +16,7 @@ export interface License {
     | 'inactive'
     | 'expired'
     | 'pending-review'
-    | 'pending_renewal'
     | 'suspended'
-    | 'archived'
     | 'action-required';
 
   // Optional - Core fields

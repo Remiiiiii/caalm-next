@@ -45,9 +45,7 @@ const LICENSE_STATUS_OPTIONS = [
   { value: 'inactive', label: 'Inactive' },
   { value: 'expired', label: 'Expired' },
   { value: 'pending-review', label: 'Pending Review' },
-  { value: 'pending_renewal', label: 'Pending Renewal' },
   { value: 'suspended', label: 'Suspended' },
-  { value: 'archived', label: 'Archived' },
   { value: 'action-required', label: 'Action Required' },
 ];
 

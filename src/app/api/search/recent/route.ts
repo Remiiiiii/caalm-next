@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/appwrite/admin';
 import { appwriteConfig } from '@/lib/appwrite/config';
-import { Query } from 'appwrite';
+import { Query } from 'node-appwrite';
 
 export async function GET(request: NextRequest) {
   try {

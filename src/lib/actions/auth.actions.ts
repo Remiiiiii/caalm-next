@@ -1,7 +1,8 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { Client, Account, Models } from 'appwrite';
+import { Client, Account } from 'node-appwrite';
+import type { Models } from 'appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 
 export const getSessionUser =

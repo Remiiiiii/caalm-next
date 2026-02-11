@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { Client, Account } from 'appwrite';
+import { Client, Account } from 'node-appwrite';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { createAdminClient } from '@/lib/appwrite';
 import { Query } from 'node-appwrite';

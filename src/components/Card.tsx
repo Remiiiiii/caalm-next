@@ -535,7 +535,7 @@ const Card = ({
           type={file.type}
           extension={file.extension}
           url={file.url}
-          className="!size-20"
+          className="size-20"
           imageClassName="!size-11"
         />
         <div className="flex flex-col items-end justify-between">
@@ -626,7 +626,7 @@ const Card = ({
           }}
         >
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-            <Banknote className="h-4 w-4 text-slate-500 flex-shrink-0" />
+            <Banknote className="h-4 w-4 text-slate-500 shrink-0 " />
             <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
               Value:
             </p>
@@ -645,7 +645,7 @@ const Card = ({
             }}
           >
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-              <Handshake className="h-4 w-4 text-slate-500 flex-shrink-0" />
+              <Handshake className="h-4 w-4 text-slate-500 shrink-0 " />
               <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                 Vendor:
               </p>
@@ -665,14 +665,14 @@ const Card = ({
             }}
           >
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-              <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
+              <Calendar className="h-4 w-4 text-slate-500 shrink-0 " />
               <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                 Uploaded on:
               </p>
               <div className="min-w-0 flex-1">
                 <FormattedDateTime
                   date={file.$createdAt}
-                  className="body-2 text-slate-700 break-words"
+                  className="body-2 text-slate-700 wrap-break-words"
                 />
               </div>
             </div>
@@ -693,10 +693,10 @@ const Card = ({
                   }}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-                    <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                    <Calendar className="h-4 w-4 text-slate-500 shrink-0 " />
 
                     <p
-                      className={`body-2 font-medium whitespace-nowrap ${isExpired ? '!text-[#E5252A]' : 'text-slate-700'}`}
+                      className={`body-2 font-medium whitespace-nowrap ${isExpired ? 'text-[#E5252A]' : 'text-slate-700'}`}
                     >
                       {isExpired ? 'Expired on:' : 'Expires on:'}
                     </p>
@@ -704,7 +704,7 @@ const Card = ({
                     <div className="min-w-0 flex-1">
                       <FormattedDate
                         date={contractExpiryDate}
-                        className={`body-2 break-words ${isExpired ? '!text-[#E5252A]' : 'text-slate-700'}`}
+                        className={`body-2 wrap-break-words ${isExpired ? 'text-[#E5252A]' : 'text-slate-700'}`}
                       />
                     </div>
                   </div>
@@ -724,7 +724,7 @@ const Card = ({
               }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-                <UserCheck className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                <UserCheck className="h-4 w-4 text-slate-500 shrink-0 " />
                 <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                   Assigned To:
                 </p>
@@ -747,12 +747,12 @@ const Card = ({
               }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-                <Building2 className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                <Building2 className="h-4 w-4 text-slate-500 shrink-0 " />
                 <p className="body-2 text-slate-700 font-medium whitespace-nowrap">
                   Department:
                 </p>
                 <div className="min-w-0 flex-1">
-                  <p className="body-2 text-slate-700 break-words">
+                  <p className="body-2 text-slate-700 wrap-break-words">
                     {assignedToDepartment}
                   </p>
                 </div>

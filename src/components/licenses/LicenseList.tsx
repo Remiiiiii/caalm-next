@@ -46,17 +46,9 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
         return <Badge className="bg-green/10 text-green">Active</Badge>;
       case 'expired':
         return <Badge className="bg-red/10 text-red">Expired</Badge>;
-      case 'pending_renewal':
-        return (
-          <Badge className="bg-orange/10 text-orange">Pending Renewal</Badge>
-        );
       case 'suspended':
         return (
           <Badge className="bg-slate-400/10 text-slate-600">Suspended</Badge>
-        );
-      case 'archived':
-        return (
-          <Badge className="bg-slate-300/10 text-slate-500">Archived</Badge>
         );
       default:
         return (

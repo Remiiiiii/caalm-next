@@ -307,12 +307,6 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
             Draft
           </Badge>
         );
-      case 'archived':
-        return (
-          <Badge className="bg-slate-100 text-slate-800 border-slate-200">
-            Archived
-          </Badge>
-        );
       default:
         return (
           <Badge className="bg-slate-100 text-slate-800 border-slate-200">

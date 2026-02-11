@@ -92,11 +92,6 @@ export default function LicensesMetricsBar({
       if (status === 'expired') {
         expiredCount++;
       }
-
-      if (status === 'pending_renewal') {
-        pendingRenewalCount++;
-      }
-
       if (license.quantity) {
         totalQuantity += license.quantity;
       }

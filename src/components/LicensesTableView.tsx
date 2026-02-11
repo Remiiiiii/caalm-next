@@ -34,11 +34,6 @@ const statusBadge = (status: string) => {
         'border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium';
       label = 'Pending Review';
       break;
-    case 'pending_renewal':
-      color =
-        'border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium';
-      label = 'Pending Renewal';
-      break;
     case 'action-required':
       color =
         'border-2 border-red-400 bg-destructive/10 text-destructive text-xs rounded-xl font-medium';
@@ -63,11 +58,6 @@ const statusBadge = (status: string) => {
       color =
         'border-2 border-slate-400 bg-slate-300 text-slate-700 text-xs rounded-xl font-medium';
       label = 'Suspended';
-      break;
-    case 'archived':
-      color =
-        'border-2 border-slate-300 bg-slate-200 text-slate-600 text-xs rounded-xl font-medium';
-      label = 'Archived';
       break;
     default:
       color =
@@ -403,7 +393,8 @@ export default function LicensesTableView({
   }
 
   return (
-    <Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg w-[99.5%]">
+    <Card className="bg-white/30 backdrop-blur border mt-6 border-white/40 shadow-lg w-[99.5%]">
+      <div className="glass-card-cap" />
       <CardContent className="p-6">
         <div className="w-full overflow-x-auto">
           <Table>
@@ -450,7 +441,7 @@ export default function LicensesTableView({
                         type="application/pdf"
                         extension="pdf"
                         url=""
-                        className="!size-10 flex-shrink-0"
+                        className="size-10! shrink-0"
                         imageClassName="!size-8"
                       />
                       <div className="min-w-0">

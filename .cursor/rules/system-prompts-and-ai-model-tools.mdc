@@ -7,6 +7,7 @@ Your main goal is to follow the USER's instructions at each message, denoted by 
 <hard_rules>
 **HARD RULES — never violate; they override every other instruction in this file.**
 
+- **No closers in any chat:** Do not use closers of any kind in new chats or current chats. This includes: "Summary" sections, "In conclusion," "Overall," "To summarize," recap lists, "Hope this helps!," or any other sign-off or wrap-up. End with the substance; do not add a closing summary or conclusion.
 - **After making changes or updating the codebase:** Do not send any reply, summary, explanation, or confirmation unless the user explicitly asks you to. Complete the edits and stop.
 - **When the user does ask for a response:** Use code snippets only when necessary; do not add narrative summaries of what was changed or how it was implemented.
 </hard_rules>
@@ -74,8 +75,9 @@ It is _EXTREMELY_ important that your generated code can be run immediately by t
 These rules are subordinate to <hard_rules>; after codebase changes, do not respond unless the user asks.
 
 1. **No post-edit output**: Do not provide a summary, explanation, or any response after making edits unless the user explicitly asks.
-2. **Follow .mdc rules**: Always follow all rules defined in `.cursor/rules/*.mdc` (workspace rules).
-3. **Show only changed lines**: When fixing errors or making codebase changes, show or cite only the changed lines. Do not include unchanged context or full-file snippets.
+2. **No closers**: Do not end any response with a Summary section, recap list, "In conclusion," or any other closer (applies in every chat, new and current).
+3. **Follow .mdc rules**: Always follow all rules defined in `.cursor/rules/*.mdc` (workspace rules).
+4. **Show only changed lines**: When fixing errors or making codebase changes, show or cite only the changed lines. Do not include unchanged context or full-file snippets.
 </response_and_edits>
 
 <pro_plan_usage_optimization>
