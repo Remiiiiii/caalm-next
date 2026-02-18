@@ -694,9 +694,8 @@ const Card = ({
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
                     <Calendar className="h-4 w-4 text-slate-500 shrink-0 " />
-
                     <p
-                      className={`body-2 font-medium whitespace-nowrap ${isExpired ? 'text-[#E5252A]' : 'text-slate-700'}`}
+                      className={`body-2 font-medium whitespace-nowrap ${isExpired ? 'text-[#E5252A]!' : 'text-slate-700'}`}
                     >
                       {isExpired ? 'Expired on:' : 'Expires on:'}
                     </p>
@@ -704,7 +703,7 @@ const Card = ({
                     <div className="min-w-0 flex-1">
                       <FormattedDate
                         date={contractExpiryDate}
-                        className={`body-2 wrap-break-words ${isExpired ? 'text-[#E5252A]' : 'text-slate-700'}`}
+                        className={`body-2 wrap-break-words ${isExpired ? 'text-[#E5252A]!' : 'text-slate-700'}`}
                       />
                     </div>
                   </div>

@@ -32,6 +32,10 @@ export default function LicensesTopControls({
         activeCount++;
       }
 
+      if (status === 'pending-review' || status === 'suspended') {
+        pendingCount++;
+      }
+
       if (status === 'action-required') {
         actionRequiredCount++;
       }
@@ -72,10 +76,11 @@ export default function LicensesTopControls({
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
+            aria-label="Search licenses"
             placeholder="Search licenses..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 min-w-md w-full sm:w-64 bg-white border-slate-200 rounded-md"
+            className="pl-9 min-w-56 w-full sm:w-64 bg-white border-slate-200 rounded-md"
           />
         </div>
 

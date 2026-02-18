@@ -460,7 +460,7 @@ const LicenseActionDropdown = ({
               <DialogTitle>License Details</DialogTitle>
             </VisuallyHiddenPrimitive.Root>
             <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+            <div className="bg-linear-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
               <div className="flex items-center justify-between ml-6">
                 <div className="flex items-center">
                   <div>
@@ -706,7 +706,7 @@ const LicenseActionDropdown = ({
               <DialogTitle>Share License</DialogTitle>
             </VisuallyHiddenPrimitive.Root>
             <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+            <div className="bg-linear-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
               <div className="flex items-center gap-3 px-6">
                 <div className="flex items-center gap-3">
                   <Share2 className="w-5 h-5 text-[#0f5384]" />
@@ -768,7 +768,7 @@ const LicenseActionDropdown = ({
               <DialogTitle>Re-assign License</DialogTitle>
             </VisuallyHiddenPrimitive.Root>
             <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+            <div className="bg-linear-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
               <div className="flex items-center gap-3 px-6">
                 <div className="flex items-center gap-3">
                   <UserRoundCheck className="w-5 h-5 text-[#0f5384]" />

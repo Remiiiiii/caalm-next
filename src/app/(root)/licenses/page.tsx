@@ -1,5 +1,6 @@
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';
+import { unstable_cache } from 'next/cache';
 import LicensesMetricsBar from '@/components/LicensesMetricsBar';
 import { LicensesViewProvider } from '@/components/LicensesView';
 import LicensesControlBar from '@/components/LicensesControlBar';
@@ -11,7 +12,8 @@ import { Query } from 'node-appwrite';
 import type { License } from '@/types/licenses';
 import Image from 'next/image';
 import LicenseForm from '@/components/licenses/LicenseForm';
-import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
+import { getUserDefaultOrganization, getUserPermissions } from '@/lib/rbac/permissions';
+import { PERMISSIONS } from '@/constants/permissions';
 
 const Page = async () => {
   const user = await getCurrentUser();
@@ -20,24 +22,37 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
+  const userPermissions = await getUserPermissions(user.$id);
+  if (!userPermissions.includes(PERMISSIONS.LICENSES.VIEW)) {
+    redirect('/dashboard');
+  }
+
   let licenses: License[] = [];
 
   try {
-    const { tablesDB } = await createAdminClient();
     const defaultOrg = await getUserDefaultOrganization(user.$id);
     const orgId = defaultOrg?.orgId || user.orgId || 'default-org';
 
-    const result = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId || 'default-db',
-      tableId: appwriteConfig.licensesCollectionId || 'licenses',
-      queries: [
-        Query.equal('orgId', orgId),
-        Query.orderDesc('$createdAt'),
-        Query.limit(1000),
-      ],
-    });
+    // Short-lived cache per org; invalidation on create/update/delete can be added later (e.g. revalidateTag).
+    const getCachedLicenses = unstable_cache(
+      async () => {
+        const { tablesDB } = await createAdminClient();
+        const result = await tablesDB.listRows({
+          databaseId: appwriteConfig.databaseId || 'default-db',
+          tableId: appwriteConfig.licensesCollectionId || 'licenses',
+          queries: [
+            Query.equal('orgId', orgId),
+            Query.orderDesc('$createdAt'),
+            Query.limit(1000),
+          ],
+        });
+        return result.rows as unknown as License[];
+      },
+      ['licenses-list', orgId],
+      { revalidate: 60 }
+    );
 
-    licenses = result.rows as unknown as License[];
+    licenses = await getCachedLicenses();
   } catch (error) {
     console.error('Error fetching licenses:', error);
     licenses = [];

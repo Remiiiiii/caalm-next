@@ -10,6 +10,8 @@ import { licenseCreateSchema, licenseListQuerySchema } from '@/lib/api/licenses/
 import { LicenseService } from '@/lib/api/licenses/services/LicenseService';
 import { getCurrentUser } from '@/lib/actions/user.actions';
 import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
+import { requirePermission } from '@/lib/rbac/middleware';
+import { PERMISSIONS } from '@/constants/permissions';
 
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
@@ -21,6 +23,11 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return errorResponse('User not found', 401, { requestId });
     }
+
+    const permissionCheck = await requirePermission(request, {
+      permission: PERMISSIONS.LICENSES.VIEW,
+    });
+    if (permissionCheck) return permissionCheck;
 
     const defaultOrg = await getUserDefaultOrganization(user.$id);
     if (!defaultOrg) {

@@ -131,6 +131,11 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
           variant="outline"
           size="sm"
           className="primary-btn px-3 sm:px-4"
+          aria-label={
+            getActiveFiltersCount() > 0
+              ? `Filter, ${getActiveFiltersCount()} active`
+              : 'Filter'
+          }
         >
           <Filter className="w-4 h-4" />
           <span className="hidden sm:inline">Filter</span>
@@ -152,7 +157,7 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
         <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
         {/* Header with gradient background */}
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-3 border-b border-slate-200 mt-4">
+        <div className="sticky top-0 z-10 bg-linear-to-r from-blue-50 to-indigo-50 py-3 border-b border-slate-200 mt-4">
           <div className="flex items-center gap-3 px-6">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
               <Filter className="w-5 h-5 text-blue-600" />
