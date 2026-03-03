@@ -5,6 +5,7 @@
 
 export class ContractTypeMapper {
   private static readonly TYPE_MAP: Record<string, string> = {
+    // Legacy contract types
     'Service Agreement': 'Service_Agreement',
     'Professional Services': 'Consulting_Agreement',
     'Purchase Agreement': 'Purchase_Order',
@@ -21,6 +22,15 @@ export class ContractTypeMapper {
     'Master Agreement': 'Service_Agreement',
     Amendment: 'Other',
     Other: 'Other',
+    
+    // New nonprofit contract types
+    'Vendor/Service Agreement': 'Vendor_Service_Agreement',
+    'Grant Agreement': 'Grant_Agreement',
+    'Government Contract': 'Government_Contract',
+    'Memorandum of Understanding': 'MOU',
+    'Donation/Gift Agreement': 'Donation_Agreement',
+    'Independent Contractor Agreement': 'Independent_Contractor',
+    'Fiscal Sponsorship Agreement': 'Fiscal_Sponsorship',
   };
 
   /**

@@ -26,6 +26,64 @@ export interface AIResponse {
   sources?: string[];
 }
 
+export interface ContractTypeSuggestionInput {
+  questionId: string;
+  answer: string;
+}
+
+/**
+ * Suggest a contract type based on quiz answers.
+ * Returns a valid typeId from CONTRACT_TYPE_CONFIGS or null on failure.
+ */
+export async function suggestContractType(
+  answers: ContractTypeSuggestionInput[]
+): Promise<string | null> {
+  const { CONTRACT_TYPE_CONFIGS } = await import(
+    '@/lib/contracts/contractTypeConfigs'
+  );
+  const validIds = CONTRACT_TYPE_CONFIGS.map((c) => c.id);
+  const fallbackId = validIds[0];
+
+  const typeList = CONTRACT_TYPE_CONFIGS.map(
+    (c) => `- ${c.id}: ${c.label} - ${c.description}`
+  ).join('\n');
+
+  const answersText = answers
+    .map((a) => `Q${a.questionId}: ${a.answer}`)
+    .join('\n');
+
+  const prompt = `You are a contract classification assistant. Based on the user's answers to a short quiz, suggest the single best-matching contract type.
+
+AVAILABLE CONTRACT TYPES (return ONLY the id field, nothing else):
+${typeList}
+
+USER ANSWERS:
+${answersText}
+
+Respond with exactly one of these ids: ${validIds.join(', ')}. No explanation, no quotes, just the id.`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = (response.text() || '').trim().toLowerCase();
+
+    // Extract id: take first line, strip non-alphanumeric/underscore
+    const rawLine = text.split('\n')[0] || text;
+    const extracted = rawLine.replace(/[^a-z0-9_]/g, '');
+    const matched = validIds.find(
+      (v) =>
+        v === extracted ||
+        v === text.trim() ||
+        extracted.includes(v) ||
+        v.replace(/_/g, '') === extracted.replace(/_/g, '')
+    );
+    return matched ?? fallbackId;
+  } catch (error) {
+    console.error('suggestContractType error:', error);
+    return fallbackId;
+  }
+}
+
 // Suggested questions based on document type
 const getSuggestedQuestions = (documentType: string): string[] => {
   const baseQuestions = [

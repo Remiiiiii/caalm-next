@@ -783,6 +783,20 @@ export const signInUser = async ({ email }: { email: string }) => {
       ? authUserResult.value
       : null;
 
+    // If user lookup failed due to auth (e.g. missing API key), surface that instead of "not found"
+    if (existingUser.status === 'rejected') {
+      const err = existingUser.reason as { code?: number; type?: string; message?: string } | undefined;
+      const isUnauthorized =
+        err?.code === 401 ||
+        err?.type === 'user_unauthorized' ||
+        err?.message?.includes('not authorized');
+      if (isUnauthorized) {
+        throw new Error(
+          'Server configuration error: Unable to verify user. Please contact support.'
+        );
+      }
+    }
+
     if (user) {
       // User found - send OTP in background (non-blocking for faster response)
       sendEmailOTP({ email }).catch((err) => {

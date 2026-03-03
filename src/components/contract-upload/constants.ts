@@ -2,7 +2,13 @@
  * Constants for Contract Upload Form
  */
 
-export const CONTRACT_TYPES = [
+import { CONTRACT_TYPE_CONFIGS } from '@/lib/contracts/contractTypeConfigs';
+
+// Export contract types from central config for consistency
+export const CONTRACT_TYPES = CONTRACT_TYPE_CONFIGS.map((config) => config.label);
+
+// Legacy contract types (kept for backward compatibility)
+export const LEGACY_CONTRACT_TYPES = [
   'Service Agreement',
   'Professional Services',
   'Purchase Agreement',

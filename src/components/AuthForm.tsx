@@ -235,7 +235,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
               const [user] = await Promise.allSettled([
                 getUserByEmail(values.email),
               ]);
-              
+
               const userData = user.status === 'fulfilled' ? user.value : null;
               if (userData?.accountId) {
                 setUserId(userData.accountId);
@@ -249,7 +249,10 @@ const AuthForm = ({ type }: { type: FormType }) => {
               }
             } catch (error) {
               if (process.env.NODE_ENV === 'development') {
-                console.error('Error getting user info for invited user:', error);
+                console.error(
+                  'Error getting user info for invited user:',
+                  error
+                );
               }
               router.push('/dashboard');
             }
@@ -377,14 +380,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
           />
           <Button
             type="submit"
-            className="form-submit-button relative overflow-hidden group"
+            className="form-submit-button relative overflow-hidden group primary-btn px-3 sm:px-4"
             disabled={isLoading}
           >
-            {/* Gradient Background */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 group-hover:from-blue-600 group-hover:via-cyan-600 group-hover:to-blue-700 transition-all duration-300"></div>
-
             {/* Shimmer Effect */}
-            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-linear-to-r from-transparent via-white/20 to-transparent"></div>
 
             {/* Button Content */}
             <span className="relative z-10 flex items-center justify-center">
@@ -403,7 +403,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
           {invitationMessage && (
             <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
-              <div className="h-6 w-6 text-green mt-0.5 flex-shrink-0">
+              <div className="h-6 w-6 text-green mt-0.5 shrink-0">
                 <svg
                   className="w-6 h-6"
                   fill="currentColor"
@@ -427,7 +427,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
           {logoutMessage && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-              <AlertTriangle className="h-6 w-6 text-yellow-500 fill-yellow-500 stroke-black stroke-1 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="h-6 w-6 text-yellow-500 fill-yellow-500 stroke-black stroke-1 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-red-800">
                   Session Expired
@@ -438,7 +438,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
           )}
           {errorMessage && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-              <AlertTriangle className="h-6 w-6 text-yellow-500 fill-yellow-500 stroke-black stroke-1 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="h-6 w-6 text-yellow-500 fill-yellow-500 stroke-black stroke-1 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm sidebar-gradient-text">{errorMessage}</p>
               </div>
@@ -566,8 +566,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
                   Promise.resolve('/dashboard'), // Fallback
                 ]);
 
-                const userData = user.status === 'fulfilled' ? user.value : null;
-                
+                const userData =
+                  user.status === 'fulfilled' ? user.value : null;
+
                 if (userData) {
                   // Fetch dashboard URL (now cached server-side)
                   const url = await getDashboardUrlForUser(

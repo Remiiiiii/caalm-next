@@ -72,10 +72,8 @@ export default function ContractsMetricsBar({
 
     files.forEach((file) => {
       const status = file.status || 'unknown';
-
-      if (file.amount) {
-        totalValue += file.amount;
-      }
+      // Sum each file's amount (same source as Card Value display) so Total Value = sum of all card values
+      totalValue += Number(file.amount) || 0;
 
       if (status === 'active') {
         activeCount++;
@@ -124,10 +122,15 @@ export default function ContractsMetricsBar({
                 <DollarSign className="h-3 w-3 text-slate-700" />
                 <p className="body-2 text-slate-700 text-sm">Total Value</p>
               </div>
-              {/* Value Display Area */}
+              {/* Value Display Area - same format as Card.tsx Value (Intl 2 decimals, grouping) */}
               <div className="glass-card-inner">
                 <p className="h3 text-navy font-bold text-center">
-                  ${metrics.totalValue.toLocaleString()}
+                  $
+                  {new Intl.NumberFormat('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                    useGrouping: true,
+                  }).format(metrics.totalValue)}
                 </p>
               </div>
             </CardContent>
