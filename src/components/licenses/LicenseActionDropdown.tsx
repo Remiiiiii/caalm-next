@@ -448,12 +448,12 @@ const LicenseActionDropdown = ({
 			{/* View Details Dialog - matches ActionDropdown Details */}
 			{showDetail && (
 				<Dialog open={showDetail} onOpenChange={setShowDetail}>
-					<DialogContent className="max-w-[800px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+					<DialogContent className="flex max-h-[90vh] max-w-[800px] flex-col overflow-hidden p-0 shadow-xl">
 						<VisuallyHiddenPrimitive.Root>
 							<DialogTitle>License Details</DialogTitle>
 						</VisuallyHiddenPrimitive.Root>
 						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-						<div className="bg-linear-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+						<div className="glass-dialog-wizard-header mt-4">
 							<div className="flex items-center justify-between ml-6">
 								<div className="flex items-center">
 									<div>
@@ -479,7 +479,7 @@ const LicenseActionDropdown = ({
 								}}
 							/>
 						</div>
-						<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+						<div className="glass-dialog-footer-wrap">
 							<div className="flex items-center justify-between">
 								<div className="text-sm text-slate-500">
 									License details and metadata
@@ -546,7 +546,7 @@ const LicenseActionDropdown = ({
 			{/* Status Dialog */}
 			{showStatus && (
 				<Dialog open={showStatus} onOpenChange={setShowStatus}>
-					<DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+					<DialogContent className="flex max-h-[90vh] max-w-[500px] flex-col overflow-hidden p-0 shadow-xl">
 						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 						<div className="sticky top-0 z-10 bg-white py-4 border-b border-slate-200 mt-4">
 							<div className="flex items-center gap-3 ml-6">
@@ -590,7 +590,7 @@ const LicenseActionDropdown = ({
 								</div>
 							</div>
 						</div>
-						<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+						<div className="glass-dialog-alert-footer">
 							<div className="text-xs text-slate-500">
 								Status changes require review
 							</div>
@@ -629,7 +629,7 @@ const LicenseActionDropdown = ({
 			{/* Delete Dialog */}
 			{showDelete && (
 				<Dialog open={showDelete} onOpenChange={setShowDelete}>
-					<DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+					<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
 						<DialogTitle className="sr-only">Delete License</DialogTitle>
 						<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
 						<div className="px-6 py-4 bg-white border-b border-slate-200">
@@ -651,7 +651,7 @@ const LicenseActionDropdown = ({
 								This will permanently remove the license from the system.
 							</p>
 						</div>
-						<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+						<div className="glass-dialog-alert-footer">
 							<div className="text-xs text-slate-500 w-20">
 								This action is permanent.
 							</div>
@@ -694,12 +694,12 @@ const LicenseActionDropdown = ({
 			{/* Share Dialog - TODO: Implement share functionality */}
 			{showShare && (
 				<Dialog open={showShare} onOpenChange={setShowShare}>
-					<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+					<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
 						<VisuallyHiddenPrimitive.Root>
 							<DialogTitle>Share License</DialogTitle>
 						</VisuallyHiddenPrimitive.Root>
 						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-						<div className="bg-linear-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+						<div className="glass-dialog-wizard-header mt-4">
 							<div className="flex items-center gap-3 px-6">
 								<div className="flex items-center gap-3">
 									<Share2 className="w-5 h-5 text-[#0f5384]" />
@@ -719,7 +719,7 @@ const LicenseActionDropdown = ({
 								</p>
 							</div>
 						</div>
-						<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+						<div className="glass-dialog-footer-wrap">
 							<div className="flex items-center justify-between">
 								<div className="text-sm text-slate-500">
 									Enter email addresses to share
@@ -756,12 +756,12 @@ const LicenseActionDropdown = ({
 			{/* Re-assign Dialog - TODO: Implement re-assign functionality */}
 			{showAssign && (
 				<Dialog open={showAssign} onOpenChange={setShowAssign}>
-					<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+					<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
 						<VisuallyHiddenPrimitive.Root>
 							<DialogTitle>Re-assign License</DialogTitle>
 						</VisuallyHiddenPrimitive.Root>
 						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-						<div className="bg-linear-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+						<div className="glass-dialog-wizard-header mt-4">
 							<div className="flex items-center gap-3 px-6">
 								<div className="flex items-center gap-3">
 									<UserRoundCheck className="w-5 h-5 text-[#0f5384]" />
@@ -781,7 +781,7 @@ const LicenseActionDropdown = ({
 								</p>
 							</div>
 						</div>
-						<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+						<div className="glass-dialog-footer-wrap">
 							<div className="flex items-center justify-between">
 								<div className="text-sm text-slate-500">
 									Select department and managers

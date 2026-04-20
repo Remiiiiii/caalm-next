@@ -24,9 +24,9 @@ export default function StepIndicator({
 	return (
 		<>
 			{/* Progress Bar */}
-			<div className="w-full bg-slate-200 rounded-full h-2">
+			<div className="h-2 w-full rounded-full bg-white/40 backdrop-blur-sm">
 				<div
-					className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+					className="h-2 rounded-full bg-linear-to-r from-blue-500 to-cyan-500 transition-all duration-300"
 					style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }}
 				/>
 			</div>

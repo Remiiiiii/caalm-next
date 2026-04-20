@@ -1,4 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+	buildContractTypeFallbackResult,
+	type ContractTypeSuggestionResult,
+	parseContractTypeSuggestionJson,
+} from "./contractTypeSuggestionSchema";
+
+export type { ContractTypeSuggestionResult };
 
 // Initialize Gemini AI - Use server-side environment variable
 const apiKey = process.env.GOOGLE_API_KEY;
@@ -9,7 +16,17 @@ const genAI = new GoogleGenerativeAI(apiKey || "");
 
 // Initialize the model - Use the correct model name
 export const model = genAI.getGenerativeModel({
-	model: "gemini-2.0-flash-exp",
+	model: "gemini-2.5-flash-lite",
+});
+
+/** JSON-only responses for contract type quiz (do not reuse plain `model` here). */
+const contractTypeSuggestionModel = genAI.getGenerativeModel({
+	model: "gemini-2.5-flash-lite",
+	generationConfig: {
+		responseMimeType: "application/json",
+		temperature: 0.2,
+		maxOutputTokens: 512,
+	},
 });
 
 export interface DocumentAnalysis {
@@ -32,55 +49,64 @@ export interface ContractTypeSuggestionInput {
 }
 
 /**
- * Suggest a contract type based on quiz answers.
- * Returns a valid typeId from CONTRACT_TYPE_CONFIGS or null on failure.
+ * Suggest contract type(s) from quiz answers using structured JSON + allow-list validation.
+ * Never falls back to the first config entry (employment).
  */
 export async function suggestContractType(
 	answers: ContractTypeSuggestionInput[],
-): Promise<string | null> {
+	freeText?: string | null,
+): Promise<ContractTypeSuggestionResult> {
 	const { CONTRACT_TYPE_CONFIGS } = await import(
 		"@/lib/contracts/contractTypeConfigs"
 	);
 	const validIds = CONTRACT_TYPE_CONFIGS.map((c) => c.id);
-	const fallbackId = validIds[0];
+
+	if (!apiKey) {
+		return buildContractTypeFallbackResult(
+			"AI is not configured. Choose a contract type from the list or browse all types.",
+		);
+	}
 
 	const typeList = CONTRACT_TYPE_CONFIGS.map(
-		(c) => `- ${c.id}: ${c.label} - ${c.description}`,
+		(c) => `- ${c.id}: ${c.label} — ${c.description}`,
 	).join("\n");
 
 	const answersText = answers
-		.map((a) => `Q${a.questionId}: ${a.answer}`)
+		.map((a) => `${a.questionId}: ${a.answer}`)
 		.join("\n");
 
-	const prompt = `You are a contract classification assistant. Based on the user's answers to a short quiz, suggest the single best-matching contract type.
+	const note = freeText?.trim().length
+		? `\nOptional user description:\n${freeText.trim()}`
+		: "";
 
-AVAILABLE CONTRACT TYPES (return ONLY the id field, nothing else):
+	const idList = validIds.join(", ");
+
+	const prompt = `You are a contract classification assistant for a nonprofit / enterprise contract system.
+Based on the user's quiz answers, pick the best matching contract type id from the list below.
+
+Return ONE JSON object only (no markdown) with exactly these keys:
+- "primaryTypeId": string, must be exactly one of: ${idList}
+- "confidence": number from 0 through 1 (your confidence in primaryTypeId)
+- "alternates": array with at most 2 objects, each like {"typeId": string, "confidence"?: number}. Each typeId must be from the same allowed list. Do not repeat primaryTypeId. Use alternates when the user could reasonably fit another type.
+- "rationale": string, 1-2 short sentences for a non-lawyer user.
+
+ALLOWED TYPE IDS ONLY: ${idList}
+
+TYPE REFERENCE:
 ${typeList}
 
-USER ANSWERS:
-${answersText}
-
-Respond with exactly one of these ids: ${validIds.join(", ")}. No explanation, no quotes, just the id.`;
+QUIZ ANSWERS:
+${answersText}${note}`;
 
 	try {
-		const result = await model.generateContent(prompt);
-		const response = await result.response;
-		const text = (response.text() || "").trim().toLowerCase();
-
-		// Extract id: take first line, strip non-alphanumeric/underscore
-		const rawLine = text.split("\n")[0] || text;
-		const extracted = rawLine.replace(/[^a-z0-9_]/g, "");
-		const matched = validIds.find(
-			(v) =>
-				v === extracted ||
-				v === text.trim() ||
-				extracted.includes(v) ||
-				v.replace(/_/g, "") === extracted.replace(/_/g, ""),
-		);
-		return matched ?? fallbackId;
+		const result = await contractTypeSuggestionModel.generateContent(prompt);
+		const text = result.response.text() ?? "{}";
+		return parseContractTypeSuggestionJson(text, validIds);
 	} catch (error) {
 		console.error("suggestContractType error:", error);
-		return fallbackId;
+		return buildContractTypeFallbackResult(
+			"We couldn't reach the AI service. Pick a type below or browse all contract types.",
+		);
 	}
 }
 
@@ -275,7 +301,7 @@ export const analyzeDocument = async (
 			hasUrl: !!fileUrl,
 			apiKeyExists: !!process.env.GOOGLE_API_KEY,
 			apiKeyLength: process.env.GOOGLE_API_KEY?.length || 0,
-			modelName: "gemini-2.0-flash-exp",
+			modelName: "gemini-2.5-flash-lite",
 		});
 		return {
 			summary: "Unable to analyze document at this time",

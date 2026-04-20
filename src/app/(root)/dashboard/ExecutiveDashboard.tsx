@@ -1358,7 +1358,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 											name="division"
 											value=""
 											onChange={() => {}}
-											className="w-full border rounded px-2 py-1"
+											className="glass-form-control w-full rounded-md px-2 py-1"
 											required
 										>
 											<option value="">Select division</option>
@@ -1382,7 +1382,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 											name="role"
 											value=""
 											onChange={() => {}}
-											className="w-full border rounded px-2 py-1"
+											className="glass-form-control w-full rounded-md px-2 py-1"
 											required
 										>
 											<option value="executive">Executive</option>
@@ -1422,7 +1422,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							open={showRevokeDialog}
 							onOpenChange={setShowRevokeDialog}
 						>
-							<AlertDialogContent className="bg-[#F6F7FA] backdrop-blur border border-white/50 shadow-xl rounded-xl max-w-md mx-4">
+							<AlertDialogContent className="mx-4 max-w-md rounded-xl shadow-xl">
 								<AlertDialogHeader className="text-center pb-4">
 									<div className="flex justify-center mb-3">
 										<div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
@@ -1489,7 +1489,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							open={showDeleteDialog}
 							onOpenChange={setShowDeleteDialog}
 						>
-							<AlertDialogContent className="bg-white/95 backdrop-blur-sm border border-slate-200 shadow-2xl rounded-lg max-w-md mx-4">
+							<AlertDialogContent className="mx-4 max-w-md rounded-lg shadow-2xl">
 								<AlertDialogHeader className="pb-1">
 									<div className="flex items-center gap-4 mb-4">
 										<div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">

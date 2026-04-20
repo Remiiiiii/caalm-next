@@ -1251,7 +1251,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 											Settings
 										</Button>
 									</DialogTrigger>
-									<DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
+									<DialogContent className="sm:max-w-[500px] shadow-xl">
 										<DialogHeader>
 											<DialogTitle className="sidebar-gradient-text">
 												Calendar Settings
@@ -1276,7 +1276,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 						</div>
 
 						{isApprover && (
-							<div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-5 shadow-sm">
+							<div className="border-b border-white/40 bg-gradient-to-r from-slate-50/85 to-white/90 px-6 py-5 shadow-sm backdrop-blur-sm">
 								<div className="flex items-center justify-between mb-1">
 									<div className="flex items-center gap-3">
 										<div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
@@ -1513,7 +1513,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 					{selectedApproval && (
 						<>
 							{/* Header */}
-							<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 px-6 border-b border-slate-200">
+							<div className="glass-dialog-wizard-header px-6">
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-3">
 										<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100">
@@ -2082,7 +2082,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 							</div>
 
 							{/* Footer Actions */}
-							<div className="sticky bottom-0 border-t border-slate-200 bg-white px-6 py-4 flex items-center gap-3">
+							<div className="sticky bottom-0 flex items-center gap-3 border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
 								<Button
 									onClick={() => setIsApprovalDialogOpen(false)}
 									disabled={isProcessingApproval}

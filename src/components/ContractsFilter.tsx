@@ -129,7 +129,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 				{/* Header with gradient background */}
-				<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-3 border-b border-slate-200 mt-4">
+				<div className="glass-dialog-wizard-header mt-4 py-3">
 					<div className="flex items-center gap-3 px-6">
 						{/* Icon with circular background */}
 						<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -353,7 +353,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 				</div>
 
 				{/* Professional Footer */}
-				<div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+				<div className="glass-dialog-footer-compact">
 					<div className="text-xs text-slate-500">
 						{getActiveFiltersCount() > 0
 							? `${getActiveFiltersCount()} filter${

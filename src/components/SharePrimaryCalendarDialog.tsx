@@ -183,7 +183,7 @@ export const SharePrimaryCalendarDialog: React.FC<
 				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 				{/* Professional Header */}
-				<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+				<div className="glass-dialog-wizard-header mt-4">
 					<div className="flex items-center justify-between ml-6">
 						<div className="flex items-center">
 							<div>
@@ -339,7 +339,7 @@ export const SharePrimaryCalendarDialog: React.FC<
 				</div>
 
 				{/* Professional Footer */}
-				<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+				<div className="glass-dialog-footer-wrap">
 					<div className="flex items-center justify-end gap-3">
 						<Button
 							variant="outline"

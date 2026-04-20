@@ -425,7 +425,7 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 					</Button>
 				</DialogTrigger>
 
-				<DialogContent className="max-w-4xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
+				<DialogContent className="glass-dialog">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Upload License</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
@@ -434,7 +434,7 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Sticky Header */}
-					<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-cyan-50 py-4 border-b border-slate-200">
+					<div className="glass-dialog-wizard-header">
 						<div className="px-6">
 							<h2 className="text-2xl font-bold sidebar-gradient-text mb-3">
 								Upload New License

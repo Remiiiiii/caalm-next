@@ -117,23 +117,22 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, avatar, email }) => {
 	return (
 		<aside className="sidebar">
 			<div className="flex items-center justify-between mb-4">
-				<Link href="/dashboard/it">
+				<Link href="/dashboard/it" className="inline-flex shrink-0">
 					<Image
 						src="/assets/images/logo.svg"
 						alt="logo"
-						width={50}
-						height={50}
-						className="hidden lg:block"
-						style={{ width: "auto", height: "auto" }}
+						width={42}
+						height={42}
+						className="hidden h-9 w-9 shrink-0 object-contain lg:block"
 						priority
 						fetchPriority="high"
 					/>
 					<Image
 						src="/assets/images/logo.svg"
 						alt="logo"
-						width={50}
-						height={50}
-						className="lg:hidden"
+						width={42}
+						height={42}
+						className="h-9 w-9 shrink-0 object-contain lg:hidden"
 						priority
 						fetchPriority="high"
 					/>

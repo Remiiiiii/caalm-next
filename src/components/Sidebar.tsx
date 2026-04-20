@@ -597,23 +597,13 @@ const Sidebar = memo(({ name, avatar, email, role, division }: Props) => {
 	return (
 		<aside className="sidebar">
 			<div className="flex items-center justify-between mb-4">
-				<Link href="/">
+				<Link href="/" className="dashboard-logo">
 					<Image
 						src="/assets/images/logo.svg"
 						alt="logo"
-						width={50}
-						height={50}
-						className="hidden lg:block"
-						style={{ width: "auto", height: "auto" }}
-						priority
-						fetchPriority="high"
-					/>
-					<Image
-						src="/assets/images/logo.svg"
-						alt="logo"
-						width={50}
-						height={50}
-						className="lg:hidden"
+						fill
+						className="object-contain"
+						sizes="50px"
 						priority
 						fetchPriority="high"
 					/>

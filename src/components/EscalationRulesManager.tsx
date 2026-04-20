@@ -334,7 +334,7 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 						Escalation Rules
 					</Button>
 				</DialogTrigger>
-				<DialogContent className="sm:max-w-4xl p-0 overflow-hidden border border-slate-200 shadow-xl max-h-[90vh] flex flex-col">
+				<DialogContent className="glass-dialog">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Manage Escalation Rules</DialogTitle>
 						<DialogDescription>
@@ -346,7 +346,7 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
 
 					{/* Header */}
-					<div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+					<div className="glass-dialog-wizard-header px-6">
 						<div className="flex items-center justify-between">
 							<div className="flex items-center gap-3">
 								<Bell className="h-5 w-5 text-[#0f5384]" />
@@ -371,7 +371,7 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 					</div>
 
 					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto px-6 py-4">
+					<div className="glass-dialog-body-padded">
 						{loading ? (
 							<div className="flex items-center justify-center py-12">
 								<div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -392,7 +392,7 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 								{rules.map((rule) => (
 									<div
 										key={rule.$id}
-										className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+										className="rounded-lg border border-white/40 bg-white/30 p-4 backdrop-blur-sm transition-shadow hover:shadow-md"
 									>
 										<div className="flex items-start justify-between">
 											<div className="flex-1">
@@ -461,7 +461,7 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 					</div>
 
 					{/* Footer */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+					<div className="glass-dialog-footer-end">
 						<Button
 							variant="outline"
 							onClick={() => setIsOpen(false)}
@@ -495,7 +495,7 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 					}
 				}}
 			>
-				<DialogContent className="sm:max-w-2xl p-0 overflow-hidden border border-slate-200 shadow-xl max-h-[90vh] flex flex-col">
+				<DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 shadow-xl sm:max-w-2xl">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>
 							{ruleToEdit ? "Edit Escalation Rule" : "Create Escalation Rule"}
@@ -511,14 +511,14 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
 
 					{/* Header */}
-					<div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+					<div className="glass-dialog-wizard-header px-6">
 						<h2 className="text-xl font-semibold sidebar-gradient-text">
 							{ruleToEdit ? "Edit Escalation Rule" : "Create Escalation Rule"}
 						</h2>
 					</div>
 
 					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+					<div className="glass-dialog-body-padded space-y-6">
 						<div>
 							<Label htmlFor="rule-name" className="text-sm font-semibold">
 								Rule Name *
@@ -670,7 +670,7 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 					</div>
 
 					{/* Footer */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+					<div className="glass-dialog-footer-end gap-3">
 						<Button
 							variant="outline"
 							onClick={() => {
@@ -707,12 +707,12 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 
 			{/* Delete Confirmation Dialog */}
 			<Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-				<DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Delete Escalation Rule</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
 					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
-					<div className="px-6 py-4 bg-white border-b border-slate-200">
+					<div className="glass-dialog-alert-section">
 						<div className="flex items-start gap-3">
 							<AlertTriangle className="w-5 h-5 text-[#f0c974]" />
 							<div>
@@ -726,13 +726,13 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 							</div>
 						</div>
 					</div>
-					<div className="px-6 py-5 space-y-3 bg-white">
+					<div className="glass-dialog-alert-body">
 						<p className="text-sm text-slate-700">
 							This will permanently remove the escalation rule and all its
 							configuration.
 						</p>
 					</div>
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500">
 							This action is permanent.
 						</div>

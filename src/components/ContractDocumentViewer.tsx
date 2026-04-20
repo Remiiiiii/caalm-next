@@ -517,7 +517,7 @@ ${contractDetails.attachments
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="rounded-[26px] max-w-7xl max-h-[95vh] overflow-y-auto bg-white/95 backdrop-blur border border-white/40 shadow-drop-1 flex flex-col p-0">
+			<DialogContent className="flex max-h-[95vh] max-w-7xl flex-col overflow-y-auto rounded-[26px] p-0 shadow-drop-1">
 				<DialogHeader className="px-6 py-6 pb-4">
 					{/* Action Buttons */}
 					<div className="flex items-center gap-2 justify-end">

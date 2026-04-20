@@ -483,7 +483,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					</Button>
 				</DialogTrigger>
 
-				<DialogContent className="max-w-4xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
+				<DialogContent className="glass-dialog">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Upload License</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
@@ -492,7 +492,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Sticky Header */}
-					<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-cyan-50 py-4 border-b border-slate-200">
+					<div className="glass-dialog-wizard-header">
 						<div className="px-6 py-6">
 							<div className="flex items-center gap-3 mb-3">
 								<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -554,7 +554,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					</div>
 
 					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto p-4 bg-white">
+					<div className="glass-dialog-scroll-area">
 						<Form {...form}>
 							<form
 								id="license-upload-form"
@@ -588,7 +588,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					</div>
 
 					{/* Footer */}
-					<div className="sticky bottom-0 bg-white border-t border-slate-200 p-4 flex items-center justify-between">
+					<div className="glass-dialog-footer-actions">
 						<Button
 							type="button"
 							variant="outline"
@@ -676,10 +676,10 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 
 			{/* Delete Draft Dialog */}
 			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<AlertDialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+				<AlertDialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
 					<AlertDialogTitle className="sr-only">Delete Draft</AlertDialogTitle>
 					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
-					<div className="px-6 py-4 bg-white border-b border-slate-200">
+					<div className="glass-dialog-alert-section">
 						<div className="flex gap-2">
 							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
 							<h2 className="text-base font-semibold sidebar-gradient-text">
@@ -691,13 +691,13 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 							undone.
 						</AlertDialogDescription>
 					</div>
-					<div className="px-6 py-5 space-y-3 bg-white">
+					<div className="glass-dialog-alert-body">
 						<p className="text-sm text-slate-600">
 							Your decision to delete is irreversible, so please make sure you
 							want to continue.
 						</p>
 					</div>
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500">
 							This action is permanent.
 						</div>

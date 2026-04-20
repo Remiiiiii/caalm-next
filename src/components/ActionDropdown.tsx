@@ -394,12 +394,12 @@ const ActionDropdown = ({
 		);
 		if (value === "assign") {
 			return (
-				<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
 					{/* Professional Cap */}
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Header with gradient background */}
-					<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+					<div className="glass-dialog-wizard-header mt-4">
 						<div className="flex items-center gap-3 px-6">
 							{/* Icon with circular background */}
 
@@ -417,7 +417,7 @@ const ActionDropdown = ({
 					</div>
 
 					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+					<div className="flex-1 overflow-y-auto bg-white/20 p-6 backdrop-blur-sm">
 						<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm space-y-6">
 							{/* Department Selection */}
 							<div>
@@ -592,7 +592,7 @@ const ActionDropdown = ({
 					</div>
 
 					{/* Professional Footer */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500">
 							{selectedManagers.length === 1
 								? `${selectedManagers.length} manager selected`
@@ -643,7 +643,7 @@ const ActionDropdown = ({
 		// Rename dialog
 		if (value === "rename") {
 			return (
-				<DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+				<DialogContent className="flex max-h-[90vh] max-w-[500px] flex-col overflow-hidden p-0 shadow-xl">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>{label}</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
@@ -651,7 +651,7 @@ const ActionDropdown = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Professional Header */}
-					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+					<div className="glass-dialog-wizard-header mt-4">
 						<div className="flex items-center gap-3 px-6">
 							<div className="flex items-center gap-3">
 								<FolderPen className="w-5 h-5 text-[#0f5384]" />
@@ -666,7 +666,7 @@ const ActionDropdown = ({
 					</div>
 
 					{/* Content section with scroll */}
-					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
+					<div className="glass-dialog-body-padded space-y-6">
 						<div className="bg-white rounded-lg p-4 border border-slate-200">
 							<Input
 								type="text"
@@ -683,7 +683,7 @@ const ActionDropdown = ({
 					</div>
 
 					{/* Professional Footer */}
-					<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-between">
 							<div className="text-sm text-slate-500">
 								{name.trim() ? "Ready to rename" : "Enter a name to continue"}
@@ -728,7 +728,7 @@ const ActionDropdown = ({
 		// Details dialog
 		if (value === "details") {
 			return (
-				<DialogContent className="max-w-[800px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+				<DialogContent className="flex max-h-[90vh] max-w-[800px] flex-col overflow-hidden p-0 shadow-xl">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>{label}</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
@@ -736,7 +736,7 @@ const ActionDropdown = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Professional Header */}
-					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+					<div className="glass-dialog-wizard-header mt-4">
 						<div className="flex items-center justify-between ml-6">
 							<div className="flex items-center">
 								<div>
@@ -755,7 +755,7 @@ const ActionDropdown = ({
 					</div>
 
 					{/* Content section with scroll */}
-					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
+					<div className="glass-dialog-body-padded space-y-6">
 						<FileDetails
 							file={file}
 							onRefresh={onRefresh}
@@ -764,7 +764,7 @@ const ActionDropdown = ({
 					</div>
 
 					{/* Professional Footer */}
-					<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-between">
 							<div className="text-sm text-slate-500">
 								Contract details and metadata
@@ -787,7 +787,7 @@ const ActionDropdown = ({
 		// Share dialog
 		if (value === "share") {
 			return (
-				<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>{label}</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
@@ -795,7 +795,7 @@ const ActionDropdown = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Professional Header */}
-					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+					<div className="glass-dialog-wizard-header mt-4">
 						<div className="flex items-center gap-3 px-6">
 							<div className="flex items-center gap-3">
 								<Share2 className="w-5 h-5 text-[#0f5384]" />
@@ -810,7 +810,7 @@ const ActionDropdown = ({
 					</div>
 
 					{/* Content section with scroll */}
-					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
+					<div className="glass-dialog-body-padded space-y-6">
 						<div className="bg-white rounded-lg p-4 border border-slate-200">
 							<ShareInput
 								file={file}
@@ -822,7 +822,7 @@ const ActionDropdown = ({
 					</div>
 
 					{/* Professional Footer */}
-					<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-between">
 							<div className="text-sm text-slate-500">
 								{emails.length > 0
@@ -871,13 +871,13 @@ const ActionDropdown = ({
 		// Delete dialog
 		if (value === "delete") {
 			return (
-				<DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
 					<DialogTitle className="sr-only">Delete File</DialogTitle>
 					{/* Cap */}
 					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
 
 					{/* Header */}
-					<div className="px-6 py-4 bg-white border-b border-slate-200">
+					<div className="glass-dialog-alert-section">
 						<div className="flex  gap-2">
 							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
 							<h2 className="text-base font-semibold sidebar-gradient-text">
@@ -901,7 +901,7 @@ const ActionDropdown = ({
 					</div>
 
 					{/* Footer */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500 w-20">
 							This action is permanent.
 						</div>
@@ -949,7 +949,7 @@ const ActionDropdown = ({
 						if (!open) closeAllModals();
 					}}
 				>
-					<DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+					<DialogContent className="flex max-h-[90vh] max-w-[500px] flex-col overflow-hidden p-0 shadow-xl">
 						{/* Professional Cap */}
 						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
@@ -972,7 +972,7 @@ const ActionDropdown = ({
 						</div>
 
 						{/* Scrollable Content */}
-						<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+						<div className="flex-1 overflow-y-auto bg-white/20 p-6 backdrop-blur-sm">
 							<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
 								{statusError && (
 									<div className="text-red mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
@@ -1054,7 +1054,7 @@ const ActionDropdown = ({
 						{/* Professional Footer */}
 						{actualRoleName === "Super Admin" ||
 						actualRoleName === "Organization Admin" ? (
-							<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center">
+							<div className="glass-dialog-footer-centered px-6">
 								<div className="flex items-center gap-3">
 									<Button
 										variant="outline"
@@ -1087,7 +1087,7 @@ const ActionDropdown = ({
 								</div>
 							</div>
 						) : (
-							<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+							<div className="glass-dialog-alert-footer">
 								<div className="text-xs text-slate-500">
 									Status changes require review
 								</div>

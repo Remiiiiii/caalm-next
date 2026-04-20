@@ -631,7 +631,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Professional Header */}
-					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+					<div className="glass-dialog-wizard-header mt-4">
 						<div className="flex items-center justify-between ml-6">
 							<div className="flex items-center">
 								<div>
@@ -741,7 +741,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					</div>
 
 					{/* Professional Footer */}
-					<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-end gap-3">
 							<Button
 								variant="outline"
@@ -767,7 +767,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Professional Header */}
-					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+					<div className="glass-dialog-wizard-header mt-4">
 						<div className="flex items-center justify-between ml-6">
 							<div className="flex items-center gap-2">
 								<Share2 className="h-5 w-5 text-[#0f5384]" />
@@ -912,7 +912,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					</div>
 
 					{/* Professional Footer */}
-					<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-end gap-3">
 							<Button
 								variant="outline"
@@ -944,7 +944,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Professional Header */}
-					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+					<div className="glass-dialog-wizard-header mt-4">
 						<div className="flex items-center justify-between ml-6">
 							<div className="flex items-center gap-2">
 								<Edit className="h-5 w-5 text-[#0f5384]" />
@@ -1134,7 +1134,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					</div>
 
 					{/* Professional Footer */}
-					<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-end gap-3">
 							<Button
 								variant="outline"
@@ -1165,7 +1165,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 				open={isDeleteCalendarDialogOpen}
 				onOpenChange={setIsDeleteCalendarDialogOpen}
 			>
-				<DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Delete Shared Calendar</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
@@ -1173,7 +1173,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Header */}
-					<div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 mt-4">
+					<div className="glass-dialog-wizard-header mt-4 px-6">
 						<div className="flex items-start gap-3">
 							<div className="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
 								<AlertTriangle className="w-5 h-5 text-red" />
@@ -1203,7 +1203,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					</div>
 
 					{/* Footer */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500">
 							This action is permanent.
 						</div>

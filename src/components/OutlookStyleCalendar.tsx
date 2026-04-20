@@ -3265,7 +3265,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	// Overflow dialog listing all events for a selected day
 	const OverflowDialog = () => (
 		<Dialog open={isOverflowOpen} onOpenChange={setIsOverflowOpen}>
-			<DialogContent className="max-w-2xl p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+			<DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden p-0 shadow-xl">
 				<VisuallyHiddenPrimitive.Root>
 					<DialogTitle>
 						{overflowDate
@@ -3275,7 +3275,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				</VisuallyHiddenPrimitive.Root>
 				{/* Professional Header with Cap */}
 				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
+				<div className="glass-dialog-wizard-header">
 					<div className="flex items-center px-6">
 						<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
 							<CalendarIcon className="w-5 h-5 text-[#0f5384]" />
@@ -3400,7 +3400,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				</div>
 
 				{/* Footer */}
-				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+				<div className="flex items-center justify-between border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
 					<div className="text-xs text-slate-500">
 						Click on any event to view details
 					</div>
@@ -3651,7 +3651,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 								</VisuallyHiddenPrimitive.Root>
 								<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 								{/* Professional Header */}
-								<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+								<div className="glass-dialog-wizard-header mt-4">
 									<div className="flex items-center justify-between ml-6">
 										<div className="flex items-center">
 											<div>
@@ -4400,7 +4400,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 								</div>
 
 								{/* Professional Footer */}
-								<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+								<div className="border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
 									<div className="flex items-center justify-between">
 										<div className="text-sm text-slate-500">
 											{newEvent.description
@@ -4494,7 +4494,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 									Settings
 								</Button>
 							</DialogTrigger>
-							<DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
+							<DialogContent className="sm:max-w-[500px] shadow-xl">
 								<DialogHeader>
 									<DialogTitle className="sidebar-gradient-text">
 										Calendar Settings
@@ -4531,7 +4531,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				</div>
 
 				{isApprover && (
-					<div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-4 shadow-sm">
+					<div className="border-b border-white/40 bg-gradient-to-r from-slate-50/85 to-white/90 px-6 py-4 shadow-sm backdrop-blur-sm">
 						<div className="flex items-center justify-between mb-1">
 							<div className="flex items-center gap-3">
 								<div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
@@ -4922,7 +4922,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						{selectedApproval && (
 							<>
 								{/* Header */}
-								<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 px-6 border-b border-slate-200">
+								<div className="glass-dialog-wizard-header px-6">
 									<div className="flex items-center justify-between mt-6">
 										<div className="flex items-center gap-3">
 											<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100">
@@ -5530,7 +5530,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 								</div>
 
 								{/* Footer Actions */}
-								<div className="sticky bottom-0 border-t border-slate-200 bg-white px-6 py-4 flex items-center gap-3">
+								<div className="sticky bottom-0 flex items-center gap-3 border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
 									<Button
 										onClick={async () => {
 											if (!selectedApproval) return;
@@ -5601,7 +5601,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						</VisuallyHiddenPrimitive.Root>
 						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 						{/* Professional Header */}
-						<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200">
+						<div className="glass-dialog-wizard-header">
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-3">
 									<div>
@@ -6226,7 +6226,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 								</div>
 
 								{/* Static Footer */}
-								<div className="sticky bottom-0 z-10 bg-slate-50 border-t border-slate-200 px-6 py-4">
+								<div className="sticky bottom-0 z-10 border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
 									<div className="flex items-center justify-between">
 										<div className="text-sm text-slate-500">
 											Event created{" "}
@@ -6398,7 +6398,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
 				{/* Delete Confirmation Modal */}
 				<Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-					<DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+					<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
 						<VisuallyHiddenPrimitive.Root>
 							<DialogTitle>Delete Event</DialogTitle>
 						</VisuallyHiddenPrimitive.Root>
@@ -6406,7 +6406,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						<div className="h-4 w-full bg-[#d6d7d8] opacity-70 " />
 
 						{/* Header */}
-						<div className="px-6 py-4 bg-white border-b border-slate-200">
+						<div className="border-b border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
 							<div className="flex items-start gap-3">
 								<div className="w-9 h-9 rounded-fullflex items-center justify-center">
 									<AlertTriangle className="w-5 h-5 text-[#f0c974]" />
@@ -6445,7 +6445,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						</div>
 
 						{/* Footer */}
-						<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+						<div className="flex items-center justify-between border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
 							<div className="text-xs text-slate-500">
 								This action is permanent.
 							</div>
@@ -6497,7 +6497,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					open={isConflictDialogOpen}
 					onOpenChange={setIsConflictDialogOpen}
 				>
-					<DialogContent className="sm:max-w-2xl p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+					<DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 shadow-xl sm:max-w-2xl">
 						<VisuallyHiddenPrimitive.Root>
 							<DialogTitle>Scheduling Conflicts Detected</DialogTitle>
 						</VisuallyHiddenPrimitive.Root>
@@ -6506,7 +6506,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						<div className="h-4 w-full bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 						{/* Header with gradient background */}
-						<div className="sticky top-0 z-10 bg-gradient-to-r from-red-50 to-orange-50 py-4 border-b border-slate-200">
+						<div className="sticky top-0 z-10 border-b border-white/40 bg-gradient-to-r from-red-50/85 to-orange-50/85 py-4 backdrop-blur-sm">
 							<div className="flex items-center gap-3 px-6">
 								{/* Icon with circular background */}
 								<div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
@@ -6633,7 +6633,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						</div>
 
 						{/* Professional Footer */}
-						<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+						<div className="flex items-center justify-between border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
 							<div className="text-xs text-slate-500">
 								Review conflicts before proceeding.
 							</div>

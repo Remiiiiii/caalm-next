@@ -195,7 +195,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 
 	return (
 		<Dialog open={open} onOpenChange={onClose}>
-			<DialogContent className="rounded-[26px] max-w-4xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur border border-white/40 shadow-drop-3 px-8 py-10">
+			<DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto rounded-[26px] px-8 py-10 shadow-drop-3">
 				<DialogHeader className="text-center border-b border-light-300 pb-6 mb-8">
 					<div className="flex items-center justify-center gap-3 mb-2">
 						<div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">

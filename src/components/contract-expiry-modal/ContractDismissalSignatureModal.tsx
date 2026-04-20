@@ -217,7 +217,7 @@ export default function ContractDismissalSignatureModal({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Header with gradient background */}
-					<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+					<div className="glass-dialog-wizard-header mt-4">
 						<div className="flex items-center gap-3 px-6">
 							<div className="flex items-center gap-3">
 								<FileText className="w-5 h-5 text-[#0f5384]" />
@@ -338,7 +338,7 @@ export default function ContractDismissalSignatureModal({
 					</div>
 
 					{/* Professional Footer */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500"></div>
 						<div className="flex items-center gap-3">
 							<Button

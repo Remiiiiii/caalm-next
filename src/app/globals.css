@@ -206,6 +206,7 @@
 		transition: width 150ms ease-in;
 	}
 	.primary-btn,
+	.btn-primary,
 	.shad-active,
 	.shad-submit-btn {
 		@apply text-white font-semibold rounded-full shadow-md px-4 py-2 sm:px-6 transition-all duration-200 w-full sm:w-auto flex items-center justify-center;
@@ -225,6 +226,7 @@
 	}
 
 	.primary-btn::after,
+	.btn-primary::after,
 	.shad-active::after,
 	.shad-submit-btn::after {
 		content: "";
@@ -244,11 +246,13 @@
 		pointer-events: none;
 	}
 
-	.primary-btn:hover {
+	.primary-btn:hover,
+	.btn-primary:hover {
 		@apply text-white!;
 	}
 
 	.primary-btn:hover::after,
+	.btn-primary:hover::after,
 	.shad-active:hover::after,
 	.shad-submit-btn:hover::after {
 		animation: shimmer-slide 900ms ease;
@@ -256,6 +260,7 @@
 
 	@media (prefers-reduced-motion: reduce) {
 		.primary-btn:hover::after,
+		.btn-primary:hover::after,
 		.shad-active:hover::after,
 		.shad-submit-btn:hover::after {
 			animation: none;
@@ -299,8 +304,82 @@
 	.shad-form-message {
 		@apply text-red text-[14px] leading-[20px] font-normal text-slate-700 ml-4;
 	}
+
+	/* Form fields on frosted surfaces */
+	.glass-form-control {
+		background: rgba(255, 255, 255, 0.3);
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+		border: 1px solid rgba(255, 255, 255, 0.5);
+	}
+	input.glass-form-control[type="file"],
+	.glass-form-control[type="file"] {
+		background: transparent;
+		border-style: dashed;
+		border-color: rgba(255, 255, 255, 0.45);
+	}
+
+	/* Dialog / modal content shell (ContractExpiryModal-style frosted pane) */
+	.glass-dialog-panel {
+		background: rgba(255, 255, 255, 0.45);
+		backdrop-filter: blur(24px);
+		-webkit-backdrop-filter: blur(24px);
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+	}
+
+	/* Large frosted dialog shell — ContractUploadForm & same-layout upload dialogs */
+	.glass-dialog {
+		@apply flex max-h-[90vh] flex-col overflow-hidden rounded-[26px] border border-white/50 bg-white/45 p-0 shadow-xl backdrop-blur-xl sm:max-w-4xl;
+	}
+
+	/* Dialog header strip — match ContractUploadForm employment upload header (~L2206); do not drift */
+	.glass-dialog-wizard-header {
+		@apply sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/55 to-sky-50/45 py-4 backdrop-blur-xl;
+	}
+	/* Transparent like ContractUploadForm wizard body (~L2340) — avoids an extra “mat” behind cards */
+	.glass-dialog-scroll-area {
+		@apply min-h-0 flex-1 overflow-y-auto bg-transparent p-4;
+	}
+	.glass-dialog-footer-actions {
+		@apply sticky bottom-0 flex items-center justify-between border-t border-white/40 bg-white/35 p-4 backdrop-blur-sm;
+	}
+	.glass-dialog-alert-section {
+		@apply border-b border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm;
+	}
+	.glass-dialog-alert-body {
+		@apply space-y-3 bg-white/20 px-6 py-5 backdrop-blur-sm;
+	}
+	.glass-dialog-alert-footer {
+		@apply flex items-center justify-between border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm;
+	}
+	.glass-dialog-footer-centered {
+		@apply flex items-center justify-center gap-3 border-t border-white/40 bg-white/35 py-4 backdrop-blur-sm;
+	}
+	.glass-dialog-modal-body {
+		@apply flex-1 overflow-y-auto bg-white/20 px-6 py-2 backdrop-blur-sm;
+	}
+	.glass-dialog-body-padded {
+		@apply flex-1 overflow-y-auto bg-white/20 px-6 py-4 backdrop-blur-sm;
+	}
+	.glass-dialog-footer-end {
+		@apply flex items-center justify-end border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm;
+	}
+	.glass-dialog-footer-compact {
+		@apply flex items-center justify-between border-t border-white/40 bg-white/35 px-4 py-3 backdrop-blur-sm;
+	}
+	.glass-dialog-footer-wrap {
+		@apply border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm;
+	}
+
+	/* Matches .glass-dialog-panel — OTP / 2FA alert shells */
 	.shad-alert-dialog {
-		@apply space-y-4 max-w-[95%] sm:w-fit rounded-xl md:rounded-[30px] px-4 md:px-8 py-10 bg-white outline-hidden;
+		@apply space-y-4 max-w-[95%] sm:w-fit rounded-xl md:rounded-[30px] px-4 md:px-8 py-10 outline-hidden;
+		background: rgba(255, 255, 255, 0.45);
+		backdrop-filter: blur(24px);
+		-webkit-backdrop-filter: blur(24px);
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
 	}
 	.shad-submit-btn {
 		@apply text-[14px] leading-[20px] font-medium transition-all rounded-full;
@@ -392,14 +471,16 @@
 		}
 
 		/* Make buttons more compact on MacBook Pro */
-		.quick-actions-container .primary-btn {
+		.quick-actions-container .primary-btn,
+		.quick-actions-container .btn-primary {
 			padding-left: 1rem; /* px-4 */
 			padding-right: 1rem; /* px-4 */
 			font-size: 0.75rem; /* text-xs */
 			height: 2.25rem; /* h-9 */
 		}
 
-		.quick-actions-container .primary-btn svg {
+		.quick-actions-container .primary-btn svg,
+		.quick-actions-container .btn-primary svg {
 			width: 0.875rem; /* h-3.5 */
 			height: 0.875rem; /* h-3.5 */
 		}
@@ -412,6 +493,10 @@
 		}
 	}
 
+	/* Dashboard */
+	.dashboard-logo {
+		@apply relative inline-block size-[50px] shrink-0;
+	}
 	/* Dashboard */
 	.dashboard-container {
 		@apply w-full px-4 sm:px-6 lg:px-8 xl:px-12;
@@ -562,6 +647,31 @@
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
+	}
+
+	/**
+	 * Frosted glass for dialogs / light surfaces (stronger fill than .glass-card).
+	 * Use with Card: reset shadcn defaults via border-0 shadow-none bg-transparent on the same node,
+	 * or the utility may fight `bg-card`.
+	 */
+	/* Translucent frosted pane — background should read through the blur */
+	.glass-card-frosted {
+		@apply relative overflow-hidden transition-all duration-200;
+		border-radius: 1.5rem;
+		background: rgba(255, 255, 255, 0.55);
+		backdrop-filter: blur(18px);
+		-webkit-backdrop-filter: blur(18px);
+		border: 1px solid rgba(255, 255, 255, 0.42);
+		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+	}
+	.glass-card-frosted > .glass-card-cap {
+		background: rgba(214, 215, 216, 0.72);
+		opacity: 1;
+	}
+	.glass-card-frosted:hover {
+		background: rgba(255, 255, 255, 0.62);
+		border-color: rgba(147, 197, 253, 0.75);
+		box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.14);
 	}
 
 	/* Chart */
@@ -915,6 +1025,13 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	isolation: isolate;
+}
+
+/* Keep content under the ::before ring so opaque <video> / full-bleed children don’t paint over it */
+.orbit-animated-border > * {
+	position: relative;
+	z-index: 0;
 }
 
 @property --orbit-angle {
@@ -946,7 +1063,7 @@
 		linear-gradient(#fff 0 0);
 	-webkit-mask-composite: xor;
 	mask-composite: exclude;
-	z-index: 1;
+	z-index: 2;
 	animation: orbit-snake-move 4s linear infinite;
 	pointer-events: none;
 }

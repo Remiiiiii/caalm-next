@@ -559,7 +559,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 								<Settings className="h-4 w-4" />
 							</Button>
 						</DialogTrigger>
-						<DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
+						<DialogContent className="sm:max-w-[500px] shadow-xl">
 							<DialogHeader>
 								<DialogTitle className="sidebar-gradient-text">
 									Calendar Settings
@@ -662,7 +662,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 							Add Event
 						</Button>
 					</DialogTrigger>
-					<DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur border border-white/60 shadow-xl">
+					<DialogContent className="sm:max-w-[500px] shadow-xl">
 						<DialogHeader>
 							<DialogTitle className="sidebar-gradient-text">
 								Add New Event

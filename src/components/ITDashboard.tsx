@@ -190,7 +190,7 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
 				{metrics?.systemPerformance && (
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 mt-4">
+						<CardHeader className="glass-dialog-wizard-header mt-4">
 							<div className="flex items-center gap-3">
 								<TrendingUp className="w-5 h-5 text-[#0f5384]" />
 								<CardTitle className="text-xl font-semibold sidebar-gradient-text">
@@ -233,7 +233,7 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
 				{recentAlerts.length > 0 && (
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 mt-4">
+						<CardHeader className="glass-dialog-wizard-header mt-4">
 							<div className="flex items-center gap-3">
 								<AlertTriangle className="w-5 h-5 text-[#0f5384]" />
 								<CardTitle className="text-xl font-semibold sidebar-gradient-text">

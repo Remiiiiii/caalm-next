@@ -201,12 +201,12 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 
 	return (
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
-			<AlertDialogContent className="glass-card max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+			<AlertDialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
 				{/* Professional Cap */}
 				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 				{/* Header with gradient background */}
-				<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+				<div className="glass-dialog-wizard-header mt-4">
 					<div className="flex items-center gap-3 px-6">
 						<div>
 							<AlertDialogTitle className="flex items-center gap-2 text-xl font-semibold sidebar-gradient-text py-2">
@@ -391,7 +391,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 				</div>
 
 				{/* Professional Footer */}
-				<div className="py-4 bg-slate-50 border-t border-slate-200 flex justify-center items-center gap-3">
+				<div className="glass-dialog-footer-centered px-6">
 					<AlertDialogCancel
 						onClick={handleCancel}
 						disabled={submitting}

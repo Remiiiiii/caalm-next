@@ -248,12 +248,12 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 				<>
 					{showDetail && (
 						<Dialog open={showDetail} onOpenChange={setShowDetail}>
-							<DialogContent className="max-w-[800px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+							<DialogContent className="flex max-h-[90vh] max-w-[800px] flex-col overflow-hidden p-0 shadow-xl">
 								<VisuallyHiddenPrimitive.Root>
 									<DialogTitle>License Details</DialogTitle>
 								</VisuallyHiddenPrimitive.Root>
 								<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-								<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+								<div className="glass-dialog-wizard-header mt-4">
 									<div className="flex items-center gap-2 px-6">
 										<Info className="h-5 w-5 text-[#0f5384]" />
 										<h2 className="text-xl font-semibold sidebar-gradient-text">
@@ -273,7 +273,7 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 										}}
 									/>
 								</div>
-								<div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between">
+								<div className="glass-dialog-alert-footer">
 									<div className="text-xs text-slate-500">
 										License details and metadata
 									</div>

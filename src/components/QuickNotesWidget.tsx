@@ -516,7 +516,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
 			{/* Create Note Dialog */}
 			<Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-				<DialogContent className="bg-white/95 backdrop-blur-sm border border-slate-200 shadow-2xl rounded-lg max-w-md mx-4 p-0 overflow-hidden">
+				<DialogContent className="mx-4 max-w-md overflow-hidden rounded-lg p-0 shadow-2xl">
 					<VisuallyHidden>
 						<DialogTitle>Create New Note</DialogTitle>
 					</VisuallyHidden>
@@ -590,7 +590,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
 			{/* Edit Note Dialog */}
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-				<DialogContent className="bg-white/95 backdrop-blur-sm border border-slate-200 shadow-2xl rounded-lg max-w-md mx-4 p-0 overflow-hidden">
+				<DialogContent className="mx-4 max-w-md overflow-hidden rounded-lg p-0 shadow-2xl">
 					<VisuallyHidden>
 						<DialogTitle>Edit Note</DialogTitle>
 					</VisuallyHidden>
@@ -691,7 +691,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 				open={isDeleteDialogOpen}
 				onOpenChange={setIsDeleteDialogOpen}
 			>
-				<AlertDialogContent className="bg-white/95 backdrop-blur-sm border border-slate-200 shadow-2xl rounded-lg max-w-md mx-4">
+				<AlertDialogContent className="mx-4 max-w-md rounded-lg shadow-2xl">
 					<AlertDialogHeader className="pb-1">
 						<div className="flex items-center gap-4 mb-4">
 							<div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">

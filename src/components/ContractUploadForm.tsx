@@ -17,7 +17,7 @@ import {
 	Upload,
 } from "lucide-react";
 import Image from "next/image";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
 import { useDropzone } from "react-dropzone";
 import { SaveProgressCard } from "@/components/SaveProgressCard";
@@ -88,6 +88,10 @@ import {
 } from "@/lib/actions/database.actions";
 import { uploadFile } from "@/lib/actions/file.actions";
 import {
+	buildContractTypeFallbackResult,
+	type ContractTypeSuggestionResult,
+} from "@/lib/ai/contractTypeSuggestionSchema";
+import {
 	CONTRACT_TYPE_CONFIGS,
 	getContractTypeConfig,
 	getFieldsForStep,
@@ -127,28 +131,20 @@ const CONTRACT_TYPES = [
 	"Other",
 ];
 
-const AI_QUIZ_QUESTIONS = [
-	{
-		id: "party_type",
-		text: "Is this contract between a business and individual, or business to business?",
-		options: [
-			{ value: "B2B", label: "Business to business" },
-			{ value: "B2C", label: "Business to individual" },
-			{ value: "Both", label: "Both / Mixed" },
-		],
-	},
-	{
-		id: "duration",
-		text: "Does this involve ongoing services or a one-time transaction?",
-		options: [
-			{ value: "Ongoing", label: "Ongoing services" },
-			{ value: "One-time", label: "One-time transaction" },
-			{ value: "Mixed", label: "Mixed" },
-		],
-	},
+type AiQuizQuestionDef = {
+	id: string;
+	text: string;
+	kind?: "choices" | "freeText";
+	options: { value: string; label: string }[];
+	showWhen?: (answers: Record<string, string>) => boolean;
+};
+
+/** Purpose-first flow with conditional follow-ups (client-side branching). */
+const AI_QUIZ_QUESTION_DEFS: AiQuizQuestionDef[] = [
 	{
 		id: "purpose",
 		text: "What best describes the primary purpose?",
+		kind: "choices",
 		options: [
 			{ value: "Employment", label: "Employment / hiring" },
 			{ value: "Services", label: "Services / consulting" },
@@ -161,15 +157,130 @@ const AI_QUIZ_QUESTIONS = [
 		],
 	},
 	{
+		id: "purpose_detail_employment",
+		text: "Is this for a W-2 employee or an independent contractor?",
+		kind: "choices",
+		showWhen: (a) => a.purpose === "Employment",
+		options: [
+			{ value: "W-2", label: "W-2 employee" },
+			{ value: "1099", label: "Independent contractor" },
+		],
+	},
+	{
+		id: "purpose_detail_property",
+		text: "Is this primarily a lease or a purchase / sale?",
+		kind: "choices",
+		showWhen: (a) => a.purpose === "Property",
+		options: [
+			{
+				value: "Lease",
+				label: "Lease / rental of space or property",
+			},
+			{
+				value: "Purchase",
+				label: "Purchase, sale, or other property transaction",
+			},
+		],
+	},
+	{
+		id: "purpose_detail_services",
+		text: "What kind of services relationship is this?",
+		kind: "choices",
+		showWhen: (a) => a.purpose === "Services",
+		options: [
+			{
+				value: "Consulting",
+				label: "Professional / consulting services",
+			},
+			{
+				value: "Vendor",
+				label: "Vendor, supplies, or general services",
+			},
+		],
+	},
+	{
+		id: "party_type",
+		text: "Is this contract between a business and individual, or business to business?",
+		kind: "choices",
+		options: [
+			{ value: "B2B", label: "Business to business" },
+			{ value: "B2C", label: "Business to individual" },
+			{ value: "Both", label: "Both / Mixed" },
+		],
+	},
+	{
+		id: "duration",
+		text: "Does this involve ongoing services or a one-time transaction?",
+		kind: "choices",
+		options: [
+			{ value: "Ongoing", label: "Ongoing services" },
+			{ value: "One-time", label: "One-time transaction" },
+			{ value: "Mixed", label: "Mixed" },
+		],
+	},
+	{
 		id: "compliance",
 		text: "Does this require government or regulatory compliance?",
+		kind: "choices",
 		options: [
 			{ value: "Yes", label: "Yes" },
 			{ value: "No", label: "No" },
 			{ value: "Unsure", label: "Unsure" },
 		],
 	},
+	{
+		id: "free_text",
+		text: "In one sentence, what is this contract for? (optional)",
+		kind: "freeText",
+		options: [],
+	},
 ];
+
+function getVisibleAiQuizQuestions(
+	answers: Record<string, string>,
+): AiQuizQuestionDef[] {
+	return AI_QUIZ_QUESTION_DEFS.filter(
+		(q) => !q.showWhen || q.showWhen(answers),
+	);
+}
+
+function pruneAiQuizAnswersToVisible(
+	answers: Record<string, string>,
+	visible: AiQuizQuestionDef[],
+): Record<string, string> {
+	const ids = new Set(visible.map((q) => q.id));
+	const next: Record<string, string> = {};
+	for (const id of ids) {
+		const v = answers[id];
+		if (v !== undefined && v !== "") next[id] = v;
+	}
+	return next;
+}
+
+/** CAALM AI Assistant — match glass contract-type selection (frosted + brand hover). */
+const AI_ASSISTANT_OPTION_CLASS =
+	"group w-full rounded-2xl border border-white/40 bg-white/35 p-4 text-left text-sm font-medium text-slate-700 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-[#0f5384]/40 hover:bg-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/30";
+
+/** Gradient primary (alias: see `.btn-primary` in globals.css). */
+const AI_ASSISTANT_BTN_PRIMARY_CLASS =
+	"btn-primary h-10 px-5 shadow-drop-1 text-sm gap-2 sm:w-auto w-full shimmer-hover justify-center";
+
+const AI_ASSISTANT_OPEN_CHIP_CLASS =
+	"inline-flex h-10 items-center gap-2 rounded-full border border-white/45 bg-white/38 px-4 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-md transition-all hover:border-[#0f5384]/35 hover:bg-white/50";
+
+/**
+ * Minimum time (ms) the AI quiz loading `.mp4` is shown before switching to results.
+ * - Edit the fallback number below, or
+ * - Set `NEXT_PUBLIC_AI_QUIZ_LOADING_MIN_MS` in `.env` (0 = show results as soon as the API returns).
+ */
+const AI_QUIZ_LOADING_MIN_MS = (() => {
+	const raw = process.env.NEXT_PUBLIC_AI_QUIZ_LOADING_MIN_MS;
+	if (raw !== undefined && raw !== "") {
+		const n = Number(raw);
+		if (Number.isFinite(n) && n >= 0) return n;
+	}
+	return 5000;
+})();
 
 const LIFECYCLE_STATUSES = [
 	{ value: "draft", label: "Draft" },
@@ -439,14 +550,169 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const [aiQuizAnswers, setAiQuizAnswers] = useState<Record<string, string>>(
 		{},
 	);
-	const [aiSuggestedTypeId, setAiSuggestedTypeId] = useState<string | null>(
-		null,
-	);
+	const [aiSuggestion, setAiSuggestion] =
+		useState<ContractTypeSuggestionResult | null>(null);
+	const [aiQuizFreeTextDraft, setAiQuizFreeTextDraft] = useState("");
 	const [aiQuizPhase, setAiQuizPhase] = useState<
 		"questions" | "loading" | "result"
 	>("questions");
 	const [aiQuizDirection, setAiQuizDirection] = useState<"forward" | "back">(
 		"forward",
+	);
+
+	const visibleAiQuizQuestions = useMemo(
+		() => getVisibleAiQuizQuestions(aiQuizAnswers),
+		[aiQuizAnswers],
+	);
+
+	useEffect(() => {
+		const q = visibleAiQuizQuestions[aiQuizStep];
+		if (q?.id === "free_text") {
+			setAiQuizFreeTextDraft(aiQuizAnswers["free_text"] ?? "");
+		}
+	}, [aiQuizStep, visibleAiQuizQuestions, aiQuizAnswers]);
+
+	useEffect(() => {
+		if (
+			visibleAiQuizQuestions.length > 0 &&
+			aiQuizStep >= visibleAiQuizQuestions.length
+		) {
+			setAiQuizStep(visibleAiQuizQuestions.length - 1);
+		}
+	}, [visibleAiQuizQuestions.length, aiQuizStep]);
+
+	const submitAiQuizSuggestion = useCallback(
+		async (pruned: Record<string, string>) => {
+			const loadingStartedAt =
+				typeof performance !== "undefined" ? performance.now() : Date.now();
+			setAiQuizPhase("loading");
+			try {
+				const freeText = pruned["free_text"]?.trim();
+				const answersForApi = Object.entries(pruned)
+					.filter(([questionId]) => questionId !== "free_text")
+					.map(([questionId, answer]) => ({ questionId, answer }));
+
+				const res = await fetch("/api/ai-contract-type-suggest", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						answers: answersForApi,
+						...(freeText ? { freeText } : {}),
+					}),
+				});
+
+				const data = (await res.json().catch(() => null)) as
+					| ContractTypeSuggestionResult
+					| { error?: string; details?: string }
+					| null;
+
+				if (!res.ok) {
+					toast({
+						title: "Couldn't get AI suggestion",
+						description:
+							data &&
+							typeof data === "object" &&
+							"error" in data &&
+							typeof data.error === "string"
+								? data.error
+								: "Choose a type from the full list.",
+						variant: "destructive",
+					});
+					setAiSuggestion(
+						buildContractTypeFallbackResult(
+							data &&
+								typeof data === "object" &&
+								"details" in data &&
+								typeof data.details === "string"
+								? data.details
+								: "Choose a contract type manually below.",
+						),
+					);
+				} else if (
+					data &&
+					typeof data === "object" &&
+					"primaryTypeId" in data
+				) {
+					setAiSuggestion(data as ContractTypeSuggestionResult);
+				} else {
+					setAiSuggestion(
+						buildContractTypeFallbackResult(
+							"Invalid response from AI. Browse all contract types below.",
+						),
+					);
+				}
+			} catch {
+				toast({
+					title: "Couldn't get AI suggestion",
+					description:
+						"Check your connection and try again, or browse all types.",
+					variant: "destructive",
+				});
+				setAiSuggestion(
+					buildContractTypeFallbackResult(
+						"Network error. Browse all contract types below.",
+					),
+				);
+			}
+
+			const elapsedMs =
+				typeof performance !== "undefined"
+					? performance.now() - loadingStartedAt
+					: Date.now() - loadingStartedAt;
+			const remainingMs = Math.max(0, AI_QUIZ_LOADING_MIN_MS - elapsedMs);
+			if (remainingMs > 0) {
+				await new Promise((resolve) => setTimeout(resolve, remainingMs));
+			}
+			setAiQuizPhase("result");
+		},
+		[toast],
+	);
+
+	const handleAiQuizChoice = useCallback(
+		(optValue: string) => {
+			const q = visibleAiQuizQuestions[aiQuizStep];
+			if (!q || q.kind === "freeText") return;
+
+			const merged = { ...aiQuizAnswers, [q.id]: optValue };
+			const visible = getVisibleAiQuizQuestions(merged);
+			const pruned = pruneAiQuizAnswersToVisible(merged, visible);
+			setAiQuizAnswers(pruned);
+
+			const nextStep = aiQuizStep + 1;
+			if (nextStep < visible.length) {
+				setAiQuizDirection("forward");
+				setAiQuizStep(nextStep);
+			} else {
+				void submitAiQuizSuggestion(pruned);
+			}
+		},
+		[aiQuizAnswers, aiQuizStep, visibleAiQuizQuestions, submitAiQuizSuggestion],
+	);
+
+	const handleAiQuizFreeTextContinue = useCallback(
+		(skip: boolean) => {
+			const q = visibleAiQuizQuestions[aiQuizStep];
+			if (!q || q.id !== "free_text") return;
+
+			const merged: Record<string, string> = { ...aiQuizAnswers };
+			if (skip || !aiQuizFreeTextDraft.trim()) {
+				delete merged.free_text;
+			} else {
+				merged.free_text = aiQuizFreeTextDraft.trim();
+			}
+
+			const visible = getVisibleAiQuizQuestions(merged);
+			const pruned = pruneAiQuizAnswersToVisible(merged, visible);
+			setAiQuizAnswers(pruned);
+			void submitAiQuizSuggestion(pruned);
+		},
+		[
+			aiQuizAnswers,
+			aiQuizFreeTextDraft,
+			aiQuizStep,
+			visibleAiQuizQuestions,
+			submitAiQuizSuggestion,
+		],
 	);
 
 	// Get current contract type configuration
@@ -702,7 +968,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		): Promise<Record<string, unknown> | null> => {
 			try {
 				console.log("=== EXTRACT CONTRACT DATA START ===");
-				console.log("Starting contract data extraction for file:", fileData.name);
+				console.log(
+					"Starting contract data extraction for file:",
+					fileData.name,
+				);
 				console.log("File type:", fileData.type);
 				console.log("File size:", fileData.size);
 				console.log("Base64 content length:", fileData.base64Content.length);
@@ -804,7 +1073,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		setShowAiQuiz(false);
 		setAiQuizStep(0);
 		setAiQuizAnswers({});
-		setAiSuggestedTypeId(null);
+		setAiSuggestion(null);
+		setAiQuizFreeTextDraft("");
 		setAiQuizPhase("questions");
 		setAiQuizDirection("forward");
 	}, [form]);
@@ -1865,24 +2135,30 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				</Button>
 			</DialogTrigger>
 
-			<DialogContent className="sm:max-w-4xl p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white rounded-[26px]">
+			<DialogContent className="glass-dialog">
 				<VisuallyHiddenPrimitive.Root>
 					<DialogTitle>Upload Contract</DialogTitle>
 				</VisuallyHiddenPrimitive.Root>
 
 				{/* Professional Cap */}
-				<div className="h-4 w-full bg-[#d6d7d8] opacity-70 rounded-t-[26px]" />
+				<div className="h-4 w-full shrink-0 rounded-t-[26px] bg-[#d6d7d8]/75" />
 
 				{/* Contract Type Selection Screen */}
 				{showTypeSelection && !selectedContractType && !showAiQuiz ? (
-					<div className="flex-1 overflow-y-auto">
-						{/* Header */}
-						<div className="sticky top-0 z-10 bg-linear-to-r from-blue-50 to-indigo-50 py-6 border-b border-slate-200">
+					<div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
+						{/* Header — frosted strip (matches contract cards) */}
+						<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-4 backdrop-blur-xl">
 							<div className="px-6">
-								<h2 className="text-2xl font-semibold sidebar-gradient-text mb-2">
-									Select Contract Type
-								</h2>
-								<p className="text-sm text-slate-600">
+								<div className="flex items-center gap-3">
+									<FileText
+										className="h-5 w-5 shrink-0 text-[#0f5384]"
+										aria-hidden
+									/>
+									<h2 className="text-xl font-semibold sidebar-gradient-text">
+										Select Contract Type
+									</h2>
+								</div>
+								<p className="mt-1 text-sm text-slate-600 sm:ml-8">
 									Choose the type of contract you want to upload. This will
 									customize the form fields to match your specific contract
 									requirements.
@@ -1891,59 +2167,86 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						</div>
 
 						{/* Contract Type Cards Grid */}
-						<div className="p-6 bg-slate-50">
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						<div className="min-h-0 flex-1 overflow-y-auto p-6">
+							<div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 								{CONTRACT_TYPE_CONFIGS.map((type) => {
 									const IconComponent = getIconComponent(type.icon);
 									return (
-										<Card
+										<div
 											key={type.id}
-											className="glass-card cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
+											role="button"
+											tabIndex={0}
+											className={cn(
+												"glass-card-frosted group cursor-pointer text-card-foreground",
+												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
+											)}
 											onClick={() => handleContractTypeSelect(type.id)}
+											onKeyDown={(e) => {
+												if (e.key === "Enter" || e.key === " ") {
+													e.preventDefault();
+													handleContractTypeSelect(type.id);
+												}
+											}}
 										>
-											<div className="glass-card-cap" />
-											<CardContent className="p-4 sm:p-6">
-												<IconComponent className="h-8 w-8 text-[#0f5384] mb-3" />
-												<h3 className="text-lg font-semibold sidebar-gradient-text mb-2">
+											<div className="glass-card-cap rounded-t-3xl!" />
+											<div className="relative bg-transparent p-4 pt-5 sm:p-6 sm:pt-6">
+												<IconComponent className="mb-3 h-8 w-8 text-[#0f5384]" />
+												<h3 className="mb-3 text-lg font-semibold sidebar-gradient-text">
 													{type.label}
 												</h3>
-												<p className="text-sm text-slate-600 mb-3">
+												<div className="mb-4 rounded-xl border border-white/40 bg-white/40 p-3 text-sm leading-relaxed text-slate-600 backdrop-blur-md">
 													{type.description}
-												</p>
-												<div className="flex items-center justify-between text-xs text-slate-500">
-													<span>{type.steps} steps</span>
-													<span>→</span>
 												</div>
-											</CardContent>
-										</Card>
+												<div className="flex items-center justify-between rounded-full border border-white/45 bg-white/38 px-4 py-2.5 text-xs text-slate-500 backdrop-blur-md">
+													<span>{type.steps} steps</span>
+													<span
+														className="text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5"
+														aria-hidden
+													>
+														→
+													</span>
+												</div>
+											</div>
+										</div>
 									);
 								})}
 							</div>
 						</div>
 
 						{/* Footer */}
-						<div className="sticky bottom-0 px-6 py-4 bg-slate-50 border-t border-slate-200">
-							<div className="flex items-center justify-between">
-								<p className="text-sm text-slate-500 flex items-center justify-center gap-2">
-									Need help? Use CAALM AI Assistant to select the contract type
-									that best fits your needs.
-									<span>→</span>
-									<Image
-										role="button"
-										tabIndex={0}
+						<div className="sticky bottom-0 shrink-0 border-t border-white/35 bg-white/30 px-6 py-4 backdrop-blur-xl">
+							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+								<p className="flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:text-sm">
+									<span>
+										Need help? Use CAALM AI Assistant to pick the best contract
+										type.
+									</span>
+									<span aria-hidden className="text-slate-400">
+										→
+									</span>
+									<button
+										type="button"
 										onClick={() => setShowAiQuiz(true)}
-										onKeyDown={(e) => e.key === "Enter" && setShowAiQuiz(true)}
-										className="cursor-pointer"
-										src="/assets/icons/ai-icon.svg"
-										alt="AI Icon"
-										width={25}
-										height={25}
-									/>
+										className={cn(
+											AI_ASSISTANT_OPEN_CHIP_CLASS,
+											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/30",
+										)}
+									>
+										<Image
+											src="/assets/icons/ai-icon.svg"
+											alt=""
+											width={22}
+											height={22}
+										/>
+										<span className="text-xs font-semibold text-[#0f5384]">
+											Open assistant
+										</span>
+									</button>
 								</p>
 								<Button
 									variant="outline"
 									onClick={() => setIsOpen(false)}
-									className="primary-btn px-3 sm:px-4"
+									className="primary-btn w-full shrink-0 px-3 sm:w-auto sm:px-4"
 								>
 									Cancel
 								</Button>
@@ -1952,9 +2255,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					</div>
 				) : showAiQuiz ? (
 					/* AI Quiz View */
-					<div className="flex-1 overflow-y-auto flex flex-col">
+					<div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
 						{/* Header */}
-						<div className="sticky top-0 z-10 bg-linear-to-r from-blue-50 to-indigo-50 py-6 border-b border-slate-200">
+						<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-6 backdrop-blur-xl">
 							<div className="px-6">
 								<button
 									type="button"
@@ -1962,13 +2265,17 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										setShowAiQuiz(false);
 										setAiQuizStep(0);
 										setAiQuizAnswers({});
-										setAiSuggestedTypeId(null);
+										setAiSuggestion(null);
+										setAiQuizFreeTextDraft("");
 										setAiQuizPhase("questions");
 										setAiQuizDirection("forward");
 									}}
-									className="flex items-center gap-2 text-sm text-slate-600 hover:text-[#0f5384] mb-2"
+									className={cn(
+										AI_ASSISTANT_BTN_PRIMARY_CLASS,
+										"mb-2 h-9 max-w-xs px-4 text-sm",
+									)}
 								>
-									<ChevronLeft className="h-4 w-4" />
+									<ChevronLeft className="h-4 w-4 shrink-0" />
 									Back
 								</button>
 								<h2 className="text-2xl font-semibold sidebar-gradient-text mb-2">
@@ -1982,83 +2289,105 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						</div>
 
 						{/* Quiz Content */}
-						<div className="flex p-6 items-center justify-center bg-slate-[f8fafc]">
+						<div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto bg-transparent p-6">
 							<AnimatePresence mode="wait">
-								{aiQuizPhase === "questions" && (
-									<motion.div
-										key={`question-${aiQuizStep}`}
-										initial={{
-											opacity: 0,
-											x: aiQuizDirection === "forward" ? 100 : -100,
-										}}
-										animate={{ opacity: 1, x: 0 }}
-										exit={{
-											opacity: 0,
-											x: aiQuizDirection === "forward" ? -100 : 100,
-										}}
-										transition={{ duration: 0.3 }}
-										className="max-w-xl w-full"
-									>
-										{aiQuizStep < AI_QUIZ_QUESTIONS.length ? (
-											<>
-												<h3 className="text-lg font-semibold sidebar-gradient-text mb-4">
-													{AI_QUIZ_QUESTIONS[aiQuizStep].text}
-												</h3>
-												<div className="space-y-3">
-													{AI_QUIZ_QUESTIONS[aiQuizStep].options.map((opt) => (
-														<button
-															key={opt.value}
-															type="button"
-															onClick={() => {
-																const q = AI_QUIZ_QUESTIONS[aiQuizStep];
-																const newAnswers = {
-																	...aiQuizAnswers,
-																	[q.id]: opt.value,
-																};
-																setAiQuizAnswers(newAnswers);
-																if (aiQuizStep < AI_QUIZ_QUESTIONS.length - 1) {
-																	setAiQuizDirection("forward");
-																	setAiQuizStep((s) => s + 1);
-																} else {
-																	setAiQuizPhase("loading");
-																	const answersForApi = Object.entries(
-																		newAnswers,
-																	).map(([questionId, answer]) => ({
-																		questionId,
-																		answer,
-																	}));
-																	Promise.all([
-																		fetch("/api/ai-contract-type-suggest", {
-																			method: "POST",
-																			headers: {
-																				"Content-Type": "application/json",
-																			},
-																			body: JSON.stringify({
-																				answers: answersForApi,
-																			}),
-																		})
-																			.then((r) => r.json())
-																			.catch(() => ({ typeId: "vendor" })),
-																		new Promise((resolve) =>
-																			setTimeout(resolve, 10000),
-																		),
-																	]).then(([res]) => {
-																		const typeId = res?.typeId ?? "vendor";
-																		setAiSuggestedTypeId(typeId);
-																		setAiQuizPhase("result");
-																	});
-																}
+								{aiQuizPhase === "questions" &&
+									visibleAiQuizQuestions.length > 0 && (
+										<motion.div
+											key={`question-${visibleAiQuizQuestions[aiQuizStep]?.id ?? aiQuizStep}`}
+											initial={{
+												opacity: 0,
+												x: aiQuizDirection === "forward" ? 100 : -100,
+											}}
+											animate={{ opacity: 1, x: 0 }}
+											exit={{
+												opacity: 0,
+												x: aiQuizDirection === "forward" ? -100 : 100,
+											}}
+											transition={{ duration: 0.3 }}
+											className="max-w-xl w-full"
+										>
+											{aiQuizStep < visibleAiQuizQuestions.length ? (
+												<>
+													<p className="text-sm text-slate-500 mb-2">
+														Question {aiQuizStep + 1} of{" "}
+														{visibleAiQuizQuestions.length}
+													</p>
+													<div className="mb-4 h-1 w-full rounded-full bg-white/50">
+														<div
+															className="h-1 rounded-full bg-linear-to-r from-blue-500 to-cyan-500 transition-all duration-300"
+															style={{
+																width: `${((aiQuizStep + 1) / visibleAiQuizQuestions.length) * 100}%`,
 															}}
-															className="w-full text-left text-slate-700 p-4 rounded-lg border border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
-														>
-															{opt.label}
-														</button>
-													))}
-												</div>
-											</>
-										) : null}
-									</motion.div>
-								)}
+														/>
+													</div>
+													<h3 className="text-lg font-semibold sidebar-gradient-text mb-4">
+														{visibleAiQuizQuestions[aiQuizStep].text}
+													</h3>
+													{visibleAiQuizQuestions[aiQuizStep].kind ===
+													"freeText" ? (
+														<div className="space-y-4">
+															<Textarea
+																value={aiQuizFreeTextDraft}
+																onChange={(e) =>
+																	setAiQuizFreeTextDraft(e.target.value)
+																}
+																placeholder="e.g. Annual lease for our program office…"
+																className="min-h-[100px] glass-form-control resize-y"
+															/>
+															<div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+																<Button
+																	type="button"
+																	variant="ghost"
+																	className={AI_ASSISTANT_BTN_PRIMARY_CLASS}
+																	onClick={() =>
+																		handleAiQuizFreeTextContinue(true)
+																	}
+																>
+																	Skip
+																</Button>
+																<Button
+																	type="button"
+																	variant="ghost"
+																	className={AI_ASSISTANT_BTN_PRIMARY_CLASS}
+																	onClick={() =>
+																		handleAiQuizFreeTextContinue(false)
+																	}
+																>
+																	Get suggestions
+																</Button>
+															</div>
+														</div>
+													) : (
+														<div className="space-y-3">
+															{visibleAiQuizQuestions[aiQuizStep].options.map(
+																(opt) => (
+																	<button
+																		key={opt.value}
+																		type="button"
+																		onClick={() =>
+																			handleAiQuizChoice(opt.value)
+																		}
+																		className={AI_ASSISTANT_OPTION_CLASS}
+																	>
+																		<span className="flex w-full items-center justify-between gap-3">
+																			<span>{opt.label}</span>
+																			<span
+																				className="shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#0f5384]"
+																				aria-hidden
+																			>
+																				→
+																			</span>
+																		</span>
+																	</button>
+																),
+															)}
+														</div>
+													)}
+												</>
+											) : null}
+										</motion.div>
+									)}
 
 								{aiQuizPhase === "loading" && (
 									<motion.div
@@ -2068,89 +2397,143 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										exit={{ opacity: 0 }}
 										className="flex flex-col items-center justify-center py-12"
 									>
-										<video
-											autoPlay
-											loop
-											muted
-											playsInline
-											preload="auto"
-											className="w-[200px] h-[150px] rounded-lg object-contain"
-										>
-											<source
-												src="/assets/video/doc-upload.mp4"
-												type="video/mp4"
-											/>
-										</video>
+										<div className="orbit-animated-border h-[150px] w-[200px] shrink-0">
+											<video
+												autoPlay
+												loop
+												muted
+												playsInline
+												preload="auto"
+												className="h-full w-full rounded-2xl bg-white object-contain"
+											>
+												<source
+													src="/assets/video/doc-upload.mp4"
+													type="video/mp4"
+												/>
+											</video>
+										</div>
 										<p className="text-sm text-slate-600 mt-4">
 											Finding the best contract type...
 										</p>
 									</motion.div>
 								)}
 
-								{aiQuizPhase === "result" && aiSuggestedTypeId && (
+								{aiQuizPhase === "result" && aiSuggestion && (
 									<motion.div
 										key="result"
 										initial={{ opacity: 0, x: 100 }}
 										animate={{ opacity: 1, x: 0 }}
-										className="max-w-xl"
+										className="max-w-xl w-full"
 									>
-										<h3 className="text-lg font-semibold sidebar-gradient-text mb-4">
-											Suggested contract type
+										<h3 className="text-lg font-semibold sidebar-gradient-text mb-2">
+											Suggested contract types
 										</h3>
-										{(() => {
-											const config =
-												getContractTypeConfig(aiSuggestedTypeId) ??
-												getContractTypeConfig("vendor");
-											if (!config) return null;
-											const IconComponent = getIconComponent(config.icon);
-											return (
-												<Card
-													className="glass-card cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
-													onClick={() => {
-														handleContractTypeSelect(config.id);
-														setShowAiQuiz(false);
-														setAiQuizStep(0);
-														setAiQuizAnswers({});
-														setAiSuggestedTypeId(null);
-														setAiQuizPhase("questions");
-														setAiQuizDirection("forward");
-													}}
-												>
-													<div className="glass-card-cap" />
-													<CardContent className="p-4 sm:p-6">
-														<IconComponent className="h-8 w-8 text-[#0f5384] mb-3" />
-														<h3 className="text-lg font-semibold sidebar-gradient-text mb-2">
-															{config.label}
-														</h3>
-														<p className="text-sm text-slate-600 mb-3">
-															{config.description}
-														</p>
-														<div className="flex items-center justify-between text-xs text-slate-500">
-															<span>{config.steps} steps</span>
-															<span>→</span>
-														</div>
-													</CardContent>
-												</Card>
-											);
-										})()}
+										{aiSuggestion.rationale ? (
+											<p className="text-sm text-slate-600 mb-3">
+												{aiSuggestion.rationale}
+											</p>
+										) : null}
+										{aiSuggestion.confidence === 0 && (
+											<p className="mb-3 rounded-xl border border-amber-200/90 bg-amber-50/95 px-3 py-2 text-xs text-amber-950">
+												This is a default suggestion (AI unavailable or the
+												response could not be applied). Prefer another card or
+												browse all types.
+											</p>
+										)}
+										{aiSuggestion.confidence > 0 &&
+											aiSuggestion.confidence < 0.35 && (
+												<p className="mb-3 text-xs text-amber-800">
+													Low confidence — review alternates or browse all types
+													below.
+												</p>
+											)}
+										<div className="space-y-4">
+											{(() => {
+												const orderedIds: string[] = [
+													aiSuggestion.primaryTypeId,
+												];
+												for (const a of aiSuggestion.alternates) {
+													if (!orderedIds.includes(a.typeId))
+														orderedIds.push(a.typeId);
+												}
+												return orderedIds.map((typeId, idx) => {
+													const config = getContractTypeConfig(typeId);
+													if (!config) return null;
+													const IconComponent = getIconComponent(config.icon);
+													const badge =
+														idx === 0
+															? aiSuggestion.confidence === 0
+																? "Default"
+																: "Best match"
+															: "Also consider";
+													return (
+														<Card
+															key={typeId}
+															className="glass-card cursor-pointer transition-all duration-200 hover:border-blue-300 hover:bg-blue-50"
+															onClick={() => {
+																handleContractTypeSelect(config.id);
+																setShowAiQuiz(false);
+																setAiQuizStep(0);
+																setAiQuizAnswers({});
+																setAiSuggestion(null);
+																setAiQuizFreeTextDraft("");
+																setAiQuizPhase("questions");
+																setAiQuizDirection("forward");
+															}}
+														>
+															<div className="glass-card-cap" />
+															<CardContent className="p-4 sm:p-6">
+																<div className="mb-2 flex items-center justify-between gap-2">
+																	<Badge
+																		variant="outline"
+																		className="text-xs font-normal text-slate-600"
+																	>
+																		{badge}
+																	</Badge>
+																	{idx === 0 && aiSuggestion.confidence > 0 && (
+																		<span className="text-xs text-slate-500">
+																			{Math.round(
+																				aiSuggestion.confidence * 100,
+																			)}
+																			% match
+																		</span>
+																	)}
+																</div>
+																<IconComponent className="mb-3 h-8 w-8 text-[#0f5384]" />
+																<h3 className="mb-2 text-lg font-semibold sidebar-gradient-text">
+																	{config.label}
+																</h3>
+																<p className="mb-3 text-sm text-slate-600">
+																	{config.description}
+																</p>
+																<div className="flex items-center justify-between text-xs text-slate-500">
+																	<span>{config.steps} steps</span>
+																	<span aria-hidden>→</span>
+																</div>
+															</CardContent>
+														</Card>
+													);
+												});
+											})()}
+										</div>
 									</motion.div>
 								)}
 							</AnimatePresence>
 						</div>
 
 						{/* Footer */}
-						<div className="sticky bottom-0 px-6 py-4 bg-slate-50 border-t border-slate-200">
-							<div className="flex items-center justify-between">
-								<div>
+						<div className="sticky bottom-0 shrink-0 border-t border-white/35 bg-white/30 px-6 py-4 backdrop-blur-xl">
+							<div className="flex items-center justify-between gap-2">
+								<div className="flex flex-wrap items-center gap-2">
 									{aiQuizPhase === "questions" && aiQuizStep > 0 && (
 										<Button
 											type="button"
-											variant="outline"
+											variant="ghost"
 											onClick={() => {
 												setAiQuizDirection("back");
 												setAiQuizStep((s) => s - 1);
 											}}
-											className="primary-btn px-3 sm:px-4"
+											className={cn(AI_ASSISTANT_BTN_PRIMARY_CLASS, "px-4")}
 										>
 											<ChevronLeft className="h-4 w-4" />
 											Previous
@@ -2160,7 +2543,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 								<Button
 									variant="outline"
 									onClick={() => setIsOpen(false)}
-									className="primary-btn px-3 sm:px-4"
+									className={cn(
+										AI_ASSISTANT_BTN_PRIMARY_CLASS,
+										"shrink-0 px-4 sm:px-6",
+									)}
 								>
 									Cancel
 								</Button>
@@ -2169,12 +2555,12 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					</div>
 				) : (
 					<>
-						{/* Sticky Header with gradient background */}
-						<div className="sticky top-0 z-10 bg-[#f4f9fd] py-4 border-b border-slate-200">
+						{/* Sticky Header — frosted strip */}
+						<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/55 to-sky-50/45 py-4 backdrop-blur-xl">
 							<div className="px-6">
 								<div className="flex items-center gap-3 mb-3">
-									<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-										<Upload className="w-5 h-5 text-[#0f5384]" />
+									<div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/45 bg-white/45 backdrop-blur-sm">
+										<Upload className="h-5 w-5 text-[#0f5384]" />
 									</div>
 									{/* Title */}
 									<div className="flex-1">
@@ -2236,7 +2622,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 								</div>
 
 								{/* Progress Bar */}
-								<div className="w-full bg-slate-200 rounded-full h-2">
+								<div className="h-2 w-full rounded-full bg-white/40 backdrop-blur-sm">
 									<div
 										className="bg-linear-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
 										style={{ width: `${(currentStep / totalSteps) * 100}%` }}
@@ -2272,8 +2658,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															: isCompleted
 																? "bg-green/10 text-green border-green/20"
 																: isAccessible
-																	? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-																	: "bg-slate-50 text-slate-400 cursor-not-allowed",
+																	? "border border-white/35 bg-white/35 text-slate-600 backdrop-blur-sm hover:bg-white/50"
+																	: "cursor-not-allowed border border-white/20 bg-white/15 text-slate-400",
 													)}
 													title={title}
 												>
@@ -2304,7 +2690,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						</div>
 
 						{/* Scrollable Content */}
-						<div className="flex-1 overflow-y-auto p-4 bg-white">
+						<div className="min-h-0 flex-1 overflow-y-auto bg-transparent p-4">
 							<Form {...form}>
 								<form
 									id="contract-upload-form"
@@ -5125,7 +5511,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Header with gradient background */}
-					<div className="sticky top-0 z-10 bg-gradient-to-r from-orange-50 to-amber-50 py-4 border-b border-slate-200">
+					<div className="sticky top-0 z-10 bg-linear-to-r from-orange-50 to-amber-50 py-4 border-b border-slate-200">
 						<div className="flex items-center gap-3 px-6">
 							{/* Title */}
 							<div>

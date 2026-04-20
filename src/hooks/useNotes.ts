@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	createNote,
 	deleteNote,
@@ -24,7 +24,7 @@ export const useNotes = ({
 	const [error, setError] = useState<string | null>(null);
 
 	// Fetch notes from database
-	const fetchNotes = async () => {
+	const fetchNotes = useCallback(async () => {
 		try {
 			setError(null);
 			console.log("useNotes: Fetching notes for userId:", userId);
@@ -45,7 +45,7 @@ export const useNotes = ({
 		} finally {
 			setIsLoading(false);
 		}
-	};
+	}, [userId]);
 
 	// Initial fetch
 	useEffect(() => {
