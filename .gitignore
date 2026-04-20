@@ -149,7 +149,6 @@ docs/
 .vercel
 
 # Google credentials
-caalm-466120-c3e75c165eeb.json
 src/pages/api/caalm-466120-c3e75c165eeb.json
 
 *.ps1
