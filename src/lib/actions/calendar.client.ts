@@ -1,150 +1,150 @@
-'use client';
+"use client";
 
 export interface CalendarEvent {
-  $id?: string;
-  title: string;
-  startDate: string;
-  endDate?: string;
-  type: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit';
-  description?: string;
-  contractName?: string;
-  amount?: string;
-  startTime?: string;
-  endTime?: string;
-  participants?: string;
-  createdBy: string;
-  createdByUserId?: string;
-  createdByAccountId?: string;
-  sensitivityLevel?: 'standard' | 'restricted' | 'confidential';
-  requiresApproval?: boolean;
-  approvalStatus?:
-    | 'not_required'
-    | 'pending'
-    | 'approved'
-    | 'rejected'
-    | 'changes_requested';
-  pendingApprovalId?: string | null;
-  $createdAt?: string;
-  $updatedAt?: string;
+	$id?: string;
+	title: string;
+	startDate: string;
+	endDate?: string;
+	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	description?: string;
+	contractName?: string;
+	amount?: string;
+	startTime?: string;
+	endTime?: string;
+	participants?: string;
+	createdBy: string;
+	createdByUserId?: string;
+	createdByAccountId?: string;
+	sensitivityLevel?: "standard" | "restricted" | "confidential";
+	requiresApproval?: boolean;
+	approvalStatus?:
+		| "not_required"
+		| "pending"
+		| "approved"
+		| "rejected"
+		| "changes_requested";
+	pendingApprovalId?: string | null;
+	$createdAt?: string;
+	$updatedAt?: string;
 }
 
 export interface CreateCalendarEventData {
-  title: string;
-  startDate: string;
-  endDate?: string;
-  type: 'contract' | 'deadline' | 'meeting' | 'review' | 'audit';
-  description?: string;
-  contractName?: string;
-  amount?: string;
-  startTime?: string;
-  endTime?: string;
-  participants?: string;
-  createdBy: string;
-  createdByUserId?: string;
-  createdByAccountId?: string;
-  outlook_id?: string;
-  sensitivityLevel?: 'standard' | 'restricted' | 'confidential';
-  requiresApproval?: boolean;
+	title: string;
+	startDate: string;
+	endDate?: string;
+	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	description?: string;
+	contractName?: string;
+	amount?: string;
+	startTime?: string;
+	endTime?: string;
+	participants?: string;
+	createdBy: string;
+	createdByUserId?: string;
+	createdByAccountId?: string;
+	outlook_id?: string;
+	sensitivityLevel?: "standard" | "restricted" | "confidential";
+	requiresApproval?: boolean;
 }
 
 // Client-side API calls for calendar events
-const API_BASE = '/api/calendar';
+const API_BASE = "/api/calendar";
 
 // Get calendar events for a specific month
 export const getCalendarEventsByMonth = async (
-  year: number,
-  month: number
+	year: number,
+	month: number,
 ): Promise<CalendarEvent[]> => {
-  try {
-    const url = `${API_BASE}/events?year=${year}&month=${month}`;
-    console.log('Fetching from URL:', url);
-    const response = await fetch(url);
-    console.log('Response status:', response.status);
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Response error:', errorText);
-      throw new Error(
-        `Failed to fetch calendar events: ${response.status} ${errorText}`
-      );
-    }
-    const data = await response.json();
-    console.log('Response data:', data);
-    // Extract events array from response wrapper if present
-    return Array.isArray(data) ? data : (data.events || []);
-  } catch (error) {
-    console.error('Error fetching calendar events by month:', error);
-    return [];
-  }
+	try {
+		const url = `${API_BASE}/events?year=${year}&month=${month}`;
+		console.log("Fetching from URL:", url);
+		const response = await fetch(url);
+		console.log("Response status:", response.status);
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error("Response error:", errorText);
+			throw new Error(
+				`Failed to fetch calendar events: ${response.status} ${errorText}`,
+			);
+		}
+		const data = await response.json();
+		console.log("Response data:", data);
+		// Extract events array from response wrapper if present
+		return Array.isArray(data) ? data : data.events || [];
+	} catch (error) {
+		console.error("Error fetching calendar events by month:", error);
+		return [];
+	}
 };
 
 // Create a new calendar event
 export const createCalendarEvent = async (
-  eventData: CreateCalendarEventData
+	eventData: CreateCalendarEventData,
 ): Promise<CalendarEvent | null> => {
-  try {
-    console.log('Sending event data to API:', eventData);
+	try {
+		console.log("Sending event data to API:", eventData);
 
-    const response = await fetch(`${API_BASE}/events`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(eventData),
-    });
+		const response = await fetch(`${API_BASE}/events`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(eventData),
+		});
 
-    console.log('Response status:', response.status);
+		console.log("Response status:", response.status);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('API Error response:', errorData);
-      throw new Error(
-        errorData.details ||
-          `Failed to create calendar event: ${response.status}`
-      );
-    }
+		if (!response.ok) {
+			const errorData = await response.json();
+			console.error("API Error response:", errorData);
+			throw new Error(
+				errorData.details ||
+					`Failed to create calendar event: ${response.status}`,
+			);
+		}
 
-    const result = await response.json();
-    console.log('Successfully created event:', result);
-    return result;
-  } catch (error) {
-    console.error('Error creating calendar event:', error);
-    throw error; // Re-throw to let the component handle it
-  }
+		const result = await response.json();
+		console.log("Successfully created event:", result);
+		return result;
+	} catch (error) {
+		console.error("Error creating calendar event:", error);
+		throw error; // Re-throw to let the component handle it
+	}
 };
 
 // Update an existing calendar event
 export const updateCalendarEvent = async (
-  eventId: string,
-  eventData: Partial<CreateCalendarEventData>
+	eventId: string,
+	eventData: Partial<CreateCalendarEventData>,
 ): Promise<CalendarEvent | null> => {
-  try {
-    console.log('Updating event data to API:', { eventId, eventData });
+	try {
+		console.log("Updating event data to API:", { eventId, eventData });
 
-    const response = await fetch(`${API_BASE}/events?id=${eventId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(eventData),
-    });
+		const response = await fetch(`${API_BASE}/events?id=${eventId}`, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(eventData),
+		});
 
-    console.log('Update response status:', response.status);
+		console.log("Update response status:", response.status);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('API Error response:', errorData);
-      throw new Error(
-        errorData.message ||
-          errorData.details ||
-          `Failed to update calendar event: ${response.status}`
-      );
-    }
+		if (!response.ok) {
+			const errorData = await response.json();
+			console.error("API Error response:", errorData);
+			throw new Error(
+				errorData.message ||
+					errorData.details ||
+					`Failed to update calendar event: ${response.status}`,
+			);
+		}
 
-    const result = await response.json();
-    console.log('Successfully updated event:', result);
-    return result.event || result;
-  } catch (error) {
-    console.error('Error updating calendar event:', error);
-    throw error; // Re-throw to let the component handle it
-  }
+		const result = await response.json();
+		console.log("Successfully updated event:", result);
+		return result.event || result;
+	} catch (error) {
+		console.error("Error updating calendar event:", error);
+		throw error; // Re-throw to let the component handle it
+	}
 };

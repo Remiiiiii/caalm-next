@@ -1,269 +1,279 @@
-'use server';
+"use server";
 
-import { createAdminClient } from '@/lib/appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
-import { ID, Query } from 'node-appwrite';
+import { ID, Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { hasPermission } from "@/lib/rbac/permissions";
 import {
-  formatDepartmentName,
-  type ContractDepartment,
-} from '../../../constants';
-import { hasPermission } from '@/lib/rbac/permissions';
-import { PERMISSIONS } from '@/constants/permissions';
+	type ContractDepartment,
+	formatDepartmentName,
+} from "../../../constants";
 
 const handleError = (error: unknown, message: string) => {
-  console.log(error, message);
-  throw error;
+	console.log(error, message);
+	throw error;
 };
 
 interface CreateNotificationProps {
-  userId: string;
-  title: string;
-  message: string;
-  type: string;
-  read?: boolean;
+	userId: string;
+	title: string;
+	message: string;
+	type: string;
+	read?: boolean;
 }
 
 export const createNotification = async ({
-  userId,
-  title,
-  message,
-  type,
-  read = false,
+	userId,
+	title,
+	message,
+	type,
+	read = false,
 }: CreateNotificationProps) => {
-  const { tablesDB } = await createAdminClient();
-  try {
-    // Get orgId - it's a required field in the database
-    const { getUserDefaultOrganization } = await import('@/lib/rbac/permissions');
-    const defaultOrg = await getUserDefaultOrganization(userId);
-    if (!defaultOrg?.orgId) {
-      throw new Error(`User ${userId} has no default organization - cannot create notification`);
-    }
+	const { tablesDB } = await createAdminClient();
+	try {
+		// Get orgId - it's a required field in the database
+		const { getUserDefaultOrganization } = await import(
+			"@/lib/rbac/permissions"
+		);
+		const defaultOrg = await getUserDefaultOrganization(userId);
+		if (!defaultOrg?.orgId) {
+			throw new Error(
+				`User ${userId} has no default organization - cannot create notification`,
+			);
+		}
 
-    const notification = await tablesDB.createRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
-      rowId: ID.unique(),
-      data: {
-        userId,
-        title,
-        message,
-        type,
-        read,
-        orgId: defaultOrg.orgId, // REQUIRED field
-      },
-    });
-    // SMS notification is now handled automatically by the notification service
-    // when creating notifications, so no additional action needed here
-    return notification;
-  } catch (error) {
-    handleError(error, 'Failed to create notification');
-  }
+		const notification = await tablesDB.createRow({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.notificationsCollectionId || "notifications",
+			rowId: ID.unique(),
+			data: {
+				userId,
+				title,
+				message,
+				type,
+				read,
+				orgId: defaultOrg.orgId, // REQUIRED field
+			},
+		});
+		// SMS notification is now handled automatically by the notification service
+		// when creating notifications, so no additional action needed here
+		return notification;
+	} catch (error) {
+		handleError(error, "Failed to create notification");
+	}
 };
 
 export const getNotifications = async (userId: string) => {
-  const { tablesDB } = await createAdminClient();
-  try {
-    const notifications = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
-      queries: [Query.equal('userId', userId), Query.orderDesc('$createdAt')],
-    });
-    return notifications;
-  } catch (error) {
-    handleError(error, 'Failed to get notifications');
-  }
+	const { tablesDB } = await createAdminClient();
+	try {
+		const notifications = await tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.notificationsCollectionId || "notifications",
+			queries: [Query.equal("userId", userId), Query.orderDesc("$createdAt")],
+		});
+		return notifications;
+	} catch (error) {
+		handleError(error, "Failed to get notifications");
+	}
 };
 
 export const markNotificationAsRead = async (notificationId: string) => {
-  const { tablesDB } = await createAdminClient();
-  try {
-    const notification = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
-      rowId: notificationId,
-      data: { read: true },
-    });
-    return notification;
-  } catch (error) {
-    handleError(error, 'Failed to mark notification as read');
-  }
+	const { tablesDB } = await createAdminClient();
+	try {
+		const notification = await tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.notificationsCollectionId || "notifications",
+			rowId: notificationId,
+			data: { read: true },
+		});
+		return notification;
+	} catch (error) {
+		handleError(error, "Failed to mark notification as read");
+	}
 };
 
 export const markNotificationAsUnread = async (notificationId: string) => {
-  const { tablesDB } = await createAdminClient();
-  try {
-    const notification = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
-      rowId: notificationId,
-      data: { read: false },
-    });
-    return notification;
-  } catch (error) {
-    handleError(error, 'Failed to mark notification as unread');
-  }
+	const { tablesDB } = await createAdminClient();
+	try {
+		const notification = await tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.notificationsCollectionId || "notifications",
+			rowId: notificationId,
+			data: { read: false },
+		});
+		return notification;
+	} catch (error) {
+		handleError(error, "Failed to mark notification as unread");
+	}
 };
 
 export const deleteNotification = async (notificationId: string) => {
-  const { tablesDB } = await createAdminClient();
-  try {
-    await tablesDB.deleteRow(
-      appwriteConfig.databaseId,
-      appwriteConfig.notificationsCollectionId || 'notifications',
-      notificationId
-    );
-    return { success: true };
-  } catch (error) {
-    handleError(error, 'Failed to delete notification');
-  }
+	const { tablesDB } = await createAdminClient();
+	try {
+		await tablesDB.deleteRow(
+			appwriteConfig.databaseId,
+			appwriteConfig.notificationsCollectionId || "notifications",
+			notificationId,
+		);
+		return { success: true };
+	} catch (error) {
+		handleError(error, "Failed to delete notification");
+	}
 };
 
 export const getUnreadNotificationsCount = async (userId: string) => {
-  const { tablesDB } = await createAdminClient();
-  try {
-    const notifications = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.notificationsCollectionId || 'notifications',
-      queries: [Query.equal('userId', userId), Query.equal('read', false)],
-    });
-    return notifications.total;
-  } catch (error) {
-    console.error('Failed to fetch unread notifications count:', error);
-    return 0;
-  }
+	const { tablesDB } = await createAdminClient();
+	try {
+		const notifications = await tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.notificationsCollectionId || "notifications",
+			queries: [Query.equal("userId", userId), Query.equal("read", false)],
+		});
+		return notifications.total;
+	} catch (error) {
+		console.error("Failed to fetch unread notifications count:", error);
+		return 0;
+	}
 };
 
 // Contract expiration notification functions
 const getDaysUntilExpiry = (expiryDate: string): number => {
-  const today = new Date();
-  const expiry = new Date(expiryDate);
-  const diff = expiry.getTime() - today.setHours(0, 0, 0, 0);
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+	const today = new Date();
+	const expiry = new Date(expiryDate);
+	const diff = expiry.getTime() - today.setHours(0, 0, 0, 0);
+	return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
 const shouldSendNotification = (daysUntil: number): boolean => {
-  const thresholds = [30, 15, 10, 5, 1];
-  return thresholds.includes(daysUntil);
+	const thresholds = [30, 15, 10, 5, 1];
+	return thresholds.includes(daysUntil);
 };
 
 export const checkContractExpirations = async () => {
-  const { tablesDB } = await createAdminClient();
-  try {
-    // Get all contracts with expiry dates
-    const contracts = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
-      queries: [Query.isNotNull('contractExpiryDate')],
-    });
+	const { tablesDB } = await createAdminClient();
+	try {
+		// Get all contracts with expiry dates
+		const contracts = await tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.contractsCollectionId,
+			queries: [Query.isNotNull("contractExpiryDate")],
+		});
 
-    // Get all users (we'll check permissions for each)
-    const users = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
-      queries: [Query.limit(100)],
-    });
+		// Get all users (we'll check permissions for each)
+		const users = await tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.usersCollectionId,
+			queries: [Query.limit(100)],
+		});
 
-    const notificationsCreated: string[] = [];
+		const notificationsCreated: string[] = [];
 
-    for (const contract of contracts.rows) {
-      if (!contract.contractExpiryDate) continue;
+		for (const contract of contracts.rows) {
+			if (!contract.contractExpiryDate) continue;
 
-      const daysUntil = getDaysUntilExpiry(contract.contractExpiryDate);
+			const daysUntil = getDaysUntilExpiry(contract.contractExpiryDate);
 
-      if (!shouldSendNotification(daysUntil)) continue;
+			if (!shouldSendNotification(daysUntil)) continue;
 
-      // Check if notification already exists for this contract and threshold
-      const existingNotifications = await tablesDB.listRows({
-        databaseId: appwriteConfig.databaseId,
-        tableId: 'notifications',
-        queries: [
-          Query.equal('type', 'contract-expiry'),
-          Query.equal('contractId', contract.$id),
-          Query.equal('daysUntil', daysUntil),
-        ],
-      });
+			// Check if notification already exists for this contract and threshold
+			const existingNotifications = await tablesDB.listRows({
+				databaseId: appwriteConfig.databaseId,
+				tableId: "notifications",
+				queries: [
+					Query.equal("type", "contract-expiry"),
+					Query.equal("contractId", contract.$id),
+					Query.equal("daysUntil", daysUntil),
+				],
+			});
 
-      if (existingNotifications.total > 0) continue;
+			if (existingNotifications.total > 0) continue;
 
-      for (const user of users.rows) {
-        let shouldNotify = false;
+			for (const user of users.rows) {
+				let shouldNotify = false;
 
-        // Check if user has contracts.view permission (all users with contract access)
-        const hasContractView = await hasPermission(user.$id, PERMISSIONS.CONTRACTS.VIEW);
-        const hasSettingsView = await hasPermission(user.$id, PERMISSIONS.SETTINGS.VIEW);
+				// Check if user has contracts.view permission (all users with contract access)
+				const hasContractView = await hasPermission(
+					user.$id,
+					PERMISSIONS.CONTRACTS.VIEW,
+				);
+				const hasSettingsView = await hasPermission(
+					user.$id,
+					PERMISSIONS.SETTINGS.VIEW,
+				);
 
-        // Super Admin and Organization Admin get notifications for all contracts
-        if (hasSettingsView) {
-          shouldNotify = true;
-        }
-        // Department Manager only gets notifications for contracts in their department
-        else if (hasContractView && contract.department && user.department) {
-          shouldNotify = user.department === contract.department;
-        }
+				// Super Admin and Organization Admin get notifications for all contracts
+				if (hasSettingsView) {
+					shouldNotify = true;
+				}
+				// Department Manager only gets notifications for contracts in their department
+				else if (hasContractView && contract.department && user.department) {
+					shouldNotify = user.department === contract.department;
+				}
 
-        if (shouldNotify) {
-          const departmentLabel = contract.department
-            ? formatDepartmentName(contract.department)
-            : 'Unknown Department';
+				if (shouldNotify) {
+					const departmentLabel = contract.department
+						? formatDepartmentName(contract.department)
+						: "Unknown Department";
 
-          const notification = await createNotification({
-            userId: user.accountId,
-            title: 'Contract Expiry Reminder',
-            message: `The contract "${
-              contract.contractName
-            }" in ${departmentLabel} is set to expire in ${daysUntil} days (on ${contract.contractExpiryDate.slice(
-              0,
-              10
-            )}).`,
-            type: 'contract-expiry',
-            read: false,
-          });
+					const notification = await createNotification({
+						userId: user.accountId,
+						title: "Contract Expiry Reminder",
+						message: `The contract "${
+							contract.contractName
+						}" in ${departmentLabel} is set to expire in ${daysUntil} days (on ${contract.contractExpiryDate.slice(
+							0,
+							10,
+						)}).`,
+						type: "contract-expiry",
+						read: false,
+					});
 
-          if (notification) {
-            notificationsCreated.push(notification.$id);
-          }
-        }
-      }
-    }
+					if (notification) {
+						notificationsCreated.push(notification.$id);
+					}
+				}
+			}
+		}
 
-    return { notificationsCreated: notificationsCreated.length };
-  } catch (error) {
-    handleError(error, 'Failed to check contract expirations');
-  }
+		return { notificationsCreated: notificationsCreated.length };
+	} catch (error) {
+		handleError(error, "Failed to check contract expirations");
+	}
 };
 
 export const assignContractToDepartment = async ({
-  contractId,
-  department,
+	contractId,
+	department,
 }: {
-  contractId: string;
-  department: ContractDepartment;
+	contractId: string;
+	department: ContractDepartment;
 }) => {
-  const { tablesDB } = await createAdminClient();
-  try {
-    // Update the contract document's department
-    const updatedContract = await tablesDB.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.contractsCollectionId,
-      rowId: contractId,
-      data: { department },
-    });
+	const { tablesDB } = await createAdminClient();
+	try {
+		// Update the contract document's department
+		const updatedContract = await tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.contractsCollectionId,
+			rowId: contractId,
+			data: { department },
+		});
 
-    // Also update the file document's department field
-    if (updatedContract.fileId) {
-      await tablesDB.updateRow({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.filesCollectionId,
-        rowId: updatedContract.fileId,
-        data: { department },
-      });
-    }
+		// Also update the file document's department field
+		if (updatedContract.fileId) {
+			await tablesDB.updateRow({
+				databaseId: appwriteConfig.databaseId,
+				tableId: appwriteConfig.filesCollectionId,
+				rowId: updatedContract.fileId,
+				data: { department },
+			});
+		}
 
-    // Trigger expiration check after department assignment
-    await checkContractExpirations();
+		// Trigger expiration check after department assignment
+		await checkContractExpirations();
 
-    return updatedContract;
-  } catch (error) {
-    handleError(error, 'Failed to assign contract to department');
-  }
+		return updatedContract;
+	} catch (error) {
+		handleError(error, "Failed to assign contract to department");
+	}
 };

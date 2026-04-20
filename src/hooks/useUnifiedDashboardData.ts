@@ -1,114 +1,110 @@
-import useSWR from 'swr';
-import { useAuth } from '@/contexts/AuthContext';
-import { useMemo } from 'react';
-import { getCachedData, setCachedData } from '@/lib/utils/client-cache';
+import { useMemo } from "react";
+import useSWR from "swr";
+import { useAuth } from "@/contexts/AuthContext";
+import { getCachedData, setCachedData } from "@/lib/utils/client-cache";
 
 interface DashboardData {
-  stats: {
-    totalContracts: number;
-    expiringContracts: number;
-    activeUsers: number;
-    complianceRate: string;
-  };
-  files: unknown[];
-  invitations: unknown[];
-  authUsers: unknown[];
-  uninvitedUsers: unknown[];
-  reports: unknown[];
-  departments: unknown[];
-  reportTemplates: unknown[];
-  notifications: unknown[];
-  notificationsStats: unknown;
-  recentActivities: unknown[];
-  calendarEvents: unknown[];
+	stats: {
+		totalContracts: number;
+		expiringContracts: number;
+		activeUsers: number;
+		complianceRate: string;
+	};
+	files: unknown[];
+	invitations: unknown[];
+	authUsers: unknown[];
+	uninvitedUsers: unknown[];
+	reports: unknown[];
+	departments: unknown[];
+	reportTemplates: unknown[];
+	notifications: unknown[];
+	notificationsStats: unknown;
+	recentActivities: unknown[];
+	calendarEvents: unknown[];
 }
 
 interface UnifiedDashboardDataResponse {
-  data: DashboardData;
-  timestamp: number;
+	data: DashboardData;
+	timestamp: number;
 }
 
 const fetcher = async (url: string): Promise<UnifiedDashboardDataResponse> => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error('Failed to fetch unified dashboard data');
-  }
-  const data = await response.json();
-  
-  // Cache the response client-side for stale-while-revalidate
-  if (typeof window !== 'undefined') {
-    setCachedData(url, data, 300000); // 5 minutes
-  }
-  
-  return data;
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error("Failed to fetch unified dashboard data");
+	}
+	const data = await response.json();
+
+	// Cache the response client-side for stale-while-revalidate
+	if (typeof window !== "undefined") {
+		setCachedData(url, data, 300000); // 5 minutes
+	}
+
+	return data;
 };
 
 export const useUnifiedDashboardData = (orgId: string) => {
-  const { user } = useAuth();
-  const url = user?.$id
-    ? `/api/dashboard/unified?orgId=${orgId}&userId=${user.$id}`
-    : null;
+	const { user } = useAuth();
+	const url = user?.$id
+		? `/api/dashboard/unified?orgId=${orgId}&userId=${user.$id}`
+		: null;
 
-  // Get cached data as fallback for stale-while-revalidate
-  const fallbackData = useMemo(() => {
-    if (!url || typeof window === 'undefined') return undefined;
-    return getCachedData<UnifiedDashboardDataResponse>(url);
-  }, [url]);
+	// Get cached data as fallback for stale-while-revalidate
+	const fallbackData = useMemo(() => {
+		if (!url || typeof window === "undefined") return undefined;
+		return getCachedData<UnifiedDashboardDataResponse>(url);
+	}, [url]);
 
-  const { data, error, isLoading, mutate } = useSWR(
-    url,
-    fetcher,
-    {
-      refreshInterval: 120000, // Refresh every 2 minutes
-      revalidateOnFocus: false, // Disable focus revalidation to prevent flickering
-      revalidateOnReconnect: true,
-      dedupingInterval: 60000, // Dedupe requests within 1 minute
-      errorRetryCount: 2, // Reduced retries for faster failure
-      errorRetryInterval: 3000, // Faster retry interval
-      revalidateIfStale: true,
-      revalidateOnMount: true,
-      keepPreviousData: true, // Keep previous data to prevent flickering
-      fallbackData, // Stale-while-revalidate: show cached data immediately
-      // Only log in development
-      onError: (err) => {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Dashboard data fetch error:', err);
-        }
-      },
-      onSuccess: (data) => {
-        // Update cache when fresh data arrives
-        if (url && typeof window !== 'undefined') {
-          setCachedData(url, data, 300000);
-        }
-      },
-    }
-  );
+	const { data, error, isLoading, mutate } = useSWR(url, fetcher, {
+		refreshInterval: 120000, // Refresh every 2 minutes
+		revalidateOnFocus: false, // Disable focus revalidation to prevent flickering
+		revalidateOnReconnect: true,
+		dedupingInterval: 60000, // Dedupe requests within 1 minute
+		errorRetryCount: 2, // Reduced retries for faster failure
+		errorRetryInterval: 3000, // Faster retry interval
+		revalidateIfStale: true,
+		revalidateOnMount: true,
+		keepPreviousData: true, // Keep previous data to prevent flickering
+		fallbackData, // Stale-while-revalidate: show cached data immediately
+		// Only log in development
+		onError: (err) => {
+			if (process.env.NODE_ENV === "development") {
+				console.error("Dashboard data fetch error:", err);
+			}
+		},
+		onSuccess: (data) => {
+			// Update cache when fresh data arrives
+			if (url && typeof window !== "undefined") {
+				setCachedData(url, data, 300000);
+			}
+		},
+	});
 
-  return {
-    // Data
-    stats: data?.data?.stats || {
-      totalContracts: 0,
-      expiringContracts: 0,
-      activeUsers: 0,
-      complianceRate: '94%',
-    },
-    files: data?.data?.files || [],
-    invitations: data?.data?.invitations || [],
-    authUsers: data?.data?.authUsers || [],
-    uninvitedUsers: data?.data?.uninvitedUsers || [],
-    reports: data?.data?.reports || [],
-    departments: data?.data?.departments || [],
-    reportTemplates: data?.data?.reportTemplates || [],
-    notifications: data?.data?.notifications || [],
-    notificationsStats: data?.data?.notificationsStats || {},
-    recentActivities: data?.data?.recentActivities || [],
-    calendarEvents: data?.data?.calendarEvents || [],
+	return {
+		// Data
+		stats: data?.data?.stats || {
+			totalContracts: 0,
+			expiringContracts: 0,
+			activeUsers: 0,
+			complianceRate: "94%",
+		},
+		files: data?.data?.files || [],
+		invitations: data?.data?.invitations || [],
+		authUsers: data?.data?.authUsers || [],
+		uninvitedUsers: data?.data?.uninvitedUsers || [],
+		reports: data?.data?.reports || [],
+		departments: data?.data?.departments || [],
+		reportTemplates: data?.data?.reportTemplates || [],
+		notifications: data?.data?.notifications || [],
+		notificationsStats: data?.data?.notificationsStats || {},
+		recentActivities: data?.data?.recentActivities || [],
+		calendarEvents: data?.data?.calendarEvents || [],
 
-    // Loading states
-    isLoading,
-    error,
+		// Loading states
+		isLoading,
+		error,
 
-    // Actions
-    refresh: mutate,
-  };
+		// Actions
+		refresh: mutate,
+	};
 };

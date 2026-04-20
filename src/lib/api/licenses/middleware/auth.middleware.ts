@@ -1,1 +1,1 @@
-export * from '@/lib/api/contracts/middleware/auth.middleware';
+export * from "@/lib/api/contracts/middleware/auth.middleware";

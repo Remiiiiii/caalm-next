@@ -3,62 +3,63 @@
  * Extracts and validates orgId from requests
  */
 
-import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/actions/user.actions';
-import { getUserDefaultOrganization, validateUserOrgAccess } from '@/lib/rbac/permissions';
+import type { NextRequest } from "next/server";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import {
+	getUserDefaultOrganization,
+	validateUserOrgAccess,
+} from "@/lib/rbac/permissions";
 
 export interface OrgContext {
-  orgId: string;
-  userId: string;
-  isValid: boolean;
+	orgId: string;
+	userId: string;
+	isValid: boolean;
 }
 
 /**
  * Extract and validate organization context from request
  */
-export async function getOrgContext(request: NextRequest): Promise<OrgContext | null> {
-  const user = await getCurrentUser();
-  
-  if (!user) {
-    return null;
-  }
+export async function getOrgContext(
+	request: NextRequest,
+): Promise<OrgContext | null> {
+	const user = await getCurrentUser();
 
-  // Try to get orgId from various sources
-  let orgId = 
-    request.nextUrl.searchParams.get('orgId') ||
-    request.headers.get('x-org-id') ||
-    undefined;
+	if (!user) {
+		return null;
+	}
 
-  // If no orgId provided, use user's default organization
-  if (!orgId) {
-    const defaultOrg = await getUserDefaultOrganization(user.$id);
-    if (!defaultOrg) {
-      return null;
-    }
-    orgId = defaultOrg.orgId;
-  }
+	// Try to get orgId from various sources
+	let orgId =
+		request.nextUrl.searchParams.get("orgId") ||
+		request.headers.get("x-org-id") ||
+		undefined;
 
-  // Validate user belongs to organization
-  const isValid = await validateUserOrgAccess(user.$id, orgId);
+	// If no orgId provided, use user's default organization
+	if (!orgId) {
+		const defaultOrg = await getUserDefaultOrganization(user.$id);
+		if (!defaultOrg) {
+			return null;
+		}
+		orgId = defaultOrg.orgId;
+	}
 
-  if (!isValid) {
-    return null;
-  }
+	// Validate user belongs to organization
+	const isValid = await validateUserOrgAccess(user.$id, orgId);
 
-  return {
-    orgId,
-    userId: user.$id,
-    isValid: true,
-  };
+	if (!isValid) {
+		return null;
+	}
+
+	return {
+		orgId,
+		userId: user.$id,
+		isValid: true,
+	};
 }
 
 /**
  * Build query with organization filter
  */
 export function buildOrgQuery(orgId: string, ...queries: any[]) {
-  return [
-    { method: 'equal', attribute: 'orgId', value: orgId },
-    ...queries,
-  ];
+	return [{ method: "equal", attribute: "orgId", value: orgId }, ...queries];
 }
-

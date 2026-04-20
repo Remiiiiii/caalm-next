@@ -1,80 +1,79 @@
+import { cookies } from "next/headers";
 import {
-  Client,
-  Databases,
-  TablesDB,
-  Account,
-  Storage,
-  Avatars,
-  Messaging,
-} from 'node-appwrite';
-import { appwriteConfig } from './config';
-import { cookies } from 'next/headers';
+	Account,
+	Avatars,
+	Client,
+	Databases,
+	Messaging,
+	Storage,
+	TablesDB,
+} from "node-appwrite";
+import { appwriteConfig } from "./config";
 
 export const createApiSessionClient = async () => {
-  if (!appwriteConfig.endpointUrl || !appwriteConfig.projectId) {
-    console.error('Appwrite configuration is incomplete:', {
-      endpointUrl: appwriteConfig.endpointUrl,
-      projectId: appwriteConfig.projectId,
-    });
-    throw new Error('Appwrite configuration is incomplete');
-  }
+	if (!appwriteConfig.endpointUrl || !appwriteConfig.projectId) {
+		console.error("Appwrite configuration is incomplete:", {
+			endpointUrl: appwriteConfig.endpointUrl,
+			projectId: appwriteConfig.projectId,
+		});
+		throw new Error("Appwrite configuration is incomplete");
+	}
 
-  const client = new Client()
-    .setEndpoint(appwriteConfig.endpointUrl)
-    .setProject(appwriteConfig.projectId);
+	const client = new Client()
+		.setEndpoint(appwriteConfig.endpointUrl)
+		.setProject(appwriteConfig.projectId);
 
-  const session = (await cookies()).get('appwrite-session');
+	const session = (await cookies()).get("appwrite-session");
 
-  if (!session || !session.value) {
-    console.error('createApiSessionClient: No session found');
-    throw new Error('No session found');
-  }
+	if (!session?.value) {
+		console.error("createApiSessionClient: No session found");
+		throw new Error("No session found");
+	}
 
-  client.setSession(session.value);
+	client.setSession(session.value);
 
-  return {
-    get account() {
-      return new Account(client);
-    },
-    get databases() {
-      return new Databases(client);
-    },
-    get tablesDB() {
-      return new TablesDB(client);
-    },
-  };
+	return {
+		get account() {
+			return new Account(client);
+		},
+		get databases() {
+			return new Databases(client);
+		},
+		get tablesDB() {
+			return new TablesDB(client);
+		},
+	};
 };
 
 export const createApiAdminClient = async () => {
-  if (
-    !appwriteConfig.endpointUrl ||
-    !appwriteConfig.projectId ||
-    !appwriteConfig.secretKey
-  ) {
-    throw new Error('Appwrite configuration is incomplete');
-  }
+	if (
+		!appwriteConfig.endpointUrl ||
+		!appwriteConfig.projectId ||
+		!appwriteConfig.secretKey
+	) {
+		throw new Error("Appwrite configuration is incomplete");
+	}
 
-  const client = new Client()
-    .setEndpoint(appwriteConfig.endpointUrl)
-    .setProject(appwriteConfig.projectId)
-    .setKey(appwriteConfig.secretKey);
+	const client = new Client()
+		.setEndpoint(appwriteConfig.endpointUrl)
+		.setProject(appwriteConfig.projectId)
+		.setKey(appwriteConfig.secretKey);
 
-  return {
-    get account() {
-      return new Account(client);
-    },
-    get tablesDB() {
-      return new TablesDB(client);
-    },
-    get storage() {
-      return new Storage(client);
-    },
-    get avatars() {
-      return new Avatars(client);
-    },
-    get messaging() {
-      return new Messaging(client);
-    },
-  };
+	return {
+		get account() {
+			return new Account(client);
+		},
+		get tablesDB() {
+			return new TablesDB(client);
+		},
+		get storage() {
+			return new Storage(client);
+		},
+		get avatars() {
+			return new Avatars(client);
+		},
+		get messaging() {
+			return new Messaging(client);
+		},
+	};
 };
-

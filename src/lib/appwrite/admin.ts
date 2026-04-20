@@ -1,5 +1,5 @@
-'use server';
+"use server";
 
-import { createAdminClient } from './index';
+import { createAdminClient } from "./index";
 
 export { createAdminClient };

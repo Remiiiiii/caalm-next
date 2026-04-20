@@ -1,79 +1,78 @@
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { Client, Account } from 'node-appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
-import { createAdminClient } from '@/lib/appwrite';
-import { Query } from 'node-appwrite';
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { Account, Client, Query } from "node-appwrite";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
 
 export async function GET() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get('appwrite-session');
+	try {
+		const cookieStore = await cookies();
+		const session = cookieStore.get("appwrite-session");
 
-    if (!session?.value) {
-      return NextResponse.json({ error: 'No session found' }, { status: 401 });
-    }
+		if (!session?.value) {
+			return NextResponse.json({ error: "No session found" }, { status: 401 });
+		}
 
-    // Get current user from session
-    const client = new Client()
-      .setEndpoint(appwriteConfig.endpointUrl)
-      .setProject(appwriteConfig.projectId)
-      .setSession(session.value);
+		// Get current user from session
+		const client = new Client()
+			.setEndpoint(appwriteConfig.endpointUrl)
+			.setProject(appwriteConfig.projectId)
+			.setSession(session.value);
 
-    const account = new Account(client);
-    const user = await account.get();
+		const account = new Account(client);
+		const user = await account.get();
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+		if (!user) {
+			return NextResponse.json({ error: "User not found" }, { status: 404 });
+		}
 
-    // Check if user has 2FA enabled in the database
-    const adminClient = await createAdminClient();
-    const userResponse = await adminClient.tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.usersCollectionId,
-      queries: [Query.equal('accountId', user.$id)],
-    });
+		// Check if user has 2FA enabled in the database
+		const adminClient = await createAdminClient();
+		const userResponse = await adminClient.tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.usersCollectionId,
+			queries: [Query.equal("accountId", user.$id)],
+		});
 
-    if (userResponse.rows.length === 0) {
-      return NextResponse.json(
-        { has2FA: false, needsSetup: true },
-        { status: 200 }
-      );
-    }
+		if (userResponse.rows.length === 0) {
+			return NextResponse.json(
+				{ has2FA: false, needsSetup: true },
+				{ status: 200 },
+			);
+		}
 
-    const userData = userResponse.rows[0];
-    const has2FA = !!(userData.twoFactorEnabled && userData.twoFactorSecret);
+		const userData = userResponse.rows[0];
+		const has2FA = !!(userData.twoFactorEnabled && userData.twoFactorSecret);
 
-    const response = NextResponse.json({
-      has2FA,
-      needsSetup: !has2FA,
-      user: {
-        $id: userData.$id,
-        accountId: userData.accountId,
-        email: userData.email,
-        fullName: userData.fullName,
-        role: userData.role,
-        department: userData.department,
-      },
-    });
+		const response = NextResponse.json({
+			has2FA,
+			needsSetup: !has2FA,
+			user: {
+				$id: userData.$id,
+				accountId: userData.accountId,
+				email: userData.email,
+				fullName: userData.fullName,
+				role: userData.role,
+				department: userData.department,
+			},
+		});
 
-    // If user has 2FA already set up, set the completed cookie
-    if (has2FA) {
-      response.cookies.set('2fa_completed', 'true', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-      });
-    }
+		// If user has 2FA already set up, set the completed cookie
+		if (has2FA) {
+			response.cookies.set("2fa_completed", "true", {
+				httpOnly: true,
+				secure: process.env.NODE_ENV === "production",
+				sameSite: "lax",
+				maxAge: 60 * 60 * 24 * 30, // 30 days
+			});
+		}
 
-    return response;
-  } catch (error) {
-    console.error('Error checking 2FA status:', error);
-    return NextResponse.json(
-      { error: 'Failed to check 2FA status' },
-      { status: 500 }
-    );
-  }
+		return response;
+	} catch (error) {
+		console.error("Error checking 2FA status:", error);
+		return NextResponse.json(
+			{ error: "Failed to check 2FA status" },
+			{ status: 500 },
+		);
+	}
 }

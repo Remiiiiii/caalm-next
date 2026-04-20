@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/appwrite';
-import { Query } from 'node-appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
-import { sendReminderNotification } from '@/lib/services/calendar-notifications.service';
-import { getCalendarEventById } from '@/lib/actions/calendar.actions';
-import { getUserByAccountId } from '@/lib/actions/user.actions';
+import { type NextRequest, NextResponse } from "next/server";
+import { Query } from "node-appwrite";
+import { getCalendarEventById } from "@/lib/actions/calendar.actions";
+import { getUserByAccountId } from "@/lib/actions/user.actions";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { sendReminderNotification } from "@/lib/services/calendar-notifications.service";
 
 /**
  * POST /api/calendar/reminders/process
@@ -12,115 +12,123 @@ import { getUserByAccountId } from '@/lib/actions/user.actions';
  * This endpoint should be called by a cron job or scheduler
  */
 export async function POST(request: NextRequest) {
-  try {
-    // Optional: Add authentication for scheduler
-    const authHeader = request.headers.get('authorization');
-    const schedulerSecret = process.env.SCHEDULER_SECRET;
-    
-    if (schedulerSecret && authHeader !== `Bearer ${schedulerSecret}`) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+	try {
+		// Optional: Add authentication for scheduler
+		const authHeader = request.headers.get("authorization");
+		const schedulerSecret = process.env.SCHEDULER_SECRET;
 
-    const { tablesDB } = await createAdminClient();
-    const remindersCollectionId =
-      process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_REMINDERS_COLLECTION ||
-      'calendar_reminders';
+		if (schedulerSecret && authHeader !== `Bearer ${schedulerSecret}`) {
+			return NextResponse.json(
+				{ success: false, message: "Unauthorized" },
+				{ status: 401 },
+			);
+		}
 
-    const now = new Date();
-    const nowISO = now.toISOString();
+		const { tablesDB } = await createAdminClient();
+		const remindersCollectionId =
+			process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_REMINDERS_COLLECTION ||
+			"calendar_reminders";
 
-    // Get all unsent reminders
-    const remindersResponse = await tablesDB.listRows({
-      databaseId: appwriteConfig.databaseId!,
-      tableId: remindersCollectionId,
-      queries: [
-        Query.equal('isSent', false),
-        Query.orderAsc('createdAt'),
-      ],
-    });
+		const now = new Date();
+		const _nowISO = now.toISOString();
 
-    const reminders = remindersResponse.rows;
-    const processedReminders: string[] = [];
-    const failedReminders: string[] = [];
+		// Get all unsent reminders
+		const remindersResponse = await tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: remindersCollectionId,
+			queries: [Query.equal("isSent", false), Query.orderAsc("createdAt")],
+		});
 
-    for (const reminder of reminders) {
-      try {
-        // Get event details
-        const event = await getCalendarEventById(reminder.eventId);
-        if (!event) {
-          console.warn(`[SERVER] processReminders] Event not found: ${reminder.eventId}`);
-          continue;
-        }
+		const reminders = remindersResponse.rows;
+		const processedReminders: string[] = [];
+		const failedReminders: string[] = [];
 
-        // Calculate when reminder should be sent
-        const eventStart = new Date(event.startDate);
-        if (event.startTime) {
-          const [hours, minutes] = event.startTime.split(':').map(Number);
-          eventStart.setHours(hours, minutes, 0, 0);
-        }
+		for (const reminder of reminders) {
+			try {
+				// Get event details
+				const event = await getCalendarEventById(reminder.eventId);
+				if (!event) {
+					console.warn(
+						`[SERVER] processReminders] Event not found: ${reminder.eventId}`,
+					);
+					continue;
+				}
 
-        const reminderTime = new Date(eventStart);
-        reminderTime.setMinutes(reminderTime.getMinutes() - reminder.reminderMinutes);
+				// Calculate when reminder should be sent
+				const eventStart = new Date(event.startDate);
+				if (event.startTime) {
+					const [hours, minutes] = event.startTime.split(":").map(Number);
+					eventStart.setHours(hours, minutes, 0, 0);
+				}
 
-        // Check if reminder should be sent now (within 1 minute window)
-        const timeDiff = now.getTime() - reminderTime.getTime();
-        if (timeDiff < 0 || timeDiff > 60000) {
-          // Not yet time or more than 1 minute past
-          continue;
-        }
+				const reminderTime = new Date(eventStart);
+				reminderTime.setMinutes(
+					reminderTime.getMinutes() - reminder.reminderMinutes,
+				);
 
-        // Get user details
-        const user = await getUserByAccountId(reminder.userId);
-        const userEmail = user?.email;
-        const userPhone = user?.phone;
+				// Check if reminder should be sent now (within 1 minute window)
+				const timeDiff = now.getTime() - reminderTime.getTime();
+				if (timeDiff < 0 || timeDiff > 60000) {
+					// Not yet time or more than 1 minute past
+					continue;
+				}
 
-        // Send reminder
-        await sendReminderNotification(
-          reminder as unknown as {
-            $id: string;
-            eventId: string;
-            userId: string;
-            reminderType: 'before_start' | 'before_end' | 'custom';
-            reminderMinutes: number;
-            channels: Array<'in_app' | 'email' | 'sms' | 'push'>;
-            isSent: boolean;
-            sentAt?: string;
-            createdAt: string;
-          },
-          event.title,
-          event.startDate,
-          event.startTime || '00:00',
-          userEmail,
-          userPhone
-        );
+				// Get user details
+				const user = await getUserByAccountId(reminder.userId);
+				const userEmail = user?.email;
+				const userPhone = user?.phone;
 
-        processedReminders.push(reminder.$id);
-      } catch (error) {
-        console.error(`[SERVER] processReminders] Error processing reminder ${reminder.$id}:`, error);
-        failedReminders.push(reminder.$id);
-      }
-    }
+				// Send reminder
+				await sendReminderNotification(
+					reminder as unknown as {
+						$id: string;
+						eventId: string;
+						userId: string;
+						reminderType: "before_start" | "before_end" | "custom";
+						reminderMinutes: number;
+						channels: Array<"in_app" | "email" | "sms" | "push">;
+						isSent: boolean;
+						sentAt?: string;
+						createdAt: string;
+					},
+					event.title,
+					event.startDate,
+					event.startTime || "00:00",
+					userEmail,
+					userPhone,
+				);
 
-    return NextResponse.json({
-      success: true,
-      processed: processedReminders.length,
-      failed: failedReminders.length,
-      processedReminders,
-      failedReminders,
-    });
-  } catch (error) {
-    console.error('[SERVER] POST /api/calendar/reminders/process] Error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          error instanceof Error ? error.message : 'Failed to process reminders',
-      },
-      { status: 500 }
-    );
-  }
+				processedReminders.push(reminder.$id);
+			} catch (error) {
+				console.error(
+					`[SERVER] processReminders] Error processing reminder ${reminder.$id}:`,
+					error,
+				);
+				failedReminders.push(reminder.$id);
+			}
+		}
+
+		return NextResponse.json({
+			success: true,
+			processed: processedReminders.length,
+			failed: failedReminders.length,
+			processedReminders,
+			failedReminders,
+		});
+	} catch (error) {
+		console.error(
+			"[SERVER] POST /api/calendar/reminders/process] Error:",
+			error,
+		);
+		return NextResponse.json(
+			{
+				success: false,
+				message:
+					error instanceof Error
+						? error.message
+						: "Failed to process reminders",
+			},
+			{ status: 500 },
+		);
+	}
 }
-

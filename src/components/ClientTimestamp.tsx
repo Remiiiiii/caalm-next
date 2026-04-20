@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from "react";
 
 const ClientTimestamp = () => {
-  const [timestamp, setTimestamp] = useState<string>('');
+	const [timestamp, setTimestamp] = useState<string>("");
 
-  useEffect(() => {
-    const updateTimestamp = () => {
-      setTimestamp(new Date().toLocaleTimeString());
-    };
+	useEffect(() => {
+		const updateTimestamp = () => {
+			setTimestamp(new Date().toLocaleTimeString());
+		};
 
-    // Set initial timestamp
-    updateTimestamp();
+		// Set initial timestamp
+		updateTimestamp();
 
-    // Update every second
-    const interval = setInterval(updateTimestamp, 1000);
+		// Update every second
+		const interval = setInterval(updateTimestamp, 1000);
 
-    return () => clearInterval(interval);
-  }, []);
+		return () => clearInterval(interval);
+	}, []);
 
-  return <span>{timestamp}</span>;
+	return <span>{timestamp}</span>;
 };
 
 export default ClientTimestamp;

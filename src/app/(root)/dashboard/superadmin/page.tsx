@@ -1,22 +1,22 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-import ExecutiveDashboard from '../ExecutiveDashboard';
+import { redirect } from "next/navigation";
 import {
-  getCurrentUser,
-  getCurrentUserFrom2FA,
-} from '@/lib/actions/user.actions';
-import { redirect } from 'next/navigation';
+	getCurrentUser,
+	getCurrentUserFrom2FA,
+} from "@/lib/actions/user.actions";
+import ExecutiveDashboard from "../ExecutiveDashboard";
 
 export default async function SuperAdminDashboardPage() {
-  // Try to get user from session first, then fall back to 2FA-based auth
-  let currentUser = await getCurrentUser();
-  if (!currentUser) {
-    currentUser = await getCurrentUserFrom2FA();
-  }
+	// Try to get user from session first, then fall back to 2FA-based auth
+	let currentUser = await getCurrentUser();
+	if (!currentUser) {
+		currentUser = await getCurrentUserFrom2FA();
+	}
 
-  if (!currentUser) {
-    redirect('/sign-in');
-  }
+	if (!currentUser) {
+		redirect("/sign-in");
+	}
 
-  return <ExecutiveDashboard user={currentUser} />;
+	return <ExecutiveDashboard user={currentUser} />;
 }

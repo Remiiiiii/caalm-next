@@ -1,3 +1,8 @@
+# Biome local diagnostic exports
+/biome-out.json
+/biome-diagnostics.json
+/biome-diagnostics-full.json
+
 # Logs
 logs
 *.log
@@ -142,6 +147,10 @@ playwright-report/
 # Feature documentation
 docs/
 .vercel
+
+# Google credentials
+caalm-466120-c3e75c165eeb.json
+src/pages/api/caalm-466120-c3e75c165eeb.json
 
 *.ps1
 uploads/

@@ -1,143 +1,143 @@
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes } from "node:crypto";
 
 // TOTP implementation based on RFC 6238
 export class TOTP {
-  private static readonly DIGITS = 6;
-  private static readonly PERIOD = 30; // 30 seconds
-  private static readonly ALGORITHM = 'sha1';
+	private static readonly DIGITS = 6;
+	private static readonly PERIOD = 30; // 30 seconds
+	private static readonly ALGORITHM = "sha1";
 
-  /**
-   * Generate a TOTP secret key
-   */
-  static generateSecret(length: number = 32): string {
-    const bytes = randomBytes(length);
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    let result = '';
+	/**
+	 * Generate a TOTP secret key
+	 */
+	static generateSecret(length: number = 32): string {
+		const bytes = randomBytes(length);
+		const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+		let result = "";
 
-    for (let i = 0; i < bytes.length; i++) {
-      result += alphabet[bytes[i] % alphabet.length];
-    }
+		for (let i = 0; i < bytes.length; i++) {
+			result += alphabet[bytes[i] % alphabet.length];
+		}
 
-    return result;
-  }
+		return result;
+	}
 
-  /**
-   * Generate a TOTP code for the current time
-   */
-  static generateCode(secret: string, time?: number): string {
-    const timestamp = time || Math.floor(Date.now() / 1000);
-    const counter = Math.floor(timestamp / this.PERIOD);
+	/**
+	 * Generate a TOTP code for the current time
+	 */
+	static generateCode(secret: string, time?: number): string {
+		const timestamp = time || Math.floor(Date.now() / 1000);
+		const counter = Math.floor(timestamp / TOTP.PERIOD);
 
-    return this.generateHOTP(secret, counter);
-  }
+		return TOTP.generateHOTP(secret, counter);
+	}
 
-  /**
-   * Verify a TOTP code
-   */
-  static verifyCode(secret: string, code: string, window: number = 1): boolean {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const counter = Math.floor(timestamp / this.PERIOD);
+	/**
+	 * Verify a TOTP code
+	 */
+	static verifyCode(secret: string, code: string, window: number = 1): boolean {
+		const timestamp = Math.floor(Date.now() / 1000);
+		const counter = Math.floor(timestamp / TOTP.PERIOD);
 
-    // Check current time window and adjacent windows
-    for (let i = -window; i <= window; i++) {
-      const expectedCode = this.generateHOTP(secret, counter + i);
-      if (expectedCode === code) {
-        return true;
-      }
-    }
+		// Check current time window and adjacent windows
+		for (let i = -window; i <= window; i++) {
+			const expectedCode = TOTP.generateHOTP(secret, counter + i);
+			if (expectedCode === code) {
+				return true;
+			}
+		}
 
-    return false;
-  }
+		return false;
+	}
 
-  /**
-   * Generate HOTP code (RFC 4226)
-   */
-  private static generateHOTP(secret: string, counter: number): string {
-    // Convert counter to 8-byte buffer
-    const buffer = Buffer.alloc(8);
-    buffer.writeBigUInt64BE(BigInt(counter), 0);
+	/**
+	 * Generate HOTP code (RFC 4226)
+	 */
+	private static generateHOTP(secret: string, counter: number): string {
+		// Convert counter to 8-byte buffer
+		const buffer = Buffer.alloc(8);
+		buffer.writeBigUInt64BE(BigInt(counter), 0);
 
-    // Create HMAC
-    const hmac = createHmac(this.ALGORITHM, this.base32Decode(secret));
-    hmac.update(buffer);
-    const hash = hmac.digest();
+		// Create HMAC
+		const hmac = createHmac(TOTP.ALGORITHM, TOTP.base32Decode(secret));
+		hmac.update(buffer);
+		const hash = hmac.digest();
 
-    // Generate 4-byte code
-    const offset = hash[hash.length - 1] & 0xf;
-    const code =
-      ((hash[offset] & 0x7f) << 24) |
-      ((hash[offset + 1] & 0xff) << 16) |
-      ((hash[offset + 2] & 0xff) << 8) |
-      (hash[offset + 3] & 0xff);
+		// Generate 4-byte code
+		const offset = hash[hash.length - 1] & 0xf;
+		const code =
+			((hash[offset] & 0x7f) << 24) |
+			((hash[offset + 1] & 0xff) << 16) |
+			((hash[offset + 2] & 0xff) << 8) |
+			(hash[offset + 3] & 0xff);
 
-    // Convert to string with leading zeros
-    const codeStr = (code % Math.pow(10, this.DIGITS)).toString();
-    return codeStr.padStart(this.DIGITS, '0');
-  }
+		// Convert to string with leading zeros
+		const codeStr = (code % 10 ** TOTP.DIGITS).toString();
+		return codeStr.padStart(TOTP.DIGITS, "0");
+	}
 
-  /**
-   * Decode base32 string
-   */
-  private static base32Decode(str: string): Buffer {
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    let bits = 0;
-    let value = 0;
-    let output = '';
+	/**
+	 * Decode base32 string
+	 */
+	private static base32Decode(str: string): Buffer {
+		const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+		let bits = 0;
+		let value = 0;
+		let output = "";
 
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i].toUpperCase();
-      const index = alphabet.indexOf(char);
+		for (let i = 0; i < str.length; i++) {
+			const char = str[i].toUpperCase();
+			const index = alphabet.indexOf(char);
 
-      if (index === -1) continue;
+			if (index === -1) continue;
 
-      value = (value << 5) | index;
-      bits += 5;
+			value = (value << 5) | index;
+			bits += 5;
 
-      if (bits >= 8) {
-        output += String.fromCharCode((value >>> (bits - 8)) & 0xff);
-        bits -= 8;
-      }
-    }
+			if (bits >= 8) {
+				output += String.fromCharCode((value >>> (bits - 8)) & 0xff);
+				bits -= 8;
+			}
+		}
 
-    return Buffer.from(output, 'binary');
-  }
+		return Buffer.from(output, "binary");
+	}
 
-  /**
-   * Generate QR code URL for authenticator apps
-   */
-  static generateQRUrl(
-    secret: string,
-    accountName: string,
-    issuer: string = 'CAALM'
-  ): string {
-    const encodedSecret = encodeURIComponent(secret);
-    const encodedAccount = encodeURIComponent(accountName);
-    const encodedIssuer = encodeURIComponent(issuer);
+	/**
+	 * Generate QR code URL for authenticator apps
+	 */
+	static generateQRUrl(
+		secret: string,
+		accountName: string,
+		issuer: string = "CAALM",
+	): string {
+		const encodedSecret = encodeURIComponent(secret);
+		const encodedAccount = encodeURIComponent(accountName);
+		const encodedIssuer = encodeURIComponent(issuer);
 
-    return `otpauth://totp/${encodedIssuer}:${encodedAccount}?secret=${encodedSecret}&issuer=${encodedIssuer}&algorithm=${this.ALGORITHM.toUpperCase()}&digits=${
-      this.DIGITS
-    }&period=${this.PERIOD}`;
-  }
+		return `otpauth://totp/${encodedIssuer}:${encodedAccount}?secret=${encodedSecret}&issuer=${encodedIssuer}&algorithm=${TOTP.ALGORITHM.toUpperCase()}&digits=${
+			TOTP.DIGITS
+		}&period=${TOTP.PERIOD}`;
+	}
 }
 
 // Utility functions for easy use
 export const generateTOTPSecret = () => TOTP.generateSecret();
 export const generateTOTPCode = (secret: string) => TOTP.generateCode(secret);
 export const verifyTOTPCode = ({
-  secret,
-  code,
-  window = 1,
+	secret,
+	code,
+	window = 1,
 }: {
-  secret: string;
-  code: string;
-  window?: number;
+	secret: string;
+	code: string;
+	window?: number;
 }) => TOTP.verifyCode(secret, code, window);
 export const generateTOTPQRUrl = ({
-  secret,
-  accountName,
-  issuer,
+	secret,
+	accountName,
+	issuer,
 }: {
-  secret: string;
-  accountName: string;
-  issuer?: string;
+	secret: string;
+	accountName: string;
+	issuer?: string;
 }) => TOTP.generateQRUrl(secret, accountName, issuer);

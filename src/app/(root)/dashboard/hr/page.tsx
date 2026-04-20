@@ -1,15 +1,15 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-import HRDashboard from '../HRDashboard';
-import { getCurrentUser } from '@/lib/actions/user.actions';
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import HRDashboard from "../HRDashboard";
 
 export default async function HRDashboardPage() {
-  const currentUser = await getCurrentUser();
+	const currentUser = await getCurrentUser();
 
-  if (!currentUser) {
-    redirect('/sign-in');
-  }
+	if (!currentUser) {
+		redirect("/sign-in");
+	}
 
-  return <HRDashboard />;
+	return <HRDashboard />;
 }

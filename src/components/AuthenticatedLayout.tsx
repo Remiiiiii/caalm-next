@@ -1,89 +1,88 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Sidebar from '@/components/Sidebar';
-import MobileNavigation from '@/components/MobileNavigation';
-import DashboardHeader from '@/components/DashboardHeader';
-import QuickActions from '@/components/QuickActions';
-import InactivityDialog from '@/components/InactivityDialog';
-import { useInactivityTimer } from '@/hooks/useInactivityTimer';
-import { OrganizationProvider } from '@/contexts/OrganizationContext';
-
-import { Toaster } from '@/components/ui/toaster';
-import { avatarPlaceholderUrl } from '../../constants';
-import { Models } from 'appwrite';
-import { normalizeUserRole, ROLE_LABELS, UserRole } from '@/constants/rbac';
+import type { Models } from "appwrite";
+import type React from "react";
+import DashboardHeader from "@/components/DashboardHeader";
+import InactivityDialog from "@/components/InactivityDialog";
+import MobileNavigation from "@/components/MobileNavigation";
+import QuickActions from "@/components/QuickActions";
+import Sidebar from "@/components/Sidebar";
+import { Toaster } from "@/components/ui/toaster";
+import { normalizeUserRole, type UserRole } from "@/constants/rbac";
+import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { useInactivityTimer } from "@/hooks/useInactivityTimer";
+import { avatarPlaceholderUrl } from "../../constants";
 
 type ExtendedUser = Models.User<Models.Preferences> & {
-  name?: string;
-  role?: UserRole;
-  accountId?: string;
-  fullName?: string;
-  division?: string;
-  prefs?: {
-    avatar?: string;
-  };
+	name?: string;
+	role?: UserRole;
+	accountId?: string;
+	fullName?: string;
+	division?: string;
+	prefs?: {
+		avatar?: string;
+	};
 };
 
 interface AuthenticatedLayoutProps {
-  user: Models.User<Models.Preferences>;
-  children: React.ReactNode;
+	user: Models.User<Models.Preferences>;
+	children: React.ReactNode;
 }
 
 const AuthenticatedLayout = ({
-  user: serverUser,
-  children,
+	user: serverUser,
+	children,
 }: AuthenticatedLayoutProps) => {
-  // For now, just use the server user to avoid hydration issues
-  const currentUser = serverUser;
-  const user = currentUser as ExtendedUser;
-  const normalizedRole = normalizeUserRole(user.role || '');
+	// For now, just use the server user to avoid hydration issues
+	const currentUser = serverUser;
+	const user = currentUser as ExtendedUser;
+	const normalizedRole = normalizeUserRole(user.role || "");
 
-  // Initialize inactivity timer
-  const { showDialog, handleContinue, handleLogout, handleClose } =
-    useInactivityTimer();
+	// Initialize inactivity timer
+	const { showDialog, handleContinue, handleLogout, handleClose } =
+		useInactivityTimer();
 
-  return (
-    <OrganizationProvider>
-      <main className="flex h-screen">
-        <Sidebar
-          name={user.name || 'Unknown User'}
-          avatar={user.prefs?.avatar || avatarPlaceholderUrl}
-          email={currentUser.email}
-          role={normalizedRole}
-          division={user.division}
-        />
-        <section className="flex h-full w-full flex-1 flex-col">
-          <MobileNavigation
-            $id={currentUser.$id}
-            accountId={user.accountId || currentUser.$id}
-            fullName={user.fullName || user.name || 'Unknown User'}
-            avatar={user.prefs?.avatar || avatarPlaceholderUrl}
-            email={currentUser.email}
-            role={normalizedRole}
-          />
-          <div className="flex justify-between items-center gap-2 px-3 sm:px-4 py-2 min-w-0">
-            <div className="flex-1 min-w-0">
-              <QuickActions user={currentUser} />
-            </div>
-            <div className="flex-shrink-0">
-              <DashboardHeader user={currentUser} />
-            </div>
-          </div>
-          <div className="main-content">{children}</div>
-        </section>
-        <Toaster />
+	return (
+		<OrganizationProvider>
+			<main className="flex h-screen">
+				<Sidebar
+					name={user.name || "Unknown User"}
+					avatar={user.prefs?.avatar || avatarPlaceholderUrl}
+					email={currentUser.email}
+					role={normalizedRole}
+					division={user.division}
+				/>
+				<section className="flex h-full w-full flex-1 flex-col">
+					<MobileNavigation
+						$id={currentUser.$id}
+						accountId={user.accountId || currentUser.$id}
+						fullName={user.fullName || user.name || "Unknown User"}
+						avatar={user.prefs?.avatar || avatarPlaceholderUrl}
+						email={currentUser.email}
+						role={normalizedRole}
+					/>
+					<div className="flex justify-between items-center gap-2 px-3 sm:px-4 py-2 min-w-0">
+						<div className="flex-1 min-w-0">
+							<QuickActions user={currentUser} />
+						</div>
+						<div className="flex-shrink-0">
+							<DashboardHeader user={currentUser} />
+						</div>
+					</div>
+					<div className="main-content">{children}</div>
+				</section>
+				<Toaster />
 
-        {/* Inactivity Dialog */}
-        <InactivityDialog
-          isOpen={showDialog}
-          onClose={handleClose}
-          onContinue={handleContinue}
-          onLogout={handleLogout}
-        />
-      </main>
-    </OrganizationProvider>
-  );
+				{/* Inactivity Dialog */}
+				<InactivityDialog
+					isOpen={showDialog}
+					onClose={handleClose}
+					onContinue={handleContinue}
+					onLogout={handleLogout}
+				/>
+			</main>
+		</OrganizationProvider>
+	);
 };
 
 export default AuthenticatedLayout;

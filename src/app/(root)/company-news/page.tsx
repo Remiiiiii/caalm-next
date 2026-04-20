@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import CompanyNewsFeed from '@/components/CompanyNewsFeed';
+import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 
 export default function CompanyNewsPage() {
-  return <CompanyNewsFeed fullPage={true} />;
+	return <CompanyNewsFeed fullPage={true} />;
 }

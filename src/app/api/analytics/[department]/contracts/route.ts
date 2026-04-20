@@ -1,80 +1,80 @@
-import { NextRequest } from 'next/server';
-import { Query } from 'node-appwrite';
-import { createAdminClient } from '@/lib/appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
-import CacheManager from '@/lib/services/cache-manager';
-import { CACHE_KEYS } from '@/lib/services/cache-keys';
+import type { NextRequest } from "next/server";
+import { Query } from "node-appwrite";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 
 function mapRouteToDbDepartment(routeDept: string): string {
-  const mapping: Record<string, string> = {
-    'child-welfare': 'child-welfare',
-    'behavioral-health': 'behavioral-health',
-    cfs: 'cfs',
-    residential: 'residential',
-    clinic: 'clinic',
-    administration: 'administration',
-  };
-  return mapping[routeDept] || routeDept;
+	const mapping: Record<string, string> = {
+		"child-welfare": "child-welfare",
+		"behavioral-health": "behavioral-health",
+		cfs: "cfs",
+		residential: "residential",
+		clinic: "clinic",
+		administration: "administration",
+	};
+	return mapping[routeDept] || routeDept;
 }
 
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ department: string }> }
+	_req: NextRequest,
+	{ params }: { params: Promise<{ department: string }> },
 ) {
-  try {
-    const resolvedParams = await params;
-    const dbDept = mapRouteToDbDepartment(resolvedParams.department);
+	try {
+		const resolvedParams = await params;
+		const dbDept = mapRouteToDbDepartment(resolvedParams.department);
 
-    // Cache key for department contracts
-    const cacheKey = CACHE_KEYS.analytics.contracts(dbDept);
+		// Cache key for department contracts
+		const cacheKey = CACHE_KEYS.analytics.contracts(dbDept);
 
-    // Fetch department contracts with caching (15 minutes TTL)
-    const data = await CacheManager.withCache(
-      'analytics/contracts',
-      cacheKey,
-      async () => {
-        const { tablesDB } = await createAdminClient();
+		// Fetch department contracts with caching (15 minutes TTL)
+		const data = await CacheManager.withCache(
+			"analytics/contracts",
+			cacheKey,
+			async () => {
+				const { tablesDB } = await createAdminClient();
 
-        // First, let's check what contracts exist in the database
-        const allDocuments = await tablesDB.listRows({
-          databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.contractsCollectionId,
-          queries: [Query.limit(200)],
-        });
+				// First, let's check what contracts exist in the database
+				const allDocuments = await tablesDB.listRows({
+					databaseId: appwriteConfig.databaseId,
+					tableId: appwriteConfig.contractsCollectionId,
+					queries: [Query.limit(200)],
+				});
 
-        console.log(`Total contracts in database: ${allDocuments.total}`);
-        console.log(
-          'Sample contract departments:',
-          allDocuments.rows.slice(0, 5).map((d: any) => ({
-            id: d.$id,
-            name: d.contractName,
-            department: d.department,
-          }))
-        );
+				console.log(`Total contracts in database: ${allDocuments.total}`);
+				console.log(
+					"Sample contract departments:",
+					allDocuments.rows.slice(0, 5).map((d: any) => ({
+						id: d.$id,
+						name: d.contractName,
+						department: d.department,
+					})),
+				);
 
-        const documents = await tablesDB.listRows({
-          databaseId: appwriteConfig.databaseId,
-          tableId: appwriteConfig.contractsCollectionId,
-          queries: [Query.equal('department', dbDept), Query.limit(200)],
-        });
+				const documents = await tablesDB.listRows({
+					databaseId: appwriteConfig.databaseId,
+					tableId: appwriteConfig.contractsCollectionId,
+					queries: [Query.equal("department", dbDept), Query.limit(200)],
+				});
 
-        return documents.rows.map((d: any) => ({
-          id: d.$id,
-          name: d.contractName,
-          amount: d.amount ?? 0,
-          status: d.status,
-          compliance: d.compliance,
-          expiryDate: d.contractExpiryDate,
-        }));
-      }
-    );
+				return documents.rows.map((d: any) => ({
+					id: d.$id,
+					name: d.contractName,
+					amount: d.amount ?? 0,
+					status: d.status,
+					compliance: d.compliance,
+					expiryDate: d.contractExpiryDate,
+				}));
+			},
+		);
 
-    return Response.json({ data });
-  } catch (error: any) {
-    console.error('analytics/contracts error', error);
-    return new Response(
-      JSON.stringify({ error: error?.message || 'Failed to load contracts' }),
-      { status: 500, headers: { 'content-type': 'application/json' } }
-    );
-  }
+		return Response.json({ data });
+	} catch (error: any) {
+		console.error("analytics/contracts error", error);
+		return new Response(
+			JSON.stringify({ error: error?.message || "Failed to load contracts" }),
+			{ status: 500, headers: { "content-type": "application/json" } },
+		);
+	}
 }

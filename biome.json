@@ -1,0 +1,80 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true,
+		"defaultBranch": "main"
+	},
+	"files": {
+		"ignoreUnknown": false
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"suspicious": {
+				"noUnknownAtRules": "off",
+				"noExplicitAny": "off",
+				"noArrayIndexKey": "off",
+				"noImplicitAnyLet": "off",
+				"useIterableCallbackReturn": "off",
+				"noDocumentCookie": "off",
+				"useAdjacentOverloadSignatures": "off"
+			},
+			"style": {
+				"noNonNullAssertion": "off"
+			},
+			"a11y": {
+				"noStaticElementInteractions": "off",
+				"useKeyWithClickEvents": "off",
+				"noSvgWithoutTitle": "off",
+				"useButtonType": "off",
+				"useValidAnchor": "off",
+				"noLabelWithoutControl": "off",
+				"useSemanticElements": "off",
+				"useFocusableInteractive": "off",
+				"useHeadingContent": "off",
+				"useAriaPropsForRole": "off"
+			},
+			"correctness": {
+				"useExhaustiveDependencies": "off",
+				"noInvalidUseBeforeDeclaration": "off",
+				"noUnusedVariables": "off",
+				"noUnusedFunctionParameters": "off"
+			},
+			"complexity": {
+				"noStaticOnlyClass": "off",
+				"noBannedTypes": "off"
+			},
+			"performance": {
+				"noImgElement": "off"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			}
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double"
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	}
+}

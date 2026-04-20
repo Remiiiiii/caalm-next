@@ -1,141 +1,138 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Image from 'next/image';
-import { Input } from './ui/input';
-import { Button } from './ui/button';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Search, Filter } from 'lucide-react';
-import Thumbnail from './Thumbnail';
-import FormattedDateTime from './FormattedDateTime';
-import SearchModal from './SearchModal';
-import { useSearch } from '@/hooks/useSearch';
+import { Filter } from "lucide-react";
+import Image from "next/image";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import React, { useState } from "react";
+import { useSearch } from "@/hooks/useSearch";
+import FormattedDateTime from "./FormattedDateTime";
+import SearchModal from "./SearchModal";
+import Thumbnail from "./Thumbnail";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 const Search = () => {
-  const searchParams = useSearchParams();
-  const searchQuery = searchParams?.get('query') || '';
-  const router = useRouter();
-  const path = usePathname();
-  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+	const searchParams = useSearchParams();
+	const searchQuery = searchParams?.get("query") || "";
+	const router = useRouter();
+	const path = usePathname();
+	const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
 
-  // Use SWR hook for search functionality
-  const {
-    query,
-    setQuery,
-    searchResults: results,
-    isLoading,
-    saveSearch,
-  } = useSearch();
+	// Use SWR hook for search functionality
+	const {
+		query,
+		setQuery,
+		searchResults: results,
+		isLoading,
+		saveSearch,
+	} = useSearch();
 
-  // Handle search query changes
-  React.useEffect(() => {
-    if (query.length === 0) {
-      return router.push(
-        (path ?? '').replace(
-          (searchParams && searchParams.toString()) || '',
-          ''
-        )
-      );
-    }
-  }, [query, path, router, searchParams]);
+	// Handle search query changes
+	React.useEffect(() => {
+		if (query.length === 0) {
+			return router.push(
+				(path ?? "").replace(searchParams?.toString() || "", ""),
+			);
+		}
+	}, [query, path, router, searchParams]);
 
-  React.useEffect(() => {
-    if (!searchQuery) {
-      setQuery('');
-    }
-  }, [searchQuery, setQuery]);
+	React.useEffect(() => {
+		if (!searchQuery) {
+			setQuery("");
+		}
+	}, [searchQuery, setQuery]);
 
-  // Show results when we have them
-  const open = results.length > 0 || (query.length > 0 && !isLoading);
+	// Show results when we have them
+	const open = results.length > 0 || (query.length > 0 && !isLoading);
 
-  const handleClickItem = (file: Record<string, unknown>) => {
-    // Save the search query
-    saveSearch(query);
+	const handleClickItem = (file: Record<string, unknown>) => {
+		// Save the search query
+		saveSearch(query);
 
-    router.push(
-      `/${
-        file.type === 'video' || file.type === 'audio'
-          ? 'media'
-          : file.type + 's'
-      }?query=${query}`
-    );
-  };
+		router.push(
+			`/${
+				file.type === "video" || file.type === "audio"
+					? "media"
+					: `${file.type}s`
+			}?query=${query}`,
+		);
+	};
 
-  return (
-    <>
-      <div className="search">
-        <div className="search-input-wrapper">
-          <Image
-            src="/assets/icons/search.svg"
-            alt="search"
-            width={24}
-            height={24}
-          />
-          <Input
-            value={query}
-            placeholder="Search contracts, files, vendors..."
-            onChange={(e) => setQuery(e.target.value)}
-            className="search-input"
-          />
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowAdvancedSearch(true)}
-            className="ml-2"
-          >
-            <Filter className="h-4 w-4" />
-          </Button>
+	return (
+		<>
+			<div className="search">
+				<div className="search-input-wrapper">
+					<Image
+						src="/assets/icons/search.svg"
+						alt="search"
+						width={24}
+						height={24}
+					/>
+					<Input
+						value={query}
+						placeholder="Search contracts, files, vendors..."
+						onChange={(e) => setQuery(e.target.value)}
+						className="search-input"
+					/>
 
-          {open && (
-            <ul className="search-result">
-              {results.length > 0 ? (
-                results.map((file) => (
-                  <li
-                    className="flex items-center justify-between"
-                    key={file.$id}
-                    onClick={() => handleClickItem(file)}
-                  >
-                    <div className="flex cursor-pointer items-center gap-4">
-                      <Thumbnail
-                        type={file.type}
-                        extension={file.extension}
-                        url={file.url}
-                        className="size-9 min-w-9"
-                      />
-                      <p className="subtitle-2 line-clamp-1 text-light-100">
-                        {file.name}
-                      </p>
-                    </div>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => setShowAdvancedSearch(true)}
+						className="ml-2"
+					>
+						<Filter className="h-4 w-4" />
+					</Button>
 
-                    <FormattedDateTime
-                      date={file.$createdAt}
-                      className="caption line-clamp-1 text-light-200"
-                    />
-                  </li>
-                ))
-              ) : (
-                <p className="empty-result">No files found</p>
-              )}
-            </ul>
-          )}
-        </div>
-      </div>
+					{open && (
+						<ul className="search-result">
+							{results.length > 0 ? (
+								results.map((file) => (
+									<li
+										className="flex items-center justify-between"
+										key={file.$id}
+										onClick={() => handleClickItem(file)}
+									>
+										<div className="flex cursor-pointer items-center gap-4">
+											<Thumbnail
+												type={file.type}
+												extension={file.extension}
+												url={file.url}
+												className="size-9 min-w-9"
+											/>
+											<p className="subtitle-2 line-clamp-1 text-light-100">
+												{file.name}
+											</p>
+										</div>
 
-      <SearchModal
-        isOpen={showAdvancedSearch}
-        onClose={() => setShowAdvancedSearch(false)}
-        onResultClick={(result) => {
-          // Handle result click - navigate to appropriate page
-          if (result.type === 'contract') {
-            router.push(`/contracts/${result.id}`);
-          } else {
-            router.push(`/files/${result.id}`);
-          }
-        }}
-      />
-    </>
-  );
+										<FormattedDateTime
+											date={file.$createdAt}
+											className="caption line-clamp-1 text-light-200"
+										/>
+									</li>
+								))
+							) : (
+								<p className="empty-result">No files found</p>
+							)}
+						</ul>
+					)}
+				</div>
+			</div>
+
+			<SearchModal
+				isOpen={showAdvancedSearch}
+				onClose={() => setShowAdvancedSearch(false)}
+				onResultClick={(result) => {
+					// Handle result click - navigate to appropriate page
+					if (result.type === "contract") {
+						router.push(`/contracts/${result.id}`);
+					} else {
+						router.push(`/files/${result.id}`);
+					}
+				}}
+			/>
+		</>
+	);
 };
 
 export default Search;

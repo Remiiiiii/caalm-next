@@ -1,16 +1,15 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-import ManagerDashboard from '../ManagerDashboard';
-import { getCurrentUser } from '@/lib/actions/user.actions';
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import ManagerDashboard from "../ManagerDashboard";
 
 export default async function DepartmentManagerDashboardPage() {
-  const currentUser = await getCurrentUser();
+	const currentUser = await getCurrentUser();
 
-  if (!currentUser) {
-    redirect('/sign-in');
-  }
+	if (!currentUser) {
+		redirect("/sign-in");
+	}
 
-  return <ManagerDashboard />;
+	return <ManagerDashboard />;
 }
-

@@ -3,127 +3,129 @@
  * Middleware functions for IT route protection and permission checks
  */
 
-'use server';
+"use server";
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/actions/user.actions';
-import { getUserRoles, getUserDefaultOrganization } from '@/lib/rbac/permissions';
-import { hasAnyPermission } from '@/lib/rbac/permissions';
-import { PERMISSIONS } from '@/constants/permissions';
-import type { PermissionKey } from '@/constants/permissions';
+import { type NextRequest, NextResponse } from "next/server";
+import type { PermissionKey } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import {
+	getUserDefaultOrganization,
+	getUserRoles,
+	hasAnyPermission,
+} from "@/lib/rbac/permissions";
 
 /**
  * Check if user has IT role
  */
 export async function hasITRole(userId: string): Promise<boolean> {
-  try {
-    const defaultOrg = await getUserDefaultOrganization(userId);
-    if (!defaultOrg) {
-      return false;
-    }
+	try {
+		const defaultOrg = await getUserDefaultOrganization(userId);
+		if (!defaultOrg) {
+			return false;
+		}
 
-    const userRoles = await getUserRoles(userId, defaultOrg.orgId);
-    return userRoles.some((role) => role.roleName === 'IT');
-  } catch (error) {
-    console.error('[hasITRole] Error:', error);
-    return false;
-  }
+		const userRoles = await getUserRoles(userId, defaultOrg.orgId);
+		return userRoles.some((role) => role.roleName === "IT");
+	} catch (error) {
+		console.error("[hasITRole] Error:", error);
+		return false;
+	}
 }
 
 /**
  * Require IT role - returns error response if user doesn't have IT role
  */
 export async function requireITRole(
-  request: NextRequest
+	request: NextRequest,
 ): Promise<NextResponse | null> {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+	try {
+		const user = await getCurrentUser();
+		if (!user) {
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
 
-    const hasRole = await hasITRole(user.$id);
-    if (!hasRole) {
-      // Log unauthorized access attempt
-      console.warn(
-        `[IT Route Guard] Unauthorized access attempt by user ${user.$id} to ${request.nextUrl.pathname}`
-      );
+		const hasRole = await hasITRole(user.$id);
+		if (!hasRole) {
+			// Log unauthorized access attempt
+			console.warn(
+				`[IT Route Guard] Unauthorized access attempt by user ${user.$id} to ${request.nextUrl.pathname}`,
+			);
 
-      return NextResponse.json(
-        { error: 'Access denied. IT role required.' },
-        { status: 403 }
-      );
-    }
+			return NextResponse.json(
+				{ error: "Access denied. IT role required." },
+				{ status: 403 },
+			);
+		}
 
-    return null;
-  } catch (error) {
-    console.error('[requireITRole] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to verify IT role' },
-      { status: 500 }
-    );
-  }
+		return null;
+	} catch (error) {
+		console.error("[requireITRole] Error:", error);
+		return NextResponse.json(
+			{ error: "Failed to verify IT role" },
+			{ status: 500 },
+		);
+	}
 }
 
 /**
  * Require specific IT permission
  */
 export async function requireITPermission(
-  request: NextRequest,
-  permission: PermissionKey
+	request: NextRequest,
+	permission: PermissionKey,
 ): Promise<NextResponse | null> {
-  try {
-    // First check if user has IT role
-    const roleCheck = await requireITRole(request);
-    if (roleCheck) {
-      return roleCheck;
-    }
+	try {
+		// First check if user has IT role
+		const roleCheck = await requireITRole(request);
+		if (roleCheck) {
+			return roleCheck;
+		}
 
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+		const user = await getCurrentUser();
+		if (!user) {
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
 
-    const defaultOrg = await getUserDefaultOrganization(user.$id);
-    if (!defaultOrg) {
-      return NextResponse.json(
-        { error: 'Organization access required' },
-        { status: 403 }
-      );
-    }
+		const defaultOrg = await getUserDefaultOrganization(user.$id);
+		if (!defaultOrg) {
+			return NextResponse.json(
+				{ error: "Organization access required" },
+				{ status: 403 },
+			);
+		}
 
-    const hasPermission = await hasAnyPermission(
-      user.$id,
-      [permission],
-      defaultOrg.orgId
-    );
+		const hasPermission = await hasAnyPermission(
+			user.$id,
+			[permission],
+			defaultOrg.orgId,
+		);
 
-    if (!hasPermission) {
-      // Log unauthorized access attempt
-      console.warn(
-        `[IT Route Guard] Unauthorized permission access attempt by user ${user.$id} to ${request.nextUrl.pathname} - required: ${permission}`
-      );
+		if (!hasPermission) {
+			// Log unauthorized access attempt
+			console.warn(
+				`[IT Route Guard] Unauthorized permission access attempt by user ${user.$id} to ${request.nextUrl.pathname} - required: ${permission}`,
+			);
 
-      return NextResponse.json(
-        { error: `Access denied. Permission required: ${permission}` },
-        { status: 403 }
-      );
-    }
+			return NextResponse.json(
+				{ error: `Access denied. Permission required: ${permission}` },
+				{ status: 403 },
+			);
+		}
 
-    return null;
-  } catch (error) {
-    console.error('[requireITPermission] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to verify permission' },
-      { status: 500 }
-    );
-  }
+		return null;
+	} catch (error) {
+		console.error("[requireITPermission] Error:", error);
+		return NextResponse.json(
+			{ error: "Failed to verify permission" },
+			{ status: 500 },
+		);
+	}
 }
 
 /**
@@ -131,53 +133,55 @@ export async function requireITPermission(
  * Returns redirect response to user's default dashboard
  */
 export async function redirectIfNotIT(
-  request: NextRequest
+	request: NextRequest,
 ): Promise<NextResponse | null> {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.redirect(new URL('/sign-in', request.url));
-    }
+	try {
+		const user = await getCurrentUser();
+		if (!user) {
+			return NextResponse.redirect(new URL("/sign-in", request.url));
+		}
 
-    const hasRole = await hasITRole(user.$id);
-    if (!hasRole) {
-      // Get user's default dashboard based on highest priority role
-      const defaultOrg = await getUserDefaultOrganization(user.$id);
-      if (defaultOrg) {
-        const userRoles = await getUserRoles(user.$id, defaultOrg.orgId);
-        
-        // Import role priority helper
-        const { getHighestPriorityRole } = await import('@/lib/utils/role-priority');
-        const roleName = getHighestPriorityRole(userRoles);
+		const hasRole = await hasITRole(user.$id);
+		if (!hasRole) {
+			// Get user's default dashboard based on highest priority role
+			const defaultOrg = await getUserDefaultOrganization(user.$id);
+			if (defaultOrg) {
+				const userRoles = await getUserRoles(user.$id, defaultOrg.orgId);
 
-        // Redirect to appropriate dashboard based on role
-        let redirectUrl = '/dashboard';
-        if (roleName === 'Super Admin') {
-          redirectUrl = '/dashboard/superadmin';
-        } else if (roleName === 'Organization Admin') {
-          redirectUrl = '/dashboard/organizationadmin';
-        } else if (roleName === 'Department Manager') {
-          redirectUrl = '/dashboard/departmentmanager';
-        } else if (roleName === 'Viewer') {
-          redirectUrl = '/dashboard/viewer';
-        } else if (roleName === 'IT') {
-          redirectUrl = '/dashboard/it';
-        }
+				// Import role priority helper
+				const { getHighestPriorityRole } = await import(
+					"@/lib/utils/role-priority"
+				);
+				const roleName = getHighestPriorityRole(userRoles);
 
-        // Log unauthorized access attempt
-        console.warn(
-          `[IT Route Guard] Redirecting user ${user.$id} from ${request.nextUrl.pathname} to ${redirectUrl}`
-        );
+				// Redirect to appropriate dashboard based on role
+				let redirectUrl = "/dashboard";
+				if (roleName === "Super Admin") {
+					redirectUrl = "/dashboard/superadmin";
+				} else if (roleName === "Organization Admin") {
+					redirectUrl = "/dashboard/organizationadmin";
+				} else if (roleName === "Department Manager") {
+					redirectUrl = "/dashboard/departmentmanager";
+				} else if (roleName === "Viewer") {
+					redirectUrl = "/dashboard/viewer";
+				} else if (roleName === "IT") {
+					redirectUrl = "/dashboard/it";
+				}
 
-        return NextResponse.redirect(new URL(redirectUrl, request.url));
-      }
+				// Log unauthorized access attempt
+				console.warn(
+					`[IT Route Guard] Redirecting user ${user.$id} from ${request.nextUrl.pathname} to ${redirectUrl}`,
+				);
 
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
+				return NextResponse.redirect(new URL(redirectUrl, request.url));
+			}
 
-    return null;
-  } catch (error) {
-    console.error('[redirectIfNotIT] Error:', error);
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
+			return NextResponse.redirect(new URL("/dashboard", request.url));
+		}
+
+		return null;
+	} catch (error) {
+		console.error("[redirectIfNotIT] Error:", error);
+		return NextResponse.redirect(new URL("/dashboard", request.url));
+	}
 }

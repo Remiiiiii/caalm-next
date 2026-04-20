@@ -1,11 +1,11 @@
-import { Client, Account, Storage } from 'appwrite';
-import { appwriteConfig } from './config';
+import { Account, Client, Storage } from "appwrite";
+import { appwriteConfig } from "./config";
 
-const sdk = require('node-appwrite');
+const sdk = require("node-appwrite");
 // Initialize Appwrite client
 const client = new Client()
-  .setEndpoint(appwriteConfig.endpointUrl)
-  .setProject(appwriteConfig.projectId);
+	.setEndpoint(appwriteConfig.endpointUrl)
+	.setProject(appwriteConfig.projectId);
 
 // Initialize services
 export const account = new Account(client);

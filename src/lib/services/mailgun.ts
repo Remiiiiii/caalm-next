@@ -1,90 +1,90 @@
-import FormData from 'form-data';
-import Mailgun from 'mailgun.js';
-import { Models } from 'appwrite';
-import { capitalizeRole } from '@/lib/utils';
+import type { Models } from "appwrite";
+import FormData from "form-data";
+import Mailgun from "mailgun.js";
+import { capitalizeRole } from "@/lib/utils";
 
 interface EmailOptions {
-  to: string | string[];
-  subject: string;
-  text?: string;
-  html?: string;
-  from?: string;
+	to: string | string[];
+	subject: string;
+	text?: string;
+	html?: string;
+	from?: string;
 }
 
 interface MailgunServiceProps {
-  user?:
-    | (Models.User<Models.Preferences> & {
-        accountId?: string;
-        fullName?: string;
-      })
-    | null;
-  fullName?: string;
+	user?:
+		| (Models.User<Models.Preferences> & {
+				accountId?: string;
+				fullName?: string;
+		  })
+		| null;
+	fullName?: string;
 }
 
 class MailgunService {
-  private mg: any | null = null;
-  private domain: string;
+	private mg: any | null = null;
+	private domain: string;
 
-  constructor() {
-    // Use your actual domain or sandbox domain
-    this.domain = process.env.MAILGUN_DOMAIN || 'caalmsolutions.com';
-  }
+	constructor() {
+		// Use your actual domain or sandbox domain
+		this.domain = process.env.MAILGUN_DOMAIN || "caalmsolutions.com";
+	}
 
-  private getClient() {
-    // Lazy-load the client only when needed and if API key is available
-    if (!this.mg) {
-      const apiKey = process.env.MAILGUN_API_KEY;
-      if (!apiKey) {
-        throw new Error(
-          'MAILGUN_API_KEY environment variable is not set. Cannot send emails.'
-        );
-      }
+	private getClient() {
+		// Lazy-load the client only when needed and if API key is available
+		if (!this.mg) {
+			const apiKey = process.env.MAILGUN_API_KEY;
+			if (!apiKey) {
+				throw new Error(
+					"MAILGUN_API_KEY environment variable is not set. Cannot send emails.",
+				);
+			}
 
-      const mailgun = new Mailgun(FormData);
-      this.mg = mailgun.client({
-        username: 'api',
-        key: apiKey,
-        // For EU domains, uncomment and modify the URL:
-        // url: 'https://api.eu.mailgun.net'
-      });
-    }
-    return this.mg;
-  }
+			const mailgun = new Mailgun(FormData);
+			this.mg = mailgun.client({
+				username: "api",
+				key: apiKey,
+				// For EU domains, uncomment and modify the URL:
+				// url: 'https://api.eu.mailgun.net'
+			});
+		}
+		return this.mg;
+	}
 
-  async sendEmail(options: EmailOptions) {
-    try {
-      const { to, subject, text, html, from } = options;
+	async sendEmail(options: EmailOptions) {
+		try {
+			const { to, subject, text, html, from } = options;
 
-      const fromAddress = from || `Mailgun Sandbox <postmaster@${this.domain}>`;
+			const fromAddress = from || `Mailgun Sandbox <postmaster@${this.domain}>`;
 
-      const client = this.getClient();
-      const data = await client.messages.create(this.domain, {
-        from: fromAddress,
-        to: Array.isArray(to) ? to : [to],
-        subject,
-        text,
-        html,
-      });
+			const client = this.getClient();
+			const data = await client.messages.create(this.domain, {
+				from: fromAddress,
+				to: Array.isArray(to) ? to : [to],
+				subject,
+				text,
+				html,
+			});
 
-      console.log('Email sent successfully:', data);
-      return { success: true, data };
-    } catch (error) {
-      console.error('Mailgun error:', error);
-      throw new Error(
-        `Failed to send email: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`
-      );
-    }
-  }
+			console.log("Email sent successfully:", data);
+			return { success: true, data };
+		} catch (error) {
+			console.error("Mailgun error:", error);
+			throw new Error(
+				`Failed to send email: ${
+					error instanceof Error ? error.message : "Unknown error"
+				}`,
+			);
+		}
+	}
 
-  async sendOTPEmail(email: string, otp: string, user: MailgunServiceProps) {
-    const subject = 'Your CAALM Solutions Verification Code';
-    const fullName = user?.fullName || 'User';
-    const firstName = fullName.split(' ')[0];
-    const text = `Hello ${firstName},\n\nYour verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you didn't request this code, please ignore this email.\n\nBest regards,\nCAALM Solutions Team`;
+	async sendOTPEmail(email: string, otp: string, user: MailgunServiceProps) {
+		const subject = "Your CAALM Solutions Verification Code";
+		const fullName = user?.fullName || "User";
+		const firstName = fullName.split(" ")[0];
+		const text = `Hello ${firstName},\n\nYour verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you didn't request this code, please ignore this email.\n\nBest regards,\nCAALM Solutions Team`;
 
-    const html = `
+		const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #078FAB; text-align: center;">CAALM Solutions</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -100,21 +100,21 @@ class MailgunService {
       </div>
     `;
 
-    return this.sendEmail({
-      to: email,
-      subject,
-      text,
-      html,
-    });
-  }
+		return this.sendEmail({
+			to: email,
+			subject,
+			text,
+			html,
+		});
+	}
 
-  async sendWelcomeEmail(email: string, user: MailgunServiceProps) {
-    const subject = 'Welcome to CAALM Solutions!';
-    const fullName = user?.fullName || 'User';
-    const firstName = fullName.split(' ')[0];
-    const text = `Hello ${firstName},\n\nWelcome to CAALM Solutions! Your account has been successfully created.\n\nYou can now access all our features and start managing your contracts and documents.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
+	async sendWelcomeEmail(email: string, user: MailgunServiceProps) {
+		const subject = "Welcome to CAALM Solutions!";
+		const fullName = user?.fullName || "User";
+		const firstName = fullName.split(" ")[0];
+		const text = `Hello ${firstName},\n\nWelcome to CAALM Solutions! Your account has been successfully created.\n\nYou can now access all our features and start managing your contracts and documents.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
 
-    const html = `
+		const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #078FAB; text-align: center;">Welcome to CAALM Solutions!</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -127,19 +127,19 @@ class MailgunService {
       </div>
     `;
 
-    return this.sendEmail({
-      to: email,
-      subject,
-      text,
-      html,
-    });
-  }
+		return this.sendEmail({
+			to: email,
+			subject,
+			text,
+			html,
+		});
+	}
 
-  async sendAccountRequestConfirmation(email: string, fullName: string) {
-    const subject = 'Account Request Received - CAALM Solutions';
-    const text = `Hello ${fullName},\n\nThank you for signing up with CAALM Solutions! Your account request has been received and is currently under review.\n\nOur team will review your request and send you an invitation link to complete your account setup within 24-48 hours.\n\nYou will receive an email with your invitation link once your request has been approved.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
+	async sendAccountRequestConfirmation(email: string, fullName: string) {
+		const subject = "Account Request Received - CAALM Solutions";
+		const text = `Hello ${fullName},\n\nThank you for signing up with CAALM Solutions! Your account request has been received and is currently under review.\n\nOur team will review your request and send you an invitation link to complete your account setup within 24-48 hours.\n\nYou will receive an email with your invitation link once your request has been approved.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
 
-    const html = `
+		const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #078FAB; text-align: center;">Account Request Received</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -159,26 +159,26 @@ class MailgunService {
       </div>
     `;
 
-    return this.sendEmail({
-      to: email,
-      subject,
-      text,
-      html,
-    });
-  }
+		return this.sendEmail({
+			to: email,
+			subject,
+			text,
+			html,
+		});
+	}
 
-  async sendInvitationEmail(
-    email: string,
-    fullName: string,
-    inviteLink: string,
-    role: string,
-    department: string
-  ) {
-    const capitalizedRole = capitalizeRole(role);
-    const subject = "You're invited to join CAALM Solutions";
-    const text = `Hello ${fullName},\n\nYou have been invited to join CAALM Solutions as a ${capitalizedRole} in the ${department} department.\n\nClick the link below to accept your invitation and complete your account setup:\n\n${inviteLink}\n\nThis invitation will expire in 7 days.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
+	async sendInvitationEmail(
+		email: string,
+		fullName: string,
+		inviteLink: string,
+		role: string,
+		department: string,
+	) {
+		const capitalizedRole = capitalizeRole(role);
+		const subject = "You're invited to join CAALM Solutions";
+		const text = `Hello ${fullName},\n\nYou have been invited to join CAALM Solutions as a ${capitalizedRole} in the ${department} department.\n\nClick the link below to accept your invitation and complete your account setup:\n\n${inviteLink}\n\nThis invitation will expire in 7 days.\n\nIf you have any questions, please don't hesitate to contact our support team.\n\nBest regards,\nCAALM Solutions Team`;
 
-    const html = `
+		const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #078FAB; text-align: center;">You're Invited to Join CAALM Solutions!</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -202,19 +202,19 @@ class MailgunService {
       </div>
     `;
 
-    return this.sendEmail({
-      to: email,
-      subject,
-      text,
-      html,
-    });
-  }
+		return this.sendEmail({
+			to: email,
+			subject,
+			text,
+			html,
+		});
+	}
 
-  async sendComingSoonConfirmation(email: string) {
-    const subject = 'Welcome to CAALM Solutions - Early Access Confirmed';
-    const text = `Thank you for your interest in CAALM Solutions!\n\nWe've added you to our early access list. You'll be among the first to know when we launch our AI-powered contract management platform.\n\nWhat to expect:\n- Early access to the platform\n- Exclusive launch updates\n- Priority support during beta\n\nWe're excited to have you on board!\n\nBest regards,\nCAALM Solutions Team`;
+	async sendComingSoonConfirmation(email: string) {
+		const subject = "Welcome to CAALM Solutions - Early Access Confirmed";
+		const text = `Thank you for your interest in CAALM Solutions!\n\nWe've added you to our early access list. You'll be among the first to know when we launch our AI-powered contract management platform.\n\nWhat to expect:\n- Early access to the platform\n- Exclusive launch updates\n- Priority support during beta\n\nWe're excited to have you on board!\n\nBest regards,\nCAALM Solutions Team`;
 
-    const html = `
+		const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #078FAB; text-align: center;">Welcome to Early Access!</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -236,19 +236,19 @@ class MailgunService {
       </div>
     `;
 
-    return this.sendEmail({
-      to: email,
-      subject,
-      text,
-      html,
-    });
-  }
+		return this.sendEmail({
+			to: email,
+			subject,
+			text,
+			html,
+		});
+	}
 
-  async notifyTeamOfNewSignup(email: string) {
-    const subject = 'New Coming Soon Signup - CAALM Solutions';
-    const text = `New early access signup received:\n\nEmail: ${email}\nTimestamp: ${new Date().toISOString()}\n\nThis person has expressed interest in our platform and should be added to the early access list.`;
+	async notifyTeamOfNewSignup(email: string) {
+		const subject = "New Coming Soon Signup - CAALM Solutions";
+		const text = `New early access signup received:\n\nEmail: ${email}\nTimestamp: ${new Date().toISOString()}\n\nThis person has expressed interest in our platform and should be added to the early access list.`;
 
-    const html = `
+		const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #078FAB; text-align: center;">New Early Access Signup</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -260,14 +260,14 @@ class MailgunService {
       </div>
     `;
 
-    // Send to support email
-    return this.sendEmail({
-      to: 'support@caalmsolutions.com',
-      subject,
-      text,
-      html,
-    });
-  }
+		// Send to support email
+		return this.sendEmail({
+			to: "support@caalmsolutions.com",
+			subject,
+			text,
+			html,
+		});
+	}
 }
 
 // Export a singleton instance

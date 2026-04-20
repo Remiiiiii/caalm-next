@@ -1,164 +1,166 @@
-import { CalendarEvent } from '@/lib/actions/calendar.actions';
-import { getUserByAccountId } from '@/lib/actions/user.actions';
+import type { CalendarPermissionMap, UserRole } from "@/constants/rbac";
+import type { CalendarEvent } from "@/lib/actions/calendar.actions";
+import { getUserByAccountId } from "@/lib/actions/user.actions";
 import {
-  resolveCalendarPermissions,
-  hasCalendarPermission,
-  resolvePermissionKey,
-  CalendarPermissionAction,
-} from './permissions';
-import { CalendarPermissionMap, UserRole } from '@/constants/rbac';
-import { getUserRoles, getUserDefaultOrganization } from '@/lib/rbac/permissions';
+	getUserDefaultOrganization,
+	getUserRoles,
+} from "@/lib/rbac/permissions";
+import {
+	type CalendarPermissionAction,
+	hasCalendarPermission,
+	resolveCalendarPermissions,
+	resolvePermissionKey,
+} from "./permissions";
 
 export type CalendarPermissionEvaluation = {
-  allowed: boolean;
-  userRole: UserRole | null;
-  permissions: CalendarPermissionMap | null;
-  userId: string | null;
-  reason?: 'user_not_found' | 'permission_denied' | 'pending_approval';
-  requiredApproval?: boolean;
+	allowed: boolean;
+	userRole: UserRole | null;
+	permissions: CalendarPermissionMap | null;
+	userId: string | null;
+	reason?: "user_not_found" | "permission_denied" | "pending_approval";
+	requiredApproval?: boolean;
 };
 
 type EvaluateCalendarPermissionArgs = {
-  userAccountId: string;
-  action: CalendarPermissionAction;
-  event?: CalendarEvent | null;
-  teamIds?: string[];
+	userAccountId: string;
+	action: CalendarPermissionAction;
+	event?: CalendarEvent | null;
+	teamIds?: string[];
 };
 
 export const evaluateCalendarPermission = async ({
-  userAccountId,
-  action,
-  event,
-  teamIds = [],
+	userAccountId,
+	action,
+	event,
+	teamIds = [],
 }: EvaluateCalendarPermissionArgs): Promise<CalendarPermissionEvaluation> => {
+	const user = await getUserByAccountId(userAccountId);
 
-  const user = await getUserByAccountId(userAccountId);
+	if (!user) {
+		console.error(
+			"[evaluateCalendarPermission] User not found for accountId:",
+			userAccountId,
+		);
+		return {
+			allowed: false,
+			userRole: null,
+			permissions: null,
+			userId: null,
+			reason: "user_not_found",
+		};
+	}
 
-  if (!user) {
-    console.error(
-      '[evaluateCalendarPermission] User not found for accountId:',
-      userAccountId
-    );
-    return {
-      allowed: false,
-      userRole: null,
-      permissions: null,
-      userId: null,
-      reason: 'user_not_found',
-    };
-  }
+	// Get user's role from database (prioritize highest role)
+	const defaultOrg = await getUserDefaultOrganization(user.$id);
+	const userRoles = defaultOrg
+		? await getUserRoles(user.$id, defaultOrg.orgId)
+		: [];
 
-  // Get user's role from database (prioritize highest role)
-  const defaultOrg = await getUserDefaultOrganization(user.$id);
-  const userRoles = defaultOrg ? await getUserRoles(user.$id, defaultOrg.orgId) : [];
-  
-  // Import role priority helper
-  const { getHighestPriorityRole } = await import('@/lib/utils/role-priority');
-  const roleName = getHighestPriorityRole(userRoles) || '';
+	// Import role priority helper
+	const { getHighestPriorityRole } = await import("@/lib/utils/role-priority");
+	const roleName = getHighestPriorityRole(userRoles) || "";
 
-  // Map new RBAC roles to legacy calendar roles for compatibility
-  // This is temporary until calendar permissions are fully migrated
-  let calendarRole: UserRole = 'viewer';
-  if (roleName === 'Super Admin' || roleName === 'Organization Admin') {
-    calendarRole = 'admin';
-  } else if (roleName === 'Department Manager') {
-    calendarRole = 'approver';
-  } else if (roleName === 'Viewer') {
-    calendarRole = 'viewer';
-  }
+	// Map new RBAC roles to legacy calendar roles for compatibility
+	// This is temporary until calendar permissions are fully migrated
+	let calendarRole: UserRole = "viewer";
+	if (roleName === "Super Admin" || roleName === "Organization Admin") {
+		calendarRole = "admin";
+	} else if (roleName === "Department Manager") {
+		calendarRole = "approver";
+	} else if (roleName === "Viewer") {
+		calendarRole = "viewer";
+	}
 
+	// Ensure overrides is an array (parse from JSON string if needed)
+	let overrides = event?.overrides || [];
+	if (typeof overrides === "string") {
+		try {
+			overrides = JSON.parse(overrides);
+		} catch (error) {
+			console.error(
+				"[evaluateCalendarPermission] Error parsing overrides:",
+				error,
+			);
+			overrides = [];
+		}
+	}
+	if (!Array.isArray(overrides)) {
+		console.warn(
+			"[evaluateCalendarPermission] overrides is not an array:",
+			overrides,
+		);
+		overrides = [];
+	}
 
-  // Ensure overrides is an array (parse from JSON string if needed)
-  let overrides = event?.overrides || [];
-  if (typeof overrides === 'string') {
-    try {
-      overrides = JSON.parse(overrides);
-    } catch (error) {
-      console.error(
-        '[evaluateCalendarPermission] Error parsing overrides:',
-        error
-      );
-      overrides = [];
-    }
-  }
-  if (!Array.isArray(overrides)) {
-    console.warn(
-      '[evaluateCalendarPermission] overrides is not an array:',
-      overrides
-    );
-    overrides = [];
-  }
+	const permissions = resolveCalendarPermissions({
+		role: calendarRole,
+		overrides: overrides,
+		context: {
+			userId: user.$id,
+			teamIds,
+		},
+	});
 
-  const permissions = resolveCalendarPermissions({
-    role: calendarRole,
-    overrides: overrides,
-    context: {
-      userId: user.$id,
-      teamIds,
-    },
-  });
+	const permissionKey = resolvePermissionKey(action);
+	let allowed = hasCalendarPermission(permissions, permissionKey);
 
-  const permissionKey = resolvePermissionKey(action);
-  let allowed = hasCalendarPermission(permissions, permissionKey);
+	// Special case: allow event creators to cancel their own events even without cancelEvent permission
+	if (!allowed && action === "cancel" && event) {
+		const isEventCreator =
+			(user.$id && event.createdByUserId === user.$id) ||
+			(userAccountId &&
+				(event.createdByAccountId === userAccountId ||
+					event.createdBy === userAccountId));
 
-  // Special case: allow event creators to cancel their own events even without cancelEvent permission
-  if (!allowed && action === 'cancel' && event) {
-    const isEventCreator =
-      (user.$id && event.createdByUserId === user.$id) ||
-      (userAccountId &&
-        (event.createdByAccountId === userAccountId ||
-          event.createdBy === userAccountId));
+		if (isEventCreator) {
+			allowed = true;
+		}
+	}
 
-    if (isEventCreator) {
-      allowed = true;
-    }
-  }
+	if (!allowed) {
+		console.error("[evaluateCalendarPermission] Permission denied:", {
+			userRole: calendarRole,
+			roleName,
+			permissionKey,
+			permissions,
+			eventId: event?.$id,
+			eventCreatedBy: event?.createdBy,
+			eventCreatedByAccountId: event?.createdByAccountId,
+			eventCreatedByUserId: event?.createdByUserId,
+		});
+		return {
+			allowed,
+			userRole: calendarRole,
+			permissions,
+			userId: user.$id,
+			reason: "permission_denied",
+		};
+	}
 
-  if (!allowed) {
-    console.error('[evaluateCalendarPermission] Permission denied:', {
-      userRole: calendarRole,
-      roleName,
-      permissionKey,
-      permissions,
-      eventId: event?.$id,
-      eventCreatedBy: event?.createdBy,
-      eventCreatedByAccountId: event?.createdByAccountId,
-      eventCreatedByUserId: event?.createdByUserId,
-    });
-    return {
-      allowed,
-      userRole: calendarRole,
-      permissions,
-      userId: user.$id,
-      reason: 'permission_denied',
-    };
-  }
+	// Block updates if event has a pending approval, but allow cancellations
+	// (cancellation creates its own approval request)
+	if (
+		event?.requiresApproval &&
+		event.approvalStatus === "pending" &&
+		action === "update"
+	) {
+		return {
+			allowed: false,
+			userRole: calendarRole,
+			permissions,
+			userId: user.$id,
+			reason: "pending_approval",
+			requiredApproval: true,
+		};
+	}
 
-  // Block updates if event has a pending approval, but allow cancellations
-  // (cancellation creates its own approval request)
-  if (
-    event &&
-    event.requiresApproval &&
-    event.approvalStatus === 'pending' &&
-    action === 'update'
-  ) {
-    return {
-      allowed: false,
-      userRole: calendarRole,
-      permissions,
-      userId: user.$id,
-      reason: 'pending_approval',
-      requiredApproval: true,
-    };
-  }
+	// Allow cancellation even if there's a pending approval for creation
+	// The cancellation will create its own approval request if needed
 
-  // Allow cancellation even if there's a pending approval for creation
-  // The cancellation will create its own approval request if needed
-
-  return {
-    allowed: true,
-    userRole: calendarRole,
-    permissions,
-    userId: user.$id,
-  };
+	return {
+		allowed: true,
+		userRole: calendarRole,
+		permissions,
+		userId: user.$id,
+	};
 };

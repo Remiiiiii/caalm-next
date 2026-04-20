@@ -1,1389 +1,1389 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
+import Image from "next/image";
+import React, { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';
-import Image from 'next/image';
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogTitle,
+} from "@/components/ui/dialog";
 
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { constructFileUrl } from "@/lib/utils";
 //
-import type { UIFileDoc } from '@/types/files';
+import type { UIFileDoc } from "@/types/files";
 import {
-  actionsDropdownItems,
-  formatDepartmentName,
-  formatDivisionName,
-  ContractDepartment,
-  DIVISION_TO_DEPARTMENT,
-  UserDivision,
-} from '../../constants';
-import { constructFileUrl } from '@/lib/utils';
+	actionsDropdownItems,
+	type ContractDepartment,
+	DIVISION_TO_DEPARTMENT,
+	formatDepartmentName,
+	formatDivisionName,
+	type UserDivision,
+} from "../../constants";
 
 // Helper function to validate Appwrite storage file ID format
 const isValidBucketFileId = (id: string | null | undefined): boolean => {
-  if (!id || typeof id !== 'string') return false;
-  // Appwrite storage file IDs must be:
-  // - At most 36 characters
-  // - Only contain a-z, A-Z, 0-9, and underscore
-  // - Cannot start with a leading underscore
-  if (id.length > 36) return false;
-  if (id.startsWith('_')) return false;
-  return /^[a-zA-Z0-9_]+$/.test(id);
+	if (!id || typeof id !== "string") return false;
+	// Appwrite storage file IDs must be:
+	// - At most 36 characters
+	// - Only contain a-z, A-Z, 0-9, and underscore
+	// - Cannot start with a leading underscore
+	if (id.length > 36) return false;
+	if (id.startsWith("_")) return false;
+	return /^[a-zA-Z0-9_]+$/.test(id);
 };
 
 // Map division to badge color for Re-assign dialog
-const getDivisionBadgeClasses = (division: string): string => {
-  const normalized = division?.toLowerCase?.() ?? '';
-  switch (normalized) {
-    case 'c-suite':
-      return 'bg-purple-100 text-purple-800 border border-purple-200 text-xs rounded-xl font-medium px-2 py-1';
-    case 'behavioral-health':
-      return 'bg-blue-100 text-blue-800 border border-blue-200 text-xs rounded-xl font-medium px-2 py-1';
-    case 'child-welfare':
-      return 'bg-teal-100 text-teal-800 border border-teal-200 text-xs rounded-xl font-medium px-2 py-1';
-    case 'clinic':
-      return 'bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs rounded-xl font-medium px-2 py-1';
-    case 'cfs':
-      return 'bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs rounded-xl font-medium px-2 py-1';
-    case 'hr':
-      return 'bg-pink-100 text-pink-800 border border-pink-200 text-xs rounded-xl font-medium px-2 py-1';
-    case 'residential':
-      return 'bg-green-100 text-green-800 border border-green-200 text-xs rounded-xl font-medium px-2 py-1';
-    case 'support':
-      return 'bg-orange-100 text-orange-800 border border-orange-200 text-xs rounded-xl font-medium px-2 py-1';
-    case 'help-desk':
-      return 'bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs rounded-xl font-medium px-2 py-1';
-    case 'accounting':
-      return 'bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs rounded-xl font-medium px-2 py-1';
-    default:
-      return 'bg-slate-100 text-slate-800 border border-slate-200 text-xs rounded-xl font-medium px-2 py-1';
-  }
+const _getDivisionBadgeClasses = (division: string): string => {
+	const normalized = division?.toLowerCase?.() ?? "";
+	switch (normalized) {
+		case "c-suite":
+			return "bg-purple-100 text-purple-800 border border-purple-200 text-xs rounded-xl font-medium px-2 py-1";
+		case "behavioral-health":
+			return "bg-blue-100 text-blue-800 border border-blue-200 text-xs rounded-xl font-medium px-2 py-1";
+		case "child-welfare":
+			return "bg-teal-100 text-teal-800 border border-teal-200 text-xs rounded-xl font-medium px-2 py-1";
+		case "clinic":
+			return "bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs rounded-xl font-medium px-2 py-1";
+		case "cfs":
+			return "bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs rounded-xl font-medium px-2 py-1";
+		case "hr":
+			return "bg-pink-100 text-pink-800 border border-pink-200 text-xs rounded-xl font-medium px-2 py-1";
+		case "residential":
+			return "bg-green-100 text-green-800 border border-green-200 text-xs rounded-xl font-medium px-2 py-1";
+		case "support":
+			return "bg-orange-100 text-orange-800 border border-orange-200 text-xs rounded-xl font-medium px-2 py-1";
+		case "help-desk":
+			return "bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs rounded-xl font-medium px-2 py-1";
+		case "accounting":
+			return "bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs rounded-xl font-medium px-2 py-1";
+		default:
+			return "bg-slate-100 text-slate-800 border border-slate-200 text-xs rounded-xl font-medium px-2 py-1";
+	}
 };
 
 // Map status to badge color for Re-assign dialog
 const getStatusBadgeClasses = (status: string): string => {
-  const normalized = status?.toLowerCase?.() ?? '';
-  switch (normalized) {
-    case 'active':
-      return 'bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-xl font-medium px-2 py-1';
-    case 'inactive':
-      return 'bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-xl font-medium px-2 py-1';
-    case 'pending':
-      return 'bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-xl font-medium px-2 py-1';
-    default:
-      return 'bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-xl font-medium px-2 py-1';
-  }
+	const normalized = status?.toLowerCase?.() ?? "";
+	switch (normalized) {
+		case "active":
+			return "bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-xl font-medium px-2 py-1";
+		case "inactive":
+			return "bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-xl font-medium px-2 py-1";
+		case "pending":
+			return "bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-xl font-medium px-2 py-1";
+		default:
+			return "bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-xl font-medium px-2 py-1";
+	}
 };
 
 // Map status to badge color matching ContractsControlBar styles
 const getStatusDialogBadgeClasses = (status: string): string => {
-  const normalized = status?.toLowerCase?.() ?? '';
-  switch (normalized) {
-    case 'active':
-      return '!font-medium border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D]';
-    case 'pending-review':
-    case 'under_review':
-      return '!font-medium border-2 border-amber-400 bg-[#FFEA99] text-[#E86100]';
-    case 'action-required':
-      return '!font-medium border-2 border-red-400 bg-destructive/10 text-destructive';
-    case 'inactive':
-      return '!font-medium border-2 border-slate-500 bg-[#D3D3D3] text-[#878787]';
-    case 'expired':
-      return '!font-medium border-2 border-red-600 bg-red-100 text-red-800';
-    default:
-      return '!font-medium border-2 border-slate-200 bg-slate-100 text-slate-800';
-  }
+	const normalized = status?.toLowerCase?.() ?? "";
+	switch (normalized) {
+		case "active":
+			return "!font-medium border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D]";
+		case "pending-review":
+		case "under_review":
+			return "!font-medium border-2 border-amber-400 bg-[#FFEA99] text-[#E86100]";
+		case "action-required":
+			return "!font-medium border-2 border-red-400 bg-destructive/10 text-destructive";
+		case "inactive":
+			return "!font-medium border-2 border-slate-500 bg-[#D3D3D3] text-[#878787]";
+		case "expired":
+			return "!font-medium border-2 border-red-600 bg-red-100 text-red-800";
+		default:
+			return "!font-medium border-2 border-slate-200 bg-slate-100 text-slate-800";
+	}
 };
 
 // Get status label for display
 const getStatusLabel = (status: string): string => {
-  const normalized = status?.toLowerCase?.() ?? '';
-  switch (normalized) {
-    case 'pending-review':
-    case 'under_review':
-      return 'Pending Review';
-    case 'action-required':
-      return 'Action Required';
-    case 'active':
-      return 'Active';
-    case 'inactive':
-      return 'Inactive';
-    case 'expired':
-      return 'Expired';
-    default:
-      return status.replace(/-/g, ' ');
-  }
+	const normalized = status?.toLowerCase?.() ?? "";
+	switch (normalized) {
+		case "pending-review":
+		case "under_review":
+			return "Pending Review";
+		case "action-required":
+			return "Action Required";
+		case "active":
+			return "Active";
+		case "inactive":
+			return "Inactive";
+		case "expired":
+			return "Expired";
+		default:
+			return status.replace(/-/g, " ");
+	}
 };
-import Link from 'next/link';
-import { Input } from './ui/input';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
+
 import {
-  Ban,
-  Trash2,
-  AlertTriangle,
-  RefreshCw,
-  UserRoundCheck,
-  FileText,
-  FolderPen,
-  Share2,
-  Info,
-  Minimize2,
-} from 'lucide-react';
+	AlertTriangle,
+	Ban,
+	FolderPen,
+	Info,
+	Minimize2,
+	RefreshCw,
+	Share2,
+	Trash2,
+	UserRoundCheck,
+} from "lucide-react";
+import { usePathname } from "next/navigation";
+import { ShareInput } from "@/components/ActionsModalContent";
+import { PERMISSIONS } from "@/constants/permissions";
+import { useContractStatusEnums } from "@/hooks/useContractStatusEnums";
+import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import {
-  deleteFile,
-  renameFile,
-  updateFileUsers,
-  assignContract,
-} from '@/lib/actions/file.actions';
-import { assignContractToDepartment } from '@/lib/actions/notification.actions';
-import { AppUser } from '@/lib/actions/user.actions';
-import { usePathname } from 'next/navigation';
-import { FileDetails } from './ActionsModalContent';
-import { ShareInput } from '@/components/ActionsModalContent';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from './ui/card';
-import { useContractStatusEnums } from '@/hooks/useContractStatusEnums';
-import { useUpdateContractStatus } from '@/hooks/useUpdateContractStatus';
-import { useDepartmentAssignment } from '@/hooks/useDepartmentAssignment';
-import DocumentViewer from './DocumentViewer';
-import { usePermissions } from '@/hooks/usePermissions';
-import { PERMISSIONS } from '@/constants/permissions';
-import { useUserRoles } from '@/hooks/useUserRoles';
+	assignContract,
+	deleteFile,
+	renameFile,
+	updateFileUsers,
+} from "@/lib/actions/file.actions";
+import { assignContractToDepartment } from "@/lib/actions/notification.actions";
+import type { AppUser } from "@/lib/actions/user.actions";
+import { FileDetails } from "./ActionsModalContent";
+import DocumentViewer from "./DocumentViewer";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
 
 const ActionDropdown = ({
-  file,
-  onStatusChange,
-  onRefresh,
-  onExpiryDateChange,
-  userRole,
+	file,
+	onStatusChange,
+	onRefresh,
+	onExpiryDateChange,
+	userRole,
 }: {
-  file: UIFileDoc;
-  onStatusChange?: () => void;
-  onRefresh?: () => void;
-  onExpiryDateChange?: (newExpiryDate: string) => void;
-  userRole?: string;
+	file: UIFileDoc;
+	onStatusChange?: () => void;
+	onRefresh?: () => void;
+	onExpiryDateChange?: (newExpiryDate: string) => void;
+	userRole?: string;
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [action, setAction] = useState<ActionType | null>(null);
-  const [name, setName] = useState<string>(
-    file?.name || file?.contractName || ''
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [emails, setEmails] = useState<string[]>([]);
-  const [downloading, setDownloading] = useState(false);
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+	const [action, setAction] = useState<ActionType | null>(null);
+	const [name, setName] = useState<string>(
+		file?.name || file?.contractName || "",
+	);
+	const [isLoading, setIsLoading] = useState(false);
+	const [emails, setEmails] = useState<string[]>([]);
+	const [downloading, setDownloading] = useState(false);
 
-  // Initialize emails from file.users when share dialog opens
-  useEffect(() => {
-    if (action?.value === 'share' && file.users && file.users.length > 0) {
-      setEmails(file.users);
-    } else if (
-      action?.value === 'share' &&
-      (!file.users || file.users.length === 0)
-    ) {
-      setEmails([]);
-    }
-  }, [action?.value, file.users]);
+	// Initialize emails from file.users when share dialog opens
+	useEffect(() => {
+		if (action?.value === "share" && file.users && file.users.length > 0) {
+			setEmails(file.users);
+		} else if (
+			action?.value === "share" &&
+			(!file.users || file.users.length === 0)
+		) {
+			setEmails([]);
+		}
+	}, [action?.value, file.users]);
 
-  // Check if contract is expired
-  const isContractExpired = React.useMemo(() => {
-    if (file?.status?.toLowerCase() === 'expired') return true;
-    if (file?.isExpired) return true;
-    if (file?.contractExpiryDate) {
-      const expiryDate = new Date(file.contractExpiryDate);
-      const now = new Date();
-      return expiryDate < now;
-    }
-    return false;
-  }, [file?.status, file?.isExpired, file?.contractExpiryDate]);
+	// Check if contract is expired
+	const isContractExpired = React.useMemo(() => {
+		if (file?.status?.toLowerCase() === "expired") return true;
+		if (file?.isExpired) return true;
+		if (file?.contractExpiryDate) {
+			const expiryDate = new Date(file.contractExpiryDate);
+			const now = new Date();
+			return expiryDate < now;
+		}
+		return false;
+	}, [file?.status, file?.isExpired, file?.contractExpiryDate]);
 
-  // Initialize selectedStatus - auto-select expired if contract is expired
-  const [selectedStatus, setSelectedStatus] = useState<string>(() => {
-    if (isContractExpired) return 'expired';
-    return file?.status || '';
-  });
+	// Initialize selectedStatus - auto-select expired if contract is expired
+	const [selectedStatus, setSelectedStatus] = useState<string>(() => {
+		if (isContractExpired) return "expired";
+		return file?.status || "";
+	});
 
-  // Update selectedStatus when dialog opens if contract is expired
-  useEffect(() => {
-    if (action?.value === 'status' && isContractExpired) {
-      setSelectedStatus('expired');
-    }
-  }, [action?.value, isContractExpired]);
-  const {
-    departmentEnums,
-    filteredManagers,
-    selectedDepartment,
-    selectedManagers,
-    handleDepartmentChange,
-    handleManagerToggle,
-  } = useDepartmentAssignment();
-  const path = usePathname() || '';
-  const { enums: statusOptions, error: statusError } = useContractStatusEnums();
-  const { updateStatus } = useUpdateContractStatus({ onStatusChange });
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const { permissions } = usePermissions();
-  const { roles: userRoles } = useUserRoles();
+	// Update selectedStatus when dialog opens if contract is expired
+	useEffect(() => {
+		if (action?.value === "status" && isContractExpired) {
+			setSelectedStatus("expired");
+		}
+	}, [action?.value, isContractExpired]);
+	const {
+		departmentEnums,
+		filteredManagers,
+		selectedDepartment,
+		selectedManagers,
+		handleDepartmentChange,
+		handleManagerToggle,
+	} = useDepartmentAssignment();
+	const path = usePathname() || "";
+	const { enums: statusOptions, error: statusError } = useContractStatusEnums();
+	const { updateStatus } = useUpdateContractStatus({ onStatusChange });
+	const [isViewerOpen, setIsViewerOpen] = useState(false);
+	const { permissions } = usePermissions();
+	const { roles: userRoles } = useUserRoles();
 
-  // Get the actual role name from user roles (e.g., 'Super Admin', 'Organization Admin')
-  const actualRoleName = userRoles[0]?.roleName || userRole || '';
+	// Get the actual role name from user roles (e.g., 'Super Admin', 'Organization Admin')
+	const actualRoleName = userRoles[0]?.roleName || userRole || "";
 
-  // SWR automatically fetches data when hook is used, no need for manual fetch
+	// SWR automatically fetches data when hook is used, no need for manual fetch
 
-  const closeAllModals = (event?: React.MouseEvent) => {
-    if (event) {
-      event.stopPropagation();
-      event.preventDefault();
-    }
-    setIsModalOpen(false);
-    setIsDropdownOpen(false);
-    setAction(null);
-    setName(file.name || file.contractName || '');
-    //setEmails([])
-  };
+	const closeAllModals = (event?: React.MouseEvent) => {
+		if (event) {
+			event.stopPropagation();
+			event.preventDefault();
+		}
+		setIsModalOpen(false);
+		setIsDropdownOpen(false);
+		setAction(null);
+		setName(file.name || file.contractName || "");
+		//setEmails([])
+	};
 
-  const handleAction = async () => {
-    if (!action) return;
-    setIsLoading(true);
-    let success = false;
+	const handleAction = async () => {
+		if (!action) return;
+		setIsLoading(true);
+		let success = false;
 
-    const actions = {
-      assign: async () => {
-        if (!file.contractId) {
-          throw new Error(
-            'This file does not have an associated contract. Only contract files can be assigned.'
-          );
-        }
+		const actions = {
+			assign: async () => {
+				if (!file.contractId) {
+					throw new Error(
+						"This file does not have an associated contract. Only contract files can be assigned.",
+					);
+				}
 
-        // Validate contractId format before using it
-        const contractId = file.contractId;
-        const isValidContractId =
-          typeof contractId === 'string' &&
-          contractId.length > 0 &&
-          contractId.length <= 36 &&
-          /^[a-zA-Z0-9_][a-zA-Z0-9_]*$/.test(contractId);
+				// Validate contractId format before using it
+				const contractId = file.contractId;
+				const isValidContractId =
+					typeof contractId === "string" &&
+					contractId.length > 0 &&
+					contractId.length <= 36 &&
+					/^[a-zA-Z0-9_][a-zA-Z0-9_]*$/.test(contractId);
 
-        if (!isValidContractId) {
-          console.error('Invalid contractId format:', contractId);
-          throw new Error(
-            `Invalid contract ID format: "${contractId}". Contract ID must be 1-36 characters, alphanumeric with underscores only, and cannot start with an underscore.`
-          );
-        }
+				if (!isValidContractId) {
+					console.error("Invalid contractId format:", contractId);
+					throw new Error(
+						`Invalid contract ID format: "${contractId}". Contract ID must be 1-36 characters, alphanumeric with underscores only, and cannot start with an underscore.`,
+					);
+				}
 
-        const assignResult = await assignContract({
-          fileId: contractId,
-          managerAccountIds: selectedManagers,
-          path,
-          fileDocumentId: file.$id, // Pass the file document ID
-        });
+				const assignResult = await assignContract({
+					fileId: contractId,
+					managerAccountIds: selectedManagers,
+					path,
+					fileDocumentId: file.$id, // Pass the file document ID
+				});
 
-        // Also assign department if selected - use the validated contractId
-        if (selectedDepartment) {
-          await assignContractToDepartment({
-            contractId: contractId, // Use the validated contractId we already have
-            department: selectedDepartment as ContractDepartment,
-          });
-        }
+				// Also assign department if selected - use the validated contractId
+				if (selectedDepartment) {
+					await assignContractToDepartment({
+						contractId: contractId, // Use the validated contractId we already have
+						department: selectedDepartment as ContractDepartment,
+					});
+				}
 
-        return assignResult;
-      },
-      rename: () => {
-        // Remove extension if user included it
-        let baseName = name;
-        if (
-          baseName.toLowerCase().endsWith(`.${file.extension.toLowerCase()}`)
-        ) {
-          baseName = baseName.slice(0, -file.extension.length - 1);
-        }
-        return renameFile({
-          fileId: file.$id,
-          name: baseName,
-          extension: file.extension,
-          path,
-        });
-      },
-      share: () =>
-        updateFileUsers({
-          fileId: file.$id,
-          emails,
-          path,
-        }),
-      delete: () =>
-        deleteFile({
-          fileId: file.$id,
-          bucketFileId: file.bucketFileId || '',
-          path,
-          contractId: file.contractId, // Pass contractId if this is a contract
-        }),
-    };
+				return assignResult;
+			},
+			rename: () => {
+				// Remove extension if user included it
+				let baseName = name;
+				if (
+					baseName.toLowerCase().endsWith(`.${file.extension.toLowerCase()}`)
+				) {
+					baseName = baseName.slice(0, -file.extension.length - 1);
+				}
+				return renameFile({
+					fileId: file.$id,
+					name: baseName,
+					extension: file.extension,
+					path,
+				});
+			},
+			share: () =>
+				updateFileUsers({
+					fileId: file.$id,
+					emails,
+					path,
+				}),
+			delete: () =>
+				deleteFile({
+					fileId: file.$id,
+					bucketFileId: file.bucketFileId || "",
+					path,
+					contractId: file.contractId, // Pass contractId if this is a contract
+				}),
+		};
 
-    success = await actions[action.value as keyof typeof actions]();
+		success = await actions[action.value as keyof typeof actions]();
 
-    if (success) {
-      closeAllModals();
-      // Refresh the contracts list after successful actions
-      if (onRefresh) {
-        onRefresh();
-      }
-    }
+		if (success) {
+			closeAllModals();
+			// Refresh the contracts list after successful actions
+			if (onRefresh) {
+				onRefresh();
+			}
+		}
 
-    setIsLoading(false);
-  };
+		setIsLoading(false);
+	};
 
-  const handleRemoveUser = async (email: string) => {
-    // Use file.users as the source of truth, fallback to emails state
-    const currentUsers = file.users || emails;
-    const updateEmails = currentUsers.filter((e: string) => e !== email);
+	const handleRemoveUser = async (email: string) => {
+		// Use file.users as the source of truth, fallback to emails state
+		const currentUsers = file.users || emails;
+		const updateEmails = currentUsers.filter((e: string) => e !== email);
 
-    const success = await updateFileUsers({
-      fileId: file.$id,
-      emails: updateEmails,
-      path,
-    });
+		const success = await updateFileUsers({
+			fileId: file.$id,
+			emails: updateEmails,
+			path,
+		});
 
-    if (success) {
-      setEmails(updateEmails);
-      // Update the file object to reflect the change immediately
-      file.users = updateEmails;
-      // Don't close the dialog - just update the list
-      // The dialog will show "No users shared yet" if updateEmails is empty
-    }
-  };
+		if (success) {
+			setEmails(updateEmails);
+			// Update the file object to reflect the change immediately
+			file.users = updateEmails;
+			// Don't close the dialog - just update the list
+			// The dialog will show "No users shared yet" if updateEmails is empty
+		}
+	};
 
-  const handleStatusChange = async () => {
-    setIsLoading(true);
-    const contractId = file.contractId || file.$id;
-    const success = await updateStatus({
-      fileId: contractId,
-      status: selectedStatus,
-      path,
-    });
-    if (success) {
-      closeAllModals();
-      // Trigger immediate UI update
-      if (onStatusChange) {
-        onStatusChange();
-      }
-      if (onRefresh) {
-        onRefresh();
-      }
-    }
-    setIsLoading(false);
-  };
+	const handleStatusChange = async () => {
+		setIsLoading(true);
+		const contractId = file.contractId || file.$id;
+		const success = await updateStatus({
+			fileId: contractId,
+			status: selectedStatus,
+			path,
+		});
+		if (success) {
+			closeAllModals();
+			// Trigger immediate UI update
+			if (onStatusChange) {
+				onStatusChange();
+			}
+			if (onRefresh) {
+				onRefresh();
+			}
+		}
+		setIsLoading(false);
+	};
 
-  const renderDialogContent = () => {
-    if (!action) return null;
-    const { value, label } = action;
-    // All dialogs styled like Assign (NotificationCenter)
-    const dialogHeader = (
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="sidebar-gradient-text">{label}</CardTitle>
-        <Button variant="ghost" size="icon" onClick={closeAllModals}>
-          <span className="sr-only">Close</span>×
-        </Button>
-      </CardHeader>
-    );
-    if (value === 'assign') {
-      return (
-        <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
-          {/* Professional Cap */}
-          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+	const renderDialogContent = () => {
+		if (!action) return null;
+		const { value, label } = action;
+		// All dialogs styled like Assign (NotificationCenter)
+		const _dialogHeader = (
+			<CardHeader className="flex flex-row items-center justify-between">
+				<CardTitle className="sidebar-gradient-text">{label}</CardTitle>
+				<Button variant="ghost" size="icon" onClick={closeAllModals}>
+					<span className="sr-only">Close</span>×
+				</Button>
+			</CardHeader>
+		);
+		if (value === "assign") {
+			return (
+				<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+					{/* Professional Cap */}
+					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
-          {/* Header with gradient background */}
-          <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-            <div className="flex items-center gap-3 px-6">
-              {/* Icon with circular background */}
+					{/* Header with gradient background */}
+					<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+						<div className="flex items-center gap-3 px-6">
+							{/* Icon with circular background */}
 
-              {/* Title */}
-              <div className="flex items-center gap-3">
-                <UserRoundCheck className="w-5 h-5 text-[#0f5384]" />
-                <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-                  {label}
-                </DialogTitle>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mt-1 ml-14">
-              Select department and managers to assign this contract
-            </p>
-          </div>
+							{/* Title */}
+							<div className="flex items-center gap-3">
+								<UserRoundCheck className="w-5 h-5 text-[#0f5384]" />
+								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+									{label}
+								</DialogTitle>
+							</div>
+						</div>
+						<p className="text-sm text-slate-600 mt-1 ml-14">
+							Select department and managers to assign this contract
+						</p>
+					</div>
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-            <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm space-y-6">
-              {/* Department Selection */}
-              <div>
-                <div className="mb-3 text-sm font-medium text-slate-700">
-                  Select department for this contract:
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {departmentEnums.length > 0 ? (
-                    departmentEnums.map((dept) => (
-                      <label
-                        key={dept}
-                        className={`flex items-center gap-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-2 rounded-lg border-2 ${
-                          selectedDepartment === dept
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-slate-200 bg-white'
-                        } group shadow-sm hover:shadow-md`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!isLoading) {
-                            handleDepartmentChange(dept);
-                          }
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="contract-department"
-                          value={dept}
-                          checked={selectedDepartment === dept}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            if (!isLoading) {
-                              handleDepartmentChange(dept);
-                            }
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                          disabled={isLoading}
-                          className="cursor-pointer w-4 h-4 text-blue-600"
-                        />
-                        <span className="text-sm cursor-pointer text-slate-900 font-medium group-hover:text-blue-600 transition-colors">
-                          {formatDepartmentName(dept as ContractDepartment)}
-                        </span>
-                      </label>
-                    ))
-                  ) : (
-                    <div className="text-sm text-slate-500 col-span-3">
-                      {isLoading
-                        ? 'Loading departments...'
-                        : 'No departments available'}
-                    </div>
-                  )}
-                </div>
-              </div>
+					{/* Scrollable Content */}
+					<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+						<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm space-y-6">
+							{/* Department Selection */}
+							<div>
+								<div className="mb-3 text-sm font-medium text-slate-700">
+									Select department for this contract:
+								</div>
+								<div className="grid grid-cols-3 gap-2">
+									{departmentEnums.length > 0 ? (
+										departmentEnums.map((dept) => (
+											<label
+												key={dept}
+												className={`flex items-center gap-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-2 rounded-lg border-2 ${
+													selectedDepartment === dept
+														? "border-blue-500 bg-blue-50"
+														: "border-slate-200 bg-white"
+												} group shadow-sm hover:shadow-md`}
+												onClick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													if (!isLoading) {
+														handleDepartmentChange(dept);
+													}
+												}}
+											>
+												<input
+													type="radio"
+													name="contract-department"
+													value={dept}
+													checked={selectedDepartment === dept}
+													onChange={(e) => {
+														e.stopPropagation();
+														if (!isLoading) {
+															handleDepartmentChange(dept);
+														}
+													}}
+													onClick={(e) => {
+														e.stopPropagation();
+													}}
+													disabled={isLoading}
+													className="cursor-pointer w-4 h-4 text-blue-600"
+												/>
+												<span className="text-sm cursor-pointer text-slate-900 font-medium group-hover:text-blue-600 transition-colors">
+													{formatDepartmentName(dept as ContractDepartment)}
+												</span>
+											</label>
+										))
+									) : (
+										<div className="text-sm text-slate-500 col-span-3">
+											{isLoading
+												? "Loading departments..."
+												: "No departments available"}
+										</div>
+									)}
+								</div>
+							</div>
 
-              {/* Manager Selection */}
-              <div>
-                <div className="mb-3 text-sm font-medium text-slate-700">
-                  Select manager(s) to assign this contract:
-                </div>
-                <div className="overflow-x-auto rounded-lg border border-slate-200">
-                  <table className="min-w-full divide-y divide-slate-200">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th></th>
-                        <th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
-                          Name
-                        </th>
-                        <th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
-                          Department
-                        </th>
-                        <th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
-                          Division
-                        </th>
-                        <th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-slate-700 text-sm bg-white">
-                      {filteredManagers.length > 0 ? (
-                        filteredManagers.map((manager: AppUser) => (
-                          <tr
-                            key={manager.accountId}
-                            className={`hover:bg-blue-50 cursor-pointer transition-colors ${
-                              selectedManagers.includes(manager.accountId)
-                                ? 'bg-blue-50'
-                                : ''
-                            }`}
-                            onClick={() =>
-                              handleManagerToggle(manager.accountId)
-                            }
-                          >
-                            <td
-                              className="p-2"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <input
-                                type="checkbox"
-                                key={`${
-                                  manager.accountId
-                                }-${selectedManagers.includes(
-                                  manager.accountId
-                                )}`}
-                                checked={selectedManagers.includes(
-                                  manager.accountId
-                                )}
-                                onChange={() =>
-                                  handleManagerToggle(manager.accountId)
-                                }
-                                className="cursor-pointer"
-                              />
-                            </td>
-                            <td className="text-center px-2 py-2">
-                              {manager.fullName}
-                            </td>
-                            <td className="text-center px-2 py-2">
-                              {(manager as any).department
-                                ? formatDepartmentName(
-                                    (manager as any)
-                                      .department as ContractDepartment
-                                  )
-                                : manager.division
-                                ? formatDepartmentName(
-                                    DIVISION_TO_DEPARTMENT[
-                                      manager.division
-                                    ] as ContractDepartment
-                                  )
-                                : 'N/A'}
-                            </td>
-                            <td className="text-center px-2 py-2">
-                              {manager.division
-                                ? formatDivisionName(
-                                    manager.division as UserDivision
-                                  )
-                                : '-'}
-                            </td>
-                            <td className="text-center px-2 py-2">
-                              <span
-                                className={`inline-block ${getStatusBadgeClasses(
-                                  manager.status || ''
-                                )}`}
-                              >
-                                {manager.status
-                                  ? manager.status.charAt(0).toUpperCase() +
-                                    manager.status.slice(1).toLowerCase()
-                                  : 'N/A'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td
-                            colSpan={5}
-                            className="text-center py-4 text-sm text-slate-500"
-                          >
-                            {isLoading
-                              ? 'Loading managers...'
-                              : !selectedDepartment
-                              ? 'Please select a department first'
-                              : 'No managers available'}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
+							{/* Manager Selection */}
+							<div>
+								<div className="mb-3 text-sm font-medium text-slate-700">
+									Select manager(s) to assign this contract:
+								</div>
+								<div className="overflow-x-auto rounded-lg border border-slate-200">
+									<table className="min-w-full divide-y divide-slate-200">
+										<thead className="bg-slate-50">
+											<tr>
+												<th></th>
+												<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+													Name
+												</th>
+												<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+													Department
+												</th>
+												<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+													Division
+												</th>
+												<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+													Status
+												</th>
+											</tr>
+										</thead>
+										<tbody className="text-slate-700 text-sm bg-white">
+											{filteredManagers.length > 0 ? (
+												filteredManagers.map((manager: AppUser) => (
+													<tr
+														key={manager.accountId}
+														className={`hover:bg-blue-50 cursor-pointer transition-colors ${
+															selectedManagers.includes(manager.accountId)
+																? "bg-blue-50"
+																: ""
+														}`}
+														onClick={() =>
+															handleManagerToggle(manager.accountId)
+														}
+													>
+														<td
+															className="p-2"
+															onClick={(e) => e.stopPropagation()}
+														>
+															<input
+																type="checkbox"
+																key={`${
+																	manager.accountId
+																}-${selectedManagers.includes(
+																	manager.accountId,
+																)}`}
+																checked={selectedManagers.includes(
+																	manager.accountId,
+																)}
+																onChange={() =>
+																	handleManagerToggle(manager.accountId)
+																}
+																className="cursor-pointer"
+															/>
+														</td>
+														<td className="text-center px-2 py-2">
+															{manager.fullName}
+														</td>
+														<td className="text-center px-2 py-2">
+															{(manager as any).department
+																? formatDepartmentName(
+																		(manager as any)
+																			.department as ContractDepartment,
+																	)
+																: manager.division
+																	? formatDepartmentName(
+																			DIVISION_TO_DEPARTMENT[
+																				manager.division
+																			] as ContractDepartment,
+																		)
+																	: "N/A"}
+														</td>
+														<td className="text-center px-2 py-2">
+															{manager.division
+																? formatDivisionName(
+																		manager.division as UserDivision,
+																	)
+																: "-"}
+														</td>
+														<td className="text-center px-2 py-2">
+															<span
+																className={`inline-block ${getStatusBadgeClasses(
+																	manager.status || "",
+																)}`}
+															>
+																{manager.status
+																	? manager.status.charAt(0).toUpperCase() +
+																		manager.status.slice(1).toLowerCase()
+																	: "N/A"}
+															</span>
+														</td>
+													</tr>
+												))
+											) : (
+												<tr>
+													<td
+														colSpan={5}
+														className="text-center py-4 text-sm text-slate-500"
+													>
+														{isLoading
+															? "Loading managers..."
+															: !selectedDepartment
+																? "Please select a department first"
+																: "No managers available"}
+													</td>
+												</tr>
+											)}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
 
-          {/* Professional Footer */}
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-            <div className="text-xs text-slate-500">
-              {selectedManagers.length === 1
-                ? `${selectedManagers.length} manager selected`
-                : selectedManagers.length > 0
-                ? `${selectedManagers.length} managers(s) selected`
-                : 'Select at least one manager'}
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={(e) => closeAllModals(e)}
-                className="primary-btn px-3 sm:px-4"
-                disabled={isLoading}
-              >
-                <Ban className="w-4 h-4" />
-                Cancel
-              </Button>
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  handleAction();
-                }}
-                disabled={
-                  isLoading ||
-                  selectedManagers.length === 0 ||
-                  !selectedDepartment
-                }
-                className="primary-btn px-3 sm:px-4"
-              >
-                {isLoading && (
-                  <Image
-                    src="/assets/icons/loader.svg"
-                    alt="loader"
-                    width={16}
-                    height={16}
-                    className="animate-spin mr-2"
-                  />
-                )}
-                <UserRoundCheck className="w-4 h-4" />
-                Assign Contract
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      );
-    }
-    // Rename dialog
-    if (value === 'rename') {
-      return (
-        <DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
-          <VisuallyHiddenPrimitive.Root>
-            <DialogTitle>{label}</DialogTitle>
-          </VisuallyHiddenPrimitive.Root>
-          {/* Professional Cap */}
-          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+					{/* Professional Footer */}
+					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+						<div className="text-xs text-slate-500">
+							{selectedManagers.length === 1
+								? `${selectedManagers.length} manager selected`
+								: selectedManagers.length > 0
+									? `${selectedManagers.length} managers(s) selected`
+									: "Select at least one manager"}
+						</div>
+						<div className="flex items-center gap-3">
+							<Button
+								variant="outline"
+								onClick={(e) => closeAllModals(e)}
+								className="primary-btn px-3 sm:px-4"
+								disabled={isLoading}
+							>
+								<Ban className="w-4 h-4" />
+								Cancel
+							</Button>
+							<Button
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									handleAction();
+								}}
+								disabled={
+									isLoading ||
+									selectedManagers.length === 0 ||
+									!selectedDepartment
+								}
+								className="primary-btn px-3 sm:px-4"
+							>
+								{isLoading && (
+									<Image
+										src="/assets/icons/loader.svg"
+										alt="loader"
+										width={16}
+										height={16}
+										className="animate-spin mr-2"
+									/>
+								)}
+								<UserRoundCheck className="w-4 h-4" />
+								Assign Contract
+							</Button>
+						</div>
+					</div>
+				</DialogContent>
+			);
+		}
+		// Rename dialog
+		if (value === "rename") {
+			return (
+				<DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+					<VisuallyHiddenPrimitive.Root>
+						<DialogTitle>{label}</DialogTitle>
+					</VisuallyHiddenPrimitive.Root>
+					{/* Professional Cap */}
+					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
-          {/* Professional Header */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-            <div className="flex items-center gap-3 px-6">
-              <div className="flex items-center gap-3">
-                <FolderPen className="w-5 h-5 text-[#0f5384]" />
-                <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-                  {label}
-                </DialogTitle>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mt-1 ml-14">
-              Enter a new name for this file or contract
-            </p>
-          </div>
+					{/* Professional Header */}
+					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+						<div className="flex items-center gap-3 px-6">
+							<div className="flex items-center gap-3">
+								<FolderPen className="w-5 h-5 text-[#0f5384]" />
+								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+									{label}
+								</DialogTitle>
+							</div>
+						</div>
+						<p className="text-sm text-slate-600 mt-1 ml-14">
+							Enter a new name for this file or contract
+						</p>
+					</div>
 
-          {/* Content section with scroll */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-            <div className="bg-white rounded-lg p-4 border border-slate-200">
-              <Input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                }}
-                placeholder="Enter new name"
-                className="w-full"
-              />
-            </div>
-          </div>
+					{/* Content section with scroll */}
+					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
+						<div className="bg-white rounded-lg p-4 border border-slate-200">
+							<Input
+								type="text"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+								}}
+								placeholder="Enter new name"
+								className="w-full"
+							/>
+						</div>
+					</div>
 
-          {/* Professional Footer */}
-          <div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-500">
-                {name.trim() ? 'Ready to rename' : 'Enter a name to continue'}
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={(e) => closeAllModals(e)}
-                  className="primary-btn px-3 sm:px-4"
-                  disabled={isLoading}
-                >
-                  <Ban className="w-4 h-4" />
-                  Cancel
-                </Button>
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleAction();
-                  }}
-                  disabled={isLoading || !name.trim()}
-                  className="primary-btn px-3 sm:px-4"
-                >
-                  {isLoading && (
-                    <Image
-                      src="/assets/icons/loader.svg"
-                      alt="loader"
-                      width={16}
-                      height={16}
-                      className="animate-spin mr-2"
-                    />
-                  )}
-                  <FolderPen className="w-4 h-4" />
-                  Rename
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      );
-    }
-    // Details dialog
-    if (value === 'details') {
-      return (
-        <DialogContent className="max-w-[800px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
-          <VisuallyHiddenPrimitive.Root>
-            <DialogTitle>{label}</DialogTitle>
-          </VisuallyHiddenPrimitive.Root>
-          {/* Professional Cap */}
-          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+					{/* Professional Footer */}
+					<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+						<div className="flex items-center justify-between">
+							<div className="text-sm text-slate-500">
+								{name.trim() ? "Ready to rename" : "Enter a name to continue"}
+							</div>
+							<div className="flex items-center gap-3">
+								<Button
+									variant="outline"
+									onClick={(e) => closeAllModals(e)}
+									className="primary-btn px-3 sm:px-4"
+									disabled={isLoading}
+								>
+									<Ban className="w-4 h-4" />
+									Cancel
+								</Button>
+								<Button
+									onClick={(e) => {
+										e.stopPropagation();
+										e.preventDefault();
+										handleAction();
+									}}
+									disabled={isLoading || !name.trim()}
+									className="primary-btn px-3 sm:px-4"
+								>
+									{isLoading && (
+										<Image
+											src="/assets/icons/loader.svg"
+											alt="loader"
+											width={16}
+											height={16}
+											className="animate-spin mr-2"
+										/>
+									)}
+									<FolderPen className="w-4 h-4" />
+									Rename
+								</Button>
+							</div>
+						</div>
+					</div>
+				</DialogContent>
+			);
+		}
+		// Details dialog
+		if (value === "details") {
+			return (
+				<DialogContent className="max-w-[800px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+					<VisuallyHiddenPrimitive.Root>
+						<DialogTitle>{label}</DialogTitle>
+					</VisuallyHiddenPrimitive.Root>
+					{/* Professional Cap */}
+					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
-          {/* Professional Header */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-            <div className="flex items-center justify-between ml-6">
-              <div className="flex items-center">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Info className="h-5 w-5 text-[#0f5384]" />
-                    <h2 className="text-xl font-semibold sidebar-gradient-text">
-                      {label}
-                    </h2>
-                  </div>
-                  <p className="text-sm text-slate-600 mt-1 ml-7">
-                    View contract and file information
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+					{/* Professional Header */}
+					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+						<div className="flex items-center justify-between ml-6">
+							<div className="flex items-center">
+								<div>
+									<div className="flex items-center gap-2">
+										<Info className="h-5 w-5 text-[#0f5384]" />
+										<h2 className="text-xl font-semibold sidebar-gradient-text">
+											{label}
+										</h2>
+									</div>
+									<p className="text-sm text-slate-600 mt-1 ml-7">
+										View contract and file information
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
 
-          {/* Content section with scroll */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-            <FileDetails
-              file={file}
-              onRefresh={onRefresh}
-              onExpiryDateChange={onExpiryDateChange}
-            />
-          </div>
+					{/* Content section with scroll */}
+					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
+						<FileDetails
+							file={file}
+							onRefresh={onRefresh}
+							onExpiryDateChange={onExpiryDateChange}
+						/>
+					</div>
 
-          {/* Professional Footer */}
-          <div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-500">
-                Contract details and metadata
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={(e) => closeAllModals(e)}
-                  className="primary-btn px-3 sm:px-4"
-                >
-                  <Minimize2 className="w-4 h-4" />
-                  Close
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      );
-    }
-    // Share dialog
-    if (value === 'share') {
-      return (
-        <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
-          <VisuallyHiddenPrimitive.Root>
-            <DialogTitle>{label}</DialogTitle>
-          </VisuallyHiddenPrimitive.Root>
-          {/* Professional Cap */}
-          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+					{/* Professional Footer */}
+					<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+						<div className="flex items-center justify-between">
+							<div className="text-sm text-slate-500">
+								Contract details and metadata
+							</div>
+							<div className="flex items-center gap-3">
+								<Button
+									variant="outline"
+									onClick={(e) => closeAllModals(e)}
+									className="primary-btn px-3 sm:px-4"
+								>
+									<Minimize2 className="w-4 h-4" />
+									Close
+								</Button>
+							</div>
+						</div>
+					</div>
+				</DialogContent>
+			);
+		}
+		// Share dialog
+		if (value === "share") {
+			return (
+				<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+					<VisuallyHiddenPrimitive.Root>
+						<DialogTitle>{label}</DialogTitle>
+					</VisuallyHiddenPrimitive.Root>
+					{/* Professional Cap */}
+					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
-          {/* Professional Header */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-            <div className="flex items-center gap-3 px-6">
-              <div className="flex items-center gap-3">
-                <Share2 className="w-5 h-5 text-[#0f5384]" />
-                <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-                  {label}
-                </DialogTitle>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mt-1 ml-14">
-              Share this file or contract with other users
-            </p>
-          </div>
+					{/* Professional Header */}
+					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+						<div className="flex items-center gap-3 px-6">
+							<div className="flex items-center gap-3">
+								<Share2 className="w-5 h-5 text-[#0f5384]" />
+								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+									{label}
+								</DialogTitle>
+							</div>
+						</div>
+						<p className="text-sm text-slate-600 mt-1 ml-14">
+							Share this file or contract with other users
+						</p>
+					</div>
 
-          {/* Content section with scroll */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-            <div className="bg-white rounded-lg p-4 border border-slate-200">
-              <ShareInput
-                file={file}
-                onInputChange={setEmails}
-                onRemove={handleRemoveUser}
-                currentUsers={emails.length > 0 ? emails : file.users}
-              />
-            </div>
-          </div>
+					{/* Content section with scroll */}
+					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
+						<div className="bg-white rounded-lg p-4 border border-slate-200">
+							<ShareInput
+								file={file}
+								onInputChange={setEmails}
+								onRemove={handleRemoveUser}
+								currentUsers={emails.length > 0 ? emails : file.users}
+							/>
+						</div>
+					</div>
 
-          {/* Professional Footer */}
-          <div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-500">
-                {emails.length > 0
-                  ? `${emails.length} email${
-                      emails.length === 1 ? '' : 's'
-                    } to share`
-                  : 'Enter email addresses to share'}
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={(e) => closeAllModals(e)}
-                  className="primary-btn px-3 sm:px-4"
-                  disabled={isLoading}
-                >
-                  <Ban className="w-4 h-4" />
-                  Cancel
-                </Button>
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleAction();
-                  }}
-                  disabled={isLoading || emails.length === 0}
-                  className="primary-btn px-3 sm:px-4"
-                >
-                  {isLoading && (
-                    <Image
-                      src="/assets/icons/loader.svg"
-                      alt="loader"
-                      width={16}
-                      height={16}
-                      className="animate-spin"
-                    />
-                  )}
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      );
-    }
-    // Delete dialog
-    if (value === 'delete') {
-      return (
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
-          <DialogTitle className="sr-only">Delete File</DialogTitle>
-          {/* Cap */}
-          <div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
+					{/* Professional Footer */}
+					<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+						<div className="flex items-center justify-between">
+							<div className="text-sm text-slate-500">
+								{emails.length > 0
+									? `${emails.length} email${
+											emails.length === 1 ? "" : "s"
+										} to share`
+									: "Enter email addresses to share"}
+							</div>
+							<div className="flex items-center gap-3">
+								<Button
+									variant="outline"
+									onClick={(e) => closeAllModals(e)}
+									className="primary-btn px-3 sm:px-4"
+									disabled={isLoading}
+								>
+									<Ban className="w-4 h-4" />
+									Cancel
+								</Button>
+								<Button
+									onClick={(e) => {
+										e.stopPropagation();
+										e.preventDefault();
+										handleAction();
+									}}
+									disabled={isLoading || emails.length === 0}
+									className="primary-btn px-3 sm:px-4"
+								>
+									{isLoading && (
+										<Image
+											src="/assets/icons/loader.svg"
+											alt="loader"
+											width={16}
+											height={16}
+											className="animate-spin"
+										/>
+									)}
+									<Share2 className="w-4 h-4" />
+									Share
+								</Button>
+							</div>
+						</div>
+					</div>
+				</DialogContent>
+			);
+		}
+		// Delete dialog
+		if (value === "delete") {
+			return (
+				<DialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+					<DialogTitle className="sr-only">Delete File</DialogTitle>
+					{/* Cap */}
+					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
 
-          {/* Header */}
-          <div className="px-6 py-4 bg-white border-b border-slate-200">
-            <div className="flex  gap-2">
-              <AlertTriangle className="w-5 h-5 text-[#f7d333]" />
-              <h2 className="text-base font-semibold sidebar-gradient-text">
-                Delete File
-              </h2>
-            </div>
-            <div>
-              <DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
-                Are you sure you want to delete &quot;
-                {file.name || file.contractName}&quot;? This action cannot be
-                undone.
-              </DialogDescription>
-            </div>
-          </div>
+					{/* Header */}
+					<div className="px-6 py-4 bg-white border-b border-slate-200">
+						<div className="flex  gap-2">
+							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+							<h2 className="text-base font-semibold sidebar-gradient-text">
+								Delete File
+							</h2>
+						</div>
+						<div>
+							<DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
+								Are you sure you want to delete &quot;
+								{file.name || file.contractName}&quot;? This action cannot be
+								undone.
+							</DialogDescription>
+						</div>
+					</div>
 
-          {/* Body */}
-          <div className="px-6 py-5 space-y-3 bg-white">
-            <p className="text-sm text-slate-600">
-              This will permanently remove the file from the system.
-            </p>
-          </div>
+					{/* Body */}
+					<div className="px-6 py-5 space-y-3 bg-white">
+						<p className="text-sm text-slate-600">
+							This will permanently remove the file from the system.
+						</p>
+					</div>
 
-          {/* Footer */}
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-            <div className="text-xs text-slate-500 w-20">
-              This action is permanent.
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                onClick={(e) => closeAllModals(e)}
-                className="primary-btn px-3 sm:px-4"
-              >
-                <Ban className="w-4 h-4" />
-                Cancel
-              </Button>
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  handleAction();
-                }}
-                disabled={isLoading}
-                className="primary-btn px-3 sm:px-4"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isLoading ? 'Deleting...' : 'Delete File'}
-                {isLoading && (
-                  <Image
-                    src="/assets/icons/loader.svg"
-                    alt="loader"
-                    width={16}
-                    height={16}
-                    className="animate-spin ml-2"
-                  />
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      );
-    }
-    // Status dialog
-    if (value === 'status') {
-      return (
-        <Dialog
-          open={isModalOpen && action?.value === 'status'}
-          onOpenChange={(open) => {
-            if (!open) closeAllModals();
-          }}
-        >
-          <DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
-            {/* Professional Cap */}
-            <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+					{/* Footer */}
+					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+						<div className="text-xs text-slate-500 w-20">
+							This action is permanent.
+						</div>
+						<div className="flex items-center gap-3">
+							<Button
+								variant="ghost"
+								onClick={(e) => closeAllModals(e)}
+								className="primary-btn px-3 sm:px-4"
+							>
+								<Ban className="w-4 h-4" />
+								Cancel
+							</Button>
+							<Button
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									handleAction();
+								}}
+								disabled={isLoading}
+								className="primary-btn px-3 sm:px-4"
+							>
+								<Trash2 className="w-4 h-4" />
+								{isLoading ? "Deleting..." : "Delete File"}
+								{isLoading && (
+									<Image
+										src="/assets/icons/loader.svg"
+										alt="loader"
+										width={16}
+										height={16}
+										className="animate-spin ml-2"
+									/>
+								)}
+							</Button>
+						</div>
+					</div>
+				</DialogContent>
+			);
+		}
+		// Status dialog
+		if (value === "status") {
+			return (
+				<Dialog
+					open={isModalOpen && action?.value === "status"}
+					onOpenChange={(open) => {
+						if (!open) closeAllModals();
+					}}
+				>
+					<DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl bg-white">
+						{/* Professional Cap */}
+						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
-            {/* Header with white background */}
-            <div className="sticky top-0 z-10 bg-white py-4 border-b border-slate-200 mt-4">
-              <div className="flex items-center gap-3 ml-6">
-                {/* Icon with circular background
+						{/* Header with white background */}
+						<div className="sticky top-0 z-10 bg-white py-4 border-b border-slate-200 mt-4">
+							<div className="flex items-center gap-3 ml-6">
+								{/* Icon with circular background
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 </div> */}
 
-                {/* Title */}
-                <RefreshCw className="w-5 h-5 text-[#0f5384]" />
-                <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-                  Change Status
-                </DialogTitle>
-              </div>
-              <p className="text-sm text-slate-600 mt-1 ml-14">
-                Select a new status for this contract
-              </p>
-            </div>
+								{/* Title */}
+								<RefreshCw className="w-5 h-5 text-[#0f5384]" />
+								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+									Change Status
+								</DialogTitle>
+							</div>
+							<p className="text-sm text-slate-600 mt-1 ml-14">
+								Select a new status for this contract
+							</p>
+						</div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-              <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
-                {statusError && (
-                  <div className="text-red mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
-                    {statusError}
-                  </div>
-                )}
-                <div className="space-y-2">
-                  {statusOptions.map((option) => {
-                    const isOptionExpired = option.toLowerCase() === 'expired';
-                    const isMuted = isContractExpired && !isOptionExpired;
-                    const showWarning = !isContractExpired && isOptionExpired && selectedStatus === 'expired';
-                    
-                    return (
-                      <div key={option}>
-                        <label
-                          className={`flex items-center gap-3 transition-all duration-200 p-3 rounded-lg border-2 bg-white group shadow-sm ${
-                            isMuted
-                              ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
-                              : 'border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-300 hover:shadow-md'
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!isMuted) {
-                              setSelectedStatus(option);
-                            }
-                          }}
-                        >
-                          <input
-                            type="radio"
-                            name="contract-status"
-                            value={option}
-                            checked={selectedStatus === option}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              if (!isMuted) {
-                                setSelectedStatus(option);
-                              }
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isMuted) {
-                                e.preventDefault();
-                              }
-                            }}
-                            disabled={isLoading || isMuted}
-                            className={`w-4 h-4 ${isMuted ? 'cursor-not-allowed opacity-50' : 'cursor-pointer text-blue-600'}`}
-                          />
-                          <Badge
-                            variant="outline"
-                            className={`${getStatusDialogBadgeClasses(
-                              option
-                            )} transition-all duration-200 shadow-sm`}
-                          >
-                            {getStatusLabel(option)}
-                          </Badge>
-                        </label>
-                        {showWarning && (
-                          <div className="mt-2 ml-7 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                            <p className="font-medium mb-1">⚠️ Warning: Marking contract as expired</p>
-                            <p className="text-xs">
-                              This action will mark the contract as expired. Please review the contract details and click "Update Status" to confirm this change.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+						{/* Scrollable Content */}
+						<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+							<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+								{statusError && (
+									<div className="text-red mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
+										{statusError}
+									</div>
+								)}
+								<div className="space-y-2">
+									{statusOptions.map((option) => {
+										const isOptionExpired = option.toLowerCase() === "expired";
+										const isMuted = isContractExpired && !isOptionExpired;
+										const showWarning =
+											!isContractExpired &&
+											isOptionExpired &&
+											selectedStatus === "expired";
 
-            {/* Professional Footer */}
-            {actualRoleName === 'Super Admin' ||
-            actualRoleName === 'Organization Admin' ? (
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center">
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeAllModals();
-                    }}
-                    className="primary-btn px-3 sm:px-4"
-                    disabled={isLoading}
-                  >
-                    <Ban className="w-4 h-4" />
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      handleStatusChange();
-                    }}
-                    disabled={isLoading || !selectedStatus}
-                    className="primary-btn px-3 sm:px-4"
-                  >
-                    {isLoading ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                    )}
-                    Update Status
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                <div className="text-xs text-slate-500">
-                  Status changes require review
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeAllModals();
-                    }}
-                    className="primary-btn px-3 sm:px-4"
-                    disabled={isLoading}
-                  >
-                    <Ban className="w-4 h-4" />
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      handleStatusChange();
-                    }}
-                    disabled={isLoading || !selectedStatus}
-                    className="primary-btn px-3 sm:px-4"
-                  >
-                    {isLoading ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                    )}
-                    Update Status
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      );
-    }
+										return (
+											<div key={option}>
+												<label
+													className={`flex items-center gap-3 transition-all duration-200 p-3 rounded-lg border-2 bg-white group shadow-sm ${
+														isMuted
+															? "border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed"
+															: "border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-300 hover:shadow-md"
+													}`}
+													onClick={(e) => {
+														e.stopPropagation();
+														if (!isMuted) {
+															setSelectedStatus(option);
+														}
+													}}
+												>
+													<input
+														type="radio"
+														name="contract-status"
+														value={option}
+														checked={selectedStatus === option}
+														onChange={(e) => {
+															e.stopPropagation();
+															if (!isMuted) {
+																setSelectedStatus(option);
+															}
+														}}
+														onClick={(e) => {
+															e.stopPropagation();
+															if (isMuted) {
+																e.preventDefault();
+															}
+														}}
+														disabled={isLoading || isMuted}
+														className={`w-4 h-4 ${isMuted ? "cursor-not-allowed opacity-50" : "cursor-pointer text-blue-600"}`}
+													/>
+													<Badge
+														variant="outline"
+														className={`${getStatusDialogBadgeClasses(
+															option,
+														)} transition-all duration-200 shadow-sm`}
+													>
+														{getStatusLabel(option)}
+													</Badge>
+												</label>
+												{showWarning && (
+													<div className="mt-2 ml-7 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+														<p className="font-medium mb-1">
+															⚠️ Warning: Marking contract as expired
+														</p>
+														<p className="text-xs">
+															This action will mark the contract as expired.
+															Please review the contract details and click
+															"Update Status" to confirm this change.
+														</p>
+													</div>
+												)}
+											</div>
+										);
+									})}
+								</div>
+							</div>
+						</div>
 
-    if (value === 'review') {
-      return null; // DocumentViewer is rendered separately
-    }
-  };
+						{/* Professional Footer */}
+						{actualRoleName === "Super Admin" ||
+						actualRoleName === "Organization Admin" ? (
+							<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center">
+								<div className="flex items-center gap-3">
+									<Button
+										variant="outline"
+										onClick={(e) => {
+											e.stopPropagation();
+											closeAllModals();
+										}}
+										className="primary-btn px-3 sm:px-4"
+										disabled={isLoading}
+									>
+										<Ban className="w-4 h-4" />
+										Cancel
+									</Button>
+									<Button
+										onClick={(e) => {
+											e.stopPropagation();
+											e.preventDefault();
+											handleStatusChange();
+										}}
+										disabled={isLoading || !selectedStatus}
+										className="primary-btn px-3 sm:px-4"
+									>
+										{isLoading ? (
+											<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+										) : (
+											<RefreshCw className="w-4 h-4 mr-2" />
+										)}
+										Update Status
+									</Button>
+								</div>
+							</div>
+						) : (
+							<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+								<div className="text-xs text-slate-500">
+									Status changes require review
+								</div>
+								<div className="flex items-center gap-3">
+									<Button
+										variant="outline"
+										onClick={(e) => {
+											e.stopPropagation();
+											closeAllModals();
+										}}
+										className="primary-btn px-3 sm:px-4"
+										disabled={isLoading}
+									>
+										<Ban className="w-4 h-4" />
+										Cancel
+									</Button>
+									<Button
+										onClick={(e) => {
+											e.stopPropagation();
+											e.preventDefault();
+											handleStatusChange();
+										}}
+										disabled={isLoading || !selectedStatus}
+										className="primary-btn px-3 sm:px-4"
+									>
+										{isLoading ? (
+											<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+										) : (
+											<RefreshCw className="w-4 h-4 mr-2" />
+										)}
+										Update Status
+									</Button>
+								</div>
+							</div>
+						)}
+					</DialogContent>
+				</Dialog>
+			);
+		}
 
-  // Safety check: ensure file object exists and has required properties
-  if (!file) {
-    console.error('ActionDropdown: file prop is undefined or null');
-    return null;
-  }
+		if (value === "review") {
+			return null; // DocumentViewer is rendered separately
+		}
+	};
 
-  // Determine if this is a contract file
-  // Since we're now fetching from contracts collection, all items should be treated as contracts
-  const fileName = file.name || file.contractName || '';
-  const isContractFile =
-    fileName.toLowerCase().includes('contract') ||
-    file.contractId ||
-    file.contractName ||
-    file.contractType ||
-    file.contractExpiryDate;
+	// Safety check: ensure file object exists and has required properties
+	if (!file) {
+		console.error("ActionDropdown: file prop is undefined or null");
+		return null;
+	}
 
-  // Permission-based action filtering
-  let filteredActions = actionsDropdownItems;
+	// Determine if this is a contract file
+	// Since we're now fetching from contracts collection, all items should be treated as contracts
+	const fileName = file.name || file.contractName || "";
+	const isContractFile =
+		fileName.toLowerCase().includes("contract") ||
+		file.contractId ||
+		file.contractName ||
+		file.contractType ||
+		file.contractExpiryDate;
 
-  // Filter actions based on permissions
-  filteredActions = actionsDropdownItems.filter((action) => {
-    switch (action.value) {
-      case 'delete':
-        // Delete requires contracts.edit or contracts.approve
-        return (
-          permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
-          permissions.includes(PERMISSIONS.CONTRACTS.APPROVE)
-        );
-      case 'rename':
-        // Rename requires contracts.edit
-        return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
-      case 'review':
-        // Review requires contracts.review
-        return permissions.includes(PERMISSIONS.CONTRACTS.REVIEW);
-      case 'status':
-        // Status requires contracts.approve
-        return permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
-      case 'assign':
-        // Assign requires contracts.edit
-        return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
-      case 'details':
-      case 'download':
-      case 'share':
-        // Basic actions require contracts.view
-        return permissions.includes(PERMISSIONS.CONTRACTS.VIEW);
-      default:
-        return true;
-    }
-  });
+	// Permission-based action filtering
+	let filteredActions = actionsDropdownItems;
 
-  // Additional filtering for contract files
-  // Only show Assign and Status for actual contract files
-  if (!isContractFile) {
-    filteredActions = filteredActions.filter(
-      (action) => !['assign', 'status'].includes(action.value)
-    );
-  }
+	// Filter actions based on permissions
+	filteredActions = actionsDropdownItems.filter((action) => {
+		switch (action.value) {
+			case "delete":
+				// Delete requires contracts.edit or contracts.approve
+				return (
+					permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
+					permissions.includes(PERMISSIONS.CONTRACTS.APPROVE)
+				);
+			case "rename":
+				// Rename requires contracts.edit
+				return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
+			case "review":
+				// Review requires contracts.review
+				return permissions.includes(PERMISSIONS.CONTRACTS.REVIEW);
+			case "status":
+				// Status requires contracts.approve
+				return permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
+			case "assign":
+				// Assign requires contracts.edit
+				return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
+			case "details":
+			case "download":
+			case "share":
+				// Basic actions require contracts.view
+				return permissions.includes(PERMISSIONS.CONTRACTS.VIEW);
+			default:
+				return true;
+		}
+	});
 
-  // If contract is expired, only show: Delete, Details, Download, Status
-  if (isContractExpired) {
-    filteredActions = filteredActions.filter((action) =>
-      ['delete', 'details', 'download', 'status'].includes(action.value)
-    );
-  }
+	// Additional filtering for contract files
+	// Only show Assign and Status for actual contract files
+	if (!isContractFile) {
+		filteredActions = filteredActions.filter(
+			(action) => !["assign", "status"].includes(action.value),
+		);
+	}
 
-  return (
-    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-        <DropdownMenuTrigger className="shad-no-focus">
-          <Image
-            src="/assets/icons/dots.svg"
-            alt="dots"
-            width={34}
-            height={34}
-          />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="relative p-0">
-          {/* Professional Cap */}
-          <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-          <div className="pt-4 px-1 pb-1">
-            <DropdownMenuLabel className="max-w-[200px] truncate">
-              {file.name || file.contractName}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {filteredActions.map((actionItem) => {
-              // Handle download action separately
-              if (actionItem.value === 'download') {
-                const handleDownload = async () => {
-                  if (downloading) return;
+	// If contract is expired, only show: Delete, Details, Download, Status
+	if (isContractExpired) {
+		filteredActions = filteredActions.filter((action) =>
+			["delete", "details", "download", "status"].includes(action.value),
+		);
+	}
 
-                  setDownloading(true);
-                  setIsDropdownOpen(false);
+	return (
+		<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+			<DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+				<DropdownMenuTrigger className="shad-no-focus">
+					<Image
+						src="/assets/icons/dots.svg"
+						alt="dots"
+						width={34}
+						height={34}
+					/>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent className="relative p-0">
+					{/* Professional Cap */}
+					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+					<div className="pt-4 px-1 pb-1">
+						<DropdownMenuLabel className="max-w-[200px] truncate">
+							{file.name || file.contractName}
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						{filteredActions.map((actionItem) => {
+							// Handle download action separately
+							if (actionItem.value === "download") {
+								const handleDownload = async () => {
+									if (downloading) return;
 
-                  try {
-                    const params = new URLSearchParams();
+									setDownloading(true);
+									setIsDropdownOpen(false);
 
-                    if (isValidBucketFileId(file.bucketFileId)) {
-                      params.append('bucketFileId', file.bucketFileId!);
-                    } else if (file.contractId) {
-                      params.append('contractId', file.contractId);
-                    } else if (file.$id) {
-                      params.append('fileId', file.$id);
-                    }
+									try {
+										const params = new URLSearchParams();
 
-                    const response = await fetch(
-                      `/api/files/download?${params.toString()}`
-                    );
+										if (isValidBucketFileId(file.bucketFileId)) {
+											params.append("bucketFileId", file.bucketFileId!);
+										} else if (file.contractId) {
+											params.append("contractId", file.contractId);
+										} else if (file.$id) {
+											params.append("fileId", file.$id);
+										}
 
-                    if (!response.ok) {
-                      throw new Error('Download failed');
-                    }
+										const response = await fetch(
+											`/api/files/download?${params.toString()}`,
+										);
 
-                    // Get the blob directly without conversion
-                    const blob = await response.blob();
+										if (!response.ok) {
+											throw new Error("Download failed");
+										}
 
-                    // Get filename from header
-                    const contentDisposition = response.headers.get(
-                      'Content-Disposition'
-                    );
-                    let filename = file.name || file.contractName || 'download';
+										// Get the blob directly without conversion
+										const blob = await response.blob();
 
-                    if (contentDisposition) {
-                      const match = contentDisposition.match(
-                        /filename\*?=['"]?([^'";\n]+)/
-                      );
-                      if (match?.[1]) {
-                        filename = decodeURIComponent(
-                          match[1].replace(/^UTF-8''/, '')
-                        );
-                      }
-                    }
+										// Get filename from header
+										const contentDisposition = response.headers.get(
+											"Content-Disposition",
+										);
+										let filename = file.name || file.contractName || "download";
 
-                    // Ensure filename has extension if file has extension
-                    if (
-                      file.extension &&
-                      !filename
-                        .toLowerCase()
-                        .endsWith(`.${file.extension.toLowerCase()}`)
-                    ) {
-                      filename = `${filename}.${file.extension}`;
-                    }
+										if (contentDisposition) {
+											const match = contentDisposition.match(
+												/filename\*?=['"]?([^'";\n]+)/,
+											);
+											if (match?.[1]) {
+												filename = decodeURIComponent(
+													match[1].replace(/^UTF-8''/, ""),
+												);
+											}
+										}
 
-                    // Create download link with proper attributes
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = filename;
-                    link.style.display = 'none'; // Hide but keep in DOM
-                    link.setAttribute('download', filename); // Ensure download attribute is set
-                    document.body.appendChild(link);
+										// Ensure filename has extension if file has extension
+										if (
+											file.extension &&
+											!filename
+												.toLowerCase()
+												.endsWith(`.${file.extension.toLowerCase()}`)
+										) {
+											filename = `${filename}.${file.extension}`;
+										}
 
-                    // Trigger download
-                    link.click();
+										// Create download link with proper attributes
+										const url = URL.createObjectURL(blob);
+										const link = document.createElement("a");
+										link.href = url;
+										link.download = filename;
+										link.style.display = "none"; // Hide but keep in DOM
+										link.setAttribute("download", filename); // Ensure download attribute is set
+										document.body.appendChild(link);
 
-                    // Clean up after a short delay to ensure download starts
-                    setTimeout(() => {
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
-                    }, 100);
-                  } catch (error) {
-                    console.error('Download failed:', error);
-                    alert('Failed to download file');
-                  } finally {
-                    setDownloading(false);
-                  }
-                };
+										// Trigger download
+										link.click();
 
-                return (
-                  <DropdownMenuItem
-                    key={actionItem.value}
-                    className="shad-dropdown-item"
-                    onSelect={(e) => {
-                      console.log('Download onSelect triggered');
-                      e.preventDefault();
-                      handleDownload();
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Image
-                        src={actionItem.icon}
-                        alt={actionItem.label}
-                        width={30}
-                        height={30}
-                      />
-                      {downloading ? 'Downloading...' : actionItem.label}
-                    </div>
-                  </DropdownMenuItem>
-                );
-              }
+										// Clean up after a short delay to ensure download starts
+										setTimeout(() => {
+											document.body.removeChild(link);
+											URL.revokeObjectURL(url);
+										}, 100);
+									} catch (error) {
+										console.error("Download failed:", error);
+										alert("Failed to download file");
+									} finally {
+										setDownloading(false);
+									}
+								};
 
-              // Handle other actions
-              return (
-                <DropdownMenuItem
-                  key={actionItem.value}
-                  className="shad-dropdown-item"
-                  onClick={() => {
-                    setAction(actionItem);
-                    if (actionItem.value === 'review') {
-                      setIsViewerOpen(true);
-                    } else if (
-                      [
-                        'assign',
-                        'rename',
-                        'delete',
-                        'share',
-                        'details',
-                        'status',
-                      ].includes(actionItem.value)
-                    ) {
-                      setIsModalOpen(true);
-                    }
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <Image
-                      src={actionItem.icon}
-                      alt={actionItem.label}
-                      width={30}
-                      height={30}
-                    />
-                    {actionItem.label}
-                  </div>
-                </DropdownMenuItem>
-              );
-            })}
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {renderDialogContent()}
-      {file && file.$id && file.bucketFileId && (
-        <DocumentViewer
-          isOpen={isViewerOpen}
-          onClose={() => setIsViewerOpen(false)}
-          file={{
-            id: file.$id,
-            name: file.name || file.contractName || '',
-            type: file.extension || 'pdf',
-            size: String(file.size ?? 'Unknown'),
-            url: constructFileUrl(file.bucketFileId),
-            createdAt: file.$createdAt,
-            expiresAt: file.contractExpiryDate,
-            createdBy:
-              typeof file.owner === 'string'
-                ? file.owner
-                : file.owner?.fullName || 'Unknown',
-            description: file.description || '',
-          }}
-        />
-      )}
-    </Dialog>
-  );
+								return (
+									<DropdownMenuItem
+										key={actionItem.value}
+										className="shad-dropdown-item"
+										onSelect={(e) => {
+											console.log("Download onSelect triggered");
+											e.preventDefault();
+											handleDownload();
+										}}
+									>
+										<div className="flex items-center gap-2">
+											<Image
+												src={actionItem.icon}
+												alt={actionItem.label}
+												width={30}
+												height={30}
+											/>
+											{downloading ? "Downloading..." : actionItem.label}
+										</div>
+									</DropdownMenuItem>
+								);
+							}
+
+							// Handle other actions
+							return (
+								<DropdownMenuItem
+									key={actionItem.value}
+									className="shad-dropdown-item"
+									onClick={() => {
+										setAction(actionItem);
+										if (actionItem.value === "review") {
+											setIsViewerOpen(true);
+										} else if (
+											[
+												"assign",
+												"rename",
+												"delete",
+												"share",
+												"details",
+												"status",
+											].includes(actionItem.value)
+										) {
+											setIsModalOpen(true);
+										}
+									}}
+								>
+									<div className="flex items-center gap-2">
+										<Image
+											src={actionItem.icon}
+											alt={actionItem.label}
+											width={30}
+											height={30}
+										/>
+										{actionItem.label}
+									</div>
+								</DropdownMenuItem>
+							);
+						})}
+					</div>
+				</DropdownMenuContent>
+			</DropdownMenu>
+			{renderDialogContent()}
+			{file?.$id && file.bucketFileId && (
+				<DocumentViewer
+					isOpen={isViewerOpen}
+					onClose={() => setIsViewerOpen(false)}
+					file={{
+						id: file.$id,
+						name: file.name || file.contractName || "",
+						type: file.extension || "pdf",
+						size: String(file.size ?? "Unknown"),
+						url: constructFileUrl(file.bucketFileId),
+						createdAt: file.$createdAt,
+						expiresAt: file.contractExpiryDate,
+						createdBy:
+							typeof file.owner === "string"
+								? file.owner
+								: file.owner?.fullName || "Unknown",
+						description: file.description || "",
+					}}
+				/>
+			)}
+		</Dialog>
+	);
 };
 
 export default ActionDropdown;

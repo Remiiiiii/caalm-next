@@ -1,118 +1,121 @@
-import { getCurrentUser } from '@/lib/actions/user.actions';
-import { redirect } from 'next/navigation';
-import { unstable_cache } from 'next/cache';
-import LicensesMetricsBar from '@/components/LicensesMetricsBar';
-import { LicensesViewProvider } from '@/components/LicensesView';
-import LicensesControlBar from '@/components/LicensesControlBar';
-import LicensesViewClient from '@/components/LicensesViewClient';
-import LicensesHeaderActions from '@/components/LicensesHeaderActions';
-import { createAdminClient } from '@/lib/appwrite';
-import { appwriteConfig } from '@/lib/appwrite/config';
-import { Query } from 'node-appwrite';
-import type { License } from '@/types/licenses';
-import Image from 'next/image';
-import LicenseForm from '@/components/licenses/LicenseForm';
-import { getUserDefaultOrganization, getUserPermissions } from '@/lib/rbac/permissions';
-import { PERMISSIONS } from '@/constants/permissions';
+import { unstable_cache } from "next/cache";
+import Image from "next/image";
+import { redirect } from "next/navigation";
+import { Query } from "node-appwrite";
+import LicensesControlBar from "@/components/LicensesControlBar";
+import LicensesHeaderActions from "@/components/LicensesHeaderActions";
+import LicensesMetricsBar from "@/components/LicensesMetricsBar";
+import { LicensesViewProvider } from "@/components/LicensesView";
+import LicensesViewClient from "@/components/LicensesViewClient";
+import LicenseForm from "@/components/licenses/LicenseForm";
+import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import {
+	getUserDefaultOrganization,
+	getUserPermissions,
+} from "@/lib/rbac/permissions";
+import type { License } from "@/types/licenses";
 
 const Page = async () => {
-  const user = await getCurrentUser();
+	const user = await getCurrentUser();
 
-  if (!user) {
-    redirect('/sign-in');
-  }
+	if (!user) {
+		redirect("/sign-in");
+	}
 
-  const userPermissions = await getUserPermissions(user.$id);
-  if (!userPermissions.includes(PERMISSIONS.LICENSES.VIEW)) {
-    redirect('/dashboard');
-  }
+	const userPermissions = await getUserPermissions(user.$id);
+	if (!userPermissions.includes(PERMISSIONS.LICENSES.VIEW)) {
+		redirect("/dashboard");
+	}
 
-  let licenses: License[] = [];
+	let licenses: License[] = [];
 
-  try {
-    const defaultOrg = await getUserDefaultOrganization(user.$id);
-    const orgId = defaultOrg?.orgId || user.orgId || 'default-org';
+	try {
+		const defaultOrg = await getUserDefaultOrganization(user.$id);
+		const orgId = defaultOrg?.orgId || user.orgId || "default-org";
 
-    // Short-lived cache per org; invalidation on create/update/delete can be added later (e.g. revalidateTag).
-    const getCachedLicenses = unstable_cache(
-      async () => {
-        const { tablesDB } = await createAdminClient();
-        const result = await tablesDB.listRows({
-          databaseId: appwriteConfig.databaseId || 'default-db',
-          tableId: appwriteConfig.licensesCollectionId || 'licenses',
-          queries: [
-            Query.equal('orgId', orgId),
-            Query.orderDesc('$createdAt'),
-            Query.limit(1000),
-          ],
-        });
-        return result.rows as unknown as License[];
-      },
-      ['licenses-list', orgId],
-      { revalidate: 60 }
-    );
+		// Short-lived cache per org; invalidation on create/update/delete can be added later (e.g. revalidateTag).
+		const getCachedLicenses = unstable_cache(
+			async () => {
+				const { tablesDB } = await createAdminClient();
+				const result = await tablesDB.listRows({
+					databaseId: appwriteConfig.databaseId || "default-db",
+					tableId: appwriteConfig.licensesCollectionId || "licenses",
+					queries: [
+						Query.equal("orgId", orgId),
+						Query.orderDesc("$createdAt"),
+						Query.limit(1000),
+					],
+				});
+				return result.rows as unknown as License[];
+			},
+			["licenses-list", orgId],
+			{ revalidate: 60 },
+		);
 
-    licenses = await getCachedLicenses();
-  } catch (error) {
-    console.error('Error fetching licenses:', error);
-    licenses = [];
-  }
+		licenses = await getCachedLicenses();
+	} catch (error) {
+		console.error("Error fetching licenses:", error);
+		licenses = [];
+	}
 
-  // Extract unique departments and assigned managers for filters
-  const uniqueDepartments = Array.from(
-    new Set(
-      licenses
-        .map((l) => l.division || l.department)
-        .filter((d): d is string => !!d)
-    )
-  ).sort();
+	// Extract unique departments and assigned managers for filters
+	const uniqueDepartments = Array.from(
+		new Set(
+			licenses
+				.map((l) => l.division || l.department)
+				.filter((d): d is string => !!d),
+		),
+	).sort();
 
-  const uniqueAssignedManagers = Array.from(
-    new Set(
-      licenses
-        .flatMap((l) => l.assignedManagers || [])
-        .filter((m): m is string => !!m)
-    )
-  ).sort();
+	const uniqueAssignedManagers = Array.from(
+		new Set(
+			licenses
+				.flatMap((l) => l.assignedManagers || [])
+				.filter((m): m is string => !!m),
+		),
+	).sort();
 
-  return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-      <LicensesViewProvider>
-        <div className="flex items-center gap-4 mb-4 justify-between w-full">
-          <h1 className="h1 capitalize sidebar-gradient-text">Licenses</h1>
-          <LicensesHeaderActions
-            licenses={licenses}
-            departments={uniqueDepartments}
-            assignedManagers={uniqueAssignedManagers}
-          />
-        </div>
+	return (
+		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
+			<LicensesViewProvider>
+				<div className="flex items-center gap-4 mb-4 justify-between w-full">
+					<h1 className="h1 capitalize sidebar-gradient-text">Licenses</h1>
+					<LicensesHeaderActions
+						licenses={licenses}
+						departments={uniqueDepartments}
+						assignedManagers={uniqueAssignedManagers}
+					/>
+				</div>
 
-        <div className="mb-6 flex items-center justify-end">
-          <LicenseForm />
-        </div>
+				<div className="mb-6 flex items-center justify-end">
+					<LicenseForm />
+				</div>
 
-        <section className="w-full">
-          <LicensesMetricsBar licenses={licenses} />
-          <LicensesControlBar licenses={licenses} />
-        </section>
+				<section className="w-full">
+					<LicensesMetricsBar licenses={licenses} />
+					<LicensesControlBar licenses={licenses} />
+				</section>
 
-        {licenses.length > 0 ? (
-          <LicensesViewClient licenses={licenses} user={user} />
-        ) : (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] py-12">
-            <Image
-              src="/assets/icons/no-data.svg"
-              alt="No licenses found"
-              width={250}
-              height={250}
-              className="mb-4 opacity-60"
-            />
-            <p className="body-1 text-slate-700">No licenses found</p>
-          </div>
-        )}
-      </LicensesViewProvider>
-    </div>
-  );
+				{licenses.length > 0 ? (
+					<LicensesViewClient licenses={licenses} user={user} />
+				) : (
+					<div className="flex flex-col items-center justify-center min-h-[60vh] py-12">
+						<Image
+							src="/assets/icons/no-data.svg"
+							alt="No licenses found"
+							width={250}
+							height={250}
+							className="mb-4 opacity-60"
+						/>
+						<p className="body-1 text-slate-700">No licenses found</p>
+					</div>
+				)}
+			</LicensesViewProvider>
+		</div>
+	);
 };
 
 export default Page;

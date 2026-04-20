@@ -3,7 +3,7 @@
  */
 
 type DebounceFunction<T extends (...args: any[]) => any> = (
-  ...args: Parameters<T>
+	...args: Parameters<T>
 ) => void;
 
 /**
@@ -14,54 +14,54 @@ type DebounceFunction<T extends (...args: any[]) => any> = (
  * @returns A debounced function
  */
 export function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number,
-  immediate = false
+	func: T,
+	wait: number,
+	immediate = false,
 ): DebounceFunction<T> {
-  let timeout: NodeJS.Timeout | null = null;
-  let result: ReturnType<T>;
+	let timeout: NodeJS.Timeout | null = null;
+	let result: ReturnType<T>;
 
-  const debounced = function (...args: Parameters<T>) {
-    const later = () => {
-      timeout = null;
-      if (!immediate) result = func(...args);
-    };
+	const debounced = (...args: Parameters<T>) => {
+		const later = () => {
+			timeout = null;
+			if (!immediate) result = func(...args);
+		};
 
-    const callNow = immediate && !timeout;
+		const callNow = immediate && !timeout;
 
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
+		if (timeout) clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
 
-    if (callNow) result = func(...args);
+		if (callNow) result = func(...args);
 
-    return result;
-  };
+		return result;
+	};
 
-  // Add cancel method
-  (debounced as any).cancel = () => {
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = null;
-    }
-  };
+	// Add cancel method
+	(debounced as any).cancel = () => {
+		if (timeout) {
+			clearTimeout(timeout);
+			timeout = null;
+		}
+	};
 
-  return debounced;
+	return debounced;
 }
 
 /**
  * Throttle utility for rate limiting
  */
 export function throttle<T extends (...args: any[]) => any>(
-  func: T,
-  limit: number
+	func: T,
+	limit: number,
 ): DebounceFunction<T> {
-  let inThrottle: boolean;
+	let inThrottle: boolean;
 
-  return function (...args: Parameters<T>) {
-    if (!inThrottle) {
-      func(...args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
-  };
+	return (...args: Parameters<T>) => {
+		if (!inThrottle) {
+			func(...args);
+			inThrottle = true;
+			setTimeout(() => (inThrottle = false), limit);
+		}
+	};
 }

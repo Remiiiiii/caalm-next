@@ -1,15 +1,15 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-import UserManagement from '../UserManagement';
-import { getCurrentUser } from '@/lib/actions/user.actions';
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import UserManagement from "../UserManagement";
 
 export default async function UserManagementPage() {
-  const currentUser = await getCurrentUser();
+	const currentUser = await getCurrentUser();
 
-  if (!currentUser) {
-    redirect('/sign-in');
-  }
+	if (!currentUser) {
+		redirect("/sign-in");
+	}
 
-  return <UserManagement />;
+	return <UserManagement />;
 }

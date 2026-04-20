@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useRoleName } from '@/hooks/useRoleName';
+import { useRoleName } from "@/hooks/useRoleName";
 
 interface UserRoleDisplayProps {
-  userId: string;
+	userId: string;
 }
 
 /**
@@ -11,12 +11,11 @@ interface UserRoleDisplayProps {
  * Fetches role name from database
  */
 export function UserRoleDisplay({ userId }: UserRoleDisplayProps) {
-  const { roleName, loading } = useRoleName({ userId });
+	const { roleName, loading } = useRoleName({ userId });
 
-  if (loading) {
-    return <span className="text-muted-foreground">Loading...</span>;
-  }
+	if (loading) {
+		return <span className="text-muted-foreground">Loading...</span>;
+	}
 
-  return <span>{roleName || 'N/A'}</span>;
+	return <span>{roleName || "N/A"}</span>;
 }
-

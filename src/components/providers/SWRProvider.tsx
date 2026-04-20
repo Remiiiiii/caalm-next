@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { SWRConfig } from 'swr';
-import { swrConfig } from '@/lib/swr-config';
+import { SWRConfig } from "swr";
+import { swrConfig } from "@/lib/swr-config";
 
 interface SWRProviderProps {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }
 
 export default function SWRProvider({ children }: SWRProviderProps) {
-  return <SWRConfig value={swrConfig}>{children}</SWRConfig>;
+	return <SWRConfig value={swrConfig}>{children}</SWRConfig>;
 }

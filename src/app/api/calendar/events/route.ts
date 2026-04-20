@@ -1,1025 +1,1048 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from "next/server";
 import {
-  createCalendarEvent,
-  getCalendarEventsByMonth,
-  deleteCalendarEvent,
-  getCalendarEventById,
-  updateCalendarEvent,
-  type CreateCalendarEventData,
-  type CalendarEvent,
-} from '@/lib/actions/calendar.actions';
-import { getCurrentUserId } from '@/lib/microsoft/auth-utils';
-import { logAuditEvent } from '@/lib/services/audit-logger';
-import { syncDeletionToOutlook } from '@/lib/services/deletion-sync';
-import CacheManager from '@/lib/services/cache-manager';
-import { CACHE_KEYS, CACHE_TTLS } from '@/lib/services/cache-keys';
-import { evaluateCalendarPermission } from '@/lib/auth/guards';
-import { createCalendarApprovalRequest } from '@/lib/actions/calendar-approval.actions';
-import { getUserByAccountId } from '@/lib/actions/user.actions';
+	type CalendarEvent,
+	type CreateCalendarEventData,
+	createCalendarEvent,
+	deleteCalendarEvent,
+	getCalendarEventById,
+	getCalendarEventsByMonth,
+	updateCalendarEvent,
+} from "@/lib/actions/calendar.actions";
+import { createCalendarApprovalRequest } from "@/lib/actions/calendar-approval.actions";
 import {
-  detectParticipantConflicts,
-  detectResourceConflicts,
-  suggestAlternateSlots,
-} from '@/lib/utils/conflict-detection';
-import { getUserDefaultOrganization } from '@/lib/rbac/permissions';
-import { createEventReminder } from '@/lib/services/calendar-notifications.service';
+	checkResourceAvailability,
+	createResourceBooking,
+	getResourceById,
+} from "@/lib/actions/resource-management.actions";
+import { getUserByAccountId } from "@/lib/actions/user.actions";
+import { evaluateCalendarPermission } from "@/lib/auth/guards";
+import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { logAuditEvent } from "@/lib/services/audit-logger";
+import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
+import { createEventReminder } from "@/lib/services/calendar-notifications.service";
+import { syncDeletionToOutlook } from "@/lib/services/deletion-sync";
 import {
-  createResourceBooking,
-  checkResourceAvailability,
-  getResourceById,
-} from '@/lib/actions/resource-management.actions';
+	detectParticipantConflicts,
+	detectResourceConflicts,
+	suggestAlternateSlots,
+} from "@/lib/utils/conflict-detection";
 
 const buildPermissionErrorResponse = (
-  reason: string,
-  requiredApproval?: boolean
+	reason: string,
+	requiredApproval?: boolean,
 ) => {
-  // Provide user-friendly messages based on the reason
-  let message = 'Permission denied';
-  if (reason === 'pending_approval') {
-    message =
-      'Events with pending approval status cannot be updated. Please wait for the approval decision before making changes.';
-  } else if (reason === 'permission_denied') {
-    message = 'You do not have permission to perform this action.';
-  } else if (reason === 'user_not_found') {
-    message = 'User not found.';
-  }
+	// Provide user-friendly messages based on the reason
+	let message = "Permission denied";
+	if (reason === "pending_approval") {
+		message =
+			"Events with pending approval status cannot be updated. Please wait for the approval decision before making changes.";
+	} else if (reason === "permission_denied") {
+		message = "You do not have permission to perform this action.";
+	} else if (reason === "user_not_found") {
+		message = "User not found.";
+	}
 
-  return NextResponse.json(
-    {
-      success: false,
-      message,
-      reason,
-      requiredApproval: Boolean(requiredApproval),
-    },
-    {
-      status:
-        reason === 'user_not_found'
-          ? 404
-          : reason === 'pending_approval'
-          ? 409
-          : 403,
-    }
-  );
+	return NextResponse.json(
+		{
+			success: false,
+			message,
+			reason,
+			requiredApproval: Boolean(requiredApproval),
+		},
+		{
+			status:
+				reason === "user_not_found"
+					? 404
+					: reason === "pending_approval"
+						? 409
+						: 403,
+		},
+	);
 };
 
 export async function POST(request: NextRequest) {
-  try {
-    const userId = await getCurrentUserId();
+	try {
+		const userId = await getCurrentUserId();
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+		if (!userId) {
+			return NextResponse.json(
+				{ success: false, message: "Authentication required" },
+				{ status: 401 },
+			);
+		}
 
-    // console.log(
-    //   '[POST /api/calendar/events] Checking permissions for userId:',
-    //   userId
-    // );
-    const permissionCheck = await evaluateCalendarPermission({
-      userAccountId: userId,
-      action: 'create',
-    });
+		// console.log(
+		//   '[POST /api/calendar/events] Checking permissions for userId:',
+		//   userId
+		// );
+		const permissionCheck = await evaluateCalendarPermission({
+			userAccountId: userId,
+			action: "create",
+		});
 
+		if (!permissionCheck.allowed) {
+			console.error("[POST /api/calendar/events] Permission denied:", {
+				reason: permissionCheck.reason,
+				userRole: permissionCheck.userRole,
+				userId: permissionCheck.userId,
+			});
+			return buildPermissionErrorResponse(
+				permissionCheck.reason || "permission_denied",
+				permissionCheck.requiredApproval,
+			);
+		}
 
-    if (!permissionCheck.allowed) {
-      console.error('[POST /api/calendar/events] Permission denied:', {
-        reason: permissionCheck.reason,
-        userRole: permissionCheck.userRole,
-        userId: permissionCheck.userId,
-      });
-      return buildPermissionErrorResponse(
-        permissionCheck.reason || 'permission_denied',
-        permissionCheck.requiredApproval
-      );
-    }
+		let eventData: Partial<CreateCalendarEventData> & Record<string, unknown>;
+		try {
+			eventData = await request.json();
+		} catch (jsonError) {
+			console.error("Error parsing JSON:", jsonError);
+			return NextResponse.json(
+				{ success: false, message: "Invalid JSON in request body" },
+				{ status: 400 },
+			);
+		}
 
-    let eventData: Partial<CreateCalendarEventData> & Record<string, unknown>;
-    try {
-      eventData = await request.json();
-    } catch (jsonError) {
-      console.error('Error parsing JSON:', jsonError);
-      return NextResponse.json(
-        { success: false, message: 'Invalid JSON in request body' },
-        { status: 400 }
-      );
-    }
+		// Validate required fields
+		if (!eventData.title || !eventData.startDate) {
+			return NextResponse.json(
+				{ success: false, message: "Title and startDate are required" },
+				{ status: 400 },
+			);
+		}
 
-    // Validate required fields
-    if (!eventData.title || !eventData.startDate) {
-      return NextResponse.json(
-        { success: false, message: 'Title and startDate are required' },
-        { status: 400 }
-      );
-    }
+		// Validate that event is not in the past
+		const now = new Date();
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const [startYear, startMonth, startDay] = (eventData.startDate as string)
+			.split("-")
+			.map(Number);
+		const eventStartDate = new Date(startYear, startMonth - 1, startDay);
 
-    // Validate that event is not in the past
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const [startYear, startMonth, startDay] = (eventData.startDate as string)
-      .split('-')
-      .map(Number);
-    const eventStartDate = new Date(startYear, startMonth - 1, startDay);
+		// Check if the date is in the past
+		if (eventStartDate < today) {
+			return NextResponse.json(
+				{
+					success: false,
+					message:
+						"Cannot create events in the past. Please select a current or future date.",
+				},
+				{ status: 400 },
+			);
+		}
 
-    // Check if the date is in the past
-    if (eventStartDate < today) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            'Cannot create events in the past. Please select a current or future date.',
-        },
-        { status: 400 }
-      );
-    }
+		// If date is today, check if the time is in the past
+		if (eventStartDate.getTime() === today.getTime() && eventData.startTime) {
+			const timeStr = eventData.startTime as string;
+			let hour24 = 0;
+			let minutes = 0;
 
-    // If date is today, check if the time is in the past
-    if (eventStartDate.getTime() === today.getTime() && eventData.startTime) {
-      const timeStr = eventData.startTime as string;
-      let hour24 = 0;
-      let minutes = 0;
+			// Handle 12-hour format (e.g., "2:00 PM")
+			if (timeStr.includes("PM") || timeStr.includes("AM")) {
+				const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+				if (match) {
+					hour24 = parseInt(match[1], 10);
+					minutes = parseInt(match[2], 10);
+					const period = match[3].toUpperCase();
+					if (period === "PM" && hour24 !== 12) {
+						hour24 += 12;
+					} else if (period === "AM" && hour24 === 12) {
+						hour24 = 0;
+					}
+				}
+			} else {
+				// Handle 24-hour format (e.g., "14:00")
+				const [h, m] = timeStr.split(":").map(Number);
+				hour24 = h;
+				minutes = m || 0;
+			}
 
-      // Handle 12-hour format (e.g., "2:00 PM")
-      if (timeStr.includes('PM') || timeStr.includes('AM')) {
-        const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-        if (match) {
-          hour24 = parseInt(match[1]);
-          minutes = parseInt(match[2]);
-          const period = match[3].toUpperCase();
-          if (period === 'PM' && hour24 !== 12) {
-            hour24 += 12;
-          } else if (period === 'AM' && hour24 === 12) {
-            hour24 = 0;
-          }
-        }
-      } else {
-        // Handle 24-hour format (e.g., "14:00")
-        const [h, m] = timeStr.split(':').map(Number);
-        hour24 = h;
-        minutes = m || 0;
-      }
+			const eventDateTime = new Date(
+				now.getFullYear(),
+				now.getMonth(),
+				now.getDate(),
+				hour24,
+				minutes,
+			);
 
-      const eventDateTime = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        hour24,
-        minutes
-      );
+			if (eventDateTime < now) {
+				return NextResponse.json(
+					{
+						success: false,
+						message:
+							"Cannot create events in the past. Please select a current or future time.",
+					},
+					{ status: 400 },
+				);
+			}
+		}
 
-      if (eventDateTime < now) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              'Cannot create events in the past. Please select a current or future time.',
-          },
-          { status: 400 }
-        );
-      }
-    }
+		// Check for conflicts (blocking - requires user confirmation)
+		let conflictInfo: {
+			conflicts: any[];
+			alternateSlots: any[];
+		} | null = null;
+		try {
+			const participantConflicts = await detectParticipantConflicts(
+				eventData,
+				undefined,
+				userId,
+			);
+			const resourceConflicts = await detectResourceConflicts(
+				eventData,
+				undefined,
+				userId,
+			);
+			const allConflicts = [...participantConflicts, ...resourceConflicts];
 
-    // Check for conflicts (blocking - requires user confirmation)
-    let conflictInfo: {
-      conflicts: any[];
-      alternateSlots: any[];
-    } | null = null;
-    try {
-      const participantConflicts = await detectParticipantConflicts(
-        eventData,
-        undefined,
-        userId
-      );
-      const resourceConflicts = await detectResourceConflicts(
-        eventData,
-        undefined,
-        userId
-      );
-      const allConflicts = [...participantConflicts, ...resourceConflicts];
+			if (allConflicts.length > 0) {
+				const alternateSlots = await suggestAlternateSlots(eventData);
+				conflictInfo = { conflicts: allConflicts, alternateSlots };
 
-      if (allConflicts.length > 0) {
-        const alternateSlots = await suggestAlternateSlots(eventData);
-        conflictInfo = { conflicts: allConflicts, alternateSlots };
+				// Check if user explicitly confirmed to proceed with conflicts
+				const forceCreate =
+					eventData.forceCreate === true || eventData.forceCreate === "true";
 
-        // Check if user explicitly confirmed to proceed with conflicts
-        const forceCreate =
-          eventData.forceCreate === true || eventData.forceCreate === 'true';
+				if (!forceCreate) {
+					// Block creation and return conflicts for user confirmation
+					return NextResponse.json(
+						{
+							success: false,
+							message:
+								"Conflicts detected. Please review and confirm to proceed.",
+							conflicts: allConflicts,
+							alternateSlots,
+							requiresConfirmation: true,
+						},
+						{ status: 409 }, // 409 Conflict status code
+					);
+				}
+			}
+		} catch (conflictError) {
+			console.error("Error checking conflicts:", conflictError);
+			// If conflict check fails, allow creation to proceed (fail open)
+		}
 
-        if (!forceCreate) {
-          // Block creation and return conflicts for user confirmation
-          return NextResponse.json(
-            {
-              success: false,
-              message:
-                'Conflicts detected. Please review and confirm to proceed.',
-              conflicts: allConflicts,
-              alternateSlots,
-              requiresConfirmation: true,
-            },
-            { status: 409 } // 409 Conflict status code
-          );
-        }
-      }
-    } catch (conflictError) {
-      console.error('Error checking conflicts:', conflictError);
-      // If conflict check fails, allow creation to proceed (fail open)
-    }
+		// Add the user ID to the event data
+		const requestedSensitivityLevel =
+			(eventData.sensitivityLevel as
+				| "standard"
+				| "restricted"
+				| "confidential") || "standard";
 
-    // Add the user ID to the event data
-    const requestedSensitivityLevel =
-      (eventData.sensitivityLevel as
-        | 'standard'
-        | 'restricted'
-        | 'confidential') || 'standard';
+		const eventWithUser: CreateCalendarEventData = {
+			title: eventData.title as string,
+			startDate: eventData.startDate as string,
+			endDate: (eventData.endDate as string) || (eventData.startDate as string),
+			type:
+				(eventData.type as
+					| "contract"
+					| "deadline"
+					| "meeting"
+					| "review"
+					| "audit") || "meeting",
+			description: (eventData.description as string) || "",
+			startTime: (eventData.startTime as string) || "",
+			endTime: (eventData.endTime as string) || "",
+			createdBy: userId,
+			createdByAccountId: userId,
+			createdByUserId: permissionCheck.userId || undefined,
+			contractName: (eventData.contractName as string) || "",
+			participants: (eventData.participants as string) || "",
+			location: (eventData.location as string) || undefined,
+			attachments: Array.isArray(eventData.attachments)
+				? eventData.attachments
+				: undefined,
+			sensitivityLevel: requestedSensitivityLevel,
+			requiresApproval: requestedSensitivityLevel !== "standard",
+			approvalStatus:
+				requestedSensitivityLevel !== "standard" ? "pending" : "not_required",
+			overrides: Array.isArray(eventData.overrides)
+				? eventData.overrides
+				: undefined,
+		};
 
-    const eventWithUser: CreateCalendarEventData = {
-      title: eventData.title as string,
-      startDate: eventData.startDate as string,
-      endDate: (eventData.endDate as string) || (eventData.startDate as string),
-      type:
-        (eventData.type as
-          | 'contract'
-          | 'deadline'
-          | 'meeting'
-          | 'review'
-          | 'audit') || 'meeting',
-      description: (eventData.description as string) || '',
-      startTime: (eventData.startTime as string) || '',
-      endTime: (eventData.endTime as string) || '',
-      createdBy: userId,
-      createdByAccountId: userId,
-      createdByUserId: permissionCheck.userId || undefined,
-      contractName: (eventData.contractName as string) || '',
-      participants: (eventData.participants as string) || '',
-      location: (eventData.location as string) || undefined,
-      attachments: Array.isArray(eventData.attachments)
-        ? eventData.attachments
-        : undefined,
-      sensitivityLevel: requestedSensitivityLevel,
-      requiresApproval: requestedSensitivityLevel !== 'standard',
-      approvalStatus:
-        requestedSensitivityLevel !== 'standard' ? 'pending' : 'not_required',
-      overrides: Array.isArray(eventData.overrides)
-        ? eventData.overrides
-        : undefined,
-    };
+		const sensitivityLevel = eventWithUser.sensitivityLevel || "standard";
+		const requiresApproval =
+			Boolean(eventData.requiresApproval) || sensitivityLevel !== "standard";
 
-    const sensitivityLevel = eventWithUser.sensitivityLevel || 'standard';
-    const requiresApproval =
-      Boolean(eventData.requiresApproval) || sensitivityLevel !== 'standard';
+		if (requiresApproval) {
+			eventWithUser.requiresApproval = true;
+			eventWithUser.approvalStatus = "pending";
+			eventWithUser.sensitivityLevel = sensitivityLevel;
+		}
 
-    if (requiresApproval) {
-      eventWithUser.requiresApproval = true;
-      eventWithUser.approvalStatus = 'pending';
-      eventWithUser.sensitivityLevel = sensitivityLevel;
-    }
+		console.log("Creating calendar event via API:", eventWithUser);
 
-    console.log('Creating calendar event via API:', eventWithUser);
+		let createdEvent;
+		try {
+			createdEvent = await createCalendarEvent(eventWithUser);
+		} catch (createError: any) {
+			console.error("Error creating calendar event:", {
+				error: createError,
+				message: createError?.message,
+				code: createError?.code,
+				type: createError?.type,
+				response: createError?.response,
+				stack: createError?.stack,
+			});
 
-    let createdEvent;
-    try {
-      createdEvent = await createCalendarEvent(eventWithUser);
-    } catch (createError: any) {
-      console.error('Error creating calendar event:', {
-        error: createError,
-        message: createError?.message,
-        code: createError?.code,
-        type: createError?.type,
-        response: createError?.response,
-        stack: createError?.stack,
-      });
+			return NextResponse.json(
+				{
+					success: false,
+					message: createError?.message || "Failed to create calendar event",
+					error: {
+						code: createError?.code,
+						type: createError?.type,
+						details: createError?.response || createError?.message,
+					},
+				},
+				{ status: 500 },
+			);
+		}
 
-      return NextResponse.json(
-        {
-          success: false,
-          message: createError?.message || 'Failed to create calendar event',
-          error: {
-            code: createError?.code,
-            type: createError?.type,
-            details: createError?.response || createError?.message,
-          },
-        },
-        { status: 500 }
-      );
-    }
+		let pendingApprovalId: string | null = null;
 
-    let pendingApprovalId: string | null = null;
+		if (requiresApproval && createdEvent.$id) {
+			const approval = await createCalendarApprovalRequest({
+				eventId: createdEvent.$id,
+				changeType: "create",
+				requestedByAccountId: userId,
+				requestedByUserId: permissionCheck.userId || undefined,
+				changeSummary: {
+					before: null,
+					after: eventWithUser as unknown as Record<string, unknown>,
+				},
+				sensitivityLevel,
+			});
 
-    if (requiresApproval && createdEvent.$id) {
-      const approval = await createCalendarApprovalRequest({
-        eventId: createdEvent.$id,
-        changeType: 'create',
-        requestedByAccountId: userId,
-        requestedByUserId: permissionCheck.userId || undefined,
-        changeSummary: {
-          before: null,
-          after: eventWithUser as unknown as Record<string, unknown>,
-        },
-        sensitivityLevel,
-      });
+			pendingApprovalId = approval.$id;
+			await updateCalendarEvent(createdEvent.$id, {
+				pendingApprovalId,
+			});
+		}
 
-      pendingApprovalId = approval.$id;
-      await updateCalendarEvent(createdEvent.$id, {
-        pendingApprovalId,
-      });
-    }
+		// Note: Audit logging for 'create' action is not supported by the current schema
+		// The audit logs collection only supports: delete, sync_delete, restore, cleanup
 
-    // Note: Audit logging for 'create' action is not supported by the current schema
-    // The audit logs collection only supports: delete, sync_delete, restore, cleanup
+		// Priority 2: Handle resource booking if resourceId is provided or location matches a resource
+		let _resourceBookingId: string | null = null;
+		if (createdEvent.$id && (eventData.resourceId || eventData.location)) {
+			try {
+				let resource = null;
 
-    // Priority 2: Handle resource booking if resourceId is provided or location matches a resource
-    let resourceBookingId: string | null = null;
-    if (createdEvent.$id && (eventData.resourceId || eventData.location)) {
-      try {
-        let resource = null;
+				// First, try to get resource by ID if provided directly
+				if (eventData.resourceId) {
+					resource = await getResourceById(eventData.resourceId as string);
+					if (!resource) {
+						console.warn(
+							"[SERVER] POST /api/calendar/events] Resource not found by ID:",
+							eventData.resourceId,
+						);
+					}
+				}
 
-        // First, try to get resource by ID if provided directly
-        if (eventData.resourceId) {
-          resource = await getResourceById(eventData.resourceId as string);
-          if (!resource) {
-            console.warn('[SERVER] POST /api/calendar/events] Resource not found by ID:', eventData.resourceId);
-          }
-        }
+				// If no resource found by ID, try matching by location name
+				if (!resource && eventData.location) {
+					const { getResources } = await import(
+						"@/lib/actions/resource-management.actions"
+					);
+					const defaultOrg = await getUserDefaultOrganization(
+						permissionCheck.userId || userId,
+					);
+					if (defaultOrg) {
+						const resources = await getResources(defaultOrg.orgId);
+						resource =
+							resources.find(
+								(r) =>
+									r.name.toLowerCase() ===
+										(eventData.location as string).toLowerCase() ||
+									(r.location &&
+										r.location.toLowerCase() ===
+											(eventData.location as string).toLowerCase()),
+							) || null;
+					}
+				}
 
-        // If no resource found by ID, try matching by location name
-        if (!resource && eventData.location) {
-          const { getResources } = await import('@/lib/actions/resource-management.actions');
-          const defaultOrg = await getUserDefaultOrganization(permissionCheck.userId || userId);
-          if (defaultOrg) {
-            const resources = await getResources(defaultOrg.orgId);
-            resource = resources.find(
-              (r) => r.name.toLowerCase() === (eventData.location as string).toLowerCase() ||
-                     (r.location && r.location.toLowerCase() === (eventData.location as string).toLowerCase())
-            ) || null;
-          }
-        }
+				if (resource) {
+					// Check availability
+					const availability = await checkResourceAvailability(
+						resource.$id,
+						eventData.startDate as string,
+						eventData.endDate || eventData.startDate,
+						eventData.startTime || "00:00",
+						eventData.endTime || "23:59",
+					);
 
-        if (resource) {
-          // Check availability
-          const availability = await checkResourceAvailability(
-            resource.$id,
-            eventData.startDate as string,
-            eventData.endDate || eventData.startDate,
-            eventData.startTime || '00:00',
-            eventData.endTime || '23:59'
-          );
+					if (availability.available) {
+						// Create resource booking
+						const booking = await createResourceBooking({
+							resourceId: resource.$id,
+							eventId: createdEvent.$id,
+							startDate: eventData.startDate as string,
+							endDate: eventData.endDate || eventData.startDate,
+							startTime: eventData.startTime || "00:00",
+							endTime: eventData.endTime || "23:59",
+							requestedBy: permissionCheck.userId || userId,
+							requestedByAccountId: userId,
+						});
+						_resourceBookingId = booking.$id;
 
-          if (availability.available) {
-            // Create resource booking
-            const booking = await createResourceBooking({
-              resourceId: resource.$id,
-              eventId: createdEvent.$id,
-              startDate: eventData.startDate as string,
-              endDate: eventData.endDate || eventData.startDate,
-              startTime: eventData.startTime || '00:00',
-              endTime: eventData.endTime || '23:59',
-              requestedBy: permissionCheck.userId || userId,
-              requestedByAccountId: userId,
-            });
-            resourceBookingId = booking.$id;
+						// If booking requires approval, add to response
+					} else {
+						// Resource not available
+					}
+				}
+			} catch (resourceError) {
+				console.error(
+					"[SERVER] POST /api/calendar/events] Error handling resource booking:",
+					resourceError,
+				);
+				// Don't fail event creation if resource booking fails
+			}
+		}
 
-            // If booking requires approval, add to response
-          } else {
-            // Resource not available
-          }
-        }
-      } catch (resourceError) {
-        console.error('[SERVER] POST /api/calendar/events] Error handling resource booking:', resourceError);
-        // Don't fail event creation if resource booking fails
-      }
-    }
+		// Priority 2: Create default reminders if specified
+		if (
+			eventData.reminders &&
+			Array.isArray(eventData.reminders) &&
+			createdEvent.$id
+		) {
+			try {
+				for (const reminderConfig of eventData.reminders) {
+					await createEventReminder({
+						eventId: createdEvent.$id,
+						userId: permissionCheck.userId || userId,
+						reminderType: reminderConfig.type || "before_start",
+						reminderMinutes: reminderConfig.minutes || 15,
+						channels: reminderConfig.channels || ["in_app"],
+					});
+				}
+			} catch (reminderError) {
+				console.error(
+					"[SERVER] POST /api/calendar/events] Error creating reminders:",
+					reminderError,
+				);
+				// Don't fail event creation if reminder creation fails
+			}
+		}
 
-    // Priority 2: Create default reminders if specified
-    if (eventData.reminders && Array.isArray(eventData.reminders) && createdEvent.$id) {
-      try {
-        for (const reminderConfig of eventData.reminders) {
-          await createEventReminder({
-            eventId: createdEvent.$id,
-            userId: permissionCheck.userId || userId,
-            reminderType: reminderConfig.type || 'before_start',
-            reminderMinutes: reminderConfig.minutes || 15,
-            channels: reminderConfig.channels || ['in_app'],
-          });
-        }
-      } catch (reminderError) {
-        console.error('[SERVER] POST /api/calendar/events] Error creating reminders:', reminderError);
-        // Don't fail event creation if reminder creation fails
-      }
-    }
+		// Invalidate calendar cache for the month
+		// Parse date string safely to avoid timezone shifts
+		if (!eventData.startDate) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: "startDate is required for cache invalidation",
+				},
+				{ status: 400 },
+			);
+		}
+		const dateStr = (eventData.startDate as string).split("T")[0]; // Get just YYYY-MM-DD
+		const [year, month, day] = dateStr.split("-").map(Number);
+		const eventDate = new Date(year, month - 1, day);
+		await CacheManager.invalidateCalendar(
+			eventDate.getFullYear(),
+			eventDate.getMonth() + 1,
+		);
 
-    // Invalidate calendar cache for the month
-    // Parse date string safely to avoid timezone shifts
-    if (!eventData.startDate) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'startDate is required for cache invalidation',
-        },
-        { status: 400 }
-      );
-    }
-    const dateStr = (eventData.startDate as string).split('T')[0]; // Get just YYYY-MM-DD
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const eventDate = new Date(year, month - 1, day);
-    await CacheManager.invalidateCalendar(
-      eventDate.getFullYear(),
-      eventDate.getMonth() + 1
-    );
+		return NextResponse.json({
+			success: true,
+			event: pendingApprovalId
+				? {
+						...createdEvent,
+						pendingApprovalId,
+						approvalStatus: "pending",
+						requiresApproval: true,
+					}
+				: createdEvent,
+			approval:
+				pendingApprovalId !== null
+					? {
+							id: pendingApprovalId,
+							status: "pending",
+						}
+					: null,
+			conflicts: conflictInfo?.conflicts || [],
+			alternateSlots: conflictInfo?.alternateSlots || [],
+		});
+	} catch (error: any) {
+		console.error("Error creating calendar event via API:", {
+			error,
+			message: error?.message,
+			code: error?.code,
+			type: error?.type,
+			response: error?.response,
+			stack: error?.stack,
+		});
 
-    return NextResponse.json({
-      success: true,
-      event: pendingApprovalId
-        ? {
-            ...createdEvent,
-            pendingApprovalId,
-            approvalStatus: 'pending',
-            requiresApproval: true,
-          }
-        : createdEvent,
-      approval:
-        pendingApprovalId !== null
-          ? {
-              id: pendingApprovalId,
-              status: 'pending',
-            }
-          : null,
-      conflicts: conflictInfo?.conflicts || [],
-      alternateSlots: conflictInfo?.alternateSlots || [],
-    });
-  } catch (error: any) {
-    console.error('Error creating calendar event via API:', {
-      error,
-      message: error?.message,
-      code: error?.code,
-      type: error?.type,
-      response: error?.response,
-      stack: error?.stack,
-    });
+		// Extract error details for client
+		const errorMessage = error?.message || "Failed to create event";
+		const errorCode = error?.code || "unknown";
+		const errorType = error?.type || "general_unknown";
+		const errorResponse = error?.response || errorMessage;
 
-    // Extract error details for client
-    const errorMessage = error?.message || 'Failed to create event';
-    const errorCode = error?.code || 'unknown';
-    const errorType = error?.type || 'general_unknown';
-    const errorResponse = error?.response || errorMessage;
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: errorMessage,
-        error: {
-          code: errorCode,
-          type: errorType,
-          details:
-            typeof errorResponse === 'string'
-              ? errorResponse
-              : JSON.stringify(errorResponse),
-        },
-      },
-      { status: 500 }
-    );
-  }
+		return NextResponse.json(
+			{
+				success: false,
+				message: errorMessage,
+				error: {
+					code: errorCode,
+					type: errorType,
+					details:
+						typeof errorResponse === "string"
+							? errorResponse
+							: JSON.stringify(errorResponse),
+				},
+			},
+			{ status: 500 },
+		);
+	}
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    let accountId: string;
-    try {
-      accountId = await getCurrentUserId();
-    } catch (authError) {
-      console.error('Error getting current user ID:', authError);
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+	try {
+		let accountId: string;
+		try {
+			accountId = await getCurrentUserId();
+		} catch (authError) {
+			console.error("Error getting current user ID:", authError);
+			return NextResponse.json(
+				{ success: false, message: "Authentication required" },
+				{ status: 401 },
+			);
+		}
 
-    if (!accountId) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+		if (!accountId) {
+			return NextResponse.json(
+				{ success: false, message: "Authentication required" },
+				{ status: 401 },
+			);
+		}
 
-    // Get user by account ID to get the user's $id (userId)
-    let user;
-    try {
-      user = await getUserByAccountId(accountId);
-    } catch (userError) {
-      console.error('Error getting user by account ID:', userError);
-      return NextResponse.json(
-        { success: false, message: 'User not found' },
-        { status: 404 }
-      );
-    }
-    
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: 'User not found' },
-        { status: 404 }
-      );
-    }
+		// Get user by account ID to get the user's $id (userId)
+		let user;
+		try {
+			user = await getUserByAccountId(accountId);
+		} catch (userError) {
+			console.error("Error getting user by account ID:", userError);
+			return NextResponse.json(
+				{ success: false, message: "User not found" },
+				{ status: 404 },
+			);
+		}
 
-    const userId = user.$id;
+		if (!user) {
+			return NextResponse.json(
+				{ success: false, message: "User not found" },
+				{ status: 404 },
+			);
+		}
 
-    const { searchParams } = new URL(request.url);
-    const year = parseInt(
-      searchParams.get('year') || new Date().getFullYear().toString()
-    );
-    const month = parseInt(
-      searchParams.get('month') || (new Date().getMonth() + 1).toString()
-    );
+		const userId = user.$id;
 
-    //console.log('Fetching calendar events for:', { year, month, userId });
+		const { searchParams } = new URL(request.url);
+		const year = parseInt(
+			searchParams.get("year") || new Date().getFullYear().toString(),
+			10,
+		);
+		const month = parseInt(
+			searchParams.get("month") || (new Date().getMonth() + 1).toString(),
+			10,
+		);
 
-    const noCacheHeader = request.headers.get('x-no-cache') === '1';
-    const noCacheQuery =
-      (request.nextUrl.searchParams.get('noCache') || '') === '1';
+		//console.log('Fetching calendar events for:', { year, month, userId });
 
-    let payload: any;
-    if (noCacheHeader || noCacheQuery) {
-      // Bypass server cache entirely
-      const events = await getCalendarEventsByMonth(year, month, userId);
-      payload = { success: true, events };
-    } else {
-      // Use server cache with user-specific cache key
-      const cacheKey = CACHE_KEYS.calendar.events(year, month, userId);
-      payload = await CacheManager.withCache(
-        'calendar/events',
-        cacheKey,
-        async () => {
-          const events = await getCalendarEventsByMonth(year, month, userId);
-          return { success: true, events };
-        },
-        CACHE_TTLS.medium
-      );
-    }
+		const noCacheHeader = request.headers.get("x-no-cache") === "1";
+		const noCacheQuery =
+			(request.nextUrl.searchParams.get("noCache") || "") === "1";
 
-    const res = NextResponse.json(payload);
-    // Prevent downstream/proxy caches from serving stale data to clients
-    res.headers.set(
-      'Cache-Control',
-      'no-store, no-cache, must-revalidate, proxy-revalidate'
-    );
-    res.headers.set('Pragma', 'no-cache');
-    res.headers.set('Expires', '0');
-    return res;
-  } catch (error) {
-    console.error('Error fetching calendar events via API:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          error instanceof Error ? error.message : 'Failed to fetch events',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
-  }
+		let payload: any;
+		if (noCacheHeader || noCacheQuery) {
+			// Bypass server cache entirely
+			const events = await getCalendarEventsByMonth(year, month, userId);
+			payload = { success: true, events };
+		} else {
+			// Use server cache with user-specific cache key
+			const cacheKey = CACHE_KEYS.calendar.events(year, month, userId);
+			payload = await CacheManager.withCache(
+				"calendar/events",
+				cacheKey,
+				async () => {
+					const events = await getCalendarEventsByMonth(year, month, userId);
+					return { success: true, events };
+				},
+				CACHE_TTLS.medium,
+			);
+		}
+
+		const res = NextResponse.json(payload);
+		// Prevent downstream/proxy caches from serving stale data to clients
+		res.headers.set(
+			"Cache-Control",
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		res.headers.set("Pragma", "no-cache");
+		res.headers.set("Expires", "0");
+		return res;
+	} catch (error) {
+		console.error("Error fetching calendar events via API:", error);
+		return NextResponse.json(
+			{
+				success: false,
+				message:
+					error instanceof Error ? error.message : "Failed to fetch events",
+				error: error instanceof Error ? error.message : "Unknown error",
+			},
+			{ status: 500 },
+		);
+	}
 }
 
 export async function PUT(request: NextRequest) {
-  try {
-    const userId = await getCurrentUserId();
+	try {
+		const userId = await getCurrentUserId();
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+		if (!userId) {
+			return NextResponse.json(
+				{ success: false, message: "Authentication required" },
+				{ status: 401 },
+			);
+		}
 
-    const { searchParams } = new URL(request.url);
-    const eventId = searchParams.get('id');
+		const { searchParams } = new URL(request.url);
+		const eventId = searchParams.get("id");
 
-    if (!eventId) {
-      return NextResponse.json(
-        { success: false, message: 'Event ID is required' },
-        { status: 400 }
-      );
-    }
+		if (!eventId) {
+			return NextResponse.json(
+				{ success: false, message: "Event ID is required" },
+				{ status: 400 },
+			);
+		}
 
-    const body = await request.json();
-    const eventData = body as Partial<CreateCalendarEventData>;
+		const body = await request.json();
+		const eventData = body as Partial<CreateCalendarEventData>;
 
-    console.log('Updating calendar event via API:', {
-      eventId,
-      userId,
-      eventData,
-    });
+		console.log("Updating calendar event via API:", {
+			eventId,
+			userId,
+			eventData,
+		});
 
-    const event = await getCalendarEventById(eventId);
+		const event = await getCalendarEventById(eventId);
 
-    if (!event) {
-      return NextResponse.json(
-        { success: false, message: 'Event not found' },
-        { status: 404 }
-      );
-    }
+		if (!event) {
+			return NextResponse.json(
+				{ success: false, message: "Event not found" },
+				{ status: 404 },
+			);
+		}
 
-    const permissionCheck = await evaluateCalendarPermission({
-      userAccountId: userId,
-      action: 'update',
-      event,
-    });
+		const permissionCheck = await evaluateCalendarPermission({
+			userAccountId: userId,
+			action: "update",
+			event,
+		});
 
-    if (!permissionCheck.allowed) {
-      return buildPermissionErrorResponse(
-        permissionCheck.reason || 'permission_denied',
-        permissionCheck.requiredApproval
-      );
-    }
+		if (!permissionCheck.allowed) {
+			return buildPermissionErrorResponse(
+				permissionCheck.reason || "permission_denied",
+				permissionCheck.requiredApproval,
+			);
+		}
 
-    // Check for conflicts (blocking - requires user confirmation)
-    let conflictInfo: {
-      conflicts: any[];
-      alternateSlots: any[];
-    } | null = null;
-    try {
-      const participantConflicts = await detectParticipantConflicts(
-        eventData,
-        eventId,
-        userId
-      );
-      const resourceConflicts = await detectResourceConflicts(
-        eventData,
-        eventId,
-        userId
-      );
-      const allConflicts = [...participantConflicts, ...resourceConflicts];
+		// Check for conflicts (blocking - requires user confirmation)
+		let conflictInfo: {
+			conflicts: any[];
+			alternateSlots: any[];
+		} | null = null;
+		try {
+			const participantConflicts = await detectParticipantConflicts(
+				eventData,
+				eventId,
+				userId,
+			);
+			const resourceConflicts = await detectResourceConflicts(
+				eventData,
+				eventId,
+				userId,
+			);
+			const allConflicts = [...participantConflicts, ...resourceConflicts];
 
-      if (allConflicts.length > 0) {
-        const alternateSlots = await suggestAlternateSlots(eventData, eventId);
-        conflictInfo = { conflicts: allConflicts, alternateSlots };
+			if (allConflicts.length > 0) {
+				const alternateSlots = await suggestAlternateSlots(eventData, eventId);
+				conflictInfo = { conflicts: allConflicts, alternateSlots };
 
-        // Check if user explicitly confirmed to proceed with conflicts
-        const forceCreate =
-          (eventData as Record<string, unknown>).forceCreate === true ||
-          String((eventData as Record<string, unknown>).forceCreate) === 'true';
+				// Check if user explicitly confirmed to proceed with conflicts
+				const forceCreate =
+					(eventData as Record<string, unknown>).forceCreate === true ||
+					String((eventData as Record<string, unknown>).forceCreate) === "true";
 
-        if (!forceCreate) {
-          // Block update and return conflicts for user confirmation
-          return NextResponse.json(
-            {
-              success: false,
-              message:
-                'Conflicts detected. Please review and confirm to proceed.',
-              conflicts: allConflicts,
-              alternateSlots,
-              requiresConfirmation: true,
-            },
-            { status: 409 } // 409 Conflict status code
-          );
-        }
-      }
-    } catch (conflictError) {
-      console.error('Error checking conflicts:', conflictError);
-      // If conflict check fails, allow update to proceed (fail open)
-    }
+				if (!forceCreate) {
+					// Block update and return conflicts for user confirmation
+					return NextResponse.json(
+						{
+							success: false,
+							message:
+								"Conflicts detected. Please review and confirm to proceed.",
+							conflicts: allConflicts,
+							alternateSlots,
+							requiresConfirmation: true,
+						},
+						{ status: 409 }, // 409 Conflict status code
+					);
+				}
+			}
+		} catch (conflictError) {
+			console.error("Error checking conflicts:", conflictError);
+			// If conflict check fails, allow update to proceed (fail open)
+		}
 
-    // Check if event requires approval for updates
-    const sensitivityLevel =
-      eventData.sensitivityLevel || event.sensitivityLevel || 'standard';
-    const requiresApproval =
-      Boolean(eventData.requiresApproval) ||
-      sensitivityLevel === 'restricted' ||
-      sensitivityLevel === 'confidential';
+		// Check if event requires approval for updates
+		const sensitivityLevel =
+			eventData.sensitivityLevel || event.sensitivityLevel || "standard";
+		const requiresApproval =
+			Boolean(eventData.requiresApproval) ||
+			sensitivityLevel === "restricted" ||
+			sensitivityLevel === "confidential";
 
-    let updatedEvent: CalendarEvent;
-    let pendingApprovalId: string | null = null;
+		let updatedEvent: CalendarEvent;
+		let pendingApprovalId: string | null = null;
 
-    // Simplified flow: Always create new approval request if approval is required
-    // This creates a clear history of all submission attempts
-    if (requiresApproval && event.approvalStatus !== 'approved') {
-      // Create new approval request (even for resubmissions after changes_requested)
-      const approval = await createCalendarApprovalRequest({
-        eventId,
-        changeType: 'update',
-        requestedByAccountId: userId,
-        requestedByUserId: permissionCheck.userId || undefined,
-        changeSummary: {
-          before: event as unknown as Record<string, unknown>,
-          after: { ...event, ...eventData } as unknown as Record<
-            string,
-            unknown
-          >,
-        },
-        sensitivityLevel,
-      });
+		// Simplified flow: Always create new approval request if approval is required
+		// This creates a clear history of all submission attempts
+		if (requiresApproval && event.approvalStatus !== "approved") {
+			// Create new approval request (even for resubmissions after changes_requested)
+			const approval = await createCalendarApprovalRequest({
+				eventId,
+				changeType: "update",
+				requestedByAccountId: userId,
+				requestedByUserId: permissionCheck.userId || undefined,
+				changeSummary: {
+					before: event as unknown as Record<string, unknown>,
+					after: { ...event, ...eventData } as unknown as Record<
+						string,
+						unknown
+					>,
+				},
+				sensitivityLevel,
+			});
 
-      pendingApprovalId = approval.$id;
+			pendingApprovalId = approval.$id;
 
-      // Update event with pending approval status
-      updatedEvent = await updateCalendarEvent(eventId, {
-        ...eventData,
-        approvalStatus: 'pending',
-        pendingApprovalId,
-      });
-    } else {
-      // Update event directly (no approval required)
-      updatedEvent = await updateCalendarEvent(eventId, eventData);
-    }
+			// Update event with pending approval status
+			updatedEvent = await updateCalendarEvent(eventId, {
+				...eventData,
+				approvalStatus: "pending",
+				pendingApprovalId,
+			});
+		} else {
+			// Update event directly (no approval required)
+			updatedEvent = await updateCalendarEvent(eventId, eventData);
+		}
 
-    // Note: Audit logging for 'update' action is not supported by the current schema
-    // The audit logs collection only supports: delete, sync_delete, restore, cleanup
+		// Note: Audit logging for 'update' action is not supported by the current schema
+		// The audit logs collection only supports: delete, sync_delete, restore, cleanup
 
-    // Invalidate calendar cache for the month
-    if (eventData.startDate || event.startDate) {
-      const dateStr = (eventData.startDate || event.startDate) as string;
-      const datePart = dateStr.split('T')[0];
-      const [year, month] = datePart.split('-').map(Number);
-      await CacheManager.invalidateCalendar(year, month);
-    }
+		// Invalidate calendar cache for the month
+		if (eventData.startDate || event.startDate) {
+			const dateStr = (eventData.startDate || event.startDate) as string;
+			const datePart = dateStr.split("T")[0];
+			const [year, month] = datePart.split("-").map(Number);
+			await CacheManager.invalidateCalendar(year, month);
+		}
 
-    return NextResponse.json({
-      success: true,
-      event: updatedEvent,
-      approval:
-        pendingApprovalId !== null
-          ? {
-              id: pendingApprovalId,
-              status: 'pending',
-            }
-          : null,
-      conflicts: conflictInfo?.conflicts || [],
-      alternateSlots: conflictInfo?.alternateSlots || [],
-    });
-  } catch (error) {
-    console.error('Error updating calendar event via API:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          error instanceof Error ? error.message : 'Failed to update event',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
-  }
+		return NextResponse.json({
+			success: true,
+			event: updatedEvent,
+			approval:
+				pendingApprovalId !== null
+					? {
+							id: pendingApprovalId,
+							status: "pending",
+						}
+					: null,
+			conflicts: conflictInfo?.conflicts || [],
+			alternateSlots: conflictInfo?.alternateSlots || [],
+		});
+	} catch (error) {
+		console.error("Error updating calendar event via API:", error);
+		return NextResponse.json(
+			{
+				success: false,
+				message:
+					error instanceof Error ? error.message : "Failed to update event",
+				error: error instanceof Error ? error.message : "Unknown error",
+			},
+			{ status: 500 },
+		);
+	}
 }
 
 export async function DELETE(request: NextRequest) {
-  try {
-    const userId = await getCurrentUserId();
+	try {
+		const userId = await getCurrentUserId();
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+		if (!userId) {
+			return NextResponse.json(
+				{ success: false, message: "Authentication required" },
+				{ status: 401 },
+			);
+		}
 
-    const { searchParams } = new URL(request.url);
-    const eventId = searchParams.get('id');
-    const reason = searchParams.get('reason') || undefined;
+		const { searchParams } = new URL(request.url);
+		const eventId = searchParams.get("id");
+		const reason = searchParams.get("reason") || undefined;
 
-    if (!eventId) {
-      return NextResponse.json(
-        { success: false, message: 'Event ID is required' },
-        { status: 400 }
-      );
-    }
+		if (!eventId) {
+			return NextResponse.json(
+				{ success: false, message: "Event ID is required" },
+				{ status: 400 },
+			);
+		}
 
-    console.log('Deleting calendar event via API:', {
-      eventId,
-      userId,
-      reason,
-    });
+		console.log("Deleting calendar event via API:", {
+			eventId,
+			userId,
+			reason,
+		});
 
-    const event = await getCalendarEventById(eventId);
+		const event = await getCalendarEventById(eventId);
 
-    if (!event) {
-      return NextResponse.json(
-        { success: false, message: 'Event not found' },
-        { status: 404 }
-      );
-    }
+		if (!event) {
+			return NextResponse.json(
+				{ success: false, message: "Event not found" },
+				{ status: 404 },
+			);
+		}
 
-    const permissionCheck = await evaluateCalendarPermission({
-      userAccountId: userId,
-      action: 'cancel',
-      event,
-    });
+		const permissionCheck = await evaluateCalendarPermission({
+			userAccountId: userId,
+			action: "cancel",
+			event,
+		});
 
-    if (!permissionCheck.allowed) {
-      // If permission is denied due to pending approval, check if we can create a cancellation approval
-      if (permissionCheck.reason === 'pending_approval') {
-        // Check if there's already a pending cancellation approval
-        const { listCalendarApprovalRequests } = await import(
-          '@/lib/actions/calendar-approval.actions'
-        );
-        const pendingApprovals = await listCalendarApprovalRequests({
-          status: 'pending',
-        });
-        const existingCancelApproval = pendingApprovals.find(
-          (approval) =>
-            approval.eventId === eventId && approval.changeType === 'cancel'
-        );
+		if (!permissionCheck.allowed) {
+			// If permission is denied due to pending approval, check if we can create a cancellation approval
+			if (permissionCheck.reason === "pending_approval") {
+				// Check if there's already a pending cancellation approval
+				const { listCalendarApprovalRequests } = await import(
+					"@/lib/actions/calendar-approval.actions"
+				);
+				const pendingApprovals = await listCalendarApprovalRequests({
+					status: "pending",
+				});
+				const existingCancelApproval = pendingApprovals.find(
+					(approval) =>
+						approval.eventId === eventId && approval.changeType === "cancel",
+				);
 
-        if (existingCancelApproval) {
-          // Already has a pending cancellation approval
-          return NextResponse.json(
-            {
-              success: false,
-              message: 'A cancellation request is already pending approval',
-              reason: 'pending_approval',
-              approvalId: existingCancelApproval.$id,
-            },
-            { status: 409 }
-          );
-        }
+				if (existingCancelApproval) {
+					// Already has a pending cancellation approval
+					return NextResponse.json(
+						{
+							success: false,
+							message: "A cancellation request is already pending approval",
+							reason: "pending_approval",
+							approvalId: existingCancelApproval.$id,
+						},
+						{ status: 409 },
+					);
+				}
 
-        // Allow creating a cancellation approval even if there's a pending creation approval
-        // The permission check blocking was removed for cancellation actions
-      } else {
-        // Other permission denials
-        return buildPermissionErrorResponse(
-          permissionCheck.reason || 'permission_denied',
-          permissionCheck.requiredApproval
-        );
-      }
-    }
+				// Allow creating a cancellation approval even if there's a pending creation approval
+				// The permission check blocking was removed for cancellation actions
+			} else {
+				// Other permission denials
+				return buildPermissionErrorResponse(
+					permissionCheck.reason || "permission_denied",
+					permissionCheck.requiredApproval,
+				);
+			}
+		}
 
-    const sensitivityLevel = event.sensitivityLevel || 'standard';
-    const requiresApproval =
-      Boolean(event.requiresApproval) ||
-      sensitivityLevel === 'restricted' ||
-      sensitivityLevel === 'confidential';
+		const sensitivityLevel = event.sensitivityLevel || "standard";
+		const requiresApproval =
+			Boolean(event.requiresApproval) ||
+			sensitivityLevel === "restricted" ||
+			sensitivityLevel === "confidential";
 
-    // Check if there's already a pending cancellation approval
-    const { listCalendarApprovalRequests } = await import(
-      '@/lib/actions/calendar-approval.actions'
-    );
-    const pendingApprovals = await listCalendarApprovalRequests({
-      status: 'pending',
-    });
-    const existingCancelApproval = pendingApprovals.find(
-      (approval) =>
-        approval.eventId === eventId && approval.changeType === 'cancel'
-    );
+		// Check if there's already a pending cancellation approval
+		const { listCalendarApprovalRequests } = await import(
+			"@/lib/actions/calendar-approval.actions"
+		);
+		const pendingApprovals = await listCalendarApprovalRequests({
+			status: "pending",
+		});
+		const existingCancelApproval = pendingApprovals.find(
+			(approval) =>
+				approval.eventId === eventId && approval.changeType === "cancel",
+		);
 
-    if (existingCancelApproval) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'A cancellation request is already pending approval',
-          reason: 'pending_approval',
-          approvalId: existingCancelApproval.$id,
-        },
-        { status: 409 }
-      );
-    }
+		if (existingCancelApproval) {
+			return NextResponse.json(
+				{
+					success: false,
+					message: "A cancellation request is already pending approval",
+					reason: "pending_approval",
+					approvalId: existingCancelApproval.$id,
+				},
+				{ status: 409 },
+			);
+		}
 
-    if (requiresApproval) {
-      const approval = await createCalendarApprovalRequest({
-        eventId,
-        changeType: 'cancel',
-        requestedByAccountId: userId,
-        requestedByUserId: permissionCheck.userId || undefined,
-        changeSummary: {
-          before: event as unknown as Record<string, unknown>,
-          after: null,
-        },
-        sensitivityLevel,
-      });
+		if (requiresApproval) {
+			const approval = await createCalendarApprovalRequest({
+				eventId,
+				changeType: "cancel",
+				requestedByAccountId: userId,
+				requestedByUserId: permissionCheck.userId || undefined,
+				changeSummary: {
+					before: event as unknown as Record<string, unknown>,
+					after: null,
+				},
+				sensitivityLevel,
+			});
 
-      await updateCalendarEvent(eventId, {
-        approvalStatus: 'pending',
-        pendingApprovalId: approval.$id,
-      });
+			await updateCalendarEvent(eventId, {
+				approvalStatus: "pending",
+				pendingApprovalId: approval.$id,
+			});
 
-      return NextResponse.json({
-        success: true,
-        message: 'Cancellation pending approval',
-        approvalId: approval.$id,
-        requiresApproval: true,
-      });
-    }
+			return NextResponse.json({
+				success: true,
+				message: "Cancellation pending approval",
+				approvalId: approval.$id,
+				requiresApproval: true,
+			});
+		}
 
-    // Get event title for audit logging (event already fetched above)
-    const eventTitle = event?.title || 'Unknown Event';
+		// Get event title for audit logging (event already fetched above)
+		const eventTitle = event?.title || "Unknown Event";
 
-    // Perform soft delete immediately
-    await deleteCalendarEvent(eventId, userId);
+		// Perform soft delete immediately
+		await deleteCalendarEvent(eventId, userId);
 
-    // Get client IP and user agent for audit
-    const ipAddress =
-      request.headers.get('x-forwarded-for') ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
-    const userAgent = request.headers.get('user-agent') || 'unknown';
+		// Get client IP and user agent for audit
+		const ipAddress =
+			request.headers.get("x-forwarded-for") ||
+			request.headers.get("x-real-ip") ||
+			"unknown";
+		const userAgent = request.headers.get("user-agent") || "unknown";
 
-    // Get user information for audit logging
-    let userName = 'Unknown User';
-    let userEmail = 'unknown@example.com';
-    let auditUserId = userId;
-    let orgId: string | undefined;
-    try {
-      const user = await getUserByAccountId(userId);
-      if (user) {
-        userName = user.fullName || 'Unknown User';
-        userEmail = user.email || 'unknown@example.com';
-        auditUserId = user.$id || userId;
-        const defaultOrg = await getUserDefaultOrganization(user.$id);
-        orgId = defaultOrg?.orgId;
-      }
-    } catch (userError) {
-      console.warn('Could not fetch user details for audit:', userError);
-    }
+		// Get user information for audit logging
+		let userName = "Unknown User";
+		let userEmail = "unknown@example.com";
+		let auditUserId = userId;
+		let orgId: string | undefined;
+		try {
+			const user = await getUserByAccountId(userId);
+			if (user) {
+				userName = user.fullName || "Unknown User";
+				userEmail = user.email || "unknown@example.com";
+				auditUserId = user.$id || userId;
+				const defaultOrg = await getUserDefaultOrganization(user.$id);
+				orgId = defaultOrg?.orgId;
+			}
+		} catch (userError) {
+			console.warn("Could not fetch user details for audit:", userError);
+		}
 
-    // Log the deletion audit event
-    await logAuditEvent({
-      event_id: eventId,
-      event_title: eventTitle,
-      action: 'delete',
-      source: 'caalm',
-      user_id: auditUserId,
-      user_name: userName,
-      user_email: userEmail,
-      orgId: orgId,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-      reason: reason,
-      status: 'success',
-      metadata: {
-        deleted_at: new Date().toISOString(),
-        deletion_method: 'soft_delete',
-      },
-    });
+		// Log the deletion audit event
+		await logAuditEvent({
+			event_id: eventId,
+			event_title: eventTitle,
+			action: "delete",
+			source: "caalm",
+			user_id: auditUserId,
+			user_name: userName,
+			user_email: userEmail,
+			orgId: orgId,
+			ip_address: ipAddress,
+			user_agent: userAgent,
+			reason: reason,
+			status: "success",
+			metadata: {
+				deleted_at: new Date().toISOString(),
+				deletion_method: "soft_delete",
+			},
+		});
 
-    // Trigger background Outlook deletion (non-blocking)
-    syncDeletionToOutlook(eventId, 3).catch((error) => {
-      console.error('Background deletion sync failed:', error);
-      // The sync service will handle logging the failure
-    });
+		// Trigger background Outlook deletion (non-blocking)
+		syncDeletionToOutlook(eventId, 3).catch((error) => {
+			console.error("Background deletion sync failed:", error);
+			// The sync service will handle logging the failure
+		});
 
-    // Invalidate all calendar caches (event could be in any month)
-    await CacheManager.invalidateCalendar();
+		// Invalidate all calendar caches (event could be in any month)
+		await CacheManager.invalidateCalendar();
 
-    return NextResponse.json({
-      success: true,
-      message: 'Event deleted successfully',
-    });
-  } catch (error) {
-    console.error('Error deleting calendar event via API:', error);
+		return NextResponse.json({
+			success: true,
+			message: "Event deleted successfully",
+		});
+	} catch (error) {
+		console.error("Error deleting calendar event via API:", error);
 
-    // Log the failed deletion attempt
-    const { searchParams } = new URL(request.url);
-    const eventId = searchParams.get('id');
+		// Log the failed deletion attempt
+		const { searchParams } = new URL(request.url);
+		const eventId = searchParams.get("id");
 
-    if (eventId) {
-      try {
-        // Try to get orgId from userId if available
-        const deleteUserId = await getCurrentUserId();
-        let orgId: string | undefined;
-        let userName = 'Unknown User';
-        let userEmail = 'unknown@example.com';
-        let auditUserId = deleteUserId || 'unknown';
-        try {
-          if (deleteUserId) {
-            const user = await getUserByAccountId(deleteUserId);
-            if (user?.$id) {
-              userName = user.fullName || 'Unknown User';
-              userEmail = user.email || 'unknown@example.com';
-              auditUserId = user.$id;
-              const defaultOrg = await getUserDefaultOrganization(user.$id);
-              orgId = defaultOrg?.orgId;
-            }
-          }
-        } catch {
-          // Ignore errors getting orgId for failed deletion log
-        }
+		if (eventId) {
+			try {
+				// Try to get orgId from userId if available
+				const deleteUserId = await getCurrentUserId();
+				let orgId: string | undefined;
+				let userName = "Unknown User";
+				let userEmail = "unknown@example.com";
+				let auditUserId = deleteUserId || "unknown";
+				try {
+					if (deleteUserId) {
+						const user = await getUserByAccountId(deleteUserId);
+						if (user?.$id) {
+							userName = user.fullName || "Unknown User";
+							userEmail = user.email || "unknown@example.com";
+							auditUserId = user.$id;
+							const defaultOrg = await getUserDefaultOrganization(user.$id);
+							orgId = defaultOrg?.orgId;
+						}
+					}
+				} catch {
+					// Ignore errors getting orgId for failed deletion log
+				}
 
-        await logAuditEvent({
-          event_id: eventId,
-          event_title: 'Unknown Event',
-          action: 'delete',
-          source: 'caalm',
-          user_id: auditUserId,
-          user_name: userName,
-          user_email: userEmail,
-          orgId: orgId,
-          status: 'failed',
-          error_message:
-            error instanceof Error ? error.message : 'Unknown error',
-          metadata: { error_type: 'api_error' },
-        });
-      } catch (auditError) {
-        console.error(
-          'Failed to log audit event for failed deletion:',
-          auditError
-        );
-      }
-    }
+				await logAuditEvent({
+					event_id: eventId,
+					event_title: "Unknown Event",
+					action: "delete",
+					source: "caalm",
+					user_id: auditUserId,
+					user_name: userName,
+					user_email: userEmail,
+					orgId: orgId,
+					status: "failed",
+					error_message:
+						error instanceof Error ? error.message : "Unknown error",
+					metadata: { error_type: "api_error" },
+				});
+			} catch (auditError) {
+				console.error(
+					"Failed to log audit event for failed deletion:",
+					auditError,
+				);
+			}
+		}
 
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          error instanceof Error ? error.message : 'Failed to delete event',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
-  }
+		return NextResponse.json(
+			{
+				success: false,
+				message:
+					error instanceof Error ? error.message : "Failed to delete event",
+				error: error instanceof Error ? error.message : "Unknown error",
+			},
+			{ status: 500 },
+		);
+	}
 }
