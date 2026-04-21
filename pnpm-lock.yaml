@@ -165,8 +165,8 @@ importers:
         specifier: ^2.3.4
         version: 2.3.4
       appwrite:
-        specifier: ^22.0.0
-        version: 22.0.0
+        specifier: ^22.4.1
+        version: 22.4.1
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2923,8 +2923,8 @@ packages:
   aos@2.3.4:
     resolution: {integrity: sha512-zh/ahtR2yME4I51z8IttIt4lC1Nw0ktsFtmeDzID1m9naJnWXhCoARaCgNOGXb5CLy3zm+wqmRAEgMYB5E2HUw==}
 
-  appwrite@22.0.0:
-    resolution: {integrity: sha512-iFlfshYttuQheIyar6m789+Z/gvfKWQxWQCDhHzH9cEkFkn+laJZV8nMvGRH+1rTYNfAcFuycWKBGZiEDFxXug==}
+  appwrite@22.4.1:
+    resolution: {integrity: sha512-NlEgUvSo7A1m+TEHZ8zlWUIuCDtNg3VN6Mbxd6r+1618CiWokig630FpeKQ9/WD5Io92QxuTV/dVzBLPlQghqg==}
 
   argparse@1.0.10:
     resolution: {integrity: sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==}
@@ -8407,9 +8407,8 @@ snapshots:
       lodash.debounce: 4.0.8
       lodash.throttle: 4.1.1
 
-  appwrite@22.0.0:
+  appwrite@22.4.1:
     dependencies:
-      bignumber.js: 9.0.0
       json-bigint: 1.0.0
 
   argparse@1.0.10:
