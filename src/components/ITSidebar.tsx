@@ -242,6 +242,8 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, avatar, email }) => {
 														alt={section.header.toLowerCase()}
 														width={24}
 														height={24}
+														className="max-w-none shrink-0"
+														style={{ width: "auto", height: "24px" }}
 														priority={
 															section.header === "Dashboard" ||
 															section.header === "System Overview"
@@ -284,6 +286,8 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, avatar, email }) => {
 																	alt={item.name.toLowerCase()}
 																	width={20}
 																	height={20}
+																	className="max-w-none shrink-0"
+																	style={{ width: "auto", height: "20px" }}
 																	priority={index < 3}
 																/>
 															</span>

@@ -453,8 +453,8 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-4">
 							<div className="relative">
-								<div className="w-16 h-16 flex items-center justify-center">
-									<ResponsiveContainer width="100%" height="100%">
+								<div className="w-16 h-16 flex min-h-16 min-w-16 items-center justify-center shrink-0">
+									<ResponsiveContainer width={64} height={64}>
 										<PieChart>
 											<Pie
 												data={contractData}

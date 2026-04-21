@@ -66,7 +66,8 @@ const SidebarIcon = memo(
 			priority={priority}
 			fetchPriority={priority ? "high" : "auto"}
 			loading={priority ? undefined : "lazy"}
-			className="flex-shrink-0"
+			className="flex-shrink-0 max-w-none"
+			style={{ width: "auto", height: `${height}px` }}
 		/>
 	),
 );

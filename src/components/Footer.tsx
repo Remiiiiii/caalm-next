@@ -72,7 +72,7 @@ const Footer = () => {
 				</div>
 
 				<div className="mt-8 border-t  border-navy-dark pt-6 sm:pt-8 text-center text-slate-dark text-xs sm:text-sm">
-					<p>© 2025 Caalm. All rights reserved.</p>
+					<p>© 2026 Caalm. All rights reserved.</p>
 				</div>
 			</div>
 		</footer>

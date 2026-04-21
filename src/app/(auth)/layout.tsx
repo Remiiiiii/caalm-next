@@ -37,6 +37,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 									alt="Caalm Logo"
 									width={48}
 									height={48}
+									className="h-auto w-12"
 								/>
 								<span className="text-2xl font-bold text-light-100">Caalm</span>
 							</div>
@@ -79,28 +80,28 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 										alt="avatar"
 										width={32}
 										height={32}
-										className="rounded-full border-3 border-white shadow-lg"
+										className="h-auto w-8 rounded-full border-3 border-white shadow-lg"
 									/>
 									<Image
 										src="/assets/images/2.png"
 										alt="avatar"
 										width={32}
 										height={32}
-										className="rounded-full border-3 border-white shadow-lg"
+										className="h-auto w-8 rounded-full border-3 border-white shadow-lg"
 									/>
 									<Image
 										src="/assets/images/3.png"
 										alt="avatar"
 										width={32}
 										height={32}
-										className="rounded-full border-3 border-white shadow-lg"
+										className="h-auto w-8 rounded-full border-3 border-white shadow-lg"
 									/>
 									<Image
 										src="/assets/images/5.png"
 										alt="avatar"
 										width={32}
 										height={32}
-										className="rounded-full border-3 border-white shadow-lg"
+										className="h-auto w-8 rounded-full border-3 border-white shadow-lg"
 									/>
 								</div>
 								<span className="text-md text-gray-600">
@@ -117,7 +118,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 							alt="logo"
 							width={50}
 							height={50}
-							style={{ width: "50px", height: "50px" }}
+							className="h-auto w-[50px]"
 						/>
 					</div>
 					{children}

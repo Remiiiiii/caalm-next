@@ -52,8 +52,8 @@ export const Header = () => {
 			borderRadius: 0,
 			marginTop: 0,
 			boxShadow: "none",
-			background: "transparent",
-			border: "1px solid transparent",
+			background: "rgba(255, 255, 255, 0)",
+			border: "1px solid rgba(255, 255, 255, 0)",
 			transition: { type: "spring", stiffness: 260, damping: 28 },
 		},
 	} as const;
@@ -91,7 +91,7 @@ export const Header = () => {
 				left: 0,
 				right: 0,
 				zIndex: 50,
-				background: "transparent",
+				background: "rgba(255, 255, 255, 0)",
 			}}
 		>
 			<motion.div
@@ -118,6 +118,7 @@ export const Header = () => {
 							alt="Logo"
 							width={40}
 							height={40}
+							className="h-auto w-10"
 						/>
 					</Link>
 					<span className="ml-1 text-2xl sm:text-xl font-bold text-slate-700">

@@ -12,14 +12,7 @@ interface ContractsResponse {
 
 const fetcher = async (url: string): Promise<UIFileDoc[]> => {
 	try {
-		console.log("[useContractsExpiring] Fetching from:", url);
 		const response = await fetch(url);
-
-		console.log("[useContractsExpiring] Response status:", {
-			ok: response.ok,
-			status: response.status,
-			statusText: response.statusText,
-		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
@@ -32,19 +25,6 @@ const fetcher = async (url: string): Promise<UIFileDoc[]> => {
 		}
 
 		const rawResult = await response.json();
-		console.log("[useContractsExpiring] Raw API response:", {
-			keys: Object.keys(rawResult),
-			hasSuccess: "success" in rawResult,
-			hasData: "data" in rawResult,
-			successValue: rawResult.success,
-			dataType: typeof rawResult.data,
-			dataIsArray: Array.isArray(rawResult.data),
-			dataLength: Array.isArray(rawResult.data)
-				? rawResult.data.length
-				: "not array",
-			fullResponse: rawResult,
-		});
-
 		const result: ContractsResponse = rawResult;
 
 		// Handle both response formats: { success: true, data: [...] } and { data: [...] }
@@ -81,11 +61,6 @@ const fetcher = async (url: string): Promise<UIFileDoc[]> => {
 			contracts = [];
 		}
 
-		console.log("[useContractsExpiring] Returning contracts:", {
-			count: contracts.length,
-			firstContract: contracts[0] || null,
-		});
-
 		return contracts;
 	} catch (error) {
 		console.error("[useContractsExpiring] Fetcher error:", error);
@@ -113,20 +88,6 @@ export function useContractsExpiring() {
 		},
 	);
 
-	// Debug logging in development
-	if (process.env.NODE_ENV === "development") {
-		console.log("[useContractsExpiring] Hook state:", {
-			dataType: typeof data,
-			dataIsArray: Array.isArray(data),
-			dataLength: Array.isArray(data) ? data.length : "not array",
-			isLoading,
-			hasError: !!error,
-			error: error?.message || error,
-			dataKeys: data && typeof data === "object" ? Object.keys(data) : [],
-			dataValue: data,
-		});
-	}
-
 	// Handle different data formats:
 	// 1. If data is already an array, use it
 	// 2. If data is an object with a 'data' property that's an array, extract it
@@ -141,10 +102,6 @@ export function useContractsExpiring() {
 		Array.isArray((data as any).data)
 	) {
 		contracts = (data as any).data;
-		console.warn(
-			"[useContractsExpiring] Data was wrapped in object, extracted array:",
-			contracts.length,
-		);
 	} else if (data && typeof data === "object") {
 		console.warn("[useContractsExpiring] Unexpected data format:", {
 			type: typeof data,

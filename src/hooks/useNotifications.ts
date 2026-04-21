@@ -24,6 +24,17 @@ const fetcher = async (url: string) => {
 		);
 	}
 	const data = await response.json();
+	// Stats endpoint: { success, data: { total, unread, read, byPriority, byType } }
+	if (
+		url.includes("/notifications/stats") &&
+		data &&
+		typeof data === "object" &&
+		data.data !== undefined &&
+		typeof data.data === "object" &&
+		!Array.isArray(data.data)
+	) {
+		return { data: data.data };
+	}
 	// Handle both direct array and wrapped response formats
 	if (Array.isArray(data)) {
 		return data;
@@ -43,15 +54,6 @@ const fetcher = async (url: string) => {
 export const useNotifications = (userId?: string): UseNotificationsReturn => {
 	const { user } = useAuth();
 	const currentUserId = userId || user?.$id;
-
-	// Debug logging
-	console.log("useNotifications Debug:", {
-		providedUserId: userId,
-		authUserId: user?.$id,
-		currentUserId,
-		userEmail: user?.email,
-		userName: user?.name,
-	});
 
 	const {
 		data: notifications,
@@ -389,7 +391,14 @@ export const useNotificationTypes = (): UseNotificationTypesReturn => {
 	};
 
 	return {
-		notificationTypes: notificationTypes?.data || [],
+		notificationTypes: Array.isArray(notificationTypes)
+			? notificationTypes
+			: notificationTypes &&
+					typeof notificationTypes === "object" &&
+					"data" in notificationTypes &&
+					Array.isArray((notificationTypes as { data: unknown }).data)
+				? (notificationTypes as { data: NotificationType[] }).data
+				: [],
 		isLoading,
 		error,
 		createNotificationType,
@@ -517,8 +526,14 @@ export const useRecentNotifications = ({
 		},
 	);
 
+	const list = Array.isArray(data)
+		? data
+		: data && typeof data === "object" && "data" in data
+			? (data as { data?: Notification[] }).data
+			: undefined;
+
 	return {
-		recentNotifications: data?.data || [],
+		recentNotifications: Array.isArray(list) ? list : [],
 		isLoading,
 		error,
 	};

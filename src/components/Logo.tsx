@@ -45,6 +45,7 @@ export default function Logo() {
 						alt="CAALM logo"
 						width={52}
 						height={52}
+						className="h-auto w-[52px]"
 						priority
 						sizes="52px"
 					/>

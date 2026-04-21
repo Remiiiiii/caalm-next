@@ -89,7 +89,7 @@ const Hero = () => {
 									alt=""
 									width={32}
 									height={32}
-									className="rounded-full border-2 border-white"
+									className="h-auto w-8 rounded-full border-2 border-white"
 									sizes="(max-width: 640px) 28px, 32px"
 									aria-hidden
 								/>
@@ -98,7 +98,7 @@ const Hero = () => {
 									alt=""
 									width={32}
 									height={32}
-									className="rounded-full border-2 border-white"
+									className="h-auto w-8 rounded-full border-2 border-white"
 									sizes="(max-width: 640px) 28px, 32px"
 									aria-hidden
 								/>
@@ -107,7 +107,7 @@ const Hero = () => {
 									alt=""
 									width={32}
 									height={32}
-									className="rounded-full border-2 border-white"
+									className="h-auto w-8 rounded-full border-2 border-white"
 									sizes="(max-width: 640px) 28px, 32px"
 									aria-hidden
 								/>
@@ -116,7 +116,7 @@ const Hero = () => {
 									alt=""
 									width={32}
 									height={32}
-									className="rounded-full border-2 border-white"
+									className="h-auto w-8 rounded-full border-2 border-white"
 									sizes="(max-width: 640px) 28px, 32px"
 									aria-hidden
 								/>
@@ -125,7 +125,7 @@ const Hero = () => {
 									alt=""
 									width={32}
 									height={32}
-									className="rounded-full border-2 border-white"
+									className="h-auto w-8 rounded-full border-2 border-white"
 									sizes="(max-width: 640px) 28px, 32px"
 									aria-hidden
 								/>
@@ -149,7 +149,7 @@ const Hero = () => {
 									alt="Nicolas Scalice"
 									width={32}
 									height={32}
-									className="rounded-full"
+									className="h-auto w-8 rounded-full"
 									loading="lazy"
 									sizes="32px"
 								/>
@@ -171,7 +171,7 @@ const Hero = () => {
 							alt="App Screenshot"
 							width={400}
 							height={400}
-							className="rounded-xl shadow-xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-90 pointer-events-none"
+							className="rounded-xl shadow-xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-90 pointer-events-none h-auto w-full max-w-[400px]"
 							priority
 							fetchPriority="high"
 							sizes="(max-width: 640px) 320px, (max-width: 1024px) 360px, 400px"
