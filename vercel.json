@@ -1,10 +1,9 @@
 {
+	"$schema": "https://openapi.vercel.sh/vercel.json",
 	"git": {
-		"deploymentEnabled": {
-			"main": true,
-			"[!main]": false
-		}
+		"deploymentEnabled": false
 	},
+	"ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 0; else exit 1; fi",
 	"crons": [
 		{
 			"path": "/api/notifications/process-digest",

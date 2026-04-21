@@ -1,0 +1,78 @@
+# Run Playwright E2E tests, then deploy to Vercel production only if tests pass.
+#
+# Required GitHub repository secrets:
+#   VERCEL_TOKEN       — Create at https://vercel.com/account/tokens
+#   VERCEL_PROJECT_ID  — Project Settings → General → Project ID
+#   VERCEL_USER_ID     — Your Vercel Team ID (Team Settings → General), used as org id for the deploy action
+#
+# Avoid double production deploys: in Vercel → Project → Settings → Git, either disable automatic
+# production deploys for the production branch, or add an Ignored Build Step that exits 0 without
+# building, and rely on this workflow for production releases.
+
+name: Tests and Vercel deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: pnpm run test:e2e
+
+  deploy:
+    name: Deploy to Vercel (production)
+    needs: playwright
+    runs-on: ubuntu-latest
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    env:
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_USER_ID: ${{ secrets.VERCEL_USER_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_USER_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: "--prod"
+          working-directory: ./
