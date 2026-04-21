@@ -373,7 +373,7 @@ export default function ComingSoonPage() {
 					<div className="max-w-7xl mx-auto">
 						<div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
 							<div className="flex items-center space-x-4 text-sm text-slate-600">
-								<span>© 2025 CAALM Solutions. All rights reserved.</span>
+								<span>© 2026 CAALM Solutions. All rights reserved.</span>
 							</div>
 							<div className="flex items-center space-x-6 text-sm">
 								<a
@@ -385,7 +385,7 @@ export default function ComingSoonPage() {
 								</a>
 								<div className="flex items-center space-x-1 text-slate-600">
 									<CheckCircle className="w-4 h-4 text-green-500" />
-									<span>Launching Q4 2025</span>
+									<span>Launching Q2 2026</span>
 								</div>
 							</div>
 						</div>
