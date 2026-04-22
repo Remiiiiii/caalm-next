@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
 
 		if (!orgId) {
 			return NextResponse.json(
-				{ error: "Organization ID is required" },
+				{
+					error: "Organization ID is required",
+					message: "orgId is required for dashboard invitations",
+				},
 				{ status: 400 },
 			);
 		}

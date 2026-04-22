@@ -1,12 +1,16 @@
 import { expect, test } from "@playwright/test";
 
+async function openNotificationCenter(page: import("@playwright/test").Page) {
+	await page.getByTestId("notification-bell").click();
+}
+
 test.describe("Notification System Component Tests", () => {
 	// Use authenticated project - dashboard requires authentication
 	test.use({ projectName: "chromium" });
 
 	test("should render notification center with test data", async ({ page }) => {
 		// Mock the API responses
-		await page.route("/api/notifications", async (route) => {
+		await page.route("**/api/notifications**", async (route) => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
@@ -81,9 +85,9 @@ test.describe("Notification System Component Tests", () => {
 		// Check if the page loaded successfully (fixed title expectation)
 		await expect(page).toHaveTitle(/CAALM Solutions/);
 
-		// Look for notification-related elements
-		// Note: This test assumes the notification center is accessible from the dashboard
-		// You may need to adjust the selectors based on your actual implementation
+		await expect(page.getByTestId("notification-bell")).toBeVisible();
+		await openNotificationCenter(page);
+
 		await expect(
 			page.locator('[data-testid="notification-center"]'),
 		).toBeVisible();
@@ -91,7 +95,7 @@ test.describe("Notification System Component Tests", () => {
 
 	test("should handle API errors gracefully", async ({ page }) => {
 		// Mock API error
-		await page.route("/api/notifications", async (route) => {
+		await page.route("**/api/notifications**", async (route) => {
 			await route.fulfill({
 				status: 500,
 				contentType: "application/json",
@@ -109,13 +113,13 @@ test.describe("Notification System Component Tests", () => {
 		// The page should still load even with API errors (fixed title expectation)
 		await expect(page).toHaveTitle(/CAALM Solutions/);
 
-		// Check for error handling
+		await openNotificationCenter(page);
 		await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
 	});
 
 	test("should handle empty notification list", async ({ page }) => {
 		// Mock empty notifications
-		await page.route("/api/notifications", async (route) => {
+		await page.route("**/api/notifications**", async (route) => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
@@ -133,7 +137,7 @@ test.describe("Notification System Component Tests", () => {
 		// The page should load successfully with empty data (fixed title expectation)
 		await expect(page).toHaveTitle(/CAALM Solutions/);
 
-		// Check for empty state
+		await openNotificationCenter(page);
 		await expect(page.locator('[data-testid="empty-state"]')).toBeVisible();
 	});
 });

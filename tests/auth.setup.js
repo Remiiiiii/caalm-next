@@ -3,14 +3,25 @@ import { test } from "@playwright/test";
 
 const authFile = "tests/.auth/user.json";
 
+const DASHBOARD_ENTRY = "/dashboard";
+const SETUP_GOTO_TIMEOUT = 60000;
+
+function getE2EUserId() {
+	const id = process.env.PLAYWRIGHT_E2E_USER_ID?.trim();
+	if (!id) {
+		throw new Error(
+			"PLAYWRIGHT_E2E_USER_ID is required for Playwright auth setup (users collection document $id). " +
+				"Set it in CI secrets and locally in .env.local — see GITHUB_SECRETS_SETUP.md.",
+		);
+	}
+	return id;
+}
+
 test("authenticate", async ({ page, context }) => {
-	// Set a shorter timeout for the entire test to prevent CI/CD cancellation
-	test.setTimeout(30000); // 30 seconds max - should be fast with mock auth
+	test.setTimeout(90000);
 
 	console.log("Starting authentication setup...");
 
-	// In test environments, skip the actual sign-in flow and create mock auth directly
-	// This is faster and more reliable for CI/CD
 	const isTestEnv =
 		process.env.CI ||
 		process.env.NODE_ENV === "test" ||
@@ -18,14 +29,24 @@ test("authenticate", async ({ page, context }) => {
 
 	if (isTestEnv) {
 		console.log(
-			"Test environment detected - creating mock authentication directly",
+			"Test environment detected — using 2FA cookies + real users table row",
 		);
 
-		// Create mock session cookie directly (no need to visit sign-in page)
+		const e2eUserId = getE2EUserId();
+
 		await context.addCookies([
 			{
-				name: "a_session_test",
-				value: "test-session-token",
+				name: "2fa_completed",
+				value: "true",
+				domain: "localhost",
+				path: "/",
+				httpOnly: true,
+				secure: false,
+				sameSite: "Lax",
+			},
+			{
+				name: "2fa_user_id",
+				value: e2eUserId,
 				domain: "localhost",
 				path: "/",
 				httpOnly: true,
@@ -34,33 +55,37 @@ test("authenticate", async ({ page, context }) => {
 			},
 		]);
 
-		// Navigate to a page to set localStorage (use root instead of sign-in to avoid unnecessary page load)
-		await page.goto("/", { waitUntil: "domcontentloaded", timeout: 10000 });
-		await page.evaluate(() => {
-			localStorage.setItem("auth-token", "test-auth-token");
-			localStorage.setItem("user-email", "test@example.com");
-			localStorage.setItem(
-				"cached_user",
-				JSON.stringify({
-					user: {
-						$id: "test-user-id",
-						email: "test@example.com",
-						name: "Test User",
-					},
-					timestamp: Date.now(),
-				}),
-			);
-			sessionStorage.setItem("authenticated", "true");
+		await page.goto("/", {
+			waitUntil: "domcontentloaded",
+			timeout: SETUP_GOTO_TIMEOUT,
 		});
 
-		// Navigate to dashboard directly
-		await page.goto("/dashboard", {
+		await page.evaluate(
+			({ userId }) => {
+				localStorage.setItem("auth-token", "test-auth-token");
+				localStorage.setItem("user-email", "test@example.com");
+				localStorage.setItem(
+					"cached_user",
+					JSON.stringify({
+						user: {
+							$id: userId,
+							email: "test@example.com",
+							name: "Test User",
+						},
+						timestamp: Date.now(),
+					}),
+				);
+				sessionStorage.setItem("authenticated", "true");
+			},
+			{ userId: e2eUserId },
+		);
+
+		await page.goto(DASHBOARD_ENTRY, {
 			waitUntil: "domcontentloaded",
-			timeout: 10000,
+			timeout: SETUP_GOTO_TIMEOUT,
 		});
-		console.log("Navigated to dashboard with mock session");
+		console.log("Navigated to dashboard entry with 2FA cookies");
 	} else {
-		// Only do full sign-in flow in non-test environments
 		await page.goto("/sign-in", {
 			waitUntil: "domcontentloaded",
 			timeout: 30000,
@@ -93,9 +118,7 @@ test("authenticate", async ({ page, context }) => {
 		await signInButton.click();
 		console.log("Clicked sign-in button");
 
-		// Wait for response with shorter timeout
 		try {
-			// Reduced timeout from 10s to 3s - if OTP doesn't appear quickly, skip it
 			await page.waitForSelector(
 				'p:has-text("Check your email"), p:has-text("check your email")',
 				{
@@ -104,8 +127,6 @@ test("authenticate", async ({ page, context }) => {
 			);
 			console.log("OTP flow detected - proceeding with mock authentication");
 
-			// For testing purposes, we'll create a mock session cookie
-			// This simulates an authenticated session
 			await context.addCookies([
 				{
 					name: "a_session_test",
@@ -118,7 +139,6 @@ test("authenticate", async ({ page, context }) => {
 				},
 			]);
 
-			// Also set localStorage for client-side checks
 			await page.evaluate(() => {
 				localStorage.setItem("auth-token", "test-auth-token");
 				localStorage.setItem("user-email", "test@example.com");
@@ -136,10 +156,9 @@ test("authenticate", async ({ page, context }) => {
 				sessionStorage.setItem("authenticated", "true");
 			});
 
-			// Navigate to dashboard directly
-			await page.goto("/dashboard", {
+			await page.goto(DASHBOARD_ENTRY, {
 				waitUntil: "domcontentloaded",
-				timeout: 15000,
+				timeout: SETUP_GOTO_TIMEOUT,
 			});
 			console.log("Navigated to dashboard after mock auth");
 		} catch (error) {
@@ -148,7 +167,6 @@ test("authenticate", async ({ page, context }) => {
 				error,
 			);
 
-			// Create mock session cookie anyway
 			await context.addCookies([
 				{
 					name: "a_session_test",
@@ -161,7 +179,6 @@ test("authenticate", async ({ page, context }) => {
 				},
 			]);
 
-			// Set localStorage
 			await page.evaluate(() => {
 				localStorage.setItem("auth-token", "test-auth-token");
 				localStorage.setItem("user-email", "test@example.com");
@@ -178,24 +195,19 @@ test("authenticate", async ({ page, context }) => {
 				);
 			});
 
-			// Try to navigate to dashboard
-			await page.goto("/dashboard", {
+			await page.goto(DASHBOARD_ENTRY, {
 				waitUntil: "domcontentloaded",
-				timeout: 15000,
+				timeout: SETUP_GOTO_TIMEOUT,
 			});
 			console.log("Navigated to dashboard with mock session");
 		}
 	}
 
-	// Verify we can access the dashboard (with shorter timeout)
 	await page.waitForLoadState("domcontentloaded");
-	// Removed waitForTimeout - not needed, just wait for load state
 
-	// Check if we're actually on a dashboard page
 	const currentUrl = page.url();
 	console.log("Final URL:", currentUrl);
 
-	// Save authentication state (with timeout)
 	try {
 		await page.context().storageState({ path: authFile });
 		console.log(
@@ -204,12 +216,21 @@ test("authenticate", async ({ page, context }) => {
 		);
 	} catch (error) {
 		console.error("Failed to save authentication state:", error);
-		// Create a minimal auth file with cookies to prevent test failures
+		const e2eUserId = process.env.PLAYWRIGHT_E2E_USER_ID?.trim() || "test-user-id";
 		const minimalAuth = {
 			cookies: [
 				{
-					name: "a_session_test",
-					value: "test-session-token",
+					name: "2fa_completed",
+					value: "true",
+					domain: "localhost",
+					path: "/",
+					httpOnly: true,
+					secure: false,
+					sameSite: "Lax",
+				},
+				{
+					name: "2fa_user_id",
+					value: e2eUserId,
 					domain: "localhost",
 					path: "/",
 					httpOnly: true,
@@ -233,7 +254,7 @@ test("authenticate", async ({ page, context }) => {
 							name: "cached_user",
 							value: JSON.stringify({
 								user: {
-									$id: "test-user-id",
+									$id: e2eUserId,
 									email: "test@example.com",
 									name: "Test User",
 								},
@@ -246,6 +267,6 @@ test("authenticate", async ({ page, context }) => {
 		};
 		fs.mkdirSync("tests/.auth", { recursive: true });
 		fs.writeFileSync(authFile, JSON.stringify(minimalAuth, null, 2));
-		console.log("Created minimal auth file with mock session");
+		console.log("Created minimal auth file with 2FA cookies");
 	}
 });

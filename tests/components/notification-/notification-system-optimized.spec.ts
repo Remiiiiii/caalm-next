@@ -1,9 +1,15 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
 	mockErrorResponses,
 	mockLargeNotificationDataset,
 	mockNotificationAPIs,
 } from "../../helpers/api-mocks.js";
+
+async function openNotificationCenter(page: Page) {
+	const bell = page.getByTestId("notification-bell");
+	if ((await bell.count()) === 0) return;
+	await bell.click();
+}
 
 function getNotificationsFromResponse(data: any) {
 	if (Array.isArray(data.notifications)) return data.notifications;
@@ -199,6 +205,8 @@ test.describe("Notification System Enhancement (Optimized)", () => {
 				return; // Skip test if auth is required
 			}
 
+			await openNotificationCenter(page);
+
 			// Check if notification center is present (it might not be integrated yet)
 			const notificationCenter = page.locator(
 				'[data-testid="notification-center"]',
@@ -223,6 +231,8 @@ test.describe("Notification System Enhancement (Optimized)", () => {
 				timeout: 30000,
 			});
 			await page.waitForLoadState("domcontentloaded");
+
+			await openNotificationCenter(page);
 
 			// Look for notification elements
 			const notificationItems = page.locator(
@@ -284,6 +294,8 @@ test.describe("Notification System Enhancement (Optimized)", () => {
 			// Verify the page loads without crashing
 			const mainElement = page.locator('main, [data-testid="dashboard"], body');
 			await expect(mainElement).toBeVisible();
+
+			await openNotificationCenter(page);
 
 			// Check if notifications are loaded (if component is integrated)
 			const notificationList = page.locator(

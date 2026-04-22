@@ -30,7 +30,7 @@ const DASHBOARD_ROLE_MAP: Record<string, string[]> = {
  */
 function getDashboardUrlForRole(roleName: string | null): string {
 	if (!roleName) {
-		return "/dashboard";
+		return "/dashboard/executive";
 	}
 
 	const roleToDashboardMap: Record<string, string> = {
@@ -39,9 +39,35 @@ function getDashboardUrlForRole(roleName: string | null): string {
 		"Department Manager": "/dashboard/departmentmanager",
 		Viewer: "/dashboard/viewer",
 		IT: "/dashboard/it",
+		Executive: "/dashboard/executive",
 	};
 
-	return roleToDashboardMap[roleName] || "/dashboard";
+	return roleToDashboardMap[roleName] || "/dashboard/executive";
+}
+
+/**
+ * Server-only: resolve where `/dashboard` should send the current user.
+ * Returns `null` if unauthenticated or missing org.
+ */
+export async function getDashboardHomeRedirectPath(): Promise<string | null> {
+	try {
+		const user = await getCurrentUser();
+		if (!user) {
+			return null;
+		}
+
+		const defaultOrg = await getUserDefaultOrganization(user.$id);
+		if (!defaultOrg) {
+			return null;
+		}
+
+		const userRoles = await getUserRoles(user.$id, defaultOrg.orgId);
+		const highestPriorityRole = getHighestPriorityRole(userRoles);
+		return getDashboardUrlForRole(highestPriorityRole);
+	} catch (error) {
+		console.error("[getDashboardHomeRedirectPath] Error:", error);
+		return null;
+	}
 }
 
 /**

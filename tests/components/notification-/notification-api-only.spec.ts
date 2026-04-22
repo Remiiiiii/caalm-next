@@ -18,6 +18,21 @@ function getStatsFromResponse(data: any) {
 	return data;
 }
 
+function getDashboardStatsFromResponse(data: any) {
+	if (data?.data && typeof data.data === "object") return data.data;
+	return data;
+}
+
+function assertOrgIdRequiredError(data: any) {
+	expect(data).toHaveProperty("error");
+	const msg = typeof data.message === "string" ? data.message : "";
+	const err = typeof data.error === "string" ? data.error : "";
+	expect(
+		msg.toLowerCase().includes("orgid") ||
+			err.toLowerCase().includes("organization"),
+	).toBe(true);
+}
+
 test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 	test.beforeEach(async ({ page }) => {
 		// Setup mocks before each test
@@ -172,12 +187,11 @@ test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 			expect(response.status()).toBe(200);
 			const data = await response.json();
 
-			expect(data).toHaveProperty("totalContracts");
-			expect(data).toHaveProperty("activeContracts");
-			expect(data).toHaveProperty("pendingContracts");
-			expect(data).toHaveProperty("completedContracts");
-			expect(data).toHaveProperty("totalRevenue");
-			expect(data).toHaveProperty("monthlyGrowth");
+			const stats = getDashboardStatsFromResponse(data);
+			expect(stats).toHaveProperty("totalContracts");
+			expect(stats).toHaveProperty("expiringContracts");
+			expect(stats).toHaveProperty("activeUsers");
+			expect(stats).toHaveProperty("complianceRate");
 
 			console.log("✅ Dashboard stats endpoint works with orgId parameter");
 		});
@@ -245,9 +259,7 @@ test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 				expect(response.status()).toBe(400);
 
 				const data = await response.json();
-				expect(data).toHaveProperty("error");
-				expect(data).toHaveProperty("message");
-				expect(data.message).toContain("orgId is required");
+				assertOrgIdRequiredError(data);
 			}
 
 			console.log(

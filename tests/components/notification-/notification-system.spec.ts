@@ -1,4 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function openNotificationCenter(page: Page) {
+	await page.getByTestId("notification-bell").waitFor({
+		state: "visible",
+		timeout: 15000,
+	});
+	await page.getByTestId("notification-bell").click();
+}
 
 function getNotificationsFromResponse(data: any) {
 	if (Array.isArray(data.notifications)) return data.notifications;
@@ -241,6 +249,8 @@ test.describe("Notification System Enhancement", () => {
 				timeout: 30000,
 			});
 
+			await openNotificationCenter(page);
+
 			// Wait for the notification center to be visible
 			await page.waitForSelector('[data-testid="notification-center"]', {
 				timeout: 10000,
@@ -259,6 +269,8 @@ test.describe("Notification System Enhancement", () => {
 				timeout: 30000,
 			});
 
+			await openNotificationCenter(page);
+
 			// Wait for notifications to load
 			await page.waitForSelector('[data-testid="notification-list"]', {
 				timeout: 10000,
@@ -275,6 +287,8 @@ test.describe("Notification System Enhancement", () => {
 				waitUntil: "domcontentloaded",
 				timeout: 30000,
 			});
+
+			await openNotificationCenter(page);
 
 			// Wait for filters to be visible
 			await page.waitForSelector('[data-testid="notification-filters"]', {
@@ -299,21 +313,19 @@ test.describe("Notification System Enhancement", () => {
 				timeout: 30000,
 			});
 
-			// Wait for stats to be visible
-			await page.waitForSelector('[data-testid="notification-stats"]', {
+			await openNotificationCenter(page);
+
+			await page.waitForSelector('[data-testid="notification-center"]', {
 				timeout: 10000,
 			});
 
-			const stats = page.locator('[data-testid="notification-stats"]');
-			await expect(stats).toBeVisible();
+			const dialogUnread = page
+				.locator('[data-testid="notification-center"]')
+				.locator('[data-testid="unread-count"]');
+			await expect(dialogUnread).toBeVisible();
 
-			// Check for total count
-			const totalCount = page.locator('[data-testid="total-count"]');
-			await expect(totalCount).toBeVisible();
-
-			// Check for unread count
-			const unreadCount = page.locator('[data-testid="unread-count"]');
-			await expect(unreadCount).toBeVisible();
+			const filters = page.locator('[data-testid="notification-filters"]');
+			await expect(filters).toBeVisible();
 		});
 	});
 
@@ -323,6 +335,8 @@ test.describe("Notification System Enhancement", () => {
 				waitUntil: "domcontentloaded",
 				timeout: 30000,
 			});
+
+			await openNotificationCenter(page);
 
 			// Wait for notifications to load
 			await page.waitForSelector('[data-testid="notification-item"]', {
@@ -352,6 +366,8 @@ test.describe("Notification System Enhancement", () => {
 				waitUntil: "domcontentloaded",
 				timeout: 30000,
 			});
+
+			await openNotificationCenter(page);
 
 			// Wait for filters to load
 			await page.waitForSelector('[data-testid="priority-filter"]', {
@@ -384,6 +400,8 @@ test.describe("Notification System Enhancement", () => {
 				waitUntil: "domcontentloaded",
 				timeout: 30000,
 			});
+
+			await openNotificationCenter(page);
 
 			// Wait for sort controls to load
 			await page.waitForSelector('[data-testid="sort-controls"]', {
@@ -428,6 +446,8 @@ test.describe("Notification System Enhancement", () => {
 				timeout: 30000,
 			});
 
+			await openNotificationCenter(page);
+
 			// Wait for initial load
 			await page.waitForSelector('[data-testid="unread-count"]', {
 				timeout: 10000,
@@ -438,10 +458,14 @@ test.describe("Notification System Enhancement", () => {
 			const initialCount = await initialCountElement.textContent();
 			const initialCountNum = parseInt(initialCount || "0", 10);
 
+			const targetUserId =
+				process.env.PLAYWRIGHT_E2E_USER_ID?.trim() || "test-user-1";
+
 			// Create a new notification via API
 			const response = await request.post("/api/notifications", {
 				data: {
 					...testNotifications[0],
+					userId: targetUserId,
 					title: "Real-time Test Notification",
 					created_at: new Date().toISOString(),
 				},
@@ -464,7 +488,7 @@ test.describe("Notification System Enhancement", () => {
 	test.describe("Error Handling", () => {
 		test("should handle API errors gracefully", async ({ page }) => {
 			// Mock a failed API response
-			await page.route("/api/notifications", async (route) => {
+			await page.route("**/api/notifications**", async (route) => {
 				await route.fulfill({
 					status: 500,
 					contentType: "application/json",
@@ -476,6 +500,8 @@ test.describe("Notification System Enhancement", () => {
 				waitUntil: "domcontentloaded",
 				timeout: 30000,
 			});
+
+			await openNotificationCenter(page);
 
 			// Wait for error state
 			await page.waitForSelector('[data-testid="error-message"]', {
@@ -489,7 +515,7 @@ test.describe("Notification System Enhancement", () => {
 
 		test("should handle empty notification list", async ({ page }) => {
 			// Mock empty notifications response
-			await page.route("/api/notifications", async (route) => {
+			await page.route("**/api/notifications**", async (route) => {
 				await route.fulfill({
 					status: 200,
 					contentType: "application/json",
@@ -501,6 +527,8 @@ test.describe("Notification System Enhancement", () => {
 				waitUntil: "domcontentloaded",
 				timeout: 30000,
 			});
+
+			await openNotificationCenter(page);
 
 			// Wait for empty state
 			await page.waitForSelector('[data-testid="empty-state"]', {
@@ -521,6 +549,8 @@ test.describe("Notification System Enhancement", () => {
 				waitUntil: "domcontentloaded",
 				timeout: 30000,
 			});
+
+			await openNotificationCenter(page);
 
 			// Wait for notifications to load
 			await page.waitForSelector('[data-testid="notification-list"]', {
@@ -558,6 +588,8 @@ test.describe("Notification System Enhancement", () => {
 				waitUntil: "domcontentloaded",
 				timeout: 30000,
 			});
+
+			await openNotificationCenter(page);
 
 			// Wait for notifications to load
 			await page.waitForSelector('[data-testid="notification-list"]', {

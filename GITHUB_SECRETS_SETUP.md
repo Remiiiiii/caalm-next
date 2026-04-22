@@ -213,6 +213,16 @@ After adding all secrets, verify they're configured:
 **Total Required Secrets: 35**
 **Total Optional Secrets: 8**
 
+### Playwright E2E (authenticated dashboard tests)
+
+Add this **repository secret** so CI can complete [`tests/auth.setup.js`](tests/auth.setup.js) with a real Appwrite **users collection** row (same database as `NEXT_PUBLIC_APPWRITE_USERS_COLLECTION`):
+
+| Secret Name | Description |
+| ----------- | ----------- |
+| `PLAYWRIGHT_E2E_USER_ID` | Document `$id` of a dedicated E2E user in your users table (not necessarily the Appwrite Account ID). The user must resolve via [`getCurrentUserFrom2FA`](src/lib/actions/user.actions.ts) when cookies `2fa_completed=true` and `2fa_user_id` are set. Grant org/RBAC so the user can open the dashboards your tests hit (e.g. `/dashboard/executive`). |
+
+For local Playwright runs, set the same value in `.env.local` or the shell, for example: `PLAYWRIGHT_E2E_USER_ID=<your-user-document-id>`.
+
 ## Troubleshooting
 
 ### "Project with the requested ID could not be found"
