@@ -8,14 +8,17 @@ export async function GET(request: NextRequest) {
 
 		if (!userId) {
 			return NextResponse.json(
-				{ error: "User ID is required" },
+				{
+					error: "Missing required parameter: user_id",
+					message: "user_id is required for stats endpoint",
+				},
 				{ status: 400 },
 			);
 		}
 
 		const stats = await notificationService.getNotificationStats(userId);
 
-		return NextResponse.json({ success: true, data: stats });
+		return NextResponse.json({ success: true, data: stats, ...stats });
 	} catch (error: any) {
 		console.error("Failed to fetch notification stats:", error);
 
@@ -45,6 +48,16 @@ export async function GET(request: NextRequest) {
 						},
 						byType: {},
 					},
+					total: 0,
+					unread: 0,
+					read: 0,
+					byPriority: {
+						low: 0,
+						medium: 0,
+						high: 0,
+						urgent: 0,
+					},
+					byType: {},
 				},
 				{ status: 200 },
 			);

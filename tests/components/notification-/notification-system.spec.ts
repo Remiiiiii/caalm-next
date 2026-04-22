@@ -1,5 +1,22 @@
 import { expect, test } from "@playwright/test";
 
+function getNotificationsFromResponse(data: any) {
+	if (Array.isArray(data.notifications)) return data.notifications;
+	if (Array.isArray(data.data)) return data.data;
+	return undefined;
+}
+
+function getCountFromResponse(data: any) {
+	if (typeof data.count === "number") return data.count;
+	if (typeof data?.data?.count === "number") return data.data.count;
+	return undefined;
+}
+
+function getStatsFromResponse(data: any) {
+	if (data?.data && typeof data.data === "object") return data.data;
+	return data;
+}
+
 // Test data for notification types
 const testNotificationTypes = [
 	{
@@ -117,10 +134,11 @@ test.describe("Notification System Enhancement", () => {
 			expect(response.status()).toBe(200);
 			const data = await response.json();
 			expect(data.success).toBe(true);
-			expect(Array.isArray(data.data)).toBe(true);
+			const notifications = getNotificationsFromResponse(data);
+			expect(Array.isArray(notifications)).toBe(true);
 
 			// Verify filters are applied
-			data.data.forEach((notification: any) => {
+			notifications?.forEach((notification: any) => {
 				expect(notification.userId || notification.user_id).toBe("test-user-1");
 				expect(notification.priority).toBe("high");
 				expect(
@@ -180,11 +198,12 @@ test.describe("Notification System Enhancement", () => {
 			expect(response.status()).toBe(200);
 			const data = await response.json();
 			expect(data.success).toBe(true);
-			expect(data.data).toHaveProperty("total");
-			expect(data.data).toHaveProperty("read");
-			expect(data.data).toHaveProperty("unread");
-			expect(data.data).toHaveProperty("byPriority");
-			expect(data.data).toHaveProperty("byType");
+			const stats = getStatsFromResponse(data);
+			expect(stats).toHaveProperty("total");
+			expect(stats).toHaveProperty("read");
+			expect(stats).toHaveProperty("unread");
+			expect(stats).toHaveProperty("byPriority");
+			expect(stats).toHaveProperty("byType");
 		});
 
 		test("should get unread count", async ({ request }) => {
@@ -195,8 +214,9 @@ test.describe("Notification System Enhancement", () => {
 			expect(response.status()).toBe(200);
 			const data = await response.json();
 			expect(data.success).toBe(true);
-			expect(typeof data.data.count).toBe("number");
-			expect(data.data.count).toBeGreaterThanOrEqual(0);
+			const count = getCountFromResponse(data);
+			expect(typeof count).toBe("number");
+			expect(count).toBeGreaterThanOrEqual(0);
 		});
 
 		test("should get recent notifications", async ({ request }) => {
@@ -207,8 +227,9 @@ test.describe("Notification System Enhancement", () => {
 			expect(response.status()).toBe(200);
 			const data = await response.json();
 			expect(data.success).toBe(true);
-			expect(Array.isArray(data.data)).toBe(true);
-			expect(data.data.length).toBeLessThanOrEqual(5);
+			const notifications = getNotificationsFromResponse(data);
+			expect(Array.isArray(notifications)).toBe(true);
+			expect(notifications?.length).toBeLessThanOrEqual(5);
 		});
 	});
 

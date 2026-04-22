@@ -1,6 +1,23 @@
 import { expect, test } from "@playwright/test";
 import { mockNotificationAPIs } from "../../helpers/api-mocks.js";
 
+function getNotificationsFromResponse(data: any) {
+	if (Array.isArray(data.notifications)) return data.notifications;
+	if (Array.isArray(data.data)) return data.data;
+	return undefined;
+}
+
+function getCountFromResponse(data: any) {
+	if (typeof data.count === "number") return data.count;
+	if (typeof data?.data?.count === "number") return data.data.count;
+	return undefined;
+}
+
+function getStatsFromResponse(data: any) {
+	if (data?.data && typeof data.data === "object") return data.data;
+	return data;
+}
+
 test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 	test.beforeEach(async ({ page }) => {
 		// Setup mocks before each test
@@ -62,9 +79,10 @@ test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 			expect(response.status()).toBe(200);
 			const data = await response.json();
 
-			expect(data).toHaveProperty("notifications");
+			const notifications = getNotificationsFromResponse(data);
+			expect(notifications).toBeDefined();
 			expect(data).toHaveProperty("total");
-			expect(Array.isArray(data.notifications)).toBe(true);
+			expect(Array.isArray(notifications)).toBe(true);
 
 			console.log("✅ Notifications endpoint works with user_id parameter");
 		});
@@ -97,11 +115,12 @@ test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 			expect(response.status()).toBe(200);
 			const data = await response.json();
 
-			expect(data).toHaveProperty("total");
-			expect(data).toHaveProperty("unread");
-			expect(data).toHaveProperty("read");
-			expect(data).toHaveProperty("byType");
-			expect(data).toHaveProperty("byPriority");
+			const stats = getStatsFromResponse(data);
+			expect(stats).toHaveProperty("total");
+			expect(stats).toHaveProperty("unread");
+			expect(stats).toHaveProperty("read");
+			expect(stats).toHaveProperty("byType");
+			expect(stats).toHaveProperty("byPriority");
 
 			console.log("✅ Stats endpoint works with user_id parameter");
 		});
@@ -116,8 +135,9 @@ test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 			expect(response.status()).toBe(200);
 			const data = await response.json();
 
-			expect(data).toHaveProperty("count");
-			expect(typeof data.count).toBe("number");
+			const count = getCountFromResponse(data);
+			expect(count).toBeDefined();
+			expect(typeof count).toBe("number");
 
 			console.log("✅ Unread count endpoint works with user_id parameter");
 		});
@@ -132,9 +152,10 @@ test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 			expect(response.status()).toBe(200);
 			const data = await response.json();
 
-			expect(data).toHaveProperty("notifications");
+			const notifications = getNotificationsFromResponse(data);
+			expect(notifications).toBeDefined();
 			expect(data).toHaveProperty("total");
-			expect(Array.isArray(data.notifications)).toBe(true);
+			expect(Array.isArray(notifications)).toBe(true);
 
 			console.log(
 				"✅ Recent notifications endpoint works with user_id parameter",

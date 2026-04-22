@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
 
 		if (!userId) {
 			return NextResponse.json(
-				{ error: "User ID is required" },
+				{
+					error: "Missing required parameter: user_id",
+					message: "user_id is required for notifications endpoint",
+				},
 				{ status: 400 },
 			);
 		}
@@ -85,6 +88,7 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json({
 			success: true,
 			data: result.data,
+			notifications: result.data,
 			total: result.total,
 			page: result.page,
 			limit: result.limit,
@@ -107,6 +111,7 @@ export async function GET(request: NextRequest) {
 				{
 					success: true,
 					data: [],
+					notifications: [],
 					total: 0,
 					page: 1,
 					limit: 20,
