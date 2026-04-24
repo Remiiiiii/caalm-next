@@ -178,7 +178,15 @@ export async function proxy(request: NextRequest) {
 
 	const isProtectedPath = protectedPrefixes.some((p) => pathname.startsWith(p));
 
-	// Dashboard route protection - check role-based access for all dashboard routes
+	// Legacy executive URL → canonical /dashboard (role-based home)
+	if (
+		pathname === "/dashboard/executive" ||
+		pathname.startsWith("/dashboard/executive/")
+	) {
+		return NextResponse.redirect(new URL("/dashboard", request.url));
+	}
+
+	// Dashboard route protection — permission + role-id policy
 	if (pathname.startsWith("/dashboard")) {
 		const { redirectIfNotAuthorizedForDashboard } = await import(
 			"@/lib/auth/dashboard-guards"

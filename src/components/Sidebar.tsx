@@ -385,6 +385,14 @@ const Sidebar = memo(({ name, avatar, email, role, division }: Props) => {
 				url: "/dashboard/it",
 				permissions: [PERMISSIONS.IT.VIEW_MONITORING],
 			},
+			"Content Creator": {
+				url: "/dashboard/content-creator",
+				permissions: [
+					PERMISSIONS.NEWS.READ,
+					PERMISSIONS.NEWS.CREATE,
+					PERMISSIONS.NEWS.UPDATE,
+				],
+			},
 		};
 
 		// Generate dashboard items from user's actual roles

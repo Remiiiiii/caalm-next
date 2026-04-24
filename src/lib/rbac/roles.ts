@@ -17,6 +17,10 @@ export interface Role {
 	createdAt: string;
 	updatedAt: string;
 	createdBy: string;
+	/** Lower = higher rank for default dashboard (optional; Appwrite column) */
+	priority?: number;
+	/** Default home path e.g. /dashboard/superadmin (optional; Appwrite column) */
+	homeDashboardPath?: string | null;
 }
 
 /**

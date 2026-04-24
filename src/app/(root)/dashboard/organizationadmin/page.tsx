@@ -5,10 +5,10 @@ import {
 	getCurrentUser,
 	getCurrentUserFrom2FA,
 } from "@/lib/actions/user.actions";
+import { getUnauthorizedDashboardRedirect } from "@/lib/rbac/dashboard-access-policy";
 import AdminDashboard from "../AdminDashboard";
 
 export default async function OrganizationAdminDashboardPage() {
-	// Try to get user from session first, then fall back to 2FA-based auth
 	let currentUser = await getCurrentUser();
 	if (!currentUser) {
 		currentUser = await getCurrentUserFrom2FA();
@@ -16,6 +16,14 @@ export default async function OrganizationAdminDashboardPage() {
 
 	if (!currentUser) {
 		redirect("/sign-in");
+	}
+
+	const guard = await getUnauthorizedDashboardRedirect(
+		currentUser.$id,
+		"/dashboard/organizationadmin",
+	);
+	if (guard) {
+		redirect(guard);
 	}
 
 	return <AdminDashboard user={currentUser} />;

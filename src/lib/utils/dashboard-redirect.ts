@@ -1,50 +1,63 @@
 /**
- * Utility functions for dashboard redirects based on user roles
+ * Client-side dashboard URL resolution (uses server policy endpoint).
  */
 
+import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 import { getHighestPriorityRole } from "@/lib/utils/role-priority";
 
-/**
- * Map role names to dashboard URLs
- */
-const ROLE_TO_DASHBOARD_MAP: Record<string, string> = {
+/** Fallback when dashboard-home API is unavailable */
+const ROLE_NAME_TO_PATH: Record<string, string> = {
 	"Super Admin": "/dashboard/superadmin",
 	"Organization Admin": "/dashboard/organizationadmin",
 	"Department Manager": "/dashboard/departmentmanager",
 	Viewer: "/dashboard/viewer",
 	IT: "/dashboard/it",
+	"Content Creator": "/dashboard/content-creator",
 };
 
-// Client-side cache for dashboard URLs (5 minute TTL)
 const dashboardUrlCache = new Map<string, { url: string; timestamp: number }>();
 
 /**
- * Get dashboard URL for a user based on their role
- * @param userId - User ID
- * @param orgId - Organization ID (optional, defaults to 'default_organization')
- * @returns Dashboard URL or '/dashboard' as fallback
+ * Get dashboard URL for a user (server policy via API).
  */
 export async function getDashboardUrlForUser(
 	userId: string,
 	orgId: string = "default_organization",
 ): Promise<string> {
 	try {
-		// Check client-side cache first
 		const cacheKey = `${userId}:${orgId}`;
 		const cached = dashboardUrlCache.get(cacheKey);
 		if (cached && Date.now() - cached.timestamp < 300000) {
 			return cached.url;
 		}
 
-		// Fetch user's roles from the API (now cached server-side)
+		const homeRes = await fetch(
+			`/api/users/${userId}/dashboard-home?orgId=${encodeURIComponent(orgId)}`,
+			{
+				method: "GET",
+				headers: { "Content-Type": "application/json" },
+				cache: "force-cache",
+			},
+		);
+
+		if (homeRes.ok) {
+			const homeData = await homeRes.json();
+			const path = homeData?.data?.path;
+			if (typeof path === "string" && path.startsWith("/dashboard")) {
+				dashboardUrlCache.set(cacheKey, {
+					url: path,
+					timestamp: Date.now(),
+				});
+				return path;
+			}
+		}
+
 		const response = await fetch(
 			`/api/users/${userId}/roles${orgId ? `?orgId=${orgId}` : ""}`,
 			{
 				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				cache: "force-cache", // Use browser cache
+				headers: { "Content-Type": "application/json" },
+				cache: "force-cache",
 			},
 		);
 
@@ -53,19 +66,26 @@ export async function getDashboardUrlForUser(
 		}
 
 		const data = await response.json();
-
 		let dashboardUrl = "/dashboard";
 		if (data.success && data.data?.roles && data.data.roles.length > 0) {
-			// Convert role objects to the format expected by getHighestPriorityRole
-			const roles = data.data.roles.map((r: any) => ({ roleName: r.name }));
+			const roles = data.data.roles.map((r: any) => ({
+				roleName: r.name,
+				priority:
+					typeof r.priority === "number"
+						? r.priority
+						: ROLE_DASHBOARD_FALLBACK[r.$id]?.priority,
+			}));
 			const selectedRole = getHighestPriorityRole(roles);
-
-			if (selectedRole && ROLE_TO_DASHBOARD_MAP[selectedRole]) {
-				dashboardUrl = ROLE_TO_DASHBOARD_MAP[selectedRole];
+			if (selectedRole) {
+				const roleObj = data.data.roles.find((r: any) => r.name === selectedRole);
+				const byId = roleObj?.$id
+					? ROLE_DASHBOARD_FALLBACK[roleObj.$id]?.homeDashboardPath
+					: undefined;
+				dashboardUrl =
+					byId || ROLE_NAME_TO_PATH[selectedRole] || "/dashboard";
 			}
 		}
 
-		// Cache the result
 		dashboardUrlCache.set(cacheKey, {
 			url: dashboardUrl,
 			timestamp: Date.now(),
@@ -81,9 +101,7 @@ export async function getDashboardUrlForUser(
 }
 
 /**
- * Get dashboard URL from role name (for client-side use)
- * @param roleName - Role name
- * @returns Dashboard URL or '/dashboard' as fallback
+ * Map role display name → home path when API is unavailable (best-effort).
  */
 export function getDashboardUrlFromRoleName(
 	roleName: string | null | undefined,
@@ -91,6 +109,5 @@ export function getDashboardUrlFromRoleName(
 	if (!roleName) {
 		return "/dashboard";
 	}
-
-	return ROLE_TO_DASHBOARD_MAP[roleName] || "/dashboard";
+	return ROLE_NAME_TO_PATH[roleName] || "/dashboard";
 }

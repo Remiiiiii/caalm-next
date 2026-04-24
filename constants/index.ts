@@ -13,7 +13,7 @@ export const navItems = [
 	{
 		name: "Dashboard",
 		icon: "/assets/icons/dashboard.svg",
-		url: ["/dashboard/executive", "/dashboard/manager", "/dashboard/admin"],
+		url: ["/dashboard", "/dashboard/manager", "/dashboard/admin"],
 	},
 	{
 		name: "Documents",

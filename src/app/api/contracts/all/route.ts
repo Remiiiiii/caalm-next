@@ -1,27 +1,59 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
-import { requireAuth } from "@/lib/api/contracts/middleware/auth.middleware";
+import {
+	requireAuth,
+	requireContractPermission,
+} from "@/lib/api/contracts/middleware/auth.middleware";
 import {
 	errorResponse,
 	generateRequestId,
 	successResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import {
+	buildContractQueries,
+	getContractListScope,
+} from "@/lib/rbac/data-scope";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
-		// Authentication
 		const authError = await requireAuth(request);
 		if (authError) return authError;
 
-		// Cache key for all contracts
-		const cacheKey = CACHE_KEYS.contracts.all();
+		const permError = await requireContractPermission(request, "read");
+		if (permError) return permError;
 
-		// Fetch contracts with caching (10 minutes TTL)
+		const user = await getCurrentUser();
+		if (!user) {
+			return errorResponse(new Error("Unauthorized"), 401, { requestId });
+		}
+
+		const defaultOrg = await getUserDefaultOrganization(user.$id);
+		if (!defaultOrg) {
+			return errorResponse(new Error("Organization required"), 403, {
+				requestId,
+			});
+		}
+
+		const scope = await getContractListScope(user.$id, defaultOrg.orgId);
+		const scopeQueries = buildContractQueries(scope);
+		const cacheKey =
+			scope.mode === "all_org"
+				? CACHE_KEYS.contracts.all()
+				: `contracts:all:scoped:${user.$id}:${scope.mode}:${
+						scope.mode === "department"
+							? scope.department
+							: scope.mode === "own"
+								? scope.userId
+								: ""
+					}`;
+
 		const contractsResult = await CacheManager.withCache(
 			"contracts/all",
 			cacheKey,
@@ -29,13 +61,11 @@ export async function GET(request: NextRequest) {
 				try {
 					const { tablesDB } = await createAdminClient();
 
-					// Fetch all contracts from the database
 					return await tablesDB.listRows({
 						databaseId: appwriteConfig.databaseId!,
 						tableId: appwriteConfig.contractsCollectionId!,
 						queries: [
-							// Order by expiry date ascending (soonest first), nulls last
-							// Note: Contracts without expiry dates will appear at the end
+							...scopeQueries,
 							Query.orderAsc("contractExpiryDate"),
 						],
 					});

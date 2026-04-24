@@ -45,4 +45,15 @@ export const ROLE_ATTRIBUTES = [
 		size: 255,
 		required: true,
 	},
+	{
+		key: "priority",
+		type: "integer" as const,
+		required: false,
+	},
+	{
+		key: "homeDashboardPath",
+		type: "string" as const,
+		size: 255,
+		required: false,
+	},
 ] as const;

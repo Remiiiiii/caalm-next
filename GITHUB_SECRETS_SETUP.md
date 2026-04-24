@@ -219,9 +219,18 @@ Add this **repository secret** so CI can complete [`tests/auth.setup.js`](tests/
 
 | Secret Name | Description |
 | ----------- | ----------- |
-| `PLAYWRIGHT_E2E_USER_ID` | Document `$id` of a dedicated E2E user in your users table (not necessarily the Appwrite Account ID). The user must resolve via [`getCurrentUserFrom2FA`](src/lib/actions/user.actions.ts) when cookies `2fa_completed=true` and `2fa_user_id` are set. Grant org/RBAC so the user can open the dashboards your tests hit (e.g. `/dashboard/executive`). |
+| `PLAYWRIGHT_E2E_USER_ID` | Document `$id` of a dedicated E2E user in your users table (not necessarily the Appwrite Account ID). The user must resolve via [`getCurrentUserFrom2FA`](src/lib/actions/user.actions.ts) when cookies `2fa_completed=true` and `2fa_user_id` are set. Grant org/RBAC so the user can open `/dashboard` (redirects to the correct role home). |
 
 For local Playwright runs, set the same value in `.env.local` or the shell, for example: `PLAYWRIGHT_E2E_USER_ID=<your-user-document-id>`.
+
+### RBAC `roles` table (optional columns)
+
+Add these optional attributes to the Appwrite **Tables** `roles` table when you want dashboard home routing stored in the database (until then, the app uses [`ROLE_DASHBOARD_FALLBACK`](src/lib/rbac/role-dashboard-metadata.ts)):
+
+- `priority` (integer) — lower number = higher precedence for default dashboard selection.
+- `homeDashboardPath` (string) — e.g. `/dashboard/superadmin`.
+
+After columns exist, run: `pnpm tsx scripts/backfill-role-dashboard-metadata.ts` (requires server API key env vars).
 
 ## Troubleshooting
 

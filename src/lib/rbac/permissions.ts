@@ -10,6 +10,7 @@ import { Query } from "node-appwrite";
 import type { PermissionKey } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 
 // Lazy load redis-cache to avoid bundling in client components
@@ -214,10 +215,18 @@ export async function getUserPermissions(
  * Get all roles assigned to a user in an organization
  * Optimized with Redis caching and parallel role name fetching
  */
+export type UserRoleAssignment = {
+	roleId: string;
+	roleName?: string | null;
+	/** Lower = higher rank for home dashboard (from DB or fallback map) */
+	priority?: number;
+	homeDashboardPath?: string | null;
+};
+
 export async function getUserRoles(
 	userId: string,
 	orgId: string,
-): Promise<Array<{ roleId: string; roleName?: string }>> {
+): Promise<UserRoleAssignment[]> {
 	if (!userId || !orgId) {
 		return [];
 	}
@@ -226,7 +235,7 @@ export async function getUserRoles(
 	const cacheKey = CACHE_KEYS.rbac.userRoles(userId, orgId);
 	const ttl = CACHE_TTLS.veryLong; // 15 minutes
 
-	return getOrSet<Array<{ roleId: string; roleName?: string }>>(
+	return getOrSet<UserRoleAssignment[]>(
 		cacheKey,
 		async () => {
 			try {
@@ -242,7 +251,6 @@ export async function getUserRoles(
 					return [];
 				}
 
-				// Fetch all role names in parallel
 				const rolesWithNames = await Promise.all(
 					userRoles.rows.map(async (ur: any) => {
 						try {
@@ -251,14 +259,27 @@ export async function getUserRoles(
 								tableId: "roles",
 								rowId: ur.roleId,
 							});
+							const r = role as Record<string, unknown> & { name?: string };
+							const fb = ROLE_DASHBOARD_FALLBACK[ur.roleId];
+							const dbPriority = r.priority;
+							const dbHome = r.homeDashboardPath;
 							return {
 								roleId: ur.roleId,
-								roleName: (role as any)?.name || null,
+								roleName: r?.name || null,
+								priority:
+									typeof dbPriority === "number" ? dbPriority : fb?.priority,
+								homeDashboardPath:
+									typeof dbHome === "string" && dbHome.trim()
+										? dbHome.trim()
+										: (fb?.homeDashboardPath ?? null),
 							};
 						} catch {
+							const fb = ROLE_DASHBOARD_FALLBACK[ur.roleId];
 							return {
 								roleId: ur.roleId,
 								roleName: null,
+								priority: fb?.priority,
+								homeDashboardPath: fb?.homeDashboardPath ?? null,
 							};
 						}
 					}),

@@ -151,6 +151,7 @@ docs/
 # Google credentials
 src/pages/api/caalm-466120-c3e75c165eeb.json
 
+.tests.md
 *.ps1
 uploads/
 document/
