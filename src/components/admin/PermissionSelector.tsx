@@ -85,17 +85,20 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 	};
 
 	return (
-		<ScrollArea className="h-[600px]">
+		<ScrollArea className="h-[600px] pr-3">
 			<div className="space-y-4">
 				{Object.entries(permissionsByCategory).map(([category, perms]) => {
 					const allSelected = isCategorySelected(category);
 					const partiallySelected = isCategoryPartiallySelected(category);
 
 					return (
-						<Card key={category}>
+						<Card
+							key={category}
+							className="border border-white/35 bg-white/20 shadow-sm backdrop-blur-sm"
+						>
 							<CardHeader className="pb-3">
-								<div className="flex items-center justify-between">
-									<CardTitle className="text-sm capitalize">
+								<div className="flex items-center justify-between gap-3">
+									<CardTitle className="text-sm font-semibold capitalize text-slate-700">
 										{category.replace("_", " ")}
 									</CardTitle>
 									<Checkbox
@@ -116,7 +119,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 								{perms.map((perm) => (
 									<div
 										key={perm.$id}
-										className="flex items-start space-x-2 p-2 rounded hover:bg-muted/50"
+										className="flex items-start space-x-2 rounded-md border border-transparent p-2 transition-colors hover:border-white/30 hover:bg-white/25"
 									>
 										<Checkbox
 											id={perm.$id}
@@ -125,15 +128,15 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 											disabled={disabled}
 											className="mt-1"
 										/>
-										<div className="flex-1">
+										<div className="min-w-0 flex-1">
 											<Label
 												htmlFor={perm.$id}
-												className="text-sm font-medium cursor-pointer"
+												className="cursor-pointer text-sm font-medium text-slate-800"
 											>
 												{perm.name}
 											</Label>
 											{perm.description && (
-												<p className="text-xs text-muted-foreground mt-1">
+												<p className="mt-1 text-xs text-slate-600">
 													{perm.description}
 												</p>
 											)}

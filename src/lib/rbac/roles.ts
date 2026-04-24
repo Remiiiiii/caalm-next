@@ -107,6 +107,57 @@ export async function listRoles(orgId?: string | null): Promise<Role[]> {
 }
 
 /**
+ * Count user_roles rows per roleId for an organization (assignment cardinality).
+ * Paginates to handle large orgs.
+ */
+export async function getRoleMemberCountsForOrg(
+	orgId: string,
+): Promise<Record<string, number>> {
+	const counts: Record<string, number> = {};
+	if (!orgId?.trim()) {
+		return counts;
+	}
+
+	const { tablesDB } = await createAdminClient();
+	const databaseId = appwriteConfig.databaseId || "default-db";
+	const pageSize = 100;
+	let offset = 0;
+
+	for (;;) {
+		const result = await tablesDB.listRows({
+			databaseId,
+			tableId: "user_roles",
+			queries: [
+				Query.equal("orgId", orgId),
+				Query.limit(pageSize),
+				Query.offset(offset),
+			],
+		});
+
+		for (const row of result.rows) {
+			const rid = (row as { roleId?: string }).roleId;
+			if (rid) {
+				counts[rid] = (counts[rid] ?? 0) + 1;
+			}
+		}
+
+		if (result.rows.length < pageSize) {
+			break;
+		}
+		offset += pageSize;
+		// Safety cap — adjust if a single org can exceed this
+		if (offset > 50_000) {
+			console.warn(
+				"[getRoleMemberCountsForOrg] Stopped pagination at 50k assignments",
+			);
+			break;
+		}
+	}
+
+	return counts;
+}
+
+/**
  * Update a role
  */
 export async function updateRole(
@@ -198,35 +249,63 @@ export async function assignPermissionsToRole(
 ): Promise<boolean> {
 	try {
 		const { tablesDB } = await createAdminClient();
+		const databaseId = appwriteConfig.databaseId || "default-db";
+		const permissionsTableId =
+			appwriteConfig.permissionsCollectionId || "permissions";
 
-		// Get permission IDs from keys
-		const permissions = await tablesDB.listRows({
-			databaseId: appwriteConfig.databaseId || "default-db",
-			tableId: appwriteConfig.permissionsCollectionId || "permissions",
-			queries: [Query.equal("key", permissionKeys)],
-		});
-
-		const permissionIds = permissions.rows.map((p: any) => p.$id);
+		const keys = [
+			...new Set(
+				permissionKeys
+					.map((k) => String(k).trim())
+					.filter((k) => k.length > 0),
+			),
+		] as PermissionKey[];
 
 		// Remove existing permissions for this role
 		const existing = await tablesDB.listRows({
-			databaseId: appwriteConfig.databaseId || "default-db",
+			databaseId,
 			tableId: "role_permissions",
-			queries: [Query.equal("roleId", roleId)],
+			queries: [Query.equal("roleId", roleId), Query.limit(500)],
 		});
 
 		for (const rp of existing.rows) {
 			await tablesDB.deleteRow({
-				databaseId: appwriteConfig.databaseId || "default-db",
+				databaseId,
 				tableId: "role_permissions",
 				rowId: rp.$id,
 			});
 		}
 
-		// Add new permissions
-		for (const permissionId of permissionIds) {
+		if (keys.length === 0) {
+			return true;
+		}
+
+		// Batch key lookups — Query.equal("key", array) is not reliable across SDK versions
+		const BATCH_SIZE = 50;
+		const permissionIdSet = new Set<string>();
+
+		for (let i = 0; i < keys.length; i += BATCH_SIZE) {
+			const batch = keys.slice(i, i + BATCH_SIZE);
+			const keyQueries =
+				batch.length === 1
+					? [Query.equal("key", batch[0]!)]
+					: [Query.or(batch.map((k) => Query.equal("key", k)))];
+
+			const permissions = await tablesDB.listRows({
+				databaseId,
+				tableId: permissionsTableId,
+				queries: [...keyQueries, Query.limit(200)],
+			});
+
+			for (const row of permissions.rows) {
+				const id = (row as { $id?: string }).$id;
+				if (id) permissionIdSet.add(id);
+			}
+		}
+
+		for (const permissionId of permissionIdSet) {
 			await tablesDB.createRow({
-				databaseId: appwriteConfig.databaseId || "default-db",
+				databaseId,
 				tableId: "role_permissions",
 				rowId: ID.unique(),
 				data: {

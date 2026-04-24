@@ -154,6 +154,7 @@ export default function LicensesView({
 					height={250}
 					className="mx-auto mb-4"
 				/>
+				<p className="text-2xl font-bold text-slate-700">OOPS!</p>
 				<p className="body-1 text-slate-700">No licenses found</p>
 			</div>
 		);

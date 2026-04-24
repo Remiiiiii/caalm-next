@@ -14,6 +14,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
+import {
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/lib/ui/data-table-styles";
 import { convertFileSize } from "@/lib/utils";
 import type { License } from "@/types/licenses";
 import FormattedDateTime, { FormattedDate } from "./FormattedDateTime";
@@ -394,43 +399,47 @@ export default function LicensesTableView({
 			<div className="glass-card-cap" />
 			<CardContent className="p-6">
 				<div className="w-full overflow-x-auto">
-					<Table>
-						<TableHeader>
-							<TableRow className="border-slate-200 bg-slate-50">
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+					<Table className="border-separate border-spacing-0">
+						<TableHeader className="[&_tr]:border-b-0">
+							<TableRow className={DATA_TABLE_HEADER_ROW}>
+								<TableHead
+									className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}
+								>
 									License
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 									Status
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 									Size
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 									Uploaded On
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 									Expires On
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 									Department
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 									Assigned To
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 									Uploaded By
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 text-right whitespace-nowrap">
+								<TableHead
+									className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+								>
 									Actions
 								</TableHead>
 							</TableRow>
 						</TableHeader>
-						<TableBody>
+						<TableBody className="[&_tr:last-child>td]:border-b-0">
 							{licenses.map((license: License) => (
 								<TableRow
 									key={license.$id}
-									className="border-slate-200 hover:bg-white/60 hover:shadow-md transition-all duration-200 cursor-pointer"
+									className={`${DATA_TABLE_BODY_ROW_BASE} cursor-pointer`}
 								>
 									<TableCell className="py-4">
 										<div className="flex items-center gap-3 min-w-0">
