@@ -1,10 +1,16 @@
 "use client";
 
 import type React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
 interface Permission {
 	$id: string;
@@ -19,6 +25,10 @@ interface PermissionSelectorProps {
 	selectedPermissions: Set<string>;
 	onSelectionChange: (selected: Set<string>) => void;
 	disabled?: boolean;
+}
+
+function formatCategoryLabel(category: string): string {
+	return category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 const PermissionSelector: React.FC<PermissionSelectorProps> = ({
@@ -37,6 +47,10 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 			return acc;
 		},
 		{},
+	);
+
+	const sortedCategories = Object.entries(permissionsByCategory).sort(
+		([a], [b]) => a.localeCompare(b),
 	);
 
 	const handleToggle = (permissionKey: string) => {
@@ -84,71 +98,138 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 		return selectedCount > 0 && selectedCount < categoryPermissions.length;
 	};
 
-	return (
-		<ScrollArea className="h-[600px] pr-3">
-			<div className="space-y-4">
-				{Object.entries(permissionsByCategory).map(([category, perms]) => {
-					const allSelected = isCategorySelected(category);
-					const partiallySelected = isCategoryPartiallySelected(category);
+	const groupSelectedCount = (category: string) => {
+		const categoryPermissions = permissionsByCategory[category] || [];
+		return categoryPermissions.filter((perm) =>
+			selectedPermissions.has(perm.key),
+		).length;
+	};
 
-					return (
-						<Card
-							key={category}
-							className="border border-white/35 bg-white/20 shadow-sm backdrop-blur-sm"
+	if (sortedCategories.length === 0) {
+		return (
+			<p className="py-6 text-center text-sm text-slate-600">
+				No permissions available.
+			</p>
+		);
+	}
+
+	return (
+		<Accordion type="multiple" className="space-y-2">
+			{sortedCategories.map(([category, perms]) => {
+				const allSelected = isCategorySelected(category);
+				const partiallySelected = isCategoryPartiallySelected(category);
+				const selectedInGroup = groupSelectedCount(category);
+				const totalInGroup = perms.length;
+
+				return (
+					<AccordionItem
+						key={category}
+						value={category}
+						className="rounded-lg border border-white/35 bg-white/15 px-1 backdrop-blur-sm"
+					>
+						<AccordionTrigger
+							className={cn(
+								"px-3 py-3 text-left hover:no-underline",
+								"data-[state=open]:border-b data-[state=open]:border-white/25",
+							)}
 						>
-							<CardHeader className="pb-3">
-								<div className="flex items-center justify-between gap-3">
-									<CardTitle className="text-sm font-semibold capitalize text-slate-700">
-										{category.replace("_", " ")}
-									</CardTitle>
-									<Checkbox
+							<div className="flex min-w-0 flex-1 items-center justify-between gap-3 pr-2">
+								<div className="flex min-w-0 items-center gap-2 sm:gap-3">
+									<span className="truncate text-sm font-semibold text-slate-800">
+										{formatCategoryLabel(category)}
+									</span>
+									<Badge
+										variant={selectedInGroup > 0 ? "default" : "outline"}
+										className={cn(
+											"h-6 min-h-0 shrink-0 border-slate-200 px-2 py-0 text-xs font-semibold",
+											selectedInGroup === 0
+												? "bg-white/50 text-slate-600"
+												: "bg-white/50 text-slate-600",
+										)}
+									>
+										{selectedInGroup}/{totalInGroup}
+									</Badge>
+								</div>
+								<div
+									className="flex shrink-0 items-center gap-2"
+									onClick={(e) => e.stopPropagation()}
+									onPointerDown={(e) => e.stopPropagation()}
+									onKeyDown={(e) => e.stopPropagation()}
+								>
+									{allSelected ? (
+										<button
+											type="button"
+											className="text-xs font-medium text-[#0f5384] hover:underline"
+											disabled={disabled}
+											onClick={() => handleCategoryToggle(category, false)}
+										>
+											Deselect All
+										</button>
+									) : (
+										<button
+											type="button"
+											className="text-xs font-medium text-[#0f5384] hover:underline"
+											disabled={disabled}
+											onClick={() => handleCategoryToggle(category, true)}
+										>
+											Select All
+										</button>
+									)}
+									<Switch
 										checked={allSelected}
-										ref={(el) => {
-											if (el) {
-												el.indeterminate = partiallySelected;
-											}
-										}}
+										disabled={disabled || totalInGroup === 0}
 										onCheckedChange={(checked) =>
-											handleCategoryToggle(category, checked === true)
+											handleCategoryToggle(category, checked)
 										}
-										disabled={disabled}
+										aria-label={
+											allSelected
+												? `Clear all ${formatCategoryLabel(category)} permissions`
+												: `Select all ${formatCategoryLabel(category)} permissions`
+										}
 									/>
 								</div>
-							</CardHeader>
-							<CardContent className="space-y-2">
-								{perms.map((perm) => (
-									<div
-										key={perm.$id}
-										className="flex items-start space-x-2 rounded-md border border-transparent p-2 transition-colors hover:border-white/30 hover:bg-white/25"
-									>
-										<Checkbox
-											id={perm.$id}
-											checked={selectedPermissions.has(perm.key)}
-											onCheckedChange={() => handleToggle(perm.key)}
-											disabled={disabled}
-											className="mt-1"
-										/>
-										<div className="min-w-0 flex-1">
-											<Label
-												htmlFor={perm.$id}
-												className="cursor-pointer text-sm font-medium text-slate-800"
-											>
-												{perm.name}
-											</Label>
-											{perm.description && (
-												<p className="mt-1 text-xs text-slate-600">
-													{perm.description}
-												</p>
-											)}
+							</div>
+						</AccordionTrigger>
+						<AccordionContent className="px-3 pb-2 pt-0">
+							<div className="divide-y divide-white/20 rounded-md border border-white/20 bg-white/10">
+								{perms.map((perm) => {
+									const rowId = `perm-${perm.$id}`;
+									const on = selectedPermissions.has(perm.key);
+									return (
+										<div
+											key={perm.$id}
+											className="flex items-start gap-3 p-3 sm:items-center"
+										>
+											<div className="min-w-0 flex-1">
+												<Label
+													htmlFor={rowId}
+													className="cursor-pointer text-sm font-medium text-slate-800"
+												>
+													{perm.name}
+												</Label>
+												{perm.description ? (
+													<p className="mt-0.5 text-xs text-slate-600">
+														{perm.description}
+													</p>
+												) : null}
+											</div>
+											<Switch
+												id={rowId}
+												checked={on}
+												disabled={disabled}
+												onCheckedChange={() => handleToggle(perm.key)}
+												className="mt-0.5 shrink-0 sm:mt-0 mr-2"
+												aria-label={`${on ? "Revoke" : "Grant"} ${perm.name}`}
+											/>
 										</div>
-									</div>
-								))}
-							</CardContent>
-						</Card>
-					);
-				})}
-			</div>
-		</ScrollArea>
+									);
+								})}
+							</div>
+						</AccordionContent>
+					</AccordionItem>
+				);
+			})}
+		</Accordion>
 	);
 };
 

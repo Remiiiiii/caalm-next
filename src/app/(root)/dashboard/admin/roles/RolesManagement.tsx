@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { AlertTriangle, Ban, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -12,7 +12,6 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
-	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -61,9 +60,11 @@ function getRoleCreatedIso(role: RoleRow): string | undefined {
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
 const MIN_MS = 60_000;
-
 /** One integer + unit (sec, min, hour(s), or day(s)); `nowMs` fixed per page visit until refresh. */
-function formatRoleCreatedLabel(iso: string | undefined, nowMs: number): string {
+function formatRoleCreatedLabel(
+	iso: string | undefined,
+	nowMs: number,
+): string {
 	if (!iso) return "—";
 	const t = new Date(iso).getTime();
 	if (Number.isNaN(t)) return "—";
@@ -172,7 +173,7 @@ function RoleActionsMenu({
 
 const RolesManagement = () => {
 	const [roles, setRoles] = useState<RoleRow[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [loading, setIsLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [roleToDelete, setRoleToDelete] = useState<RoleRow | null>(null);
@@ -186,7 +187,7 @@ const RolesManagement = () => {
 
 	const fetchRoles = useCallback(async () => {
 		try {
-			setLoading(true);
+			setIsLoading(true);
 			const response = await fetch(`/api/admin/roles?orgId=${orgId || ""}`);
 			const data = await response.json();
 
@@ -207,7 +208,7 @@ const RolesManagement = () => {
 				variant: "destructive",
 			});
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
 	}, [orgId, toast]);
 
@@ -395,7 +396,7 @@ const RolesManagement = () => {
 						onClick={() => router.push("/dashboard/admin/roles/new")}
 						className="primary-btn shrink-0"
 					>
-						<Plus className="mr-2 h-4 w-4" />
+						<Plus className="h-4 w-4" />
 						Create role
 					</Button>
 				</PermissionGate>
@@ -472,30 +473,75 @@ const RolesManagement = () => {
 				</div>
 			)}
 
-			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Delete role</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete the role &quot;
-							{roleToDelete?.name}
-							&quot;? This cannot be undone. Roles assigned to users cannot be
-							deleted.
-						</DialogDescription>
-					</DialogHeader>
-					<div className="flex justify-end gap-2">
-						<Button
-							variant="outline"
-							onClick={() => {
-								setDeleteDialogOpen(false);
-								setRoleToDelete(null);
-							}}
-						>
-							Cancel
-						</Button>
-						<Button variant="destructive" onClick={handleDelete}>
-							Delete
-						</Button>
+			<Dialog
+				open={deleteDialogOpen}
+				onOpenChange={(open) => {
+					setDeleteDialogOpen(open);
+					if (!open) setRoleToDelete(null);
+				}}
+			>
+				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
+					<DialogTitle className="sr-only">Delete Role</DialogTitle>
+					{/* Cap */}
+					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
+
+					{/* Header */}
+					<div className="glass-dialog-alert-section">
+						<div className="flex gap-2">
+							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+							<h2 className="text-base font-semibold sidebar-gradient-text">
+								Delete Role
+							</h2>
+						</div>
+						<div>
+							<DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
+								Are you sure you want to delete &quot;{roleToDelete?.name}
+								&quot;? This action cannot be undone.
+							</DialogDescription>
+						</div>
+					</div>
+
+					<div className="px-6 py-5 space-y-3 bg-white">
+						<p className="text-sm text-slate-600">
+							This will permanently remove the role from the system.
+						</p>
+					</div>
+					<div className="glass-dialog-alert-footer">
+						<div className="text-xs text-slate-500 w-20">
+							This action is permanent.
+						</div>
+						<div className="flex items-center justify-end gap-3">
+							<Button
+								type="button"
+								variant="ghost"
+								className="primary-btn px-3 sm:px-4"
+								onClick={() => {
+									setDeleteDialogOpen(false);
+									setRoleToDelete(null);
+								}}
+							>
+								<Ban className="h-4 w-4" />
+								Cancel
+							</Button>
+							<Button
+								type="button"
+								variant="ghost"
+								className="primary-btn px-3 sm:px-4"
+								onClick={() => void handleDelete()}
+							>
+								<Trash2 className="h-4 w-4" />
+								{loading ? "Deleting..." : "Delete Role"}
+								{loading && (
+									<Image
+										src="/assets/icons/loader.svg"
+										alt="loader"
+										width={16}
+										height={16}
+										className="animate-spin ml-2"
+									/>
+								)}
+							</Button>
+						</div>
 					</div>
 				</DialogContent>
 			</Dialog>

@@ -2,14 +2,13 @@
 
 import { ArrowLeft, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import PermissionSelector from "@/components/admin/PermissionSelector";
 import { PermissionGate } from "@/components/PermissionGate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +43,17 @@ const CreateRole = () => {
 	const router = useRouter();
 	const { orgId } = useOrganization();
 
+	const selectionSummary = useMemo(() => {
+		const count = selectedPermissions.size;
+		const groups = new Set<string>();
+		for (const p of permissions) {
+			if (selectedPermissions.has(p.key)) {
+				groups.add(p.category || "other");
+			}
+		}
+		return { count, groupCount: groups.size };
+	}, [permissions, selectedPermissions]);
+
 	const fetchPermissions = useCallback(async () => {
 		try {
 			setLoading(true);
@@ -61,8 +71,7 @@ const CreateRole = () => {
 					variant: "destructive",
 				});
 			}
-		} catch (error) {
-			console.error("Error fetching permissions:", error);
+		} catch {
 			toast({
 				title: "Error",
 				description: "Failed to fetch permissions",
@@ -118,8 +127,7 @@ const CreateRole = () => {
 					variant: "destructive",
 				});
 			}
-		} catch (error) {
-			console.error("Error creating role:", error);
+		} catch {
 			toast({
 				title: "Error",
 				description: "Failed to create role",
@@ -130,9 +138,16 @@ const CreateRole = () => {
 		}
 	};
 
+	const summaryPhrase = (() => {
+		const { count, groupCount } = selectionSummary;
+		const p = count === 1 ? "permission" : "permissions";
+		const g = groupCount === 1 ? "group" : "groups";
+		return `Selected: ${count} ${p} across ${groupCount} ${g}`;
+	})();
+
 	if (loading) {
 		return (
-			<div className="container mx-auto p-6">
+			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
 				<div className="py-16 text-center text-slate-600">
 					Loading permissions…
 				</div>
@@ -141,25 +156,23 @@ const CreateRole = () => {
 	}
 
 	return (
-		<div className="container mx-auto space-y-8 p-6">
+		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
+			<Button
+				variant="ghost"
+				size="sm"
+				className="mb-4 shrink-0 text-slate-600 hover:text-slate-900 bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+				onClick={() => router.push("/dashboard/admin/roles")}
+			>
+				<ArrowLeft className="h-4 w-4" />
+				Back
+			</Button>
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-					<Button
-						variant="ghost"
-						size="sm"
-						className="shrink-0 text-slate-600 hover:text-slate-900"
-						onClick={() => router.push("/dashboard/admin/roles")}
-					>
-						<ArrowLeft className="h-4 w-4" />
-						Back
-					</Button>
 					<div>
-						<h1 className="text-3xl font-bold sidebar-gradient-text">
-							Create role
-						</h1>
-						<p className="mt-2 text-slate-600">
+						<h1 className="h1 capitalize sidebar-gradient-text">Create role</h1>
+						<p className="mt-2 text-sm text-slate-600 sm:text-base">
 							Define a name and description, then choose permissions from your
-							organization&apos;s catalog.
+							organization's catalog.
 						</p>
 					</div>
 				</div>
@@ -173,8 +186,8 @@ const CreateRole = () => {
 					</p>
 				}
 			>
-				<div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-					<section className="space-y-3 lg:col-span-1">
+				<div className="mt-8 space-y-8">
+					<section className="space-y-3">
 						<div>
 							<h2 className="text-xl font-semibold sidebar-gradient-text">
 								Role details
@@ -184,76 +197,78 @@ const CreateRole = () => {
 								pickers.
 							</p>
 						</div>
-						<Card className="w-full border border-white/40 bg-white/30 shadow-lg backdrop-blur">
-							<div className="glass-card-cap" />
-							<CardContent className="space-y-4 p-6">
-								<div className="space-y-2">
-									<Label htmlFor="name" className="text-slate-700">
-										Name *
-									</Label>
-									<Input
-										id="name"
-										value={formData.name}
-										onChange={(e) =>
-											setFormData({ ...formData, name: e.target.value })
-										}
-										placeholder="e.g. Project manager"
-										className="border-white/40 bg-white/40"
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="description" className="text-slate-700">
-										Description
-									</Label>
-									<Textarea
-										id="description"
-										value={formData.description}
-										onChange={(e) =>
-											setFormData({
-												...formData,
-												description: e.target.value,
-											})
-										}
-										placeholder="What this role is allowed to do in plain language…"
-										rows={4}
-										className="border-white/40 bg-white/40"
-									/>
-								</div>
-								<Button
-									type="button"
-									onClick={() => void handleSave()}
-									disabled={saving}
-									className="primary-btn w-full"
-								>
-									<Save className="h-4 w-4" />
-									{saving ? "Creating role…" : "Create role"}
-								</Button>
-							</CardContent>
-						</Card>
+						<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-end">
+							<div className="space-y-2">
+								<Label htmlFor="name" className="text-slate-700">
+									Name *
+								</Label>
+								<Input
+									id="name"
+									value={formData.name}
+									onChange={(e) =>
+										setFormData({ ...formData, name: e.target.value })
+									}
+									placeholder="e.g. Project manager"
+									className="border-white/40 bg-white/40"
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="description" className="text-slate-700">
+									Description
+								</Label>
+								<Input
+									id="description"
+									value={formData.description}
+									onChange={(e) =>
+										setFormData({
+											...formData,
+											description: e.target.value,
+										})
+									}
+									placeholder="Short summary of what this role is for"
+									className="border-white/40 bg-white/40"
+								/>
+							</div>
+						</div>
 					</section>
 
-					<section className="space-y-3 lg:col-span-2">
+					<section className="space-y-3">
 						<div>
 							<h2 className="text-xl font-semibold sidebar-gradient-text">
 								Permissions
 							</h2>
 							<p className="mt-1 text-sm text-slate-600">
-								Permissions control what actions users assigned to this role can
-								perform within the system. Only checked items will be granted.
+								Permissions control what actions users assigned to a role can
+								perform within the system. Only toggled items will be granted.
 							</p>
 						</div>
-						<Card className="w-full border border-white/40 bg-white/30 shadow-lg backdrop-blur">
+						<Card className="glass-card w-full">
 							<div className="glass-card-cap" />
-							<CardContent className="p-6">
-								<PermissionSelector
-									permissions={permissions}
-									selectedPermissions={selectedPermissions}
-									onSelectionChange={setSelectedPermissions}
-									disabled={saving}
-								/>
+							<CardContent className="p-4 sm:p-6">
+								<div className="max-h-[70vh] overflow-y-auto pr-2">
+									<PermissionSelector
+										permissions={permissions}
+										selectedPermissions={selectedPermissions}
+										onSelectionChange={setSelectedPermissions}
+										disabled={saving}
+									/>
+								</div>
 							</CardContent>
 						</Card>
 					</section>
+
+					<footer className="flex flex-col gap-4 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+						<p className="text-sm text-slate-600">{summaryPhrase}</p>
+						<Button
+							type="button"
+							onClick={() => void handleSave()}
+							disabled={saving || !formData.name.trim()}
+							className="primary-btn w-full sm:w-auto sm:shrink-0"
+						>
+							<Save className="h-4 w-4" />
+							{saving ? "Creating role…" : "Create role"}
+						</Button>
+					</footer>
 				</div>
 			</PermissionGate>
 		</div>

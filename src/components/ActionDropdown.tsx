@@ -878,7 +878,7 @@ const ActionDropdown = ({
 
 					{/* Header */}
 					<div className="glass-dialog-alert-section">
-						<div className="flex  gap-2">
+						<div className="flex gap-2">
 							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
 							<h2 className="text-base font-semibold sidebar-gradient-text">
 								Delete File
