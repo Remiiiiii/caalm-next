@@ -13,6 +13,7 @@ import type React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AnalyticsErrorBoundary from "./AnalyticsErrorBoundary";
 
@@ -184,6 +185,13 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
 	if (isLoading) {
 		return (
 			<div className="space-y-6">
+				<div className="flex justify-center py-2">
+					<LoadingSpinner
+						size="sm"
+						label="Loading analytics..."
+						className="!p-0"
+					/>
+				</div>
 				<div className="animate-pulse">
 					<div className="h-8 bg-white/20 rounded-xl w-1/3 mb-4"></div>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

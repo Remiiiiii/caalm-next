@@ -240,6 +240,21 @@ export async function deleteRole(roleId: string): Promise<boolean> {
 	}
 }
 
+const ROLE_PERM_LIST_CHUNK = 100;
+/** Parallel Appwrite writes per batch (stay under typical rate limits). */
+const ROLE_PERM_WRITE_CONCURRENCY = 24;
+
+async function runInConcurrencyBatches<T>(
+	items: T[],
+	concurrency: number,
+	fn: (item: T) => Promise<unknown>,
+): Promise<void> {
+	for (let i = 0; i < items.length; i += concurrency) {
+		const chunk = items.slice(i, i + concurrency);
+		await Promise.all(chunk.map((item) => fn(item)));
+	}
+}
+
 /**
  * Assign permissions to a role
  */
@@ -261,19 +276,33 @@ export async function assignPermissionsToRole(
 			),
 		] as PermissionKey[];
 
-		// Remove existing permissions for this role
-		const existing = await tablesDB.listRows({
-			databaseId,
-			tableId: "role_permissions",
-			queries: [Query.equal("roleId", roleId), Query.limit(500)],
-		});
-
-		for (const rp of existing.rows) {
-			await tablesDB.deleteRow({
+		// Remove existing role_permissions: list in pages, delete each page in parallel
+		// (repeated first page until empty avoids offset skew after deletes).
+		let clearPasses = 0;
+		const maxClearPasses = 200;
+		while (clearPasses < maxClearPasses) {
+			clearPasses += 1;
+			const existing = await tablesDB.listRows({
 				databaseId,
 				tableId: "role_permissions",
-				rowId: rp.$id,
+				queries: [
+					Query.equal("roleId", roleId),
+					Query.limit(ROLE_PERM_LIST_CHUNK),
+				],
 			});
+			if (existing.rows.length === 0) {
+				break;
+			}
+			await runInConcurrencyBatches(
+				existing.rows,
+				ROLE_PERM_WRITE_CONCURRENCY,
+				(rp) =>
+					tablesDB.deleteRow({
+						databaseId,
+						tableId: "role_permissions",
+						rowId: (rp as { $id: string }).$id,
+					}),
+			);
 		}
 
 		if (keys.length === 0) {
@@ -284,36 +313,47 @@ export async function assignPermissionsToRole(
 		const BATCH_SIZE = 50;
 		const permissionIdSet = new Set<string>();
 
+		const keyBatches: PermissionKey[][] = [];
 		for (let i = 0; i < keys.length; i += BATCH_SIZE) {
-			const batch = keys.slice(i, i + BATCH_SIZE);
-			const keyQueries =
-				batch.length === 1
-					? [Query.equal("key", batch[0]!)]
-					: [Query.or(batch.map((k) => Query.equal("key", k)))];
+			keyBatches.push(keys.slice(i, i + BATCH_SIZE));
+		}
 
-			const permissions = await tablesDB.listRows({
-				databaseId,
-				tableId: permissionsTableId,
-				queries: [...keyQueries, Query.limit(200)],
-			});
+		const lookupResults = await Promise.all(
+			keyBatches.map((batch) => {
+				const keyQueries =
+					batch.length === 1
+						? [Query.equal("key", batch[0]!)]
+						: [Query.or(batch.map((k) => Query.equal("key", k)))];
+				return tablesDB.listRows({
+					databaseId,
+					tableId: permissionsTableId,
+					queries: [...keyQueries, Query.limit(200)],
+				});
+			}),
+		);
 
+		for (const permissions of lookupResults) {
 			for (const row of permissions.rows) {
 				const id = (row as { $id?: string }).$id;
 				if (id) permissionIdSet.add(id);
 			}
 		}
 
-		for (const permissionId of permissionIdSet) {
-			await tablesDB.createRow({
-				databaseId,
-				tableId: "role_permissions",
-				rowId: ID.unique(),
-				data: {
-					roleId,
-					permissionId,
-				},
-			});
-		}
+		const newIds = [...permissionIdSet];
+		await runInConcurrencyBatches(
+			newIds,
+			ROLE_PERM_WRITE_CONCURRENCY,
+			(permissionId) =>
+				tablesDB.createRow({
+					databaseId,
+					tableId: "role_permissions",
+					rowId: ID.unique(),
+					data: {
+						roleId,
+						permissionId,
+					},
+				}),
+		);
 
 		return true;
 	} catch (error) {

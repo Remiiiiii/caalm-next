@@ -15,6 +15,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface TrendAnalysisProps {
@@ -282,6 +283,13 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
 	if (isLoading) {
 		return (
 			<div className="space-y-6">
+				<div className="flex justify-center py-2">
+					<LoadingSpinner
+						size="sm"
+						label="Loading trends..."
+						className="!p-0"
+					/>
+				</div>
 				<div className="animate-pulse">
 					<div className="h-8 bg-white/20 rounded-xl w-1/3 mb-4"></div>
 					<div className="h-64 bg-white/20 rounded-xl backdrop-blur"></div>

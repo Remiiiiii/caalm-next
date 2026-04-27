@@ -1,6 +1,14 @@
 "use client";
 
-import { AlertTriangle, Ban, Plus, Trash2 } from "lucide-react";
+import {
+	AlertTriangle,
+	Ban,
+	EyeIcon,
+	PencilIcon,
+	Plus,
+	Trash2,
+	Trash2Icon,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,13 +23,14 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
+	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { LoadingSpinner } from "@/components/ui/loading";
 import {
 	Table,
 	TableBody,
@@ -110,18 +119,16 @@ function RoleActionsMenu({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="h-9 w-9 shad-no-focus text-slate-500 hover:text-slate-800"
+					className="h-9 w-9 rounded-full shad-no-focus text-slate-500 transition-colors hover:bg-white/30 hover:text-slate-800"
 					aria-label={`Actions for ${role.name}`}
 				>
 					<Image src="/assets/icons/dots.svg" alt="" width={34} height={34} />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="relative min-w-[200px] p-0">
-				<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-				<div className="px-1 pb-1 pt-4">
+			<AppDropdownMenuContent align="end" className="min-w-[200px]">
 					{variant === "default" ? (
-						<DropdownMenuItem
-							className="shad-dropdown-item cursor-pointer"
+						<AppDropdownMenuItem
+							icon={PencilIcon}
 							disabled={!canManage}
 							onSelect={(e) => {
 								e.preventDefault();
@@ -129,11 +136,11 @@ function RoleActionsMenu({
 							}}
 						>
 							Edit permissions &amp; description
-						</DropdownMenuItem>
+						</AppDropdownMenuItem>
 					) : (
 						<>
-							<DropdownMenuItem
-								className="shad-dropdown-item cursor-pointer"
+							<AppDropdownMenuItem
+								icon={EyeIcon}
 								disabled={!canManage}
 								onSelect={(e) => {
 									e.preventDefault();
@@ -141,9 +148,9 @@ function RoleActionsMenu({
 								}}
 							>
 								View role
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								className="shad-dropdown-item cursor-pointer"
+							</AppDropdownMenuItem>
+							<AppDropdownMenuItem
+								icon={PencilIcon}
 								disabled={!canManage}
 								onSelect={(e) => {
 									e.preventDefault();
@@ -151,10 +158,11 @@ function RoleActionsMenu({
 								}}
 							>
 								Edit role &amp; permissions
-							</DropdownMenuItem>
+							</AppDropdownMenuItem>
 							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								className="shad-dropdown-item cursor-pointer text-destructive focus:text-destructive"
+							<AppDropdownMenuItem
+								icon={Trash2Icon}
+								tone="danger"
 								disabled={!canManage}
 								onSelect={(e) => {
 									e.preventDefault();
@@ -162,11 +170,10 @@ function RoleActionsMenu({
 								}}
 							>
 								Delete role
-							</DropdownMenuItem>
+							</AppDropdownMenuItem>
 						</>
 					)}
-				</div>
-			</DropdownMenuContent>
+			</AppDropdownMenuContent>
 		</DropdownMenu>
 	);
 }
@@ -412,7 +419,11 @@ const RolesManagement = () => {
 			</div>
 
 			{loading ? (
-				<div className="py-16 text-center text-slate-600">Loading roles…</div>
+				<LoadingSpinner
+					size="lg"
+					label="Loading roles…"
+					className="min-h-[200px] !p-0 py-16"
+				/>
 			) : filteredRoles.length === 0 ? (
 				<div className="text-center py-12">
 					<Image

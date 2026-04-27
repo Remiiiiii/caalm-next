@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Calendar, ScrollText } from "lucide-react";
+import { Building2, Calendar, Loader2, ScrollText } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { FormattedDate } from "@/components/FormattedDateTime";
@@ -280,11 +280,16 @@ export default function LicenseCard({
 								</p>
 								<div className="min-w-0 flex-1">
 									<p className="body-2 text-slate-700 wrap-break-words">
-										{loadingAssigned
-											? "Loading..."
-											: assignedNames.length > 0
-												? assignedNames.join(", ")
-												: "—"}
+										{loadingAssigned ? (
+											<span className="inline-flex items-center gap-1.5">
+												<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+												Loading...
+											</span>
+										) : assignedNames.length > 0 ? (
+											assignedNames.join(", ")
+										) : (
+											"—"
+										)}
 									</p>
 								</div>
 							</div>
@@ -295,9 +300,14 @@ export default function LicenseCard({
 				<hr className="my-1 border-white/30" />
 				<p className="caption line-clamp-1 text-light-200">
 					By:{" "}
-					{loadingUploader
-						? "Loading..."
-						: (uploaderName ?? (license.createdBy ? "Unknown" : "—"))}
+					{loadingUploader ? (
+						<span className="inline-flex items-center gap-1 align-middle">
+							<Loader2 className="h-3 w-3 animate-spin shrink-0" />
+							Loading...
+						</span>
+					) : (
+						(uploaderName ?? (license.createdBy ? "Unknown" : "—"))
+					)}
 				</p>
 			</div>
 		</div>

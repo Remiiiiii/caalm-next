@@ -21,6 +21,7 @@ import {
 	YAxis,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
+import { LoadingSpinner } from "@/components/ui/loading";
 import {
 	Card,
 	CardContent,
@@ -127,8 +128,8 @@ export default function StorageMetricsPage() {
 		return (
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
 				<div className="glass-card w-full overflow-hidden">
-					<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-						<p className="text-slate-600">Loading storage metrics...</p>
+					<div className="flex-1 overflow-y-auto p-6 bg-slate-50 flex flex-col items-center justify-center min-h-[200px]">
+						<LoadingSpinner size="md" label="Loading storage metrics..." />
 					</div>
 				</div>
 			</div>

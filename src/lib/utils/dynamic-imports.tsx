@@ -4,6 +4,7 @@
 
 import dynamic from "next/dynamic";
 import type { ComponentType, ReactNode } from "react";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 /**
  * Lazy loading component with custom fallback
@@ -14,7 +15,12 @@ export function lazyLoad<T extends ComponentType<any>>(
 ) {
 	return dynamic(importFn, {
 		ssr: false,
-		loading: () => fallback || <div>Loading...</div>,
+		loading: () =>
+			fallback || (
+				<div className="flex items-center justify-center p-8">
+					<LoadingSpinner size="md" label="Loading..." className="!p-0" />
+				</div>
+			),
 	});
 }
 
@@ -42,7 +48,7 @@ export function lazyLoadHeavy<T extends ComponentType<any>>(
 		loading: () =>
 			placeholder || (
 				<div className="flex items-center justify-center p-8">
-					<div className="animate-pulse text-slate-600">Loading...</div>
+					<LoadingSpinner size="md" label="Loading..." className="!p-0" />
 				</div>
 			),
 	});

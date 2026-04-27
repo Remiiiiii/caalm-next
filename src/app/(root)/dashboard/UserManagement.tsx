@@ -1,6 +1,13 @@
 "use client";
 
-import { Ban, ListFilter, Pencil, Trash } from "lucide-react";
+import {
+	Ban,
+	Building2,
+	ListFilter,
+	Pencil,
+	Radio,
+	Trash,
+} from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { UserRoleDisplay } from "@/components/UserRoleDisplay";
@@ -14,12 +21,12 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import {
+	AppDropdownMenuCheckboxItem,
+	AppDropdownMenuContent,
+	AppDropdownMenuTrigger,
 	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -296,7 +303,7 @@ const UserManagement = () => {
 						<span>User Management</span>
 						<div className="flex items-center space-x-2">
 							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
+								<AppDropdownMenuTrigger asChild>
 									<Button
 										variant="outline"
 										size="sm"
@@ -309,13 +316,14 @@ const UserManagement = () => {
 												filters.departments.length + filters.statuses.length
 											})`}
 									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent className="w-56">
+								</AppDropdownMenuTrigger>
+								<AppDropdownMenuContent className="w-56">
 									{/* Role filtering removed - roles are now managed via RBAC system */}
 									<DropdownMenuSeparator />
 									<DropdownMenuLabel>Filter by Department</DropdownMenuLabel>
 									{uniqueDepartments.map((dept) => (
-										<DropdownMenuCheckboxItem
+										<AppDropdownMenuCheckboxItem
+											icon={Building2}
 											key={dept}
 											checked={filters.departments.includes(dept)}
 											onCheckedChange={(checked) =>
@@ -323,13 +331,14 @@ const UserManagement = () => {
 											}
 										>
 											{dept}
-										</DropdownMenuCheckboxItem>
+										</AppDropdownMenuCheckboxItem>
 									))}
 
 									<DropdownMenuSeparator />
 									<DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
 									{uniqueStatuses.map((status) => (
-										<DropdownMenuCheckboxItem
+										<AppDropdownMenuCheckboxItem
+											icon={Radio}
 											key={status}
 											checked={filters.statuses.includes(status)}
 											onCheckedChange={(checked) =>
@@ -337,7 +346,7 @@ const UserManagement = () => {
 											}
 										>
 											{status}
-										</DropdownMenuCheckboxItem>
+										</AppDropdownMenuCheckboxItem>
 									))}
 
 									{hasActiveFilters && (
@@ -353,7 +362,7 @@ const UserManagement = () => {
 											</Button>
 										</>
 									)}
-								</DropdownMenuContent>
+								</AppDropdownMenuContent>
 							</DropdownMenu>
 						</div>
 					</CardTitle>

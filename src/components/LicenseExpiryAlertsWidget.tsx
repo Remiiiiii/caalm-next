@@ -6,6 +6,7 @@ import useSWR from "swr";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import type { License } from "@/types/licenses";
 
 interface LicenseExpiryAlertsWidgetProps {
@@ -120,7 +121,9 @@ export default function LicenseExpiryAlertsWidget({
 							Expiring Licenses
 						</h3>
 					</div>
-					<p className="text-sm text-slate-600">Loading...</p>
+					<div className="flex justify-start py-2">
+						<LoadingSpinner size="sm" label="Loading..." className="!p-0" />
+					</div>
 				</CardContent>
 			</Card>
 		);

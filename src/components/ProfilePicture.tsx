@@ -7,10 +7,10 @@ import { useEffect, useRef, useState } from "react";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
+	AppDropdownMenuTrigger,
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -276,7 +276,7 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 	return (
 		<div className="relative">
 			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
+				<AppDropdownMenuTrigger asChild>
 					<Button
 						variant="ghost"
 						className="relative p-0 rounded-full hover:opacity-80 transition-opacity"
@@ -287,23 +287,26 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 							<Camera className={cn("text-white", config.icon)} />
 						</div>
 					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-48">
-					<DropdownMenuItem onClick={handleFileSelect} disabled={isUploading}>
-						<Upload className="w-4 h-4" />
+				</AppDropdownMenuTrigger>
+				<AppDropdownMenuContent align="end" className="w-48">
+					<AppDropdownMenuItem
+						icon={Upload}
+						onClick={handleFileSelect}
+						disabled={isUploading}
+					>
 						{profileImageUrl ? "Change picture" : "Upload picture"}
-					</DropdownMenuItem>
+					</AppDropdownMenuItem>
 					{profileImageUrl && (
-						<DropdownMenuItem
+						<AppDropdownMenuItem
+							icon={Trash2}
+							tone="danger"
 							onClick={handleDeletePicture}
 							disabled={isUploading}
-							className="text-red-600 hover:text-red-700"
 						>
-							<Trash2 className="w-4 h-4" />
 							Remove picture
-						</DropdownMenuItem>
+						</AppDropdownMenuItem>
 					)}
-				</DropdownMenuContent>
+				</AppDropdownMenuContent>
 			</DropdownMenu>
 
 			<input

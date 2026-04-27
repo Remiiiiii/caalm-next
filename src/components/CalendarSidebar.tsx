@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -119,7 +119,10 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
 					{isSharedCalendarsExpanded && (
 						<div className="space-y-2 ml-2">
 							{loadingSharedCalendars ? (
-								<div className="text-sm text-slate-500">Loading...</div>
+								<div className="text-sm text-slate-500 flex items-center gap-2">
+									<Loader2 className="h-4 w-4 animate-spin shrink-0" />
+									Loading...
+								</div>
 							) : sharedCalendars.length === 0 ? (
 								<div className="text-sm text-slate-500">
 									No shared calendars

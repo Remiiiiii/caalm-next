@@ -6,14 +6,15 @@ import {
 	getCurrentUser,
 	getCurrentUserFrom2FA,
 } from "@/lib/actions/user.actions";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 // Lazy load the heavy calendar component to reduce initial compilation time
 const OutlookStyleCalendar = dynamicImport(
 	() => import("@/components/OutlookStyleCalendar"),
 	{
 		loading: () => (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="animate-pulse text-slate-600">Loading calendar...</div>
+			<div className="flex min-h-screen items-center justify-center">
+				<LoadingSpinner size="lg" label="Loading calendar..." className="!p-0" />
 			</div>
 		),
 	},

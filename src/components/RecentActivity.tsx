@@ -2,6 +2,7 @@
 
 import type { FC } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { ActivityItemSkeleton } from "@/components/ui/skeletons";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
@@ -95,6 +96,13 @@ const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="pt-0">
+					<div className="flex justify-center py-3">
+						<LoadingSpinner
+							size="sm"
+							label="Loading activity..."
+							className="!p-0"
+						/>
+					</div>
 					<div className="h-[400px] overflow-y-auto">
 						<div className="space-y-3 py-2">
 							{[1, 2, 3, 4, 5].map((i) => (

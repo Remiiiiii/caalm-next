@@ -3,6 +3,7 @@
 import {
 	Clock,
 	FileText,
+	Loader2,
 	Save,
 	SquarePen,
 	Trash2,
@@ -368,7 +369,12 @@ export const FileDetails = ({
 	const renderAssignedManagers = () => {
 		if (assignedManagerUsers.length === 0) {
 			if (loadingManagers) {
-				return <span className="text-slate-400">Loading...</span>;
+				return (
+					<span className="text-slate-400 inline-flex items-center gap-1.5">
+						<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+						Loading...
+					</span>
+				);
 			}
 			if (Array.isArray(assignedManagers) && assignedManagers.length > 0) {
 				return (

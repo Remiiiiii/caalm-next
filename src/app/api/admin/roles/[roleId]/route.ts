@@ -1,7 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { PERMISSIONS } from "@/constants/permissions";
+import {
+	PERMISSIONS,
+	type PermissionKey,
+} from "@/constants/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
 import {
+	assignPermissionsToRole,
 	deleteRole,
 	getRole,
 	getRolePermissions,
@@ -62,14 +66,55 @@ export async function PUT(
 		}
 
 		const { roleId } = await params;
-		const { name, description, permissionKeys } = await request.json();
+		const body = (await request.json()) as {
+			name?: string;
+			description?: string;
+			permissionKeys?: string[];
+		};
 
-		const role = await updateRole(
+		const { name, description, permissionKeys } = body;
+		const existing = await getRole(roleId);
+
+		if (!existing) {
+			return NextResponse.json(
+				{ success: false, error: "Role not found" },
+				{ status: 404 },
+			);
+		}
+
+		if (!existing.isSystemRole && !String(name ?? "").trim()) {
+			return NextResponse.json(
+				{ success: false, error: "Role name is required" },
+				{ status: 400 },
+			);
+		}
+
+		const updates: { name?: string; description?: string } = {
+			description: description ?? "",
+		};
+		if (!existing.isSystemRole && name?.trim()) {
+			updates.name = name.trim();
+		}
+
+		const role = await updateRole(roleId, updates);
+		if (!role) {
+			return NextResponse.json(
+				{ success: false, error: "Failed to update role" },
+				{ status: 500 },
+			);
+		}
+
+		const assigned = await assignPermissionsToRole(
 			roleId,
-			name,
-			description || "",
-			permissionKeys || [],
+			(permissionKeys ?? []) as PermissionKey[],
 		);
+
+		if (!assigned) {
+			return NextResponse.json(
+				{ success: false, error: "Failed to update permissions for role" },
+				{ status: 500 },
+			);
+		}
 
 		return NextResponse.json({
 			success: true,

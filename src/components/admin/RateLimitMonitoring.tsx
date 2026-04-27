@@ -20,6 +20,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { StatCardSkeleton } from "@/components/ui/skeletons";
 import {
 	Table,
@@ -115,6 +116,13 @@ export default function RateLimitMonitoring() {
 					</div>
 				</div>
 				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+					<div className="flex justify-center pb-4">
+						<LoadingSpinner
+							size="sm"
+							label="Loading metrics..."
+							className="!p-0"
+						/>
+					</div>
 					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
 						{[1, 2, 3, 4, 5].map((i) => (
 							<StatCardSkeleton key={i} />

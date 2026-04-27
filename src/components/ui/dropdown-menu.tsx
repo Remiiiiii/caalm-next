@@ -1,4 +1,5 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import type { LucideIcon } from "lucide-react";
 import { Check, ChevronRight, Circle } from "lucide-react";
 import * as React from "react";
 
@@ -63,7 +64,7 @@ const DropdownMenuContent = React.forwardRef<
 			ref={ref}
 			sideOffset={sideOffset}
 			className={cn(
-				"z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+			"relative z-50 min-w-[8rem] overflow-hidden rounded-md border border-white/30 bg-white/10 p-1 pt-4 text-slate-900 shadow-md backdrop-blur data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 before:absolute before:top-0 before:left-0 before:right-0 before:h-4 before:rounded-t-md before:bg-[#d6d7d8] before:opacity-70",
 				className,
 			)}
 			{...props}
@@ -179,6 +180,134 @@ const DropdownMenuShortcut = ({
 };
 DropdownMenuShortcut.displayName = "DropdownMenuShortcut";
 
+type AppDropdownMenuTone = "default" | "danger" | "info" | "success" | "warning";
+
+const APP_DROPDOWN_TONE_CLASSES: Record<
+	AppDropdownMenuTone,
+	{ iconWrap: string; label: string }
+> = {
+	default: {
+		iconWrap: "bg-slate-200/70 text-slate-700",
+		label: "text-slate-800",
+	},
+	danger: {
+		iconWrap: "bg-red/15 text-red",
+		label: "text-red",
+	},
+	info: {
+		iconWrap: "bg-blue/15 text-[#0f5384]",
+		label: "text-slate-800",
+	},
+	success: {
+		iconWrap: "bg-green/15 text-green",
+		label: "text-slate-800",
+	},
+	warning: {
+		iconWrap: "bg-yellow/20 text-yellow",
+		label: "text-slate-800",
+	},
+};
+
+const AppDropdownMenuContent = React.forwardRef<
+	React.ElementRef<typeof DropdownMenuPrimitive.Content>,
+	React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> & {
+		contentClassName?: string;
+	}
+>(({ className, contentClassName, children, ...props }, ref) => (
+	<DropdownMenuContent
+		ref={ref}
+		className={cn(
+			"relative min-w-[12rem] overflow-hidden border border-white/30 bg-white/10 p-0 text-slate-900 backdrop-blur",
+			className,
+		)}
+		{...props}
+	>
+		<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
+		<div className={cn("px-1 pb-1 pt-4", contentClassName)}>{children}</div>
+	</DropdownMenuContent>
+));
+AppDropdownMenuContent.displayName = "AppDropdownMenuContent";
+
+const AppDropdownMenuTrigger = React.forwardRef<
+	React.ElementRef<typeof DropdownMenuPrimitive.Trigger>,
+	React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>
+>(({ className, ...props }, ref) => (
+	<DropdownMenuTrigger
+		ref={ref}
+		className={cn(
+			"shad-no-focus rounded-full border border-white/40 bg-white/20 p-1 text-slate-700 shadow-sm backdrop-blur transition-colors hover:bg-white/30",
+			className,
+		)}
+		{...props}
+	/>
+));
+AppDropdownMenuTrigger.displayName = "AppDropdownMenuTrigger";
+
+const AppDropdownMenuItem = React.forwardRef<
+	React.ElementRef<typeof DropdownMenuPrimitive.Item>,
+	React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
+		icon: LucideIcon;
+		tone?: AppDropdownMenuTone;
+		iconClassName?: string;
+	}
+>(
+	(
+		{
+			className,
+			children,
+			icon: Icon,
+			tone = "default",
+			iconClassName,
+			...props
+		},
+		ref,
+	) => (
+		<DropdownMenuItem
+			ref={ref}
+			className={cn("shad-dropdown-item gap-2", className)}
+			{...props}
+		>
+			<span
+				className={cn(
+					"inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+					APP_DROPDOWN_TONE_CLASSES[tone].iconWrap,
+				)}
+			>
+				<Icon className={cn("h-3.5 w-3.5", iconClassName)} />
+			</span>
+			<span className={cn(APP_DROPDOWN_TONE_CLASSES[tone].label)}>{children}</span>
+		</DropdownMenuItem>
+	),
+);
+AppDropdownMenuItem.displayName = "AppDropdownMenuItem";
+
+const AppDropdownMenuCheckboxItem = React.forwardRef<
+	React.ElementRef<typeof DropdownMenuPrimitive.CheckboxItem>,
+	React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem> & {
+		icon: LucideIcon;
+		tone?: AppDropdownMenuTone;
+	}
+>(({ className, children, icon: Icon, tone = "default", ...props }, ref) => (
+	<DropdownMenuCheckboxItem
+		ref={ref}
+		className={cn("pl-8 pr-2", className)}
+		{...props}
+	>
+		<div className="ml-2 flex items-center gap-2">
+			<span
+				className={cn(
+					"inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+					APP_DROPDOWN_TONE_CLASSES[tone].iconWrap,
+				)}
+			>
+				<Icon className="h-3.5 w-3.5" />
+			</span>
+			<span className={cn(APP_DROPDOWN_TONE_CLASSES[tone].label)}>{children}</span>
+		</div>
+	</DropdownMenuCheckboxItem>
+));
+AppDropdownMenuCheckboxItem.displayName = "AppDropdownMenuCheckboxItem";
+
 export {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -195,4 +324,8 @@ export {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	AppDropdownMenuCheckboxItem,
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
+	AppDropdownMenuTrigger,
 };

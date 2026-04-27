@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 
 interface AuthWrapperProps {
@@ -42,7 +43,7 @@ const AuthWrapper = ({ children }: AuthWrapperProps) => {
 	return (
 		<>
 			{loading ? (
-				<div>Loading...</div> // You can replace this with a proper loading component
+				<LoadingSpinner fullScreen label="Loading..." />
 			) : !user ? null : (
 				<AuthenticatedLayout user={user}>{children}</AuthenticatedLayout>
 			)}

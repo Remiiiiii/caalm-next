@@ -1,7 +1,7 @@
 "use client";
 
 import type { Models } from "appwrite";
-import { Bell, FileText, LogOut, Mail } from "lucide-react";
+import { Bell, FileText, Loader2, LogOut, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { mutate } from "swr";
@@ -102,7 +102,10 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 							// Guest/loading state
 							<div className="text-sm text-foreground">
 								<p className="font-medium text-navy">Welcome</p>
-								<p className="text-xs text-slate-dark">Loading...</p>
+								<p className="text-xs text-slate-dark flex items-center gap-1.5">
+									<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+									Loading...
+								</p>
 							</div>
 						)}
 					</div>

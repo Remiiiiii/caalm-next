@@ -12,11 +12,11 @@ import {
 
 import {
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
+	DropdownMenuTrigger,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuTrigger,
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { constructFileUrl } from "@/lib/utils";
 //
@@ -135,6 +135,10 @@ import {
 	RefreshCw,
 	Share2,
 	Trash2,
+	Download,
+	Pencil,
+	FileText,
+	ScanEye,
 	UserRoundCheck,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -1201,7 +1205,7 @@ const ActionDropdown = ({
 	return (
 		<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
 			<DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-				<DropdownMenuTrigger className="shad-no-focus">
+				<DropdownMenuTrigger className="shad-no-focus rounded-full transition-colors hover:bg-white/30">
 					<Image
 						src="/assets/icons/dots.svg"
 						alt="dots"
@@ -1209,15 +1213,28 @@ const ActionDropdown = ({
 						height={34}
 					/>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent className="relative p-0">
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-					<div className="pt-4 px-1 pb-1">
+				<AppDropdownMenuContent>
 						<DropdownMenuLabel className="max-w-[200px] truncate">
 							{file.name || file.contractName}
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
 						{filteredActions.map((actionItem) => {
+							const actionIconMap = {
+								assign: UserRoundCheck,
+								rename: Pencil,
+								share: Share2,
+								delete: Trash2,
+								details: Info,
+								status: RefreshCw,
+								download: Download,
+								review: ScanEye,
+							} as const;
+
+							const Icon = actionIconMap[
+								actionItem.value as keyof typeof actionIconMap
+							] || FileText;
+							const tone = actionItem.value === "delete" ? "danger" : "default";
+
 							// Handle download action separately
 							if (actionItem.value === "download") {
 								const handleDownload = async () => {
@@ -1301,33 +1318,26 @@ const ActionDropdown = ({
 								};
 
 								return (
-									<DropdownMenuItem
+									<AppDropdownMenuItem
 										key={actionItem.value}
-										className="shad-dropdown-item"
+										icon={Icon}
+										tone={tone}
 										onSelect={(e) => {
-											console.log("Download onSelect triggered");
 											e.preventDefault();
 											handleDownload();
 										}}
 									>
-										<div className="flex items-center gap-2">
-											<Image
-												src={actionItem.icon}
-												alt={actionItem.label}
-												width={30}
-												height={30}
-											/>
-											{downloading ? "Downloading..." : actionItem.label}
-										</div>
-									</DropdownMenuItem>
+										{downloading ? "Downloading..." : actionItem.label}
+									</AppDropdownMenuItem>
 								);
 							}
 
 							// Handle other actions
 							return (
-								<DropdownMenuItem
+								<AppDropdownMenuItem
 									key={actionItem.value}
-									className="shad-dropdown-item"
+									icon={Icon}
+									tone={tone}
 									onClick={() => {
 										setAction(actionItem);
 										if (actionItem.value === "review") {
@@ -1346,20 +1356,11 @@ const ActionDropdown = ({
 										}
 									}}
 								>
-									<div className="flex items-center gap-2">
-										<Image
-											src={actionItem.icon}
-											alt={actionItem.label}
-											width={30}
-											height={30}
-										/>
-										{actionItem.label}
-									</div>
-								</DropdownMenuItem>
+									{actionItem.label}
+								</AppDropdownMenuItem>
 							);
 						})}
-					</div>
-				</DropdownMenuContent>
+				</AppDropdownMenuContent>
 			</DropdownMenu>
 			{renderDialogContent()}
 			{file?.$id && file.bucketFileId && (

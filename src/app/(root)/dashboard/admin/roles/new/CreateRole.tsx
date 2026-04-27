@@ -8,6 +8,7 @@ import { PermissionGate } from "@/components/PermissionGate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { Label } from "@/components/ui/label";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -148,9 +149,11 @@ const CreateRole = () => {
 	if (loading) {
 		return (
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
-				<div className="py-16 text-center text-slate-600">
-					Loading permissions…
-				</div>
+				<LoadingSpinner
+					size="lg"
+					label="Loading permissions…"
+					className="min-h-[240px] !p-0 py-16"
+				/>
 			</div>
 		);
 	}

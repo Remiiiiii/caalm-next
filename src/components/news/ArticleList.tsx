@@ -33,9 +33,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -545,43 +545,47 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 										<TableCell className="text-right">
 											<DropdownMenu>
 												<DropdownMenuTrigger asChild>
-													<Button variant="ghost" size="icon">
+													<Button
+														variant="ghost"
+														size="icon"
+														className="rounded-full transition-colors hover:bg-white/30"
+													>
 														<MoreVertical className="h-4 w-4" />
 													</Button>
 												</DropdownMenuTrigger>
-												<DropdownMenuContent align="end">
-													<DropdownMenuItem
+												<AppDropdownMenuContent align="end">
+													<AppDropdownMenuItem
+														icon={Edit}
 														onClick={() => onEdit?.(article.id)}
 													>
-														<Edit className="mr-2 h-4 w-4" />
 														Edit
-													</DropdownMenuItem>
+													</AppDropdownMenuItem>
 													{article.status === "published" ? (
-														<DropdownMenuItem
+														<AppDropdownMenuItem
+															icon={EyeOff}
 															onClick={() => handlePublish(article.id, false)}
 														>
-															<EyeOff className="mr-2 h-4 w-4" />
 															Unpublish
-														</DropdownMenuItem>
+														</AppDropdownMenuItem>
 													) : (
-														<DropdownMenuItem
+														<AppDropdownMenuItem
+															icon={Eye}
 															onClick={() => handlePublish(article.id, true)}
 														>
-															<Eye className="mr-2 h-4 w-4" />
 															Publish
-														</DropdownMenuItem>
+														</AppDropdownMenuItem>
 													)}
-													<DropdownMenuItem
+													<AppDropdownMenuItem
+														icon={Trash2}
+														tone="danger"
 														onClick={() => {
 															setArticleToDelete(article.id);
 															setDeleteDialogOpen(true);
 														}}
-														className="text-red"
 													>
-														<Trash2 className="mr-2 h-4 w-4" />
 														Delete
-													</DropdownMenuItem>
-												</DropdownMenuContent>
+													</AppDropdownMenuItem>
+												</AppDropdownMenuContent>
 											</DropdownMenu>
 										</TableCell>
 									</TableRow>

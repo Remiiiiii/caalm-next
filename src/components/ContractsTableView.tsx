@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -380,9 +381,6 @@ export default function ContractsTableView({
 		) {
 			return (file.owner as { fullName: string }).fullName;
 		}
-		if (loadingOwners[file.$id]) {
-			return "Loading...";
-		}
 
 		return "Unknown";
 	};
@@ -408,7 +406,12 @@ export default function ContractsTableView({
 		const isLoading = loadingManagers[file.$id];
 
 		if (isLoading) {
-			return <span className="body-2 text-slate-400">Loading...</span>;
+			return (
+				<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
+					<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+					Loading...
+				</span>
+			);
 		}
 
 		if (managers.length === 0) {
@@ -560,12 +563,25 @@ export default function ContractsTableView({
 										{renderAssignedManagers(file)}
 									</TableCell>
 									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										<span
-											className="body-2 truncate block"
-											title={getOwnerName(file)}
-										>
-											{getOwnerName(file)}
-										</span>
+										{loadingOwners[file.$id] &&
+										!ownerNames[file.$id] &&
+										!(
+											typeof file.owner === "object" &&
+											file.owner &&
+											"fullName" in file.owner
+										) ? (
+											<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
+												<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+												Loading...
+											</span>
+										) : (
+											<span
+												className="body-2 truncate block"
+												title={getOwnerName(file)}
+											>
+												{getOwnerName(file)}
+											</span>
+										)}
 									</TableCell>
 									<TableCell className="py-4 text-right">
 										<ActionDropdown
