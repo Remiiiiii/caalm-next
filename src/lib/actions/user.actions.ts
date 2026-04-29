@@ -716,7 +716,7 @@ export const getCurrentUserFrom2FA = async () => {
 				role: calendarRole,
 				division: user.division,
 				status: user.status,
-				profileImageId: user.profileImageId || null,
+				profileImageId: resolveProfileImageId(user),
 				$createdAt: user.$createdAt,
 				$updatedAt: user.$updatedAt,
 			});
@@ -1682,6 +1682,205 @@ export const listAllUsers = async () => {
 		return result.rows;
 	} catch (error) {
 		handleError(error, "Failed to list all users");
+	}
+};
+
+export interface UserManagementRow {
+	$id: string;
+	fullName: string;
+	email: string;
+	avatar: string;
+	accountId: string;
+	role: CalendarRole;
+	roleName: string;
+	assignedByName: string;
+	assignedDate?: string;
+	lastActiveAt?: string;
+	$createdAt?: string;
+	$updatedAt?: string;
+	department?: string;
+	status?: string;
+}
+
+function calendarRoleFromRbacName(roleName: string): CalendarRole {
+	const name = roleName.trim();
+	if (name === "Super Admin" || name === "Organization Admin") return "admin";
+	if (name === "Department Manager") return "approver";
+	if (name === "Viewer") return "viewer";
+	if (name === "IT") return "admin";
+	return "viewer";
+}
+
+function resolveProfileAvatarUrl(user: {
+	avatar?: string;
+	profileImageId?: string | null;
+}): string {
+	const avatarValue = user.avatar?.trim();
+	const profileImageId = user.profileImageId?.trim();
+
+	if (avatarValue && /^https?:\/\//i.test(avatarValue)) {
+		return avatarValue;
+	}
+	if (avatarValue?.startsWith("/")) {
+		return avatarValue;
+	}
+
+	const imageId = avatarValue || profileImageId;
+	if (
+		imageId &&
+		appwriteConfig.endpointUrl &&
+		appwriteConfig.profilePicturesBucketId &&
+		appwriteConfig.projectId
+	) {
+		return `${appwriteConfig.endpointUrl}/storage/buckets/${appwriteConfig.profilePicturesBucketId}/files/${imageId}/view?project=${appwriteConfig.projectId}`;
+	}
+
+	return avatarPlaceholderUrl;
+}
+
+function resolveProfileImageId(user: {
+	avatar?: string;
+	profileImageId?: string | null;
+}): string | null {
+	const avatarValue = user.avatar?.trim();
+	if (avatarValue && !avatarValue.startsWith("/") && !/^https?:\/\//i.test(avatarValue)) {
+		return avatarValue;
+	}
+	return user.profileImageId || null;
+}
+
+export const listUsersForManagement = async (
+	orgId: string,
+): Promise<UserManagementRow[]> => {
+	try {
+		const { tablesDB } = await createAdminClient();
+		const databaseId = appwriteConfig.databaseId || "default-db";
+		const usersTableId = appwriteConfig.usersCollectionId || "users";
+
+		const [usersResult, userRolesResult, rolesResult] = await Promise.all([
+			tablesDB.listRows({
+				databaseId,
+				tableId: usersTableId,
+				queries: [Query.limit(500)],
+			}),
+			tablesDB.listRows({
+				databaseId,
+				tableId: "user_roles",
+				queries: [Query.equal("orgId", orgId), Query.limit(500)],
+			}),
+			tablesDB.listRows({
+				databaseId,
+				tableId: "roles",
+				queries: [Query.limit(500)],
+			}),
+		]);
+
+		const rolesById = new Map<string, string>();
+		for (const role of rolesResult.rows) {
+			const roleId = String((role as { $id?: string }).$id || "");
+			const roleName = String((role as { name?: string }).name || "N/A");
+			if (roleId) rolesById.set(roleId, roleName);
+		}
+
+		const usersById = new Map<
+			string,
+			{ fullName: string; email: string; avatar?: string }
+		>();
+		for (const user of usersResult.rows) {
+			const userId = String((user as { $id?: string }).$id || "");
+			if (!userId) continue;
+			usersById.set(userId, {
+				fullName: String((user as { fullName?: string }).fullName || "Unknown"),
+				email: String((user as { email?: string }).email || ""),
+				avatar: (user as { avatar?: string }).avatar,
+			});
+		}
+
+		const assignmentsByUserId = new Map<
+			string,
+			{
+				roleName: string;
+				assignedByName: string;
+				assignedDate?: string;
+			}
+		>();
+
+		for (const assignment of userRolesResult.rows) {
+			const targetUserId = String((assignment as { userId?: string }).userId || "");
+			if (!targetUserId) continue;
+
+			const roleId = String((assignment as { roleId?: string }).roleId || "");
+			const assignedById = String(
+				(assignment as { assignedBy?: string }).assignedBy || "",
+			);
+			const assignedByUser = assignedById ? usersById.get(assignedById) : null;
+			const roleName = roleId ? (rolesById.get(roleId) ?? "N/A") : "N/A";
+			const assignedDate =
+				(assignment as { assignedAt?: string }).assignedAt ||
+				(assignment as { $createdAt?: string }).$createdAt;
+
+			const existing = assignmentsByUserId.get(targetUserId);
+			if (!existing) {
+				assignmentsByUserId.set(targetUserId, {
+					roleName,
+					assignedByName: assignedByUser?.fullName || "System",
+					assignedDate,
+				});
+				continue;
+			}
+
+			const existingTs = existing.assignedDate
+				? new Date(existing.assignedDate).getTime()
+				: 0;
+			const nextTs = assignedDate ? new Date(assignedDate).getTime() : 0;
+
+			if (nextTs > existingTs) {
+				assignmentsByUserId.set(targetUserId, {
+					roleName,
+					assignedByName: assignedByUser?.fullName || "System",
+					assignedDate,
+				});
+			}
+		}
+
+		return usersResult.rows
+			.filter((user) => {
+				const userId = String((user as { $id?: string }).$id || "");
+				const docOrgId = (user as { orgId?: string }).orgId;
+				if (docOrgId === orgId || assignmentsByUserId.has(userId)) return true;
+				return false;
+			})
+			.map((user) => {
+				const userId = String((user as { $id?: string }).$id || "");
+				const assignment = assignmentsByUserId.get(userId);
+				const createdAt = (user as { $createdAt?: string }).$createdAt;
+				const updatedAt = (user as { $updatedAt?: string }).$updatedAt;
+				const roleName = assignment?.roleName || "Unassigned";
+				const accountId = String(
+					(user as { accountId?: string }).accountId || "",
+				);
+				return {
+					$id: userId,
+					fullName: String((user as { fullName?: string }).fullName || "Unknown"),
+					email: String((user as { email?: string }).email || ""),
+					avatar: resolveProfileAvatarUrl(
+						user as { avatar?: string; profileImageId?: string | null },
+					),
+					accountId,
+					role: calendarRoleFromRbacName(roleName),
+					roleName,
+					assignedByName: assignment?.assignedByName || "System",
+					assignedDate: assignment?.assignedDate || createdAt,
+					lastActiveAt: updatedAt || createdAt,
+					$createdAt: createdAt,
+					$updatedAt: updatedAt,
+					department: (user as { department?: string }).department,
+					status: (user as { status?: string }).status,
+				};
+			});
+	} catch (error) {
+		handleError(error, "Failed to list users for management");
+		return [];
 	}
 };
 

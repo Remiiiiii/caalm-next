@@ -3,14 +3,25 @@ import type { AppUser } from "@/lib/actions/user.actions";
 import { swrConfig, swrKeys } from "@/lib/swr-config";
 
 interface UseUsersOptions {
+	/** Required for `/api/users`; SWR key is null until set. */
+	orgId: string | null | undefined;
 	enableRealTime?: boolean;
 	pollingInterval?: number;
+}
+
+export interface UserManagementUser extends AppUser {
+	roleName?: string;
+	assignedByName?: string;
+	assignedDate?: string;
+	lastActiveAt?: string;
+	$createdAt?: string;
+	$updatedAt?: string;
 }
 
 // Type guard for user document
 function isAppUserDoc(
 	u: unknown,
-): u is AppUser & { $id: string; department?: string } {
+): u is UserManagementUser & { $id: string; department?: string } {
 	return (
 		typeof u === "object" &&
 		u !== null &&
@@ -24,11 +35,11 @@ function isAppUserDoc(
 }
 
 export const useUsers = ({
+	orgId,
 	enableRealTime = true,
 	pollingInterval = 15000, // 15 seconds for users (less frequent than calendar)
-}: UseUsersOptions = {}) => {
-	// Use the global SWR key
-	const key = swrKeys.users();
+}: UseUsersOptions) => {
+	const key = swrKeys.users(orgId);
 
 	const {
 		data: rawUsers = [],
@@ -37,11 +48,11 @@ export const useUsers = ({
 		mutate,
 	} = useSWR(key, swrConfig.fetcher || null, {
 		...swrConfig,
-		refreshInterval: enableRealTime ? pollingInterval : 0,
+		refreshInterval: key && enableRealTime ? pollingInterval : 0,
 	});
 
 	// Process and validate users
-	const users = Array.isArray(rawUsers)
+	const users: UserManagementUser[] = Array.isArray(rawUsers)
 		? rawUsers.filter(isAppUserDoc).map((u) => ({
 				$id: u.$id,
 				fullName: u.fullName,
@@ -50,7 +61,13 @@ export const useUsers = ({
 				accountId: u.accountId,
 				role: u.role,
 				department: u.department,
-				status: u.status || "active", // fallback to 'active'
+				status: u.status === "inactive" ? "inactive" : "active",
+				roleName: u.roleName,
+				assignedByName: u.assignedByName,
+				assignedDate: u.assignedDate,
+				lastActiveAt: u.lastActiveAt,
+				$createdAt: u.$createdAt,
+				$updatedAt: u.$updatedAt,
 			}))
 		: [];
 
