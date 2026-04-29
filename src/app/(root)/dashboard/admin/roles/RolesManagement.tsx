@@ -3,7 +3,6 @@
 import {
 	AlertTriangle,
 	Ban,
-	EyeIcon,
 	PencilIcon,
 	Plus,
 	Trash2,
@@ -26,8 +25,8 @@ import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
 	DropdownMenu,
-	DropdownMenuTrigger,
 	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -126,7 +125,19 @@ function RoleActionsMenu({
 				</Button>
 			</DropdownMenuTrigger>
 			<AppDropdownMenuContent align="end" className="min-w-[200px]">
-					{variant === "default" ? (
+				{variant === "default" ? (
+					<AppDropdownMenuItem
+						icon={PencilIcon}
+						disabled={!canManage}
+						onSelect={(e) => {
+							e.preventDefault();
+							if (canManage) goToRole();
+						}}
+					>
+						Edit permissions &amp; description
+					</AppDropdownMenuItem>
+				) : (
+					<>
 						<AppDropdownMenuItem
 							icon={PencilIcon}
 							disabled={!canManage}
@@ -135,44 +146,22 @@ function RoleActionsMenu({
 								if (canManage) goToRole();
 							}}
 						>
-							Edit permissions &amp; description
+							Edit role &amp; permissions
 						</AppDropdownMenuItem>
-					) : (
-						<>
-							<AppDropdownMenuItem
-								icon={EyeIcon}
-								disabled={!canManage}
-								onSelect={(e) => {
-									e.preventDefault();
-									if (canManage) goToRole();
-								}}
-							>
-								View role
-							</AppDropdownMenuItem>
-							<AppDropdownMenuItem
-								icon={PencilIcon}
-								disabled={!canManage}
-								onSelect={(e) => {
-									e.preventDefault();
-									if (canManage) goToRole();
-								}}
-							>
-								Edit role &amp; permissions
-							</AppDropdownMenuItem>
-							<DropdownMenuSeparator />
-							<AppDropdownMenuItem
-								icon={Trash2Icon}
-								tone="danger"
-								disabled={!canManage}
-								onSelect={(e) => {
-									e.preventDefault();
-									if (canManage) onDeleteRequest(role);
-								}}
-							>
-								Delete role
-							</AppDropdownMenuItem>
-						</>
-					)}
+						<DropdownMenuSeparator />
+						<AppDropdownMenuItem
+							icon={Trash2Icon}
+							tone="danger"
+							disabled={!canManage}
+							onSelect={(e) => {
+								e.preventDefault();
+								if (canManage) onDeleteRequest(role);
+							}}
+						>
+							Delete role
+						</AppDropdownMenuItem>
+					</>
+				)}
 			</AppDropdownMenuContent>
 		</DropdownMenu>
 	);
@@ -281,10 +270,9 @@ const RolesManagement = () => {
 			variant={isDefault ? "default" : "secondary"}
 			className={cn(
 				"font-medium",
-				isDefault &&
-					"font-medium! border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] hover:bg-[#C0C0C0] hover:border-slate-600 transition-all duration-200 shadow-sm",
-				!isDefault &&
-					"font-medium! border-2 border-cyan-400 bg-[#7ceec6] text-[#12477D] hover:bg-[#9FE0E8] hover:border-cyan-500 transition-all duration-200 shadow-sm",
+				isDefault
+					? "font-medium! border-2 shrink-0 w-fit  text-slate-600 hover:text-slate-900 bg-white/20 backdrop-blur border-white/50 hover:bg-white/30 transition-all duration-300 px-1.5 py-3 text-xs leading-none"
+					: "font-medium! border-2 shrink-0 w-fit  text-slate-600 hover:text-slate-900 bg-white/20 backdrop-blur border-white/50 hover:bg-white/30 transition-all duration-300 px-1.5 py-3 text-xs leading-none",
 			)}
 		>
 			{isDefault ? "Default" : "Custom"}
@@ -441,7 +429,7 @@ const RolesManagement = () => {
 					<section className="space-y-3">
 						<div>
 							<h2 className="text-xl font-semibold sidebar-gradient-text">
-								Default roles
+								Default Roles
 							</h2>
 							<p className="mt-1 text-sm text-slate-600">
 								Built-in roles with curated access. Edit permissions or
@@ -463,7 +451,7 @@ const RolesManagement = () => {
 					<section className="space-y-3">
 						<div>
 							<h2 className="text-xl font-semibold sidebar-gradient-text">
-								Custom roles
+								Custom Roles
 							</h2>
 							<p className="mt-1 text-sm text-slate-600">
 								Roles you define for your org. Use them to grant least-privilege
