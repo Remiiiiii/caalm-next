@@ -1,6 +1,8 @@
 /**
  * Shared glass data-table chrome (roles admin, contracts table, licenses table).
  */
+import { cn } from "@/lib/utils";
+
 export const DATA_TABLE_HEADER_CELL =
 	"h-auto whitespace-nowrap bg-transparent py-3.5 font-semibold sidebar-gradient-text";
 
@@ -10,3 +12,9 @@ export const DATA_TABLE_HEADER_ROW =
 /** Base body row; add e.g. `cursor-pointer` via cn() where needed */
 export const DATA_TABLE_BODY_ROW_BASE =
 	"border-b-0 transition-all duration-200 hover:bg-white/20 hover:shadow-md [&>td]:border-b [&>td]:border-slate-300/50";
+
+/** Clickable data table rows */
+export const DATA_TABLE_BODY_ROW_CLICKABLE = cn(
+	DATA_TABLE_BODY_ROW_BASE,
+	"cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-inset",
+);

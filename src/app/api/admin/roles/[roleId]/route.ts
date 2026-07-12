@@ -1,8 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import {
-	PERMISSIONS,
-	type PermissionKey,
-} from "@/constants/permissions";
+import { PERMISSIONS, type PermissionKey } from "@/constants/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
 import {
 	assignPermissionsToRole,

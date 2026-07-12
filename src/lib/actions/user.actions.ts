@@ -1743,7 +1743,11 @@ function resolveProfileImageId(user: {
 	profileImageId?: string | null;
 }): string | null {
 	const avatarValue = user.avatar?.trim();
-	if (avatarValue && !avatarValue.startsWith("/") && !/^https?:\/\//i.test(avatarValue)) {
+	if (
+		avatarValue &&
+		!avatarValue.startsWith("/") &&
+		!/^https?:\/\//i.test(avatarValue)
+	) {
 		return avatarValue;
 	}
 	return user.profileImageId || null;
@@ -1806,7 +1810,9 @@ export const listUsersForManagement = async (
 		>();
 
 		for (const assignment of userRolesResult.rows) {
-			const targetUserId = String((assignment as { userId?: string }).userId || "");
+			const targetUserId = String(
+				(assignment as { userId?: string }).userId || "",
+			);
 			if (!targetUserId) continue;
 
 			const roleId = String((assignment as { roleId?: string }).roleId || "");
@@ -1861,7 +1867,9 @@ export const listUsersForManagement = async (
 				);
 				return {
 					$id: userId,
-					fullName: String((user as { fullName?: string }).fullName || "Unknown"),
+					fullName: String(
+						(user as { fullName?: string }).fullName || "Unknown",
+					),
 					email: String((user as { email?: string }).email || ""),
 					avatar: resolveProfileAvatarUrl(
 						user as { avatar?: string; profileImageId?: string | null },

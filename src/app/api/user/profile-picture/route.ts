@@ -18,7 +18,11 @@ function getStoredAvatarFileId(user: {
 	const avatarValue = user.avatar?.trim();
 	const profileImageId = user.profileImageId?.trim();
 
-	if (avatarValue && !avatarValue.startsWith("/") && !/^https?:\/\//i.test(avatarValue)) {
+	if (
+		avatarValue &&
+		!avatarValue.startsWith("/") &&
+		!/^https?:\/\//i.test(avatarValue)
+	) {
 		return avatarValue;
 	}
 

@@ -17,11 +17,14 @@ const VALID_IDS = MIN_CONFIGS.map((c) => c.id);
 describe("extractJsonObjectFromModelText", () => {
 	it("strips markdown fences", () => {
 		const raw = '```json\n{"primaryTypeId":"lease"}\n```';
-		expect(extractJsonObjectFromModelText(raw)).toBe('{"primaryTypeId":"lease"}');
+		expect(extractJsonObjectFromModelText(raw)).toBe(
+			'{"primaryTypeId":"lease"}',
+		);
 	});
 
 	it("extracts first object from surrounding text", () => {
-		const raw = 'Here you go: {"primaryTypeId":"grant","confidence":0.9} trailing';
+		const raw =
+			'Here you go: {"primaryTypeId":"grant","confidence":0.9} trailing';
 		expect(extractJsonObjectFromModelText(raw)).toBe(
 			'{"primaryTypeId":"grant","confidence":0.9}',
 		);
@@ -30,11 +33,15 @@ describe("extractJsonObjectFromModelText", () => {
 
 describe("resolveContractTypeId", () => {
 	it("accepts exact ids", () => {
-		expect(resolveContractTypeId("lease", VALID_IDS, MIN_CONFIGS)).toBe("lease");
+		expect(resolveContractTypeId("lease", VALID_IDS, MIN_CONFIGS)).toBe(
+			"lease",
+		);
 	});
 
 	it("matches case-insensitive id", () => {
-		expect(resolveContractTypeId("LEASE", VALID_IDS, MIN_CONFIGS)).toBe("lease");
+		expect(resolveContractTypeId("LEASE", VALID_IDS, MIN_CONFIGS)).toBe(
+			"lease",
+		);
 	});
 
 	it("maps display labels to ids", () => {

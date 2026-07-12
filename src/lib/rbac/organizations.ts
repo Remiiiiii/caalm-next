@@ -7,6 +7,15 @@ import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 
+export type BillingStatus =
+	| "active"
+	| "trialing"
+	| "past_due"
+	| "canceled"
+	| "none";
+
+export type BillingInterval = "monthly" | "yearly";
+
 export interface Organization {
 	$id: string;
 	name: string;
@@ -18,6 +27,12 @@ export interface Organization {
 		maxDepartments: number;
 		features: string[];
 	};
+	stripeCustomerId?: string;
+	stripeSubscriptionId?: string;
+	stripePriceId?: string;
+	billingStatus?: BillingStatus;
+	billingInterval?: BillingInterval;
+	currentPeriodEnd?: string;
 	createdAt: string;
 	updatedAt: string;
 	createdBy: string;
@@ -168,6 +183,60 @@ export async function updateOrganization(
 		} as unknown as Organization;
 	} catch (error) {
 		console.error("[updateOrganization] Error:", error);
+		return null;
+	}
+}
+
+/**
+ * Update organization Stripe billing fields (webhook / checkout source of truth)
+ */
+export async function updateOrganizationBilling(
+	orgId: string,
+	updates: {
+		stripeCustomerId?: string;
+		stripeSubscriptionId?: string;
+		stripePriceId?: string;
+		billingStatus?: BillingStatus;
+		billingInterval?: BillingInterval;
+		subscriptionTier?: "starter" | "growth" | "enterprise";
+		currentPeriodEnd?: string;
+	},
+): Promise<Organization | null> {
+	try {
+		const { tablesDB } = await createAdminClient();
+
+		const updateData: Record<string, string> = {};
+		if (updates.stripeCustomerId !== undefined)
+			updateData.stripeCustomerId = updates.stripeCustomerId;
+		if (updates.stripeSubscriptionId !== undefined)
+			updateData.stripeSubscriptionId = updates.stripeSubscriptionId;
+		if (updates.stripePriceId !== undefined)
+			updateData.stripePriceId = updates.stripePriceId;
+		if (updates.billingStatus !== undefined)
+			updateData.billingStatus = updates.billingStatus;
+		if (updates.billingInterval !== undefined)
+			updateData.billingInterval = updates.billingInterval;
+		if (updates.subscriptionTier !== undefined)
+			updateData.subscriptionTier = updates.subscriptionTier;
+		if (updates.currentPeriodEnd !== undefined)
+			updateData.currentPeriodEnd = updates.currentPeriodEnd;
+
+		const org = await tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId || "default-db",
+			tableId: "organizations",
+			rowId: orgId,
+			data: updateData,
+		});
+
+		return {
+			...org,
+			settings:
+				typeof org.settings === "string"
+					? JSON.parse(org.settings as string)
+					: org.settings,
+		} as unknown as Organization;
+	} catch (error) {
+		console.error("[updateOrganizationBilling] Error:", error);
 		return null;
 	}
 }

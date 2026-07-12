@@ -1,7 +1,7 @@
+import { describe, expect, it } from "vitest";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getPolicyEntryForPath } from "@/lib/rbac/dashboard-access-policy";
 import { validatePermissionsForSod } from "@/lib/rbac/separation-of-duties";
-import { describe, expect, it } from "vitest";
 
 describe("dashboard-access-policy", () => {
 	it("matches longest dashboard prefix for nested admin routes", () => {

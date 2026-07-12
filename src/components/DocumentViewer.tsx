@@ -1,9 +1,13 @@
 import {
 	Calendar,
+	FileImage,
+	FileSpreadsheet,
 	FileText,
+	FileType,
 	Lightbulb,
 	Loader2,
 	Minimize2,
+	Presentation,
 	Send,
 	Sparkles,
 } from "lucide-react";
@@ -579,29 +583,30 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		}
 	};
 
-	const getFileIcon = (type: string) => {
+	const getFileIcon = (type: string, size: "lg" | "sm" = "lg") => {
+		const className =
+			size === "lg" ? "h-16 w-16 text-slate-500" : "h-8 w-8 text-slate-500";
 		switch (type.toLowerCase()) {
 			case "pdf":
-				return "📄";
+			case "txt":
+				return <FileText className={className} aria-hidden />;
 			case "doc":
 			case "docx":
-				return "📝";
+				return <FileType className={className} aria-hidden />;
 			case "xls":
 			case "xlsx":
-				return "📊";
+				return <FileSpreadsheet className={className} aria-hidden />;
 			case "ppt":
 			case "pptx":
-				return "📈";
-			case "txt":
-				return "📄";
+				return <Presentation className={className} aria-hidden />;
 			case "jpg":
 			case "jpeg":
 			case "png":
 			case "gif":
 			case "svg":
-				return "🖼️";
+				return <FileImage className={className} aria-hidden />;
 			default:
-				return "📄";
+				return <FileText className={className} aria-hidden />;
 		}
 	};
 
@@ -668,7 +673,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 				return (
 					<div className="h-full flex items-center justify-center">
 						<div className="text-center max-w-md">
-							<div className="text-6xl mb-4">📄</div>
+							<div className="mb-4 flex justify-center">
+								{getFileIcon("pdf")}
+							</div>
 							<h3 className="text-lg font-medium text-gray-900 mb-2">
 								Local PDF Detected
 							</h3>
@@ -754,7 +761,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		return (
 			<div className="h-full flex items-center justify-center">
 				<div className="text-center">
-					<div className="text-6xl mb-4">{getFileIcon(file.type)}</div>
+					<div className="mb-4 flex justify-center">
+						{getFileIcon(file.type)}
+					</div>
 					<h3 className="text-lg font-medium text-gray-900 mb-2">
 						{file.name}
 					</h3>
@@ -820,7 +829,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 				{/* Header */}
 				<div className="rounded-3xl flex items-center justify-between p-6 border-b border-light-300 bg-gradient-to-r from-light-400 to-white">
 					<div className="flex items-center space-x-4">
-						<div className="text-3xl">{getFileIcon(file.type)}</div>
+						<div className="flex items-center">
+							{getFileIcon(file.type, "sm")}
+						</div>
 						<div>
 							<h2 className="text-xl font-semibold sidebar-gradient-text">
 								{file.name}

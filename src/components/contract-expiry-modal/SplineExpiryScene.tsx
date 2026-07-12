@@ -1,7 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { Suspense, useEffect, useState } from "react";
 import { useSplineWatermarkRemoval } from "@/hooks/useSplineWatermarkRemoval";
 import { getSplineSceneUrl } from "@/lib/spline-config";

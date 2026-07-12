@@ -26,9 +26,9 @@ import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
 	DropdownMenu,
-	DropdownMenuTrigger,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
@@ -370,81 +370,81 @@ const LicenseActionDropdown = ({
 					/>
 				</DropdownMenuTrigger>
 				<AppDropdownMenuContent>
-						<DropdownMenuLabel className="max-w-[200px] truncate">
-							{license.licenseName}
-						</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						{filteredActions.map((actionItem) => {
-							const actionIconMap = {
-								details: Info,
-								edit: Pencil,
-								allocate: KeyRound,
-								renew: RefreshCw,
-								assign: UserRoundCheck,
-								status: RefreshCw,
-								delete: Trash2,
-								download: Download,
-								share: Share2,
-							} as const;
-							const Icon = actionIconMap[
-								actionItem.value as keyof typeof actionIconMap
-							] || FileText;
-							const tone = actionItem.value === "delete" ? "danger" : "default";
+					<DropdownMenuLabel className="max-w-[200px] truncate">
+						{license.licenseName}
+					</DropdownMenuLabel>
+					<DropdownMenuSeparator />
+					{filteredActions.map((actionItem) => {
+						const actionIconMap = {
+							details: Info,
+							edit: Pencil,
+							allocate: KeyRound,
+							renew: RefreshCw,
+							assign: UserRoundCheck,
+							status: RefreshCw,
+							delete: Trash2,
+							download: Download,
+							share: Share2,
+						} as const;
+						const Icon =
+							actionIconMap[actionItem.value as keyof typeof actionIconMap] ||
+							FileText;
+						const tone = actionItem.value === "delete" ? "danger" : "default";
 
-							if (actionItem.value === "download") {
-								return (
-									<AppDropdownMenuItem
-										key={actionItem.value}
-										icon={Icon}
-										tone={tone}
-										onSelect={(e) => {
-											e.preventDefault();
-											handleDownload();
-										}}
-									>
-										{downloading ? "Downloading..." : actionItem.label}
-									</AppDropdownMenuItem>
-								);
-							}
-
+						if (actionItem.value === "download") {
 							return (
 								<AppDropdownMenuItem
 									key={actionItem.value}
 									icon={Icon}
 									tone={tone}
-									onSelect={() => {
-										setAction(actionItem);
-										if (actionItem.value === "details") {
-											setShowDetail(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "edit") {
-											setShowEdit(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "allocate") {
-											setShowAllocate(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "renew") {
-											setShowRenew(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "assign") {
-											setShowAssign(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "status") {
-											setShowStatus(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "delete") {
-											setShowDelete(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "share") {
-											setShowShare(true);
-											setIsModalOpen(true);
-										}
+									onSelect={(e) => {
+										e.preventDefault();
+										handleDownload();
 									}}
 								>
-									{actionItem.label}
+									{downloading ? "Downloading..." : actionItem.label}
 								</AppDropdownMenuItem>
 							);
-						})}
+						}
+
+						return (
+							<AppDropdownMenuItem
+								key={actionItem.value}
+								icon={Icon}
+								tone={tone}
+								onSelect={() => {
+									setAction(actionItem);
+									if (actionItem.value === "details") {
+										setShowDetail(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "edit") {
+										setShowEdit(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "allocate") {
+										setShowAllocate(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "renew") {
+										setShowRenew(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "assign") {
+										setShowAssign(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "status") {
+										setShowStatus(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "delete") {
+										setShowDelete(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "share") {
+										setShowShare(true);
+										setIsModalOpen(true);
+									}
+								}}
+							>
+								{actionItem.label}
+							</AppDropdownMenuItem>
+						);
+					})}
 				</AppDropdownMenuContent>
 			</DropdownMenu>
 

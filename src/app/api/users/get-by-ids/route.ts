@@ -10,7 +10,11 @@ function getProfileImageId(user: {
 	profileImageId?: string | null;
 }): string | null {
 	const avatarValue = user.avatar?.trim();
-	if (avatarValue && !avatarValue.startsWith("/") && !/^https?:\/\//i.test(avatarValue)) {
+	if (
+		avatarValue &&
+		!avatarValue.startsWith("/") &&
+		!/^https?:\/\//i.test(avatarValue)
+	) {
 		return avatarValue;
 	}
 	return user.profileImageId || null;

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
 	requireAuth,
 	requireContractPermission,
@@ -13,7 +14,6 @@ import {
 	generateRequestId,
 	successResponse,
 } from "@/lib/api/contracts/utils/response.util";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import {

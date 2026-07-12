@@ -270,9 +270,7 @@ export async function assignPermissionsToRole(
 
 		const keys = [
 			...new Set(
-				permissionKeys
-					.map((k) => String(k).trim())
-					.filter((k) => k.length > 0),
+				permissionKeys.map((k) => String(k).trim()).filter((k) => k.length > 0),
 			),
 		] as PermissionKey[];
 

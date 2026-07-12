@@ -1,8 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import {
-	PERMISSIONS,
-	type PermissionKey,
-} from "@/constants/permissions";
+import { PERMISSIONS, type PermissionKey } from "@/constants/permissions";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import {
 	assignPermissionsToRole,
@@ -58,7 +55,12 @@ export async function POST(request: NextRequest) {
 		}
 
 		const body = await request.json();
-		const { name, description, orgId: orgIdBody, permissionKeys } = body as {
+		const {
+			name,
+			description,
+			orgId: orgIdBody,
+			permissionKeys,
+		} = body as {
 			name?: string;
 			description?: string;
 			orgId?: string | null;

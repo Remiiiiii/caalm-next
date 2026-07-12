@@ -106,82 +106,108 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
 				</div>
 
 				{/* System Health Cards */}
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-					<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+				<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
-							<CardTitle className="text-sm font-medium sidebar-gradient-text">
-								System Status
-							</CardTitle>
-							{systemHealth.status === "healthy" ? (
-								<CheckCircle className="h-4 w-4 text-green-600" />
-							) : systemHealth.status === "degraded" ? (
-								<AlertTriangle className="h-4 w-4 text-yellow-600" />
-							) : (
-								<XCircle className="h-4 w-4 text-red-600" />
-							)}
-						</CardHeader>
-						<CardContent className="bg-slate-50">
-							<div className="text-2xl font-bold text-slate-900 capitalize">
-								{systemHealth.status}
+						<CardContent className="p-4 sm:p-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-sm font-medium sidebar-gradient-text">
+										System Status
+									</p>
+									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 capitalize">
+										<span>{systemHealth.status}</span>
+										<span className="inline-block ml-2 pb-1">
+											{systemHealth.status === "healthy" ? (
+												<CheckCircle className="h-8 w-8 text-green-600" />
+											) : systemHealth.status === "degraded" ? (
+												<AlertTriangle className="h-8 w-8 text-yellow-600" />
+											) : (
+												<XCircle className="h-8 w-8 text-red-600" />
+											)}
+										</span>
+									</div>
+									<p className="text-xs text-slate-600 mt-1">
+										Uptime: {systemHealth.uptime}%
+									</p>
+								</div>
 							</div>
-							<p className="text-xs text-slate-600 mt-1">
-								Uptime: {systemHealth.uptime}%
-							</p>
 						</CardContent>
 					</Card>
 
-					<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
-							<CardTitle className="text-sm font-medium sidebar-gradient-text">
-								API Requests
-							</CardTitle>
-							<Activity className="h-4 w-4 text-[#0f5384]" />
-						</CardHeader>
-						<CardContent className="bg-slate-50">
-							<div className="text-2xl font-bold text-slate-900">
-								{typeof quickStats.apiRequests === "number"
-									? quickStats.apiRequests.toLocaleString()
-									: "0"}
+						<CardContent className="p-4 sm:p-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-sm font-medium sidebar-gradient-text">
+										API Requests
+									</p>
+									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+										<span>
+											{typeof quickStats.apiRequests === "number"
+												? quickStats.apiRequests.toLocaleString()
+												: "0"}
+										</span>
+										<span className="inline-block ml-2 pb-1">
+											<Activity className="h-8 w-8 text-slate-600" />
+										</span>
+									</div>
+									<p className="text-xs text-slate-600 mt-1">Total requests</p>
+								</div>
 							</div>
-							<p className="text-xs text-slate-600 mt-1">Total requests</p>
 						</CardContent>
 					</Card>
 
-					<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
-							<CardTitle className="text-sm font-medium sidebar-gradient-text">
-								Deployments
-							</CardTitle>
-							<Server className="h-4 w-4 text-[#0f5384]" />
-						</CardHeader>
-						<CardContent className="bg-slate-50">
-							<div className="text-2xl font-bold text-slate-900">
-								{typeof quickStats.deployments === "number"
-									? quickStats.deployments.toLocaleString()
-									: "0"}
+						<CardContent className="p-4 sm:p-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-sm font-medium sidebar-gradient-text">
+										Deployments
+									</p>
+									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+										<span>
+											{typeof quickStats.deployments === "number"
+												? quickStats.deployments.toLocaleString()
+												: "0"}
+										</span>
+										<span className="inline-block ml-2 pb-1">
+											<Server className="h-8 w-8 text-slate-600" />
+										</span>
+									</div>
+									<p className="text-xs text-slate-600 mt-1">
+										Total deployments
+									</p>
+								</div>
 							</div>
-							<p className="text-xs text-slate-600 mt-1">Total deployments</p>
 						</CardContent>
 					</Card>
 
-					<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-6">
-							<CardTitle className="text-sm font-medium sidebar-gradient-text">
-								Active Incidents
-							</CardTitle>
-							<AlertCircle className="h-4 w-4 text-[#0f5384]" />
-						</CardHeader>
-						<CardContent className="bg-slate-50">
-							<div className="text-2xl font-bold text-destructive">
-								{typeof quickStats.activeIncidents === "number"
-									? quickStats.activeIncidents
-									: "0"}
+						<CardContent className="p-4 sm:p-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-sm font-medium sidebar-gradient-text">
+										Active Incidents
+									</p>
+									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+										<span>
+											{typeof quickStats.activeIncidents === "number"
+												? quickStats.activeIncidents
+												: "0"}
+										</span>
+										<span className="inline-block ml-2 pb-1">
+											<AlertCircle className="h-8 w-8 text-slate-600" />
+										</span>
+									</div>
+									<p className="text-xs text-slate-600 mt-1">
+										Requiring attention
+									</p>
+								</div>
 							</div>
-							<p className="text-xs text-slate-600 mt-1">Requiring attention</p>
 						</CardContent>
 					</Card>
 				</div>

@@ -2,6 +2,7 @@
 
 import {
 	Activity,
+	AlertTriangle,
 	BarChart3,
 	Building,
 	ClipboardCheck,
@@ -305,7 +306,10 @@ const OrganizationAnalyticsDashboard = () => {
 		return (
 			<div className="space-y-6">
 				<div className="text-center py-12">
-					<div className="text-red-600 mb-4">⚠️ Error Loading Analytics</div>
+					<div className="flex items-center justify-center gap-2 text-red-600 mb-4">
+						<AlertTriangle className="h-5 w-5" aria-hidden />
+						<span>Error Loading Analytics</span>
+					</div>
 					<p className="text-red-700 mb-4">
 						{error instanceof Error
 							? error.message

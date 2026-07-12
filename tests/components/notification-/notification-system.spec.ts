@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 async function openNotificationCenter(page: Page) {
 	await page.getByTestId("notification-bell").waitFor({

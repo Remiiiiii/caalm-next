@@ -2,11 +2,11 @@ export const dynamic = "force-dynamic";
 
 import dynamicImport from "next/dynamic";
 import { redirect } from "next/navigation";
+import { LoadingSpinner } from "@/components/ui/loading";
 import {
 	getCurrentUser,
 	getCurrentUserFrom2FA,
 } from "@/lib/actions/user.actions";
-import { LoadingSpinner } from "@/components/ui/loading";
 
 // Lazy load the heavy calendar component to reduce initial compilation time
 const OutlookStyleCalendar = dynamicImport(
@@ -14,7 +14,11 @@ const OutlookStyleCalendar = dynamicImport(
 	{
 		loading: () => (
 			<div className="flex min-h-screen items-center justify-center">
-				<LoadingSpinner size="lg" label="Loading calendar..." className="!p-0" />
+				<LoadingSpinner
+					size="lg"
+					label="Loading calendar..."
+					className="!p-0"
+				/>
 			</div>
 		),
 	},

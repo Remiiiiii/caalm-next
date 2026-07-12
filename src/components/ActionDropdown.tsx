@@ -11,12 +11,12 @@ import {
 } from "@/components/ui/dialog";
 
 import {
-	DropdownMenu,
-	DropdownMenuTrigger,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
+	DropdownMenu,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { constructFileUrl } from "@/lib/utils";
 //
@@ -129,16 +129,16 @@ const getStatusLabel = (status: string): string => {
 import {
 	AlertTriangle,
 	Ban,
+	Download,
+	FileText,
 	FolderPen,
 	Info,
 	Minimize2,
+	Pencil,
 	RefreshCw,
+	ScanEye,
 	Share2,
 	Trash2,
-	Download,
-	Pencil,
-	FileText,
-	ScanEye,
 	UserRoundCheck,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -1038,8 +1038,12 @@ const ActionDropdown = ({
 												</label>
 												{showWarning && (
 													<div className="mt-2 ml-7 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-														<p className="font-medium mb-1">
-															⚠️ Warning: Marking contract as expired
+														<p className="font-medium mb-1 flex items-center gap-2">
+															<AlertTriangle
+																className="h-4 w-4 shrink-0"
+																aria-hidden
+															/>
+															Warning: Marking contract as expired
 														</p>
 														<p className="text-xs">
 															This action will mark the contract as expired.
@@ -1214,152 +1218,152 @@ const ActionDropdown = ({
 					/>
 				</DropdownMenuTrigger>
 				<AppDropdownMenuContent>
-						<DropdownMenuLabel className="max-w-[200px] truncate">
-							{file.name || file.contractName}
-						</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						{filteredActions.map((actionItem) => {
-							const actionIconMap = {
-								assign: UserRoundCheck,
-								rename: Pencil,
-								share: Share2,
-								delete: Trash2,
-								details: Info,
-								status: RefreshCw,
-								download: Download,
-								review: ScanEye,
-							} as const;
+					<DropdownMenuLabel className="max-w-[200px] truncate">
+						{file.name || file.contractName}
+					</DropdownMenuLabel>
+					<DropdownMenuSeparator />
+					{filteredActions.map((actionItem) => {
+						const actionIconMap = {
+							assign: UserRoundCheck,
+							rename: Pencil,
+							share: Share2,
+							delete: Trash2,
+							details: Info,
+							status: RefreshCw,
+							download: Download,
+							review: ScanEye,
+						} as const;
 
-							const Icon = actionIconMap[
-								actionItem.value as keyof typeof actionIconMap
-							] || FileText;
-							const tone = actionItem.value === "delete" ? "danger" : "default";
+						const Icon =
+							actionIconMap[actionItem.value as keyof typeof actionIconMap] ||
+							FileText;
+						const tone = actionItem.value === "delete" ? "danger" : "default";
 
-							// Handle download action separately
-							if (actionItem.value === "download") {
-								const handleDownload = async () => {
-									if (downloading) return;
+						// Handle download action separately
+						if (actionItem.value === "download") {
+							const handleDownload = async () => {
+								if (downloading) return;
 
-									setDownloading(true);
-									setIsDropdownOpen(false);
+								setDownloading(true);
+								setIsDropdownOpen(false);
 
-									try {
-										const params = new URLSearchParams();
+								try {
+									const params = new URLSearchParams();
 
-										if (isValidBucketFileId(file.bucketFileId)) {
-											params.append("bucketFileId", file.bucketFileId!);
-										} else if (file.contractId) {
-											params.append("contractId", file.contractId);
-										} else if (file.$id) {
-											params.append("fileId", file.$id);
-										}
-
-										const response = await fetch(
-											`/api/files/download?${params.toString()}`,
-										);
-
-										if (!response.ok) {
-											throw new Error("Download failed");
-										}
-
-										// Get the blob directly without conversion
-										const blob = await response.blob();
-
-										// Get filename from header
-										const contentDisposition = response.headers.get(
-											"Content-Disposition",
-										);
-										let filename = file.name || file.contractName || "download";
-
-										if (contentDisposition) {
-											const match = contentDisposition.match(
-												/filename\*?=['"]?([^'";\n]+)/,
-											);
-											if (match?.[1]) {
-												filename = decodeURIComponent(
-													match[1].replace(/^UTF-8''/, ""),
-												);
-											}
-										}
-
-										// Ensure filename has extension if file has extension
-										if (
-											file.extension &&
-											!filename
-												.toLowerCase()
-												.endsWith(`.${file.extension.toLowerCase()}`)
-										) {
-											filename = `${filename}.${file.extension}`;
-										}
-
-										// Create download link with proper attributes
-										const url = URL.createObjectURL(blob);
-										const link = document.createElement("a");
-										link.href = url;
-										link.download = filename;
-										link.style.display = "none"; // Hide but keep in DOM
-										link.setAttribute("download", filename); // Ensure download attribute is set
-										document.body.appendChild(link);
-
-										// Trigger download
-										link.click();
-
-										// Clean up after a short delay to ensure download starts
-										setTimeout(() => {
-											document.body.removeChild(link);
-											URL.revokeObjectURL(url);
-										}, 100);
-									} catch (error) {
-										console.error("Download failed:", error);
-										alert("Failed to download file");
-									} finally {
-										setDownloading(false);
+									if (isValidBucketFileId(file.bucketFileId)) {
+										params.append("bucketFileId", file.bucketFileId!);
+									} else if (file.contractId) {
+										params.append("contractId", file.contractId);
+									} else if (file.$id) {
+										params.append("fileId", file.$id);
 									}
-								};
 
-								return (
-									<AppDropdownMenuItem
-										key={actionItem.value}
-										icon={Icon}
-										tone={tone}
-										onSelect={(e) => {
-											e.preventDefault();
-											handleDownload();
-										}}
-									>
-										{downloading ? "Downloading..." : actionItem.label}
-									</AppDropdownMenuItem>
-								);
-							}
+									const response = await fetch(
+										`/api/files/download?${params.toString()}`,
+									);
 
-							// Handle other actions
+									if (!response.ok) {
+										throw new Error("Download failed");
+									}
+
+									// Get the blob directly without conversion
+									const blob = await response.blob();
+
+									// Get filename from header
+									const contentDisposition = response.headers.get(
+										"Content-Disposition",
+									);
+									let filename = file.name || file.contractName || "download";
+
+									if (contentDisposition) {
+										const match = contentDisposition.match(
+											/filename\*?=['"]?([^'";\n]+)/,
+										);
+										if (match?.[1]) {
+											filename = decodeURIComponent(
+												match[1].replace(/^UTF-8''/, ""),
+											);
+										}
+									}
+
+									// Ensure filename has extension if file has extension
+									if (
+										file.extension &&
+										!filename
+											.toLowerCase()
+											.endsWith(`.${file.extension.toLowerCase()}`)
+									) {
+										filename = `${filename}.${file.extension}`;
+									}
+
+									// Create download link with proper attributes
+									const url = URL.createObjectURL(blob);
+									const link = document.createElement("a");
+									link.href = url;
+									link.download = filename;
+									link.style.display = "none"; // Hide but keep in DOM
+									link.setAttribute("download", filename); // Ensure download attribute is set
+									document.body.appendChild(link);
+
+									// Trigger download
+									link.click();
+
+									// Clean up after a short delay to ensure download starts
+									setTimeout(() => {
+										document.body.removeChild(link);
+										URL.revokeObjectURL(url);
+									}, 100);
+								} catch (error) {
+									console.error("Download failed:", error);
+									alert("Failed to download file");
+								} finally {
+									setDownloading(false);
+								}
+							};
+
 							return (
 								<AppDropdownMenuItem
 									key={actionItem.value}
 									icon={Icon}
 									tone={tone}
-									onClick={() => {
-										setAction(actionItem);
-										if (actionItem.value === "review") {
-											setIsViewerOpen(true);
-										} else if (
-											[
-												"assign",
-												"rename",
-												"delete",
-												"share",
-												"details",
-												"status",
-											].includes(actionItem.value)
-										) {
-											setIsModalOpen(true);
-										}
+									onSelect={(e) => {
+										e.preventDefault();
+										handleDownload();
 									}}
 								>
-									{actionItem.label}
+									{downloading ? "Downloading..." : actionItem.label}
 								</AppDropdownMenuItem>
 							);
-						})}
+						}
+
+						// Handle other actions
+						return (
+							<AppDropdownMenuItem
+								key={actionItem.value}
+								icon={Icon}
+								tone={tone}
+								onClick={() => {
+									setAction(actionItem);
+									if (actionItem.value === "review") {
+										setIsViewerOpen(true);
+									} else if (
+										[
+											"assign",
+											"rename",
+											"delete",
+											"share",
+											"details",
+											"status",
+										].includes(actionItem.value)
+									) {
+										setIsModalOpen(true);
+									}
+								}}
+							>
+								{actionItem.label}
+							</AppDropdownMenuItem>
+						);
+					})}
 				</AppDropdownMenuContent>
 			</DropdownMenu>
 			{renderDialogContent()}

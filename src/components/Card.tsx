@@ -1,8 +1,8 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 // import Link from 'next/link'; // Removed since we no longer use Link component
 import type { Models } from "node-appwrite";
-import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { type AppUser, fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { convertFileSize } from "@/lib/utils";

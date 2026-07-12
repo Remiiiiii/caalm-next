@@ -77,12 +77,13 @@ export async function getDashboardUrlForUser(
 			}));
 			const selectedRole = getHighestPriorityRole(roles);
 			if (selectedRole) {
-				const roleObj = data.data.roles.find((r: any) => r.name === selectedRole);
+				const roleObj = data.data.roles.find(
+					(r: any) => r.name === selectedRole,
+				);
 				const byId = roleObj?.$id
 					? ROLE_DASHBOARD_FALLBACK[roleObj.$id]?.homeDashboardPath
 					: undefined;
-				dashboardUrl =
-					byId || ROLE_NAME_TO_PATH[selectedRole] || "/dashboard";
+				dashboardUrl = byId || ROLE_NAME_TO_PATH[selectedRole] || "/dashboard";
 			}
 		}
 

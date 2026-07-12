@@ -21,7 +21,6 @@ import {
 	YAxis,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/ui/loading";
 import {
 	Card,
 	CardContent,
@@ -29,6 +28,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 interface StorageMetrics {
 	sourceCode: { size: number; unit: string };

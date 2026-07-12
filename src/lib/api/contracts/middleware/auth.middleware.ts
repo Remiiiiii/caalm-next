@@ -1,14 +1,14 @@
 import type { NextRequest } from "next/server";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { PERMISSIONS } from "@/constants/permissions";
-import {
-	forbiddenResponse,
-	unauthorizedResponse,
-} from "../utils/response.util";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
 	getUserDefaultOrganization,
 	hasPermission,
 } from "@/lib/rbac/permissions";
+import {
+	forbiddenResponse,
+	unauthorizedResponse,
+} from "../utils/response.util";
 
 /**
  * Require user to be authenticated

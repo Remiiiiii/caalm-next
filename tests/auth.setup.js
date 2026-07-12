@@ -216,7 +216,8 @@ test("authenticate", async ({ page, context }) => {
 		);
 	} catch (error) {
 		console.error("Failed to save authentication state:", error);
-		const e2eUserId = process.env.PLAYWRIGHT_E2E_USER_ID?.trim() || "test-user-id";
+		const e2eUserId =
+			process.env.PLAYWRIGHT_E2E_USER_ID?.trim() || "test-user-id";
 		const minimalAuth = {
 			cookies: [
 				{

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Loader2 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import {
-	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
@@ -504,7 +504,7 @@ export default function ContractsTableView({
 							{files.map((file: UIFileDoc) => (
 								<TableRow
 									key={file.$id}
-									className={`${DATA_TABLE_BODY_ROW_BASE} cursor-pointer`}
+									className={DATA_TABLE_BODY_ROW_CLICKABLE}
 								>
 									<TableCell className="py-4">
 										<div className="flex items-center gap-3 min-w-0">

@@ -84,7 +84,9 @@ const CANONICAL_HOME_CANDIDATES: string[] = [
 	"/dashboard/viewer",
 ];
 
-export function getPolicyEntryForPath(pathname: string): DashboardPolicyEntry | null {
+export function getPolicyEntryForPath(
+	pathname: string,
+): DashboardPolicyEntry | null {
 	const sorted = [...DASHBOARD_ROUTE_POLICY].sort(
 		(a, b) => b.pathPrefix.length - a.pathPrefix.length,
 	);
@@ -96,9 +98,7 @@ export function getPolicyEntryForPath(pathname: string): DashboardPolicyEntry | 
 	return null;
 }
 
-function roleIdsHeld(
-	roles: Array<{ roleId: string }>,
-): Set<string> {
+function roleIdsHeld(roles: Array<{ roleId: string }>): Set<string> {
 	return new Set(roles.map((r) => r.roleId));
 }
 
@@ -212,5 +212,7 @@ export async function getUnauthorizedDashboardRedirect(
 	if (await userMayAccessDashboardPath(userId, defaultOrg.orgId, pathname)) {
 		return null;
 	}
-	return (await resolveDashboardHomePath(userId, defaultOrg.orgId)) ?? "/dashboard";
+	return (
+		(await resolveDashboardHomePath(userId, defaultOrg.orgId)) ?? "/dashboard"
+	);
 }

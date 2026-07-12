@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Loader2 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import {
-	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
@@ -407,9 +407,7 @@ export default function LicensesTableView({
 					<Table className="border-separate border-spacing-0">
 						<TableHeader className="[&_tr]:border-b-0">
 							<TableRow className={DATA_TABLE_HEADER_ROW}>
-								<TableHead
-									className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}
-								>
+								<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}>
 									License
 								</TableHead>
 								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
@@ -444,7 +442,7 @@ export default function LicensesTableView({
 							{licenses.map((license: License) => (
 								<TableRow
 									key={license.$id}
-									className={`${DATA_TABLE_BODY_ROW_BASE} cursor-pointer`}
+									className={DATA_TABLE_BODY_ROW_CLICKABLE}
 								>
 									<TableCell className="py-4">
 										<div className="flex items-center gap-3 min-w-0">

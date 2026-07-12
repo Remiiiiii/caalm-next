@@ -521,74 +521,78 @@ const AuditLogsPage = () => {
 				<TabsContent value="all" className="space-y-8">
 					{/* Professional Stats Cards */}
 					{auditStats && (
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-							<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+							<Card className="glass-card">
 								<div className="glass-card-cap" />
-								<CardContent className="p-6">
+								<CardContent className="p-4 sm:p-6">
 									<div className="flex items-center justify-between">
 										<div>
-											<p className="body-2 text-slate-700 mb-1">
+											<p className="text-sm font-medium sidebar-gradient-text">
 												Total Deletions
 											</p>
-											<p className="h2 text-slate-900">
-												{auditStats.totalDeletions}
-											</p>
-										</div>
-										<div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600">
-											<AlertTriangle className="w-6 h-6 text-white" />
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
-								<div className="glass-card-cap" />
-								<CardContent className="p-6">
-									<div className="flex items-center justify-between">
-										<div>
-											<p className="body-2 text-slate-600 mb-1">Success Rate</p>
-											<p className="h2 text-emerald-600">
-												{auditStats.successRate.toFixed(1)}%
-											</p>
-										</div>
-										<div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
-											<TrendingUp className="w-6 h-6 text-white" />
+											<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+												<span>{auditStats.totalDeletions}</span>
+												<span className="inline-block ml-2 pb-1">
+													<AlertTriangle className="h-8 w-8 text-slate-600" />
+												</span>
+											</div>
 										</div>
 									</div>
 								</CardContent>
 							</Card>
 
-							<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+							<Card className="glass-card">
 								<div className="glass-card-cap" />
-								<CardContent className="p-6">
+								<CardContent className="p-4 sm:p-6">
 									<div className="flex items-center justify-between">
 										<div>
-											<p className="body-2 text-slate-600 mb-1">Failed Syncs</p>
-											<p className="h2 text-red-600">
-												{auditStats.failedSyncs}
+											<p className="text-sm font-medium sidebar-gradient-text">
+												Success Rate
 											</p>
-										</div>
-										<div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600">
-											<XCircle className="w-6 h-6 text-white" />
+											<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+												<span>{auditStats.successRate.toFixed(1)}%</span>
+												<span className="inline-block ml-2 pb-1">
+													<TrendingUp className="h-8 w-8 text-slate-600" />
+												</span>
+											</div>
 										</div>
 									</div>
 								</CardContent>
 							</Card>
 
-							<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+							<Card className="glass-card">
 								<div className="glass-card-cap" />
-								<CardContent className="p-6">
+								<CardContent className="p-4 sm:p-6">
 									<div className="flex items-center justify-between">
 										<div>
-											<p className="body-2 text-slate-600 mb-1">
+											<p className="text-sm font-medium sidebar-gradient-text">
+												Failed Syncs
+											</p>
+											<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+												<span>{auditStats.failedSyncs}</span>
+												<span className="inline-block ml-2 pb-1">
+													<XCircle className="h-8 w-8 text-slate-600" />
+												</span>
+											</div>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+
+							<Card className="glass-card">
+								<div className="glass-card-cap" />
+								<CardContent className="p-4 sm:p-6">
+									<div className="flex items-center justify-between">
+										<div>
+											<p className="text-sm font-medium sidebar-gradient-text">
 												Pending Syncs
 											</p>
-											<p className="h2 text-amber-600">
-												{auditStats.pendingSyncs}
-											</p>
-										</div>
-										<div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600">
-											<Clock className="w-6 h-6 text-white" />
+											<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+												<span>{auditStats.pendingSyncs}</span>
+												<span className="inline-block ml-2 pb-1">
+													<Clock className="h-8 w-8 text-slate-600" />
+												</span>
+											</div>
 										</div>
 									</div>
 								</CardContent>

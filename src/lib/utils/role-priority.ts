@@ -41,9 +41,13 @@ export function getHighestPriorityRole(
 
 	const sorted = [...roles].sort((a, b) => {
 		const pa =
-			typeof a.priority === "number" ? a.priority : nameFallbackRank(a.roleName);
+			typeof a.priority === "number"
+				? a.priority
+				: nameFallbackRank(a.roleName);
 		const pb =
-			typeof b.priority === "number" ? b.priority : nameFallbackRank(b.roleName);
+			typeof b.priority === "number"
+				? b.priority
+				: nameFallbackRank(b.roleName);
 		return pa - pb;
 	});
 

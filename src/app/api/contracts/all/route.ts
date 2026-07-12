@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
 	requireAuth,
 	requireContractPermission,
@@ -9,7 +10,6 @@ import {
 	generateRequestId,
 	successResponse,
 } from "@/lib/api/contracts/utils/response.util";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import {
@@ -64,10 +64,7 @@ export async function GET(request: NextRequest) {
 					return await tablesDB.listRows({
 						databaseId: appwriteConfig.databaseId!,
 						tableId: appwriteConfig.contractsCollectionId!,
-						queries: [
-							...scopeQueries,
-							Query.orderAsc("contractExpiryDate"),
-						],
+						queries: [...scopeQueries, Query.orderAsc("contractExpiryDate")],
 					});
 				} catch (dbError: any) {
 					console.error("Error querying contracts from database:", dbError);

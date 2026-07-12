@@ -107,9 +107,7 @@ export const fetcher = async (url: string) => {
 export const swrKeys = {
 	currentUser: () => "/api/user/current",
 	users: (orgId: string | null | undefined) =>
-		orgId
-			? `/api/users?orgId=${encodeURIComponent(orgId)}`
-			: null,
+		orgId ? `/api/users?orgId=${encodeURIComponent(orgId)}` : null,
 	calendarEvents: (year: number, month: number) =>
 		`/api/calendar/events?year=${year}&month=${month}`,
 	managerContracts: (userId: string) => `/api/contracts/manager/${userId}`,

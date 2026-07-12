@@ -111,13 +111,13 @@ export function parseContractTypeSuggestionJson(
 		);
 	}
 
-	const { primaryTypeId: rawPrimary, confidence, alternates, rationale } =
-		zod.data;
-	const primaryTypeId = resolveContractTypeId(
-		rawPrimary,
-		validIds,
-		configs,
-	);
+	const {
+		primaryTypeId: rawPrimary,
+		confidence,
+		alternates,
+		rationale,
+	} = zod.data;
+	const primaryTypeId = resolveContractTypeId(rawPrimary, validIds, configs);
 	if (!primaryTypeId || !allow.has(primaryTypeId)) {
 		return buildContractTypeFallbackResult(
 			"The suggested type was not recognized. Pick a type below or browse all contract types.",

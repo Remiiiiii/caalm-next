@@ -861,7 +861,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				</Card>
 
 				{/* Stats Grid */}
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
 					{unifiedLoading
 						? [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
 						: stats.map((stat, index) => (
@@ -870,7 +870,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									<CardContent className="p-4 sm:p-6">
 										<div className="flex items-center justify-between">
 											<div>
-												<p className="text-sm  font-medium sidebar-gradient-text">
+												<p className="text-sm font-medium sidebar-gradient-text">
 													{stat.title}
 												</p>
 												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
@@ -1426,7 +1426,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								<AlertDialogHeader className="text-center pb-4">
 									<div className="flex justify-center mb-3">
 										<div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
-											<span className="text-2xl">⚠️</span>
+											<AlertTriangle
+												className="h-6 w-6 text-amber-600"
+												aria-hidden
+											/>
 										</div>
 									</div>
 									<AlertDialogTitle className="text-xl sidebar-gradient-text">
@@ -1461,8 +1464,12 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									</div>
 
 									<div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-										<p className="text-xs text-amber-800 font-medium">
-											⚠️ This action can&apos;t be undone
+										<p className="text-xs text-amber-800 font-medium flex items-center gap-2">
+											<AlertTriangle
+												className="h-3.5 w-3.5 shrink-0"
+												aria-hidden
+											/>
+											This action can&apos;t be undone
 										</p>
 									</div>
 								</div>
