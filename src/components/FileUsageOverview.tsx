@@ -1,6 +1,7 @@
 "use client";
 
 import type { Models } from "appwrite";
+import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Chart } from "@/components/Chart";
@@ -40,7 +41,8 @@ const FileUsageOverview = ({ user, totalSpace }: FileUsageOverviewProps) => {
 				<h2 className="flex left-0 text-lg font-bold text-center sidebar-gradient-text mb-6">
 					File Usage Overview
 				</h2>
-				<div className="flex justify-center items-center">
+				<div className="flex justify-center items-center gap-2 py-8">
+					<Loader2 className="h-6 w-6 animate-spin text-[#0f5384]" />
 					<p className="text-gray-500">Loading usage data...</p>
 				</div>
 			</section>

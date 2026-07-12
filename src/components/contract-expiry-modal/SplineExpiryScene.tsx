@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Suspense, useEffect, useState } from "react";
 import { useSplineWatermarkRemoval } from "@/hooks/useSplineWatermarkRemoval";
@@ -12,7 +13,10 @@ const Spline = dynamic(
 		ssr: false,
 		loading: () => (
 			<div className="absolute inset-0 flex items-center justify-center bg-slate-900/50">
-				<div className="text-white text-sm">Loading 3D scene...</div>
+				<div className="text-white text-sm flex items-center gap-2">
+					<Loader2 className="h-4 w-4 animate-spin shrink-0" />
+					Loading 3D scene...
+				</div>
 			</div>
 		),
 	},
@@ -34,11 +38,9 @@ export default function SplineExpiryScene({
 
 	useEffect(() => {
 		const url = getSplineSceneUrl();
-		console.log("Spline scene URL:", url); // Debug: verify which URL is being used
 		if (url) {
 			setSceneUrl(url);
 		} else {
-			// Fallback to local file
 			setSceneUrl("/scene.splinecode");
 		}
 	}, []);
@@ -59,7 +61,10 @@ export default function SplineExpiryScene({
 				<Suspense
 					fallback={
 						<div className="absolute inset-0 flex items-center justify-center bg-transparent">
-							<div className="text-slate-700 text-sm">Loading 3D scene...</div>
+							<div className="text-slate-700 text-sm flex items-center gap-2">
+								<Loader2 className="h-4 w-4 animate-spin shrink-0" />
+								Loading 3D scene...
+							</div>
 						</div>
 					}
 				>
@@ -77,7 +82,10 @@ export default function SplineExpiryScene({
 
 			{isLoading && (
 				<div className="absolute inset-0 flex items-center justify-center bg-transparent z-30">
-					<div className="text-slate-700 text-sm">Loading 3D scene...</div>
+					<div className="text-slate-700 text-sm flex items-center gap-2">
+						<Loader2 className="h-4 w-4 animate-spin shrink-0" />
+						Loading 3D scene...
+					</div>
 				</div>
 			)}
 

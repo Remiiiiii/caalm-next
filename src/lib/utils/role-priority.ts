@@ -4,39 +4,54 @@
  */
 
 /**
- * Role priority order (highest to lowest)
- * When a user has multiple roles, the highest priority role is used for routing
+ * Fallback order when numeric `priority` is missing (unmigrated envs).
  */
 export const ROLE_PRIORITY_ORDER = [
 	"Super Admin",
 	"IT",
 	"Organization Admin",
+	"Content Creator",
 	"Department Manager",
 	"Viewer",
 ] as const;
 
+function nameFallbackRank(roleName?: string | null): number {
+	if (!roleName) {
+		return 9999;
+	}
+	const idx = (ROLE_PRIORITY_ORDER as readonly string[]).indexOf(roleName);
+	if (idx === -1) {
+		return 5000;
+	}
+	return (idx + 1) * 100;
+}
+
 /**
- * Get the highest priority role from a list of roles
- * @param roles - Array of role objects with roleName property
- * @returns The highest priority role name, or null if no roles
+ * Get the highest priority role from a list of roles (lowest `priority` wins).
  */
 export function getHighestPriorityRole(
-	roles: Array<{ roleName?: string | null }>,
+	roles: Array<{
+		roleName?: string | null;
+		priority?: number;
+	}>,
 ): string | null {
 	if (!roles || roles.length === 0) {
 		return null;
 	}
 
-	// Find the highest priority role
-	for (const priority of ROLE_PRIORITY_ORDER) {
-		const role = roles.find((r) => r.roleName === priority);
-		if (role?.roleName) {
-			return role.roleName;
-		}
-	}
+	const sorted = [...roles].sort((a, b) => {
+		const pa =
+			typeof a.priority === "number"
+				? a.priority
+				: nameFallbackRank(a.roleName);
+		const pb =
+			typeof b.priority === "number"
+				? b.priority
+				: nameFallbackRank(b.roleName);
+		return pa - pb;
+	});
 
-	// Fallback to first role if no priority match
-	return roles[0]?.roleName || null;
+	return sorted[0]?.roleName || null;
 }
 
 /**

@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 // import Link from 'next/link'; // Removed since we no longer use Link component
 import type { Models } from "node-appwrite";
 import { useCallback, useEffect, useState } from "react";
@@ -483,7 +484,12 @@ const Card = ({
 		if (assignedManagerUsers.length === 0) {
 			// Only show loading if we have no data at all
 			if (loadingManagers) {
-				return <span className="body-2 text-slate-400">Loading...</span>;
+				return (
+					<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
+						<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+						Loading...
+					</span>
+				);
 			}
 			// Fallback to original display if no user data
 			if (
@@ -770,14 +776,19 @@ const Card = ({
 				<hr className="my-1 border-white/30" />
 				<p className="caption line-clamp-1 text-light-200">
 					By:{" "}
-					{isLoadingOwnerName
-						? "Loading..."
-						: ownerName ||
-							(typeof file.owner === "object" && file.owner?.fullName
-								? file.owner.fullName
-								: typeof file.owner === "string"
-									? "Unknown"
-									: "Unknown")}
+					{isLoadingOwnerName ? (
+						<span className="inline-flex items-center gap-1 align-middle">
+							<Loader2 className="h-3 w-3 animate-spin shrink-0" />
+							Loading...
+						</span>
+					) : (
+						ownerName ||
+						(typeof file.owner === "object" && file.owner?.fullName
+							? file.owner.fullName
+							: typeof file.owner === "string"
+								? "Unknown"
+								: "Unknown")
+					)}
 				</p>
 			</div>
 		</div>

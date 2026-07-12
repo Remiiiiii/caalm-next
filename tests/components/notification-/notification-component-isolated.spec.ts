@@ -10,30 +10,58 @@ test.describe("Notification System Component Tests (Isolated)", () => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
-				body: JSON.stringify([
-					{
-						$id: "test-1",
-						userId: "test-user-1",
-						title: "Test Notification 1",
-						message: "This is a test notification",
-						type: "contract-expiry",
-						read: false,
-						priority: "high",
-						$createdAt: new Date().toISOString(),
-						$updatedAt: new Date().toISOString(),
-					},
-					{
-						$id: "test-2",
-						userId: "test-user-1",
-						title: "Test Notification 2",
-						message: "This is another test notification",
-						type: "info",
-						read: true,
-						priority: "medium",
-						$createdAt: new Date().toISOString(),
-						$updatedAt: new Date().toISOString(),
-					},
-				]),
+				body: JSON.stringify({
+					success: true,
+					data: [
+						{
+							$id: "test-1",
+							userId: "test-user-1",
+							title: "Test Notification 1",
+							message: "This is a test notification",
+							type: "contract-expiry",
+							read: false,
+							priority: "high",
+							$createdAt: new Date().toISOString(),
+							$updatedAt: new Date().toISOString(),
+						},
+						{
+							$id: "test-2",
+							userId: "test-user-1",
+							title: "Test Notification 2",
+							message: "This is another test notification",
+							type: "info",
+							read: true,
+							priority: "medium",
+							$createdAt: new Date().toISOString(),
+							$updatedAt: new Date().toISOString(),
+						},
+					],
+					notifications: [
+						{
+							$id: "test-1",
+							userId: "test-user-1",
+							title: "Test Notification 1",
+							message: "This is a test notification",
+							type: "contract-expiry",
+							read: false,
+							priority: "high",
+							$createdAt: new Date().toISOString(),
+							$updatedAt: new Date().toISOString(),
+						},
+						{
+							$id: "test-2",
+							userId: "test-user-1",
+							title: "Test Notification 2",
+							message: "This is another test notification",
+							type: "info",
+							read: true,
+							priority: "medium",
+							$createdAt: new Date().toISOString(),
+							$updatedAt: new Date().toISOString(),
+						},
+					],
+					total: 2,
+				}),
 			});
 		});
 
@@ -41,30 +69,33 @@ test.describe("Notification System Component Tests (Isolated)", () => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
-				body: JSON.stringify([
-					{
-						$id: "contract-expiry",
-						name: "Contract Expiry",
-						description: "Notifications for contract expiration",
-						icon: "Calendar",
-						priority: "high",
-						category: "contracts",
-						is_active: true,
-						default_enabled: true,
-						auto_trigger: true,
-					},
-					{
-						$id: "info",
-						name: "Information",
-						description: "General information notifications",
-						icon: "Info",
-						priority: "low",
-						category: "general",
-						is_active: true,
-						default_enabled: true,
-						auto_trigger: false,
-					},
-				]),
+				body: JSON.stringify({
+					success: true,
+					data: [
+						{
+							$id: "contract-expiry",
+							name: "Contract Expiry",
+							description: "Notifications for contract expiration",
+							icon: "Calendar",
+							priority: "high",
+							category: "contracts",
+							is_active: true,
+							default_enabled: true,
+							auto_trigger: true,
+						},
+						{
+							$id: "info",
+							name: "Information",
+							description: "General information notifications",
+							icon: "Info",
+							priority: "low",
+							category: "general",
+							is_active: true,
+							default_enabled: true,
+							auto_trigger: false,
+						},
+					],
+				}),
 			});
 		});
 
@@ -116,7 +147,12 @@ test.describe("Notification System Component Tests (Isolated)", () => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
-				body: JSON.stringify([]),
+				body: JSON.stringify({
+					success: true,
+					data: [],
+					notifications: [],
+					total: 0,
+				}),
 			});
 		});
 
@@ -124,7 +160,7 @@ test.describe("Notification System Component Tests (Isolated)", () => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
-				body: JSON.stringify([]),
+				body: JSON.stringify({ success: true, data: [] }),
 			});
 		});
 
@@ -147,19 +183,36 @@ test.describe("Notification System Component Tests (Isolated)", () => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
-				body: JSON.stringify([
-					{
-						$id: "test-1",
-						userId: "test-user-1",
-						title: "Test Notification",
-						message: "This is a test notification message",
-						type: "info",
-						read: false,
-						priority: "medium",
-						$createdAt: new Date().toISOString(),
-						$updatedAt: new Date().toISOString(),
-					},
-				]),
+				body: JSON.stringify({
+					success: true,
+					data: [
+						{
+							$id: "test-1",
+							userId: "test-user-1",
+							title: "Test Notification",
+							message: "This is a test notification message",
+							type: "info",
+							read: false,
+							priority: "medium",
+							$createdAt: new Date().toISOString(),
+							$updatedAt: new Date().toISOString(),
+						},
+					],
+					notifications: [
+						{
+							$id: "test-1",
+							userId: "test-user-1",
+							title: "Test Notification",
+							message: "This is a test notification message",
+							type: "info",
+							read: false,
+							priority: "medium",
+							$createdAt: new Date().toISOString(),
+							$updatedAt: new Date().toISOString(),
+						},
+					],
+					total: 1,
+				}),
 			});
 		});
 
@@ -167,19 +220,22 @@ test.describe("Notification System Component Tests (Isolated)", () => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
-				body: JSON.stringify([
-					{
-						$id: "info",
-						name: "Information",
-						description: "General information notifications",
-						icon: "Info",
-						priority: "low",
-						category: "general",
-						is_active: true,
-						default_enabled: true,
-						auto_trigger: false,
-					},
-				]),
+				body: JSON.stringify({
+					success: true,
+					data: [
+						{
+							$id: "info",
+							name: "Information",
+							description: "General information notifications",
+							icon: "Info",
+							priority: "low",
+							category: "general",
+							is_active: true,
+							default_enabled: true,
+							auto_trigger: false,
+						},
+					],
+				}),
 			});
 		});
 

@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
+import { Button } from "@/components/ui/button";
 
 const Hero = () => {
 	const { ref, inView } = useInView({
@@ -79,7 +81,22 @@ const Hero = () => {
 								your organization from financial and reputational risks.
 							</p>
 						</div>
-						{/* Original styled buttons with arrows and hover arrow animation */}
+						{/* Enterprise Gateway CTAs */}
+						<div className="flex flex-wrap items-center gap-3 mt-4 mb-2">
+							<Link href="/sign-in">
+								<Button className="primary-btn px-3 sm:px-4 cursor-pointer">
+									Sign In
+								</Button>
+							</Link>
+							<a href="#contact">
+								<Button
+									variant="outline"
+									className="rounded-full border-slate-300 text-slate-700 hover:bg-blue-50 hover:border-blue-300 px-3 sm:px-4 cursor-pointer transition-all duration-200"
+								>
+									Contact Sales
+								</Button>
+							</a>
+						</div>
 
 						{/* Avatars and rating */}
 						<div className="flex items-center gap-2 mt-3">

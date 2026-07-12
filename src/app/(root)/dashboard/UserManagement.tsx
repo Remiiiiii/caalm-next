@@ -1,283 +1,297 @@
 "use client";
 
-import { Ban, ListFilter, Pencil, Trash } from "lucide-react";
-import type React from "react";
+import {
+	Ban,
+	CalendarClock,
+	ChevronDown,
+	ChevronsUpDown,
+	Filter,
+	FunnelX,
+	KeyRound,
+	LogOut,
+	PencilIcon,
+	Power,
+	ShieldCheck,
+	UserCheck,
+	UserRound,
+	UserX,
+} from "lucide-react";
+import Image from "next/image";
 import { useMemo, useState } from "react";
-import { UserRoleDisplay } from "@/components/UserRoleDisplay";
+import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox"; // Create or use your own
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import {
+	AppDropdownMenuCheckboxItem,
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
+	AppDropdownMenuTrigger,
 	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { PERMISSIONS } from "@/constants/permissions";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useUsers } from "@/hooks/useUsers";
-import type { AppUser } from "@/lib/actions/user.actions";
+import {
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/lib/ui/data-table-styles";
+import { avatarPlaceholderUrl } from "../../../../constants";
 
-// Map user status to badge colors
-// Now uses the same enum as contracts: ['active', 'inactive', 'pending-review', 'action-required']
-const getUserStatusBadgeClasses = (status: string): string => {
-	const normalized = status?.toLowerCase?.() ?? "";
-	switch (normalized) {
-		case "active":
-			return "bg-[#ccf3e9] text-[#3dd9b3] text-xs rounded";
-		case "inactive":
-			return "bg-[#fff1f1] text-[#fe8787] text-xs rounded";
-		case "pending-review":
-		case "pending": // Legacy support
-			return "bg-[#fef6f0] text-[#ebc620] text-xs rounded";
-		case "action-required":
-			return "bg-[#fff1f1] text-[#fe8787] text-xs rounded";
-		default:
-			return "bg-gray-100 text-gray-600 text-xs rounded";
+type DateRangeFilter = "all" | "today" | "last7days" | "last30days";
+
+function isSafeNextImageSrc(src: string): boolean {
+	const s = src.trim();
+	if (!s) return false;
+	if (/^https?:\/\//i.test(s)) return true;
+	// Public folder paths must start with /
+	if (s.startsWith("/") && !s.startsWith("//")) return true;
+	return false;
+}
+
+function hasCustomAvatar(avatar: string | undefined): boolean {
+	const a = avatar?.trim();
+	if (!a) return false;
+	if (!isSafeNextImageSrc(a)) return false;
+	if (a === avatarPlaceholderUrl) return false;
+	if (a.includes("avatar-placeholder")) return false;
+	return true;
+}
+
+type SortKey =
+	| "fullName"
+	| "email"
+	| "roleName"
+	| "assignedByName"
+	| "assignedDate"
+	| "lastActiveAt";
+
+type SortDirection = "asc" | "desc";
+
+const formatDateTimeLabel = (iso?: string): string => {
+	if (!iso) return "—";
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) return "—";
+
+	const now = new Date();
+	const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const yesterdayStart = new Date(todayStart);
+	yesterdayStart.setDate(todayStart.getDate() - 1);
+	const tomorrowStart = new Date(todayStart);
+	tomorrowStart.setDate(todayStart.getDate() + 1);
+
+	const timeLabel = date.toLocaleString("en-US", {
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: true,
+	});
+
+	if (date >= todayStart && date < tomorrowStart) {
+		return `Today at ${timeLabel}`;
 	}
+	if (date >= yesterdayStart && date < todayStart) {
+		return `Yesterday at ${timeLabel}`;
+	}
+
+	const dateLabel = date.toLocaleDateString("en-US", {
+		month: "short",
+		day: "2-digit",
+		year: "numeric",
+	});
+
+	return `${dateLabel} at ${timeLabel}`;
 };
 
 const UserManagement = () => {
-	const [editUser, setEditUser] = useState<
-		(AppUser & { $id: string; department?: string }) | null
-	>(null);
-	const [editForm, setEditForm] = useState({
-		fullName: "",
-		department: "",
-	});
-	const [editLoading, setEditLoading] = useState(false);
-	const [editError, setEditError] = useState<string | null>(null);
 	const { toast } = useToast();
-	const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+	const { permissions } = usePermissions();
+	const canManageUsers = permissions.includes(PERMISSIONS.USERS.EDIT);
+	const canAssignRoles = permissions.includes(PERMISSIONS.USERS.ASSIGN_ROLES);
 
-	// Selection state
-	const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-
-	// Search and filter state
 	const [searchTerm, setSearchTerm] = useState("");
-	const [filters, setFilters] = useState({
-		roles: [] as string[],
-		departments: [] as string[],
-		statuses: [] as string[],
+	const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+	const [selectedAssignedBy, setSelectedAssignedBy] = useState<string[]>([]);
+	const [dateRangeFilter, setDateRangeFilter] =
+		useState<DateRangeFilter>("all");
+	const [sortConfig, setSortConfig] = useState<{
+		key: SortKey;
+		direction: SortDirection;
+	}>({
+		key: "fullName",
+		direction: "asc",
 	});
 
-	// Use the real-time users hook
-	const { users, isLoading, error, refresh } = useUsers({
+	const [actionUserName, setActionUserName] = useState<string | null>(null);
+	const [actionLabel, setActionLabel] = useState<string | null>(null);
+
+	const { orgId, loading: orgLoading } = useOrganization();
+	const { users, isLoading, error } = useUsers({
+		orgId,
 		enableRealTime: true,
-		pollingInterval: 15000, // 15 seconds
+		pollingInterval: 15000,
 	});
+	const listLoading = orgLoading || !orgId || isLoading;
 
-	// Ensure users have the proper type
-	const typedUsers = users as (AppUser & {
-		$id: string;
-		department?: string;
-	})[];
+	const allRoles = useMemo(
+		() =>
+			[...new Set(users.map((user) => user.roleName || "Unassigned"))].sort(
+				(a, b) => a.localeCompare(b),
+			),
+		[users],
+	);
 
-	// Filter and search functionality
-	const filteredUsers = useMemo(() => {
-		let filtered = typedUsers;
+	const allAssigners = useMemo(
+		() =>
+			[...new Set(users.map((user) => user.assignedByName || "System"))].sort(
+				(a, b) => a.localeCompare(b),
+			),
+		[users],
+	);
 
-		// Apply search filter
+	const isWithinDateRange = (
+		iso: string | undefined,
+		range: DateRangeFilter,
+	) => {
+		if (range === "all") return true;
+		if (!iso) return false;
+		const date = new Date(iso);
+		if (Number.isNaN(date.getTime())) return false;
+
+		const now = new Date();
+		const startToday = new Date(
+			now.getFullYear(),
+			now.getMonth(),
+			now.getDate(),
+		);
+		if (range === "today") return date >= startToday;
+
+		const days = range === "last7days" ? 7 : 30;
+		const startWindow = new Date(now);
+		startWindow.setDate(now.getDate() - days);
+		return date >= startWindow;
+	};
+
+	const filteredAndSortedUsers = useMemo(() => {
+		let next = users;
+
 		if (searchTerm) {
-			filtered = filtered.filter(
+			next = next.filter(
 				(user) =>
 					user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
 					user.email.toLowerCase().includes(searchTerm.toLowerCase()),
 			);
 		}
 
-		// Role filtering removed - roles are now managed via RBAC system
-		// Use the role management UI to view and assign roles
-
-		// Apply department filter
-		if (filters.departments.length > 0) {
-			filtered = filtered.filter(
-				(user) =>
-					user.department && filters.departments.includes(user.department),
+		if (selectedRoles.length > 0) {
+			next = next.filter((user) =>
+				selectedRoles.includes(user.roleName || "Unassigned"),
 			);
 		}
 
-		// Apply status filter
-		if (filters.statuses.length > 0) {
-			filtered = filtered.filter((user) =>
-				filters.statuses.includes(user.status as string),
+		if (selectedAssignedBy.length > 0) {
+			next = next.filter((user) =>
+				selectedAssignedBy.includes(user.assignedByName || "System"),
 			);
 		}
 
-		return filtered;
-	}, [typedUsers, searchTerm, filters]);
+		next = next.filter((user) =>
+			isWithinDateRange(user.assignedDate || user.$createdAt, dateRangeFilter),
+		);
 
-	// Role filter removed - roles are now managed via RBAC system
-	// Use the role management UI to view and assign roles
-	const _uniqueRoles: string[] = [];
+		return [...next].sort((a, b) => {
+			const dir = sortConfig.direction === "asc" ? 1 : -1;
+			const valueA = a[sortConfig.key];
+			const valueB = b[sortConfig.key];
 
-	const uniqueDepartments = useMemo(
-		() =>
-			[...new Set(typedUsers.map((user) => user.department))].filter(
-				Boolean,
-			) as string[],
-		[typedUsers],
-	);
+			if (
+				sortConfig.key === "assignedDate" ||
+				sortConfig.key === "lastActiveAt"
+			) {
+				const timeA = valueA ? new Date(String(valueA)).getTime() : 0;
+				const timeB = valueB ? new Date(String(valueB)).getTime() : 0;
+				return (timeA - timeB) * dir;
+			}
 
-	const uniqueStatuses = useMemo(
-		() =>
-			[...new Set(typedUsers.map((user) => user.status))].filter(
-				Boolean,
-			) as string[],
-		[typedUsers],
-	);
+			return String(valueA || "").localeCompare(String(valueB || "")) * dir;
+		});
+	}, [
+		users,
+		searchTerm,
+		selectedRoles,
+		selectedAssignedBy,
+		dateRangeFilter,
+		sortConfig,
+	]);
 
-	// Filter handlers
-	const handleFilterChange = (
-		type: "roles" | "departments" | "statuses",
-		value: string,
-		checked: boolean,
-	) => {
-		setFilters((prev) => ({
-			...prev,
-			[type]: checked
-				? [...prev[type], value]
-				: prev[type].filter((item) => item !== value),
+	const activeFilterCount =
+		selectedRoles.length +
+		selectedAssignedBy.length +
+		(dateRangeFilter === "all" ? 0 : 1);
+
+	const clearAllFilters = () => {
+		setSelectedRoles([]);
+		setSelectedAssignedBy([]);
+		setDateRangeFilter("all");
+	};
+
+	const toggleSort = (key: SortKey) => {
+		setSortConfig((current) => ({
+			key,
+			direction:
+				current.key === key && current.direction === "asc" ? "desc" : "asc",
 		}));
 	};
 
-	const clearAllFilters = () => {
-		setFilters({ roles: [], departments: [], statuses: [] });
-		setSearchTerm("");
+	const applySortPreset = (key: SortKey, direction: SortDirection) => {
+		setSortConfig({ key, direction });
 	};
 
-	const hasActiveFilters =
-		searchTerm || filters.departments.length > 0 || filters.statuses.length > 0;
-
-	// User edit handlers
-	const closeEditModal = () => {
-		setEditUser(null);
-		setEditForm({ fullName: "", department: "" });
-		setEditError(null);
+	const handleAction = (userName: string, label: string) => {
+		setActionUserName(userName);
+		setActionLabel(label);
+		toast({
+			title: "Action selected",
+			description: `${label} for ${userName}`,
+		});
 	};
 
-	const handleEditChange = (
-		e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-	) => {
-		setEditForm({ ...editForm, [e.target.name]: e.target.value });
-	};
-
-	const handleEditSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!editUser) return;
-
-		setEditLoading(true);
-		setEditError(null);
-
-		try {
-			// Here you would typically call an API to update the user
-			// For now, we'll just simulate the update
-			console.log("Updating user:", editUser.$id, editForm);
-
-			// Simulate API call
-			await new Promise((resolve) => setTimeout(resolve, 1000));
-
-			toast({
-				title: "Success",
-				description: "User updated successfully",
-			});
-
-			closeEditModal();
-			// Refresh users to get the latest data
-			refresh();
-		} catch (error) {
-			console.error("Error updating user:", error);
-			setEditError("Failed to update user");
-			toast({
-				title: "Error",
-				description: "Failed to update user",
-				variant: "destructive",
-			});
-		} finally {
-			setEditLoading(false);
-		}
-	};
-
-	const handleDeleteUser = async (userId: string) => {
-		try {
-			// Here you would typically call an API to delete the user
-			console.log("Deleting user:", userId);
-
-			// Simulate API call
-			await new Promise((resolve) => setTimeout(resolve, 1000));
-
-			toast({
-				title: "Success",
-				description: "User deleted successfully",
-			});
-
-			// Refresh users to get the latest data
-			refresh();
-		} catch (error) {
-			console.error("Error deleting user:", error);
-			toast({
-				title: "Error",
-				description: "Failed to delete user",
-				variant: "destructive",
-			});
-		}
-	};
-
-	const toggleSelectAll = () => {
-		if (selectedUsers.size === filteredUsers.length) {
-			setSelectedUsers(new Set());
-		} else {
-			setSelectedUsers(new Set(filteredUsers.map((user) => user.$id)));
-		}
-	};
-
-	const toggleSelectUser = (id: string) => {
-		const newSelected = new Set(selectedUsers);
-		if (newSelected.has(id)) {
-			newSelected.delete(id);
-		} else {
-			newSelected.add(id);
-		}
-		setSelectedUsers(newSelected);
-	};
-
-	const handleBulkDelete = async () => {
-		try {
-			// Here you would typically call an API to delete multiple users
-			console.log("Bulk deleting users");
-
-			// Simulate API call
-			await new Promise((resolve) => setTimeout(resolve, 1000));
-
-			toast({
-				title: "Success",
-				description: "Selected users deleted successfully",
-			});
-
-			setShowBulkDeleteDialog(false);
-			// Refresh users to get the latest data
-			refresh();
-		} catch (error) {
-			console.error("Error bulk deleting users:", error);
-			toast({
-				title: "Error",
-				description: "Failed to delete selected users",
-				variant: "destructive",
-			});
-		}
+	const renderSortableHead = (label: string, key: SortKey, className = "") => {
+		const isActive = sortConfig.key === key;
+		return (
+			<TableHead className={`${DATA_TABLE_HEADER_CELL} ${className}`}>
+				<Button
+					type="button"
+					variant="ghost"
+					onClick={() => toggleSort(key)}
+					className="h-auto px-0 py-0 font-semibold text-slate-700 hover:bg-transparent"
+				>
+					{label}
+					<ChevronsUpDown
+						className={`ml-1.5 h-3.5 w-3.5 ${isActive ? "opacity-100" : "opacity-50"}`}
+					/>
+				</Button>
+			</TableHead>
+		);
 	};
 
 	if (error) {
 		return (
-			<Card>
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
 				<CardContent className="p-6">
 					<div className="text-center text-red-600">
 						<p>Failed to load users</p>
@@ -288,228 +302,409 @@ const UserManagement = () => {
 	}
 
 	return (
-		<div className="space-y-6">
-			<Card className="glass-card">
-				<div className="glass-card-cap" />
-				<CardHeader>
-					<CardTitle className="flex items-center justify-between text-lg font-bold sidebar-gradient-text">
-						<span>User Management</span>
-						<div className="flex items-center space-x-2">
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button
-										variant="outline"
-										size="sm"
-										className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 space-y-6">
+			<div className="mb-4 flex w-full flex-col gap-1">
+				<h1 className="h1 capitalize sidebar-gradient-text">User management</h1>
+				<p className="text-sm text-slate-600">
+					View and manage user accounts, roles, assignments, activity, and
+					account actions in one place.
+				</p>
+			</div>
+			<div className="flex justify-between flex-col gap-3 sm:flex-row sm:items-center ">
+				<Input
+					placeholder="Search users by full name or email..."
+					className="max-w-md border-white/40 bg-white/40"
+					value={searchTerm}
+					onChange={(e) => setSearchTerm(e.target.value)}
+				/>
+				<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+					<div className="flex items-center gap-2">
+						<DropdownMenu>
+							<AppDropdownMenuTrigger
+								asChild
+								className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
+							>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="primary-btn border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+								>
+									<Filter className="h-4 w-4" />
+									<span className="hidden sm:inline">Filter</span>
+									{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+									<ChevronDown className="h-4 w-4" />
+								</Button>
+							</AppDropdownMenuTrigger>
+							<AppDropdownMenuContent align="end" className="w-72">
+								<DropdownMenuLabel className="sidebar-gradient-text">
+									Filter by role
+								</DropdownMenuLabel>
+								{allRoles.map((role) => (
+									<AppDropdownMenuCheckboxItem
+										icon={ShieldCheck}
+										key={role}
+										checked={selectedRoles.includes(role)}
+										onCheckedChange={(checked) =>
+											setSelectedRoles((prev) =>
+												checked
+													? [...prev, role]
+													: prev.filter((r) => r !== role),
+											)
+										}
 									>
-										<ListFilter className="h-4 w-4 mr-2" />
-										Filter{" "}
-										{hasActiveFilters &&
-											`(${
-												filters.departments.length + filters.statuses.length
-											})`}
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent className="w-56">
-									{/* Role filtering removed - roles are now managed via RBAC system */}
-									<DropdownMenuSeparator />
-									<DropdownMenuLabel>Filter by Department</DropdownMenuLabel>
-									{uniqueDepartments.map((dept) => (
-										<DropdownMenuCheckboxItem
-											key={dept}
-											checked={filters.departments.includes(dept)}
-											onCheckedChange={(checked) =>
-												handleFilterChange("departments", dept, checked)
-											}
-										>
-											{dept}
-										</DropdownMenuCheckboxItem>
-									))}
+										{role}
+									</AppDropdownMenuCheckboxItem>
+								))}
 
-									<DropdownMenuSeparator />
-									<DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-									{uniqueStatuses.map((status) => (
-										<DropdownMenuCheckboxItem
-											key={status}
-											checked={filters.statuses.includes(status)}
-											onCheckedChange={(checked) =>
-												handleFilterChange("statuses", status, checked)
-											}
-										>
-											{status}
-										</DropdownMenuCheckboxItem>
-									))}
+								<DropdownMenuSeparator />
+								<DropdownMenuLabel className="sidebar-gradient-text">
+									Filter by assigned by
+								</DropdownMenuLabel>
+								{allAssigners.map((assigner) => (
+									<AppDropdownMenuCheckboxItem
+										icon={UserCheck}
+										key={assigner}
+										checked={selectedAssignedBy.includes(assigner)}
+										onCheckedChange={(checked) =>
+											setSelectedAssignedBy((prev) =>
+												checked
+													? [...prev, assigner]
+													: prev.filter((v) => v !== assigner),
+											)
+										}
+									>
+										{assigner}
+									</AppDropdownMenuCheckboxItem>
+								))}
 
-									{hasActiveFilters && (
-										<>
-											<DropdownMenuSeparator />
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={clearAllFilters}
-												className="w-full justify-start"
-											>
-												Clear All Filters
-											</Button>
-										</>
-									)}
-								</DropdownMenuContent>
-							</DropdownMenu>
-						</div>
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					{isLoading ? (
+								<DropdownMenuSeparator />
+								<DropdownMenuLabel className="sidebar-gradient-text">
+									Assigned date
+								</DropdownMenuLabel>
+								<AppDropdownMenuCheckboxItem
+									icon={UserCheck}
+									checked={dateRangeFilter === "today"}
+									onCheckedChange={() => setDateRangeFilter("today")}
+								>
+									Today
+								</AppDropdownMenuCheckboxItem>
+								<AppDropdownMenuCheckboxItem
+									icon={UserCheck}
+									checked={dateRangeFilter === "last7days"}
+									onCheckedChange={() => setDateRangeFilter("last7days")}
+								>
+									Last 7 days
+								</AppDropdownMenuCheckboxItem>
+								<AppDropdownMenuCheckboxItem
+									icon={UserCheck}
+									checked={dateRangeFilter === "last30days"}
+									onCheckedChange={() => setDateRangeFilter("last30days")}
+								>
+									Last 30 days
+								</AppDropdownMenuCheckboxItem>
+								<AppDropdownMenuCheckboxItem
+									icon={CalendarClock}
+									checked={dateRangeFilter === "all"}
+									onCheckedChange={() => setDateRangeFilter("all")}
+								>
+									All dates
+								</AppDropdownMenuCheckboxItem>
+
+								{activeFilterCount > 0 && (
+									<>
+										<DropdownMenuSeparator />
+										<AppDropdownMenuItem
+											icon={FunnelX}
+											onSelect={(e) => {
+												e.preventDefault();
+												clearAllFilters();
+											}}
+										>
+											Clear filters
+										</AppDropdownMenuItem>
+									</>
+								)}
+							</AppDropdownMenuContent>
+						</DropdownMenu>
+
+						<DropdownMenu>
+							<AppDropdownMenuTrigger
+								asChild
+								className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
+							>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="primary-btn border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+								>
+									<span className="hidden sm:inline">Sort by</span>
+									<ChevronDown className="h-4 w-4" />
+								</Button>
+							</AppDropdownMenuTrigger>
+							<AppDropdownMenuContent align="end" className="w-64">
+								<AppDropdownMenuItem
+									icon={ChevronsUpDown}
+									onSelect={() => applySortPreset("fullName", "asc")}
+								>
+									Full Name (A-Z)
+								</AppDropdownMenuItem>
+								<AppDropdownMenuItem
+									icon={ChevronsUpDown}
+									onSelect={() => applySortPreset("fullName", "desc")}
+								>
+									Full Name (Z-A)
+								</AppDropdownMenuItem>
+								<DropdownMenuSeparator />
+								<AppDropdownMenuItem
+									icon={ChevronsUpDown}
+									onSelect={() => applySortPreset("assignedDate", "desc")}
+								>
+									Assigned Date (Newest)
+								</AppDropdownMenuItem>
+								<AppDropdownMenuItem
+									icon={ChevronsUpDown}
+									onSelect={() => applySortPreset("assignedDate", "asc")}
+								>
+									Assigned Date (Oldest)
+								</AppDropdownMenuItem>
+								<DropdownMenuSeparator />
+								<AppDropdownMenuItem
+									icon={ChevronsUpDown}
+									onSelect={() => applySortPreset("lastActiveAt", "desc")}
+								>
+									Last Active (Most recent)
+								</AppDropdownMenuItem>
+								<AppDropdownMenuItem
+									icon={ChevronsUpDown}
+									onSelect={() => applySortPreset("lastActiveAt", "asc")}
+								>
+									Last Active (Least recent)
+								</AppDropdownMenuItem>
+							</AppDropdownMenuContent>
+						</DropdownMenu>
+					</div>
+				</div>
+			</div>
+
+			<Card className="w-[99.5%] border border-white/40 bg-white/30 shadow-lg backdrop-blur">
+				<div className="glass-card-cap" />
+				<CardContent className="p-6 space-y-4">
+					{listLoading ? (
 						<div className="flex items-center justify-center py-8">
 							<div className="text-center">
-								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto" />
 								<p className="mt-2 text-sm text-gray-500">Loading users...</p>
 							</div>
 						</div>
 					) : (
-						<div className="space-y-4">
-							{/* Search and bulk actions */}
-							<div className="flex items-center justify-between">
-								<Input
-									placeholder="Search users..."
-									className="max-w-sm"
-									value={searchTerm}
-									onChange={(e) => setSearchTerm(e.target.value)}
-								/>
-								<div className="flex items-center space-x-2">
-									<Checkbox
-										checked={
-											filteredUsers.length > 0 &&
-											selectedUsers.size === filteredUsers.length
-										}
-										onCheckedChange={toggleSelectAll}
-									/>
-									<span className="text-sm text-gray-500">
-										Select all{" "}
-										{selectedUsers.size > 0 &&
-											`(${selectedUsers.size} selected)`}
-									</span>
-									<Button
-										variant="destructive"
-										size="sm"
-										onClick={() => setShowBulkDeleteDialog(true)}
-										disabled={selectedUsers.size === 0}
-									>
-										<Trash className="h-4 w-4 mr-2" />
-										Delete Selected ({selectedUsers.size})
-									</Button>
-								</div>
-							</div>
-
-							{/* Users table styled like Executive Dashboard's Pending Invitations */}
-							<div className="glass-card-inner overflow-x-auto">
-								<table className="min-w-full text-xs">
-									<thead className="bg-gray-50 text-center">
-										<tr>
-											<th className="text-slate-700 text-center px-4 py-2">
-												User
-											</th>
-											<th className="text-slate-700 text-center px-4 py-2">
-												Role
-											</th>
-											<th className="text-slate-700 text-center px-4 py-2">
-												Department
-											</th>
-											<th className="text-slate-700 text-center px-4 py-2">
-												Status
-											</th>
-											<th className="text-slate-700 text-center px-4 py-2">
-												Actions
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{filteredUsers.map((user) => (
-											<tr
-												key={user.$id}
-												className="border-b text-center hover:bg-gray-50 transition-all duration-300"
-											>
-												<td className="pl-2 text-left">
-													<div className="flex items-center">
-														<Checkbox
-															checked={selectedUsers.has(user.$id)}
-															onCheckedChange={() => toggleSelectUser(user.$id)}
-														/>
-														<div className="ml-4">
-															<div className="text-sm font-medium text-gray-900">
-																{user.fullName}
-															</div>
-															<div className="text-sm text-gray-500">
-																{user.email}
-															</div>
-														</div>
-													</div>
-												</td>
-												<td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-													<UserRoleDisplay userId={user.$id} />
-												</td>
-												<td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-													{user.department || "N/A"}
-												</td>
-												<td className="px-4 py-4 whitespace-nowrap">
-													<span
-														className={`inline-block px-2 py-1 font-medium ${getUserStatusBadgeClasses(
-															user.status as string,
-														)}`}
-													>
-														{user.status}
-													</span>
-												</td>
-												<td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-													<div className="flex items-center justify-center space-x-2">
-														<Button
-															variant="outline"
-															size="sm"
-															onClick={() => {
-																setEditUser(user);
-																setEditForm({
-																	fullName: user.fullName,
-																	department: user.department || "",
-																});
-															}}
-															className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-														>
-															<Pencil className="h-4 w-4 mr-2" />
-															Edit
-														</Button>
-														<Button
-															size="sm"
-															onClick={() => handleDeleteUser(user.$id)}
+						<div className="w-full overflow-x-auto">
+							<Table className="border-separate border-spacing-0">
+								<TableHeader className="[&_tr]:border-b-0">
+									<TableRow className={DATA_TABLE_HEADER_ROW}>
+										{renderSortableHead("Full Name", "fullName", "pl-4 pr-3")}
+										{renderSortableHead("Email Address", "email", "px-3")}
+										{renderSortableHead("Role", "roleName", "px-3")}
+										{renderSortableHead(
+											"Assigned by",
+											"assignedByName",
+											"px-3",
+										)}
+										{renderSortableHead(
+											"Assigned Date",
+											"assignedDate",
+											"px-3",
+										)}
+										{renderSortableHead("Last Active", "lastActiveAt", "px-3")}
+										<TableHead
+											className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+										>
+											Action
+										</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody className="[&_tr:last-child>td]:border-b-0">
+									{filteredAndSortedUsers.map((user) => (
+										<TableRow
+											key={user.$id}
+											className={DATA_TABLE_BODY_ROW_BASE}
+										>
+											<TableCell className="py-4">
+												<div className="flex items-center gap-3">
+													{hasCustomAvatar(user.avatar) ? (
+														<div
+															className="shrink-0 rounded-full overflow-hidden"
 															style={{
-																backgroundColor: "#ffffff",
-																color: "#f87774",
+																background:
+																	"linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
+																padding: "2px",
+																width: "32px",
+																height: "32px",
 															}}
 														>
-															<Trash className="h-4 w-4" />
+															<Image
+																src={user.avatar!}
+																alt=""
+																width={28}
+																height={28}
+																className="h-7 w-7 rounded-full object-cover border-2 border-white"
+															/>
+														</div>
+													) : (
+														<Avatar
+															name={user.fullName}
+															userId={user.$id}
+															size="sm"
+															className="shrink-0 gap-0"
+														/>
+													)}
+													<span className="subtitle-2 text-slate-800">
+														{user.fullName}
+													</span>
+												</div>
+											</TableCell>
+											<TableCell className="py-4 text-slate-700">
+												<span className="body-2">{user.email}</span>
+											</TableCell>
+											<TableCell className="py-4 text-slate-700">
+												<span className="body-2">
+													{user.roleName || "Unassigned"}
+												</span>
+											</TableCell>
+											<TableCell className="py-4 text-slate-700">
+												<span className="body-2">
+													{user.assignedByName || "System"}
+												</span>
+											</TableCell>
+											<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+												<span className="body-2 tabular-nums">
+													{formatDateTimeLabel(
+														user.assignedDate || user.$createdAt,
+													)}
+												</span>
+											</TableCell>
+											<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+												<span className="body-2 tabular-nums">
+													{formatDateTimeLabel(
+														user.lastActiveAt || user.$updatedAt,
+													)}
+												</span>
+											</TableCell>
+											<TableCell className="py-4 text-right">
+												<DropdownMenu>
+													<AppDropdownMenuTrigger asChild>
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-9 w-9 rounded-full shad-no-focus text-slate-500 transition-colors hover:bg-white/30 hover:text-slate-800"
+															aria-label={`Actions for ${user.fullName}`}
+														>
+															<Image
+																src="/assets/icons/dots.svg"
+																alt=""
+																width={34}
+																height={34}
+															/>
 														</Button>
-													</div>
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
+													</AppDropdownMenuTrigger>
+													<AppDropdownMenuContent
+														align="end"
+														className="min-w-[230px]"
+													>
+														<AppDropdownMenuItem
+															icon={UserRound}
+															onSelect={() =>
+																handleAction(user.fullName, "View profile")
+															}
+														>
+															View profile
+														</AppDropdownMenuItem>
+														<AppDropdownMenuItem
+															icon={PencilIcon}
+															disabled={!canManageUsers}
+															onSelect={() =>
+																handleAction(user.fullName, "Edit user details")
+															}
+														>
+															Edit user details
+														</AppDropdownMenuItem>
+														<AppDropdownMenuItem
+															icon={ShieldCheck}
+															disabled={!canAssignRoles}
+															onSelect={() =>
+																handleAction(
+																	user.fullName,
+																	"Change role or permissions",
+																)
+															}
+														>
+															Change role / permissions
+														</AppDropdownMenuItem>
+														<DropdownMenuSeparator />
+														<AppDropdownMenuItem
+															icon={KeyRound}
+															disabled={!canManageUsers}
+															onSelect={() =>
+																handleAction(user.fullName, "Reset password")
+															}
+														>
+															Reset password
+														</AppDropdownMenuItem>
+														<AppDropdownMenuItem
+															icon={LogOut}
+															disabled={!canManageUsers}
+															onSelect={() =>
+																handleAction(
+																	user.fullName,
+																	"Revoke active sessions",
+																)
+															}
+														>
+															Revoke active sessions
+														</AppDropdownMenuItem>
+														<AppDropdownMenuItem
+															icon={Power}
+															disabled={!canManageUsers}
+															onSelect={() =>
+																handleAction(
+																	user.fullName,
+																	"Suspend or reactivate account",
+																)
+															}
+														>
+															Suspend / reactivate account
+														</AppDropdownMenuItem>
+														<DropdownMenuSeparator />
+														<AppDropdownMenuItem
+															icon={UserX}
+															tone="danger"
+															disabled={!canManageUsers}
+															onSelect={() =>
+																handleAction(user.fullName, "Delete user")
+															}
+														>
+															Delete user
+														</AppDropdownMenuItem>
+													</AppDropdownMenuContent>
+												</DropdownMenu>
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
 
-							{filteredUsers.length === 0 && !isLoading && (
-								<div className="text-center py-8">
-									<p className="text-gray-500">
-										{hasActiveFilters
-											? "No users match the current filters"
-											: "No users found"}
+							{filteredAndSortedUsers.length === 0 && (
+								<div className="text-center py-10 text-slate-500">
+									<p className="body-2">
+										No users match the current search or filters.
 									</p>
-									{hasActiveFilters && (
+									{activeFilterCount > 0 && (
 										<Button
 											variant="outline"
 											size="sm"
 											onClick={clearAllFilters}
-											className="mt-2"
+											className="mt-3"
 										>
-											Clear Filters
+											Clear filters
 										</Button>
 									)}
 								</div>
@@ -519,97 +714,30 @@ const UserManagement = () => {
 				</CardContent>
 			</Card>
 
-			{/* Edit User Modal */}
-			<Dialog open={!!editUser} onOpenChange={() => closeEditModal()}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Edit User</DialogTitle>
-					</DialogHeader>
-					<form onSubmit={handleEditSubmit} className="space-y-4">
-						<div>
-							<label className="block text-sm font-medium text-gray-700">
-								Full Name
-							</label>
-							<Input
-								name="fullName"
-								value={editForm.fullName || ""}
-								onChange={(e) => {
-									const value = e.target.value.replace(/^ /, "");
-									setEditForm({ ...editForm, fullName: value });
-								}}
-								required
-							/>
-						</div>
-						<div>
-							<label className="block text-sm font-medium text-gray-700">
-								Department
-							</label>
-							<Input
-								name="department"
-								value={editForm.department}
-								onChange={handleEditChange}
-							/>
-						</div>
-						<div>
-							<label className="block text-sm font-medium text-gray-700">
-								Role
-							</label>
-							<select
-								name="role"
-								value={editForm.role}
-								onChange={handleEditChange}
-								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-								required
-							>
-								<option value="">Select a role</option>
-								<option value="admin">Admin</option>
-								<option value="manager">Manager</option>
-								<option value="employee">Employee</option>
-							</select>
-						</div>
-						{editError && <p className="text-red-600 text-sm">{editError}</p>}
-						<div className="flex justify-end space-x-2">
-							<Button
-								type="button"
-								variant="outline"
-								onClick={closeEditModal}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Ban className="w-4 h-4 mr-2" />
-								Cancel
-							</Button>
-							<Button type="submit" disabled={editLoading}>
-								{editLoading ? "Updating..." : "Update User"}
-							</Button>
-						</div>
-					</form>
-				</DialogContent>
-			</Dialog>
-
-			{/* Bulk Delete Confirmation Modal */}
 			<Dialog
-				open={showBulkDeleteDialog}
-				onOpenChange={setShowBulkDeleteDialog}
+				open={!!actionUserName}
+				onOpenChange={() => setActionUserName(null)}
 			>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Confirm Bulk Delete</DialogTitle>
-					</DialogHeader>
-					<p className="text-gray-600">
-						Are you sure you want to delete the selected users? This action
-						cannot be undone.
-					</p>
-					<div className="flex justify-end space-x-2">
+				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
+					<DialogTitle className="sr-only">User action selected</DialogTitle>
+					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
+					<div className="px-6 py-5 space-y-2 bg-white">
+						<p className="text-base font-semibold sidebar-gradient-text">
+							Action selected
+						</p>
+						<p className="text-sm text-slate-600">
+							{actionLabel} for {actionUserName}
+						</p>
+					</div>
+					<div className="px-6 py-4 border-t border-slate-200 bg-white flex justify-end">
 						<Button
-							variant="outline"
-							onClick={() => setShowBulkDeleteDialog(false)}
+							type="button"
+							variant="ghost"
 							className="primary-btn px-3 sm:px-4"
+							onClick={() => setActionUserName(null)}
 						>
-							<Ban className="w-4 h-4 mr-2" />
-							Cancel
-						</Button>
-						<Button variant="destructive" onClick={handleBulkDelete}>
-							Delete Selected
+							<Ban className="h-4 w-4" />
+							Close
 						</Button>
 					</div>
 				</DialogContent>

@@ -68,28 +68,29 @@ const Features = () => {
 					</p>
 				</div>
 
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 					{features.map((feature, index) => {
 						const delay = 0.5 * index;
 						return (
 							<Card
 								key={index}
-								className="hover:shadow-lg transition-shadow border border-white/30 bg-white/60 backdrop-blur-md h-full"
+								className="glass-card h-full"
 								style={{
 									opacity: visible ? 1 : 0,
 									transform: visible ? "translateY(0)" : "translateY(40px)",
 									transition: `opacity 0.7s ${delay}s cubic-bezier(0.4,0,0.2,1), transform 0.7s ${delay}s cubic-bezier(0.4,0,0.2,1)`,
 								}}
 							>
-								<CardHeader className="pb-3 sm:pb-4">
+								<div className="glass-card-cap" />
+								<CardHeader className="pb-3 sm:pb-4 pt-6">
 									<div className="orbit-animated-border w-[70px] h-[70px] mx-auto mb-2">
 										<feature.icon className="orbit-3d w-full h-full p-4 rounded-2xl shadow-xl border border-slate-200 text-[#059BB2] ring-2 ring-cyan-100/40" />
 									</div>
-									<CardTitle className="flex items-center justify-center text-base sm:text-lg bg-gradient-to-r from-[#059BB2] via-[#00C1CB] to-[#162768] bg-clip-text text-transparent">
+									<CardTitle className="flex items-center justify-center text-base sm:text-lg sidebar-gradient-text">
 										{feature.title}
 									</CardTitle>
 								</CardHeader>
-								<CardContent className="pt-0">
+								<CardContent className="pt-0 p-4 sm:p-6">
 									<p className="text-slate-700 text-xs sm:text-sm">
 										{feature.description}
 									</p>

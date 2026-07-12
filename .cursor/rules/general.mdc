@@ -6,6 +6,16 @@ alwaysApply: true
 
 Tech stack: React (Next.js), Tailwind, ShadCN, Appwrite, pnpm, Node. JS
 
+## How to explain things (plain language)
+
+**Assume the reader is not tech-savvy and has about a high-school level education.**
+
+- Start **high level**: what something does in real life, not how engineers name it.
+- Use **everyday words**; if you must use a tech term, give a **one-line plain definition** right after it.
+- Prefer **short sentences** and **one simple analogy** when it helps (for example: “like a security guard checking tickets before you enter”).
+- Skip deep implementation detail unless the user asks for it; if you include it, put it **after** the simple explanation or label it clearly so they can ignore it.
+- For “yes/no” questions, **answer directly first**, then add a sentence or two of context if needed.
+
 ## Style Guide
 
 **IMPORTANT**: All UI/UX styling, page structure, and component patterns must follow the **Global Style Guide**:

@@ -7,6 +7,9 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { listRoles } from "@/lib/rbac/roles";
+import { validateRoleAssignmentForSod } from "@/lib/rbac/separation-of-duties";
+import { logAuditEvent } from "@/lib/services/audit-logger";
+import CacheManager from "@/lib/services/cache-manager";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -72,6 +75,11 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
+		const sod = await validateRoleAssignmentForSod(role.$id);
+		if (!sod.ok) {
+			return NextResponse.json({ error: sod.message }, { status: 400 });
+		}
+
 		// Remove existing role assignments for this user in this org
 		const existingRoles = await tablesDB.listRows(
 			appwriteConfig.databaseId,
@@ -105,6 +113,28 @@ export async function POST(request: NextRequest) {
 				role: roleName.toLowerCase().replace(/\s+/g, "-"),
 			},
 		);
+
+		await CacheManager.invalidateRBAC(user.$id, targetOrgId);
+
+		await logAuditEvent({
+			event_id: "rbac_user_role_set_by_email",
+			event_title: "User role set (email lookup)",
+			action: "update",
+			source: "caalm",
+			user_id: currentUser.$id,
+			user_name:
+				(currentUser as { fullName?: string }).fullName ||
+				currentUser.email ||
+				"unknown",
+			user_email: currentUser.email || "",
+			orgId: targetOrgId,
+			status: "success",
+			metadata: {
+				targetUserId: user.$id,
+				roleId: role.$id,
+				roleName,
+			},
+		});
 
 		return NextResponse.json(
 			{

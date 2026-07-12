@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect } from "react";
 import { ITDashboardErrorBoundary } from "@/components/errors/ITDashboardErrorBoundary";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ITProvider } from "@/contexts/ITContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
@@ -32,11 +33,8 @@ const ITLayoutContent = ({ children }: { children: React.ReactNode }) => {
 		<ITProvider>
 			<ITDashboardErrorBoundary>
 				{loading ? (
-					<div className="flex items-center justify-center h-full">
-						<div className="text-center">
-							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-							<p className="text-gray-600">Loading IT dashboard...</p>
-						</div>
+					<div className="flex h-full min-h-[200px] items-center justify-center">
+						<LoadingSpinner size="lg" label="Loading IT dashboard..." />
 					</div>
 				) : (
 					children

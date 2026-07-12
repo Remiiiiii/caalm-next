@@ -14,7 +14,10 @@ export async function GET(request: NextRequest) {
 
 		if (!orgId) {
 			return NextResponse.json(
-				{ error: "Organization ID is required" },
+				{
+					error: "Organization ID is required",
+					message: "orgId is required for dashboard stats",
+				},
 				{ status: 400 },
 			);
 		}
@@ -44,7 +47,7 @@ export async function GET(request: NextRequest) {
 			},
 		);
 
-		return NextResponse.json({ data: stats });
+		return NextResponse.json({ data: stats, ...stats });
 	} catch (error: any) {
 		console.error("Failed to fetch dashboard stats:", error);
 
@@ -59,15 +62,14 @@ export async function GET(request: NextRequest) {
 			) ||
 			error?.message?.includes("AppwriteException")
 		) {
+			const fallback = {
+				totalContracts: 0,
+				expiringContracts: 0,
+				activeUsers: 0,
+				complianceRate: "0%",
+			};
 			return NextResponse.json(
-				{
-					data: {
-						totalContracts: 0,
-						expiringContracts: 0,
-						activeUsers: 0,
-						complianceRate: "0%",
-					},
-				},
+				{ data: fallback, ...fallback },
 				{ status: 200 },
 			);
 		}

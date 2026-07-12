@@ -4,8 +4,12 @@ import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
 	Ban,
+	Download,
+	FileText,
 	Info,
+	KeyRound,
 	Minimize2,
+	Pencil,
 	RefreshCw,
 	Share2,
 	Trash2,
@@ -19,9 +23,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
@@ -357,7 +361,7 @@ const LicenseActionDropdown = ({
 	return (
 		<>
 			<DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-				<DropdownMenuTrigger className="shad-no-focus">
+				<DropdownMenuTrigger className="shad-no-focus rounded-full transition-colors hover:bg-white/30">
 					<Image
 						src="/assets/icons/dots.svg"
 						alt="dots"
@@ -365,84 +369,83 @@ const LicenseActionDropdown = ({
 						height={34}
 					/>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent className="relative p-0">
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-					<div className="pt-4 px-1 pb-1">
-						<DropdownMenuLabel className="max-w-[200px] truncate">
-							{license.licenseName}
-						</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						{filteredActions.map((actionItem) => {
-							if (actionItem.value === "download") {
-								return (
-									<DropdownMenuItem
-										key={actionItem.value}
-										className="shad-dropdown-item"
-										onSelect={(e) => {
-											e.preventDefault();
-											handleDownload();
-										}}
-									>
-										<div className="flex items-center gap-2">
-											<Image
-												src={actionItem.icon}
-												alt={actionItem.label}
-												width={30}
-												height={30}
-											/>
-											{downloading ? "Downloading..." : actionItem.label}
-										</div>
-									</DropdownMenuItem>
-								);
-							}
+				<AppDropdownMenuContent>
+					<DropdownMenuLabel className="max-w-[200px] truncate">
+						{license.licenseName}
+					</DropdownMenuLabel>
+					<DropdownMenuSeparator />
+					{filteredActions.map((actionItem) => {
+						const actionIconMap = {
+							details: Info,
+							edit: Pencil,
+							allocate: KeyRound,
+							renew: RefreshCw,
+							assign: UserRoundCheck,
+							status: RefreshCw,
+							delete: Trash2,
+							download: Download,
+							share: Share2,
+						} as const;
+						const Icon =
+							actionIconMap[actionItem.value as keyof typeof actionIconMap] ||
+							FileText;
+						const tone = actionItem.value === "delete" ? "danger" : "default";
 
+						if (actionItem.value === "download") {
 							return (
-								<DropdownMenuItem
+								<AppDropdownMenuItem
 									key={actionItem.value}
-									className="shad-dropdown-item"
-									onSelect={() => {
-										setAction(actionItem);
-										if (actionItem.value === "details") {
-											setShowDetail(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "edit") {
-											setShowEdit(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "allocate") {
-											setShowAllocate(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "renew") {
-											setShowRenew(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "assign") {
-											setShowAssign(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "status") {
-											setShowStatus(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "delete") {
-											setShowDelete(true);
-											setIsModalOpen(true);
-										} else if (actionItem.value === "share") {
-											setShowShare(true);
-											setIsModalOpen(true);
-										}
+									icon={Icon}
+									tone={tone}
+									onSelect={(e) => {
+										e.preventDefault();
+										handleDownload();
 									}}
 								>
-									<div className="flex items-center gap-2">
-										<Image
-											src={actionItem.icon}
-											alt={actionItem.label}
-											width={30}
-											height={30}
-										/>
-										{actionItem.label}
-									</div>
-								</DropdownMenuItem>
+									{downloading ? "Downloading..." : actionItem.label}
+								</AppDropdownMenuItem>
 							);
-						})}
-					</div>
-				</DropdownMenuContent>
+						}
+
+						return (
+							<AppDropdownMenuItem
+								key={actionItem.value}
+								icon={Icon}
+								tone={tone}
+								onSelect={() => {
+									setAction(actionItem);
+									if (actionItem.value === "details") {
+										setShowDetail(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "edit") {
+										setShowEdit(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "allocate") {
+										setShowAllocate(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "renew") {
+										setShowRenew(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "assign") {
+										setShowAssign(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "status") {
+										setShowStatus(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "delete") {
+										setShowDelete(true);
+										setIsModalOpen(true);
+									} else if (actionItem.value === "share") {
+										setShowShare(true);
+										setIsModalOpen(true);
+									}
+								}}
+							>
+								{actionItem.label}
+							</AppDropdownMenuItem>
+						);
+					})}
+				</AppDropdownMenuContent>
 			</DropdownMenu>
 
 			{/* View Details Dialog - matches ActionDropdown Details */}

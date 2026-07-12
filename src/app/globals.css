@@ -627,12 +627,40 @@
 
 	/* Glass Card (for stat cards and similar components) */
 	.glass-card {
-		@apply relative rounded-lg overflow-hidden transition-all;
-		background: rgba(255, 255, 255, 0.1);
+		@apply relative rounded-lg overflow-hidden transition-all duration-200;
+		background: rgba(255, 255, 255, 0.55);
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
 		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+	}
+
+	/* Clickable glass surfaces — pointer, hover, keyboard focus */
+	.interactive-glass-card {
+		@apply cursor-pointer;
+	}
+	.interactive-glass-card:hover {
+		@apply border-blue-300;
+		background: rgba(255, 255, 255, 0.65);
+		box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.2);
+	}
+	.interactive-glass-card:focus-visible {
+		outline: none;
+		box-shadow:
+			0 0 0 2px rgba(15, 83, 132, 0.4),
+			0 8px 32px 0 rgba(31, 38, 135, 0.15);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.glass-card,
+		.glass-card-frosted,
+		.interactive-glass-card,
+		.glass-card-inner {
+			transition: none;
+		}
+		.interactive-glass-card:hover {
+			box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+		}
 	}
 
 	.glass-card-cap {

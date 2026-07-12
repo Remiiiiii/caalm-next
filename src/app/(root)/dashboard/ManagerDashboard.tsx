@@ -103,14 +103,16 @@ const ManagerDashboard = () => {
 									<CardContent className="p-4 sm:p-6">
 										<div className="flex items-center justify-between">
 											<div>
-												<p className="text-sm font-medium text-slate-600">
+												<p className="text-sm font-medium sidebar-gradient-text">
 													Total Contracts
 												</p>
-												<p className="text-2xl font-bold text-navy">
-													{contracts.length}
-												</p>
+												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+													<span>{contracts.length}</span>
+													<span className="inline-block ml-2 pb-1">
+														<FileText className="h-8 w-8 text-slate-600" />
+													</span>
+												</div>
 											</div>
-											<FileText className="h-8 w-8 text-[#524E4E]" />
 										</div>
 									</CardContent>
 								</Card>
@@ -120,17 +122,21 @@ const ManagerDashboard = () => {
 									<CardContent className="p-4 sm:p-6">
 										<div className="flex items-center justify-between">
 											<div>
-												<p className="text-sm font-medium text-slate-600">
+												<p className="text-sm font-medium sidebar-gradient-text">
 													Expiring Soon
 												</p>
-												<p className="text-2xl font-bold text-navy">
-													{
-														contracts.filter((c) => c.status === "expired")
-															.length
-													}
-												</p>
+												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+													<span>
+														{
+															contracts.filter((c) => c.status === "expired")
+																.length
+														}
+													</span>
+													<span className="inline-block ml-2 pb-1">
+														<AlertCircle className="h-8 w-8 text-slate-600" />
+													</span>
+												</div>
 											</div>
-											<AlertCircle className="h-8 w-8 text-[#FF7474]" />
 										</div>
 									</CardContent>
 								</Card>
@@ -140,17 +146,21 @@ const ManagerDashboard = () => {
 									<CardContent className="p-4 sm:p-6">
 										<div className="flex items-center justify-between">
 											<div>
-												<p className="text-sm font-medium text-slate-600">
+												<p className="text-sm font-medium sidebar-gradient-text">
 													Pending Reviews
 												</p>
-												<p className="text-2xl font-bold text-navy">
-													{
-														contracts.filter((c) => c.status === "pending")
-															.length
-													}
-												</p>
+												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+													<span>
+														{
+															contracts.filter((c) => c.status === "pending")
+																.length
+														}
+													</span>
+													<span className="inline-block ml-2 pb-1">
+														<Clock className="h-8 w-8 text-slate-600" />
+													</span>
+												</div>
 											</div>
-											<Clock className="h-8 w-8 text-[#56B8FF]" />
 										</div>
 									</CardContent>
 								</Card>
@@ -160,17 +170,21 @@ const ManagerDashboard = () => {
 									<CardContent className="p-4 sm:p-6">
 										<div className="flex items-center justify-between">
 											<div>
-												<p className="text-sm font-medium text-slate-600">
+												<p className="text-sm font-medium sidebar-gradient-text">
 													Active Contracts
 												</p>
-												<p className="text-2xl font-bold text-navy">
-													{
-														contracts.filter((c) => c.status === "active")
-															.length
-													}
-												</p>
+												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+													<span>
+														{
+															contracts.filter((c) => c.status === "active")
+																.length
+														}
+													</span>
+													<span className="inline-block ml-2 pb-1">
+														<Upload className="h-8 w-8 text-slate-600" />
+													</span>
+												</div>
 											</div>
-											<Upload className="h-8 w-8 text-[#DB83ED]" />
 										</div>
 									</CardContent>
 								</Card>

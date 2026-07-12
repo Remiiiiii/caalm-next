@@ -534,15 +534,17 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
 							<CardContent className="p-4 sm:p-6">
-								<div className="space-y-2">
-									<p className="text-sm font-medium text-[#5B93FF]">
-										Total Contracts
-									</p>
-									<div className="flex items-center gap-2">
-										<p className="text-3xl font-bold text-[#5B93FF]">
-											{unifiedStats.totalContracts}
+								<div className="flex items-center justify-between">
+									<div>
+										<p className="text-sm font-medium sidebar-gradient-text">
+											Total Contracts
 										</p>
-										<FileStack className="h-8 w-8 text-[#5B93FF]" />
+										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+											<span>{unifiedStats.totalContracts}</span>
+											<span className="inline-block ml-2 pb-1">
+												<FileStack className="h-8 w-8 text-slate-600" />
+											</span>
+										</div>
 									</div>
 								</div>
 							</CardContent>
@@ -552,15 +554,17 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
 							<CardContent className="p-4 sm:p-6">
-								<div className="space-y-2">
-									<p className="text-sm font-medium text-[#FF7474]">
-										Expiring Soon
-									</p>
-									<div className="flex items-center gap-2">
-										<p className="text-3xl font-bold text-[#FF7474]">
-											{unifiedStats.expiringContracts}
+								<div className="flex items-center justify-between">
+									<div>
+										<p className="text-sm font-medium sidebar-gradient-text">
+											Expiring Soon
 										</p>
-										<AlertTriangle className="h-8 w-8 text-[#FF7474]" />
+										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+											<span>{unifiedStats.expiringContracts}</span>
+											<span className="inline-block ml-2 pb-1">
+												<AlertTriangle className="h-8 w-8 text-slate-600" />
+											</span>
+										</div>
 									</div>
 								</div>
 							</CardContent>
@@ -570,15 +574,17 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
 							<CardContent className="p-4 sm:p-6">
-								<div className="space-y-2">
-									<p className="text-sm font-medium text-[#5B93FF]">
-										Active Users
-									</p>
-									<div className="flex items-center gap-2">
-										<p className="text-3xl font-bold text-[#5B93FF]">
-											{unifiedStats.activeUsers}
+								<div className="flex items-center justify-between">
+									<div>
+										<p className="text-sm font-medium sidebar-gradient-text">
+											Active Users
 										</p>
-										<Users className="h-8 w-8 text-[#5B93FF]" />
+										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+											<span>{unifiedStats.activeUsers}</span>
+											<span className="inline-block ml-2 pb-1">
+												<Users className="h-8 w-8 text-slate-600" />
+											</span>
+										</div>
 									</div>
 								</div>
 							</CardContent>
@@ -588,15 +594,17 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
 							<CardContent className="p-4 sm:p-6">
-								<div className="space-y-2">
-									<p className="text-sm font-medium text-[#3DD9B3]">
-										Compliance Rate
-									</p>
-									<div className="flex items-center gap-2">
-										<p className="text-3xl font-bold text-[#3DD9B3]">
-											{unifiedStats.complianceRate}
+								<div className="flex items-center justify-between">
+									<div>
+										<p className="text-sm font-medium sidebar-gradient-text">
+											Compliance Rate
 										</p>
-										<CheckCircle className="h-8 w-8 text-[#3DD9B3]" />
+										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+											<span>{unifiedStats.complianceRate}</span>
+											<span className="inline-block ml-2 pb-1">
+												<CheckCircle className="h-8 w-8 text-slate-600" />
+											</span>
+										</div>
 									</div>
 								</div>
 							</CardContent>

@@ -1,7 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { PERMISSIONS } from "@/constants/permissions";
+import { PERMISSIONS, type PermissionKey } from "@/constants/permissions";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
-import { listRoles } from "@/lib/rbac/roles";
+import {
+	assignPermissionsToRole,
+	createRole,
+	deleteRole,
+	getRoleMemberCountsForOrg,
+	listRoles,
+} from "@/lib/rbac/roles";
 
 export async function GET(request: NextRequest) {
 	try {
@@ -15,10 +21,19 @@ export async function GET(request: NextRequest) {
 
 		const orgId = await getOrgIdFromRequest(request);
 		const roles = await listRoles(orgId);
+		const memberCounts =
+			orgId && String(orgId).trim()
+				? await getRoleMemberCountsForOrg(String(orgId))
+				: {};
+
+		const data = roles.map((role) => ({
+			...role,
+			memberCount: memberCounts[role.$id] ?? 0,
+		}));
 
 		return NextResponse.json({
 			success: true,
-			data: roles,
+			data,
 		});
 	} catch (error) {
 		console.error("Error fetching roles:", error);
@@ -39,16 +54,26 @@ export async function POST(request: NextRequest) {
 			return permissionCheck;
 		}
 
-		const { name, description, orgId, permissionKeys } = await request.json();
+		const body = await request.json();
+		const {
+			name,
+			description,
+			orgId: orgIdBody,
+			permissionKeys,
+		} = body as {
+			name?: string;
+			description?: string;
+			orgId?: string | null;
+			permissionKeys?: string[];
+		};
 
-		if (!name) {
+		if (!name?.trim()) {
 			return NextResponse.json(
 				{ success: false, error: "Role name is required" },
 				{ status: 400 },
 			);
 		}
 
-		const { createRole } = await import("@/lib/rbac/roles");
 		const { getCurrentUser } = await import("@/lib/actions/user.actions");
 		const currentUser = await getCurrentUser();
 
@@ -59,14 +84,40 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const role = await createRole(
-			name,
-			description || "",
-			false,
-			orgId || null,
-			currentUser.$id,
-			permissionKeys || [],
+		const fromRequest = getOrgIdFromRequest(request);
+		const fromBody =
+			orgIdBody != null && String(orgIdBody).trim()
+				? String(orgIdBody).trim()
+				: undefined;
+		const resolvedOrgId = fromRequest?.trim() || fromBody || null;
+
+		const role = await createRole({
+			name: name.trim(),
+			description: description || "",
+			orgId: resolvedOrgId,
+			isSystemRole: false,
+			createdBy: currentUser.$id,
+		});
+
+		const assigned = await assignPermissionsToRole(
+			role.$id,
+			(permissionKeys ?? []) as PermissionKey[],
 		);
+
+		if (!assigned) {
+			try {
+				await deleteRole(role.$id);
+			} catch (cleanupError) {
+				console.error(
+					"[POST /api/admin/roles] Failed to roll back role after permission error:",
+					cleanupError,
+				);
+			}
+			return NextResponse.json(
+				{ success: false, error: "Failed to assign permissions to role" },
+				{ status: 500 },
+			);
+		}
 
 		return NextResponse.json({
 			success: true,

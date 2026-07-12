@@ -7,6 +7,7 @@
 #
 # Playwright also uses the Appwrite / Twilio / Microsoft secrets listed on the test step
 # (same as former CI workflow). Add them under Repository secrets if tests need real backends.
+# PLAYWRIGHT_E2E_USER_ID — users collection document $id for auth.setup.js (see GITHUB_SECRETS_SETUP.md).
 #
 # Avoid double production deploys: see vercel.json ignoreCommand + Vercel Git settings.
 
@@ -64,6 +65,8 @@ jobs:
         run: pnpm test
         env:
           CI: true
+          PLAYWRIGHT_TEST: "true"
+          PLAYWRIGHT_E2E_USER_ID: ${{ secrets.PLAYWRIGHT_E2E_USER_ID }}
           NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
           NEXT_PUBLIC_APPWRITE_PROJECT: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT }}
           NEXT_PUBLIC_APPWRITE_DATABASE: ${{ secrets.NEXT_PUBLIC_APPWRITE_DATABASE }}

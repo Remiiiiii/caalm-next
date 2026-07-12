@@ -1,5 +1,10 @@
 import type { NextRequest } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import {
+	getUserDefaultOrganization,
+	hasPermission,
+} from "@/lib/rbac/permissions";
 import {
 	forbiddenResponse,
 	unauthorizedResponse,
@@ -56,9 +61,16 @@ export async function requireOwnerAccess(
  * Require user to have specific contract permission
  * Returns null if authorized, or an error response if not
  */
+const ACTION_TO_PERMISSION = {
+	read: PERMISSIONS.CONTRACTS.VIEW,
+	create: PERMISSIONS.CONTRACTS.CREATE,
+	update: PERMISSIONS.CONTRACTS.EDIT,
+	delete: PERMISSIONS.CONTRACTS.EDIT,
+} as const;
+
 export async function requireContractPermission(
-	_request: NextRequest,
-	_action: "read" | "create" | "update" | "delete",
+	request: NextRequest,
+	action: "read" | "create" | "update" | "delete",
 ): Promise<ReturnType<typeof forbiddenResponse> | null> {
 	const user = await getCurrentUser();
 
@@ -66,13 +78,20 @@ export async function requireContractPermission(
 		return unauthorizedResponse("Authentication required");
 	}
 
-	// TODO: Implement RBAC permission checks
-	// For now, allow all authenticated users
-	// This should be replaced with actual permission checks
-	// const hasPermission = await checkContractPermission(user.$id, action);
-	// if (!hasPermission) {
-	//   return forbiddenResponse(`Permission denied: ${action} contract`);
-	// }
+	const orgId =
+		request.nextUrl.searchParams.get("orgId") ||
+		(await getUserDefaultOrganization(user.$id))?.orgId;
+
+	if (!orgId) {
+		return forbiddenResponse("Organization context required");
+	}
+
+	const key = ACTION_TO_PERMISSION[action];
+	const allowed = await hasPermission(user.$id, key, orgId);
+
+	if (!allowed) {
+		return forbiddenResponse(`Permission denied: ${action} contract`);
+	}
 
 	return null;
 }

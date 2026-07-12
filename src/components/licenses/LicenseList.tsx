@@ -1,16 +1,25 @@
 "use client";
 
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
-import { Calendar, Info, Key, Minimize2, MoreVertical } from "lucide-react";
+import {
+	Calendar,
+	Info,
+	Key,
+	Minimize2,
+	MoreVertical,
+	Pencil,
+	RefreshCw,
+	Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -193,48 +202,52 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 												<Button
 													variant="ghost"
 													size="sm"
-													className="h-8 w-8 p-0"
+													className="h-8 w-8 rounded-full p-0 transition-colors hover:bg-white/30"
 												>
 													<MoreVertical className="h-4 w-4" />
 												</Button>
 											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem
+											<AppDropdownMenuContent align="end">
+												<AppDropdownMenuItem
+													icon={Info}
 													onClick={() => {
 														setSelectedLicense(license);
 														setShowDetail(true);
 													}}
 												>
 													View Details
-												</DropdownMenuItem>
-												<DropdownMenuItem
+												</AppDropdownMenuItem>
+												<AppDropdownMenuItem
+													icon={Pencil}
 													onClick={() => {
 														setSelectedLicense(license);
 														setShowEdit(true);
 													}}
 												>
 													Edit
-												</DropdownMenuItem>
-												<DropdownMenuItem
+												</AppDropdownMenuItem>
+												<AppDropdownMenuItem
+													icon={Key}
 													onClick={() => {
 														setSelectedLicense(license);
 														setShowAllocate(true);
 													}}
 												>
 													Allocate
-												</DropdownMenuItem>
-												<DropdownMenuItem
+												</AppDropdownMenuItem>
+												<AppDropdownMenuItem
+													icon={RefreshCw}
 													onClick={() => {
 														setSelectedLicense(license);
 														setShowRenew(true);
 													}}
 												>
 													Renew
-												</DropdownMenuItem>
-												<DropdownMenuItem className="text-red">
+												</AppDropdownMenuItem>
+												<AppDropdownMenuItem icon={Trash2} tone="danger">
 													Delete
-												</DropdownMenuItem>
-											</DropdownMenuContent>
+												</AppDropdownMenuItem>
+											</AppDropdownMenuContent>
 										</DropdownMenu>
 									</TableCell>
 								</TableRow>

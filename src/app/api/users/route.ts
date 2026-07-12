@@ -1,14 +1,28 @@
-import { NextResponse } from "next/server";
-import { listAllUsers } from "@/lib/actions/user.actions";
+import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
+import { listUsersForManagement } from "@/lib/actions/user.actions";
+import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
 	try {
-		console.log("Fetching all users");
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.USERS.VIEW,
+		});
 
-		const users = await listAllUsers();
-		console.log("Users fetched:", users?.length || 0);
+		if (permissionCheck) {
+			return permissionCheck;
+		}
 
-		return NextResponse.json(users || []);
+		const orgId = getOrgIdFromRequest(request);
+		if (!orgId) {
+			return NextResponse.json(
+				{ error: "Organization context required" },
+				{ status: 400 },
+			);
+		}
+
+		const users = await listUsersForManagement(orgId);
+		return NextResponse.json(users);
 	} catch (error) {
 		console.error("Error fetching users:", error);
 		return NextResponse.json(

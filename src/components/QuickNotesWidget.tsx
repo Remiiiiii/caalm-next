@@ -13,6 +13,7 @@ import {
 	Italic,
 	List,
 	ListOrdered,
+	Loader2,
 	MoreVertical,
 	Plus,
 	Save,
@@ -26,9 +27,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -383,7 +384,10 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 					</div>
 				</CardHeader>
 				<CardContent className="px-4 pb-2 flex items-center justify-center h-full">
-					<div className="text-sm text-slate-500">Loading notes...</div>
+					<div className="flex flex-col items-center gap-2 text-sm text-slate-500">
+						<Loader2 className="h-6 w-6 animate-spin text-[#0f5384]" />
+						Loading notes...
+					</div>
 				</CardContent>
 			</Card>
 		);
@@ -552,7 +556,8 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 							<div className="min-h-[120px]">
 								{isClient && <EditorContent editor={newNoteEditor} />}
 								{!isClient && (
-									<div className="min-h-[120px] p-2 text-slate-400">
+									<div className="min-h-[120px] p-2 text-slate-400 flex flex-col items-center justify-center gap-2">
+										<Loader2 className="h-5 w-5 animate-spin text-slate-400" />
 										Loading editor...
 									</div>
 								)}
@@ -608,21 +613,21 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 									<Button
 										variant="ghost"
 										size="sm"
-										className="h-6 w-6 p-0 hover:bg-yellow-200/60"
+										className="h-6 w-6 rounded-full p-0 hover:bg-yellow-200/60"
 										title="More Options"
 									>
 										<MoreVertical className="h-3 w-3 rotate-90" />
 									</Button>
 								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuItem
+								<AppDropdownMenuContent align="end">
+									<AppDropdownMenuItem
+										icon={Trash2}
+										tone="danger"
 										onClick={() => openDeleteDialog(selectedNote!)}
-										className="text-slate-700 hover:text-red focus:text-red"
 									>
-										<Trash2 className="h-4 w-4 text-red" />
 										Delete Note
-									</DropdownMenuItem>
-								</DropdownMenuContent>
+									</AppDropdownMenuItem>
+								</AppDropdownMenuContent>
 							</DropdownMenu>
 							<Button
 								variant="ghost"
@@ -649,7 +654,8 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 							<div className="min-h-[120px]">
 								{isClient && <EditorContent editor={editNoteEditor} />}
 								{!isClient && (
-									<div className="min-h-[120px] p-2 text-slate-400">
+									<div className="min-h-[120px] p-2 text-slate-400 flex flex-col items-center justify-center gap-2">
+										<Loader2 className="h-5 w-5 animate-spin text-slate-400" />
 										Loading editor...
 									</div>
 								)}

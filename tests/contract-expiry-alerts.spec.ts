@@ -93,8 +93,8 @@ test.describe("Contract Expiry Alerts Widget", () => {
 			sessionStorage.setItem("authenticated", "true");
 		});
 
-		// Navigate to real dashboard page
-		await page.goto("/dashboard/executive", {
+		// Navigate to dashboard (redirects to role home when authenticated)
+		await page.goto("/dashboard", {
 			waitUntil: "domcontentloaded",
 			timeout: 30000,
 		});

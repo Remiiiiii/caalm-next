@@ -11,6 +11,24 @@ const client = new Client()
 const storage = new Storage(client);
 const databases = new Databases(client);
 
+function getStoredAvatarFileId(user: {
+	avatar?: string | null;
+	profileImageId?: string | null;
+}): string | null {
+	const avatarValue = user.avatar?.trim();
+	const profileImageId = user.profileImageId?.trim();
+
+	if (
+		avatarValue &&
+		!avatarValue.startsWith("/") &&
+		!/^https?:\/\//i.test(avatarValue)
+	) {
+		return avatarValue;
+	}
+
+	return profileImageId || null;
+}
+
 export async function POST(request: NextRequest) {
 	try {
 		// Check if required Appwrite config is available
@@ -63,10 +81,11 @@ export async function POST(request: NextRequest) {
 				userId,
 			);
 
-			if (user.profileImageId) {
+			const existingImageId = getStoredAvatarFileId(user);
+			if (existingImageId) {
 				await storage.deleteFile(
 					appwriteConfig.profilePicturesBucketId!,
-					user.profileImageId,
+					existingImageId,
 				);
 			}
 		} catch (_error) {
@@ -87,13 +106,13 @@ export async function POST(request: NextRequest) {
 			userId,
 		);
 
-		// Update user document with only the file ID (not the URL)
+		// Store file ID in avatar field (text); profileImageId is deprecated.
 		await databases.updateDocument(
 			appwriteConfig.databaseId!,
 			appwriteConfig.usersCollectionId!,
 			userId,
 			{
-				profileImageId: uploadedFile.$id,
+				avatar: uploadedFile.$id,
 			},
 		);
 
@@ -139,30 +158,31 @@ export async function DELETE(request: NextRequest) {
 			);
 		}
 
-		// Get user document to find profile image ID
+		// Get user document to find current profile image ID
 		const user = await databases.getDocument(
 			appwriteConfig.databaseId!,
 			appwriteConfig.usersCollectionId!,
 			userId,
 		);
 
-		if (user.profileImageId) {
+		const existingImageId = getStoredAvatarFileId(user);
+		if (existingImageId) {
 			// Delete file from storage
 			await storage.deleteFile(
 				appwriteConfig.profilePicturesBucketId!,
-				user.profileImageId,
+				existingImageId,
 			);
 
 			// Get user data for cache invalidation before update
 			const userDoc = user;
 
-			// Update user document to remove profile image ID
+			// Clear avatar field (profileImageId is deprecated)
 			await databases.updateDocument(
 				appwriteConfig.databaseId!,
 				appwriteConfig.usersCollectionId!,
 				userId,
 				{
-					profileImageId: null,
+					avatar: null,
 				},
 			);
 

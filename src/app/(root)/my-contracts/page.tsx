@@ -13,6 +13,7 @@ import {
 	CardTitle,
 	Card as UICard,
 } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -174,6 +175,13 @@ const MyContractsPage = () => {
 	if (loading) {
 		return (
 			<div className="space-y-6">
+				<div className="flex justify-center py-2">
+					<LoadingSpinner
+						size="sm"
+						label="Loading contracts..."
+						className="!p-0"
+					/>
+				</div>
 				<div className="animate-pulse">
 					<div className="h-8 bg-white/20 rounded-xl w-1/3 mb-4"></div>
 					<div className="h-4 bg-white/20 rounded-xl w-1/2 mb-6"></div>

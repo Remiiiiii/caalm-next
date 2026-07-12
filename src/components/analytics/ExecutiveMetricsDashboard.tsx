@@ -17,6 +17,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ExecutiveMetricsDashboardProps {
@@ -186,6 +187,13 @@ const ExecutiveMetricsDashboard: React.FC<ExecutiveMetricsDashboardProps> = ({
 	if (isLoading) {
 		return (
 			<div className="space-y-6">
+				<div className="flex justify-center py-2">
+					<LoadingSpinner
+						size="sm"
+						label="Loading metrics..."
+						className="!p-0"
+					/>
+				</div>
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 					{[...Array(8)].map((_, i) => (
 						<Card

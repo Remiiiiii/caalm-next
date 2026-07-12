@@ -153,15 +153,19 @@ export const Header = () => {
 				</nav>
 
 				<div className="hidden md:flex items-center space-x-2 sm:space-x-4">
-					<Link href="/sign-in">
+					<a href="#contact">
 						<Button
-							variant="ghost"
-							className="text-slate-700 hover:bg-white/60 hover:backdrop-blur-lg text-sm transition-all duration-300 ease-in-out hover:scale-105 active:scale-95  hover:shadow-md rounded-full"
+							variant="outline"
+							className="rounded-full border-slate-300 text-slate-700 hover:bg-blue-50 hover:border-blue-300 text-sm cursor-pointer transition-all duration-200"
 						>
+							Contact Sales
+						</Button>
+					</a>
+					<Link href="/sign-in">
+						<Button className="primary-btn px-3 sm:px-4 text-sm cursor-pointer">
 							Sign In
 						</Button>
 					</Link>
-					<Link href="/sign-in"></Link>
 				</div>
 
 				<button

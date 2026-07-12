@@ -4,6 +4,7 @@
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { type ReactNode, useEffect } from "react";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
@@ -24,10 +25,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 	return (
 		<>
 			{loading ? (
-				<div className="flex justify-center items-center h-screen">
-					Loading...
-				</div>
-			) : !user ? null : ( // Or a spinner
+				<LoadingSpinner fullScreen label="Loading..." />
+			) : !user ? null : (
 				children
 			)}
 		</>

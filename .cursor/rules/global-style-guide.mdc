@@ -392,6 +392,77 @@ className="shadow-sm hover:shadow-md transition-all duration-200"
 
 ---
 
+## Interactive glass cards
+
+Use **static** glass for display-only content. Use **interactive** glass when the whole card is clickable.
+
+### Static (display only)
+
+```tsx
+<Card className="glass-card">
+  <div className="glass-card-cap" />
+  <CardContent className="p-4 sm:p-6">{/* content */}</CardContent>
+</Card>
+```
+
+### Interactive (clickable)
+
+```tsx
+<Card className="glass-card interactive-glass-card" tabIndex={0} role="button" onClick={...}>
+  <div className="glass-card-cap" />
+  <CardContent className="p-4 sm:p-6">{/* content */}</CardContent>
+</Card>
+```
+
+Or combine: `className="glass-card interactive-glass-card"`.
+
+**Rules:**
+- `cursor-pointer` on all clickable cards, rows, and icon buttons
+- Hover via color/border/shadow only — no `scale-*` that shifts layout
+- `transition-all duration-200` on interactive glass
+- `focus-visible:ring-2 focus-visible:ring-[#0f5384]/40` for keyboard users
+
+---
+
+## Glass contrast rules
+
+| Surface | Minimum fill | Text |
+|---------|--------------|------|
+| `.glass-card` | `rgba(255,255,255,0.55)` | `text-slate-900` body, `text-slate-600` muted |
+| `.glass-card-inner` | `rgba(255,255,255,0.30)` | Same as above |
+| `.glass-card-frosted` | `rgba(255,255,255,0.55)` | Dialog content on `bg-slate-50` |
+
+Never use `bg-white/10` for primary readable content. Ensure 4.5:1 contrast on light backgrounds.
+
+---
+
+## Dashboard density (anti-clutter)
+
+- One clear primary CTA per section; group secondary actions
+- Stat card grids: `gap-6` (not `gap-4`)
+- Limit equal-weight card rows to 4 per row on desktop
+- Empty/error states: icon + short message (Lucide, not emoji)
+- Loading: use skeleton components, not spinner-only walls
+
+---
+
+## ui-ux-pro-max pre-delivery checklist (CAALM mapping)
+
+| Check | CAALM implementation |
+|-------|---------------------|
+| No emoji icons | Lucide (`lucide-react`) |
+| cursor-pointer | `.interactive-glass-card`, `Button`, table row classes |
+| Hover 150–300ms | `duration-200` on glass and `.primary-btn` |
+| Light contrast | `text-slate-900` / `text-slate-600` on glass |
+| Focus visible | `focus-visible:ring-*` on buttons, cards, table rows |
+| Reduced motion | `@media (prefers-reduced-motion: reduce)` in `globals.css` |
+| Responsive | `375px, 768px, 1024px, 1440px` — standard container padding |
+| Page container | `w-full px-4 sm:px-6 lg:px-8 xl:px-12` |
+
+Reference: [`design-system/caalm/MASTER.md`](design-system/caalm/MASTER.md)
+
+---
+
 ## Consistency Checklist
 
 When creating a new page or component, verify:

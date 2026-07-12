@@ -1,19 +1,27 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/actions/user.actions";
+import {
+	getCurrentUser,
+	getCurrentUserFrom2FA,
+} from "@/lib/actions/user.actions";
 import RoleDetail from "./RoleDetail";
 
 export default async function RoleDetailPage({
 	params,
 }: {
-	params: { roleId: string };
+	params: Promise<{ roleId: string }>;
 }) {
-	const currentUser = await getCurrentUser();
+	let currentUser = await getCurrentUser();
+	if (!currentUser) {
+		currentUser = await getCurrentUserFrom2FA();
+	}
 
 	if (!currentUser) {
 		redirect("/sign-in");
 	}
 
-	return <RoleDetail roleId={params.roleId} />;
+	const { roleId } = await params;
+
+	return <RoleDetail roleId={roleId} />;
 }

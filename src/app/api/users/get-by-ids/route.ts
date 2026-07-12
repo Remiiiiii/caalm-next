@@ -5,6 +5,21 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { CACHE_KEYS, getTTLForRoute } from "@/lib/services/cache-keys";
 import * as cache from "@/lib/services/redis-cache";
 
+function getProfileImageId(user: {
+	avatar?: string | null;
+	profileImageId?: string | null;
+}): string | null {
+	const avatarValue = user.avatar?.trim();
+	if (
+		avatarValue &&
+		!avatarValue.startsWith("/") &&
+		!/^https?:\/\//i.test(avatarValue)
+	) {
+		return avatarValue;
+	}
+	return user.profileImageId || null;
+}
+
 /**
  * Fetch a single user by ID, accountId, or fullName with caching
  */
@@ -38,7 +53,7 @@ async function fetchUserByIdentifier(
 					accountId: user.accountId,
 					fullName: user.fullName,
 					email: user.email,
-					profileImageId: user.profileImageId || null,
+					profileImageId: getProfileImageId(user),
 				};
 
 				// Cache by all identifiers for future lookups
@@ -80,7 +95,7 @@ async function fetchUserByIdentifier(
 					accountId: user.accountId,
 					fullName: user.fullName,
 					email: user.email,
-					profileImageId: user.profileImageId || null,
+					profileImageId: getProfileImageId(user),
 				};
 
 				// Cache by all identifiers
@@ -122,7 +137,7 @@ async function fetchUserByIdentifier(
 					accountId: user.accountId,
 					fullName: user.fullName,
 					email: user.email,
-					profileImageId: user.profileImageId || null,
+					profileImageId: getProfileImageId(user),
 				};
 
 				// Cache by all identifiers

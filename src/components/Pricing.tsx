@@ -118,29 +118,31 @@ export default function Pricing({ plans }: Props) {
 						<article
 							key={plan.key}
 							className={cn(
-								"rounded-2xl bg-[#f6fafd]/50 shadow-lg border border-white backdrop-blur p-6 flex flex-col transform transition-transform duration-300 will-change-transform motion-reduce:transform-none hover:scale-[1.02] hover:-translate-y-1",
+								"rounded-2xl glass-card p-6 flex flex-col transition-all duration-200",
 								idx === 1 ? "ring-2 ring-[#05A1B7]/70" : "",
 								idx === 0 ? "self-start h-auto" : "",
 								idx === 1 ? "self-start h-auto" : "",
 							)}
 						>
-							<h3 className="text-lg font-semibold text-slate-900 mb-2">
+							<div className="glass-card-cap" />
+							<h3 className="text-lg font-semibold text-slate-900 mb-2 mt-2">
 								{plan.name}
 							</h3>
 							<div className="flex items-baseline gap-1 mb-4">
-								<span className="text-4xl font-bold text-navy">
+								<span className="text-4xl font-bold text-slate-700">
 									${plan.displayPrice}
 								</span>
-								<span className="text-sm text-slate-500">
+								<span className="text-sm text-slate-600">
 									{period === "monthly" ? "user/month" : "user/year"}
 								</span>
 							</div>
 							<button
+								type="button"
 								className={cn(
-									"w-full rounded-full py-3 shimmer-hover font-semibold shadow-sm transition-colors",
+									"w-full rounded-full py-3 cursor-pointer font-semibold shadow-sm transition-all duration-200",
 									idx === 1
-										? "bg-gradient-to-r from-[#00C1CB] via-[#078FAB] to-[#162768] text-white"
-										: "bg-gradient-to-r from-slate-500 to-slate-700 text-white",
+										? "primary-btn"
+										: "bg-gradient-to-r from-slate-500 to-slate-700 text-white hover:opacity-90",
 								)}
 							>
 								Get Started

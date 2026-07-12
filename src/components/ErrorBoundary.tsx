@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import type React from "react";
 import { Component, type ReactNode } from "react";
 
@@ -37,7 +38,10 @@ class ErrorBoundary extends Component<Props, State> {
 				return (
 					this.props.fallback || (
 						<div className="p-6 text-center">
-							<div className="text-red-600 mb-4">⚠️ Something went wrong</div>
+							<div className="flex items-center justify-center gap-2 text-red-600 mb-4">
+								<AlertTriangle className="h-5 w-5" aria-hidden />
+								<span>Something went wrong</span>
+							</div>
 							<p className="text-gray-600 mb-4">
 								We're sorry, but something unexpected happened. Please try
 								again.
@@ -46,7 +50,7 @@ class ErrorBoundary extends Component<Props, State> {
 								onClick={() =>
 									this.setState({ hasError: false, error: undefined })
 								}
-								className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+								className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 cursor-pointer"
 							>
 								Try Again
 							</button>
@@ -58,13 +62,16 @@ class ErrorBoundary extends Component<Props, State> {
 			// In development, show detailed error information
 			return (
 				<div className="p-6 text-center">
-					<div className="text-red-600 mb-4">⚠️ Error</div>
+					<div className="flex items-center justify-center gap-2 text-red-600 mb-4">
+						<AlertTriangle className="h-5 w-5" aria-hidden />
+						<span>Error</span>
+					</div>
 					<p className="text-red-700 mb-4">
 						{this.state.error?.message || "An unexpected error occurred"}
 					</p>
 					<button
 						onClick={() => this.setState({ hasError: false, error: undefined })}
-						className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+						className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200 cursor-pointer"
 					>
 						Try Again
 					</button>

@@ -5,6 +5,8 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
+import { validateRoleAssignmentForSod } from "@/lib/rbac/separation-of-duties";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(
@@ -112,6 +114,14 @@ export async function POST(
 			);
 		}
 
+		const sod = await validateRoleAssignmentForSod(roleId);
+		if (!sod.ok) {
+			return NextResponse.json(
+				{ success: false, error: sod.message },
+				{ status: 400 },
+			);
+		}
+
 		const { tablesDB } = await createAdminClient();
 
 		// Remove existing role assignments for this user in this org
@@ -149,6 +159,26 @@ export async function POST(
 
 		// Invalidate RBAC cache for this user
 		await CacheManager.invalidateRBAC(userId, targetOrgId);
+
+		await logAuditEvent({
+			event_id: "rbac_user_role_assigned",
+			event_title: "User role assignment updated",
+			action: "update",
+			source: "caalm",
+			user_id: currentUser.$id,
+			user_name:
+				(currentUser as { fullName?: string }).fullName ||
+				currentUser.email ||
+				"unknown",
+			user_email: currentUser.email || "",
+			orgId: targetOrgId,
+			status: "success",
+			metadata: {
+				targetUserId: userId,
+				roleId,
+				assignmentId: (assignment as { $id?: string }).$id,
+			},
+		});
 
 		return NextResponse.json({
 			success: true,

@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import useSWR from "swr";
 import { Card, CardContent } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { fetcher } from "@/lib/swr-config";
 import type { License } from "@/types/licenses";
 
@@ -69,8 +70,8 @@ export default function LicenseStatusPieChart({
 							License Status
 						</h3>
 					</div>
-					<div className="text-center py-8 text-slate-500">
-						<p className="text-sm">Loading...</p>
+					<div className="flex justify-center py-8">
+						<LoadingSpinner size="md" label="Loading..." className="!p-0" />
 					</div>
 				</CardContent>
 			</Card>

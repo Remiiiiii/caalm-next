@@ -65,6 +65,8 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 								variant="ghost"
 								onClick={() => setNotifOpen(true)}
 								className="relative hover:bg-white/40 text-slate-700"
+								data-testid="notification-bell"
+								aria-label="Open notifications"
 							>
 								<Bell className="w-6 h-6" />
 								<NotificationBadge

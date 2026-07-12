@@ -8,14 +8,17 @@ export async function GET(request: NextRequest) {
 
 		if (!userId) {
 			return NextResponse.json(
-				{ error: "User ID is required" },
+				{
+					error: "Missing required parameter: user_id",
+					message: "user_id is required for unread count endpoint",
+				},
 				{ status: 400 },
 			);
 		}
 
 		const count = await notificationService.getUnreadCount(userId);
 
-		return NextResponse.json({ success: true, data: { count } });
+		return NextResponse.json({ success: true, data: { count }, count });
 	} catch (error: any) {
 		console.error("Failed to get unread count:", error);
 
@@ -31,7 +34,7 @@ export async function GET(request: NextRequest) {
 			error?.message?.includes("AppwriteException")
 		) {
 			return NextResponse.json(
-				{ success: true, data: { count: 0 } },
+				{ success: true, data: { count: 0 }, count: 0 },
 				{ status: 200 },
 			);
 		}

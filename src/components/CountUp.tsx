@@ -1,7 +1,7 @@
 "use client";
 
-import { useCountUp } from "react-countup";
 import { useEffect, useState } from "react";
+import { useCountUp } from "react-countup";
 
 function CountUpActive() {
 	useCountUp({ ref: "counter", end: 5000, delay: 3, duration: 3 });

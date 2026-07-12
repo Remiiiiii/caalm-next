@@ -6,6 +6,7 @@ import { Suspense, useEffect, useMemo } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import MobileNavigation from "@/components/MobileNavigation";
 import Sidebar from "@/components/Sidebar";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
@@ -15,14 +16,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	const router = useRouter();
 
 	useEffect(() => {
-		console.log(
-			"Layout useEffect - loading:",
-			loading,
-			"user:",
-			user ? "Found" : "Not found",
-		);
 		if (!loading && !user) {
-			console.log("Layout: Redirecting to sign-in - no user found");
 			router.push("/sign-in");
 		}
 	}, [user, loading, router]);
@@ -92,12 +86,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	return (
 		<>
 			{loading ? (
-				<div className="flex h-screen items-center justify-center">
-					<div className="text-center">
-						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-						<p className="text-gray-600">Loading...</p>
-					</div>
-				</div>
+				<LoadingSpinner fullScreen label="Loading..." />
 			) : !user ? (
 				<div className="flex h-screen items-center justify-center">
 					<div className="text-center">
@@ -111,7 +100,15 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 						<MobileNavigation {...navigationProps} />
 						<DashboardHeader user={user} />
 						<div className="main-content">
-							<Suspense fallback={null}>{children}</Suspense>
+							<Suspense
+								fallback={
+									<div className="flex min-h-[200px] items-center justify-center">
+										<LoadingSpinner size="md" />
+									</div>
+								}
+							>
+								{children}
+							</Suspense>
 						</div>
 					</section>
 					<Toaster />

@@ -4,6 +4,7 @@ import { AlertTriangle, Clock } from "lucide-react";
 import type React from "react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { AlarmControls } from "./AlarmControls";
 import { ContractEmptyState } from "./ContractEmptyState";
 import { ContractFilterControls } from "./ContractFilterControls";
@@ -50,7 +51,11 @@ export const CompactContractExpiryWidget: React.FC<
 					</div>
 				</CardHeader>
 				<CardContent className="px-4 pb-2 flex items-center justify-center h-full">
-					<div className="text-sm text-slate-500">Loading contracts...</div>
+					<LoadingSpinner
+						size="md"
+						label="Loading contracts..."
+						className="!p-0"
+					/>
 				</CardContent>
 			</Card>
 		);

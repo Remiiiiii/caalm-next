@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { ContractCardSkeleton } from "@/components/ui/skeletons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnifiedAnalyticsData } from "@/hooks/useUnifiedAnalyticsData";
@@ -258,6 +259,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
 	if (isLoading) {
 		return (
 			<div className="p-6">
+				<div className="flex justify-center pb-4">
+					<LoadingSpinner
+						size="sm"
+						label="Loading reports..."
+						className="!p-0"
+					/>
+				</div>
 				<div className="mb-6">
 					<div className="h-8 bg-gray-200 rounded-lg w-1/3 mb-2 animate-pulse"></div>
 					<div className="h-4 bg-gray-200 rounded-lg w-1/2 animate-pulse"></div>
