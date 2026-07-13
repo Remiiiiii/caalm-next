@@ -39,6 +39,8 @@ const MyContractsPage = () => {
 	const [selectedDivision, setSelectedDivision] = useState<string>("");
 	const [sortBy] = useState<string>("$createdAt-desc");
 
+	const contractsList = filteredContracts ?? [];
+
 	// Function to refresh contracts data
 	const refreshContracts = async () => {
 		try {
@@ -48,7 +50,7 @@ const MyContractsPage = () => {
 				!permissions.includes(PERMISSIONS.SETTINGS.VIEW) &&
 				division
 			) {
-				const divisionContracts = await getContractsByUserDivision(division);
+				const divisionContracts = (await getContractsByUserDivision(division)) || [];
 
 				// Get the corresponding file documents for these contracts
 				const contractFiles: UIFileDoc[] = [];
@@ -60,7 +62,8 @@ const MyContractsPage = () => {
 								searchText: "",
 								sort: sortBy,
 							});
-							const file = fileResponse.documents.find(
+							const documents = fileResponse?.documents || [];
+							const file = documents.find(
 								(f: UIFileDoc) => f.$id === contract.fileId,
 							);
 							if (file) {
@@ -82,25 +85,34 @@ const MyContractsPage = () => {
 					sort: sortBy,
 				});
 
-				const contractFiles = filesResponse.documents as UIFileDoc[];
+				const contractFiles = (filesResponse?.documents || []) as UIFileDoc[];
 				setContracts(contractFiles);
 				setFilteredContracts(contractFiles);
+			} else {
+				setContracts([]);
+				setFilteredContracts([]);
 			}
 		} catch (err) {
 			console.error("Error refreshing contracts:", err);
+			setContracts([]);
+			setFilteredContracts([]);
 		}
 	};
 
 	// Fetch contracts on component mount
 	useEffect(() => {
 		if (permissions.length > 0 && !loading) {
-			refreshContracts();
+			void refreshContracts();
 		}
-	}, [permissions, loading, refreshContracts]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- refresh when role/permissions settle
+	}, [permissions, loading, division]);
 
 	// Filter contracts based on permissions and selected department/division
 	useEffect(() => {
-		if (!contracts.length) return;
+		if (!contracts.length) {
+			setFilteredContracts([]);
+			return;
+		}
 
 		let filtered = [...contracts];
 
@@ -166,7 +178,7 @@ const MyContractsPage = () => {
 	};
 
 	// Calculate total file size
-	const totalSizeBytes = (filteredContracts || []).reduce(
+	const totalSizeBytes = contractsList.reduce(
 		(sum, file) => sum + (file.size || 0),
 		0,
 	);
@@ -316,7 +328,7 @@ const MyContractsPage = () => {
 														Total:{" "}
 														<span className="h5">{totalSizeFormatted}</span>
 														<span className="ml-2 text-slate-600">
-															({filteredContracts.length} contracts)
+															({contractsList.length} contracts)
 														</span>
 													</p>
 													<div className="flex items-center gap-4 text-slate-700">
@@ -325,9 +337,9 @@ const MyContractsPage = () => {
 													</div>
 												</div>
 
-												{filteredContracts.length > 0 ? (
+												{contractsList.length > 0 ? (
 													<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-														{filteredContracts.map((contract) => (
+														{contractsList.map((contract) => (
 															<FileCard
 																key={contract.$id}
 																file={contract}
@@ -383,7 +395,7 @@ const MyContractsPage = () => {
 									<p className="body-1">
 										Total: <span className="h5">{totalSizeFormatted}</span>
 										<span className="ml-2 text-slate-600">
-											({filteredContracts.length} contracts)
+											({contractsList.length} contracts)
 										</span>
 									</p>
 									<div className="flex items-center gap-4">
@@ -392,9 +404,9 @@ const MyContractsPage = () => {
 									</div>
 								</div>
 
-								{filteredContracts.length > 0 ? (
+								{contractsList.length > 0 ? (
 									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-										{filteredContracts.map((contract) => (
+										{contractsList.map((contract) => (
 											<FileCard
 												key={contract.$id}
 												file={contract}

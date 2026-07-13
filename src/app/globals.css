@@ -462,15 +462,8 @@
 		}
 	}
 
-	/* Optimize QuickActions for MacBook Pro (1024px - 1440px) */
+	/* Compact top QuickActions buttons on MacBook Pro widths */
 	@media (min-width: 1024px) and (max-width: 1440px) {
-		.quick-actions-container {
-			/* Ensure buttons fit within available space on MacBook Pro */
-			/* Account for sidebar (280px) + header (~220px) + gaps and padding (~40px) */
-			max-width: calc(100% - 240px);
-		}
-
-		/* Make buttons more compact on MacBook Pro */
 		.quick-actions-container .primary-btn,
 		.quick-actions-container .btn-primary {
 			padding-left: 1rem; /* px-4 */
@@ -483,13 +476,6 @@
 		.quick-actions-container .btn-primary svg {
 			width: 0.875rem; /* h-3.5 */
 			height: 0.875rem; /* h-3.5 */
-		}
-	}
-
-	/* For larger desktop monitors (24-27 inch), allow more space */
-	@media (min-width: 1441px) {
-		.quick-actions-container {
-			max-width: none;
 		}
 	}
 

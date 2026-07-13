@@ -16,39 +16,54 @@ import {
 } from "@/components/ui/table";
 import type { AuditEvidenceRow, AuditEvidenceStatus } from "@/lib/audits/types";
 
+const STATUS_BADGE_BASE =
+	"h-auto py-1 whitespace-nowrap shrink-0 pointer-events-none shadow-none transition-none";
+
 function statusBadge(status: AuditEvidenceStatus) {
 	switch (status) {
 		case "compliant":
 			return (
-				<Badge className="bg-green/10 text-green border-green/20">
-					<CheckCircle className="w-3 h-3 mr-1" />
+				<Badge
+					className={`${STATUS_BADGE_BASE} bg-green/10 text-green border-green/20 hover:bg-green/10`}
+				>
+					<CheckCircle className="w-3 h-3 mr-1 shrink-0" />
 					Compliant
 				</Badge>
 			);
 		case "at_risk":
 			return (
-				<Badge className="bg-orange/10 text-orange border-orange/20">
-					<Clock className="w-3 h-3 mr-1" />
+				<Badge
+					className={`${STATUS_BADGE_BASE} bg-orange/10 text-orange border-orange/20 hover:bg-orange/10`}
+				>
+					<Clock className="w-3 h-3 mr-1 shrink-0" />
 					At risk
 				</Badge>
 			);
 		case "non_compliant":
 			return (
-				<Badge variant="destructive" className="bg-red/10 text-red border-red/20">
-					<XCircle className="w-3 h-3 mr-1" />
+				<Badge
+					variant="destructive"
+					className={`${STATUS_BADGE_BASE} bg-red/10 text-red border-red/20 hover:bg-red/10`}
+				>
+					<XCircle className="w-3 h-3 mr-1 shrink-0" />
 					Non-compliant
 				</Badge>
 			);
 		case "in_progress":
 			return (
-				<Badge className="bg-blue/10 text-blue border-blue/20">
-					<Clock className="w-3 h-3 mr-1" />
+				<Badge
+					className={`${STATUS_BADGE_BASE} min-w-[7.5rem] justify-center bg-blue/10 text-blue border-blue/20 hover:bg-blue/10`}
+				>
+					<Clock className="w-3 h-3 mr-1 shrink-0" />
 					In progress
 				</Badge>
 			);
 		default:
 			return (
-				<Badge variant="secondary" className="bg-slate-100 text-slate-700">
+				<Badge
+					variant="secondary"
+					className={`${STATUS_BADGE_BASE} bg-slate-100 text-slate-700 hover:bg-slate-100`}
+				>
 					Pending
 				</Badge>
 			);

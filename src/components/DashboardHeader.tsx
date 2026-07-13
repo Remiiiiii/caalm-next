@@ -53,11 +53,12 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 	};
 
 	return (
-		<div className="flex gap-2 sm:gap-4 items-center min-w-0">
-			<QuickActions user={user} />
-			<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mt-6 md:px-9 sm:mr-7 rounded-full mb-6 ml-auto w-fit px-4 flex-shrink-0">
+		<div className="flex flex-wrap gap-2 sm:gap-4 items-center justify-end min-w-0 w-full">
+			<div className="min-w-0 flex-1 basis-full sm:basis-auto sm:flex-1">
+				<QuickActions user={user} />
+			</div>
+			<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-full w-fit px-4 shrink-0">
 				<div className="flex items-center h-10">
-					{/* Action buttons */}
 					{user && (
 						<div className="flex items-center space-x-2">
 							<ProfilePicture user={user} size="sm" />

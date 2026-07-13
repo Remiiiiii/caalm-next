@@ -40,7 +40,29 @@ const MODULE_LINKS = [
 	{ label: "Licenses", href: "/licenses", icon: Shield },
 	{ label: "Documents", href: "/uploads", icon: FileText },
 	{ label: "Reports", href: "/analytics", icon: ScrollText },
-];
+] as const;
+
+const PRIMARY_ACTION_LINKS = MODULE_LINKS.slice(0, 3);
+const REPORTS_ACTION_LINK = MODULE_LINKS[3];
+
+function ActionLinkButton({
+	href,
+	label,
+	icon: Icon,
+}: {
+	href: string;
+	label: string;
+	icon: typeof FileText;
+}) {
+	return (
+		<Link href={href} className="shrink-0">
+			<Button className="primary-btn h-9 px-4! gap-2 justify-center text-xs whitespace-nowrap shadow-drop-1 border-0">
+				<Icon className="h-4 w-4 shrink-0" />
+				{label}
+			</Button>
+		</Link>
+	);
+}
 
 interface ComplianceOverviewPanelProps {
 	snapshot: ComplianceStatusSnapshot | null;
@@ -76,18 +98,19 @@ export function ComplianceOverviewPanel({
 			<Card className={`glass-card border-2 ${rag.ring}`}>
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 sm:p-6">
-					<div className="grid grid-cols-1 lg:grid-cols-[minmax(22rem,1.65fr)_1px_minmax(0,max-content)] lg:grid-rows-[auto_auto] gap-x-6 gap-y-4">
+					{/* Keep posture + actions side-by-side on lg; only wrap buttons inside the actions zone */}
+					<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.65fr)_1px_minmax(0,24rem)] xl:grid-cols-[minmax(0,1.65fr)_1px_max-content] lg:grid-rows-[auto_auto] gap-x-6 gap-y-4">
 						{/* Status header — top-aligned with Quick actions label on lg */}
-						<div className="flex items-start gap-3 order-1 lg:col-start-1 lg:row-start-1 lg:min-w-88">
+						<div className="flex items-start gap-3 order-1 lg:col-start-1 lg:row-start-1 min-w-0">
 							<RagIcon className="h-8 w-8 text-[#0f5384] shrink-0" />
-							<p className="text-sm font-medium sidebar-gradient-text pt-1.5 flex-1 min-w-56">
+							<p className="text-sm font-medium sidebar-gradient-text pt-1.5 flex-1 min-w-0">
 								Organization compliance posture
 							</p>
 						</div>
 
 						{/* Score + description — vertically centered with button row on lg */}
-						<div className="order-2 pl-11 -mt-1 lg:mt-0 lg:col-start-1 lg:row-start-2 lg:self-center lg:min-w-88">
-							<div className="flex flex-nowrap items-center gap-3">
+						<div className="order-2 pl-11 -mt-1 lg:mt-0 lg:col-start-1 lg:row-start-2 lg:self-center min-w-0">
+							<div className="flex flex-wrap items-center gap-3">
 								<span className="text-3xl font-bold text-slate-700 shrink-0">
 									{overview.overallScore}%
 								</span>
@@ -120,23 +143,26 @@ export function ComplianceOverviewPanel({
 							Quick actions
 						</p>
 
-						{/* Buttons — 2×2 on mobile, single flex row on sm+ */}
-						<div className="quick-actions-container order-5 lg:order-0 lg:col-start-3 lg:row-start-2 lg:self-center grid grid-cols-2 gap-2 sm:flex sm:flex-nowrap sm:items-center lg:px-5 lg:pb-3">
-							{MODULE_LINKS.map((link) => {
-								const Icon = link.icon;
-								return (
-									<Link
+						{/*
+						  Contracts / Licenses / Documents stay on one row (nowrap group).
+						  Only Reports wraps beneath when the actions column is too narrow.
+						*/}
+						<div className="compliance-quick-actions order-5 lg:order-0 lg:col-start-3 lg:row-start-2 lg:self-center flex flex-wrap items-center gap-2 max-w-full lg:px-5 lg:pb-3">
+							<div className="flex flex-nowrap items-center gap-2">
+								{PRIMARY_ACTION_LINKS.map((link) => (
+									<ActionLinkButton
 										key={link.href}
 										href={link.href}
-										className="w-full min-w-0 sm:w-auto sm:shrink-0"
-									>
-										<Button className="primary-btn h-9 w-full sm:w-auto px-4! sm:px-4! gap-2 justify-center text-xs whitespace-nowrap shadow-drop-1 border-0">
-											<Icon className="h-4 w-4 shrink-0" />
-											{link.label}
-										</Button>
-									</Link>
-								);
-							})}
+										label={link.label}
+										icon={link.icon}
+									/>
+								))}
+							</div>
+							<ActionLinkButton
+								href={REPORTS_ACTION_LINK.href}
+								label={REPORTS_ACTION_LINK.label}
+								icon={REPORTS_ACTION_LINK.icon}
+							/>
 						</div>
 					</div>
 				</CardContent>
@@ -213,9 +239,9 @@ export function ComplianceOverviewPanel({
 			</div>
 
 			{(snapshot.sources.contracts || snapshot.sources.licenses) && (
-				<div className="flex items-center gap-2 text-xs text-slate-500">
-					<ArrowRight className="h-3 w-3" />
-					<span>
+				<div className="flex items-start gap-2 text-xs text-slate-500">
+					<ArrowRight className="h-3 w-3 shrink-0 mt-0.5" />
+					<span className="min-w-0">
 						Contracts and licenses tabs use live CAALM data. Regulatory,
 						documents, and governance metrics use tracked obligations until
 						those modules are fully connected.

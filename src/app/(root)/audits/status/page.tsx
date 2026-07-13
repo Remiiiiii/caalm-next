@@ -18,9 +18,9 @@ export default function AuditStatusPage() {
 		>
 			<ComplianceOverviewPanel snapshot={snapshot} isLoading={isLoading} />
 
-			<div className="mb-6 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-				<ClipboardCheck className="h-4 w-4 text-[#0f5384] shrink-0" />
-				<span>
+			<div className="mb-6 flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+				<ClipboardCheck className="h-4 w-4 text-[#0f5384] shrink-0 mt-0.5" />
+				<span className="min-w-0">
 					Contracts and licenses pull live data from your organization.
 					Regulatory, document, and governance metrics reflect standard nonprofit
 					KRIs until those workflows are fully connected in CAALM.

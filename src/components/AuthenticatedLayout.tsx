@@ -5,7 +5,6 @@ import type React from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import InactivityDialog from "@/components/InactivityDialog";
 import MobileNavigation from "@/components/MobileNavigation";
-import QuickActions from "@/components/QuickActions";
 import Sidebar from "@/components/Sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { normalizeUserRole, type UserRole } from "@/constants/rbac";
@@ -61,13 +60,8 @@ const AuthenticatedLayout = ({
 						email={currentUser.email}
 						role={normalizedRole}
 					/>
-					<div className="flex justify-between items-center gap-2 px-3 sm:px-4 py-2 min-w-0">
-						<div className="flex-1 min-w-0">
-							<QuickActions user={currentUser} />
-						</div>
-						<div className="flex-shrink-0">
-							<DashboardHeader user={currentUser} />
-						</div>
+					<div className="px-3 sm:px-4 py-2 min-w-0">
+						<DashboardHeader user={currentUser} />
 					</div>
 					<div className="main-content">{children}</div>
 				</section>

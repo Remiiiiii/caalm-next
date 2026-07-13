@@ -76,7 +76,7 @@ export function AuditControlsTabs() {
 			/>
 
 			<Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-				<TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 mb-6 bg-white border border-slate-200 h-auto gap-1 p-1">
+				<TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-6 bg-white border border-slate-200 h-auto gap-1 p-1">
 					{AUDIT_CONTROL_TABS.map((tab) => {
 						const Icon = TAB_ICONS[tab.id];
 						const isActive = activeTab === tab.id;
@@ -84,12 +84,12 @@ export function AuditControlsTabs() {
 							<TabsTrigger
 								key={tab.id}
 								value={tab.id}
-								className="flex items-center gap-2 tabs-underline py-2.5 [&[data-state=active]>span]:sidebar-gradient-text"
+								className="flex items-center justify-center gap-2 tabs-underline py-2.5 min-w-0 [&[data-state=active]>span]:sidebar-gradient-text"
 							>
 								<Icon
-									className={`w-4 h-4 ${isActive ? "text-[#0f5384]" : "text-slate-500"}`}
+									className={`w-4 h-4 shrink-0 ${isActive ? "text-[#0f5384]" : "text-slate-500"}`}
 								/>
-								<span className="text-xs sm:text-sm">{tab.label}</span>
+								<span className="text-xs sm:text-sm truncate">{tab.label}</span>
 							</TabsTrigger>
 						);
 					})}

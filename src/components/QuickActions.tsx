@@ -41,13 +41,13 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 	}, [userRoles]);
 
 	return (
-		<div className="quick-actions-container flex items-center gap-1.5 sm:gap-2 flex-nowrap min-w-0 overflow-x-auto remove-scrollbar">
+		<div className="quick-actions-container flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
 			{/* IT users only see Schedule Review and Generate Report */}
 			{!isITUser && user && (
 				<ContractUploadForm
 					ownerId={user.$id}
 					accountId={user.$id}
-					className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2"
+					className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap shrink-0 gap-2"
 					onSuccess={() => {
 						// Refresh data or show success message
 						console.log("Contract uploaded successfully");
@@ -59,24 +59,24 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 					<LicenseUploadForm
 						ownerId={user?.$id || ""}
 						accountId={user?.$id || ""}
-						className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2"
+						className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap shrink-0 gap-2"
 						onSuccess={() => {
 							// Refresh data or show success message
 							console.log("License uploaded successfully");
 						}}
 					/>
-					<Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
+					<Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap shrink-0 gap-2">
 						<Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 						Upload Audit
 					</Button>
 				</>
 			)}
-			<Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
+			<Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap shrink-0 gap-2">
 				<Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 				Schedule Review
 			</Button>
 			<Button
-				className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2"
+				className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap shrink-0 gap-2"
 				onClick={() => setReportOpen(true)}
 			>
 				<TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
