@@ -18,6 +18,9 @@ import {
 } from "@/lib/api/licenses/utils/response.util";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { logAuditEvent } from "@/lib/services/audit-logger";
+import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	const requestId = generateRequestId();
@@ -66,10 +69,15 @@ export async function GET(request: NextRequest) {
 			expiringSoon: validatedParams.expiringSoon,
 		};
 
-		const result = await LicenseService.listLicenses(
-			defaultOrg.orgId,
-			filters,
-			{ limit, offset },
+		const result = await CacheManager.withCache(
+			"licenses/all",
+			`${CACHE_KEYS.licenses.all()}:${defaultOrg.orgId}`,
+			async () =>
+				LicenseService.listLicenses(defaultOrg.orgId, filters, {
+					limit,
+					offset,
+				}),
+			CACHE_TTLS.long,
 		);
 
 		const paginationMeta = buildPaginationMeta(limit, offset, result.total);
@@ -106,6 +114,28 @@ export async function POST(request: NextRequest) {
 		const validatedData = licenseCreateSchema.parse(body);
 
 		const license = await LicenseService.createLicense(user.$id, validatedData);
+
+		const licenseLabel =
+			(license as { name?: string; title?: string })?.name ||
+			(license as { title?: string })?.title ||
+			"License";
+		await logAuditEvent({
+			event_id: `license_create_${(license as { $id?: string })?.$id || Date.now()}`,
+			event_title: `License created: ${licenseLabel}`,
+			action: "create",
+			source: "caalm",
+			user_id: user.$id,
+			user_name:
+				(user as { fullName?: string }).fullName || user.email || "unknown",
+			user_email: user.email || "",
+			status: "success",
+			module: "licenses",
+			target_type: "license",
+			target_id: (license as { $id?: string })?.$id,
+			target_label: licenseLabel,
+			summary: `${(user as { fullName?: string }).fullName || user.email} created license ${licenseLabel}`,
+			correlation_id: requestId,
+		});
 
 		return successResponse(
 			{ license },

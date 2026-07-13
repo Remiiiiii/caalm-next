@@ -173,6 +173,11 @@ export async function POST(
 			user_email: currentUser.email || "",
 			orgId: targetOrgId,
 			status: "success",
+			module: "governance",
+			target_type: "user_role",
+			target_id: userId,
+			target_label: userId,
+			summary: `${(currentUser as { fullName?: string }).fullName || currentUser.email} assigned role to user ${userId}`,
 			metadata: {
 				targetUserId: userId,
 				roleId,

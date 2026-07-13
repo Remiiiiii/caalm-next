@@ -24,6 +24,14 @@ const RATE_LIMIT_ENABLED =
 // Log mode: log violations without blocking
 const RATE_LIMIT_LOG_MODE = process.env.RATE_LIMIT_LOG_MODE === "true";
 
+/** Cookie-only check — avoids Appwrite/RBAC round-trips on server actions. */
+function hasAuthenticatedSession(request: NextRequest): boolean {
+	const has2FA = request.cookies.get("2fa_completed")?.value === "true";
+	const has2FAUserId = !!request.cookies.get("2fa_user_id")?.value;
+	const hasSession = !!request.cookies.get("appwrite-session")?.value;
+	return (has2FA && has2FAUserId) || hasSession;
+}
+
 export async function proxy(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 
@@ -188,6 +196,14 @@ export async function proxy(request: NextRequest) {
 
 	// Dashboard route protection — permission + role-id policy
 	if (pathname.startsWith("/dashboard")) {
+		const isServerAction = request.headers.has("Next-Action");
+		const isRscFlight = request.headers.get("RSC") === "1";
+
+		// Server actions and RSC payloads re-hit the same protected page; skip heavy RBAC
+		if ((isServerAction || isRscFlight) && hasAuthenticatedSession(request)) {
+			return NextResponse.next();
+		}
+
 		const { redirectIfNotAuthorizedForDashboard } = await import(
 			"@/lib/auth/dashboard-guards"
 		);

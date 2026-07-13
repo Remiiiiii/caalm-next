@@ -1,43 +1,46 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { AuditDomainCharts } from "@/components/audits/AuditDomainCharts";
 import { AuditEvidenceTable } from "@/components/audits/AuditEvidenceTable";
 import { AuditStatCardRow } from "@/components/audits/AuditStatCardRow";
-import {
-	getAuditDomainData,
-	getTimeSeriesForPeriod,
-} from "@/lib/audits/mock-data";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useComplianceStatus } from "@/hooks/useComplianceStatus";
+import { getTimeSeriesForPeriod } from "@/lib/audits/mock-data";
+import { mergeDomainWithLiveData } from "@/lib/audits/merge-live-data";
 import type { AuditControlDomain, AuditPeriod } from "@/lib/audits/types";
 
 const CHART_TITLES: Record<
 	AuditControlDomain,
 	{ time: string; breakdown: string; donut: string }
 > = {
-	financial: {
-		time: "Control testing trend",
-		breakdown: "Exceptions by account area",
-		donut: "Assertion coverage",
+	regulatory: {
+		time: "Filing timeliness trend",
+		breakdown: "Obligations by filing type",
+		donut: "Deadline status (RAG)",
+	},
+	contracts: {
+		time: "Contract compliance trend",
+		breakdown: "Contracts by type",
+		donut: "Compliance distribution",
+	},
+	licenses: {
+		time: "License renewal completion",
+		breakdown: "Licenses by category",
+		donut: "License compliance status",
 	},
 	documents: {
-		time: "Document intake over time",
+		time: "Evidence collection over time",
 		breakdown: "Documents by category",
 		donut: "Evidence completeness",
 	},
-	administrative: {
-		time: "Administrative findings trend",
-		breakdown: "Findings by department",
-		donut: "Policy compliance",
-	},
-	it: {
-		time: "Access review completion",
-		breakdown: "Failed auth events by role",
-		donut: "Access review status",
-	},
-	vendor: {
-		time: "RFP cycle time trend",
-		breakdown: "Vendors by lifecycle stage",
-		donut: "Vendor risk tier",
+	governance: {
+		time: "Training & policy completion",
+		breakdown: "Action items by department",
+		donut: "Governance compliance",
 	},
 };
 
@@ -52,7 +55,11 @@ export function AuditDomainTabContent({
 	period,
 	search,
 }: AuditDomainTabContentProps) {
-	const data = getAuditDomainData(domain);
+	const { snapshot } = useComplianceStatus();
+	const data = useMemo(
+		() => mergeDomainWithLiveData(domain, snapshot),
+		[domain, snapshot],
+	);
 	const timeSeries = getTimeSeriesForPeriod(domain, period);
 	const titles = CHART_TITLES[domain];
 
@@ -69,6 +76,28 @@ export function AuditDomainTabContent({
 
 	return (
 		<div className="space-y-6">
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
+				<CardContent className="p-4 sm:p-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<p className="text-sm font-medium sidebar-gradient-text">
+							CAALM module: {data.caalmModule}
+						</p>
+						<p className="text-xs text-slate-600 mt-1">{data.description}</p>
+					</div>
+					<Button
+						variant="outline"
+						className="primary-btn px-3 sm:px-4 shrink-0"
+						asChild
+					>
+						<Link href={data.modulePath}>
+							Open {data.caalmModule}
+							<ArrowRight className="h-4 w-4" />
+						</Link>
+					</Button>
+				</CardContent>
+			</Card>
+
 			<AuditStatCardRow kpis={data.kpis} />
 			<AuditDomainCharts
 				timeSeries={timeSeries}
@@ -78,7 +107,11 @@ export function AuditDomainTabContent({
 				breakdownTitle={titles.breakdown}
 				donutTitle={titles.donut}
 			/>
-			<AuditEvidenceTable rows={filteredEvidence} logDomain={domain} />
+			<AuditEvidenceTable
+				rows={filteredEvidence}
+				logDomain={domain}
+				title="Compliance obligations"
+			/>
 		</div>
 	);
 }

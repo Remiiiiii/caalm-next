@@ -114,6 +114,7 @@ export const CACHE_KEYS = {
 	audits: {
 		logs: (filters: string) => `audits:logs:${filters}`,
 		stats: () => `audits:stats`,
+		complianceStatus: (userId: string) => `audits:compliance-status:${userId}`,
 	},
 
 	// Search

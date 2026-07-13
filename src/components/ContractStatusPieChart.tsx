@@ -3,9 +3,10 @@
 import { AlertTriangle, CheckCircle, FileText } from "lucide-react";
 import type React from "react";
 import { useMemo } from "react";
+import useSWR from "swr";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useContractsExpiring } from "@/hooks/useContractsExpiring";
+import { swrConfig, swrKeys } from "@/lib/swr-config";
 import type { UIFileDoc } from "@/types/files";
 
 interface ContractData {
@@ -18,17 +19,23 @@ interface ContractData {
 
 interface ContractStatusPieChartProps {
 	data?: ContractData[];
+	/** When provided, skips the duplicate /api/contracts/all fetch */
+	contracts?: UIFileDoc[];
 }
 
 const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 	data: propData,
+	contracts: propContracts,
 }) => {
-	// Fetch contracts using the hook
-	const {
-		contracts,
-		isLoading,
-		error: contractsError,
-	} = useContractsExpiring();
+	const skipFetch = propContracts != null || propData != null;
+	const { data: fetchedContracts, isLoading, error: contractsError } = useSWR<
+		UIFileDoc[]
+	>(skipFetch ? null : swrKeys.allContracts(), swrConfig.fetcher ?? null, {
+		...swrConfig,
+		revalidateOnFocus: false,
+	});
+
+	const contracts = propContracts ?? fetchedContracts ?? [];
 
 	// Transform contracts into pie chart data
 	const contractData = useMemo(() => {
@@ -38,7 +45,7 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 		}
 
 		// Don't process data while still loading (wait for first load to complete)
-		if (isLoading && contracts === undefined) {
+		if (!skipFetch && isLoading && contracts === undefined) {
 			// Return empty data structure while loading (will be replaced once data loads)
 			return [
 				{

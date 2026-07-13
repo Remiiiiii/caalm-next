@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
 			await logAuditEvent({
 				event_id: eventId,
 				event_title: `Contract Dismissed: ${contractNameDisplay}`,
-				action: "delete", // Using 'delete' as per Appwrite schema (allowed: delete, sync_delete, restore, cleanup)
+				action: "delete",
 				source: "caalm",
 				user_id: auditUserId,
 				user_name: userName,
@@ -222,6 +222,11 @@ export async function POST(request: NextRequest) {
 				user_agent: userAgent,
 				reason: "Contract dismissed with electronic signature",
 				status: "success",
+				module: "contracts",
+				target_type: "contract",
+				target_id: body.contractId,
+				target_label: contractNameDisplay,
+				summary: `${userName} dismissed contract ${contractNameDisplay}`,
 				metadata: auditMetadata,
 			});
 			console.log(

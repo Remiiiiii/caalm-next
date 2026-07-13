@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Search } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,13 +53,12 @@ export function AuditGlobalFilters({
 							))}
 						</SelectContent>
 					</Select>
-					<div className="relative flex-1 max-w-md">
-						<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+					<div className="flex-1 max-w-md">
 						<Input
 							value={search}
 							onChange={(e) => onSearchChange(e.target.value)}
-							placeholder="Search controls and evidence..."
-							className="shad-input pl-10"
+							placeholder="Search obligations and evidence..."
+							className="shad-input"
 						/>
 					</div>
 				</div>

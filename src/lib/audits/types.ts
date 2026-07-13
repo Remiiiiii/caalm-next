@@ -1,9 +1,9 @@
 export type AuditControlDomain =
-	| "financial"
+	| "regulatory"
+	| "contracts"
+	| "licenses"
 	| "documents"
-	| "administrative"
-	| "it"
-	| "vendor";
+	| "governance";
 
 export type AuditPeriod = "7d" | "30d" | "90d" | "ytd";
 
@@ -14,6 +14,8 @@ export type AuditEvidenceStatus =
 	| "pending"
 	| "in_progress";
 
+export type ComplianceRagStatus = "green" | "amber" | "red";
+
 export interface AuditKpi {
 	id: string;
 	title: string;
@@ -21,6 +23,7 @@ export interface AuditKpi {
 	description: string;
 	trend?: string;
 	trendDirection?: "up" | "down" | "neutral";
+	ragStatus?: ComplianceRagStatus;
 }
 
 export interface AuditTimeSeriesPoint {
@@ -43,11 +46,16 @@ export interface AuditEvidenceRow {
 	dueDate: string;
 	lastTested?: string;
 	category?: string;
+	moduleLink?: string;
+	moduleLabel?: string;
 }
 
 export interface AuditDomainData {
 	domain: AuditControlDomain;
 	label: string;
+	description: string;
+	caalmModule: string;
+	modulePath: string;
 	kpis: AuditKpi[];
 	timeSeries: Record<AuditPeriod, AuditTimeSeriesPoint[]>;
 	breakdown: AuditBreakdownPoint[];
@@ -55,20 +63,73 @@ export interface AuditDomainData {
 	evidence: AuditEvidenceRow[];
 }
 
+export interface ComplianceOverviewMetrics {
+	ragStatus: ComplianceRagStatus;
+	overallScore: number;
+	areasAtRisk: number;
+	upcomingDeadlines: number;
+	filingsOnTime: number;
+	contractComplianceRate: number | null;
+	licenseRenewalHealth: number | null;
+}
+
+export interface LiveContractCompliance {
+	total: number;
+	complianceRate: number;
+	buckets: Record<string, number>;
+	expiringSoon: number;
+	evidence: AuditEvidenceRow[];
+}
+
+export interface LiveLicenseCompliance {
+	total: number;
+	active: number;
+	expiringSoon: number;
+	atRisk: number;
+	complianceBuckets: Record<string, number>;
+	evidence: AuditEvidenceRow[];
+}
+
+export interface ComplianceStatusSnapshot {
+	overview: ComplianceOverviewMetrics;
+	contracts: LiveContractCompliance | null;
+	licenses: LiveLicenseCompliance | null;
+	sources: {
+		contracts: boolean;
+		licenses: boolean;
+	};
+}
+
 export const AUDIT_CONTROL_TABS: Array<{
 	id: AuditControlDomain;
 	label: string;
 	logDomain: AuditControlDomain;
 }> = [
-	{ id: "financial", label: "Financial statements", logDomain: "financial" },
+	{
+		id: "regulatory",
+		label: "Regulatory & filings",
+		logDomain: "regulatory",
+	},
+	{
+		id: "contracts",
+		label: "Contracts & grants",
+		logDomain: "contracts",
+	},
+	{
+		id: "licenses",
+		label: "Licenses",
+		logDomain: "licenses",
+	},
 	{
 		id: "documents",
-		label: "Supporting documents",
+		label: "Documents & evidence",
 		logDomain: "documents",
 	},
-	{ id: "administrative", label: "Administrative", logDomain: "administrative" },
-	{ id: "it", label: "IT access controls", logDomain: "it" },
-	{ id: "vendor", label: "Vendor / RFP lifecycle", logDomain: "vendor" },
+	{
+		id: "governance",
+		label: "Governance & teams",
+		logDomain: "governance",
+	},
 ];
 
 export const AUDIT_PERIOD_OPTIONS: Array<{ value: AuditPeriod; label: string }> =

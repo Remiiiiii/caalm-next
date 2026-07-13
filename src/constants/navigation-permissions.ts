@@ -163,11 +163,11 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				name: "Compliance Status",
 				icon: "/assets/icons/compliance-status.svg",
 				url: "/audits/status",
-				permissions: [PERMISSIONS.AUDIT.VIEW, PERMISSIONS.CONTRACTS.VIEW],
+				permissions: [PERMISSIONS.AUDIT.VIEW],
 				// Hidden for Department Manager, full read access for Viewer
 				hiddenForRoles: ["Department Manager"],
 				viewerReadOnly: true,
-				viewerFullAccess: true, // Viewers get full read access to audits
+				viewerFullAccess: true,
 			},
 			{
 				name: "Audit Logs",

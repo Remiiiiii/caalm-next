@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import Link from "next/link";
-import { ArrowRight, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle, Clock, ExternalLink, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,7 +64,7 @@ interface AuditEvidenceTableProps {
 export function AuditEvidenceTable({
 	rows,
 	logDomain,
-	title = "Control evidence",
+	title = "Compliance obligations",
 }: AuditEvidenceTableProps) {
 	return (
 		<Card className="glass-card">
@@ -77,7 +77,7 @@ export function AuditEvidenceTable({
 						className="primary-btn px-3 sm:px-4"
 						asChild
 					>
-						<Link href={`/audits/audit?domain=${logDomain}`}>
+						<Link href={`/audits/audit?domain=${logDomain}&module=${logDomain}`}>
 							View audit logs
 							<ArrowRight className="h-4 w-4" />
 						</Link>
@@ -89,21 +89,24 @@ export function AuditEvidenceTable({
 							<TableRow className="border-slate-200 bg-slate-50">
 								<TableHead className="font-semibold text-slate-700">ID</TableHead>
 								<TableHead className="font-semibold text-slate-700">
-									Control / item
+									Obligation
 								</TableHead>
 								<TableHead className="font-semibold text-slate-700">Owner</TableHead>
 								<TableHead className="font-semibold text-slate-700">Status</TableHead>
 								<TableHead className="font-semibold text-slate-700">Due</TableHead>
 								<TableHead className="font-semibold text-slate-700">
-									Last tested
+									Last reviewed
+								</TableHead>
+								<TableHead className="font-semibold text-slate-700">
+									CAALM module
 								</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{rows.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={6} className="text-center py-8 text-slate-500">
-										No evidence matches your search.
+									<TableCell colSpan={7} className="text-center py-8 text-slate-500">
+										No obligations match your search.
 									</TableCell>
 								</TableRow>
 							) : (
@@ -132,6 +135,19 @@ export function AuditEvidenceTable({
 											{row.lastTested
 												? format(new Date(row.lastTested), "MMM d, yyyy")
 												: "—"}
+										</TableCell>
+										<TableCell>
+											{row.moduleLink ? (
+												<Link
+													href={row.moduleLink}
+													className="inline-flex items-center gap-1 text-sm text-[#0f5384] hover:underline cursor-pointer"
+												>
+													{row.moduleLabel || "Open"}
+													<ExternalLink className="h-3 w-3" />
+												</Link>
+											) : (
+												<span className="text-slate-400">—</span>
+											)}
 										</TableCell>
 									</TableRow>
 								))

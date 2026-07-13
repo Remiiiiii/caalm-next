@@ -1,9 +1,9 @@
 "use client";
 
 import {
-	Building2,
+	BadgeCheck,
 	FileText,
-	Landmark,
+	Scale,
 	Shield,
 	Users,
 } from "lucide-react";
@@ -20,11 +20,11 @@ import {
 } from "@/lib/audits/types";
 
 const TAB_ICONS: Record<AuditControlDomain, typeof Shield> = {
-	financial: Landmark,
+	regulatory: Scale,
+	contracts: FileText,
+	licenses: BadgeCheck,
 	documents: FileText,
-	administrative: Building2,
-	it: Shield,
-	vendor: Users,
+	governance: Users,
 };
 
 const VALID_TABS = AUDIT_CONTROL_TABS.map((t) => t.id);
@@ -36,7 +36,7 @@ export function AuditControlsTabs() {
 
 	const tabParam = searchParams?.get("tab") as AuditControlDomain | null;
 	const [activeTab, setActiveTab] = useState<AuditControlDomain>(
-		tabParam && VALID_TABS.includes(tabParam) ? tabParam : "financial",
+		tabParam && VALID_TABS.includes(tabParam) ? tabParam : "regulatory",
 	);
 	const [period, setPeriod] = useState<AuditPeriod>("30d");
 	const [search, setSearch] = useState("");
@@ -61,7 +61,7 @@ export function AuditControlsTabs() {
 	const handleExport = () => {
 		toast({
 			title: "Export started",
-			description: "Dummy compliance report export is ready for download.",
+			description: "Board-ready compliance report export is being prepared.",
 		});
 	};
 

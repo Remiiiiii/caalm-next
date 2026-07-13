@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyOTP } from "@/lib/actions/user.actions";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -12,18 +13,56 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Verify the OTP (optimized with caching)
 		const result = await verifyOTP({ email, otp, accountId });
 
 		if (result?.success) {
+			await logAuditEvent({
+				event_id: `auth_login_${Date.now()}`,
+				event_title: "User login",
+				action: "login",
+				source: "caalm",
+				user_id: accountId || email,
+				user_name: email,
+				user_email: email,
+				status: "success",
+				module: "auth",
+				target_type: "session",
+				target_label: email,
+				summary: `${email} logged in`,
+				ip_address:
+					request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+					undefined,
+				user_agent: request.headers.get("user-agent") || undefined,
+			});
+
 			return NextResponse.json({
 				success: true,
 				message: "OTP verified successfully",
 				accountId: result.accountId,
 			});
-		} else {
-			return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
 		}
+
+		await logAuditEvent({
+			event_id: `auth_login_failed_${Date.now()}`,
+			event_title: "Failed login attempt",
+			action: "login",
+			source: "caalm",
+			user_id: accountId || email,
+			user_name: email,
+			user_email: email,
+			status: "failed",
+			module: "auth",
+			target_type: "session",
+			target_label: email,
+			summary: `Failed login attempt for ${email}`,
+			error_message: "Invalid OTP",
+			ip_address:
+				request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+				undefined,
+			user_agent: request.headers.get("user-agent") || undefined,
+		});
+
+		return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
 	} catch (error) {
 		if (process.env.NODE_ENV === "development") {
 			console.error("OTP verification error:", error);

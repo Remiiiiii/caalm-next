@@ -8,6 +8,8 @@ import {
 	successResponse,
 } from "@/lib/api/licenses/utils/response.util";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	const requestId = generateRequestId();
@@ -28,9 +30,12 @@ export async function GET(request: NextRequest) {
 		const { searchParams } = new URL(request.url);
 		const days = parseInt(searchParams.get("days") || "30", 10);
 
-		const expiringLicenses = await LicenseService.getExpiringLicenses(
-			defaultOrg.orgId,
-			days,
+		const expiringLicenses = await CacheManager.withCache(
+			"licenses/expiring",
+			`${CACHE_KEYS.licenses.expiring(days)}:${defaultOrg.orgId}`,
+			async () =>
+				LicenseService.getExpiringLicenses(defaultOrg.orgId, days),
+			CACHE_TTLS.long,
 		);
 
 		return successResponse(
