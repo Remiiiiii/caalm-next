@@ -235,9 +235,11 @@ export default function AuditLogsPage() {
 						<p className="text-slate-600 text-sm mb-4">
 							{logsError?.message || statsError?.message}
 						</p>
-						<Button onClick={() => refreshLogs()} className="primary-btn">
-							Try again
-						</Button>
+						<div className="flex justify-center">
+							<Button onClick={() => refreshLogs()} className="primary-btn">
+								Try again
+							</Button>
+						</div>
 					</CardContent>
 				</Card>
 			</AuditPageShell>
