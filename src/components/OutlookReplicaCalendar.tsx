@@ -15,6 +15,7 @@ import {
 } from "date-fns";
 import {
 	AlertCircle,
+	Ban,
 	Bell,
 	CalendarIcon,
 	CheckCircle,
@@ -568,7 +569,7 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
 								onClick={() => setIsAddEventOpen(false)}
 								className="primary-btn px-3 sm:px-4"
 							>
-								<Trash2 className="w-4 h-4" />
+								<Ban className="w-4 h-4" />
 								Cancel
 							</Button>
 							<Button onClick={handleCreateEvent} disabled={creatingEvent}>

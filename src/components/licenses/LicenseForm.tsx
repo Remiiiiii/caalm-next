@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Ban, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
@@ -657,6 +657,7 @@ export default function LicenseForm({
 							className="primary-btn px-3 sm:px-4"
 							onClick={() => setOpen(false)}
 						>
+							<Ban className="w-4 h-4" />
 							Cancel
 						</Button>
 						<Button

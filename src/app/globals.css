@@ -1424,6 +1424,110 @@ button[data-state="active"] > span {
 	background-color: var(--rdp-background-color);
 }
 
+/* Sidebar mini-calendar: full-width grid, stroke chevrons, today gradient */
+.caalm-mini-cal {
+	--rdp-accent-color: #03afbf;
+	--rdp-selected-border: 2px solid transparent;
+	--rdp-today-color: #fff;
+	--rdp-day-width: calc(100% / 7);
+	--rdp-day-height: auto;
+	--rdp-day_button-width: 100%;
+	--rdp-day_button-height: 100%;
+	--rdp-nav_button-width: 1.5rem;
+	--rdp-nav_button-height: 1.5rem;
+	--rdp-nav-height: 1.75rem;
+	--rdp-weekday-padding: 0.25rem 0;
+	width: 100%;
+	max-width: 100%;
+	margin: 0;
+}
+
+/* Beat RDP fit-content so the matrix fills the card with even L/R gutters */
+.caalm-mini-cal .rdp-months {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+.caalm-mini-cal .rdp-month {
+	width: 100%;
+	max-width: 100%;
+}
+
+.caalm-mini-cal .rdp-month_grid {
+	width: 100%;
+	table-layout: fixed;
+}
+
+.caalm-mini-cal .rdp-weekdays,
+.caalm-mini-cal .rdp-week {
+	width: 100%;
+}
+
+.caalm-mini-cal .rdp-weekday,
+.caalm-mini-cal .rdp-day {
+	width: calc(100% / 7) !important;
+	box-sizing: border-box;
+}
+
+.caalm-mini-cal .rdp-day {
+	height: auto !important;
+	aspect-ratio: 1;
+	padding: 2px;
+}
+
+.caalm-mini-cal .rdp-day_button {
+	width: 100% !important;
+	height: 100% !important;
+	max-width: none !important;
+	aspect-ratio: 1;
+	border-radius: 9999px;
+}
+
+.caalm-mini-cal .rdp-month_caption {
+	justify-content: center;
+	margin-bottom: 0.375rem;
+}
+
+/* Kill RDP fill that paints Lucide chevrons as solid triangles */
+.caalm-mini-cal .rdp-button_previous,
+.caalm-mini-cal .rdp-button_next {
+	color: #334155;
+}
+
+.caalm-mini-cal .rdp-button_previous:hover:not([disabled]),
+.caalm-mini-cal .rdp-button_next:hover:not([disabled]) {
+	color: #0f172a;
+}
+
+.caalm-mini-cal .rdp-button_previous svg,
+.caalm-mini-cal .rdp-button_next svg {
+	fill: none !important;
+	stroke: currentColor;
+	color: #334155;
+}
+
+.caalm-mini-cal .rdp-selected {
+	font-size: inherit;
+	font-weight: 500;
+}
+
+/* Match main calendar today badge */
+.caalm-mini-cal .rdp-today:not(.rdp-outside) .rdp-day_button,
+.caalm-mini-cal .rdp-selected .rdp-day_button {
+	border: none !important;
+	color: #fff !important;
+	background: linear-gradient(135deg, #12477d 0%, #03afbf 100%) !important;
+	box-shadow: none;
+}
+
+.caalm-mini-cal .rdp-today:not(.rdp-outside) .rdp-day_button:hover,
+.caalm-mini-cal .rdp-selected .rdp-day_button:hover,
+.caalm-mini-cal .rdp-today:not(.rdp-outside) .rdp-day_button:focus-visible,
+.caalm-mini-cal .rdp-selected .rdp-day_button:focus-visible {
+	background: linear-gradient(135deg, #12477d 0%, #03afbf 100%) !important;
+	color: #fff !important;
+}
+
 /* Hide Spline "Built with Spline" watermark badge - Aggressive CSS rules */
 a[href*="spline.design"],
 a[href*="splinetool.com"],

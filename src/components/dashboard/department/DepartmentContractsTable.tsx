@@ -65,10 +65,10 @@ export function DepartmentContractsTable({
 	isLoading,
 }: DepartmentContractsTableProps) {
 	return (
-		<Card className="glass-card">
+		<Card className="glass-card h-full w-full flex flex-col min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]">
 			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6">
-				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+			<CardContent className="p-4 sm:p-6 flex flex-col flex-1 min-h-0">
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 shrink-0">
 					<div>
 						<h2 className="text-xl font-semibold sidebar-gradient-text">
 							Contracts needing attention
@@ -85,7 +85,7 @@ export function DepartmentContractsTable({
 					</Button>
 				</div>
 
-				<div className="overflow-x-auto">
+				<div className="overflow-auto flex-1 min-h-0">
 					<Table>
 						<TableHeader>
 							<TableRow className="border-slate-200 bg-slate-50">

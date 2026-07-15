@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Clock, Eye, Mail, RefreshCw, RotateCcw, X } from "lucide-react";
+import { Ban, Clock, Eye, Mail, RefreshCw, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
@@ -357,7 +357,10 @@ export default function ExpiryActionButtons({
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isUpdating}>Cancel</AlertDialogCancel>
+						<AlertDialogCancel disabled={isUpdating}>
+							<Ban className="w-4 h-4" />
+							Cancel
+						</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={handleLetExpire}
 							disabled={isUpdating}

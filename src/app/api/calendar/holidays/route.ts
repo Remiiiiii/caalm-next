@@ -19,8 +19,9 @@ export async function GET(request: NextRequest) {
 			10,
 		);
 
-		// Cache key for holidays
-		const cacheKey = CACHE_KEYS.calendar.holidays();
+		// Cache per year/month — a single shared key returned the wrong month
+		// after the first request (preload walks all 12 months).
+		const cacheKey = CACHE_KEYS.calendar.holidays(year, month);
 
 		// Fetch holidays with caching (1 hour TTL - holidays are static)
 		const holidays = await CacheManager.withCache(
@@ -34,11 +35,10 @@ export async function GET(request: NextRequest) {
 			holidays,
 		});
 
-		// Cache holidays for 1 year (they don't change)
-		// Use public cache with long max-age for CDN caching
+		// Short browser cache — a prior 1-year max-age poisoned clients with wrong months
 		response.headers.set(
 			"Cache-Control",
-			"public, max-age=31536000, stale-while-revalidate=86400",
+			"public, max-age=3600, stale-while-revalidate=86400",
 		);
 
 		return response;

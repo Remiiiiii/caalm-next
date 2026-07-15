@@ -2248,6 +2248,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 									onClick={() => setIsOpen(false)}
 									className="primary-btn w-full shrink-0 px-3 sm:w-auto sm:px-4"
 								>
+									<Ban className="w-4 h-4" />
 									Cancel
 								</Button>
 							</div>
@@ -2548,6 +2549,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										"shrink-0 px-4 sm:px-6",
 									)}
 								>
+									<Ban className="w-4 h-4" />
 									Cancel
 								</Button>
 							</div>

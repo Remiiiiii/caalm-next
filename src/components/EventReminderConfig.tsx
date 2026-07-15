@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Clock, Plus, Trash2 } from "lucide-react";
+import { Ban, Bell, Clock, Plus, Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -262,6 +262,7 @@ export const EventReminderConfig: React.FC<EventReminderConfigProps> = ({
 							}}
 							className="h-8"
 						>
+							<Ban className="w-4 h-4" />
 							Cancel
 						</Button>
 					</div>

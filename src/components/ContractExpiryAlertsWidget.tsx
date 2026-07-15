@@ -320,6 +320,7 @@ const ContractExpiryAlertsWidget = ({
 	if (compact) {
 		return (
 			<CompactContractExpiryWidget
+				className={className}
 				isLoading={isLoading}
 				error={error}
 				filteredContracts={filteredContracts}

@@ -46,10 +46,10 @@ export function DepartmentActionQueue({
 	isLoading,
 }: DepartmentActionQueueProps) {
 	return (
-		<Card className="glass-card">
+		<Card className="glass-card h-full w-full flex flex-col">
 			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6">
-				<div className="flex items-center justify-between mb-4">
+			<CardContent className="p-4 sm:p-6 flex flex-col flex-1 min-h-0">
+				<div className="flex items-center justify-between mb-4 shrink-0">
 					<div>
 						<p className="text-sm font-medium sidebar-gradient-text">
 							Things to do
@@ -61,7 +61,7 @@ export function DepartmentActionQueue({
 				</div>
 
 				{isLoading ? (
-					<div className="space-y-3">
+					<div className="space-y-3 flex-1">
 						{[1, 2, 3].map((i) => (
 							<div
 								key={i}
@@ -70,7 +70,7 @@ export function DepartmentActionQueue({
 						))}
 					</div>
 				) : items.length === 0 ? (
-					<div className="flex flex-col items-center justify-center py-10 text-center">
+					<div className="flex flex-col items-center justify-center flex-1 py-10 text-center">
 						<CheckCircle2 className="h-10 w-10 text-green mb-3" />
 						<p className="text-sm font-medium text-slate-900">
 							You're caught up
@@ -86,7 +86,7 @@ export function DepartmentActionQueue({
 						</Link>
 					</div>
 				) : (
-					<ul className="space-y-2">
+					<ul className="space-y-2 flex-1 overflow-y-auto min-h-0">
 						{items.map((item) => (
 							<li key={item.id}>
 								<Link

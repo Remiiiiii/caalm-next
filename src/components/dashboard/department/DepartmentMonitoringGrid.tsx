@@ -21,7 +21,7 @@ function MonitoringCard({ domain }: { domain: DepartmentMonitoringDomain }) {
 	return (
 		<Link
 			href={domain.href}
-			className="block min-w-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 rounded-lg"
+			className="block min-w-0 h-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 rounded-lg"
 		>
 			<Card className="glass-card interactive-glass-card h-full transition-all duration-200 hover:border-blue-300">
 				<div className="glass-card-cap" />
@@ -63,14 +63,14 @@ export function DepartmentMonitoringGrid({
 	];
 
 	return (
-		<div className="space-y-3">
-			<div>
+		<div className="h-full w-full flex flex-col space-y-3">
+			<div className="shrink-0">
 				<p className="text-sm font-medium sidebar-gradient-text">Monitoring</p>
 				<p className="text-xs text-slate-600 mt-1">
 					Division domains that need follow-up
 				</p>
 			</div>
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 content-stretch">
 				{domains.map((domain) => (
 					<MonitoringCard key={domain.label} domain={domain} />
 				))}

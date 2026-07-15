@@ -1,6 +1,7 @@
 //
 
 import {
+	Ban,
 	Clock,
 	FileText,
 	Loader2,
@@ -992,7 +993,7 @@ export const FileDetails = ({
 															}}
 															className="primary-btn px-3 sm:px-4 text-slate-600 hover:text-slate-800"
 														>
-															<Trash2 className="w-4 h-4" />
+															<Ban className="w-4 h-4" />
 															Cancel
 														</ShadButton>
 													</div>

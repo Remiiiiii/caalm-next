@@ -120,31 +120,44 @@ export default function DepartmentManagerDashboard({
 				<div className="mb-6 h-36 rounded-lg bg-slate-200/60 animate-pulse" />
 			) : null}
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-				<div className="lg:col-span-2 space-y-6">
+			{/* Row 1: Things to do | Monitoring — equal height */}
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
+				<div className="lg:col-span-2 min-h-0 h-full flex">
 					<DepartmentActionQueue
 						items={data?.actionQueue || []}
 						isLoading={isLoading}
 					/>
+				</div>
+				<div className="min-h-0 h-full flex">
+					{data ? (
+						<DepartmentMonitoringGrid monitoring={data.monitoring} />
+					) : (
+						<div className="h-full min-h-64 w-full rounded-lg bg-slate-200/60 animate-pulse" />
+					)}
+				</div>
+			</div>
+
+			{/* Row 2: Contracts needing attention | Contract Expiry Alerts — equal height */}
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
+				<div className="lg:col-span-2 min-h-0 h-full flex">
 					<DepartmentContractsTable
 						contracts={data?.contractsAtRisk || []}
 						isLoading={isLoading}
 					/>
 				</div>
-
-				<div className="space-y-6">
-					{data ? (
-						<DepartmentMonitoringGrid monitoring={data.monitoring} />
-					) : (
-						<div className="h-64 rounded-lg bg-slate-200/60 animate-pulse" />
-					)}
-
+				<div className="min-h-0 h-full flex w-full">
 					<ContractExpiryAlertsWidget
+						className="w-full"
 						maxVisible={3}
 						compact
 						contracts={data?.contractsForAlerts}
 					/>
+				</div>
+			</div>
 
+			{/* Row 3: Recent activity — same width as Contracts needing attention */}
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+				<div className="lg:col-span-2">
 					<DepartmentRecentActivity
 						activities={data?.recentActivity || []}
 						isLoading={isLoading}

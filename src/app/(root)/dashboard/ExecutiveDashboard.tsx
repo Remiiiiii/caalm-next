@@ -1402,7 +1402,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 											disabled={false}
 											className="primary-btn px-3 sm:px-4"
 										>
-											<Trash2 className="w-4 h-4" />
+											<Ban className="w-4 h-4" />
 											Cancel
 										</Button>
 										<Button type="submit" disabled={false}>

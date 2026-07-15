@@ -1,7 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { FileText } from "lucide-react";
+import { Ban, FileText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { Button } from "@/components/ui/button";
@@ -347,6 +347,7 @@ export default function ContractDismissalSignatureModal({
 								disabled={isSubmitting}
 								className="primary-btn px-3 sm:px-4"
 							>
+								<Ban className="w-4 h-4" />
 								Cancel
 							</Button>
 							<Button

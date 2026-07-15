@@ -40,7 +40,8 @@ export const CACHE_KEYS = {
 		event: (eventId: string) => `calendar:event:${eventId}`,
 		shared: (userId: string, orgId: string) =>
 			`calendar:shared:${userId}:${orgId}`,
-		holidays: () => `calendar:holidays`,
+		holidays: (year: number, month: number) =>
+			`calendar:holidays:${year}:${month}`,
 	},
 
 	// Notifications

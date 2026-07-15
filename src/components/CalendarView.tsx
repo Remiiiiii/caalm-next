@@ -8,6 +8,7 @@ import {
 	startOfWeek,
 } from "date-fns";
 import {
+	Ban,
 	CalendarDays,
 	CalendarIcon,
 	CheckCircle,
@@ -851,6 +852,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 									onClick={() => setIsAddEventOpen(false)}
 									className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
 								>
+									<Ban className="w-4 h-4" />
 									Cancel
 								</Button>
 								<Button

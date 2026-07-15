@@ -17,7 +17,7 @@ import {
 	X,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -130,18 +130,105 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 		}
 	}, [isOpen, swrCalendars, swrLoading]);
 
+	const fetchCalendars = async () => {
+		// Use SWR's mutate to refresh data
+		await refresh();
+		// Type assertion needed due to slight type differences between hook and component
+		setCalendars(swrCalendars as any);
+	};
+
+	const loadSharedUsers = useCallback(
+		async (calendar?: SharedCalendar | null) => {
+			// Use provided calendar or fall back to selectedCalendar
+			const calendarToUse = calendar || selectedCalendar;
+
+			// Get user IDs from sharePermissions (new) or sharedWith (legacy)
+			const userIds: string[] = [];
+			if (
+				calendarToUse?.sharePermissions &&
+				calendarToUse.sharePermissions.length > 0
+			) {
+				userIds.push(...calendarToUse.sharePermissions.map((p) => p.userId));
+			} else if (
+				calendarToUse?.sharedWith &&
+				calendarToUse.sharedWith.length > 0
+			) {
+				userIds.push(...calendarToUse.sharedWith);
+			}
+
+			if (userIds.length === 0) {
+				setSharedUsers([]);
+				return;
+			}
+
+			try {
+				const response = await fetch("/api/users/get-by-ids", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ userIds }),
+				});
+
+				if (response.ok) {
+					const users = await response.json();
+					// Enrich users with permission levels
+					const enrichedUsers = (Array.isArray(users) ? users : []).map(
+						(user: any) => {
+							const permission = calendarToUse?.sharePermissions?.find(
+								(p) => p.userId === user.$id,
+							);
+							return {
+								...user,
+								permissionLevel: permission?.permissionLevel || "view_all", // Default for legacy
+							};
+						},
+					);
+					setSharedUsers(enrichedUsers);
+				}
+			} catch (error) {
+				console.error(
+					"[CLIENT] SharedCalendarManager] Error loading shared users:",
+					error,
+				);
+			}
+		},
+		[selectedCalendar],
+	);
+
+	const searchUsers = useCallback(
+		async (query: string) => {
+			setIsSearching(true);
+			try {
+				const response = await fetch(
+					`/api/users/search?q=${encodeURIComponent(query)}`,
+				);
+				if (response.ok) {
+					const users = await response.json();
+					// Filter out users already shared with
+					const alreadySharedIds = selectedCalendar?.sharedWith || [];
+					setSearchResults(
+						users.filter(
+							(u: { $id: string }) => !alreadySharedIds.includes(u.$id),
+						),
+					);
+				}
+			} catch (error) {
+				console.error(
+					"[CLIENT] SharedCalendarManager] Error searching users:",
+					error,
+				);
+			} finally {
+				setIsSearching(false);
+			}
+		},
+		[selectedCalendar?.sharedWith],
+	);
+
 	// Load shared users when share dialog opens or selectedCalendar changes
 	useEffect(() => {
 		if (isShareDialogOpen && selectedCalendar) {
 			loadSharedUsers();
 		}
-	}, [
-		isShareDialogOpen,
-		selectedCalendar?.$id,
-		selectedCalendar?.sharedWith,
-		loadSharedUsers,
-		selectedCalendar,
-	]);
+	}, [isShareDialogOpen, selectedCalendar, loadSharedUsers]);
 
 	// Search for users
 	useEffect(() => {
@@ -151,93 +238,6 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 			setSearchResults([]);
 		}
 	}, [userSearch, searchUsers]);
-
-	const fetchCalendars = async () => {
-		// Use SWR's mutate to refresh data
-		await refresh();
-		// Type assertion needed due to slight type differences between hook and component
-		setCalendars(swrCalendars as any);
-	};
-
-	const loadSharedUsers = async (calendar?: SharedCalendar | null) => {
-		// Use provided calendar or fall back to selectedCalendar
-		const calendarToUse = calendar || selectedCalendar;
-
-		// Get user IDs from sharePermissions (new) or sharedWith (legacy)
-		const userIds: string[] = [];
-		if (
-			calendarToUse?.sharePermissions &&
-			calendarToUse.sharePermissions.length > 0
-		) {
-			userIds.push(...calendarToUse.sharePermissions.map((p) => p.userId));
-		} else if (
-			calendarToUse?.sharedWith &&
-			calendarToUse.sharedWith.length > 0
-		) {
-			userIds.push(...calendarToUse.sharedWith);
-		}
-
-		if (userIds.length === 0) {
-			setSharedUsers([]);
-			return;
-		}
-
-		try {
-			const response = await fetch("/api/users/get-by-ids", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ userIds }),
-			});
-
-			if (response.ok) {
-				const users = await response.json();
-				// Enrich users with permission levels
-				const enrichedUsers = (Array.isArray(users) ? users : []).map(
-					(user: any) => {
-						const permission = calendarToUse?.sharePermissions?.find(
-							(p) => p.userId === user.$id,
-						);
-						return {
-							...user,
-							permissionLevel: permission?.permissionLevel || "view_all", // Default for legacy
-						};
-					},
-				);
-				setSharedUsers(enrichedUsers);
-			}
-		} catch (error) {
-			console.error(
-				"[CLIENT] SharedCalendarManager] Error loading shared users:",
-				error,
-			);
-		}
-	};
-
-	const searchUsers = async (query: string) => {
-		setIsSearching(true);
-		try {
-			const response = await fetch(
-				`/api/users/search?q=${encodeURIComponent(query)}`,
-			);
-			if (response.ok) {
-				const users = await response.json();
-				// Filter out users already shared with
-				const alreadySharedIds = selectedCalendar?.sharedWith || [];
-				setSearchResults(
-					users.filter(
-						(u: { $id: string }) => !alreadySharedIds.includes(u.$id),
-					),
-				);
-			}
-		} catch (error) {
-			console.error(
-				"[CLIENT] SharedCalendarManager] Error searching users:",
-				error,
-			);
-		} finally {
-			setIsSearching(false);
-		}
-	};
 
 	const handleAddUser = async (userId: string) => {
 		if (!selectedCalendar) return;
