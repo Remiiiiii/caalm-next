@@ -1,13 +1,11 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
 description: Best practices for using Radix UI components
-globs: **/*.{ts,tsx}
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
 ---
+
+# Radix UI
 
 - Use Radix components for accessible and customizable UI elements.
 - Follow the documentation for proper usage and customization of components.
-
 - Ensure proper keyboard navigation and focus management for all interactive elements.

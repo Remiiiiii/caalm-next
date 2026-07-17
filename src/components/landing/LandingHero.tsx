@@ -210,10 +210,9 @@ export default function LandingHero() {
 						variants={fadeUp}
 						className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-semibold tracking-tight leading-[1.2] sidebar-gradient-text"
 					>
-						<span className="block">
+						<span className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.75rem] text-center">
 							Centralize Contracts Audits and Licenses
 						</span>
-						<span className="block mt-1">Powered by AI</span>
 					</motion.h2>
 					<motion.p
 						variants={fadeUp}

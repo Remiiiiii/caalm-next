@@ -1,7 +1,6 @@
 ---
-name: security-rbac
-description: Strict RBAC, authentication, and authorization rules - NO BYPASSES ALLOWED
-globs: **/*.{ts,tsx,js,jsx}
+description: Strict RBAC, authentication, and authorization — no role-based permission bypasses
+globs: "**/*.{ts,tsx,js,jsx}"
 alwaysApply: true
 ---
 

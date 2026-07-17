@@ -1,158 +1,29 @@
-Please adapt the globs depending on your project structure.
-
+---
+description: Logging prefixes, database MCP-only ops, and related engineering conventions
+globs: "**/*.{ts,tsx,js,jsx}"
+alwaysApply: false
 ---
 
-name: vite-best-practices.mdc
-description: Best practices for Vite applications
-globs: \*_/_.{ts,tsx,js,jsx}
+# Logging and database conventions
 
----
+## Logging
 
-- Use Vite's built-in features for fast development and hot module replacement.
-- Optimize build performance by configuring the `build.rollupOptions` in `vite.config.js`.
-- Leverage Vite plugins for enhanced functionality, such as `@vitejs/plugin-react-swc` for React support.
+- Always add clear prefixes to `console.log`, `console.error`, `console.warn`, and `console.info` so logs are easy to identify.
+- Use `[SERVER]` for server-side logs (API routes, Server Actions, server components).
+- Use `[CLIENT]` for client-side logs (React components, hooks, browser code).
+- Include function or component name in the prefix (e.g. `[SERVER] getLatestApprovalRequestByEventId:`, `[CLIENT] OutlookStyleCalendar:`).
+- Server logs appear in the terminal where the dev server runs; browser logs appear in DevTools.
 
----
-
-name: react-best-practices.mdc
-description: Best practices for React applications
-globs: \*_/_.{ts,tsx,js,jsx}
-
----
-
-- Use functional components and hooks for state management.
-- Implement React's Context API for global state management.
-- Optimize performance with `React.memo` and `useMemo` for expensive calculations.
-
----
-
-name: react-query-best-practices.mdc
-description: Best practices for data fetching with React Query
-globs: \*_/_.{ts,tsx,js,jsx}
-
----
-
-- Use `useQuery` and `useMutation` hooks for data fetching and mutations.
-- Implement query invalidation to keep data fresh.
-- Utilize caching strategies to minimize unnecessary network requests.
-
----
-
-name: react-hook-form-best-practices.mdc
-description: Best practices for form handling with React Hook Form
-globs: \*_/_.{ts,tsx,js,jsx}
-
----
-
-- Use `useForm` to manage form state and validation.
-- Integrate with `zod` for schema validation.
-- Leverage `Controller` for custom components to maintain compatibility with React Hook Form.
-
----
-
-name: tailwindcss-best-practices.mdc
-description: Best practices for styling with Tailwind CSS
-globs: \*_/_.{ts,tsx,css}
-
----
-
-- Use utility-first classes for rapid UI development.
-- Create custom themes using Tailwind's configuration file.
-- Utilize `@apply` for reusable styles in your CSS files.
-
----
-
-name: radix-ui-best-practices.mdc
-description: Best practices for using Radix UI components
-globs: \*_/_.{ts,tsx}
-
----
-
-- Use Radix components for accessible and customizable UI elements.
-- Follow the documentation for proper usage and customization of components.
-- Ensure proper keyboard navigation and focus management for all interactive elements.
-
----
-
-name: zod-best-practices.mdc
-description: Best practices for schema validation with Zod
-globs: \*_/_.{ts,tsx}
-
----
-
-- Define schemas for data validation to ensure type safety.
-- Use Zod's built-in methods for complex validations.
-- Integrate Zod with React Hook Form for seamless form validation.
-
----
-
-name: typescript-best-practices.mdc
-description: TypeScript coding standards and type safety guidelines
-globs: \*_/_.{ts,tsx}
-
----
-
-- Use strict null checks to avoid runtime errors.
-- Prefer interfaces over types for object shapes.
-- Utilize type guards and assertions for better type safety.
-- Implement proper type inference to reduce redundancy.
-
----
-
-name: logging-best-practices.mdc
-description: Best practices for logging with clear prefixes to identify browser vs server logs
-globs: \*_/_.{ts,tsx,js,jsx}
-
----
-
-- Always add clear prefixes to console.log, console.error, console.warn, and console.info statements to make logs easier to identify.
-- Use `[SERVER]` prefix for server-side logs (API routes, Server Actions, server components).
-- Use `[CLIENT]` prefix for client-side logs (React components, hooks, browser code).
-- Include function or component name in the prefix for better traceability (e.g., `[SERVER] getLatestApprovalRequestByEventId:`, `[CLIENT] OutlookStyleCalendar:`).
-- Server logs appear in the terminal/console where the dev server runs.
-- Browser logs appear in the browser DevTools Console (F12).
-- Example server log: `console.log('[SERVER] getLatestApprovalRequestByEventId] Querying for approval:', data);`
-- Example client log: `console.log('[CLIENT] OutlookStyleCalendar] Permission check:', data);`
-
----
-
-name: dialog-best-practices.mdc
-description: Enterprise/professional UI standards for dialogs and modals
-globs: \*_/_.{ts,tsx,js,jsx}
-
----
-
-- All dialogs, modals, and popups must follow enterprise/professional UI design standards.
-- When creating or updating any dialog, automatically apply the standard structure with professional cap bar, gradient header, scrollable content, and footer.
-- Reference OutlookStyleCalendar.tsx dialogs for correct implementation patterns.
-- Use consistent color palette, spacing, and interactive elements throughout all dialogs.
-
----
-
-name: server-restart-indication.mdc
-description: Server restart indication rules for code changes
-globs: \*_/_.{ts,tsx,js,jsx,md,json}
-
----
-
-name: database-operations.mdc
-description: Rules for performing database operations and schema changes
-globs: \*_/_.{ts,tsx,js,jsx}
-
----
+## Database operations
 
 - NEVER create scripts (`.ts`, `.js`, `.sh`, etc.) to perform database operations, schema changes, or attribute creation.
-- ALWAYS use MCP (Model Context Protocol) tools for all database operations.
-- When database attributes need to be created or modified, use the available MCP database tools:
-  - `mcp_caalm_databases_create_string_attribute` for string attributes
-  - `mcp_caalm_databases_create_boolean_attribute` for boolean attributes
-  - `mcp_caalm_databases_create_integer_attribute` for integer attributes
-  - `mcp_caalm_databases_create_datetime_attribute` for datetime attributes
-  - Other MCP database attribute creation tools as needed
-- If MCP tools are not available or fail, provide clear instructions for manual creation via Appwrite Console UI.
-- Database operations include but are not limited to:
-  - Creating table attributes/columns
-  - Modifying table schemas
-  - Creating indexes
-  - Database migrations
-- This rule ensures consistency, reduces maintenance overhead, and leverages the integrated MCP tooling.
+- ALWAYS use MCP tools for all database operations.
+- When attributes need to be created or modified, use the available MCP database tools (string, boolean, integer, datetime, etc.).
+- If MCP tools are unavailable or fail, provide clear instructions for manual creation via Appwrite Console UI.
+- Covers creating/modifying attributes, indexes, and migrations.
+
+## Server restart indication
+
+- After code changes, indicate whether a server restart is required:
+  - Frontend-only → no restart / page refresh is enough
+  - Server-side / API / env → server restart required

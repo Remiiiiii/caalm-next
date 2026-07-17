@@ -1,7 +1,7 @@
 ---
-name: tailwindcss-best-practices
-description: Best practices for styling with Tailwind CSS
-globs: **/*.{ts,tsx,css}
+description: Best practices for styling with Tailwind CSS (see global-style-guide for full SSOT)
+globs: "**/*.{ts,tsx,css}"
+alwaysApply: false
 ---
 
 **Note**: This file is part of the comprehensive style guide. For the complete single source of truth, see `global-style-guide.mdc`.
