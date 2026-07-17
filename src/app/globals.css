@@ -258,6 +258,25 @@
 		animation: shimmer-slide 900ms ease;
 	}
 
+	/* Hero secondary CTA — original slate/gray gradient */
+	.schedule-demo-btn {
+		@apply text-white font-semibold rounded-full shadow-md px-4 py-2 sm:px-6 transition-all duration-200 w-full sm:w-auto flex items-center justify-center;
+		white-space: nowrap;
+		background-image: linear-gradient(
+			to right,
+			#94a3b8,
+			#64748b,
+			#475569,
+			#334155
+		);
+		position: relative;
+		overflow: hidden;
+	}
+
+	.schedule-demo-btn:hover {
+		@apply text-white!;
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.primary-btn:hover::after,
 		.btn-primary:hover::after,
@@ -462,20 +481,21 @@
 		}
 	}
 
-	/* Compact top QuickActions buttons on MacBook Pro widths */
-	@media (min-width: 1024px) and (max-width: 1440px) {
+	/* Compact QuickActions in dashboard header */
+	@media (min-width: 1024px) {
 		.quick-actions-container .primary-btn,
 		.quick-actions-container .btn-primary {
-			padding-left: 1rem; /* px-4 */
-			padding-right: 1rem; /* px-4 */
-			font-size: 0.75rem; /* text-xs */
-			height: 2.25rem; /* h-9 */
+			padding-left: 0.875rem;
+			padding-right: 0.875rem;
+			font-size: 0.8125rem;
+			height: 2.25rem;
+			min-height: 2.25rem;
 		}
 
 		.quick-actions-container .primary-btn svg,
 		.quick-actions-container .btn-primary svg {
-			width: 0.875rem; /* h-3.5 */
-			height: 0.875rem; /* h-3.5 */
+			width: 0.875rem;
+			height: 0.875rem;
 		}
 	}
 
@@ -1543,4 +1563,142 @@ a[href*="spline"] {
 	pointer-events: none;
 	clip: rect(0, 0, 0, 0);
 	clip-path: inset(50%);
+}
+
+/* ===== Landing page polish utilities ===== */
+
+/* Original subtle page grid (40px) */
+.landing-grid-bg {
+	background-image:
+		linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+		linear-gradient(180deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+	background-size: 40px 40px;
+}
+
+/* Hero video overlay grid — slightly lighter so video still reads */
+.landing-grid-bg-soft {
+	background-image:
+		linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+		linear-gradient(180deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+	background-size: 40px 40px;
+}
+
+/* Landing glass cards (caps) — same translucent glass as Integrations */
+.landing-frosted-card,
+.landing-integration-card {
+	@apply relative overflow-hidden transition-all duration-200;
+	border-radius: 0.75rem;
+	background: transparent;
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	border: 1px solid rgba(255, 255, 255, 0.55);
+	box-shadow:
+		0 8px 32px 0 rgba(31, 38, 135, 0.12),
+		inset 0 1px 0 0 rgba(255, 255, 255, 0.65);
+}
+
+/* Marquee tiles — thin drop shadow only (no heavy stacked band) */
+.landing-frosted-card-marquee {
+	box-shadow: 0 3px 8px 0 rgba(15, 23, 42, 0.06);
+}
+
+.landing-frosted-card > .glass-card-cap,
+.landing-integration-card > .glass-card-cap {
+	background: rgba(214, 215, 216, 0.35);
+	opacity: 1;
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+}
+
+/* Soft brand wash — matches Book a call card tint, full-bleed sections */
+.landing-soft-brand-wash {
+	background: linear-gradient(
+		to bottom right,
+		#fcfdff 0%,
+		rgba(0, 193, 203, 0.05) 28%,
+		rgba(14, 99, 143, 0.06) 55%,
+		rgba(22, 39, 104, 0.04) 78%,
+		#f2f4f8 100%
+	);
+}
+
+/* Weight only — color comes from .sidebar-gradient-text */
+.landing-section-title {
+	font-weight: 600;
+	letter-spacing: -0.015em;
+}
+
+.section-fade-top {
+	pointer-events: none;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 4rem;
+	z-index: 1;
+	background: linear-gradient(
+		to bottom,
+		rgba(255, 255, 255, 0.92) 0%,
+		rgba(255, 255, 255, 0) 100%
+	);
+}
+
+.section-fade-bottom {
+	pointer-events: none;
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 4rem;
+	z-index: 1;
+	background: linear-gradient(
+		to top,
+		rgba(255, 255, 255, 0.92) 0%,
+		rgba(255, 255, 255, 0) 100%
+	);
+}
+
+/* Pricing Save 20% strike when Monthly is active — angled bar only */
+.strike-th {
+	display: inline-block;
+	position: relative;
+	color: #94a3b8;
+}
+.strike-th::after {
+	content: "";
+	position: absolute;
+	left: -3px;
+	right: -3px;
+	top: 50%;
+	height: 1.5px;
+	background: #64748b;
+	transform: rotate(-14deg);
+	transform-origin: center;
+	pointer-events: none;
+}
+
+/* Badge: radial-glow sweeps from left mid → right mid, then pause */
+.badge-border-light {
+	--badge-emerald: #00c1cb;
+	--badge-ring: 1px;
+	/* Keep in sync with SWEEP_* in ShimmerBadge.tsx */
+	--badge-sweep-travel: 4s;
+	--badge-sweep-pause: 8s;
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	background: var(--badge-emerald);
+}
+
+.badge-border-light-inner {
+	background-color: rgba(241, 249, 255, 0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.badge-sweep-layer {
+		display: none;
+	}
+	.landing-frosted-card {
+		transition: none;
+	}
 }

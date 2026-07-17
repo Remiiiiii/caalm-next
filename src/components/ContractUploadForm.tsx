@@ -103,6 +103,7 @@ interface ContractUploadFormProps {
 	ownerId: string;
 	accountId: string;
 	className?: string;
+	triggerLabel?: string;
 	onSuccess?: () => void;
 }
 
@@ -505,6 +506,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	ownerId,
 	accountId,
 	className,
+	triggerLabel = "Upload Contract",
 	onSuccess,
 }) => {
 	const path = usePathname();
@@ -2130,8 +2132,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						className,
 					)}
 				>
-					<FileText className="h-4 w-4" />
-					Upload Contract
+					<Upload className="h-4 w-4" />
+					{triggerLabel}
 				</Button>
 			</DialogTrigger>
 

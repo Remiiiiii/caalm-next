@@ -51,7 +51,7 @@ const AuthenticatedLayout = ({
 					role={normalizedRole}
 					division={user.division}
 				/>
-				<section className="flex h-full w-full flex-1 flex-col">
+				<section className="flex h-full w-full flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
 					<MobileNavigation
 						$id={currentUser.$id}
 						accountId={user.accountId || currentUser.$id}
@@ -60,7 +60,7 @@ const AuthenticatedLayout = ({
 						email={currentUser.email}
 						role={normalizedRole}
 					/>
-					<div className="px-3 sm:px-4 py-2 min-w-0">
+					<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
 						<DashboardHeader user={currentUser} />
 					</div>
 					<div className="main-content">{children}</div>

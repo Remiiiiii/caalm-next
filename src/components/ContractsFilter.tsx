@@ -21,12 +21,20 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
 import { CONTRACT_STATUS_OPTIONS } from "@/constants/status";
-import { type ContractFilters, useContractsFilter } from "./ContractsView";
-
-// Use the centralized status enum from constants
-// Note: LIFECYCLE_STATUSES are separate and used for lifecycle tracking,
-// while CONTRACT_STATUS_OPTIONS are the actual database enum values
+import { countActiveAdvancedFilters } from "@/lib/contracts/contractsListUtils";
+import {
+	type ContractFilters,
+	useContractsFilter,
+} from "./ContractsViewContext";
 
 const COMMON_DEPARTMENTS = [
 	"IT",
@@ -51,50 +59,22 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 	departments = [],
 	assignedManagers = [],
 }) => {
-	const { filters, setFilters } = useContractsFilter();
-	const [showFilters, setShowFilters] = useState(false);
+	const { filters, setFilters, clearFilters } = useContractsFilter();
+	const [open, setOpen] = useState(false);
 
-	// Combine common departments with unique departments from contracts
 	const allDepartments = useMemo(() => {
 		const uniqueDepts = new Set([...COMMON_DEPARTMENTS, ...departments]);
 		return Array.from(uniqueDepts).sort();
 	}, [departments]);
 
-	// Combine assigned managers
 	const allAssignedManagers = useMemo(() => {
 		const uniqueManagers = new Set(assignedManagers);
 		return Array.from(uniqueManagers).sort();
 	}, [assignedManagers]);
 
-	// Calculate active filter count
-	const getActiveFiltersCount = (): number => {
-		let count = 0;
-		if (filters.status) count++;
-		if (filters.contractType) count++;
-		if (filters.uploadedOnFrom || filters.uploadedOnTo) count++;
-		if (filters.expiresOnFrom || filters.expiresOnTo) count++;
-		if (filters.department) count++;
-		if (filters.assignedTo) count++;
-		return count;
-	};
+	const activeCount = countActiveAdvancedFilters(filters);
 
-	// Clear all filters
-	const clearFilters = () => {
-		setFilters({
-			status: undefined,
-			contractType: undefined,
-			uploadedOnFrom: undefined,
-			uploadedOnTo: undefined,
-			expiresOnFrom: undefined,
-			expiresOnTo: undefined,
-			department: undefined,
-			assignedTo: undefined,
-			searchQuery: undefined,
-		});
-	};
-
-	// Update individual filter
-	const updateFilter = (key: keyof ContractFilters, value: any) => {
+	const updateFilter = (key: keyof ContractFilters, value: unknown) => {
 		setFilters((prev) => ({
 			...prev,
 			[key]: value || undefined,
@@ -102,56 +82,45 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 	};
 
 	return (
-		<Popover open={showFilters} onOpenChange={setShowFilters}>
-			<PopoverTrigger asChild>
+		<Sheet open={open} onOpenChange={setOpen}>
+			<SheetTrigger asChild>
 				<Button
 					variant="outline"
 					size="sm"
-					className="primary-btn px-3 sm:px-4"
+					className="primary-btn px-3 sm:px-4 cursor-pointer"
 				>
 					<Filter className="w-4 h-4" />
 					<span className="hidden sm:inline">Filter</span>
-					{getActiveFiltersCount() > 0 && (
+					{activeCount > 0 && (
 						<Badge
 							variant="secondary"
 							className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
 						>
-							{getActiveFiltersCount()}
+							{activeCount}
 						</Badge>
 					)}
 				</Button>
-			</PopoverTrigger>
-			<PopoverContent
-				className="w-96 max-h-[55vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl p-0"
-				sideOffset={10}
+			</SheetTrigger>
+			<SheetContent
+				side="right"
+				className="w-full sm:max-w-md p-0 flex flex-col overflow-hidden border-l border-slate-200"
 			>
-				{/* Professional Cap */}
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70" />
 
-				{/* Header with gradient background */}
-				<div className="glass-dialog-wizard-header mt-4 py-3">
-					<div className="flex items-center gap-3 px-6">
-						{/* Icon with circular background */}
-						<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-							<Filter className="w-5 h-5 text-blue-600" />
-						</div>
-
-						{/* Title */}
-						<div className="flex-1">
-							<h4 className="text-lg font-semibold sidebar-gradient-text">
-								Filter Contracts
-							</h4>
-							<p className="text-xs text-slate-600 mt-0.5">
-								Refine your contract list
-							</p>
-						</div>
+				<SheetHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4 px-6 text-left space-y-1">
+					<div className="flex items-center gap-3">
+						<Filter className="w-5 h-5 text-[#0f5384]" />
+						<SheetTitle className="text-xl font-semibold sidebar-gradient-text">
+							Filter contracts
+						</SheetTitle>
 					</div>
-				</div>
+					<SheetDescription className="text-sm text-slate-600 ml-8">
+						Refine your contract list
+					</SheetDescription>
+				</SheetHeader>
 
-				{/* Scrollable Content */}
-				<div className="flex-1 overflow-y-auto p-4 bg-slate-50">
+				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
 					<div className="space-y-4">
-						{/* Status Filter */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Status</Label>
 							<Select
@@ -174,7 +143,6 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 							</Select>
 						</div>
 
-						{/* Contract Type Filter */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Type</Label>
 							<Select
@@ -200,7 +168,6 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 							</Select>
 						</div>
 
-						{/* Uploaded On Date Range */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Uploaded On</Label>
 							<div className="grid grid-cols-2 gap-2">
@@ -208,7 +175,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
-											className="justify-start text-left font-normal bg-white"
+											className="justify-start text-left font-normal bg-white cursor-pointer"
 											size="sm"
 										>
 											{filters.uploadedOnFrom
@@ -229,7 +196,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
-											className="justify-start text-left font-normal bg-white"
+											className="justify-start text-left font-normal bg-white cursor-pointer"
 											size="sm"
 										>
 											{filters.uploadedOnTo
@@ -249,7 +216,6 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 							</div>
 						</div>
 
-						{/* Expires On Date Range */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Expires On</Label>
 							<div className="grid grid-cols-2 gap-2">
@@ -257,7 +223,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
-											className="justify-start text-left font-normal bg-white"
+											className="justify-start text-left font-normal bg-white cursor-pointer"
 											size="sm"
 										>
 											{filters.expiresOnFrom
@@ -278,7 +244,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
-											className="justify-start text-left font-normal bg-white"
+											className="justify-start text-left font-normal bg-white cursor-pointer"
 											size="sm"
 										>
 											{filters.expiresOnTo
@@ -298,7 +264,6 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 							</div>
 						</div>
 
-						{/* Department Filter */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Department</Label>
 							<Select
@@ -324,7 +289,6 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 							</Select>
 						</div>
 
-						{/* Assigned To Filter */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Assigned To</Label>
 							<Select
@@ -352,27 +316,33 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 					</div>
 				</div>
 
-				{/* Professional Footer */}
-				<div className="glass-dialog-footer-compact">
+				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
 					<div className="text-xs text-slate-500">
-						{getActiveFiltersCount() > 0
-							? `${getActiveFiltersCount()} filter${
-									getActiveFiltersCount() > 1 ? "s" : ""
-								} active`
+						{activeCount > 0
+							? `${activeCount} filter${activeCount > 1 ? "s" : ""} active`
 							: "No filters applied"}
 					</div>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={clearFilters}
-						className="primary-btn px-3 sm:px-4 h-8"
-						disabled={getActiveFiltersCount() === 0}
-					>
-						Clear All
-					</Button>
+					<div className="flex items-center gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => clearFilters()}
+							className="primary-btn px-3 sm:px-4 cursor-pointer"
+							disabled={activeCount === 0 && !filters.searchQuery}
+						>
+							Clear all
+						</Button>
+						<Button
+							size="sm"
+							className="primary-btn px-3 sm:px-4 cursor-pointer"
+							onClick={() => setOpen(false)}
+						>
+							Done
+						</Button>
+					</div>
 				</div>
-			</PopoverContent>
-		</Popover>
+			</SheetContent>
+		</Sheet>
 	);
 };
 

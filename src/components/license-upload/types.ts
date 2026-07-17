@@ -6,6 +6,7 @@ export interface LicenseUploadFormProps {
 	ownerId: string;
 	accountId: string;
 	className?: string;
+	triggerLabel?: string;
 	onSuccess?: () => void;
 }
 

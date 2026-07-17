@@ -96,9 +96,11 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 			) : (
 				<main className="flex h-screen overflow-hidden">
 					<Sidebar {...sidebarProps} />
-					<section className="flex h-full flex-1 flex-col min-w-0">
+					<section className="flex h-full flex-1 flex-col min-w-0 pt-4 sm:pt-5 md:pt-6 lg:pt-7">
 						<MobileNavigation {...navigationProps} />
-						<DashboardHeader user={user} />
+						<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
+							<DashboardHeader user={user} />
+						</div>
 						<div className="main-content">
 							<Suspense
 								fallback={

@@ -1,96 +1,25 @@
 "use client";
 
 import Image from "next/image";
-import {
-	createContext,
-	useCallback,
-	useContext,
-	useEffect,
-	useMemo,
-	useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 import Card from "@/components/Card";
+import ContractPreviewSheet from "@/components/ContractPreviewSheet";
+import { useContractsView } from "@/components/ContractsViewContext";
 import type { UIFileDoc } from "@/types/files";
 import ContractsPagination from "./ContractsPagination";
 import ContractsTableView from "./ContractsTableView";
 
-export type ViewType = "table" | "card";
-
-const STORAGE_KEY = "contracts-view-preference";
-
-export interface ContractFilters {
-	status?: string;
-	uploadedOnFrom?: Date;
-	uploadedOnTo?: Date;
-	expiresOnFrom?: Date;
-	expiresOnTo?: Date;
-	department?: string;
-	assignedTo?: string;
-	contractType?: string;
-	searchQuery?: string;
-}
-
-interface ContractsViewContextType {
-	view: ViewType;
-	handleViewChange: (view: ViewType) => void;
-	filters: ContractFilters;
-	setFilters: React.Dispatch<React.SetStateAction<ContractFilters>>;
-}
-
-const ContractsViewContext = createContext<
-	ContractsViewContextType | undefined
->(undefined);
-
-export function ContractsViewProvider({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
-	const [view, setView] = useState<ViewType>("card");
-	const [filters, setFilters] = useState<ContractFilters>({});
-
-	// Load view preference from localStorage on mount
-	useEffect(() => {
-		const savedView = localStorage.getItem(STORAGE_KEY) as ViewType | null;
-		if (savedView === "table" || savedView === "card") {
-			setView(savedView);
-		}
-	}, []);
-
-	// Save view preference to localStorage when it changes
-	const handleViewChange = useCallback((newView: ViewType) => {
-		setView(newView);
-		localStorage.setItem(STORAGE_KEY, newView);
-	}, []);
-
-	return (
-		<ContractsViewContext.Provider
-			value={{ view, handleViewChange, filters, setFilters }}
-		>
-			{children}
-		</ContractsViewContext.Provider>
-	);
-}
-
-export function useContractsView() {
-	const context = useContext(ContractsViewContext);
-	if (context === undefined) {
-		throw new Error(
-			"useContractsView must be used within a ContractsViewProvider",
-		);
-	}
-	return context;
-}
-
-export function useContractsFilter() {
-	const context = useContext(ContractsViewContext);
-	if (context === undefined) {
-		throw new Error(
-			"useContractsFilter must be used within a ContractsViewProvider",
-		);
-	}
-	return { filters: context.filters, setFilters: context.setFilters };
-}
+export {
+	ContractsViewProvider,
+	useContractsView,
+	useContractsFilter,
+} from "@/components/ContractsViewContext";
+export type {
+	ContractFilters,
+	StatusTab,
+	DensityMode,
+	ViewType,
+} from "@/components/ContractsViewContext";
 
 interface ContractsViewProps {
 	files: UIFileDoc[];
@@ -105,37 +34,26 @@ export default function ContractsView({
 	user,
 	onRefresh,
 }: ContractsViewProps) {
-	const { view, filters } = useContractsView();
+	const { view, density, previewFile, setPreviewFile } = useContractsView();
 	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 12;
-
-	// Reset to page 1 when files array changes (length or content)
-	// Using JSON.stringify to detect filter changes that affect results
-	const _filesKey = useMemo(
-		() => JSON.stringify(files.map((f) => f.$id)),
-		[files],
-	);
+	const itemsPerPage = density === "compact" ? 20 : 12;
 
 	useEffect(() => {
 		setCurrentPage(1);
-	}, []);
+	}, [files.length, density]);
 
-	// Calculate total pages
 	const totalPages = Math.max(1, Math.ceil(files.length / itemsPerPage));
 
-	// Ensure currentPage is within valid range
 	const validCurrentPage = useMemo(() => {
 		return Math.min(Math.max(1, currentPage), totalPages);
 	}, [currentPage, totalPages]);
 
-	// Sync currentPage if out of bounds (e.g., when filtering reduces total pages)
 	useEffect(() => {
 		if (totalPages > 0 && (currentPage > totalPages || currentPage < 1)) {
 			setCurrentPage(Math.min(Math.max(1, currentPage), totalPages));
 		}
 	}, [totalPages, currentPage]);
 
-	// Calculate pagination with valid page number
 	const startIndex = (validCurrentPage - 1) * itemsPerPage;
 	const endIndex = startIndex + itemsPerPage;
 	const paginatedFiles = useMemo(
@@ -143,7 +61,6 @@ export default function ContractsView({
 		[files, startIndex, endIndex],
 	);
 
-	// Empty state for card view
 	if (view === "card" && files.length === 0) {
 		return (
 			<div className="text-center py-12">
@@ -165,6 +82,7 @@ export default function ContractsView({
 				<>
 					<ContractsTableView
 						files={paginatedFiles}
+						allVisibleIds={paginatedFiles.map((f) => f.$id)}
 						user={user}
 						onRefresh={onRefresh}
 					/>
@@ -178,7 +96,7 @@ export default function ContractsView({
 				</>
 			) : (
 				<>
-					<section className="file-list">
+					<section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-4 sm:p-6">
 						{paginatedFiles.map((file: UIFileDoc) => (
 							<Card
 								key={file.$id}
@@ -187,6 +105,7 @@ export default function ContractsView({
 								expirationDate={file.contractExpiryDate}
 								userRole={user?.role as "executive" | "admin" | "manager"}
 								onRefresh={onRefresh}
+								onPreview={() => setPreviewFile(file)}
 							/>
 						))}
 					</section>
@@ -199,6 +118,13 @@ export default function ContractsView({
 					)}
 				</>
 			)}
+			<ContractPreviewSheet
+				file={previewFile}
+				open={Boolean(previewFile)}
+				onOpenChange={(open) => {
+					if (!open) setPreviewFile(null);
+				}}
+			/>
 		</>
 	);
 }

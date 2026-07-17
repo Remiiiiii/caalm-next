@@ -3,7 +3,8 @@
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useContractsView } from "@/components/ContractsViewContext";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Table,
 	TableBody,
@@ -16,71 +17,83 @@ import { useToast } from "@/hooks/use-toast";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import {
+	getExpiryUrgency,
+	isContractExpired,
+} from "@/lib/contracts/contractsListUtils";
+import {
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
-import { convertFileSize } from "@/lib/utils";
+import { cn, convertFileSize } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import ActionDropdown from "./ActionDropdown";
 import FormattedDateTime, { FormattedDate } from "./FormattedDateTime";
 import ManagerAvatars from "./ManagerAvatars";
 import Thumbnail from "./Thumbnail";
 
-// Map contract status to badge color and label (same as Card component)
-const statusBadge = (
-	status: string,
-	isExpired?: boolean,
-	contractExpiryDate?: string,
-) => {
-	// Check if contract is expired (priority: status > isExpired flag > expiry date)
-	const isContractExpired =
-		status?.toLowerCase() === "expired" ||
-		isExpired ||
-		(contractExpiryDate && new Date(contractExpiryDate) < new Date());
+function statusBadge(file: UIFileDoc) {
+	const expired = isContractExpired(file);
+	const status = expired ? "expired" : file.status || "";
+	const labelMap: Record<string, string> = {
+		"pending-review": "Pending Review",
+		"action-required": "Action Required",
+		active: "Active",
+		inactive: "Inactive",
+		expired: "Expired",
+	};
+	const classMap: Record<string, string> = {
+		active: "bg-green/10 text-green border-green/20",
+		"pending-review": "bg-orange/10 text-orange border-orange/20",
+		"action-required": "bg-red/10 text-red border-red/20",
+		inactive: "bg-slate-100 text-slate-600 border-slate-200",
+		expired: "bg-red/10 text-red border-red/20",
+	};
+	return (
+		<span
+			className={cn(
+				"inline-block px-2 py-0.5 text-xs rounded-md font-medium border",
+				classMap[status] || "bg-slate-100 text-slate-700 border-slate-200",
+			)}
+		>
+			{labelMap[status] || status || "—"}
+		</span>
+	);
+}
 
-	// If expired, always show Expired badge
-	if (isContractExpired) {
-		return (
-			<span className="inline-block px-2 py-1 border-2 border-purple-600 bg-purple-50 text-purple-900 text-xs rounded-xl font-medium">
-				Expired
-			</span>
-		);
+function expiryCell(file: UIFileDoc) {
+	if (!file.contractExpiryDate) {
+		return <span className="body-2 text-slate-400">-</span>;
 	}
-
-	let color = "";
-	let label = status;
-	switch (status) {
-		case "pending-review":
-			color =
-				"border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium";
-			label = "Pending Review";
-			break;
-		case "action-required":
-			color =
-				"border-2 border-red-400 bg-destructive/10 text-destructive text-xs rounded-xl font-medium";
-			label = "Action Required";
-			break;
-		case "active":
-			color =
-				"border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium";
-			label = "Active";
-			break;
-		case "inactive":
-			color =
-				"border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium";
-			label = "Inactive";
-			break;
-		default:
-			color =
-				"border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium";
-			label = status;
-	}
-	return <span className={`inline-block px-2 py-1 ${color}`}>{label}</span>;
-};
+	const urgency = getExpiryUrgency(file);
+	const tone =
+		urgency === "expired" || urgency === "30"
+			? "text-red"
+			: urgency === "60"
+				? "text-orange"
+				: urgency === "90"
+					? "text-amber-700"
+					: "text-slate-700";
+	return (
+		<span className={cn("body-2", tone)}>
+			<FormattedDate date={file.contractExpiryDate} className="body-2" />
+			{urgency !== "none" && urgency !== "expired" && (
+				<span className="block text-[10px] font-medium uppercase tracking-wide opacity-80">
+					{urgency}d
+				</span>
+			)}
+			{urgency === "expired" && (
+				<span className="block text-[10px] font-medium uppercase tracking-wide opacity-80">
+					Expired
+				</span>
+			)}
+		</span>
+	);
+}
 
 interface ContractsTableViewProps {
 	files: UIFileDoc[];
+	allVisibleIds?: string[];
 	user: {
 		role?: string;
 	} | null;
@@ -89,10 +102,19 @@ interface ContractsTableViewProps {
 
 export default function ContractsTableView({
 	files,
+	allVisibleIds,
 	user,
 	onRefresh,
 }: ContractsTableViewProps) {
 	const { toast } = useToast();
+	const {
+		selectedIds,
+		toggleSelected,
+		selectAll,
+		clearSelection,
+		density,
+		setPreviewFile,
+	} = useContractsView();
 	const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
 	const [loadingOwners, setLoadingOwners] = useState<Record<string, boolean>>(
 		{},
@@ -109,6 +131,18 @@ export default function ContractsTableView({
 	const [failedProfileImages, setFailedProfileImages] = useState<Set<string>>(
 		new Set(),
 	);
+
+	const visibleIds = allVisibleIds || files.map((f) => f.$id);
+	const allSelected =
+		visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+	const rowPad = density === "compact" ? "py-2" : "py-4";
+
+	const stickyContractCell = (selected: boolean) =>
+		cn(
+			"sticky left-10 z-10 backdrop-blur-md border-r border-white/30 transition-colors duration-200",
+			selected ? "bg-blue-50/50" : "bg-white/10 group-hover:bg-white/25",
+		);
+
 
 	// Fetch owner names for all contracts
 	useEffect(() => {
@@ -462,141 +496,173 @@ export default function ContractsTableView({
 	}
 
 	return (
-		<Card className="bg-white/30 backdrop-blur border mt-6 border-white/40 shadow-lg w-[99.5%]">
-			<div className="glass-card-cap" />
-			<CardContent className="p-6">
-				<div className="w-full overflow-x-auto">
-					<Table className="border-separate border-spacing-0">
-						<TableHeader className="[&_tr]:border-b-0">
-							<TableRow className={DATA_TABLE_HEADER_ROW}>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}>
-									Contract
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Status
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Size
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Uploaded On
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Expires On
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Department
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Assigned To
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									By
-								</TableHead>
-								<TableHead
-									className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-								>
-									Actions
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody className="[&_tr:last-child>td]:border-b-0">
-							{files.map((file: UIFileDoc) => (
-								<TableRow
-									key={file.$id}
-									className={DATA_TABLE_BODY_ROW_CLICKABLE}
-								>
-									<TableCell className="py-4">
-										<div className="flex items-center gap-3 min-w-0">
-											<Thumbnail
-												type={file.type}
-												extension={file.extension}
-												url={file.url}
-												className="size-10! shrink-0"
-												imageClassName="!size-8"
-											/>
-											<p
-												className="subtitle-2 text-slate-700 whitespace-nowrap truncate"
-												title={
-													file.name || file.contractName || "Untitled Contract"
-												}
-											>
-												{truncateContractName(
-													file.name || file.contractName || "Untitled Contract",
-												)}
-											</p>
-										</div>
-									</TableCell>
-									<TableCell className="py-4 whitespace-nowrap">
-										{file.status &&
-											statusBadge(
-												file.status,
-												file.isExpired,
-												file.contractExpiryDate,
-											)}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{convertFileSize({ sizeInBytes: file.size || 0 })}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										<FormattedDateTime
-											date={file.$createdAt}
-											className="body-2"
-										/>
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{file.contractExpiryDate ? (
-											<FormattedDate
-												date={file.contractExpiryDate}
-												className="body-2"
-											/>
-										) : (
-											<span className="body-2 text-slate-400">-</span>
+		<div className="w-full overflow-x-auto px-2 sm:px-4 pb-4">
+			<Table className="border-separate border-spacing-0">
+				<TableHeader className="[&_tr]:border-b-0">
+					<TableRow className={DATA_TABLE_HEADER_ROW}>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
+							<Checkbox
+								checked={allSelected}
+								onCheckedChange={(checked) => {
+									if (checked) selectAll(visibleIds);
+									else clearSelection();
+								}}
+								aria-label="Select all visible contracts"
+								className="cursor-pointer"
+							/>
+						</TableHead>
+						<TableHead
+							className={`${DATA_TABLE_HEADER_CELL} px-3 sticky left-10 z-10 backdrop-blur-md bg-transparent border-r border-white/30`}
+						>
+							Contract
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Status
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Size
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Uploaded On
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Expires On
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Department
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Assigned To
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							By
+						</TableHead>
+						<TableHead
+							className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+						>
+							Actions
+						</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody className="[&_tr:last-child>td]:border-b-0">
+					{files.map((file: UIFileDoc) => (
+						<TableRow
+							key={file.$id}
+							className={cn(
+								DATA_TABLE_BODY_ROW_CLICKABLE,
+								"group",
+								selectedIds.includes(file.$id) && "bg-blue-50/50",
+							)}
+							onClick={() => setPreviewFile(file)}
+						>
+							<TableCell
+								className={cn(rowPad, "pl-4 pr-2")}
+								onClick={(e) => e.stopPropagation()}
+							>
+								<Checkbox
+									checked={selectedIds.includes(file.$id)}
+									onCheckedChange={() => toggleSelected(file.$id)}
+									aria-label={`Select ${file.contractName || file.name || "contract"}`}
+									className="cursor-pointer"
+								/>
+							</TableCell>
+							<TableCell
+								className={cn(
+									rowPad,
+									stickyContractCell(selectedIds.includes(file.$id)),
+								)}
+							>
+								<div className="flex items-center gap-3 min-w-0">
+									<Thumbnail
+										type={file.type}
+										extension={file.extension}
+										url={file.url}
+										className="size-10! shrink-0"
+										imageClassName="!size-8"
+									/>
+									<p
+										className="subtitle-2 text-slate-700 whitespace-nowrap truncate max-w-[180px]"
+										title={
+											file.name || file.contractName || "Untitled Contract"
+										}
+									>
+										{truncateContractName(
+											file.name || file.contractName || "Untitled Contract",
 										)}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{file.department || (
-											<span className="body-2 text-slate-400">-</span>
-										)}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{renderAssignedManagers(file)}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{loadingOwners[file.$id] &&
-										!ownerNames[file.$id] &&
-										!(
-											typeof file.owner === "object" &&
-											file.owner &&
-											"fullName" in file.owner
-										) ? (
-											<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
-												<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-												Loading...
-											</span>
-										) : (
-											<span
-												className="body-2 truncate block"
-												title={getOwnerName(file)}
-											>
-												{getOwnerName(file)}
-											</span>
-										)}
-									</TableCell>
-									<TableCell className="py-4 text-right">
-										<ActionDropdown
-											file={file}
-											onStatusChange={onRefresh}
-											onRefresh={onRefresh}
-											userRole={user?.role as "executive" | "admin" | "manager"}
-										/>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</div>
-			</CardContent>
-		</Card>
+									</p>
+								</div>
+							</TableCell>
+							<TableCell className={cn(rowPad, "whitespace-nowrap")}>
+								{statusBadge(file)}
+							</TableCell>
+							<TableCell
+								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							>
+								{convertFileSize({ sizeInBytes: file.size || 0 })}
+							</TableCell>
+							<TableCell
+								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							>
+								<FormattedDateTime
+									date={file.$createdAt}
+									className="body-2"
+								/>
+							</TableCell>
+							<TableCell
+								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							>
+								{expiryCell(file)}
+							</TableCell>
+							<TableCell
+								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							>
+								{file.department || (
+									<span className="body-2 text-slate-400">-</span>
+								)}
+							</TableCell>
+							<TableCell
+								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							>
+								{renderAssignedManagers(file)}
+							</TableCell>
+							<TableCell
+								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							>
+								{loadingOwners[file.$id] &&
+								!ownerNames[file.$id] &&
+								!(
+									typeof file.owner === "object" &&
+									file.owner &&
+									"fullName" in file.owner
+								) ? (
+									<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
+										<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+										Loading...
+									</span>
+								) : (
+									<span
+										className="body-2 truncate block"
+										title={getOwnerName(file)}
+									>
+										{getOwnerName(file)}
+									</span>
+								)}
+							</TableCell>
+							<TableCell
+								className={cn(rowPad, "text-right")}
+								onClick={(e) => e.stopPropagation()}
+							>
+								<ActionDropdown
+									file={file}
+									onStatusChange={onRefresh}
+									onRefresh={onRefresh}
+									userRole={user?.role as "executive" | "admin" | "manager"}
+								/>
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
+		</div>
 	);
 }

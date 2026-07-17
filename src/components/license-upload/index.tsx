@@ -88,6 +88,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	ownerId,
 	accountId,
 	className,
+	triggerLabel = "Upload License",
 	onSuccess,
 }) => {
 	const _path = usePathname();
@@ -479,7 +480,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 				<DialogTrigger asChild>
 					<Button className={className}>
 						<Upload className="h-4 w-4" />
-						Upload License
+						{triggerLabel}
 					</Button>
 				</DialogTrigger>
 

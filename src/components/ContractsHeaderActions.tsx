@@ -1,28 +1,40 @@
 "use client";
 
 import { Download } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { PERMISSIONS } from "@/constants/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
+import { matchesStatusTab } from "@/lib/contracts/contractsListUtils";
 import type { UIFileDoc } from "@/types/files";
 import ContractsExpiryModalTestButton from "./ContractsExpiryModalTestButton";
-import ContractsFilter from "./ContractsFilter";
-import { useContractsFilter } from "./ContractsView";
+import { useContractsView } from "./ContractsViewContext";
+
+const ContractUploadForm = dynamic(
+	() => import("@/components/ContractUploadForm"),
+	{ ssr: false, loading: () => null },
+);
 
 interface ContractsHeaderActionsProps {
 	files: UIFileDoc[];
-	departments?: string[];
-	assignedManagers?: string[];
+	userId?: string;
+	accountId?: string;
 }
 
 export default function ContractsHeaderActions({
 	files,
-	departments = [],
-	assignedManagers = [],
+	userId,
+	accountId,
 }: ContractsHeaderActionsProps) {
-	const { filters } = useContractsFilter();
+	const { filters, statusTab, selectedIds } = useContractsView();
+	const { permissions } = usePermissions();
+	const canView = permissions.includes(PERMISSIONS.CONTRACTS.VIEW);
+	const canCreate = permissions.includes(PERMISSIONS.CONTRACTS.CREATE);
 
-	const filteredFilesForExport = useMemo(() => {
-		return files.filter((file: UIFileDoc) => {
+	const exportFiles = useMemo(() => {
+		const base = files.filter((file) => {
+			if (!matchesStatusTab(file, statusTab)) return false;
 			if (filters.status && file.status !== filters.status) return false;
 			if (filters.contractType && file.contractType !== filters.contractType)
 				return false;
@@ -79,9 +91,15 @@ export default function ContractsHeaderActions({
 			}
 			return true;
 		});
-	}, [files, filters]);
+
+		if (selectedIds.length > 0) {
+			return base.filter((f) => selectedIds.includes(f.$id));
+		}
+		return base;
+	}, [files, filters, statusTab, selectedIds]);
 
 	const handleExport = () => {
+		if (!canView) return;
 		const headers = [
 			"Contract Name",
 			"Contract Number",
@@ -94,7 +112,7 @@ export default function ContractsHeaderActions({
 			"Vendor",
 			"Created Date",
 		];
-		const rows = filteredFilesForExport.map((file) => [
+		const rows = exportFiles.map((file) => [
 			file.contractName || file.name || "Untitled",
 			file.contractNumber || "",
 			file.status || "",
@@ -128,20 +146,29 @@ export default function ContractsHeaderActions({
 	};
 
 	return (
-		<div className="flex items-center gap-2">
-			<ContractsFilter
-				departments={departments}
-				assignedManagers={assignedManagers}
-			/>
-			<Button
-				variant="outline"
-				size="sm"
-				onClick={handleExport}
-				className="primary-btn px-3 sm:px-4"
-			>
-				<Download className="w-4 h-4" />
-				<span className="hidden sm:inline">Export</span>
-			</Button>
+		<div className="flex items-center gap-2 justify-end flex-wrap">
+			{canCreate && userId && accountId && (
+				<ContractUploadForm
+					ownerId={userId}
+					accountId={accountId}
+					className="primary-btn px-3 sm:px-4 h-9 cursor-pointer"
+				/>
+			)}
+			{canView && (
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={handleExport}
+					className="primary-btn px-3 sm:px-4 cursor-pointer"
+				>
+					<Download className="w-4 h-4" />
+					<span className="hidden sm:inline">
+						{selectedIds.length > 0
+							? `Export (${selectedIds.length})`
+							: "Export"}
+					</span>
+				</Button>
+			)}
 			{process.env.NODE_ENV === "development" && (
 				<ContractsExpiryModalTestButton />
 			)}

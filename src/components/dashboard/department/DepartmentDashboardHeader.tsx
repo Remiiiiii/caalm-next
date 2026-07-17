@@ -48,9 +48,9 @@ export function DepartmentDashboardHeader({
 					{departmentLabel ? ` ${departmentLabel}` : null}
 				</p>
 			</div>
-			{/* <div className="flex flex-wrap items-center gap-3 shrink-0">
+			<div className="flex flex-wrap items-center gap-3 shrink-0">
 				{canApprove ? (
-					<Button className="primary-btn px-3 sm:px-4" asChild>
+					<Button className="primary-btn px-3 sm:px-4 cursor-pointer" asChild>
 						<Link href="/contracts/approvals">
 							<CalendarCheck className="h-4 w-4" />
 							Review approvals
@@ -60,7 +60,7 @@ export function DepartmentDashboardHeader({
 				{canViewAnalytics && division ? (
 					<Button
 						variant="outline"
-						className="primary-btn px-3 sm:px-4"
+						className="primary-btn px-3 sm:px-4 cursor-pointer"
 						asChild
 					>
 						<Link href={`/analytics/${division}`}>
@@ -72,7 +72,7 @@ export function DepartmentDashboardHeader({
 				{canInvite ? (
 					<Button
 						variant="outline"
-						className="primary-btn px-3 sm:px-4"
+						className="primary-btn px-3 sm:px-4 cursor-pointer"
 						asChild
 					>
 						<Link href="/dashboard/user-management">
@@ -81,7 +81,7 @@ export function DepartmentDashboardHeader({
 						</Link>
 					</Button>
 				) : null}
-			</div> */}
+			</div>
 		</div>
 	);
 }

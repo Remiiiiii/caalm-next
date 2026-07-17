@@ -113,6 +113,7 @@ interface CardProps {
 	assignedManagers?: string[];
 	onRefresh?: () => void;
 	userRole?: "executive" | "admin" | "manager";
+	onPreview?: () => void;
 }
 
 const Card = ({
@@ -125,6 +126,7 @@ const Card = ({
 	assignedToDepartment: propAssignedToDepartment,
 	onRefresh,
 	userRole,
+	onPreview,
 }: CardProps) => {
 	const [contractStatus, setContractStatus] = useState<string | undefined>(
 		status || file.status,
@@ -525,25 +527,28 @@ const Card = ({
 	};
 
 	const handleCardClick = (e: React.MouseEvent) => {
-		// Prevent the default link behavior - we don't want to open files in new tabs anymore
 		e.preventDefault();
 		e.stopPropagation();
-		// The file viewing is now handled by the DocumentViewer modal through the ActionDropdown
+		onPreview?.();
 	};
 
 	return (
-		<div className="file-card relative" onClick={handleCardClick}>
+		<div
+			className="glass-card interactive-glass-card relative cursor-pointer flex flex-col gap-6 p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 transition-all duration-200"
+			onClick={handleCardClick}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onPreview?.();
+				}
+			}}
+			role="button"
+			tabIndex={0}
+		>
 			{/* Professional Cap */}
-			<div
-				className="absolute top-0 left-0 right-0 h-4 rounded-t-[18px]"
-				style={{
-					background: "rgba(214, 215, 216, 0.5)",
-					backdropFilter: "blur(4px)",
-					WebkitBackdropFilter: "blur(4px)",
-				}}
-			/>
+			<div className="glass-card-cap" />
 
-			<div className="flex justify-between text-slate-700 mt-2">
+			<div className="flex justify-between text-slate-700 mt-2 px-1">
 				<Thumbnail
 					type={file.type}
 					extension={file.extension}
@@ -551,7 +556,11 @@ const Card = ({
 					className="size-20"
 					imageClassName="!size-11"
 				/>
-				<div className="flex flex-col items-end justify-between">
+				<div
+					className="flex flex-col items-end justify-between"
+					onClick={(e) => e.stopPropagation()}
+					onKeyDown={(e) => e.stopPropagation()}
+				>
 					<ActionDropdown
 						file={file}
 						onStatusChange={() => {

@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
+import { matchesStatusTab } from "@/lib/contracts/contractsListUtils";
 import type { UIFileDoc } from "@/types/files";
-import ContractsView, { useContractsFilter } from "./ContractsView";
+import ContractsBulkBar from "./ContractsBulkBar";
+import ContractsView, { useContractsView } from "./ContractsView";
 
 interface ContractsViewClientProps {
 	files: UIFileDoc[];
@@ -17,25 +19,20 @@ export default function ContractsViewClient({
 	user,
 }: ContractsViewClientProps) {
 	const router = useRouter();
-	const { filters } = useContractsFilter();
+	const { filters, statusTab } = useContractsView();
 
 	const handleRefresh = () => {
 		router.refresh();
 	};
 
-	// Apply filters to files
 	const filteredFiles = useMemo(() => {
-		if (!filters || Object.keys(filters).length === 0) {
-			return files;
-		}
-
 		return files.filter((file: UIFileDoc) => {
-			// Status filter
+			if (!matchesStatusTab(file, statusTab)) return false;
+
 			if (filters.status && file.status !== filters.status) {
 				return false;
 			}
 
-			// Uploaded On date range filter
 			if (filters.uploadedOnFrom || filters.uploadedOnTo) {
 				const uploadedDate = file.$createdAt ? new Date(file.$createdAt) : null;
 				if (!uploadedDate) return false;
@@ -53,7 +50,6 @@ export default function ContractsViewClient({
 				}
 			}
 
-			// Expires On date range filter
 			if (filters.expiresOnFrom || filters.expiresOnTo) {
 				const expiryDate = file.contractExpiryDate
 					? new Date(file.contractExpiryDate)
@@ -73,12 +69,10 @@ export default function ContractsViewClient({
 				}
 			}
 
-			// Department filter
 			if (filters.department && file.department !== filters.department) {
 				return false;
 			}
 
-			// Assigned To filter (case-insensitive partial match)
 			if (filters.assignedTo) {
 				const assignedManagers = file.assignedManagers || [];
 				const searchTerm = filters.assignedTo.toLowerCase();
@@ -88,12 +82,10 @@ export default function ContractsViewClient({
 				if (!hasMatch) return false;
 			}
 
-			// Contract Type filter
 			if (filters.contractType && file.contractType !== filters.contractType) {
 				return false;
 			}
 
-			// Search query filter (contract name, number, vendor)
 			if (filters.searchQuery) {
 				const query = filters.searchQuery.toLowerCase();
 				const matchesName = (file.contractName || file.name || "")
@@ -110,13 +102,16 @@ export default function ContractsViewClient({
 
 			return true;
 		});
-	}, [files, filters]);
+	}, [files, filters, statusTab]);
 
 	return (
-		<ContractsView
-			files={filteredFiles}
-			user={user}
-			onRefresh={handleRefresh}
-		/>
+		<>
+			<ContractsView
+				files={filteredFiles}
+				user={user}
+				onRefresh={handleRefresh}
+			/>
+			<ContractsBulkBar files={filteredFiles} />
+		</>
 	);
 }

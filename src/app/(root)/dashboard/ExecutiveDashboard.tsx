@@ -12,6 +12,7 @@ import {
 	Users,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { type Models, Query } from "node-appwrite";
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
@@ -1024,15 +1025,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 														<Button
 															size="sm"
 															variant="outline"
-															className="glass-card text-slate-700 hover:opacity-80"
+															className="glass-card text-slate-700 hover:opacity-80 cursor-pointer"
+															asChild
 														>
-															Deny
-														</Button>
-														<Button
-															size="sm"
-															className="glass-card text-slate-700 hover:opacity-80"
-														>
-															Approve
+															<Link href="/contracts/approvals">Review</Link>
 														</Button>
 													</div>
 												</div>
@@ -1051,6 +1047,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												)}
 											</div>
 										))}
+										<Button
+											asChild
+											className="primary-btn w-full cursor-pointer"
+										>
+											<Link href="/contracts/approvals">
+												Open approvals inbox
+											</Link>
+										</Button>
 									</div>
 								</CardContent>
 							</Card>
