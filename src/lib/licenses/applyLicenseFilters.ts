@@ -1,4 +1,4 @@
-import type { LicenseFilters } from "@/components/LicensesView";
+import type { LicenseFilters } from "@/lib/licenses/licensesListUtils";
 import type { License } from "@/types/licenses";
 
 /**
@@ -24,6 +24,21 @@ export function applyLicenseFilters(
 
 		if (filters.category && license.category !== filters.category) {
 			return false;
+		}
+
+		if (filters.compliance && license.compliance !== filters.compliance) {
+			return false;
+		}
+
+		if (filters.autoRenew !== undefined) {
+			if (Boolean(license.autoRenew) !== filters.autoRenew) return false;
+		}
+
+		if (filters.issuingAuthority) {
+			const authority = (license.issuingAuthority || "").toLowerCase();
+			if (!authority.includes(filters.issuingAuthority.toLowerCase())) {
+				return false;
+			}
 		}
 
 		if (filters.issueDateFrom || filters.issueDateTo) {
@@ -90,7 +105,16 @@ export function applyLicenseFilters(
 			const matchesProduct = (license.product || "")
 				.toLowerCase()
 				.includes(query);
-			if (!matchesName && !matchesNumber && !matchesVendor && !matchesProduct) {
+			const matchesAuthority = (license.issuingAuthority || "")
+				.toLowerCase()
+				.includes(query);
+			if (
+				!matchesName &&
+				!matchesNumber &&
+				!matchesVendor &&
+				!matchesProduct &&
+				!matchesAuthority
+			) {
 				return false;
 			}
 		}

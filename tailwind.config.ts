@@ -113,6 +113,7 @@ export default {
 			animation: {
 				"caret-blink": "caret-blink 1.25s ease-out infinite",
 				"gradient-move": "gradient-move 4s ease-in-out infinite",
+				"spin-slow": "spin 10s linear infinite",
 			},
 		},
 	},

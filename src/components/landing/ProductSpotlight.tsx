@@ -13,6 +13,7 @@ import { SPOTLIGHT_TABS } from "./landingContent";
 import { fadeUp, staggerContainer, viewportOnce } from "./motion";
 import AuditsMock from "./spotlight/AuditsMock";
 import ContractsMock from "./spotlight/ContractsMock";
+import LicensesMock from "./spotlight/LicensesMock";
 
 export default function ProductSpotlight() {
 	const [activeId, setActiveId] = useState<(typeof SPOTLIGHT_TABS)[number]["id"]>(
@@ -38,7 +39,10 @@ export default function ProductSpotlight() {
 		return () => io.disconnect();
 	}, []);
 
-	const showFullMock = activeId === "contracts" || activeId === "audits";
+	const showFullMock =
+		activeId === "contracts" ||
+		activeId === "licenses" ||
+		activeId === "audits";
 
 	return (
 		<LandingSection id="platform" fadeTop fadeBottom className="bg-white">
@@ -98,6 +102,8 @@ export default function ProductSpotlight() {
 							{showFullMock ? (
 								activeId === "contracts" ? (
 									<ContractsMock />
+								) : activeId === "licenses" ? (
+									<LicensesMock />
 								) : (
 									<AuditsMock />
 								)

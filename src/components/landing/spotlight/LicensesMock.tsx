@@ -1,22 +1,24 @@
 "use client";
 
 import {
+	AlertTriangle,
 	Bookmark,
 	CheckCircle,
 	ChevronDown,
+	ClipboardList,
 	Crown,
 	FileText,
 	Filter,
 	LayoutGrid,
 	Search,
+	ShieldAlert,
 	Table,
-	TriangleAlert,
 	Upload,
 } from "lucide-react";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import Thumbnail from "@/components/Thumbnail";
-import { CONTRACT_MOCK_ROWS } from "../landingContent";
+import { LICENSE_MOCK_ROWS } from "../landingContent";
 import { cn } from "@/lib/utils";
 
 const STATUS_STYLES = {
@@ -33,7 +35,6 @@ const SIDEBAR_SECTIONS = [
 		items: [
 			{
 				name: "Executive",
-				// Super Admin badge icon from Sidebar.tsx
 				lucideIcon: Crown,
 				active: false,
 			},
@@ -53,16 +54,6 @@ const SIDEBAR_SECTIONS = [
 			{
 				name: "All Contracts",
 				icon: "/assets/icons/all-contracts.svg",
-				active: true,
-			},
-			{
-				name: "My Contracts",
-				icon: "/assets/icons/my-contracts.svg",
-				active: false,
-			},
-			{
-				name: "Approvals",
-				icon: "/assets/icons/proposal-approval.svg",
 				active: false,
 			},
 		],
@@ -74,7 +65,7 @@ const SIDEBAR_SECTIONS = [
 			{
 				name: "All Licenses",
 				icon: "/assets/icons/licenses.svg",
-				active: false,
+				active: true,
 			},
 		],
 	},
@@ -134,11 +125,13 @@ const SIDEBAR_SECTIONS = [
 ] as const;
 
 const STATUS_TABS = [
-	{ label: "All", count: 16 },
-	{ label: "Active", count: 14 },
-	{ label: "Pending", count: 1 },
-	{ label: "Expiring", count: 4 },
-	{ label: "Expired", count: 1 },
+	{ label: "All", count: 89 },
+	{ label: "Active", count: 82 },
+	{ label: "Pending", count: 3 },
+	{ label: "Expiring", count: 6 },
+	{ label: "Expired", count: 2 },
+	{ label: "Action", count: 4 },
+	{ label: "Compliance", count: 3 },
 ] as const;
 
 function GlassStat({
@@ -186,7 +179,7 @@ function GlassStat({
 	);
 }
 
-export default function ContractsMock() {
+export default function LicensesMock() {
 	return (
 		<div className="rounded-xl border border-slate-200/80 bg-white/80 overflow-hidden shadow-md">
 			<div className="relative flex min-h-[360px] items-stretch">
@@ -238,11 +231,9 @@ export default function ContractsMock() {
 												/>
 											</span>
 										)}
-										<span className="truncate sidebar-gradient-text">
-											{section.header}
-										</span>
+										<span className="truncate">{section.header}</span>
 									</p>
-									<ul className="relative ml-2.5 flex flex-col gap-0.5">
+									<ul className="relative ml-2 space-y-0.5 border-l border-transparent pl-0">
 										{section.items.map((item, index) => (
 											<li
 												key={item.name}
@@ -290,11 +281,11 @@ export default function ContractsMock() {
 					</aside>
 				</div>
 
-				{/* Main — mirrors /contracts page chrome */}
+				{/* Main — mirrors /licenses page chrome */}
 				<div className="flex-1 min-w-0 p-3 sm:p-4">
 					<div className="mb-3 flex items-center justify-between gap-2">
 						<h3 className="h1 text-xl sm:text-2xl capitalize sidebar-gradient-text !leading-none">
-							Contracts
+							Licenses
 						</h3>
 						<div className="flex items-center gap-2 shrink-0">
 							<span className="inline-flex items-center gap-1.5 rounded-full primary-btn px-2.5 py-1 text-[10px] sm:text-xs">
@@ -308,44 +299,89 @@ export default function ContractsMock() {
 						</div>
 					</div>
 
-					<div className="mb-3 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+					{/* Attention strip — LicensesAttentionStrip */}
+					<div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-orange/20 bg-orange/10 px-2.5 py-2">
+						<div className="flex min-w-0 items-start gap-2">
+							<AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange" />
+							<div className="min-w-0">
+								<p className="text-[10px] sm:text-xs font-semibold text-slate-900">
+									Needs attention
+								</p>
+								<p className="text-[9px] sm:text-[10px] text-slate-600 truncate">
+									6 expiring within 90 days · 4 action required · 3 compliance
+									at risk
+								</p>
+							</div>
+						</div>
+						<span className="hidden sm:inline-flex shrink-0 rounded-md border border-orange/30 bg-white/70 px-2 py-1 text-[9px] font-medium text-slate-700">
+							View expiring
+						</span>
+					</div>
+
+					{/* Tier 1 metrics — LicensesMetricsBar */}
+					<div className="mb-2 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
 						<GlassStat
-							label="Total Value"
-							value="$2.3M"
-							hint="Sum of contract amounts"
+							label="Total Cost"
+							value="$1.2M"
+							hint="Sum of license costs"
 						/>
 						<GlassStat
-							label="Total Contracts"
-							value="16"
-							hint="All contracts in view"
+							label="Total Licenses"
+							value="89"
+							hint="Click to show all"
 							icon={FileText}
 							iconClassName="text-[#0f5384]"
 						/>
 						<GlassStat
-							label="Expiring Soon"
-							value="4"
-							icon={TriangleAlert}
-							iconClassName="text-orange"
-							hint={
-								<div className="mt-0.5 flex items-center justify-center gap-2 text-[9px] sm:text-[10px] text-slate-600">
-									<span>30d: 1</span>
-									<span>60d: 2</span>
-									<span>90d: 1</span>
-								</div>
-							}
-						/>
-						<GlassStat
 							label="Active"
-							value="14"
-							hint="88% of total"
+							value="82"
+							hint="92% of total"
 							icon={CheckCircle}
 							iconClassName="text-green"
 						/>
+						<GlassStat
+							label="Expiring Soon"
+							value="6"
+							icon={AlertTriangle}
+							iconClassName="text-orange"
+							hint={
+								<div className="mt-0.5 flex items-center justify-center gap-2 text-[9px] sm:text-[10px] text-slate-600">
+									<span>30d: 2</span>
+									<span>60d: 2</span>
+									<span>90d: 2</span>
+								</div>
+							}
+						/>
 					</div>
 
-					{/* Status tabs — ContractsStatusTabs */}
+					{/* Tier 2 — org intelligence (compact) */}
+					<div className="mb-3 grid grid-cols-3 gap-2 sm:gap-3">
+						<GlassStat
+							label="Compliance at risk"
+							value="3"
+							hint="At-risk or non-compliant"
+							icon={ShieldAlert}
+							iconClassName="text-red"
+						/>
+						<GlassStat
+							label="Action required"
+							value="4"
+							hint="Needs owner follow-up"
+							icon={ClipboardList}
+							iconClassName="text-orange"
+						/>
+						<GlassStat
+							label="Pending review"
+							value="3"
+							hint="Pending or suspended"
+							icon={FileText}
+							iconClassName="text-orange"
+						/>
+					</div>
+
+					{/* Status tabs + control bar + table */}
 					<div className="mb-2 rounded-lg border border-slate-200/80 bg-white/70 overflow-hidden">
-						<div className="grid grid-cols-5 gap-0.5 bg-slate-100/80 p-1">
+						<div className="grid grid-cols-4 sm:grid-cols-7 gap-0.5 bg-slate-100/80 p-1">
 							{STATUS_TABS.map((tab, i) => (
 								<span
 									key={tab.label}
@@ -366,12 +402,11 @@ export default function ContractsMock() {
 							))}
 						</div>
 
-						{/* Control bar — mirrors ContractsControlBar / TopControls / Filter / Views / Sort / ViewToggle */}
 						<div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 px-2 py-2 sm:px-3">
 							<div className="relative min-w-[140px] flex-1 sm:max-w-[11rem]">
 								<Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
 								<span className="flex h-7 w-full items-center rounded-md border border-slate-200 bg-white pl-7 pr-2 text-[10px] text-slate-400">
-									Search contracts...
+									Search licenses...
 								</span>
 							</div>
 							<div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -398,15 +433,12 @@ export default function ContractsMock() {
 							</div>
 						</div>
 
-						{/* Table — ContractsTableView columns */}
+						{/* Table — LicensesTableView columns */}
 						<div className="overflow-x-auto border-t border-slate-200/80">
 							<table className="w-full text-left text-[10px] sm:text-[11px]">
 								<thead>
 									<tr className="bg-slate-50/90 text-slate-500">
-										<th className="w-6 px-2 py-2">
-											<span className="inline-block h-3 w-3 rounded border border-slate-300" />
-										</th>
-										<th className="px-2 py-2 font-medium">Name</th>
+										<th className="px-2 py-2 font-medium">License</th>
 										<th className="px-2 py-2 font-medium">Status</th>
 										<th className="hidden md:table-cell px-2 py-2 font-medium">
 											Size
@@ -417,17 +449,17 @@ export default function ContractsMock() {
 										<th className="hidden sm:table-cell px-2 py-2 font-medium">
 											Expires
 										</th>
+										<th className="hidden xl:table-cell px-2 py-2 font-medium">
+											Department
+										</th>
 									</tr>
 								</thead>
 								<tbody>
-									{CONTRACT_MOCK_ROWS.map((row) => (
+									{LICENSE_MOCK_ROWS.map((row) => (
 										<tr
 											key={row.name}
 											className="border-t border-slate-100 bg-white/50 hover:bg-blue-50/40"
 										>
-											<td className="px-2 py-2">
-												<span className="inline-block h-3 w-3 rounded border border-slate-300" />
-											</td>
 											<td className="px-2 py-2">
 												<div className="flex items-center gap-1.5 min-w-0">
 													<Thumbnail
@@ -460,6 +492,9 @@ export default function ContractsMock() {
 											</td>
 											<td className="hidden sm:table-cell px-2 py-2 text-slate-600">
 												{row.expires}
+											</td>
+											<td className="hidden xl:table-cell px-2 py-2 text-slate-600 capitalize">
+												{row.department}
 											</td>
 										</tr>
 									))}

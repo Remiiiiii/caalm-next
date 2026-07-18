@@ -11,10 +11,11 @@ export function LicensesViewToggle() {
 		<div className="flex items-center">
 			<div className="inline-flex items-center rounded-lg border-2 border-slate-200 bg-white p-1 shadow-sm h-10!">
 				<button
+					type="button"
 					onClick={() => handleViewChange("card")}
 					className={cn(
-						"inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 h-7!",
-						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
+						"inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 cursor-pointer",
+						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 						"disabled:pointer-events-none disabled:opacity-50",
 						view === "card"
 							? "bg-[#03afbf] text-white shadow-md hover:bg-[#02a0af]"
@@ -25,10 +26,11 @@ export function LicensesViewToggle() {
 					<LayoutGrid className="h-5 w-5" />
 				</button>
 				<button
+					type="button"
 					onClick={() => handleViewChange("table")}
 					className={cn(
-						"inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 h-7!",
-						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
+						"inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 cursor-pointer",
+						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 						"disabled:pointer-events-none disabled:opacity-50",
 						view === "table"
 							? "bg-[#03afbf] text-white shadow-md hover:bg-[#02a0af]"

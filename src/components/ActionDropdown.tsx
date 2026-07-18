@@ -2,7 +2,7 @@
 
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { Fragment, useEffect, useState } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -1256,6 +1256,8 @@ const ActionDropdown = ({
 										params.append("contractId", file.contractId);
 									} else if (file.$id) {
 										params.append("fileId", file.$id);
+									} else {
+										throw new Error("No file identifier available");
 									}
 
 									const response = await fetch(
@@ -1266,10 +1268,8 @@ const ActionDropdown = ({
 										throw new Error("Download failed");
 									}
 
-									// Get the blob directly without conversion
 									const blob = await response.blob();
 
-									// Get filename from header
 									const contentDisposition = response.headers.get(
 										"Content-Disposition",
 									);
@@ -1286,7 +1286,6 @@ const ActionDropdown = ({
 										}
 									}
 
-									// Ensure filename has extension if file has extension
 									if (
 										file.extension &&
 										!filename
@@ -1296,19 +1295,15 @@ const ActionDropdown = ({
 										filename = `${filename}.${file.extension}`;
 									}
 
-									// Create download link with proper attributes
 									const url = URL.createObjectURL(blob);
 									const link = document.createElement("a");
 									link.href = url;
 									link.download = filename;
-									link.style.display = "none"; // Hide but keep in DOM
-									link.setAttribute("download", filename); // Ensure download attribute is set
+									link.style.display = "none";
+									link.setAttribute("download", filename);
 									document.body.appendChild(link);
-
-									// Trigger download
 									link.click();
 
-									// Clean up after a short delay to ensure download starts
 									setTimeout(() => {
 										document.body.removeChild(link);
 										URL.revokeObjectURL(url);
@@ -1336,10 +1331,8 @@ const ActionDropdown = ({
 							);
 						}
 
-						// Handle other actions
-						return (
+						const menuItem = (
 							<AppDropdownMenuItem
-								key={actionItem.value}
 								icon={Icon}
 								tone={tone}
 								onClick={() => {
@@ -1362,6 +1355,19 @@ const ActionDropdown = ({
 							>
 								{actionItem.label}
 							</AppDropdownMenuItem>
+						);
+
+						if (actionItem.value === "delete") {
+							return (
+								<Fragment key={actionItem.value}>
+									<DropdownMenuSeparator />
+									{menuItem}
+								</Fragment>
+							);
+						}
+
+						return (
+							<Fragment key={actionItem.value}>{menuItem}</Fragment>
 						);
 					})}
 				</AppDropdownMenuContent>

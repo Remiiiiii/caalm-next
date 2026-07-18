@@ -7,67 +7,169 @@ import {
 	useContext,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
+	type ReactNode,
 } from "react";
 import LicenseCard from "@/components/licenses/LicenseCard";
+import EqualHeightGrid from "@/components/EqualHeightGrid";
+import {
+	type LicenseFilters,
+	type LicenseStatusTab,
+	type LicenseViewType,
+	type SavedLicenseView,
+	LICENSE_SAVED_VIEWS_STORAGE_KEY,
+	LICENSE_VIEW_STORAGE_KEY,
+	deserializeLicenseFilters,
+	serializeLicenseFilters,
+} from "@/lib/licenses/licensesListUtils";
 import type { License } from "@/types/licenses";
 import LicensesPagination from "./LicensesPagination";
 import LicensesTableView from "./LicensesTableView";
 
-export type ViewType = "table" | "card";
-
-const STORAGE_KEY = "licenses-view-preference";
-
-export interface LicenseFilters {
-	status?: string;
-	licenseType?: string;
-	category?: string;
-	issueDateFrom?: Date;
-	issueDateTo?: Date;
-	expiryDateFrom?: Date;
-	expiryDateTo?: Date;
-	department?: string;
-	assignedTo?: string;
-	searchQuery?: string;
-}
+export type ViewType = LicenseViewType;
+export type { LicenseFilters, LicenseStatusTab, SavedLicenseView };
 
 interface LicensesViewContextType {
 	view: ViewType;
 	handleViewChange: (view: ViewType) => void;
 	filters: LicenseFilters;
 	setFilters: React.Dispatch<React.SetStateAction<LicenseFilters>>;
+	clearFilters: () => void;
+	statusTab: LicenseStatusTab;
+	setStatusTab: (tab: LicenseStatusTab) => void;
+	savedViews: SavedLicenseView[];
+	saveCurrentView: (name: string) => void;
+	applySavedView: (view: SavedLicenseView) => void;
+	deleteSavedView: (id: string) => void;
+	listAnchorRef: React.RefObject<HTMLDivElement | null>;
+	scrollToList: () => void;
 }
 
 const LicensesViewContext = createContext<LicensesViewContextType | undefined>(
 	undefined,
 );
 
-export function LicensesViewProvider({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
-	const [view, setView] = useState<ViewType>("card");
-	const [filters, setFilters] = useState<LicenseFilters>({});
+const emptyFilters = (): LicenseFilters => ({});
 
-	// Load view preference from localStorage on mount
+export function LicensesViewProvider({ children }: { children: ReactNode }) {
+	const [view, setView] = useState<ViewType>("table");
+	const [filters, setFilters] = useState<LicenseFilters>({});
+	const [statusTab, setStatusTabState] = useState<LicenseStatusTab>("all");
+	const [savedViews, setSavedViews] = useState<SavedLicenseView[]>([]);
+	const listAnchorRef = useRef<HTMLDivElement | null>(null);
+
 	useEffect(() => {
-		const savedView = localStorage.getItem(STORAGE_KEY) as ViewType | null;
+		const savedView = localStorage.getItem(
+			LICENSE_VIEW_STORAGE_KEY,
+		) as ViewType | null;
 		if (savedView === "table" || savedView === "card") {
 			setView(savedView);
+		} else {
+			setView("table");
+			localStorage.setItem(LICENSE_VIEW_STORAGE_KEY, "table");
+		}
+		try {
+			const raw = localStorage.getItem(LICENSE_SAVED_VIEWS_STORAGE_KEY);
+			if (raw) {
+				const parsed = JSON.parse(raw) as SavedLicenseView[];
+				if (Array.isArray(parsed)) setSavedViews(parsed);
+			}
+		} catch {
+			/* ignore */
 		}
 	}, []);
 
-	// Save view preference to localStorage when it changes
 	const handleViewChange = useCallback((newView: ViewType) => {
 		setView(newView);
-		localStorage.setItem(STORAGE_KEY, newView);
+		localStorage.setItem(LICENSE_VIEW_STORAGE_KEY, newView);
 	}, []);
 
+	const setStatusTab = useCallback((tab: LicenseStatusTab) => {
+		setStatusTabState(tab);
+	}, []);
+
+	const clearFilters = useCallback(() => {
+		setFilters(emptyFilters());
+		setStatusTabState("all");
+	}, []);
+
+	const persistSavedViews = useCallback((views: SavedLicenseView[]) => {
+		setSavedViews(views);
+		localStorage.setItem(
+			LICENSE_SAVED_VIEWS_STORAGE_KEY,
+			JSON.stringify(views),
+		);
+	}, []);
+
+	const saveCurrentView = useCallback(
+		(name: string) => {
+			const entry: SavedLicenseView = {
+				id: `view-${Date.now()}`,
+				name: name.trim() || "Untitled view",
+				statusTab,
+				filters: serializeLicenseFilters(filters),
+				view,
+			};
+			persistSavedViews([entry, ...savedViews].slice(0, 12));
+		},
+		[statusTab, filters, view, savedViews, persistSavedViews],
+	);
+
+	const applySavedView = useCallback((saved: SavedLicenseView) => {
+		setStatusTabState(saved.statusTab);
+		setFilters(deserializeLicenseFilters(saved.filters));
+		setView(saved.view);
+		localStorage.setItem(LICENSE_VIEW_STORAGE_KEY, saved.view);
+	}, []);
+
+	const deleteSavedView = useCallback(
+		(id: string) => {
+			persistSavedViews(savedViews.filter((v) => v.id !== id));
+		},
+		[savedViews, persistSavedViews],
+	);
+
+	const scrollToList = useCallback(() => {
+		listAnchorRef.current?.scrollIntoView({
+			behavior: "smooth",
+			block: "start",
+		});
+	}, []);
+
+	const value = useMemo(
+		() => ({
+			view,
+			handleViewChange,
+			filters,
+			setFilters,
+			clearFilters,
+			statusTab,
+			setStatusTab,
+			savedViews,
+			saveCurrentView,
+			applySavedView,
+			deleteSavedView,
+			listAnchorRef,
+			scrollToList,
+		}),
+		[
+			view,
+			handleViewChange,
+			filters,
+			clearFilters,
+			statusTab,
+			setStatusTab,
+			savedViews,
+			saveCurrentView,
+			applySavedView,
+			deleteSavedView,
+			scrollToList,
+		],
+	);
+
 	return (
-		<LicensesViewContext.Provider
-			value={{ view, handleViewChange, filters, setFilters }}
-		>
+		<LicensesViewContext.Provider value={value}>
 			{children}
 		</LicensesViewContext.Provider>
 	);
@@ -84,13 +186,12 @@ export function useLicensesView() {
 }
 
 export function useLicensesFilter() {
-	const context = useContext(LicensesViewContext);
-	if (context === undefined) {
-		throw new Error(
-			"useLicensesFilter must be used within a LicensesViewProvider",
-		);
-	}
-	return { filters: context.filters, setFilters: context.setFilters };
+	const context = useLicensesView();
+	return {
+		filters: context.filters,
+		setFilters: context.setFilters,
+		clearFilters: context.clearFilters,
+	};
 }
 
 interface LicensesViewProps {
@@ -106,36 +207,31 @@ export default function LicensesView({
 	user,
 	onRefresh,
 }: LicensesViewProps) {
-	const { view, filters } = useLicensesView();
+	const { view } = useLicensesView();
 	const [currentPage, setCurrentPage] = useState(1);
 	const itemsPerPage = 12;
 
-	// Reset to page 1 when licenses array changes
-	const _licensesKey = useMemo(
-		() => JSON.stringify(licenses.map((l) => l.$id)),
+	const licensesKey = useMemo(
+		() => licenses.map((l) => l.$id).join("|"),
 		[licenses],
 	);
 
 	useEffect(() => {
 		setCurrentPage(1);
-	}, []);
+	}, [licensesKey]);
 
-	// Calculate total pages
 	const totalPages = Math.max(1, Math.ceil(licenses.length / itemsPerPage));
 
-	// Ensure currentPage is within valid range
 	const validCurrentPage = useMemo(() => {
 		return Math.min(Math.max(1, currentPage), totalPages);
 	}, [currentPage, totalPages]);
 
-	// Sync currentPage if out of bounds
 	useEffect(() => {
 		if (totalPages > 0 && (currentPage > totalPages || currentPage < 1)) {
 			setCurrentPage(Math.min(Math.max(1, currentPage), totalPages));
 		}
 	}, [totalPages, currentPage]);
 
-	// Calculate pagination with valid page number
 	const startIndex = (validCurrentPage - 1) * itemsPerPage;
 	const endIndex = startIndex + itemsPerPage;
 	const paginatedLicenses = useMemo(
@@ -143,18 +239,16 @@ export default function LicensesView({
 		[licenses, startIndex, endIndex],
 	);
 
-	// Empty state for card view
-	if (view === "card" && licenses.length === 0) {
+	if (licenses.length === 0) {
 		return (
-			<div className="text-center py-12">
+			<div className="text-center py-12 px-4">
 				<Image
 					src="/assets/icons/no-data.svg"
 					alt="No licenses found"
 					width={250}
 					height={250}
-					className="mx-auto mb-4"
+					className="mx-auto mb-4 opacity-60"
 				/>
-				<p className="text-2xl font-bold text-slate-700">OOPS!</p>
 				<p className="body-1 text-slate-700">No licenses found</p>
 			</div>
 		);
@@ -179,15 +273,13 @@ export default function LicensesView({
 				</>
 			) : (
 				<>
-					<section className="file-list">
+					<EqualHeightGrid className="grid w-full min-w-0 grid-cols-1 gap-6 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
 						{paginatedLicenses.map((license: License) => (
-							<LicenseCard
-								key={license.$id}
-								license={license}
-								onRefresh={onRefresh}
-							/>
+							<div key={license.$id} className="min-w-0 h-full">
+								<LicenseCard license={license} onRefresh={onRefresh} />
+							</div>
 						))}
-					</section>
+					</EqualHeightGrid>
 					{licenses.length > itemsPerPage && (
 						<LicensesPagination
 							currentPage={validCurrentPage}

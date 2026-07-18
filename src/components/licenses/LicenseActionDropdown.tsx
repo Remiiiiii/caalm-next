@@ -18,7 +18,7 @@ import {
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -73,11 +73,6 @@ const licenseActionsDropdownItems = [
 		value: "status",
 	},
 	{
-		label: "Delete",
-		icon: "/assets/icons/delete.svg",
-		value: "delete",
-	},
-	{
 		label: "Download",
 		icon: "/assets/icons/download.svg",
 		value: "download",
@@ -86,6 +81,11 @@ const licenseActionsDropdownItems = [
 		label: "Share",
 		icon: "/assets/icons/share.svg",
 		value: "share",
+	},
+	{
+		label: "Delete",
+		icon: "/assets/icons/delete.svg",
+		value: "delete",
 	},
 ];
 
@@ -391,10 +391,9 @@ const LicenseActionDropdown = ({
 							FileText;
 						const tone = actionItem.value === "delete" ? "danger" : "default";
 
-						if (actionItem.value === "download") {
-							return (
+						const menuItem =
+							actionItem.value === "download" ? (
 								<AppDropdownMenuItem
-									key={actionItem.value}
 									icon={Icon}
 									tone={tone}
 									onSelect={(e) => {
@@ -404,45 +403,54 @@ const LicenseActionDropdown = ({
 								>
 									{downloading ? "Downloading..." : actionItem.label}
 								</AppDropdownMenuItem>
+							) : (
+								<AppDropdownMenuItem
+									icon={Icon}
+									tone={tone}
+									onSelect={() => {
+										setAction(actionItem);
+										if (actionItem.value === "details") {
+											setShowDetail(true);
+											setIsModalOpen(true);
+										} else if (actionItem.value === "edit") {
+											setShowEdit(true);
+											setIsModalOpen(true);
+										} else if (actionItem.value === "allocate") {
+											setShowAllocate(true);
+											setIsModalOpen(true);
+										} else if (actionItem.value === "renew") {
+											setShowRenew(true);
+											setIsModalOpen(true);
+										} else if (actionItem.value === "assign") {
+											setShowAssign(true);
+											setIsModalOpen(true);
+										} else if (actionItem.value === "status") {
+											setShowStatus(true);
+											setIsModalOpen(true);
+										} else if (actionItem.value === "delete") {
+											setShowDelete(true);
+											setIsModalOpen(true);
+										} else if (actionItem.value === "share") {
+											setShowShare(true);
+											setIsModalOpen(true);
+										}
+									}}
+								>
+									{actionItem.label}
+								</AppDropdownMenuItem>
+							);
+
+						if (actionItem.value === "delete") {
+							return (
+								<Fragment key={actionItem.value}>
+									<DropdownMenuSeparator />
+									{menuItem}
+								</Fragment>
 							);
 						}
 
 						return (
-							<AppDropdownMenuItem
-								key={actionItem.value}
-								icon={Icon}
-								tone={tone}
-								onSelect={() => {
-									setAction(actionItem);
-									if (actionItem.value === "details") {
-										setShowDetail(true);
-										setIsModalOpen(true);
-									} else if (actionItem.value === "edit") {
-										setShowEdit(true);
-										setIsModalOpen(true);
-									} else if (actionItem.value === "allocate") {
-										setShowAllocate(true);
-										setIsModalOpen(true);
-									} else if (actionItem.value === "renew") {
-										setShowRenew(true);
-										setIsModalOpen(true);
-									} else if (actionItem.value === "assign") {
-										setShowAssign(true);
-										setIsModalOpen(true);
-									} else if (actionItem.value === "status") {
-										setShowStatus(true);
-										setIsModalOpen(true);
-									} else if (actionItem.value === "delete") {
-										setShowDelete(true);
-										setIsModalOpen(true);
-									} else if (actionItem.value === "share") {
-										setShowShare(true);
-										setIsModalOpen(true);
-									}
-								}}
-							>
-								{actionItem.label}
-							</AppDropdownMenuItem>
+							<Fragment key={actionItem.value}>{menuItem}</Fragment>
 						);
 					})}
 				</AppDropdownMenuContent>

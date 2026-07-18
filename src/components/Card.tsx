@@ -1,66 +1,68 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-// import Link from 'next/link'; // Removed since we no longer use Link component
 import type { Models } from "node-appwrite";
+import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { type AppUser, fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { convertFileSize } from "@/lib/utils";
+import type { UIFileDoc } from "@/types/files";
 import ActionDropdown from "./ActionDropdown";
 import FormattedDateTime, { FormattedDate } from "./FormattedDateTime";
 import ManagerAvatars from "./ManagerAvatars";
 import Thumbnail from "./Thumbnail";
 
-// Map contract status to badge color and label
+// Map contract status to badge color and label (aligned with licenses / style guide)
 const statusBadge = (
 	status: string,
 	isExpired?: boolean,
 	contractExpiryDate?: string,
 ) => {
-	// Check if contract is expired (priority: status > isExpired flag > expiry date)
 	const isContractExpired =
 		status?.toLowerCase() === "expired" ||
 		isExpired ||
 		(contractExpiryDate && new Date(contractExpiryDate) < new Date());
 
-	// If expired, always show Expired badge
 	if (isContractExpired) {
 		return (
-			<span className="inline-block px-2 py-1 border-2 border-purple-600 bg-purple-50 text-purple-900 text-xs rounded-xl font-medium mr-auto">
+			<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium">
 				Expired
 			</span>
 		);
 	}
 
-	let color = "";
-	let label = status;
 	switch (status) {
 		case "pending-review":
-			color =
-				"border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium mr-auto";
-			label = "Pending Review";
-			break;
+			return (
+				<span className="inline-block px-1.5 py-0.5 border border-orange/20 bg-orange/10 text-orange text-xs rounded-md font-medium">
+					Pending Review
+				</span>
+			);
 		case "action-required":
-			color =
-				"border-2 border-red-400 bg-destructive/10 border border-destructive/50 text-destructive text-xs rounded-xl font-medium mr-auto";
-			label = "Action Required";
-			break;
+			return (
+				<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium">
+					Action Required
+				</span>
+			);
 		case "active":
-			color =
-				"border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium";
-			label = "Active";
-			break;
+			return (
+				<span className="inline-block px-1.5 py-0.5 border border-green/20 bg-green/10 text-green text-xs rounded-md font-medium">
+					Active
+				</span>
+			);
 		case "inactive":
-			color =
-				"border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium mr-auto";
-			label = "Inactive";
-			break;
+			return (
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-md font-medium">
+					Inactive
+				</span>
+			);
 		default:
-			color =
-				"border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium";
-			label = status;
+			return (
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-md font-medium">
+					{status || "Unknown"}
+				</span>
+			);
 	}
-	return <span className={`inline-block px-2 py-1 ${color}`}>{label}</span>;
 };
 
 // Map risk level to badge color and label
@@ -68,39 +70,59 @@ const riskLevelBadge = (risk: string) => {
 	let color = "";
 	switch (risk.toLowerCase()) {
 		case "critical":
-			color = "border-2 border-slate-700 bg-black text-white";
+			color = "border border-slate-700 bg-slate-900 text-white";
 			break;
 		case "high":
-			color =
-				"border-2 border-destructive/50 bg-destructive/10 text-destructive";
+			color = "border border-red/20 bg-red/10 text-red";
 			break;
 		case "medium":
-			color = "border-2 border-amber-400 bg-amber-100 text-amber-700";
+			color = "border border-orange/20 bg-orange/10 text-orange";
 			break;
 		case "low":
-			color = "border-2 border-green-400 bg-green-100 text-green-700";
+			color = "border border-green/20 bg-green/10 text-green";
 			break;
 		default:
-			color = "border-2 border-slate-200 bg-slate-100 text-slate-800";
+			color = "border border-slate-200 bg-slate-100 text-slate-800";
 	}
 	const label = risk.charAt(0).toUpperCase() + risk.slice(1).toLowerCase();
 	return (
 		<span
-			className={`inline-block px-2 py-1 text-xs rounded-xl font-medium ${color}`}
+			className={`inline-block px-1.5 py-0.5 text-xs rounded-md font-medium ${color}`}
 		>
 			{label} Risk
 		</span>
 	);
 };
 
-import {
-	Banknote,
-	Building2,
-	Calendar,
-	Handshake,
-	UserCheck,
-} from "lucide-react";
-import type { UIFileDoc } from "@/types/files";
+function MetaRow({
+	label,
+	children,
+	emphasize,
+}: {
+	label: string;
+	children: React.ReactNode;
+	emphasize?: "danger" | "warning";
+}) {
+	const valueClass =
+		emphasize === "danger"
+			? "text-[#E5252A] font-semibold"
+			: emphasize === "warning"
+				? "text-orange font-semibold"
+				: "text-slate-900 font-medium";
+
+	return (
+		<div className="flex items-start justify-between gap-3 min-w-0 py-1.5 border-b border-slate-200/60 last:border-b-0">
+			<span className="text-xs sm:text-sm text-slate-500 shrink-0 pt-0.5">
+				{label}
+			</span>
+			<div
+				className={`min-w-0 text-right text-xs sm:text-sm wrap-anywhere ${valueClass}`}
+			>
+				{children}
+			</div>
+		</div>
+	);
+}
 
 interface CardProps {
 	file: UIFileDoc;
@@ -532,9 +554,30 @@ const Card = ({
 		onPreview?.();
 	};
 
+	const displayName = file.contractName || file.name || "Untitled";
+	const isExpired =
+		contractStatus?.toLowerCase() === "expired" ||
+		file.isExpired ||
+		(contractExpiryDate ? new Date(contractExpiryDate) < new Date() : false);
+	const daysUntilExpiry = contractExpiryDate
+		? Math.ceil(
+				(new Date(contractExpiryDate).getTime() - Date.now()) /
+					(1000 * 60 * 60 * 24),
+			)
+		: null;
+	const isExpiringSoon =
+		!isExpired &&
+		daysUntilExpiry != null &&
+		daysUntilExpiry >= 0 &&
+		daysUntilExpiry <= 90;
+	const departmentLabel = assignedToDepartment
+		? String(assignedToDepartment).replace(/-/g, " ")
+		: null;
+
 	return (
 		<div
-			className="glass-card interactive-glass-card relative cursor-pointer flex flex-col gap-6 p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 transition-all duration-200"
+			className="glass-card interactive-glass-card relative flex h-full w-full min-w-0 cursor-pointer flex-col gap-3 p-4 sm:p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 transition-all duration-200"
+			data-equal-height-card
 			onClick={handleCardClick}
 			onKeyDown={(e) => {
 				if (e.key === "Enter" || e.key === " ") {
@@ -545,261 +588,122 @@ const Card = ({
 			role="button"
 			tabIndex={0}
 		>
-			{/* Professional Cap */}
 			<div className="glass-card-cap" />
 
-			<div className="flex justify-between text-slate-700 mt-2 px-1">
+			<div className="flex items-start justify-between gap-3 mt-2 min-w-0">
 				<Thumbnail
 					type={file.type}
 					extension={file.extension}
 					url={file.url}
-					className="size-20"
-					imageClassName="!size-11"
+					className="size-12 sm:size-14 shrink-0"
+					imageClassName="!size-8 sm:!size-9"
 				/>
 				<div
-					className="flex flex-col items-end justify-between"
+					className="flex flex-col items-end gap-1.5 shrink-0"
 					onClick={(e) => e.stopPropagation()}
 					onKeyDown={(e) => e.stopPropagation()}
 				>
 					<ActionDropdown
 						file={file}
 						onStatusChange={() => {
-							// Update local state to reflect the new status immediately
 							if (onRefresh) {
 								onRefresh();
 							}
 						}}
 						onRefresh={onRefresh}
 						onExpiryDateChange={(newExpiryDate: string) => {
-							// Optimistically update local state immediately
 							setContractExpiryDate(newExpiryDate);
-							// Also trigger refresh to sync with server
 							if (onRefresh) {
 								onRefresh();
 							}
 						}}
 						userRole={userRole}
 					/>
-					<span
-						className="inline-block px-2 py-1 text-slate-800 text-xs rounded-xl font-medium"
-						style={{
-							background: "rgba(255, 255, 255, 0.3)",
-							backdropFilter: "blur(8px)",
-							WebkitBackdropFilter: "blur(8px)",
-							border: "1px solid rgba(255, 255, 255, 0.5)",
-						}}
-					>
-						{convertFileSize({ sizeInBytes: file.size })}
-					</span>
-				</div>
-			</div>
-			<div className="file-card-details">
-				<p className="subtitle-2 line-clamp-1">{file.name}</p>
-				{(contractStatus || riskLevel || contractExpiryDate) && (
-					<div className="mb-1 flex items-center gap-2 flex-wrap">
-						{/* Always check for expiration, even if status is missing */}
-						{(() => {
-							const isExpired =
-								contractStatus?.toLowerCase() === "expired" ||
-								file.isExpired ||
-								(contractExpiryDate &&
-									new Date(contractExpiryDate) < new Date());
-
-							// If expired, always show Expired badge (even if status is missing)
-							if (isExpired) {
-								return (
-									<div>
-										{statusBadge(
-											contractStatus || "expired",
-											file.isExpired,
-											contractExpiryDate,
-										)}
-									</div>
-								);
-							}
-
-							// Otherwise, show status badge if status exists
-							if (contractStatus) {
-								return (
-									<div>
-										{statusBadge(
-											contractStatus,
-											file.isExpired,
-											contractExpiryDate,
-										)}
-									</div>
-								);
-							}
-
-							return null;
-						})()}
-						{riskLevel && <div>{riskLevelBadge(riskLevel)}</div>}
-					</div>
-				)}
-				{/* Horizontal divider between status and details */}
-				<hr className="border-slate-200 my-1" />
-				<div
-					className="rounded-lg p-2"
-					style={{
-						background: "rgba(255, 255, 255, 0.3)",
-						backdropFilter: "blur(8px)",
-						WebkitBackdropFilter: "blur(8px)",
-						border: "1px solid rgba(255, 255, 255, 0.5)",
-					}}
-				>
-					<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-						<Banknote className="h-4 w-4 text-slate-500 shrink-0 " />
-						<p className="body-2 text-slate-700 font-medium whitespace-nowrap">
-							Value:
-						</p>
-						<div className="min-w-0 flex-1">${formattedContractAmount} USD</div>
-					</div>
-				</div>
-				{/* Vendor section */}
-				{contractVendor && (
-					<div
-						className="rounded-lg p-2"
-						style={{
-							background: "rgba(255, 255, 255, 0.3)",
-							backdropFilter: "blur(8px)",
-							WebkitBackdropFilter: "blur(8px)",
-							border: "1px solid rgba(255, 255, 255, 0.5)",
-						}}
-					>
-						<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-							<Handshake className="h-4 w-4 text-slate-500 shrink-0 " />
-							<p className="body-2 text-slate-700 font-medium whitespace-nowrap">
-								Vendor:
-							</p>
-							<div className="min-w-0 flex-1">{contractVendor}</div>
-						</div>
-					</div>
-				)}
-				<div className="flex flex-col gap-3">
-					{/* Uploaded on section */}
-					<div
-						className="rounded-lg p-2"
-						style={{
-							background: "rgba(255, 255, 255, 0.3)",
-							backdropFilter: "blur(8px)",
-							WebkitBackdropFilter: "blur(8px)",
-							border: "1px solid rgba(255, 255, 255, 0.5)",
-						}}
-					>
-						<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-							<Calendar className="h-4 w-4 text-slate-500 shrink-0 " />
-							<p className="body-2 text-slate-700 font-medium whitespace-nowrap">
-								Uploaded on:
-							</p>
-							<div className="min-w-0 flex-1">
-								<FormattedDateTime
-									date={file.$createdAt}
-									className="body-2 text-slate-700 wrap-break-words"
-								/>
-							</div>
-						</div>
-					</div>
-
-					{/* Expires on section */}
-					{contractExpiryDate &&
-						(() => {
-							const isExpired = new Date(contractExpiryDate) < new Date();
-							return (
-								<div
-									className="rounded-lg p-2"
-									style={{
-										background: "rgba(255, 255, 255, 0.3)",
-										backdropFilter: "blur(8px)",
-										WebkitBackdropFilter: "blur(8px)",
-										border: "1px solid rgba(255, 255, 255, 0.5)",
-									}}
-								>
-									<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-										<Calendar className="h-4 w-4 text-slate-500 shrink-0 " />
-										<p
-											className={`body-2 font-medium whitespace-nowrap ${isExpired ? "text-[#E5252A]!" : "text-slate-700"}`}
-										>
-											{isExpired ? "Expired on:" : "Expires on:"}
-										</p>
-
-										<div className="min-w-0 flex-1">
-											<FormattedDate
-												date={contractExpiryDate}
-												className={`body-2 wrap-break-words ${isExpired ? "text-[#E5252A]!" : "text-slate-700"}`}
-											/>
-										</div>
-									</div>
-								</div>
-							);
-						})()}
-
-					{/* Assigned To section */}
-					{(assignedTo || assignedManagerUsers.length > 0) && (
-						<div
-							className="rounded-lg p-2"
-							style={{
-								background: "rgba(255, 255, 255, 0.3)",
-								backdropFilter: "blur(8px)",
-								WebkitBackdropFilter: "blur(8px)",
-								border: "1px solid rgba(255, 255, 255, 0.5)",
-							}}
-						>
-							<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-								<UserCheck className="h-4 w-4 text-slate-500 shrink-0 " />
-								<p className="body-2 text-slate-700 font-medium whitespace-nowrap">
-									Assigned To:
-								</p>
-								<div className="min-w-0 flex-1 flex items-center flex-wrap gap-1">
-									{renderAssignedManagers()}
-								</div>
-							</div>
-						</div>
-					)}
-
-					{/* Department section */}
-					{assignedToDepartment && (
-						<div
-							className="rounded-lg p-2"
-							style={{
-								background: "rgba(255, 255, 255, 0.3)",
-								backdropFilter: "blur(8px)",
-								WebkitBackdropFilter: "blur(8px)",
-								border: "1px solid rgba(255, 255, 255, 0.5)",
-							}}
-						>
-							<div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-								<Building2 className="h-4 w-4 text-slate-500 shrink-0 " />
-								<p className="body-2 text-slate-700 font-medium whitespace-nowrap">
-									Department:
-								</p>
-								<div className="min-w-0 flex-1">
-									<p className="body-2 text-slate-700 wrap-break-words">
-										{assignedToDepartment}
-									</p>
-								</div>
-							</div>
-						</div>
-					)}
-				</div>
-				{/* Horizontal divider between details and owner */}
-				<hr className="my-1 border-white/30" />
-				<p className="caption line-clamp-1 text-light-200">
-					By:{" "}
-					{isLoadingOwnerName ? (
-						<span className="inline-flex items-center gap-1 align-middle">
-							<Loader2 className="h-3 w-3 animate-spin shrink-0" />
-							Loading...
+					{file.size != null && file.size > 0 && (
+						<span className="text-[10px] text-slate-500 tabular-nums">
+							{convertFileSize({ sizeInBytes: file.size })}
 						</span>
-					) : (
-						ownerName ||
-						(typeof file.owner === "object" && file.owner?.fullName
-							? file.owner.fullName
-							: typeof file.owner === "string"
-								? "Unknown"
-								: "Unknown")
 					)}
-				</p>
+				</div>
 			</div>
+
+			<div className="min-w-0 space-y-2">
+				<p className="subtitle-2 line-clamp-2 wrap-break-word text-slate-900">
+					{displayName}
+				</p>
+				<div className="flex items-center gap-2 flex-wrap">
+					{(contractStatus || isExpired) &&
+						statusBadge(
+							contractStatus || "expired",
+							file.isExpired,
+							contractExpiryDate,
+						)}
+					{riskLevel && riskLevelBadge(riskLevel)}
+					{departmentLabel && (
+						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-md font-medium capitalize">
+							{departmentLabel}
+						</span>
+					)}
+				</div>
+			</div>
+
+			<div className="min-w-0 rounded-lg bg-white/40 border border-white/50 px-3 py-1">
+				{contractAmount != null && (
+					<MetaRow label="Value">
+						${formattedContractAmount} USD
+					</MetaRow>
+				)}
+				{contractVendor && (
+					<MetaRow label="Vendor">{contractVendor}</MetaRow>
+				)}
+				{file.$createdAt && (
+					<MetaRow label="Uploaded">
+						<FormattedDateTime
+							date={file.$createdAt}
+							className="text-inherit"
+						/>
+					</MetaRow>
+				)}
+				{contractExpiryDate && (
+					<MetaRow
+						label={isExpired ? "Expired" : "Expires"}
+						emphasize={
+							isExpired ? "danger" : isExpiringSoon ? "warning" : undefined
+						}
+					>
+						<FormattedDate
+							date={contractExpiryDate}
+							className="text-inherit"
+						/>
+					</MetaRow>
+				)}
+				{(assignedTo ||
+					assignedManagerUsers.length > 0 ||
+					loadingManagers ||
+					(Array.isArray(file.assignedManagers) &&
+						file.assignedManagers.length > 0)) && (
+					<MetaRow label="Assigned">
+						<div className="flex items-center justify-end flex-wrap gap-1">
+							{renderAssignedManagers()}
+						</div>
+					</MetaRow>
+				)}
+			</div>
+
+			<p className="caption mt-auto line-clamp-1 wrap-break-word text-slate-500">
+				By:{" "}
+				{isLoadingOwnerName ? (
+					<span className="inline-flex items-center gap-1 align-middle">
+						<Loader2 className="h-3 w-3 animate-spin shrink-0" />
+						Loading...
+					</span>
+				) : (
+					ownerName ||
+					(typeof file.owner === "object" && file.owner?.fullName
+						? file.owner.fullName
+						: "Unknown")
+				)}
+			</p>
 		</div>
 	);
 };

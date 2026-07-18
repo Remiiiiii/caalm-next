@@ -260,6 +260,49 @@ export const CONTRACT_MOCK_ROWS = [
 	},
 ] as const;
 
+export const LICENSE_MOCK_ROWS = [
+	{
+		name: "State Nursing Board License",
+		status: "Active",
+		statusTone: "active" as const,
+		size: "1.8 MB",
+		uploaded: "14 Mar, 10:22am",
+		expires: "30 Sep, 2026",
+		department: "Clinical",
+		assignedTo: "A. Rivera",
+	},
+	{
+		name: "Facility Occupancy Permit",
+		status: "Expiring Soon",
+		statusTone: "pending" as const,
+		size: "940 KB",
+		uploaded: "2 Jan, 3:15pm",
+		expires: "12 Aug, 2026",
+		department: "Facilities",
+		assignedTo: "J. Chen",
+	},
+	{
+		name: "Adobe Creative Cloud Enterprise",
+		status: "Active",
+		statusTone: "active" as const,
+		size: "210 KB",
+		uploaded: "19 Nov, 9:04am",
+		expires: "1 Dec, 2026",
+		department: "Marketing",
+		assignedTo: "M. Okonkwo",
+	},
+	{
+		name: "HIPAA Security Certification",
+		status: "Action Required",
+		statusTone: "expired" as const,
+		size: "2.1 MB",
+		uploaded: "8 Oct, 4:41pm",
+		expires: "22 Jul, 2026",
+		department: "Compliance",
+		assignedTo: "S. Patel",
+	},
+] as const;
+
 export const AUDIT_MOCK_MODULES = [
 	{ label: "Regulatory filings", rag: "green" as const, value: "On track" },
 	{ label: "Contracts", rag: "amber" as const, value: "Needs attention" },
@@ -277,7 +320,7 @@ export const FEATURE_SPOTLIGHT_TILES = [
 		id: "rings",
 		title: "Compliance pulse",
 		metrics: [
-			{ label: "Compliance", value: 85 },
+			{ label: "Compliance", value: 100 },
 			{ label: "Renewals", value: 96 },
 			{ label: "Audits", value: 78 },
 		],

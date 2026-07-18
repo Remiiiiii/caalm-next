@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import Card from "@/components/Card";
+import EqualHeightGrid from "@/components/EqualHeightGrid";
 import ContractPreviewSheet from "@/components/ContractPreviewSheet";
 import { useContractsView } from "@/components/ContractsViewContext";
 import type { UIFileDoc } from "@/types/files";
@@ -96,19 +97,20 @@ export default function ContractsView({
 				</>
 			) : (
 				<>
-					<section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-4 sm:p-6">
+					<EqualHeightGrid className="grid w-full min-w-0 grid-cols-1 gap-6 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
 						{paginatedFiles.map((file: UIFileDoc) => (
-							<Card
-								key={file.$id}
-								file={file}
-								status={file.status}
-								expirationDate={file.contractExpiryDate}
-								userRole={user?.role as "executive" | "admin" | "manager"}
-								onRefresh={onRefresh}
-								onPreview={() => setPreviewFile(file)}
-							/>
+							<div key={file.$id} className="min-w-0 h-full">
+								<Card
+									file={file}
+									status={file.status}
+									expirationDate={file.contractExpiryDate}
+									userRole={user?.role as "executive" | "admin" | "manager"}
+									onRefresh={onRefresh}
+									onPreview={() => setPreviewFile(file)}
+								/>
+							</div>
 						))}
-					</section>
+					</EqualHeightGrid>
 					{files.length > itemsPerPage && (
 						<ContractsPagination
 							currentPage={validCurrentPage}

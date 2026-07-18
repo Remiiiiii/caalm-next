@@ -1,6 +1,6 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -161,7 +161,7 @@ export default function ContractsHeaderActions({
 					onClick={handleExport}
 					className="primary-btn px-3 sm:px-4 cursor-pointer"
 				>
-					<Download className="w-4 h-4" />
+					<Upload className="w-4 h-4" />
 					<span className="hidden sm:inline">
 						{selectedIds.length > 0
 							? `Export (${selectedIds.length})`
