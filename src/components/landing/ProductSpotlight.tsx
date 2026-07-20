@@ -16,10 +16,10 @@ import ContractsMock from "./spotlight/ContractsMock";
 import LicensesMock from "./spotlight/LicensesMock";
 
 export default function ProductSpotlight() {
-	const [activeId, setActiveId] = useState<(typeof SPOTLIGHT_TABS)[number]["id"]>(
-		"contracts",
-	);
-	const active = SPOTLIGHT_TABS.find((t) => t.id === activeId) ?? SPOTLIGHT_TABS[0];
+	const [activeId, setActiveId] =
+		useState<(typeof SPOTLIGHT_TABS)[number]["id"]>("contracts");
+	const active =
+		SPOTLIGHT_TABS.find((t) => t.id === activeId) ?? SPOTLIGHT_TABS[0];
 	const paperRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
@@ -66,7 +66,7 @@ export default function ProductSpotlight() {
 						See CAALM in action
 					</h2>
 					<p className="mt-3 text-slate-600 max-w-2xl mx-auto text-sm sm:text-base">
-						Switch between contracts, licenses, audits, and analytics — the same
+						Switch between contracts, licenses, audits, and analytics. The same
 						live oversight your teams use every day.
 					</p>
 				</motion.div>

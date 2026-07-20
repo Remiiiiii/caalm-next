@@ -315,9 +315,7 @@ export default function LandingHero() {
 							<span className="text-yellow-500 text-lg" aria-hidden>
 								★★★★★
 							</span>
-							<span className="text-slate-700 font-semibold text-sm">
-								4.9/5
-							</span>
+							<span className="text-slate-700 font-semibold text-sm">5/5</span>
 							<span className="text-slate-500 text-sm">based on reviews</span>
 						</motion.div>
 

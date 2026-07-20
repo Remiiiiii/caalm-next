@@ -250,7 +250,7 @@ export default function AuditsMock() {
 						</h3>
 						<p className="mt-1 text-[10px] sm:text-xs text-slate-600 max-w-xl">
 							Nonprofit compliance posture across regulatory filings, contracts,
-							licenses, documents, and governance — aligned with CAALM modules.
+							licenses, documents, and governance aligned with CAALM modules.
 						</p>
 					</div>
 
@@ -267,14 +267,16 @@ export default function AuditsMock() {
 										</p>
 									</div>
 									<div className="mt-1 pl-8 flex flex-wrap items-center gap-2">
-										<span className="text-2xl font-bold text-slate-700">87%</span>
+										<span className="text-2xl font-bold text-slate-700">
+											87%
+										</span>
 										<span className="inline-flex items-center rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-[10px] font-medium text-green">
 											On track
 										</span>
 									</div>
 									<p className="mt-1 pl-8 text-[10px] text-slate-600">
-										Nonprofit compliance view across filings, contracts, licenses,
-										documents, and governance.
+										Nonprofit compliance view across filings, contracts,
+										licenses, documents, and governance.
 									</p>
 								</div>
 								<div className="shrink-0 rounded-lg bg-slate-50/80 px-3 py-2">
@@ -346,10 +348,7 @@ export default function AuditsMock() {
 										: "bg-red/10 text-red border-red/20";
 							const Icon = mod.icon;
 							return (
-								<div
-									key={mod.label}
-									className="glass-card relative p-2.5 pt-3"
-								>
+								<div key={mod.label} className="glass-card relative p-2.5 pt-3">
 									<div className="glass-card-cap" />
 									<p className="text-[10px] font-medium text-slate-800">
 										{mod.label}
