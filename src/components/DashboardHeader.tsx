@@ -53,22 +53,24 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 	};
 
 	return (
-		<div className="flex gap-2 sm:gap-4 items-center min-w-0">
-			<QuickActions user={user} />
-			<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg mt-6 md:px-9 sm:mr-7 rounded-full mb-6 ml-auto w-fit px-4 flex-shrink-0">
-				<div className="flex items-center h-10">
-					{/* Action buttons */}
+		<div className="flex flex-nowrap items-center gap-2 min-w-0 w-full">
+			<div className="min-w-0 flex-1">
+				<QuickActions user={user} />
+			</div>
+			<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-full w-fit px-2.5 sm:px-3 shrink-0">
+				<div className="flex items-center h-9">
 					{user && (
-						<div className="flex items-center space-x-2">
+						<div className="flex items-center gap-1">
 							<ProfilePicture user={user} size="sm" />
 							<Button
 								variant="ghost"
+								size="icon"
 								onClick={() => setNotifOpen(true)}
-								className="relative hover:bg-white/40 text-slate-700"
+								className="relative h-8 w-8 hover:bg-white/40 text-slate-700"
 								data-testid="notification-bell"
 								aria-label="Open notifications"
 							>
-								<Bell className="w-6 h-6" />
+								<Bell className="w-5 h-5" />
 								<NotificationBadge
 									count={unreadCount}
 									size="sm"
@@ -78,17 +80,19 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 							<Button
 								variant="ghost"
 								size="icon"
-								className="hover:bg-white/40 text-slate-700"
+								className="h-8 w-8 hover:bg-white/40 text-slate-700"
+								aria-label="Messages"
 							>
-								<Mail className="h-5 w-5" />
+								<Mail className="h-4 w-4" />
 							</Button>
 							<Button
 								variant="ghost"
 								size="icon"
 								onClick={handleLogout}
-								className="hover:bg-white/40 text-slate-700"
+								className="h-8 w-8 hover:bg-white/40 text-slate-700"
+								aria-label="Log out"
 							>
-								<LogOut className="h-5 w-5" />
+								<LogOut className="h-4 w-4" />
 							</Button>
 						</div>
 					)}

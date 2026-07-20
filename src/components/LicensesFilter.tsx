@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	Popover,
@@ -20,7 +21,19 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { type LicenseFilters, useLicensesFilter } from "./LicensesView";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+	type LicenseFilters,
+	countActiveAdvancedLicenseFilters,
+} from "@/lib/licenses/licensesListUtils";
+import { useLicensesFilter } from "./LicensesView";
 
 const LICENSE_TYPES = [
 	"perpetual",
@@ -39,6 +52,13 @@ const CATEGORIES = [
 	"certificate",
 	"insurance",
 	"other",
+];
+
+const COMPLIANCE_OPTIONS = [
+	{ value: "compliant", label: "Compliant" },
+	{ value: "at-risk", label: "At risk" },
+	{ value: "non-compliant", label: "Non-compliant" },
+	{ value: "action-required", label: "Action required" },
 ];
 
 const LICENSE_STATUS_OPTIONS = [
@@ -73,111 +93,70 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 	departments = [],
 	assignedManagers = [],
 }) => {
-	const { filters, setFilters } = useLicensesFilter();
-	const [showFilters, setShowFilters] = useState(false);
+	const { filters, setFilters, clearFilters } = useLicensesFilter();
+	const [open, setOpen] = useState(false);
 
-	// Combine common departments with unique departments from licenses
 	const allDepartments = useMemo(() => {
 		const uniqueDepts = new Set([...COMMON_DEPARTMENTS, ...departments]);
 		return Array.from(uniqueDepts).sort();
 	}, [departments]);
 
-	// Combine assigned managers
 	const allAssignedManagers = useMemo(() => {
-		const uniqueManagers = new Set(assignedManagers);
-		return Array.from(uniqueManagers).sort();
+		return Array.from(new Set(assignedManagers)).sort();
 	}, [assignedManagers]);
 
-	// Calculate active filter count
-	const getActiveFiltersCount = (): number => {
-		let count = 0;
-		if (filters.status) count++;
-		if (filters.licenseType) count++;
-		if (filters.category) count++;
-		if (filters.issueDateFrom || filters.issueDateTo) count++;
-		if (filters.expiryDateFrom || filters.expiryDateTo) count++;
-		if (filters.department) count++;
-		if (filters.assignedTo) count++;
-		return count;
-	};
+	const activeCount = countActiveAdvancedLicenseFilters(filters);
 
-	// Clear all filters
-	const clearFilters = () => {
-		setFilters({
-			status: undefined,
-			licenseType: undefined,
-			category: undefined,
-			issueDateFrom: undefined,
-			issueDateTo: undefined,
-			expiryDateFrom: undefined,
-			expiryDateTo: undefined,
-			department: undefined,
-			assignedTo: undefined,
-			searchQuery: undefined,
-		});
-	};
-
-	// Update individual filter
-	const updateFilter = (key: keyof LicenseFilters, value: any) => {
+	const updateFilter = (key: keyof LicenseFilters, value: unknown) => {
 		setFilters((prev) => ({
 			...prev,
-			[key]: value || undefined,
+			[key]: value === "" || value === null ? undefined : value,
 		}));
 	};
 
 	return (
-		<Popover open={showFilters} onOpenChange={setShowFilters}>
-			<PopoverTrigger asChild>
+		<Sheet open={open} onOpenChange={setOpen}>
+			<SheetTrigger asChild>
 				<Button
 					variant="outline"
 					size="sm"
-					className="primary-btn px-3 sm:px-4"
+					className="primary-btn px-3 sm:px-4 cursor-pointer"
 					aria-label={
-						getActiveFiltersCount() > 0
-							? `Filter, ${getActiveFiltersCount()} active`
-							: "Filter"
+						activeCount > 0 ? `Filter, ${activeCount} active` : "Filter"
 					}
 				>
 					<Filter className="w-4 h-4" />
 					<span className="hidden sm:inline">Filter</span>
-					{getActiveFiltersCount() > 0 && (
+					{activeCount > 0 && (
 						<Badge
 							variant="secondary"
 							className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
 						>
-							{getActiveFiltersCount()}
+							{activeCount}
 						</Badge>
 					)}
 				</Button>
-			</PopoverTrigger>
-			<PopoverContent
-				className="w-96 max-h-[50vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl p-0"
-				sideOffset={10}
+			</SheetTrigger>
+			<SheetContent
+				side="right"
+				className="w-full sm:max-w-md p-0 flex flex-col overflow-hidden border-l border-slate-200"
 			>
-				{/* Professional Cap */}
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70" />
 
-				{/* Header with gradient background */}
-				<div className="glass-dialog-wizard-header mt-4 py-3">
-					<div className="flex items-center gap-3 px-6">
-						<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-							<Filter className="w-5 h-5 text-blue-600" />
-						</div>
-						<div className="flex-1">
-							<h4 className="text-lg font-semibold sidebar-gradient-text">
-								Filter Licenses
-							</h4>
-							<p className="text-xs text-slate-600 mt-0.5">
-								Refine your license list
-							</p>
-						</div>
+				<SheetHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4 px-6 text-left space-y-1">
+					<div className="flex items-center gap-3">
+						<Filter className="w-5 h-5 text-[#0f5384]" />
+						<SheetTitle className="text-xl font-semibold sidebar-gradient-text">
+							Filter licenses
+						</SheetTitle>
 					</div>
-				</div>
+					<SheetDescription className="text-sm text-slate-600 ml-8">
+						Refine your license list
+					</SheetDescription>
+				</SheetHeader>
 
-				{/* Scrollable Content */}
-				<div className="flex-1 overflow-y-auto p-4 bg-slate-50">
+				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
 					<div className="space-y-4">
-						{/* Status Filter */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Status</Label>
 							<Select
@@ -200,7 +179,6 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 							</Select>
 						</div>
 
-						{/* License Type Filter */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Type</Label>
 							<Select
@@ -228,7 +206,6 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 							</Select>
 						</div>
 
-						{/* Category Filter */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Category</Label>
 							<Select
@@ -253,15 +230,81 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 							</Select>
 						</div>
 
-						{/* Issue Date Range */}
 						<div className="space-y-2">
-							<Label className="text-slate-700 font-medium">Issue Date</Label>
+							<Label className="text-slate-700 font-medium">Compliance</Label>
+							<Select
+								value={filters.compliance || "all"}
+								onValueChange={(value) =>
+									updateFilter(
+										"compliance",
+										value === "all" ? undefined : value,
+									)
+								}
+							>
+								<SelectTrigger className="bg-white">
+									<SelectValue placeholder="All compliance" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All compliance</SelectItem>
+									{COMPLIANCE_OPTIONS.map((opt) => (
+										<SelectItem key={opt.value} value={opt.value}>
+											{opt.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className="space-y-2">
+							<Label className="text-slate-700 font-medium">Auto-renew</Label>
+							<Select
+								value={
+									filters.autoRenew === undefined
+										? "all"
+										: filters.autoRenew
+											? "yes"
+											: "no"
+								}
+								onValueChange={(value) =>
+									updateFilter(
+										"autoRenew",
+										value === "all" ? undefined : value === "yes",
+									)
+								}
+							>
+								<SelectTrigger className="bg-white">
+									<SelectValue placeholder="Any" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Any</SelectItem>
+									<SelectItem value="yes">Auto-renew on</SelectItem>
+									<SelectItem value="no">Auto-renew off</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className="space-y-2">
+							<Label className="text-slate-700 font-medium">
+								Issuing authority
+							</Label>
+							<Input
+								value={filters.issuingAuthority || ""}
+								onChange={(e) =>
+									updateFilter("issuingAuthority", e.target.value || undefined)
+								}
+								placeholder="Search authority…"
+								className="bg-white"
+							/>
+						</div>
+
+						<div className="space-y-2">
+							<Label className="text-slate-700 font-medium">Issue date</Label>
 							<div className="grid grid-cols-2 gap-2">
 								<Popover>
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
-											className="justify-start text-left font-normal bg-white"
+											className="justify-start text-left font-normal bg-white cursor-pointer"
 											size="sm"
 										>
 											{filters.issueDateFrom
@@ -282,7 +325,7 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
-											className="justify-start text-left font-normal bg-white"
+											className="justify-start text-left font-normal bg-white cursor-pointer"
 											size="sm"
 										>
 											{filters.issueDateTo
@@ -302,15 +345,14 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 							</div>
 						</div>
 
-						{/* Expiry Date Range */}
 						<div className="space-y-2">
-							<Label className="text-slate-700 font-medium">Expiry Date</Label>
+							<Label className="text-slate-700 font-medium">Expiry date</Label>
 							<div className="grid grid-cols-2 gap-2">
 								<Popover>
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
-											className="justify-start text-left font-normal bg-white"
+											className="justify-start text-left font-normal bg-white cursor-pointer"
 											size="sm"
 										>
 											{filters.expiryDateFrom
@@ -331,7 +373,7 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
-											className="justify-start text-left font-normal bg-white"
+											className="justify-start text-left font-normal bg-white cursor-pointer"
 											size="sm"
 										>
 											{filters.expiryDateTo
@@ -351,7 +393,6 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 							</div>
 						</div>
 
-						{/* Department Filter */}
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Department</Label>
 							<Select
@@ -377,9 +418,8 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 							</Select>
 						</div>
 
-						{/* Assigned To Filter */}
 						<div className="space-y-2">
-							<Label className="text-slate-700 font-medium">Assigned To</Label>
+							<Label className="text-slate-700 font-medium">Assigned to</Label>
 							<Select
 								value={filters.assignedTo || "all"}
 								onValueChange={(value) =>
@@ -405,27 +445,33 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 					</div>
 				</div>
 
-				{/* Professional Footer */}
-				<div className="glass-dialog-footer-compact">
+				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
 					<div className="text-xs text-slate-500">
-						{getActiveFiltersCount() > 0
-							? `${getActiveFiltersCount()} filter${
-									getActiveFiltersCount() > 1 ? "s" : ""
-								} active`
+						{activeCount > 0
+							? `${activeCount} filter${activeCount > 1 ? "s" : ""} active`
 							: "No filters applied"}
 					</div>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={clearFilters}
-						className="primary-btn px-3 sm:px-4 h-8"
-						disabled={getActiveFiltersCount() === 0}
-					>
-						Clear All
-					</Button>
+					<div className="flex items-center gap-3">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => clearFilters()}
+							className="primary-btn px-3 sm:px-4 cursor-pointer"
+							disabled={activeCount === 0 && !filters.searchQuery}
+						>
+							Clear all
+						</Button>
+						<Button
+							size="sm"
+							className="primary-btn px-3 sm:px-4 cursor-pointer"
+							onClick={() => setOpen(false)}
+						>
+							Done
+						</Button>
+					</div>
 				</div>
-			</PopoverContent>
-		</Popover>
+			</SheetContent>
+		</Sheet>
 	);
 };
 

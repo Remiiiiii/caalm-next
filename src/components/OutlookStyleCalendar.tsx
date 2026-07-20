@@ -2,18 +2,21 @@
 
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
+	addDays,
 	addMonths,
+	addWeeks,
 	eachDayOfInterval,
 	endOfMonth,
 	endOfWeek,
 	format,
-	formatDistanceToNow,
 	isSameDay,
 	isSameMonth,
 	isToday,
 	startOfMonth,
 	startOfWeek,
+	subDays,
 	subMonths,
+	subWeeks,
 } from "date-fns";
 import {
 	AlertCircle,
@@ -28,27 +31,24 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	ChevronUp,
-	ClipboardClock,
 	Clock,
 	Edit,
 	Eye,
 	FileCheck,
 	FileSliders,
 	FileText,
-	Filter,
 	Glasses,
 	Grid3X3,
 	Link,
+	List,
 	Loader2,
 	MapPin,
 	MessageSquare,
 	Paperclip,
 	Pencil,
 	Plus,
-	Printer,
 	RefreshCw,
-	Settings,
-	Share2,
+	SlidersHorizontal,
 	Tag,
 	ThumbsUp,
 	Trash2,
@@ -57,6 +57,20 @@ import {
 	X,
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { AgendaView } from "@/components/calendar/AgendaView";
+import { CalendarApprovalsRail } from "@/components/calendar/CalendarApprovalsRail";
+import { CalendarFiltersDrawer } from "@/components/calendar/CalendarFiltersDrawer";
+import { DayView } from "@/components/calendar/DayView";
+import { EventChip } from "@/components/calendar/EventChip";
+import {
+	type CalendarSource,
+	VISIBLE_CHIPS_PER_DAY,
+} from "@/components/calendar/eventChipStyles";
+import {
+	QuickCreateEventPopover,
+	type QuickCreatePayload,
+} from "@/components/calendar/QuickCreateEventPopover";
+import { TimeGridWeekView } from "@/components/calendar/TimeGridWeekView";
 import CalendarAIChat from "@/components/CalendarAIChat";
 import { CalendarDelegationManager } from "@/components/CalendarDelegationManager";
 import CalendarSettings from "@/components/CalendarSettings";
@@ -126,6 +140,10 @@ import {
 import type { SharedCalendar } from "@/lib/actions/shared-calendar.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { resolveCalendarPermissions } from "@/lib/auth/permissions";
+import {
+	getUSHolidaysForMonth,
+	parseHolidayDate,
+} from "@/lib/utils/holidays";
 import { cn, convertFileSize, getFileType } from "@/lib/utils";
 
 // Event attachments are stored as file IDs (references to files collection)
@@ -139,6 +157,8 @@ interface EventAttachment {
 	size?: number;
 	bucketFileId?: string;
 }
+
+type CalendarViewMode = "day" | "week" | "month" | "agenda";
 
 interface LocalCalendarEvent {
 	$id?: string;
@@ -158,6 +178,7 @@ interface LocalCalendarEvent {
 	contractName?: string;
 	participants?: string;
 	location?: string;
+	resourceId?: string;
 	createdBy?: string;
 	createdByAccountId?: string;
 	createdByUserId?: string;
@@ -168,6 +189,7 @@ interface LocalCalendarEvent {
 	requiresApproval?: boolean;
 	pendingApprovalId?: string | null;
 	overrides?: PermissionOverrideRecord[];
+	source?: CalendarSource;
 }
 
 interface EventReminderConfigData {
@@ -258,92 +280,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 }) => {
 	const { toast } = useToast();
 
-	// Preload all holidays for the current year on mount for instant access
-	useEffect(() => {
-		const preloadHolidays = async () => {
-			const currentYear = new Date().getFullYear();
-			const { getCachedData, setCachedData } = await import(
-				"@/lib/utils/client-cache"
-			);
-
-			// Check if we already have holidays cached for this year
-			const yearCacheKey = `holidays:${currentYear}:all`;
-			const cachedYearHolidays =
-				getCachedData<Array<{ date: string; name: string }>>(yearCacheKey);
-
-			if (!cachedYearHolidays) {
-				// Preload all months for the current year in the background
-				const preloadPromises = [];
-				for (let month = 1; month <= 12; month++) {
-					const cacheKey = `holidays:${currentYear}:${month}`;
-					const cached =
-						getCachedData<Array<{ date: string; name: string }>>(cacheKey);
-
-					if (!cached) {
-						preloadPromises.push(
-							fetch(`/api/calendar/holidays?year=${currentYear}&month=${month}`)
-								.then((res) => res.json())
-								.then((data) => {
-									if (data.success && data.holidays) {
-										// Cache for 1 year (holidays don't change)
-										setCachedData(
-											cacheKey,
-											data.holidays,
-											365 * 24 * 60 * 60 * 1000,
-										);
-									}
-								})
-								.catch((err) => {
-									// Silently fail - we'll fetch on demand
-									if (process.env.NODE_ENV === "development") {
-										console.warn(
-											`Failed to preload holidays for ${currentYear}-${month}:`,
-											err,
-										);
-									}
-								}),
-						);
-					}
-				}
-
-				// Also preload next year's holidays
-				const nextYear = currentYear + 1;
-				for (let month = 1; month <= 12; month++) {
-					const cacheKey = `holidays:${nextYear}:${month}`;
-					const cached =
-						getCachedData<Array<{ date: string; name: string }>>(cacheKey);
-
-					if (!cached) {
-						preloadPromises.push(
-							fetch(`/api/calendar/holidays?year=${nextYear}&month=${month}`)
-								.then((res) => res.json())
-								.then((data) => {
-									if (data.success && data.holidays) {
-										setCachedData(
-											cacheKey,
-											data.holidays,
-											365 * 24 * 60 * 60 * 1000,
-										);
-									}
-								})
-								.catch(() => {
-									// Silently fail
-								}),
-						);
-					}
-				}
-
-				// Run preloads in parallel but don't block
-				Promise.all(preloadPromises).catch(() => {
-					// Silently handle errors
-				});
-			}
-		};
-
-		// Preload after a short delay to not block initial render
-		const timeout = setTimeout(preloadHolidays, 100);
-		return () => clearTimeout(timeout);
-	}, []);
 	const [selectedDate, setSelectedDate] = useState<Date | undefined>(
 		new Date(),
 	);
@@ -356,11 +292,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 	const [deleteReason, setDeleteReason] = useState("");
 
-	// Pending approvals collapse state - default to collapsed
-	const [isApprovalsExpanded, setIsApprovalsExpanded] = useState(false);
+	// Pending approvals rail — expanded by default on desktop when items exist
+	const [isApprovalsExpanded, setIsApprovalsExpanded] = useState(true);
+	const [isFiltersDrawerOpen, setIsFiltersDrawerOpen] = useState(false);
+	const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+	const [quickCreateDate, setQuickCreateDate] = useState<Date | null>(null);
+	const [quickCreateHour, setQuickCreateHour] = useState<number | null>(null);
 
 	const [currentMonth, setCurrentMonth] = useState(new Date());
-	const [viewMode, setViewMode] = useState<"month" | "week">("month");
+	const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
 	const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 	const [isEditEventOpen, setIsEditEventOpen] = useState(false);
 	const [selectedEvent, setSelectedEvent] = useState<LocalCalendarEvent | null>(
@@ -385,6 +325,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	const [selectedMyCalendars, setSelectedMyCalendars] = useState({
 		calendar: true, // Default checked
 		usHolidays: false,
+		resources: true,
 	});
 	const [selectedSharedCalendars, setSelectedSharedCalendars] = useState<
 		string[]
@@ -1583,9 +1524,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	const normalizedEvents = useMemo(() => {
 		const combined = [...events, ...(calendarEvents || [])];
 		return combined.map((event) => {
-			const extended = event as LocalCalendarEvent;
+			const extended = event as LocalCalendarEvent & { resourceId?: string };
 			return {
 				...extended,
+				resourceId: extended.resourceId,
 				sensitivityLevel: extended.sensitivityLevel || "standard",
 				approvalStatus: extended.approvalStatus || "not_required",
 				requiresApproval: Boolean(extended.requiresApproval),
@@ -1594,6 +1536,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						? extended.pendingApprovalId
 						: null,
 				overrides: extended.overrides || [],
+				source: extended.source || (extended.resourceId ? "resource" : "my"),
 			};
 		});
 	}, [events, calendarEvents]);
@@ -1609,6 +1552,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
 		// Filter out events created by shared calendar owners
 		return normalizedEvents.filter((event) => {
+			if (!selectedMyCalendars.resources && event.resourceId) {
+				return false;
+			}
 			// Include events created by current user
 			if (
 				event.createdByUserId === user?.$id ||
@@ -1639,119 +1585,79 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 			// Include other events (fallback)
 			return true;
 		});
-	}, [normalizedEvents, selectedMyCalendars.calendar, sharedCalendars, user]);
+	}, [
+		normalizedEvents,
+		selectedMyCalendars.calendar,
+		selectedMyCalendars.resources,
+		sharedCalendars,
+		user,
+	]);
 
 	// Helper to get events for a specific shared calendar
 	const getSharedCalendarEvents = useCallback(
 		(calendar: SharedCalendar): LocalCalendarEvent[] => {
-			return normalizedEvents.filter((event) => {
-				// Only show events created by this calendar's owner
-				return (
-					event.createdByUserId === calendar.ownerId ||
-					event.createdByAccountId === calendar.ownerAccountId
-				);
-			});
+			return normalizedEvents
+				.filter((event) => {
+					if (!selectedMyCalendars.resources && event.resourceId) {
+						return false;
+					}
+					return (
+						event.createdByUserId === calendar.ownerId ||
+						event.createdByAccountId === calendar.ownerAccountId
+					);
+				})
+				.map((event) => ({ ...event, source: "shared" as CalendarSource }));
 		},
-		[normalizedEvents],
+		[normalizedEvents, selectedMyCalendars.resources],
 	);
 
-	// Get US holidays as events with fast caching
-	const [usHolidaysEvents, setUsHolidaysEvents] = useState<
-		LocalCalendarEvent[]
-	>([]);
+	// US holidays are computed locally (date-holidays) — no Microsoft sync, no API cache
+	const usHolidaysEvents = useMemo((): LocalCalendarEvent[] => {
+		if (!selectedMyCalendars.usHolidays) return [];
 
-	useEffect(() => {
-		const fetchHolidays = async () => {
-			if (!selectedMyCalendars.usHolidays) {
-				setUsHolidaysEvents([]);
-				return;
-			}
+		const year = currentMonth.getFullYear();
+		const month = currentMonth.getMonth() + 1;
 
-			const year = currentMonth.getFullYear();
-			const month = currentMonth.getMonth() + 1;
-			const cacheKey = `holidays:${year}:${month}`;
-
-			// Try to get cached data immediately for instant display
-			const { getCachedData, setCachedData } = await import(
-				"@/lib/utils/client-cache"
-			);
-			const cachedHolidays =
-				getCachedData<Array<{ date: string; name: string }>>(cacheKey);
-
-			if (cachedHolidays) {
-				// Show cached data immediately
-				const holidayEvents: LocalCalendarEvent[] = cachedHolidays.map(
-					(holiday: { date: string; name: string }): LocalCalendarEvent => ({
-						$id: `holiday-${holiday.date}`,
-						id: `holiday-${holiday.date}`,
-						title: holiday.name,
-						startDate: new Date(holiday.date),
-						endDate: new Date(holiday.date),
-						type: "meeting",
-						startTime: undefined,
-						endTime: undefined,
-						sensitivityLevel: "standard",
-						approvalStatus: "not_required",
-						requiresApproval: false,
-						pendingApprovalId: null,
-						overrides: [],
-					}),
-				);
-				setUsHolidaysEvents(holidayEvents);
-			}
-
-			try {
-				// Fetch fresh data in background (stale-while-revalidate)
-				const response = await fetch(
-					`/api/calendar/holidays?year=${year}&month=${month}`,
-				);
-				if (response.ok) {
-					const data = await response.json();
-					const holidays = data.holidays || [];
-
-					// Cache for 1 year (holidays don't change)
-					setCachedData(cacheKey, holidays, 365 * 24 * 60 * 60 * 1000);
-
-					const holidayEvents: LocalCalendarEvent[] = holidays.map(
-						(holiday: { date: string; name: string }): LocalCalendarEvent => ({
-							$id: `holiday-${holiday.date}`,
-							id: `holiday-${holiday.date}`,
-							title: holiday.name,
-							startDate: new Date(holiday.date),
-							endDate: new Date(holiday.date),
-							type: "meeting",
-							startTime: undefined,
-							endTime: undefined,
-							sensitivityLevel: "standard",
-							approvalStatus: "not_required",
-							requiresApproval: false,
-							pendingApprovalId: null,
-							overrides: [],
-						}),
-					);
-					setUsHolidaysEvents(holidayEvents);
-				}
-			} catch (error) {
-				console.error(
-					"[CLIENT] OutlookStyleCalendar] Error fetching holidays:",
-					error,
-				);
-				// Only clear if we don't have cached data
-				if (!cachedHolidays) {
-					setUsHolidaysEvents([]);
-				}
-			}
-		};
-
-		fetchHolidays();
+		return getUSHolidaysForMonth(year, month).map((holiday) => {
+			const holidayDate = parseHolidayDate(holiday.date);
+			return {
+				$id: `holiday-${holiday.date}`,
+				id: `holiday-${holiday.date}`,
+				title: holiday.name,
+				startDate: holidayDate,
+				endDate: holidayDate,
+				type: "meeting" as const,
+				startTime: undefined,
+				endTime: undefined,
+				sensitivityLevel: "standard" as const,
+				approvalStatus: "not_required" as const,
+				requiresApproval: false,
+				pendingApprovalId: null,
+				overrides: [],
+				source: "holidays" as CalendarSource,
+			};
+		});
 	}, [currentMonth, selectedMyCalendars.usHolidays]);
+
+	// Prefer Agenda on narrow screens (once on mount)
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		const mq = window.matchMedia("(max-width: 1023px)");
+		if (mq.matches) {
+			setViewMode("agenda");
+		}
+	}, []);
 
 	// Handlers for calendar selection
 	const handleMyCalendarChange = (
-		calendar: "calendar" | "usHolidays",
+		calendar: "calendar" | "usHolidays" | "resources",
 		checked: boolean,
 	) => {
 		setSelectedMyCalendars((prev) => {
+			if (calendar === "resources") {
+				return { ...prev, resources: checked };
+			}
+
 			// Count how many calendars are currently checked (before this change)
 			const currentCheckedCount =
 				(prev.calendar ? 1 : 0) +
@@ -2165,6 +2071,67 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				date: date,
 			}));
 		}
+	};
+
+	const openQuickCreate = (date: Date, hour?: number) => {
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		const check = new Date(date);
+		check.setHours(0, 0, 0, 0);
+		if (check < today) {
+			toast({
+				title: "Error",
+				description: "Cannot create events in the past",
+				variant: "destructive",
+			});
+			return;
+		}
+		if (!canCreateEvent) {
+			toast({
+				title: "Permission denied",
+				description: "You do not have permission to create events.",
+				variant: "destructive",
+			});
+			return;
+		}
+		setSelectedDate(date);
+		setQuickCreateDate(date);
+		setQuickCreateHour(hour ?? null);
+		setIsQuickCreateOpen(true);
+	};
+
+	const applyQuickCreateToForm = (payload: QuickCreatePayload) => {
+		setSelectedEvent(null);
+		setNewEvent((prev) => ({
+			...prev,
+			title: payload.title,
+			date: payload.date,
+			endDate: payload.date,
+			startTime: payload.startTime,
+			endTime: payload.endTime,
+			type: payload.type,
+		}));
+	};
+
+	const handleQuickCreate = async (payload: QuickCreatePayload) => {
+		if (!payload.title.trim()) {
+			toast({
+				title: "Error",
+				description: "Event title is required",
+				variant: "destructive",
+			});
+			return;
+		}
+		applyQuickCreateToForm(payload);
+		setIsQuickCreateOpen(false);
+		// Prefill + open create dialog so existing validation/API path runs
+		setIsAddEventOpen(true);
+	};
+
+	const handleQuickCreateMoreOptions = (payload: QuickCreatePayload) => {
+		applyQuickCreateToForm(payload);
+		setIsQuickCreateOpen(false);
+		setIsAddEventOpen(true);
 	};
 
 	const getEventTypeConfig = (type: LocalCalendarEvent["type"]) => {
@@ -3160,7 +3127,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 								!isCurrentMonth && "bg-gray-50 text-gray-400",
 								isSelected && "bg-gray-50 border-blue-300",
 							)}
-							onClick={() => handleDateSelect(day)}
+							onClick={() => {
+								handleDateSelect(day);
+								openQuickCreate(day);
+							}}
 						>
 							<div className="flex items-center justify-start mb-0.5 flex-shrink-0">
 								{isCurrentDay ? (
@@ -3183,67 +3153,35 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							{/* Events for this day */}
 							<div className="flex flex-col flex-1 min-h-0">
 								<div className="space-y-1">
-									{dayEvents.slice(0, 2).map((event, index) => {
+									{dayEvents.slice(0, VISIBLE_CHIPS_PER_DAY).map((event, index) => {
 										const canViewSensitive =
 											canViewEventSensitiveDetails(event);
 										const displayTitle = canViewSensitive
 											? event.title
 											: "Restricted event";
-										const status =
-											event.approvalStatus &&
-											event.approvalStatus !== "not_required"
-												? event.approvalStatus
-												: null;
-										const borderColor = getEventTypeBorderColor(event.type);
 										return (
-											<div
+											<EventChip
 												key={event.$id || `event-${index}-${event.title}`}
-												className={cn(
-													"bg-gray-100 border-l-4 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-200 transition-colors",
-													borderColor,
-												)}
+												event={event}
+												displayTitle={displayTitle}
+												timeLabel={
+													event.startTime
+														? formatTimeForDisplay(event.startTime)
+														: "All Day"
+												}
+												canViewSensitive={canViewSensitive}
 												onClick={(e) => {
 													e.stopPropagation();
 													openEditDialog(event);
 												}}
-											>
-												<div className="flex items-center gap-1.5 min-w-0">
-													<span className="text-[10px] font-medium text-gray-600 whitespace-nowrap">
-														{event.startTime
-															? formatTimeForDisplay(event.startTime)
-															: "All Day"}
-													</span>
-
-													<span
-														className={cn(
-															"text-xs truncate",
-															canViewSensitive
-																? "text-gray-800"
-																: "text-slate-500 italic",
-														)}
-													>
-														{displayTitle}
-													</span>
-													{status && (
-														<Badge
-															variant="outline"
-															className="ml-auto uppercase text-[9px] text-amber-600 bg-[#fcddc7]"
-														>
-															{getApprovalStatusText(status)}
-														</Badge>
-													)}
-													{!status && event.outlook_id && (
-														<CheckCircle className="h-3 w-3 text-green flex-shrink-0 ml-auto" />
-													)}
-												</div>
-											</div>
+											/>
 										);
 									})}
 								</div>
-								{dayEvents.length > 2 && (
+								{dayEvents.length > VISIBLE_CHIPS_PER_DAY && (
 									<button
 										type="button"
-										className="w-full text-[10px] text-slate-600 text-center hover:text-blue-600 py-1 mt-auto"
+										className="w-full text-[10px] text-slate-600 text-center hover:text-[#0f5384] py-1 mt-auto cursor-pointer transition-colors duration-200"
 										onClick={(e) => {
 											e.stopPropagation();
 											setOverflowDate(day);
@@ -3251,7 +3189,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 											setIsOverflowOpen(true);
 										}}
 									>
-										+{dayEvents.length - 2} more
+										+{dayEvents.length - VISIBLE_CHIPS_PER_DAY} more
 									</button>
 								)}
 							</div>
@@ -3416,191 +3354,206 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		</Dialog>
 	);
 
-	const renderWeekView = () => {
-		const weekStart = startOfWeek(selectedDate || new Date());
-		const weekEnd = endOfWeek(selectedDate || new Date());
-		const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
-
+	const renderWeekView = (eventsToRender: LocalCalendarEvent[] = normalizedEvents) => {
 		return (
-			<div className="grid grid-cols-7 gap-1">
-				{/* Day headers */}
-				{days.map((day) => (
-					<div
-						key={day.toISOString()}
-						className="p-2 text-center text-sm font-medium text-gray-700 bg-gray-50"
-					>
-						<div>{format(day, "EEE")}</div>
-						<div className="text-lg font-bold">{format(day, "d")}</div>
-					</div>
-				))}
-
-				{/* Day content */}
-				{days.map((day) => {
-					const dayEvents = normalizedEvents.filter((event) => {
-						// event.startDate is already a Date object from useCalendarEvents
-						if (!event.startDate) return false;
-
-						// Ensure we have a Date object
-						const eventDate =
-							event.startDate instanceof Date
-								? event.startDate
-								: new Date(event.startDate);
-
-						// Use isSameDay for timezone-safe date comparison
-						return isSameDay(eventDate, day);
-					});
-					const isSelected = selectedDate && isSameDay(day, selectedDate);
-					const isCurrentDay = isToday(day);
-
-					return (
-						<div
-							key={day.toISOString()}
-							className={cn(
-								"min-h-[160px] p-2 border border-slate-200 cursor-pointer transition-colors",
-								isSelected && "bg-blue-50 border-blue-300",
-								isCurrentDay && "bg-blue-100",
-							)}
-							onClick={() => handleDateSelect(day)}
-						>
-							<div className="space-y-1">
-								{dayEvents.map((event, index) => {
-									const config = getEventTypeConfig(event.type);
-									const canViewSensitive = canViewEventSensitiveDetails(event);
-									const displayTitle = canViewSensitive
-										? event.title
-										: "Restricted event";
-									const status =
-										event.approvalStatus &&
-										event.approvalStatus !== "not_required"
-											? event.approvalStatus
-											: null;
-									return (
-										<div
-											key={event.$id || `event-${index}-${event.title}`}
-											className={cn(
-												"text-xs px-2 py-1.5 rounded cursor-pointer",
-												config.color,
-											)}
-											onClick={(e) => {
-												e.stopPropagation();
-												openEditDialog(event);
-											}}
-										>
-											<div className="flex items-center gap-2 min-w-0 leading-none">
-												<span className="text-[11px] font-medium text-gray-700 whitespace-nowrap">
-													{event.startTime
-														? formatTimeForDisplay(event.startTime)
-														: "All Day"}
-												</span>
-												<span className="text-slate-500 text-[11px]">•</span>
-												<span
-													className={cn(
-														"text-[12px] font-medium truncate",
-														canViewSensitive
-															? "text-gray-900"
-															: "text-slate-500 italic",
-													)}
-												>
-													{displayTitle}
-												</span>
-												{status && (
-													<Badge
-														variant="outline"
-														className="uppercase text-[9px] ml-auto"
-													>
-														{getApprovalStatusText(status)}
-													</Badge>
-												)}
-												{!status && event.outlook_id && (
-													<CheckCircle className="h-3.5 w-3.5 text-blue-600 flex-shrink-0 ml-auto" />
-												)}
-											</div>
-										</div>
-									);
-								})}
-							</div>
-						</div>
-					);
-				})}
-			</div>
+			<TimeGridWeekView
+				selectedDate={selectedDate || new Date()}
+				events={eventsToRender}
+				canViewSensitive={(e) =>
+					canViewEventSensitiveDetails(e as LocalCalendarEvent)
+				}
+				formatTime={formatTimeForDisplay}
+				parseTimeToMinutes={parseTimeToMinutes}
+				onSelectDay={(day) => {
+					setSelectedDate(day);
+					setCurrentMonth(day);
+				}}
+				onEventClick={(e) => openEditDialog(e as LocalCalendarEvent)}
+				onSlotClick={(day, hour) => openQuickCreate(day, hour)}
+			/>
 		);
 	};
+
+	const renderDayView = (eventsToRender: LocalCalendarEvent[] = normalizedEvents) => {
+		return (
+			<DayView
+				selectedDate={selectedDate || new Date()}
+				events={eventsToRender}
+				canViewSensitive={(e) =>
+					canViewEventSensitiveDetails(e as LocalCalendarEvent)
+				}
+				formatTime={formatTimeForDisplay}
+				parseTimeToMinutes={parseTimeToMinutes}
+				onSelectDay={(day) => {
+					setSelectedDate(day);
+					setCurrentMonth(day);
+				}}
+				onEventClick={(e) => openEditDialog(e as LocalCalendarEvent)}
+				onSlotClick={(day, hour) => openQuickCreate(day, hour)}
+			/>
+		);
+	};
+
+	const renderAgendaView = (
+		eventsToRender: LocalCalendarEvent[] = normalizedEvents,
+	) => {
+		const rangeStart = startOfMonth(currentMonth);
+		const rangeEnd = endOfMonth(currentMonth);
+		return (
+			<AgendaView
+				events={eventsToRender}
+				rangeStart={rangeStart}
+				rangeEnd={rangeEnd}
+				canViewSensitive={(e) =>
+					canViewEventSensitiveDetails(e as LocalCalendarEvent)
+				}
+				formatTime={formatTimeForDisplay}
+				parseTimeToMinutes={parseTimeToMinutes}
+				onEventClick={(e) => openEditDialog(e as LocalCalendarEvent)}
+			/>
+		);
+	};
+
+	const renderActiveView = (eventsToRender: LocalCalendarEvent[]) => {
+		switch (viewMode) {
+			case "day":
+				return renderDayView(eventsToRender);
+			case "week":
+				return renderWeekView(eventsToRender);
+			case "agenda":
+				return renderAgendaView(eventsToRender);
+			default:
+				return renderMonthView(eventsToRender);
+		}
+	};
+
+	const navigatePeriod = (direction: -1 | 1) => {
+		const base = selectedDate || currentMonth;
+		if (viewMode === "day") {
+			const next = direction === 1 ? addDays(base, 1) : subDays(base, 1);
+			setSelectedDate(next);
+			setCurrentMonth(next);
+			return;
+		}
+		if (viewMode === "week") {
+			const next = direction === 1 ? addWeeks(base, 1) : subWeeks(base, 1);
+			setSelectedDate(next);
+			setCurrentMonth(next);
+			return;
+		}
+		setCurrentMonth(
+			direction === 1 ? addMonths(currentMonth, 1) : subMonths(currentMonth, 1),
+		);
+	};
+
+	const periodLabel = (() => {
+		const base = selectedDate || currentMonth;
+		if (viewMode === "day") return format(base, "EEEE, MMMM d, yyyy");
+		if (viewMode === "week") {
+			const ws = startOfWeek(base);
+			const we = endOfWeek(base);
+			return `${format(ws, "MMM d")} – ${format(we, "MMM d, yyyy")}`;
+		}
+		return format(currentMonth, "MMMM yyyy");
+	})();
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 			<div className="space-y-6">
 				{/* Calendar Title and Outlook Status */}
 				<div className="flex items-center justify-between">
-					<h1 className="text-2xl font-bold sidebar-gradient-text">Calendar</h1>
+					<h1 className="h1 capitalize sidebar-gradient-text">Calendar</h1>
 					{outlookConnected && (
-						<div className="flex items-center border border-green-200 rounded-full gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm">
+						<div className="flex items-center border border-green/20 rounded-full gap-1 px-3 py-1 bg-green/10 text-green text-sm">
 							<CheckCircle className="h-4 w-4 text-green" />
 							<span>Outlook</span>
 						</div>
 					)}
 				</div>
 
-				{/* Header */}
-				<div className="flex rounded-t-lg items-center justify-between p-4 border-b bg-white">
-					<div className="flex items-center space-x-4">
-						<div className="flex items-center space-x-2">
-							<Button
-								size="sm"
-								variant="ghost"
-								onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-								className="h-8 w-8 p-0 hover:bg-slate-100"
-							>
-								<ChevronLeft className="h-4 w-4 rotate-90" />
-							</Button>
-							<Button
-								size="sm"
-								variant="ghost"
-								onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-								className="h-8 w-8 p-0 hover:bg-slate-100"
-							>
-								<ChevronRight className="h-4 w-4 rotate-90" />
-							</Button>
-						</div>
-						<div className="text-2xl font-bold sidebar-gradient-text">
-							{format(currentMonth, "MMMM yyyy")}
-						</div>
-						<Button
-							size="sm"
-							variant="outline"
-							onClick={() => {
-								setCurrentMonth(new Date());
-								setSelectedDate(new Date());
-							}}
-							className="bg-white/30 backdrop-blur border border-white/40 shadow-md sidebar-gradient-text hover:bg-white/40"
-						>
-							Today
-						</Button>
-					</div>
-
-					<div className="flex items-center space-x-2">
-						<Tabs
-							value={viewMode}
-							onValueChange={(value) => setViewMode(value as "month" | "week")}
-						>
-							<TabsList className="grid w-full grid-cols-2">
-								<TabsTrigger
-									value="month"
-									className="flex items-center space-x-2"
+				<Card className="glass-card overflow-hidden">
+					<div className="glass-card-cap" />
+					<CardContent className="p-0">
+						{/* Clean toolbar — pt clears absolute glass-card-cap (h-4) */}
+						<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-7 px-4 pb-4 border-b border-slate-200 bg-white/60">
+							<div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => {
+										const today = new Date();
+										setCurrentMonth(today);
+										setSelectedDate(today);
+									}}
+									className="px-3 sm:px-4 border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 cursor-pointer shrink-0"
 								>
-									<Grid3X3 className="h-4 w-4 text-slate-700 flex-shrink-0" />
-									<span className="sidebar-gradient-text">Month</span>
-								</TabsTrigger>
-								<TabsTrigger
-									value="week"
-									className="flex items-center space-x-2"
-								>
-									<CalendarDays className="h-4 w-4 flex-shrink-0" />
-									<span className="sidebar-gradient-text">Week</span>
-								</TabsTrigger>
-							</TabsList>
-						</Tabs>
+									Today
+								</Button>
+								<div className="flex items-center gap-1 shrink-0">
+									<Button
+										size="sm"
+										variant="ghost"
+										onClick={() => navigatePeriod(-1)}
+										className="h-8 w-8 p-0 hover:bg-slate-100 cursor-pointer"
+										aria-label="Previous period"
+									>
+										<ChevronLeft className="h-4 w-4" />
+									</Button>
+									<Button
+										size="sm"
+										variant="ghost"
+										onClick={() => navigatePeriod(1)}
+										className="h-8 w-8 p-0 hover:bg-slate-100 cursor-pointer"
+										aria-label="Next period"
+									>
+										<ChevronRight className="h-4 w-4" />
+									</Button>
+								</div>
+								<div className="text-xl sm:text-2xl font-bold sidebar-gradient-text truncate min-w-0">
+									{periodLabel}
+								</div>
+							</div>
 
-						{/* New Event Button - PRIMARY ACTION (Leftmost for maximum discoverability) */}
+							<div className="flex items-center gap-2 flex-wrap">
+								<Tabs
+									value={viewMode}
+									onValueChange={(value) =>
+										setViewMode(value as CalendarViewMode)
+									}
+								>
+									<TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+										<TabsTrigger
+											value="day"
+											className="hidden sm:flex items-center space-x-1 cursor-pointer"
+										>
+											<CalendarIcon className="h-4 w-4 text-slate-700 shrink-0" />
+											<span className="sidebar-gradient-text">Day</span>
+										</TabsTrigger>
+										<TabsTrigger
+											value="week"
+											className="flex items-center space-x-1 cursor-pointer"
+										>
+											<CalendarDays className="h-4 w-4 shrink-0" />
+											<span className="sidebar-gradient-text">Week</span>
+										</TabsTrigger>
+										<TabsTrigger
+											value="month"
+											className="flex items-center space-x-1 cursor-pointer"
+										>
+											<Grid3X3 className="h-4 w-4 text-slate-700 shrink-0" />
+											<span className="sidebar-gradient-text">Month</span>
+										</TabsTrigger>
+										<TabsTrigger
+											value="agenda"
+											className="flex items-center space-x-1 cursor-pointer"
+										>
+											<List className="h-4 w-4 shrink-0" />
+											<span className="sidebar-gradient-text">Agenda</span>
+										</TabsTrigger>
+									</TabsList>
+								</Tabs>
+
+						{/* New Event Button - PRIMARY ACTION */}
 						<Dialog
 							open={isAddEventOpen}
 							onOpenChange={(open) => {
@@ -4451,49 +4404,19 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							</DialogContent>
 						</Dialog>
 
-						{/* Filter Button - Viewing tools */}
-						<Button
-							size="sm"
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Filter className="h-4 w-4" />
-							Filter
-						</Button>
-
-						{/* Share Button */}
-						<Button
-							size="sm"
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-							onClick={() => setIsSharePrimaryCalendarOpen(true)}
-						>
-							<Share2 className="h-4 w-4" />
-							Share
-						</Button>
-
-						{/* Print Button */}
-						<Button
-							size="sm"
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Printer className="h-4 w-4" />
-							Print
-						</Button>
-
-						{/* Settings Button - Configuration */}
-						<Dialog open={showSettings} onOpenChange={setShowSettings}>
-							<DialogTrigger asChild>
 								<Button
 									size="sm"
 									variant="outline"
-									className="primary-btn px-3 sm:px-4"
+									className="px-3 sm:px-4 border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 cursor-pointer"
+									onClick={() => setIsFiltersDrawerOpen(true)}
 								>
-									<Settings className="h-4 w-4 text-white" />
-									Settings
+									<SlidersHorizontal className="h-4 w-4" />
+									Manage
 								</Button>
-							</DialogTrigger>
+							</div>
+						</div>
+
+						<Dialog open={showSettings} onOpenChange={setShowSettings}>
 							<DialogContent className="sm:max-w-[500px] shadow-xl">
 								<DialogHeader>
 									<DialogTitle className="sidebar-gradient-text">
@@ -4507,250 +4430,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							</DialogContent>
 						</Dialog>
 
-						{/* Sync Button - Utility action */}
-						{outlookConnected && (
-							<Button
-								size="sm"
-								variant="outline"
-								onClick={handleSync}
-								disabled={syncing}
-								className="primary-btn px-3 sm:px-4"
-							>
-								{syncing ? (
-									<>
-										<Loader2 className="h-4 w-4 animate-spin" /> Syncing...
-									</>
-								) : (
-									<>
-										<Loader2 className="h-4 w-4" /> Sync
-									</>
-								)}
-							</Button>
-						)}
-					</div>
-				</div>
-
-				{isApprover && (
-					<div className="border-b border-white/40 bg-gradient-to-r from-slate-50/85 to-white/90 px-6 py-4 shadow-sm backdrop-blur-sm">
-						<div className="flex items-center justify-between mb-1">
-							<div className="flex items-center gap-3">
-								<div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
-									<ClipboardClock className="h-6 w-6 text-[#0f5384]" />
-								</div>
-								<div>
-									<h3 className="text-base font-semibold sidebar-gradient-text">
-										Pending Approvals
-									</h3>
-									<p className="text-xs font-medium text-slate-600 mt-0.5">
-										{approvalsLoading ? (
-											<span className="flex items-center gap-1.5">
-												<Loader2 className="h-3 w-3 animate-spin" />
-												Loading approvals...
-											</span>
-										) : approvals.length > 0 ? (
-											<span className="flex items-center gap-1.5">
-												<AlertCircle className="h-3 w-3 text-amber-500" />
-												{approvals.length}{" "}
-												{approvals.length === 1 ? "request" : "requests"}{" "}
-												awaiting your review
-											</span>
-										) : (
-											<span className="flex items-center gap-1.5 text-green-600">
-												<CheckCircle2 className="h-3 w-3 text-green" />
-												All caught up
-											</span>
-										)}
-									</p>
-								</div>
-							</div>
-							<button
-								onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
-								className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
-								aria-expanded={isApprovalsExpanded}
-								aria-label={
-									isApprovalsExpanded
-										? "Collapse approvals"
-										: "Expand approvals"
-								}
-							>
-								{isApprovalsExpanded ? (
-									<ChevronUp className="h-5 w-5 text-slate-600 group-hover:text-slate-900 transition-colors" />
-								) : (
-									<ChevronDown className="h-5 w-5 text-slate-600 group-hover:text-slate-900 transition-colors" />
-								)}
-							</button>
-						</div>
-						{isApprovalsExpanded && (
-							<div className="mt-4 space-y-2.5 max-h-64 overflow-y-auto pr-1">
-								{!approvalsLoading &&
-									approvals.length > 0 &&
-									approvals.map((approval: CalendarApprovalRequest) => {
-										const summary =
-											(approval.changeSummary as CalendarApprovalChangeSummary) ||
-											{};
-										const after = (summary.after || {}) as Record<
-											string,
-											unknown
-										>;
-										const before = (summary.before || {}) as Record<
-											string,
-											unknown
-										>;
-										const title =
-											(after.title as string) ||
-											(before.title as string) ||
-											"Untitled Event";
-										const sensitivityLevel =
-											(after.sensitivityLevel as CalendarSensitivity) ||
-											approval.sensitivityLevel ||
-											"standard";
-										const submittedTime = approval.submittedAt
-											? new Date(approval.submittedAt)
-											: null;
-										const timeAgo = submittedTime
-											? formatDistanceToNow(submittedTime, {
-													addSuffix: true,
-												})
-											: "recently";
-
-										// Icon and color based on change type
-										const getChangeTypeConfig = (
-											type: string,
-										): {
-											icon: React.ReactNode;
-											color: string;
-											bgColor: string;
-										} => {
-											switch (type) {
-												case "create":
-													return {
-														icon: <CalendarPlus className="h-4 w-4" />,
-														color: "text-green-600",
-														bgColor: "bg-green-50",
-													};
-												case "update":
-													return {
-														icon: <Edit className="h-4 w-4" />,
-														color: "text-blue-600",
-														bgColor: "bg-blue-50",
-													};
-												case "cancel":
-													return {
-														icon: <Trash2 className="h-4 w-4" />,
-														color: "text-red-600",
-														bgColor: "bg-red-50",
-													};
-												default:
-													return {
-														icon: <FileCheck className="h-4 w-4" />,
-														color: "text-slate-600",
-														bgColor: "bg-slate-50",
-													};
-											}
-										};
-
-										const changeTypeConfig = getChangeTypeConfig(
-											approval.changeType,
-										);
-
-										return (
-											<div
-												key={approval.$id}
-												className="group relative rounded-lg border border-slate-200 bg-white px-4 py-3.5 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer"
-												onClick={() => {
-													setSelectedApproval(approval);
-													setIsApprovalDialogOpen(true);
-													setReviewerNotes("");
-												}}
-											>
-												<div className="flex items-start gap-3">
-													<div
-														className={cn(
-															"flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0",
-															changeTypeConfig.bgColor,
-														)}
-													>
-														<div className={changeTypeConfig.color}>
-															{changeTypeConfig.icon}
-														</div>
-													</div>
-													<div className="flex-1 min-w-0">
-														<div className="flex items-start justify-between gap-2 mb-1.5">
-															<h4 className="text-sm font-semibold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
-																{title}
-															</h4>
-															<div className="flex items-center gap-2 flex-shrink-0">
-																<Badge
-																	variant="outline"
-																	className="text-[10px] font-medium px-2 py-0.5 uppercase tracking-wide border-slate-300 text-slate-700"
-																>
-																	{approval.changeType}
-																</Badge>
-																{sensitivityLevel !== "standard" && (
-																	<Badge
-																		className={cn(
-																			"text-[10px] font-medium px-2 py-0.5 border pointer-events-none",
-																			getSensitivityBadgeClasses(
-																				sensitivityLevel,
-																			),
-																		)}
-																	>
-																		{SENSITIVITY_LABELS[sensitivityLevel]}
-																	</Badge>
-																)}
-															</div>
-														</div>
-														<div className="flex items-center gap-3 text-xs text-slate-500">
-															<span className="flex items-center gap-1.5">
-																<Clock className="h-3 w-3" />
-																{timeAgo}
-															</span>
-															{submittedTime && (
-																<span className="text-slate-400">
-																	{format(submittedTime, "MMM d, h:mm a")}
-																</span>
-															)}
-														</div>
-													</div>
-												</div>
-											</div>
-										);
-									})}
-								{!approvalsLoading && approvals.length === 0 && (
-									<div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-										<div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-3">
-											<CheckCircle2 className="h-12 w-12 text-green" />
-										</div>
-										<p className="text-lg font-medium text-slate-700 mb-1">
-											All caught up
-										</p>
-										<p className="text-md text-slate-500">
-											No pending approval requests at this time
-										</p>
-									</div>
-								)}
-								{approvalsLoading && (
-									<div className="flex items-center justify-center py-8">
-										<div className="flex items-center gap-2 text-sm text-slate-500">
-											<Loader2 className="h-4 w-4 animate-spin" />
-											<span>Loading approval requests...</span>
-										</div>
-									</div>
-								)}
-							</div>
-						)}
-					</div>
-				)}
-				{/* Management Buttons */}
-				<div className="flex justify-end gap-4">
-					<SharedCalendarManager />
-					<ResourceManager />
-					<CalendarDelegationManager />
-				</div>
-
-				{/* Calendar View with Sidebar */}
-				<div className="flex gap-0 border border-slate-200 rounded-lg overflow-hidden">
-					{/* Left Sidebar */}
+				{/* Management + Calendar View */}
+				<div className="flex flex-col lg:flex-row gap-0 min-h-[640px]">
 					<CalendarSidebar
 						selectedMyCalendars={selectedMyCalendars}
 						selectedSharedCalendars={selectedSharedCalendars}
@@ -4761,12 +4442,20 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							ownerName: sharedCalendarOwnerNames[cal.$id] || cal.name,
 						}))}
 						loadingSharedCalendars={loadingSharedCalendars}
-					/>
+						selectedDate={selectedDate}
+						currentMonth={currentMonth}
+						onSelectDate={(date) => setSelectedDate(date)}
+						onMonthChange={(month) => setCurrentMonth(month)}
+					>
+						<SharedCalendarManager />
+						<ResourceManager />
+						<CalendarDelegationManager />
+					</CalendarSidebar>
 
 					{/* Calendar Display Area */}
 					<div
 						ref={calendarContainerRef}
-						className={`flex-1 bg-white ${
+						className={`flex-1 bg-white/40 ${
 							(selectedMyCalendars.calendar ? 1 : 0) +
 								(selectedMyCalendars.usHolidays ? 1 : 0) +
 								selectedSharedCalendars.length >
@@ -4819,9 +4508,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 												</div>
 												<Card>
 													<CardContent className="p-0">
-														{viewMode === "month"
-															? renderMonthView(defaultCalendarEvents)
-															: renderWeekView()}
+														{renderActiveView(defaultCalendarEvents)}
 													</CardContent>
 												</Card>
 											</div>
@@ -4848,9 +4535,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 												</div>
 												<Card>
 													<CardContent className="p-0">
-														{viewMode === "month"
-															? renderMonthView(usHolidaysEvents)
-															: renderWeekView()}
+														{renderActiveView(usHolidaysEvents)}
 													</CardContent>
 												</Card>
 											</div>
@@ -4889,9 +4574,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 													</div>
 													<Card>
 														<CardContent className="p-0">
-															{viewMode === "month"
-																? renderMonthView(sharedCalendarEvents)
-																: renderWeekView()}
+															{renderActiveView(sharedCalendarEvents)}
 														</CardContent>
 													</Card>
 												</div>
@@ -4902,7 +4585,51 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							})()}
 						</div>
 					</div>
+
+					{isApprover && (
+						<CalendarApprovalsRail
+							approvals={approvals}
+							isLoading={approvalsLoading}
+							isExpanded={isApprovalsExpanded}
+							onExpandedChange={setIsApprovalsExpanded}
+							onSelectApproval={(approval) => {
+								setSelectedApproval(approval);
+								setIsApprovalDialogOpen(true);
+								setReviewerNotes("");
+							}}
+						/>
+					)}
 				</div>
+
+				<CalendarFiltersDrawer
+					open={isFiltersDrawerOpen}
+					onOpenChange={setIsFiltersDrawerOpen}
+					outlookConnected={outlookConnected}
+					syncing={syncing}
+					onShare={() => setIsSharePrimaryCalendarOpen(true)}
+					onPrint={() => window.print()}
+					onSettings={() => setShowSettings(true)}
+					onSync={() => {
+						void handleSync();
+					}}
+				/>
+
+				<QuickCreateEventPopover
+					open={isQuickCreateOpen}
+					onOpenChange={setIsQuickCreateOpen}
+					anchorDate={quickCreateDate}
+					canCreate={canCreateEvent}
+					creating={creatingEvent}
+					defaultStartTime={
+						quickCreateHour != null
+							? `${String(quickCreateHour).padStart(2, "0")}:00`
+							: "09:00"
+					}
+					onCreate={handleQuickCreate}
+					onMoreOptions={handleQuickCreateMoreOptions}
+				/>
+					</CardContent>
+				</Card>
 
 				{/* Approval Review Dialog */}
 				<Dialog
@@ -6387,7 +6114,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 									onClick={() => setIsShareOpen(false)}
 									className="primary-btn px-3 sm:px-4"
 								>
-									<Trash2 className="w-4 h-4" />
+									<Ban className="w-4 h-4" />
 									Cancel
 								</Button>
 								<Button onClick={handleShare}>Share</Button>
@@ -6455,7 +6182,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 									onClick={cancelDelete}
 									className="primary-btn px-3 sm:px-4"
 								>
-									<Trash2 className="w-4 h-4" />
+									<Ban className="w-4 h-4" />
 									Cancel
 								</Button>
 								<Button

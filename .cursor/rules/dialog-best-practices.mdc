@@ -1,7 +1,7 @@
 ---
-name: dialog-best-practices.mdc
 description: Enterprise/professional UI standards for dialogs and modals
-globs: **/*.{ts,tsx,js,jsx}
+globs: "**/*.{ts,tsx,js,jsx}"
+alwaysApply: false
 ---
 
 **Note**: This file is part of the comprehensive style guide. For the complete single source of truth, see `global-style-guide.mdc`.
@@ -20,7 +20,7 @@ globs: **/*.{ts,tsx,js,jsx}
     <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
     {/* Header with gradient background */}
-    <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
+    <div className="sticky top-0 z-10 bg-linear-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
       <div className="flex items-center gap-3 px-6">
         {/* Title with icon */}
         <div className="flex items-center gap-3">

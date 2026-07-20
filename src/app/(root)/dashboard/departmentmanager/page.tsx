@@ -6,7 +6,7 @@ import {
 	getCurrentUserFrom2FA,
 } from "@/lib/actions/user.actions";
 import { getUnauthorizedDashboardRedirect } from "@/lib/rbac/dashboard-access-policy";
-import ManagerDashboard from "../ManagerDashboard";
+import DepartmentManagerDashboard from "../DepartmentManagerDashboard";
 
 export default async function DepartmentManagerDashboardPage() {
 	let currentUser = await getCurrentUser();
@@ -26,5 +26,5 @@ export default async function DepartmentManagerDashboardPage() {
 		redirect(guard);
 	}
 
-	return <ManagerDashboard />;
+	return <DepartmentManagerDashboard user={currentUser} />;
 }

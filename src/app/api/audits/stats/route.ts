@@ -7,7 +7,6 @@ import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	try {
-		// Check permission
 		const permissionCheck = await requirePermission(request, {
 			permission: PERMISSIONS.AUDIT.VIEW,
 		});
@@ -16,10 +15,8 @@ export async function GET(request: NextRequest) {
 			return permissionCheck;
 		}
 
-		// Cache key for audit stats
 		const cacheKey = CACHE_KEYS.audits.stats();
 
-		// Fetch audit stats with caching (10 minutes TTL)
 		const stats = await CacheManager.withCache(
 			"audits/stats",
 			cacheKey,

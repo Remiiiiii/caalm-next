@@ -577,7 +577,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 								onClick={() => setIsEditDialogOpen(false)}
 								className="primary-btn px-3 sm:px-4 text-xs py-1 h-7"
 							>
-								<Trash2 className="w-4 h-4" />
+								<Ban className="w-4 h-4" />
 								Cancel
 							</Button>
 							<Button
@@ -675,7 +675,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 								onClick={() => setIsEditDialogOpen(false)}
 								className="primary-btn px-3 sm:px-4 text-xs py-1 h-7"
 							>
-								<Trash2 className="w-4 h-4" />
+								<Ban className="w-4 h-4" />
 								Cancel
 							</Button>
 

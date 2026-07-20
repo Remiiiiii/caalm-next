@@ -13,7 +13,7 @@ import {
 	Users,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -76,13 +76,7 @@ export const ResourceManager: React.FC<ResourceManagerProps> = ({
 	});
 	const { toast } = useToast();
 
-	useEffect(() => {
-		if (isOpen) {
-			fetchResources();
-		}
-	}, [isOpen, fetchResources]);
-
-	const fetchResources = async () => {
+	const fetchResources = useCallback(async () => {
 		try {
 			setLoading(true);
 			const response = await fetch("/api/calendar/resources");
@@ -103,7 +97,13 @@ export const ResourceManager: React.FC<ResourceManagerProps> = ({
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [toast]);
+
+	useEffect(() => {
+		if (isOpen) {
+			fetchResources();
+		}
+	}, [isOpen, fetchResources]);
 
 	const handleCreate = async () => {
 		if (!formData.name.trim()) {

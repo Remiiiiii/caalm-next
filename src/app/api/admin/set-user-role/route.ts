@@ -129,6 +129,11 @@ export async function POST(request: NextRequest) {
 			user_email: currentUser.email || "",
 			orgId: targetOrgId,
 			status: "success",
+			module: "governance",
+			target_type: "user_role",
+			target_id: user.$id,
+			target_label: user.email || email,
+			summary: `${(currentUser as { fullName?: string }).fullName || currentUser.email} set role ${roleName} for ${user.email || email}`,
 			metadata: {
 				targetUserId: user.$id,
 				roleId: role.$id,

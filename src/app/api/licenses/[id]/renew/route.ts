@@ -8,6 +8,7 @@ import {
 	generateRequestId,
 	successResponse,
 } from "@/lib/api/licenses/utils/response.util";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 
 export async function POST(
 	request: NextRequest,
@@ -30,6 +31,28 @@ export async function POST(
 		const license = await LicenseService.renewLicense(id, {
 			...validatedData,
 			renewedBy: user.$id,
+		});
+
+		const licenseLabel =
+			(license as { name?: string; title?: string })?.name ||
+			(license as { title?: string })?.title ||
+			id;
+		await logAuditEvent({
+			event_id: `license_renew_${id}`,
+			event_title: `License renewed: ${licenseLabel}`,
+			action: "update",
+			source: "caalm",
+			user_id: user.$id,
+			user_name:
+				(user as { fullName?: string }).fullName || user.email || "unknown",
+			user_email: user.email || "",
+			status: "success",
+			module: "licenses",
+			target_type: "license",
+			target_id: id,
+			target_label: licenseLabel,
+			summary: `${(user as { fullName?: string }).fullName || user.email} renewed license ${licenseLabel}`,
+			correlation_id: requestId,
 		});
 
 		return successResponse(

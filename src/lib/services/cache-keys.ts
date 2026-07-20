@@ -10,6 +10,8 @@ export const CACHE_KEYS = {
 	dashboard: {
 		unified: (orgId: string, userId: string) =>
 			`dashboard:unified:${orgId}:${userId}`,
+		department: (orgId: string, userId: string, division: string) =>
+			`dashboard:department:${orgId}:${userId}:${division}`,
 		stats: (orgId: string) => `dashboard:stats:${orgId}`,
 		invitations: (orgId: string) => `dashboard:invitations:${orgId}`,
 		files: (orgId?: string, limit?: number) =>
@@ -38,7 +40,8 @@ export const CACHE_KEYS = {
 		event: (eventId: string) => `calendar:event:${eventId}`,
 		shared: (userId: string, orgId: string) =>
 			`calendar:shared:${userId}:${orgId}`,
-		holidays: () => `calendar:holidays`,
+		holidays: (year: number, month: number) =>
+			`calendar:holidays:${year}:${month}`,
 	},
 
 	// Notifications
@@ -114,6 +117,7 @@ export const CACHE_KEYS = {
 	audits: {
 		logs: (filters: string) => `audits:logs:${filters}`,
 		stats: () => `audits:stats`,
+		complianceStatus: (userId: string) => `audits:compliance-status:${userId}`,
 	},
 
 	// Search
@@ -169,6 +173,7 @@ export const getTTLForRoute = (route: string): number => {
 	const ttlMap: Record<string, number> = {
 		// Dashboard
 		"dashboard/unified": CACHE_TTLS.veryLong,
+		"dashboard/department": CACHE_TTLS.short, // 2 minutes
 		"dashboard/stats": CACHE_TTLS.medium, // 5 minutes
 		"dashboard/invitations": CACHE_TTLS.medium, // 5 minutes
 		"dashboard/files": CACHE_TTLS.medium, // 5 minutes

@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import * as sdk from "node-appwrite";
 import { ID, Query } from "node-appwrite";
+import { cache } from "react";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,
@@ -579,7 +580,7 @@ export const verifySecret = async ({
 	}
 };
 
-export const getCurrentUser = async () => {
+const getCurrentUserImpl = async () => {
 	try {
 		const { tablesDB, account } = await createSessionClient();
 		const result = await account.get();
@@ -654,16 +655,17 @@ export const getCurrentUser = async () => {
 	}
 };
 
-export const getCurrentUserFrom2FA = async () => {
+const getCurrentUserCached = cache(getCurrentUserImpl);
+
+export async function getCurrentUser() {
+	return getCurrentUserCached();
+}
+
+const getCurrentUserFrom2FAImpl = async () => {
 	try {
 		const cookieStore = await cookies();
 		const hasCompleted2FA = cookieStore.get("2fa_completed");
 		const userIdFromCookie = cookieStore.get("2fa_user_id");
-
-		// console.log('getCurrentUserFrom2FA - Cookie check:', {
-		//   hasCompleted2FA: hasCompleted2FA?.value || 'Not found',
-		//   userIdFromCookie: userIdFromCookie?.value || 'Not found',
-		// });
 
 		if (!hasCompleted2FA?.value || !userIdFromCookie?.value) {
 			console.log(
@@ -672,7 +674,6 @@ export const getCurrentUserFrom2FA = async () => {
 			return null;
 		}
 
-		// Get the actual user data from the database using the stored user ID
 		try {
 			const { tablesDB } = await createAdminClient();
 			const userResponse = await tablesDB.listRows({
@@ -688,15 +689,12 @@ export const getCurrentUserFrom2FA = async () => {
 
 			const user = userResponse.rows[0];
 
-			// Get user's role from database (for calendar permissions compatibility)
-			// Both functions are now cached, so this is fast
 			const defaultOrg = await getUserDefaultOrganization(user.$id);
 			const userRoles = defaultOrg
 				? await getUserRoles(user.$id, defaultOrg.orgId)
 				: [];
 			const roleName = userRoles[0]?.roleName || "";
 
-			// Map new RBAC roles to calendar roles for compatibility
 			let calendarRole: CalendarRole = "viewer";
 			if (roleName === "Super Admin" || roleName === "Organization Admin") {
 				calendarRole = "admin";
@@ -706,7 +704,6 @@ export const getCurrentUserFrom2FA = async () => {
 				calendarRole = "viewer";
 			}
 
-			// Return only the user data, not any client objects
 			return parseStringify({
 				$id: user.$id,
 				fullName: user.fullName,
@@ -732,6 +729,12 @@ export const getCurrentUserFrom2FA = async () => {
 		return null;
 	}
 };
+
+const getCurrentUserFrom2FACached = cache(getCurrentUserFrom2FAImpl);
+
+export async function getCurrentUserFrom2FA() {
+	return getCurrentUserFrom2FACached();
+}
 
 export const signOutUser = async () => {
 	// Clear cookies immediately and redirect - don't wait for Appwrite session deletion

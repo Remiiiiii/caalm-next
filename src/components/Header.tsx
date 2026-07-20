@@ -4,13 +4,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const NAV_LINKS = [
+	{ href: "#features", label: "Features", hideBelowXl: false },
+	{ href: "#how-it-works", label: "How it works", hideBelowXl: false },
+	{ href: "#integrations", label: "Integrations", hideBelowXl: false },
+	{ href: "#pricing", label: "Pricing", hideBelowXl: false },
+	{ href: "#faq", label: "FAQ", hideBelowXl: false },
+	{ href: "#contact", label: "Contact", hideBelowXl: true },
+] as const;
 
 export const Header = () => {
 	const [isOpen, setIsOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
 	const headerRef = useRef(null);
-	// Brute-force: Toggle a boolean once scrollTop >= 64, animate via variants
 	const [scrolled, setScrolled] = useState(false);
+
 	useEffect(() => {
 		const el = window;
 		let raf = 0;
@@ -32,21 +42,9 @@ export const Header = () => {
 	}, []);
 
 	const wrapperVariants = {
-		// Opposite mapping:
-		// - At top (no scroll) show solid, rounded pill (Image 1)
-		// - After threshold show minimal transparent bar (Image 2)
+		// At top of page: transparent + blur (original frosted glass bar)
+		// After scroll: compact frosted pill
 		top: {
-			width: "70%",
-			height: 70,
-			borderRadius: 24,
-			marginTop: 16,
-			boxShadow:
-				"0 4px 32px 0 rgba(16,30,54,0.10), 0 1.5px 4px 0 rgba(16,30,54,0.03)",
-			background: "rgba(255,255,255,0.85)",
-			border: "1px solid rgba(200,200,200,0.18)",
-			transition: { type: "spring", stiffness: 260, damping: 28 },
-		},
-		scrolled: {
 			width: "100%",
 			height: 70,
 			borderRadius: 0,
@@ -54,23 +52,21 @@ export const Header = () => {
 			boxShadow: "none",
 			background: "rgba(255, 255, 255, 0)",
 			border: "1px solid rgba(255, 255, 255, 0)",
-			transition: { type: "spring", stiffness: 260, damping: 28 },
+			transition: { type: "spring" as const, stiffness: 260, damping: 28 },
 		},
-	} as const;
+		scrolled: {
+			width: "min(920px, 88%)",
+			height: 70,
+			borderRadius: 24,
+			marginTop: 16,
+			boxShadow:
+				"0 4px 32px 0 rgba(16,30,54,0.10), 0 1.5px 4px 0 rgba(16,30,54,0.03)",
+			background: "rgba(255,255,255,0.85)",
+			border: "1px solid rgba(200,200,200,0.18)",
+			transition: { type: "spring" as const, stiffness: 260, damping: 28 },
+		},
+	};
 
-	useEffect(() => {
-		let cleanup: (() => void) | undefined;
-		(async () => {
-			const AOS = (await import("aos")).default;
-			AOS.init({ duration: 1500, once: true });
-			cleanup = () => AOS.refreshHard();
-		})();
-		return () => {
-			if (cleanup) cleanup();
-		};
-	}, []);
-
-	// Close menu on outside click
 	useEffect(() => {
 		if (!isOpen) return;
 		function handleClick(e: MouseEvent) {
@@ -97,79 +93,74 @@ export const Header = () => {
 			<motion.div
 				variants={wrapperVariants}
 				initial={false}
-				animate={scrolled ? "top" : "scrolled"}
+				animate={scrolled ? "scrolled" : "top"}
 				style={{
 					marginLeft: "auto",
 					marginRight: "auto",
 					backdropFilter: "blur(16px)",
 					WebkitBackdropFilter: "blur(16px)",
-					border: "1px solid rgba(200,200,200,0.18)",
-					display: "flex",
+					display: "grid",
+					gridTemplateColumns: "auto 1fr auto",
 					alignItems: "center",
-					justifyContent: "space-between",
-					padding: "0 2rem",
+					columnGap: "1.25rem",
+					padding: "0 1.5rem",
 				}}
 				className="transition-all duration-500"
 			>
-				<div className="flex items-center justify-center">
-					<Link href="/">
+				<div className="flex items-center shrink-0 min-w-0">
+					<Link href="/" className="flex items-center gap-1.5">
 						<Image
 							src="/assets/images/logo.svg"
 							alt="Logo"
 							width={40}
 							height={40}
-							className="h-auto w-10"
+							className="h-auto w-9 shrink-0"
 						/>
+						<span
+							className={cn(
+								"font-bold text-slate-700 whitespace-nowrap",
+								scrolled ? "text-lg" : "text-xl sm:text-2xl",
+							)}
+						>
+							Caalm
+						</span>
 					</Link>
-					<span className="ml-1 text-2xl sm:text-xl font-bold text-slate-700">
-						Caalm
-					</span>
 				</div>
-				<nav className="hidden items-center space-x-4 sm:space-x-6 md:flex text-sm md:text-[0.95rem]">
-					<a
-						className="bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
-						href="#features"
-					>
-						Features
-					</a>
-					<a
-						className=" bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
-						href="#solutions"
-					>
-						Solutions
-					</a>
-					<a
-						className=" bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
-						href="#pricing"
-					>
-						Pricing
-					</a>
-					<a
-						className=" bg-clip-text font-medium relative text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4"
-						href="#contact"
-					>
-						Contact
-					</a>
+
+				<nav className="hidden md:flex items-center justify-center gap-3 lg:gap-4 min-w-0 overflow-hidden">
+					{NAV_LINKS.map((link) => (
+						<a
+							key={link.href}
+							className={cn(
+								"font-medium text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4 whitespace-nowrap shrink-0",
+								link.hideBelowXl && "hidden xl:inline",
+							)}
+							href={link.href}
+						>
+							{link.label}
+						</a>
+					))}
 				</nav>
 
-				<div className="hidden md:flex items-center space-x-2 sm:space-x-4">
+				<div className="hidden md:flex items-center justify-end gap-2 shrink-0">
 					<a href="#contact">
 						<Button
 							variant="outline"
-							className="rounded-full border-slate-300 text-slate-700 hover:bg-blue-50 hover:border-blue-300 text-sm cursor-pointer transition-all duration-200"
+							className="rounded-full border-slate-300 text-slate-700 hover:bg-blue-50 hover:border-blue-300 text-sm cursor-pointer transition-all duration-200 whitespace-nowrap"
 						>
 							Contact Sales
 						</Button>
 					</a>
 					<Link href="/sign-in">
-						<Button className="primary-btn px-3 sm:px-4 text-sm cursor-pointer">
+						<Button className="primary-btn px-3 sm:px-4 text-sm cursor-pointer whitespace-nowrap">
 							Sign In
 						</Button>
 					</Link>
 				</div>
 
 				<button
-					className="flex flex-col items-center justify-center border-2 rounded-full lg:hidden z-20 w-10 h-10 border-s4/25 ml-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors bg-white"
+					type="button"
+					className="flex md:hidden flex-col items-center justify-center border-2 rounded-full z-20 w-10 h-10 border-s4/25 justify-self-end focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors bg-white cursor-pointer"
 					onClick={() => setIsOpen((prevState) => !prevState)}
 					aria-label={isOpen ? "Close menu" : "Open menu"}
 				>
@@ -193,7 +184,6 @@ export const Header = () => {
 
 			{isOpen && (
 				<>
-					{/* Backdrop */}
 					<div
 						className="fixed inset-0 z-10 bg-black/30 backdrop-blur-sm"
 						aria-hidden="true"
@@ -203,34 +193,16 @@ export const Header = () => {
 						className="fixed top-16 left-0 right-0 z-20 md:hidden py-6 border-t border-border bg-white w-full px-6 shadow-xl animate-fadeIn"
 					>
 						<nav className="flex flex-col space-y-4 text-sm">
-							<a
-								href="#features"
-								className="text-navy font-medium"
-								onClick={() => setIsOpen(false)}
-							>
-								Features
-							</a>
-							<a
-								href="#solutions"
-								className="text-navy font-medium"
-								onClick={() => setIsOpen(false)}
-							>
-								Solutions
-							</a>
-							<a
-								href="#pricing"
-								className="text-navy font-medium"
-								onClick={() => setIsOpen(false)}
-							>
-								Pricing
-							</a>
-							<a
-								href="#contact"
-								className="text-navy font-medium"
-								onClick={() => setIsOpen(false)}
-							>
-								Contact
-							</a>
+							{NAV_LINKS.map((link) => (
+								<a
+									key={link.href}
+									href={link.href}
+									className="text-navy font-medium"
+									onClick={() => setIsOpen(false)}
+								>
+									{link.label}
+								</a>
+							))}
 							<div className="flex flex-col space-y-2 pt-3">
 								<Link href="/sign-in">
 									<Button
@@ -243,7 +215,7 @@ export const Header = () => {
 								</Link>
 								<Link href="/sign-in">
 									<Button
-										className="justify-start bg-[#2563eb] hover:bg-[#1e40af] text-white w-full"
+										className="justify-start primary-btn w-full"
 										onClick={() => setIsOpen(false)}
 									>
 										Get Started

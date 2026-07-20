@@ -1,3 +1,11 @@
+---
+name: code-review-licenses
+description: >-
+  Checklist and review notes for the CAALM licenses feature (page data flow,
+  filters, API/RBAC, a11y, correctness). Use when reviewing licenses UI, API
+  routes, LicenseService, filters/pagination, or permissions for /licenses.
+---
+
 # Code review: Licenses feature
 
 ## Data flow and patterns

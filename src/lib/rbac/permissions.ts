@@ -6,6 +6,7 @@
 
 "use server";
 
+import { cache } from "react";
 import { Query } from "node-appwrite";
 import type { PermissionKey } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
@@ -99,7 +100,7 @@ export async function hasAllPermissions(
  * Returns array of permission keys
  * Optimized with Redis caching and parallel queries
  */
-export async function getUserPermissions(
+async function getUserPermissionsImpl(
 	userId: string,
 	orgId?: string,
 ): Promise<PermissionKey[]> {
@@ -211,6 +212,15 @@ export async function getUserPermissions(
 	);
 }
 
+const getUserPermissionsCached = cache(getUserPermissionsImpl);
+
+export async function getUserPermissions(
+	userId: string,
+	orgId?: string,
+): Promise<PermissionKey[]> {
+	return getUserPermissionsCached(userId, orgId);
+}
+
 /**
  * Get all roles assigned to a user in an organization
  * Optimized with Redis caching and parallel role name fetching
@@ -223,7 +233,7 @@ export type UserRoleAssignment = {
 	homeDashboardPath?: string | null;
 };
 
-export async function getUserRoles(
+async function getUserRolesImpl(
 	userId: string,
 	orgId: string,
 ): Promise<UserRoleAssignment[]> {
@@ -231,9 +241,8 @@ export async function getUserRoles(
 		return [];
 	}
 
-	// Use Redis cache for user roles
 	const cacheKey = CACHE_KEYS.rbac.userRoles(userId, orgId);
-	const ttl = CACHE_TTLS.veryLong; // 15 minutes
+	const ttl = CACHE_TTLS.veryLong;
 
 	return getOrSet<UserRoleAssignment[]>(
 		cacheKey,
@@ -295,6 +304,64 @@ export async function getUserRoles(
 	);
 }
 
+const getUserRolesCached = cache(getUserRolesImpl);
+
+export async function getUserRoles(
+	userId: string,
+	orgId: string,
+): Promise<UserRoleAssignment[]> {
+	return getUserRolesCached(userId, orgId);
+}
+
+async function getUserDefaultOrganizationImpl(
+	userId: string,
+): Promise<{ orgId: string; orgRole: string } | null> {
+	if (!userId) {
+		return null;
+	}
+
+	const cacheKey = CACHE_KEYS.rbac.defaultOrg(userId);
+	const ttl = CACHE_TTLS.static;
+
+	return getOrSet<{ orgId: string; orgRole: string } | null>(
+		cacheKey,
+		async () => {
+			try {
+				const orgs = await getUserOrganizations(userId);
+				const defaultOrg = orgs.find((o) => o.isDefault);
+
+				if (defaultOrg) {
+					return {
+						orgId: defaultOrg.orgId,
+						orgRole: defaultOrg.orgRole,
+					};
+				}
+
+				if (orgs.length > 0) {
+					return {
+						orgId: orgs[0].orgId,
+						orgRole: orgs[0].orgRole,
+					};
+				}
+
+				return null;
+			} catch (error) {
+				console.error("[getUserDefaultOrganization] Error:", error);
+				return null;
+			}
+		},
+		ttl,
+	);
+}
+
+const getUserDefaultOrganizationCached = cache(getUserDefaultOrganizationImpl);
+
+export async function getUserDefaultOrganization(
+	userId: string,
+): Promise<{ orgId: string; orgRole: string } | null> {
+	return getUserDefaultOrganizationCached(userId);
+}
+
 /**
  * Get all organizations a user belongs to
  */
@@ -326,53 +393,6 @@ export async function getUserOrganizations(
 		);
 		return [];
 	}
-}
-
-/**
- * Get user's default organization
- * Optimized with Redis caching
- */
-export async function getUserDefaultOrganization(
-	userId: string,
-): Promise<{ orgId: string; orgRole: string } | null> {
-	if (!userId) {
-		return null;
-	}
-
-	// Use Redis cache for default organization
-	const cacheKey = CACHE_KEYS.rbac.defaultOrg(userId);
-	const ttl = CACHE_TTLS.static; // 1 hour (rarely changes)
-
-	return getOrSet<{ orgId: string; orgRole: string } | null>(
-		cacheKey,
-		async () => {
-			try {
-				const orgs = await getUserOrganizations(userId);
-				const defaultOrg = orgs.find((o) => o.isDefault);
-
-				if (defaultOrg) {
-					return {
-						orgId: defaultOrg.orgId,
-						orgRole: defaultOrg.orgRole,
-					};
-				}
-
-				// If no default, return first organization
-				if (orgs.length > 0) {
-					return {
-						orgId: orgs[0].orgId,
-						orgRole: orgs[0].orgRole,
-					};
-				}
-
-				return null;
-			} catch (error) {
-				console.error("[getUserDefaultOrganization] Error:", error);
-				return null;
-			}
-		},
-		ttl,
-	);
 }
 
 /**

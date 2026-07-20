@@ -1,10 +1,15 @@
 import Image from "next/image";
 import Card from "@/components/Card";
+import ContractsAttentionStrip from "@/components/ContractsAttentionStrip";
 import ContractsControlBar from "@/components/ContractsControlBar";
 import ContractsHeaderActions from "@/components/ContractsHeaderActions";
 import ContractsMetricsBar from "@/components/ContractsMetricsBar";
 import { ContractsViewProvider } from "@/components/ContractsView";
 import ContractsViewClient from "@/components/ContractsViewClient";
+import {
+	Card as GlassCard,
+	CardContent,
+} from "@/components/ui/card";
 import FileUsageOverview from "@/components/FileUsageOverview";
 import Sort from "@/components/Sort";
 import StorageProgressBar from "@/components/StorageProgressBar";
@@ -236,34 +241,45 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 			{type.toLowerCase() === "contracts" ? (
 				<ContractsViewProvider>
-					<div className="flex items-center gap-4 mb-4 justify-between w-full">
+					<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
 						<h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
+					</div>
+					<div className="mb-6 flex items-center justify-end">
 						<ContractsHeaderActions
 							files={contractDocuments}
-							departments={uniqueDepartments}
-							assignedManagers={uniqueAssignedManagers}
+							userId={user?.$id}
+							accountId={user?.accountId}
 						/>
 					</div>
-					<section className="w-full">
-						<ContractsMetricsBar files={contractDocuments} />
-						<ContractsControlBar files={contractDocuments} />
-					</section>
+					<ContractsAttentionStrip files={contractDocuments} />
+					<ContractsMetricsBar files={contractDocuments} />
 
-					{/* Render the files */}
-					{filteredDocuments.length > 0 ? (
-						<ContractsViewClient files={filteredDocuments} user={user} />
-					) : (
-						<div className="text-center py-12">
-							<Image
-								src="/assets/icons/no-data.svg"
-								alt="No contracts uploaded yet"
-								width={250}
-								height={250}
-								className="mb-4 opacity-60"
+					<GlassCard className="glass-card mb-6">
+						<div className="glass-card-cap" />
+						<CardContent className="p-0">
+							<ContractsControlBar
+								files={contractDocuments}
+								departments={uniqueDepartments}
+								assignedManagers={uniqueAssignedManagers}
 							/>
-							<p className="body-1 text-slate-700">No contracts uploaded yet</p>
-						</div>
-					)}
+							{filteredDocuments.length > 0 ? (
+								<ContractsViewClient files={filteredDocuments} user={user} />
+							) : (
+								<div className="text-center py-12 px-4">
+									<Image
+										src="/assets/icons/no-data.svg"
+										alt="No contracts uploaded yet"
+										width={250}
+										height={250}
+										className="mb-4 opacity-60 mx-auto"
+									/>
+									<p className="body-1 text-slate-700">
+										No contracts uploaded yet
+									</p>
+								</div>
+							)}
+						</CardContent>
+					</GlassCard>
 				</ContractsViewProvider>
 			) : (
 				<>

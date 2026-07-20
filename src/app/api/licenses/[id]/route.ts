@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
 import { licenseCreateSchema } from "@/lib/api/licenses/schemas/license.schema";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
@@ -8,6 +9,7 @@ import {
 	notFoundResponse,
 	successResponse,
 } from "@/lib/api/licenses/utils/response.util";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 
 export async function GET(
 	request: NextRequest,
@@ -49,8 +51,34 @@ export async function PUT(
 		const { id } = await params;
 		const body = await request.json();
 		const validatedData = licenseCreateSchema.partial().parse(body);
+		const user = await getCurrentUser();
 
 		const license = await LicenseService.updateLicense(id, validatedData);
+
+		if (user) {
+			const licenseLabel =
+				(license as { name?: string; title?: string })?.name ||
+				(license as { title?: string })?.title ||
+				id;
+			await logAuditEvent({
+				event_id: `license_update_${id}`,
+				event_title: `License updated: ${licenseLabel}`,
+				action: "update",
+				source: "caalm",
+				user_id: user.$id,
+				user_name:
+					(user as { fullName?: string }).fullName || user.email || "unknown",
+				user_email: user.email || "",
+				status: "success",
+				module: "licenses",
+				target_type: "license",
+				target_id: id,
+				target_label: licenseLabel,
+				summary: `${(user as { fullName?: string }).fullName || user.email} updated license ${licenseLabel}`,
+				correlation_id: requestId,
+				metadata: { updatedFields: Object.keys(validatedData) },
+			});
+		}
 
 		return successResponse(
 			{ license },
@@ -84,8 +112,29 @@ export async function DELETE(
 		if (authError) return authError;
 
 		const { id } = await params;
+		const user = await getCurrentUser();
 
 		await LicenseService.deleteLicense(id);
+
+		if (user) {
+			await logAuditEvent({
+				event_id: `license_delete_${id}`,
+				event_title: `License deleted: ${id}`,
+				action: "delete",
+				source: "caalm",
+				user_id: user.$id,
+				user_name:
+					(user as { fullName?: string }).fullName || user.email || "unknown",
+				user_email: user.email || "",
+				status: "success",
+				module: "licenses",
+				target_type: "license",
+				target_id: id,
+				target_label: id,
+				summary: `${(user as { fullName?: string }).fullName || user.email} deleted license ${id}`,
+				correlation_id: requestId,
+			});
+		}
 
 		return successResponse(
 			{ success: true },

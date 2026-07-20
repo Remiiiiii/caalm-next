@@ -46,14 +46,16 @@ class ErrorBoundary extends Component<Props, State> {
 								We're sorry, but something unexpected happened. Please try
 								again.
 							</p>
-							<button
-								onClick={() =>
-									this.setState({ hasError: false, error: undefined })
-								}
-								className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 cursor-pointer"
-							>
-								Try Again
-							</button>
+							<div className="flex justify-center">
+								<button
+									onClick={() =>
+										this.setState({ hasError: false, error: undefined })
+									}
+									className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 cursor-pointer"
+								>
+									Try Again
+								</button>
+							</div>
 						</div>
 					)
 				);
@@ -69,12 +71,14 @@ class ErrorBoundary extends Component<Props, State> {
 					<p className="text-red-700 mb-4">
 						{this.state.error?.message || "An unexpected error occurred"}
 					</p>
-					<button
-						onClick={() => this.setState({ hasError: false, error: undefined })}
-						className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200 cursor-pointer"
-					>
-						Try Again
-					</button>
+					<div className="flex justify-center">
+						<button
+							onClick={() => this.setState({ hasError: false, error: undefined })}
+							className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200 cursor-pointer"
+						>
+							Try Again
+						</button>
+					</div>
 				</div>
 			);
 		}

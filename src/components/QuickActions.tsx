@@ -8,20 +8,18 @@ import ReportGenerator from "@/components/ReportGenerator";
 import { Button } from "@/components/ui/button";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
-// Lazy load ContractUploadForm for better performance
 const ContractUploadForm = dynamic(
 	() => import("@/components/ContractUploadForm"),
-	{
-		ssr: false,
-		loading: () => null, // No loader for trigger button
-	},
+	{ ssr: false, loading: () => null },
 );
 
-// Lazy load LicenseUploadForm for better performance
 const LicenseUploadForm = dynamic(() => import("@/components/license-upload"), {
 	ssr: false,
-	loading: () => null, // No loader for trigger button
+	loading: () => null,
 });
+
+const quickActionBtn =
+	"primary-btn h-9 px-3.5 sm:px-4 shadow-drop-1 text-xs sm:text-sm whitespace-nowrap gap-1.5 [&_svg]:size-3.5";
 
 interface QuickActionsProps {
 	user?:
@@ -35,21 +33,19 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 	const [reportOpen, setReportOpen] = useState(false);
 	const { roles: userRoles } = useUserRoles();
 
-	// Check if user has IT role
 	const isITUser = useMemo(() => {
 		return userRoles.some((r) => r.roleName === "IT");
 	}, [userRoles]);
 
 	return (
-		<div className="quick-actions-container flex items-center gap-1.5 sm:gap-2 flex-nowrap min-w-0 overflow-x-auto remove-scrollbar">
-			{/* IT users only see Schedule Review and Generate Report */}
+		<div className="quick-actions-container flex flex-nowrap items-center gap-1 sm:gap-1.5 min-w-0 w-full">
 			{!isITUser && user && (
 				<ContractUploadForm
 					ownerId={user.$id}
 					accountId={user.$id}
-					className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2"
+					triggerLabel="Upload Contract"
+					className={quickActionBtn}
 					onSuccess={() => {
-						// Refresh data or show success message
 						console.log("Contract uploaded successfully");
 					}}
 				/>
@@ -59,28 +55,32 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 					<LicenseUploadForm
 						ownerId={user?.$id || ""}
 						accountId={user?.$id || ""}
-						className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2"
+						triggerLabel="Upload License"
+						className={quickActionBtn}
 						onSuccess={() => {
-							// Refresh data or show success message
 							console.log("License uploaded successfully");
 						}}
 					/>
-					<Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
-						<Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-						Upload Audit
+					<Button
+						className={quickActionBtn}
+						title="Upload Audit"
+					>
+						<Calendar className="size-3.5" />
+						Audit
 					</Button>
 				</>
 			)}
-			<Button className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2">
-				<Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-				Schedule Review
+			<Button className={quickActionBtn} title="Schedule Review">
+				<Calendar className="size-3.5" />
+				Schedule
 			</Button>
 			<Button
-				className="primary-btn h-9 sm:h-10 px-4 shadow-drop-1 text-xs whitespace-nowrap flex-shrink-0 gap-2"
+				className={quickActionBtn}
+				title="Generate Report"
 				onClick={() => setReportOpen(true)}
 			>
-				<TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-				Generate Report
+				<TrendingUp className="size-3.5" />
+				Report
 			</Button>
 			<ReportGenerator
 				open={reportOpen}

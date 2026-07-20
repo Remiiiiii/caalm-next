@@ -1,6 +1,5 @@
 ---
-name: general
-description: General development guidelines and tech stack information
+description: General development guidelines, tech stack, and troubleshooting conventions
 alwaysApply: true
 ---
 

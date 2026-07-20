@@ -11,7 +11,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -73,13 +73,7 @@ export const CalendarDelegationManager: React.FC<
 	});
 	const { toast } = useToast();
 
-	useEffect(() => {
-		if (isOpen) {
-			fetchDelegations();
-		}
-	}, [isOpen, fetchDelegations]);
-
-	const fetchDelegations = async () => {
+	const fetchDelegations = useCallback(async () => {
 		try {
 			setLoading(true);
 			const response = await fetch("/api/calendar/delegations");
@@ -95,7 +89,13 @@ export const CalendarDelegationManager: React.FC<
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, []);
+
+	useEffect(() => {
+		if (isOpen) {
+			fetchDelegations();
+		}
+	}, [isOpen, fetchDelegations]);
 
 	const searchUsers = async (query: string) => {
 		if (query.length < 2) {

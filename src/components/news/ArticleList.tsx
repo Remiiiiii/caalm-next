@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 import {
 	AlertCircle,
+	Ban,
 	ChevronLeft,
 	ChevronRight,
 	Edit,
@@ -671,7 +672,10 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogCancel>
+							<Ban className="w-4 h-4" />
+							Cancel
+						</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={() => {
 								if (articleToDelete) {

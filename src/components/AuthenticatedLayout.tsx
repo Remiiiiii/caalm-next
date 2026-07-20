@@ -5,7 +5,6 @@ import type React from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import InactivityDialog from "@/components/InactivityDialog";
 import MobileNavigation from "@/components/MobileNavigation";
-import QuickActions from "@/components/QuickActions";
 import Sidebar from "@/components/Sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { normalizeUserRole, type UserRole } from "@/constants/rbac";
@@ -52,7 +51,7 @@ const AuthenticatedLayout = ({
 					role={normalizedRole}
 					division={user.division}
 				/>
-				<section className="flex h-full w-full flex-1 flex-col">
+				<section className="flex h-full w-full flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
 					<MobileNavigation
 						$id={currentUser.$id}
 						accountId={user.accountId || currentUser.$id}
@@ -61,13 +60,8 @@ const AuthenticatedLayout = ({
 						email={currentUser.email}
 						role={normalizedRole}
 					/>
-					<div className="flex justify-between items-center gap-2 px-3 sm:px-4 py-2 min-w-0">
-						<div className="flex-1 min-w-0">
-							<QuickActions user={currentUser} />
-						</div>
-						<div className="flex-shrink-0">
-							<DashboardHeader user={currentUser} />
-						</div>
+					<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
+						<DashboardHeader user={currentUser} />
 					</div>
 					<div className="main-content">{children}</div>
 				</section>

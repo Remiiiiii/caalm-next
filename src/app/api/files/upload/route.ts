@@ -6,6 +6,7 @@ import {
 	createApiSessionClient,
 } from "@/lib/appwrite/api-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 import { constructFileUrl, getFileType } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
@@ -196,6 +197,28 @@ export async function POST(request: NextRequest) {
 				await storage.deleteFile(appwriteConfig.bucketId, bucketFile.$id);
 				throw new Error("File document creation failed");
 			}
+
+			await logAuditEvent({
+				event_id: `document_upload_${newFile.$id}`,
+				event_title: `Document uploaded: ${bucketFile.name}`,
+				action: "create",
+				source: "caalm",
+				user_id: userId,
+				user_name: userId,
+				user_email: "",
+				status: "success",
+				module: "documents",
+				target_type: "document",
+				target_id: newFile.$id,
+				target_label: bucketFile.name,
+				summary: `Document uploaded: ${bucketFile.name}`,
+				correlation_id: uploadId || undefined,
+				metadata: {
+					bucketFileId: bucketFile.$id,
+					size: bucketFile.sizeOriginal,
+					extension: getFileType(bucketFile.name).extension,
+				},
+			});
 
 			return NextResponse.json({
 				data: newFile,

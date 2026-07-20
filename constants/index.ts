@@ -44,11 +44,6 @@ export const actionsDropdownItems = [
 		value: "assign",
 	},
 	{
-		label: "Delete",
-		icon: "/assets/icons/delete.svg",
-		value: "delete",
-	},
-	{
 		label: "Details",
 		icon: "/assets/icons/info.svg",
 		value: "details",
@@ -77,6 +72,11 @@ export const actionsDropdownItems = [
 		label: "Status",
 		icon: "/assets/icons/contract-status.svg",
 		value: "status",
+	},
+	{
+		label: "Delete",
+		icon: "/assets/icons/delete.svg",
+		value: "delete",
 	},
 ];
 

@@ -22,7 +22,11 @@ interface CompactContractExpiryWidgetProps {
 	isPlaying: boolean;
 	onSilence: () => void;
 	onDismiss: () => void;
+	className?: string;
 }
+
+const COMPACT_HEIGHT =
+	"w-full h-full min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]";
 
 export const CompactContractExpiryWidget: React.FC<
 	CompactContractExpiryWidgetProps
@@ -37,10 +41,13 @@ export const CompactContractExpiryWidget: React.FC<
 	isPlaying,
 	onSilence,
 	onDismiss,
+	className = "",
 }) => {
 	if (isLoading) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card
+				className={`${COMPACT_HEIGHT} glass-card overflow-hidden ${className}`}
+			>
 				<div className="glass-card-cap" />
 				<CardHeader className="pb-3 pt-4 px-4">
 					<div className="flex items-center gap-2">
@@ -63,7 +70,9 @@ export const CompactContractExpiryWidget: React.FC<
 
 	if (error) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card
+				className={`${COMPACT_HEIGHT} glass-card overflow-hidden ${className}`}
+			>
 				<div className="glass-card-cap" />
 				<CardHeader className="pb-3 pt-6 px-4">
 					<div className="flex items-center gap-2">
@@ -83,7 +92,9 @@ export const CompactContractExpiryWidget: React.FC<
 	}
 
 	return (
-		<Card className="glass-card w-full h-[200px] sm:h-[250px] lg:h-[300px] flex flex-col overflow-hidden">
+		<Card
+			className={`glass-card ${COMPACT_HEIGHT} flex flex-col overflow-hidden ${className}`}
+		>
 			<div className="glass-card-cap" />
 			<CardHeader className="pb-2 pt-6 px-4 flex-shrink-0">
 				<div className="flex items-center gap-2 mb-3">

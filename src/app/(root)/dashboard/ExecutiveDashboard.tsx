@@ -12,6 +12,7 @@ import {
 	Users,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { type Models, Query } from "node-appwrite";
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
@@ -64,6 +65,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { useContractExpiryModal } from "@/hooks/useContractExpiryModal";
 import { useContractsExpiring } from "@/hooks/useContractsExpiring";
+import { useDashboardLicenses } from "@/hooks/useDashboardLicenses";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { tablesDB } from "@/lib/appwrite/client";
 import { appwriteConfig } from "@/lib/appwrite/config";
@@ -207,12 +209,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		refresh: refreshUnified,
 	} = useUnifiedDashboardData(orgId || "default_organization");
 
-	// Fetch contracts from /api/contracts/all endpoint
+	// Fetch contracts from /api/contracts/all endpoint (shared by contract widgets)
 	const {
 		contracts: contractsFromApi,
 		isLoading: contractsLoading,
 		refresh: refreshContracts,
 	} = useContractsExpiring();
+
+	// Single licenses fetch shared by license widgets
+	const { licenses: dashboardLicenses } = useDashboardLicenses();
 
 	// Contract expiry modal hook - uses contracts from /api/contracts/all
 	const {
@@ -229,14 +234,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		refreshUnified();
 		refreshContracts();
 	};
-
-	// Debug logging
-	console.log("ExecutiveDashboard Debug:", {
-		orgId,
-		unifiedLoading,
-		filesLength: files?.length || 0,
-		files: files?.slice(0, 3) || [],
-	});
 
 	// Invitation management functions
 	const createInvitation = async (invitationData: Record<string, unknown>) => {
@@ -820,10 +817,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 										maxVisible={2}
 										showSettings={false}
 										compact={true}
+										contracts={contractsFromApi}
 									/>
 								</div>
 								<div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[425px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0 h-fit">
-									<ContractStatusPieChart />
+									<ContractStatusPieChart contracts={contractsFromApi} />
 								</div>
 							</div>
 
@@ -843,10 +841,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							{/* Page 3: License Status, License Expiry Alerts */}
 							<div className="flex items-center gap-3 sm:gap-2 lg:gap-3 xl:gap-3 2xl:gap-3 3xl:gap-3 4xl:gap-3 min-w-full -ml-6 flex-shrink-0 mx-auto">
 								<div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[425px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0 h-fit">
-									<LicenseStatusPieChart />
+									<LicenseStatusPieChart licenses={dashboardLicenses} />
 								</div>
 								<div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[535px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0 h-fit">
-									<LicenseExpiryAlertsWidget maxVisible={2} compact={true} />
+									<LicenseExpiryAlertsWidget
+										maxVisible={2}
+										compact={true}
+										licenses={dashboardLicenses}
+									/>
 								</div>
 							</div>
 						</div>
@@ -1023,15 +1025,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 														<Button
 															size="sm"
 															variant="outline"
-															className="glass-card text-slate-700 hover:opacity-80"
+															className="glass-card text-slate-700 hover:opacity-80 cursor-pointer"
+															asChild
 														>
-															Deny
-														</Button>
-														<Button
-															size="sm"
-															className="glass-card text-slate-700 hover:opacity-80"
-														>
-															Approve
+															<Link href="/contracts/approvals">Review</Link>
 														</Button>
 													</div>
 												</div>
@@ -1050,6 +1047,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												)}
 											</div>
 										))}
+										<Button
+											asChild
+											className="primary-btn w-full cursor-pointer"
+										>
+											<Link href="/contracts/approvals">
+												Open approvals inbox
+											</Link>
+										</Button>
 									</div>
 								</CardContent>
 							</Card>
@@ -1401,7 +1406,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 											disabled={false}
 											className="primary-btn px-3 sm:px-4"
 										>
-											<Trash2 className="w-4 h-4" />
+											<Ban className="w-4 h-4" />
 											Cancel
 										</Button>
 										<Button type="submit" disabled={false}>

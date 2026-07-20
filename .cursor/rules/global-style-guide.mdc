@@ -1,7 +1,6 @@
 ---
-name: global-style-guide
-description: Single source of truth for all UI/UX styling standards, page structure, and component patterns
-globs: **/*.{ts,tsx,js,jsx,css}
+description: Single source of truth for UI/UX styling, page structure, and component patterns
+globs: "**/*.{ts,tsx,js,jsx,css}"
 alwaysApply: true
 ---
 

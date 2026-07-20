@@ -1,13 +1,11 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
 description: Best practices for schema validation with Zod
-globs: **/*.{ts,tsx}
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
 ---
+
+# Zod
 
 - Define schemas for data validation to ensure type safety.
 - Use Zod's built-in methods for complex validations.
-
 - Integrate Zod with React Hook Form for seamless form validation.

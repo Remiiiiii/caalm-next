@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { applyLicenseFilters } from "@/lib/licenses/applyLicenseFilters";
+import { matchesStatusTab } from "@/lib/licenses/licensesListUtils";
 import type { License } from "@/types/licenses";
-import LicensesView, { useLicensesFilter } from "./LicensesView";
+import LicensesView, { useLicensesView } from "./LicensesView";
 
 interface LicensesViewClientProps {
 	licenses: License[];
@@ -18,16 +19,17 @@ export default function LicensesViewClient({
 	user,
 }: LicensesViewClientProps) {
 	const router = useRouter();
-	const { filters } = useLicensesFilter();
+	const { filters, statusTab } = useLicensesView();
 
 	const handleRefresh = () => {
 		router.refresh();
 	};
 
-	const filteredLicenses = useMemo(
-		() => applyLicenseFilters(licenses, filters),
-		[licenses, filters],
-	);
+	const filteredLicenses = useMemo(() => {
+		return applyLicenseFilters(licenses, filters).filter((license) =>
+			matchesStatusTab(license, statusTab),
+		);
+	}, [licenses, filters, statusTab]);
 
 	return (
 		<LicensesView

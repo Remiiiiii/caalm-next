@@ -372,6 +372,8 @@ const Sidebar = memo(({ name, avatar, email, role, division }: Props) => {
 				permissions: [
 					PERMISSIONS.CALENDAR.VIEW_TEAM,
 					PERMISSIONS.CONTRACTS.VIEW,
+					PERMISSIONS.CONTRACTS.REVIEW,
+					PERMISSIONS.CONTRACTS.APPROVE,
 				],
 			},
 			Viewer: {

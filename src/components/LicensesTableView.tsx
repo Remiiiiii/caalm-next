@@ -27,47 +27,47 @@ import LicenseActionDropdown from "./licenses/LicenseActionDropdown";
 import ManagerAvatars from "./ManagerAvatars";
 import Thumbnail from "./Thumbnail";
 
-// Map license status to badge color and label
+// Map license status to badge color and label (aligned with contracts / style guide)
 const statusBadge = (status: string) => {
 	let color = "";
 	let label = status;
 	switch (status) {
 		case "pending-review":
 			color =
-				"border-2 border-amber-400 bg-[#FFEA99] text-[#E86100] text-xs rounded-xl font-medium";
+				"border border-orange/20 bg-orange/10 text-orange text-xs rounded-md font-medium";
 			label = "Pending Review";
 			break;
 		case "action-required":
 			color =
-				"border-2 border-red-400 bg-destructive/10 text-destructive text-xs rounded-xl font-medium";
+				"border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium";
 			label = "Action Required";
 			break;
 		case "active":
 			color =
-				"border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D] text-xs rounded-xl font-medium";
+				"border border-green/20 bg-green/10 text-green text-xs rounded-md font-medium";
 			label = "Active";
 			break;
 		case "inactive":
 			color =
-				"border-2 border-slate-500 bg-[#D3D3D3] text-[#878787] text-xs rounded-xl font-medium";
+				"border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-md font-medium";
 			label = "Inactive";
 			break;
 		case "expired":
 			color =
-				"border-2 border-purple-600 bg-purple-50 text-purple-900 text-xs rounded-xl font-medium";
+				"border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium";
 			label = "Expired";
 			break;
 		case "suspended":
 			color =
-				"border-2 border-slate-400 bg-slate-300 text-slate-700 text-xs rounded-xl font-medium";
+				"border border-slate-200 bg-slate-100 text-slate-700 text-xs rounded-md font-medium";
 			label = "Suspended";
 			break;
 		default:
 			color =
-				"border-2 border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-xl font-medium";
+				"border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-md font-medium";
 			label = status;
 	}
-	return <span className={`inline-block px-2 py-1 ${color}`}>{label}</span>;
+	return <span className={`inline-block px-1.5 py-0.5 ${color}`}>{label}</span>;
 };
 
 interface LicensesTableViewProps {

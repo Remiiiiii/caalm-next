@@ -1,13 +1,11 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
-description: Best practices for form handling with React Hook Form
-globs: **/*.{ts,tsx,js,jsx}
+description: Best practices for Vite applications
+globs: "**/vite.config.{ts,js},**/*.{ts,tsx,js,jsx}"
+alwaysApply: false
 ---
 
-- Use `useForm` to manage form state and validation.
-- Integrate with `zod` for schema validation.
+# Vite
 
-- Leverage `Controller` for custom components to maintain compatibility with React Hook Form.
+- Use Vite's built-in features for fast development and hot module replacement.
+- Optimize build performance by configuring `build.rollupOptions` in `vite.config.js`.
+- Leverage Vite plugins for enhanced functionality, such as `@vitejs/plugin-react-swc` for React support.

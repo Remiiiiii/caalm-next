@@ -39,7 +39,12 @@ export const DASHBOARD_ROUTE_POLICY: DashboardPolicyEntry[] = [
 	},
 	{
 		pathPrefix: "/dashboard/departmentmanager",
-		anyOf: [PERMISSIONS.CALENDAR.VIEW_TEAM, PERMISSIONS.CONTRACTS.VIEW],
+		anyOf: [
+			PERMISSIONS.CALENDAR.VIEW_TEAM,
+			PERMISSIONS.CONTRACTS.VIEW,
+			PERMISSIONS.CONTRACTS.REVIEW,
+			PERMISSIONS.CONTRACTS.APPROVE,
+		],
 		allowedRoleIds: ["role_dept_manager"],
 	},
 	{

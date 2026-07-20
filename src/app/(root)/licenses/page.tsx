@@ -2,12 +2,16 @@ import { unstable_cache } from "next/cache";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Query } from "node-appwrite";
+import LicensesAttentionStrip from "@/components/LicensesAttentionStrip";
 import LicensesControlBar from "@/components/LicensesControlBar";
 import LicensesHeaderActions from "@/components/LicensesHeaderActions";
 import LicensesMetricsBar from "@/components/LicensesMetricsBar";
 import { LicensesViewProvider } from "@/components/LicensesView";
 import LicensesViewClient from "@/components/LicensesViewClient";
-import LicenseForm from "@/components/licenses/LicenseForm";
+import {
+	Card as GlassCard,
+	CardContent,
+} from "@/components/ui/card";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
@@ -36,7 +40,6 @@ const Page = async () => {
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		const orgId = defaultOrg?.orgId || user.orgId || "default-org";
 
-		// Short-lived cache per org; invalidation on create/update/delete can be added later (e.g. revalidateTag).
 		const getCachedLicenses = unstable_cache(
 			async () => {
 				const { tablesDB } = await createAdminClient();
@@ -61,7 +64,6 @@ const Page = async () => {
 		licenses = [];
 	}
 
-	// Extract unique departments and assigned managers for filters
 	const uniqueDepartments = Array.from(
 		new Set(
 			licenses
@@ -81,38 +83,44 @@ const Page = async () => {
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 			<LicensesViewProvider>
-				<div className="flex items-center gap-4 mb-4 justify-between w-full">
+				<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
 					<h1 className="h1 capitalize sidebar-gradient-text">Licenses</h1>
+				</div>
+				<div className="mb-6 flex items-center justify-end">
 					<LicensesHeaderActions
 						licenses={licenses}
-						departments={uniqueDepartments}
-						assignedManagers={uniqueAssignedManagers}
+						userId={user.$id}
+						accountId={user.accountId}
 					/>
 				</div>
 
-				<div className="mb-6 flex items-center justify-end">
-					<LicenseForm />
-				</div>
+				<LicensesAttentionStrip licenses={licenses} />
+				<LicensesMetricsBar licenses={licenses} />
 
-				<section className="w-full">
-					<LicensesMetricsBar licenses={licenses} />
-					<LicensesControlBar licenses={licenses} />
-				</section>
-
-				{licenses.length > 0 ? (
-					<LicensesViewClient licenses={licenses} user={user} />
-				) : (
-					<div className="flex flex-col items-center justify-center min-h-[60vh] py-12">
-						<Image
-							src="/assets/icons/no-data.svg"
-							alt="No licenses found"
-							width={250}
-							height={250}
-							className="mb-4 opacity-60"
+				<GlassCard className="glass-card mb-6">
+					<div className="glass-card-cap" />
+					<CardContent className="p-0">
+						<LicensesControlBar
+							licenses={licenses}
+							departments={uniqueDepartments}
+							assignedManagers={uniqueAssignedManagers}
 						/>
-						<p className="body-1 text-slate-700">No licenses found</p>
-					</div>
-				)}
+						{licenses.length > 0 ? (
+							<LicensesViewClient licenses={licenses} user={user} />
+						) : (
+							<div className="text-center py-12 px-4">
+								<Image
+									src="/assets/icons/no-data.svg"
+									alt="No licenses found"
+									width={250}
+									height={250}
+									className="mb-4 opacity-60 mx-auto"
+								/>
+								<p className="body-1 text-slate-700">No licenses found</p>
+							</div>
+						)}
+					</CardContent>
+				</GlassCard>
 			</LicensesViewProvider>
 		</div>
 	);
