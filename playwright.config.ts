@@ -42,10 +42,7 @@ export default defineConfig({
 				...devices["Desktop Chrome"],
 				// No storageState = no authentication
 			},
-			testIgnore: [
-				"**/components/notification-/**",
-				"**/contract-expiry-alerts.spec.ts",
-			],
+			testIgnore: ["**/components/notification-/**"],
 		},
 	],
 
