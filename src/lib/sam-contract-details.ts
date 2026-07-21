@@ -350,7 +350,7 @@ export function parseSAMApiResponse(
 						attachment && (attachment.url || attachment.href),
 				)
 				.map((attachment: Record<string, unknown>) => ({
-					title:
+					filename:
 						(attachment.title as string) ||
 						(attachment.name as string) ||
 						(attachment.filename as string) ||

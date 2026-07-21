@@ -270,7 +270,7 @@ export class CacheManager {
 			// This ensures cache is populated before first user request
 			const dashboardKey = CACHE_KEYS.dashboard.unified(orgId, userId);
 			const existingCache = await import("./redis-cache").then((m) =>
-				m.get(dashboardKey),
+				m.get<{ timestamp?: number }>(dashboardKey),
 			);
 
 			// Only warm up if cache is empty or stale (older than 10 minutes)

@@ -3,7 +3,7 @@
  * Organization-scoped role management
  */
 
-import { ID, Query } from "node-appwrite";
+import { ID, type Models, Query } from "node-appwrite";
 import type { PermissionKey } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
@@ -342,7 +342,7 @@ export async function assignPermissionsToRole(
 			newIds,
 			ROLE_PERM_WRITE_CONCURRENCY,
 			(permissionId) =>
-				tablesDB.createRow({
+				tablesDB.createRow<Models.DefaultRow>({
 					databaseId,
 					tableId: "role_permissions",
 					rowId: ID.unique(),

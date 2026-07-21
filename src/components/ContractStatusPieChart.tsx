@@ -3,8 +3,8 @@
 import { AlertTriangle, CheckCircle, FileText } from "lucide-react";
 import type React from "react";
 import { useMemo } from "react";
-import useSWR from "swr";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { swrConfig, swrKeys } from "@/lib/swr-config";
 import type { UIFileDoc } from "@/types/files";
@@ -28,12 +28,18 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 	contracts: propContracts,
 }) => {
 	const skipFetch = propContracts != null || propData != null;
-	const { data: fetchedContracts, isLoading, error: contractsError } = useSWR<
-		UIFileDoc[]
-	>(skipFetch ? null : swrKeys.allContracts(), swrConfig.fetcher ?? null, {
-		...swrConfig,
-		revalidateOnFocus: false,
-	});
+	const {
+		data: fetchedContracts,
+		isLoading,
+		error: contractsError,
+	} = useSWR<UIFileDoc[]>(
+		skipFetch ? null : swrKeys.allContracts(),
+		swrConfig.fetcher ?? null,
+		{
+			...swrConfig,
+			revalidateOnFocus: false,
+		},
+	);
 
 	const contracts = propContracts ?? fetchedContracts ?? [];
 

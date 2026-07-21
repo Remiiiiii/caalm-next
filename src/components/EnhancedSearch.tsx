@@ -51,25 +51,6 @@ const EnhancedSearch: React.FC<EnhancedSearchProps> = ({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const searchStartTime = useRef<number>(0);
 
-	// Load search history and analytics on mount
-	useEffect(() => {
-		if (user?.$id) {
-			loadSearchHistory();
-			if (showAnalytics) {
-				loadAnalytics();
-			}
-		}
-	}, [user?.$id, showAnalytics, loadAnalytics, loadSearchHistory]);
-
-	// Load suggestions when query changes
-	useEffect(() => {
-		if (query.length >= 2) {
-			loadSuggestions(query);
-		} else {
-			setSuggestions([]);
-		}
-	}, [query, loadSuggestions]);
-
 	const loadSearchHistory = async () => {
 		try {
 			const history = localStorage.getItem(`search_history_${user?.$id}`);
@@ -95,7 +76,7 @@ const EnhancedSearch: React.FC<EnhancedSearchProps> = ({
 	const loadSuggestions = async (searchQuery: string) => {
 		try {
 			const [apiSuggestions, recentSearches] = await Promise.all([
-				getSearchSuggestions(searchQuery, 5),
+				getSearchSuggestions(searchQuery),
 				Promise.resolve(searchHistory.slice(0, 3)),
 			]);
 
@@ -136,6 +117,25 @@ const EnhancedSearch: React.FC<EnhancedSearchProps> = ({
 			console.error("Failed to load suggestions:", error);
 		}
 	};
+
+	// Load search history and analytics on mount
+	useEffect(() => {
+		if (user?.$id) {
+			loadSearchHistory();
+			if (showAnalytics) {
+				loadAnalytics();
+			}
+		}
+	}, [user?.$id, showAnalytics, loadAnalytics, loadSearchHistory]);
+
+	// Load suggestions when query changes
+	useEffect(() => {
+		if (query.length >= 2) {
+			loadSuggestions(query);
+		} else {
+			setSuggestions([]);
+		}
+	}, [query, loadSuggestions]);
 
 	const saveToHistory = (searchQuery: string) => {
 		if (!user?.$id || !searchQuery.trim()) return;

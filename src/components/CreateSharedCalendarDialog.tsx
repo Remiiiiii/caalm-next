@@ -142,7 +142,7 @@ export const CreateSharedCalendarDialog: React.FC<
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col">
+			<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] p-0 max-h-[90vh] flex flex-col">
 				<VisuallyHiddenPrimitive.Root>
 					<DialogTitle>Create Shared Calendar</DialogTitle>
 					<DialogDescription>

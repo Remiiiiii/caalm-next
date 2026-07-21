@@ -16,7 +16,7 @@ import { sendCalendarSharedNotification } from "@/lib/services/calendar-notifica
  */
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { calendarId: string } },
+	{ params }: { params: Promise<{ calendarId: string }> },
 ) {
 	try {
 		const userId = await getCurrentUserId();

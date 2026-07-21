@@ -6,7 +6,7 @@
 
 export default function InfrastructurePage() {
 	return (
-		<div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+		<div className="page-container py-6">
 			<div className="glass-card w-full overflow-hidden">
 				<div className="glass-card-cap" />
 				<div className="glass-dialog-wizard-header mt-4">

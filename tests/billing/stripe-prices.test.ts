@@ -3,10 +3,7 @@
  */
 
 import { afterEach, describe, expect, it } from "vitest";
-import {
-	getPriceId,
-	getTierFromPriceId,
-} from "@/lib/stripe/prices";
+import { getPriceId, getTierFromPriceId } from "@/lib/stripe/prices";
 
 const PRICE_ENV = {
 	STRIPE_PRICE_STARTER_MONTHLY: "price_starter_monthly",

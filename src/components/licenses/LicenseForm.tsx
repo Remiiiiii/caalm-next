@@ -204,7 +204,7 @@ export default function LicenseForm({
 								)}
 							/>
 
-							<div className="grid grid-cols-2 gap-4">
+							<div className="responsive-form-grid">
 								<FormField
 									control={control}
 									name="licenseNumber"
@@ -248,7 +248,7 @@ export default function LicenseForm({
 								)}
 							/>
 
-							<div className="grid grid-cols-2 gap-4">
+							<div className="responsive-form-grid">
 								<FormField
 									control={control}
 									name="licenseType"
@@ -432,7 +432,7 @@ export default function LicenseForm({
 								/>
 							</div>
 
-							<div className="grid grid-cols-2 gap-4">
+							<div className="responsive-form-grid">
 								<FormField
 									control={control}
 									name="issuingAuthority"

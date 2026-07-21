@@ -342,10 +342,6 @@ const PieChartRepresentation: React.FC<{
 								marginBottom: 8,
 								borderWidth: 2,
 								borderColor: "#ffffff",
-								shadowColor: "#000",
-								shadowOffset: { width: 0, height: 2 },
-								shadowOpacity: 0.1,
-								shadowRadius: 4,
 							}}
 						/>
 						<Text

@@ -22,7 +22,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import type { AuditChangeDiff, AuditModule } from "@/lib/audits/audit-log.utils";
+import type {
+	AuditChangeDiff,
+	AuditModule,
+} from "@/lib/audits/audit-log.utils";
 
 export interface AuditLog {
 	event_id: string;
@@ -299,8 +302,9 @@ export function AuditLogTable({
 					{onPageChange && total > 0 ? (
 						<div className="flex items-center justify-between mt-4 text-xs text-slate-600">
 							<span>
-								Showing {(page - 1) * (logs.length || 50) + (logs.length ? 1 : 0)}
-								–{(page - 1) * 50 + logs.length} of {total}
+								Showing{" "}
+								{(page - 1) * (logs.length || 50) + (logs.length ? 1 : 0)}–
+								{(page - 1) * 50 + logs.length} of {total}
 							</span>
 							{totalPages > 1 ? (
 								<div className="flex items-center gap-2">

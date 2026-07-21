@@ -4,7 +4,7 @@
 
 export interface Contract {
 	$id: string;
-	contractName: string;
+	contractName?: string;
 	name?: string;
 	contractExpiryDate?: string;
 	isExpired?: boolean; // From database

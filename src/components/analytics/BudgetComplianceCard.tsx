@@ -131,7 +131,7 @@ const BudgetComplianceCard = () => {
 		<div className="z-50 mt-[-200px] flex gap-6 ml-auto pr-6">
 			{/* Contractual Compliance Card */}
 			<Card
-				className={`transition-all duration-300 ease-in-out w-[490px] ${
+				className={`transition-all duration-300 ease-in-out w-full max-w-[490px] ${
 					complianceHovered
 						? "scale-105 shadow-2xl bg-white/70 border-white/50"
 						: "bg-white/60 backdrop-blur-md border-white/40 shadow-lg"
@@ -243,8 +243,8 @@ const BudgetComplianceCard = () => {
 								tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
 							/>
 							<Tooltip
-								formatter={(value: number) => [
-									`$${value.toLocaleString()}`,
+								formatter={(value) => [
+									`$${Number(value).toLocaleString()}`,
 									"Amount",
 								]}
 								contentStyle={{

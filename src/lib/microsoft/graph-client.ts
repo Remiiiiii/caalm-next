@@ -1,4 +1,3 @@
-import { Client } from "@microsoft/microsoft-graph-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { isTokenExpired, refreshAccessToken } from "./oauth";
 
@@ -69,17 +68,6 @@ export class MicrosoftGraphClient {
 		this.accessToken = accessToken;
 		this.refreshToken = refreshToken;
 		this.tokenExpiry = tokenExpiry;
-
-		// Initialize the Graph client with a minimal auth provider
-		// We'll handle authentication manually in each method, but the SDK requires an auth provider
-		this.client = Client.init({
-			authProvider: {
-				getAccessToken: async () => {
-					// Return the current access token - we'll refresh manually if needed
-					return this.accessToken;
-				},
-			},
-		});
 	}
 
 	/**
@@ -209,7 +197,7 @@ export class MicrosoftGraphClient {
 				const outlookTimezone =
 					timezone === "America/New_York" ? "Eastern Standard Time" : timezone; // Use server timezone dynamically
 
-				const response = await fetch(nextLink, {
+				const response: Response = await fetch(nextLink, {
 					headers: {
 						Authorization: `Bearer ${this.accessToken}`,
 						"Content-Type": "application/json",
@@ -225,7 +213,10 @@ export class MicrosoftGraphClient {
 					);
 				}
 
-				const data = await response.json();
+				const data: {
+					value?: GraphEvent[];
+					"@odata.nextLink"?: string;
+				} = await response.json();
 
 				// Add events from this page
 				if (data.value && Array.isArray(data.value)) {

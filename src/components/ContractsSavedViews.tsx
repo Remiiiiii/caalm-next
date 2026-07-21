@@ -2,6 +2,7 @@
 
 import { Bookmark, BookmarkPlus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useContractsView } from "@/components/ContractsViewContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,15 +10,10 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { useContractsView } from "@/components/ContractsViewContext";
 
 export default function ContractsSavedViews() {
-	const {
-		savedViews,
-		saveCurrentView,
-		applySavedView,
-		deleteSavedView,
-	} = useContractsView();
+	const { savedViews, saveCurrentView, applySavedView, deleteSavedView } =
+		useContractsView();
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
 

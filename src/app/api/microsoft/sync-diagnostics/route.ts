@@ -1,8 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getCalendarEvents } from "@/lib/actions/calendar.actions";
+import {
+	type CalendarEvent,
+	getCalendarEvents,
+} from "@/lib/actions/calendar.actions";
 import { getValidIntegration } from "@/lib/actions/calendar-integration.actions";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
-import { createGraphClient } from "@/lib/microsoft/graph-client";
+import {
+	createGraphClient,
+	type GraphEvent,
+} from "@/lib/microsoft/graph-client";
 import { detectConflict, validateEventForSync } from "@/lib/microsoft/sync";
 
 export async function GET(_request: NextRequest) {
@@ -60,7 +66,7 @@ export async function GET(_request: NextRequest) {
 		}
 
 		// Fetch CAALM events
-		let caalmEvents = [];
+		let caalmEvents: CalendarEvent[] = [];
 		const caalmErrors = [];
 		try {
 			caalmEvents = await getCalendarEvents();
@@ -74,7 +80,7 @@ export async function GET(_request: NextRequest) {
 		}
 
 		// Fetch Outlook events
-		let outlookEvents = [];
+		let outlookEvents: GraphEvent[] = [];
 		const outlookErrors = [];
 		try {
 			const calendars = await graphClient.getCalendars();
@@ -113,7 +119,7 @@ export async function GET(_request: NextRequest) {
 							caalmEvent: {
 								id: caalmEvent.$id,
 								title: caalmEvent.title,
-								date: caalmEvent.date,
+								date: caalmEvent.startDate,
 							},
 							outlookEvent: {
 								id: outlookEvent.id,

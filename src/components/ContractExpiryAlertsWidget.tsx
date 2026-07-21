@@ -94,7 +94,9 @@ const ContractExpiryAlertsWidget = ({
 	 * - ONE_YEAR (365): Show contracts expiring in 181-365 days
 	 * Default is THIRTY_DAYS (30 days)
 	 */
-	const [filterDays, setFilterDays] = useState(FILTER_VALUES.THIRTY_DAYS);
+	const [filterDays, setFilterDays] = useState<number>(
+		FILTER_VALUES.THIRTY_DAYS,
+	);
 	const [isMinimized, setIsMinimized] = useState(false);
 
 	// Ensure contracts is always an array for stable hook dependencies

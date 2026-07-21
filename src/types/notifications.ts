@@ -6,7 +6,6 @@ export interface NotificationSettingsDoc {
 	phone_number?: string;
 	notification_types: string[];
 	frequency: "instant" | "daily" | "weekly";
-	phone_number?: string;
 }
 
 export interface UpsertNotificationSettingsRequest {
@@ -16,7 +15,6 @@ export interface UpsertNotificationSettingsRequest {
 	phoneNumber?: string;
 	notificationTypes?: string[];
 	frequency?: "instant" | "daily" | "weekly";
-	phoneNumber?: string;
 }
 
 // Enhanced Notification System Types

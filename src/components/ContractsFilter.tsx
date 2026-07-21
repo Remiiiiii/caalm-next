@@ -170,7 +170,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Uploaded On</Label>
-							<div className="grid grid-cols-2 gap-2">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 								<Popover>
 									<PopoverTrigger asChild>
 										<Button
@@ -218,7 +218,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Expires On</Label>
-							<div className="grid grid-cols-2 gap-2">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 								<Popover>
 									<PopoverTrigger asChild>
 										<Button

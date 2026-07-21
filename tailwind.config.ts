@@ -2,7 +2,7 @@ import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
-	darkMode: ["class"],
+	darkMode: "class",
 	content: [
 		"./pages/**/*.{ts,tsx}",
 		"./components/**/*.{ts,tsx}",
@@ -122,4 +122,4 @@ export default {
 		"shad-active",
 		// add any other dynamic classes here if needed
 	],
-} satisfies Config;
+} as Config;

@@ -19,8 +19,8 @@ export function validateBody<T>(
 			const result = schema.safeParse(body);
 			if (!result.success) {
 				const requestId = generateRequestId();
-				const errors = result.error.errors.reduce(
-					(acc, err) => {
+				const errors = result.error.issues.reduce(
+					(acc: Record<string, string[]>, err) => {
 						const path = err.path.join(".");
 						if (!acc[path]) {
 							acc[path] = [];
@@ -59,8 +59,8 @@ export function validateQuery<T>(
 	const result = schema.safeParse(params);
 	if (!result.success) {
 		const requestId = generateRequestId();
-		const errors = result.error.errors.reduce(
-			(acc, err) => {
+		const errors = result.error.issues.reduce(
+			(acc: Record<string, string[]>, err) => {
 				const path = err.path.join(".");
 				if (!acc[path]) {
 					acc[path] = [];
@@ -91,8 +91,8 @@ export async function parseAndValidateBody<T>(
 	const body = await request.json();
 	const result = schema.safeParse(body);
 	if (!result.success) {
-		const errors = result.error.errors.reduce(
-			(acc, err) => {
+		const errors = result.error.issues.reduce(
+			(acc: Record<string, string[]>, err) => {
 				const path = err.path.join(".");
 				if (!acc[path]) {
 					acc[path] = [];
@@ -124,8 +124,8 @@ export function parseAndValidateQuery<T>(
 
 	const result = schema.safeParse(params);
 	if (!result.success) {
-		const errors = result.error.errors.reduce(
-			(acc, err) => {
+		const errors = result.error.issues.reduce(
+			(acc: Record<string, string[]>, err) => {
 				const path = err.path.join(".");
 				if (!acc[path]) {
 					acc[path] = [];

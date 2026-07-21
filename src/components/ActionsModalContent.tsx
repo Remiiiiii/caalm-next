@@ -7,7 +7,6 @@ import {
 	Loader2,
 	Save,
 	SquarePen,
-	Trash2,
 	Users,
 	X,
 } from "lucide-react";

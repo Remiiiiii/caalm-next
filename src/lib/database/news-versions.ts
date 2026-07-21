@@ -48,7 +48,7 @@ export async function createNewsVersion(
 			data: versionData,
 		});
 
-		return version as NewsVersion;
+		return version as unknown as NewsVersion;
 	} catch (error) {
 		console.error("Error creating news version:", error);
 		throw error;
@@ -72,7 +72,7 @@ export async function getNewsVersions(newsId: string): Promise<NewsVersion[]> {
 			],
 		});
 
-		return response.rows as NewsVersion[];
+		return response.rows as unknown as NewsVersion[];
 	} catch (error) {
 		console.error("Error fetching news versions:", error);
 		throw error;
@@ -92,7 +92,7 @@ export async function getNewsVersion(id: string): Promise<NewsVersion | null> {
 			rowId: id,
 		});
 
-		return version as NewsVersion;
+		return version as unknown as NewsVersion;
 	} catch (error: any) {
 		if (error.code === 404) {
 			return null;

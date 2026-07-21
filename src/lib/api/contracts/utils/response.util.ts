@@ -114,7 +114,7 @@ export function errorResponse(
 		status: finalStatus,
 		message: errorMessage,
 		...(error instanceof Error && { stack: error.stack }),
-		...(options?.details && { details: options.details }),
+		...(options?.details ? { details: options.details } : {}),
 	});
 
 	return NextResponse.json(response, { status: finalStatus });

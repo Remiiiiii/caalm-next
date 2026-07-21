@@ -101,7 +101,7 @@ export default function Step2LicenseDetails({
 					)}
 				/>
 
-				<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+				<div className="responsive-form-grid bg-slate-50 rounded-lg p-4 border border-slate-200">
 					<FormField
 						control={form.control}
 						name="licenseNumber"
@@ -150,7 +150,7 @@ export default function Step2LicenseDetails({
 					/>
 				</div>
 
-				<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+				<div className="responsive-form-grid bg-slate-50 rounded-lg p-4 border border-slate-200">
 					<FormField
 						control={form.control}
 						name="licenseType"
@@ -218,7 +218,7 @@ export default function Step2LicenseDetails({
 
 			{/* Vendor & Product */}
 			<div className="space-y-4">
-				<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+				<div className="responsive-form-grid bg-slate-50 rounded-lg p-4 border border-slate-200">
 					<FormField
 						control={form.control}
 						name="vendor"
@@ -263,7 +263,7 @@ export default function Step2LicenseDetails({
 
 			{/* Dates */}
 			<div className="space-y-4">
-				<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+				<div className="responsive-form-grid bg-slate-50 rounded-lg p-4 border border-slate-200">
 					<FormField
 						control={form.control}
 						name="issueDate"
@@ -445,7 +445,7 @@ export default function Step2LicenseDetails({
 
 			{/* Organization & Assignment */}
 			<div className="space-y-4">
-				<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+				<div className="responsive-form-grid bg-slate-50 rounded-lg p-4 border border-slate-200">
 					<FormField
 						control={form.control}
 						name="division"
@@ -549,7 +549,7 @@ export default function Step2LicenseDetails({
 
 			{/* Renewal Settings */}
 			<div className="space-y-4">
-				<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+				<div className="responsive-form-grid bg-slate-50 rounded-lg p-4 border border-slate-200">
 					<FormField
 						control={form.control}
 						name="autoRenew"

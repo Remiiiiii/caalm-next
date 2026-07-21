@@ -14,7 +14,7 @@ export async function PATCH(
 	try {
 		// Check permission to update users
 		const permissionCheck = await requirePermission(request, {
-			permission: PERMISSIONS.USERS.UPDATE,
+			permission: PERMISSIONS.USERS.EDIT,
 		});
 
 		if (permissionCheck) {

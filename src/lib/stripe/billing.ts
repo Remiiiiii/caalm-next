@@ -1,17 +1,13 @@
 import type Stripe from "stripe";
 import {
-	getOrganization,
-	updateOrganizationBilling,
 	type BillingInterval,
 	type BillingStatus,
+	getOrganization,
 	type Organization,
+	updateOrganizationBilling,
 } from "@/lib/rbac/organizations";
 import { getStripe } from "./client";
-import {
-	getPriceId,
-	getTierFromPriceId,
-	type PricingTier,
-} from "./prices";
+import { getPriceId, getTierFromPriceId, type PricingTier } from "./prices";
 
 export async function getOrCreateStripeCustomer(
 	org: Organization,
@@ -155,9 +151,7 @@ export async function syncSubscriptionToOrg(
 	const orgId =
 		orgIdOverride ||
 		subscription.metadata?.orgId ||
-		(typeof subscription.customer === "string"
-			? undefined
-			: undefined);
+		(typeof subscription.customer === "string" ? undefined : undefined);
 
 	const customerId =
 		typeof subscription.customer === "string"

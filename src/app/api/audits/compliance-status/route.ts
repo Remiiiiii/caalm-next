@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getComplianceStatusForRequest } from "@/lib/audits/compliance-status.service";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 
 export async function GET(request: NextRequest) {
 	try {

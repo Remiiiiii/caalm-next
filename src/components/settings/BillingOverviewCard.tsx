@@ -49,11 +49,7 @@ export default function BillingOverviewCard({
 	managing,
 }: BillingOverviewCardProps) {
 	const price =
-		interval === "yearly"
-			? yearly
-			: monthly !== null
-				? monthly
-				: null;
+		interval === "yearly" ? yearly : monthly !== null ? monthly : null;
 	const priceLabel =
 		price !== null
 			? `$${price.toLocaleString()}/${interval === "yearly" ? "year" : "month"}`
@@ -84,7 +80,9 @@ export default function BillingOverviewCard({
 								variant="outline"
 								className={cn("capitalize", statusBadgeClass(status))}
 							>
-								{status === "none" ? "No subscription" : status.replace("_", " ")}
+								{status === "none"
+									? "No subscription"
+									: status.replace("_", " ")}
 							</Badge>
 						</div>
 						<p className="text-sm text-slate-600 mt-2">
@@ -121,8 +119,8 @@ export default function BillingOverviewCard({
 				</div>
 				{!stripeConfigured && (
 					<p className="text-xs text-slate-500">
-						Stripe is not configured. Add billing keys to enable checkout and the
-						customer portal.
+						Stripe is not configured. Add billing keys to enable checkout and
+						the customer portal.
 					</p>
 				)}
 			</CardContent>

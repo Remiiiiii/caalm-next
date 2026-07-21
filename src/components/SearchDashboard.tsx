@@ -34,12 +34,6 @@ const SearchDashboard: React.FC<SearchDashboardProps> = ({
 	const [searchResults, setSearchResults] = useState<any[]>([]);
 	const [currentQuery, setCurrentQuery] = useState("");
 
-	useEffect(() => {
-		if (user?.$id) {
-			loadAnalytics();
-		}
-	}, [user?.$id, loadAnalytics]);
-
 	const loadAnalytics = async () => {
 		try {
 			setLoading(true);
@@ -51,6 +45,12 @@ const SearchDashboard: React.FC<SearchDashboardProps> = ({
 			setLoading(false);
 		}
 	};
+
+	useEffect(() => {
+		if (user?.$id) {
+			loadAnalytics();
+		}
+	}, [user?.$id, loadAnalytics]);
 
 	const handleSearchResults = (results: any[]) => {
 		setSearchResults(results);
@@ -174,7 +174,7 @@ const SearchDashboard: React.FC<SearchDashboardProps> = ({
 			{/* Analytics Dashboard */}
 			{analytics && (
 				<Tabs defaultValue="overview" className="w-full">
-					<TabsList className="grid w-full grid-cols-4">
+					<TabsList className="responsive-tab-list">
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="searches">Popular Searches</TabsTrigger>
 						<TabsTrigger value="filters">Filter Usage</TabsTrigger>

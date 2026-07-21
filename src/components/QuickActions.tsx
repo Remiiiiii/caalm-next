@@ -38,7 +38,7 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 	}, [userRoles]);
 
 	return (
-		<div className="quick-actions-container flex flex-nowrap items-center gap-1 sm:gap-1.5 min-w-0 w-full">
+		<div className="quick-actions-container flex min-w-0 w-full items-center gap-1 overflow-x-auto pb-1 sm:gap-1.5 sm:pb-0">
 			{!isITUser && user && (
 				<ContractUploadForm
 					ownerId={user.$id}
@@ -61,10 +61,7 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 							console.log("License uploaded successfully");
 						}}
 					/>
-					<Button
-						className={quickActionBtn}
-						title="Upload Audit"
-					>
+					<Button className={quickActionBtn} title="Upload Audit">
 						<Calendar className="size-3.5" />
 						Audit
 					</Button>

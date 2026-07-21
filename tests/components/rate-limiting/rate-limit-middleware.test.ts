@@ -45,7 +45,7 @@ describe("Rate Limit Middleware", () => {
 		vi.clearAllMocks();
 		// Set environment variables before importing middleware
 		process.env.RATE_LIMIT_ENABLED = "true";
-		process.env.NODE_ENV = "production";
+		(process.env as Record<string, string>).NODE_ENV = "production";
 		// Re-import middleware to pick up new env vars
 		const proxyModule = await import("@/proxy");
 		middleware = proxyModule.proxy;

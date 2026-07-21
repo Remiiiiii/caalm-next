@@ -46,7 +46,7 @@ export async function createNote(params: CreateNoteParams): Promise<Note> {
 		);
 
 		revalidatePath("/dashboard");
-		return note as Note;
+		return note as unknown as Note;
 	} catch (error) {
 		console.error("Error creating note:", error);
 		throw error;
@@ -76,7 +76,7 @@ export async function getUserNotes(userId: string): Promise<Note[]> {
 		);
 
 		console.log("getUserNotes: Response:", response);
-		return response.documents as Note[];
+		return response.documents as unknown as Note[];
 	} catch (error) {
 		console.error("Error fetching user notes:", error);
 		// Throw the actual error instead of a generic one for debugging
@@ -101,7 +101,7 @@ export async function updateNote(params: UpdateNoteParams): Promise<Note> {
 		);
 
 		revalidatePath("/dashboard");
-		return note as Note;
+		return note as unknown as Note;
 	} catch (error) {
 		console.error("Error updating note:", error);
 		throw error;

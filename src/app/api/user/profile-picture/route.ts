@@ -81,7 +81,12 @@ export async function POST(request: NextRequest) {
 				userId,
 			);
 
-			const existingImageId = getStoredAvatarFileId(user);
+			const existingImageId = getStoredAvatarFileId(
+				user as unknown as {
+					avatar?: string | null;
+					profileImageId?: string | null;
+				},
+			);
 			if (existingImageId) {
 				await storage.deleteFile(
 					appwriteConfig.profilePicturesBucketId!,
@@ -165,7 +170,12 @@ export async function DELETE(request: NextRequest) {
 			userId,
 		);
 
-		const existingImageId = getStoredAvatarFileId(user);
+		const existingImageId = getStoredAvatarFileId(
+			user as unknown as {
+				avatar?: string | null;
+				profileImageId?: string | null;
+			},
+		);
 		if (existingImageId) {
 			// Delete file from storage
 			await storage.deleteFile(

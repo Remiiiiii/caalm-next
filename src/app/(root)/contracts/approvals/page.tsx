@@ -3,9 +3,7 @@ import { Query } from "node-appwrite";
 import ApprovalsPageShell from "@/components/approvals/ApprovalsPageShell";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import {
-	contractToApprovalItem,
-} from "@/lib/approvals/approvalsListUtils";
+import { contractToApprovalItem } from "@/lib/approvals/approvalsListUtils";
 import { createAdminClient } from "@/lib/appwrite/admin";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { getUserPermissions } from "@/lib/rbac/permissions";
@@ -63,8 +61,9 @@ export default async function ContractsApprovalsPage() {
 					$collectionId: String(contract.$collectionId || ""),
 					$databaseId: String(contract.$databaseId || ""),
 					$sequence: Number(contract.$sequence || 0),
-					name:
-						String(contract.contractName || contract.name || "Untitled Contract"),
+					name: String(
+						contract.contractName || contract.name || "Untitled Contract",
+					),
 					type: "document",
 					extension: String(fileData?.extension || "pdf"),
 					url: String(fileData?.url || ""),

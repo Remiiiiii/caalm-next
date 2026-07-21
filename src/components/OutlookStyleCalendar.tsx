@@ -24,13 +24,9 @@ import {
 	Ban,
 	CalendarDays,
 	Calendar as CalendarIcon,
-	CalendarPlus,
 	CheckCircle,
-	CheckCircle2,
-	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
-	ChevronUp,
 	Clock,
 	Edit,
 	Eye,
@@ -57,6 +53,11 @@ import {
 	X,
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import CalendarAIChat from "@/components/CalendarAIChat";
+import { CalendarDelegationManager } from "@/components/CalendarDelegationManager";
+import CalendarSettings from "@/components/CalendarSettings";
+import { CalendarSidebar } from "@/components/CalendarSidebar";
+import { CreateSharedCalendarDialog } from "@/components/CreateSharedCalendarDialog";
 import { AgendaView } from "@/components/calendar/AgendaView";
 import { CalendarApprovalsRail } from "@/components/calendar/CalendarApprovalsRail";
 import { CalendarFiltersDrawer } from "@/components/calendar/CalendarFiltersDrawer";
@@ -71,11 +72,6 @@ import {
 	type QuickCreatePayload,
 } from "@/components/calendar/QuickCreateEventPopover";
 import { TimeGridWeekView } from "@/components/calendar/TimeGridWeekView";
-import CalendarAIChat from "@/components/CalendarAIChat";
-import { CalendarDelegationManager } from "@/components/CalendarDelegationManager";
-import CalendarSettings from "@/components/CalendarSettings";
-import { CalendarSidebar } from "@/components/CalendarSidebar";
-import { CreateSharedCalendarDialog } from "@/components/CreateSharedCalendarDialog";
 import { EventReminderConfig as EventReminderConfigComponent } from "@/components/EventReminderConfig";
 import { ResourceManager } from "@/components/ResourceManager";
 import { SharedCalendarManager } from "@/components/SharedCalendarManager";
@@ -129,10 +125,7 @@ import {
 	hasMicrosoftCalendarIntegration,
 	syncMicrosoftCalendar,
 } from "@/lib/actions/calendar.actions";
-import type {
-	CalendarApprovalChangeSummary,
-	CalendarApprovalRequest,
-} from "@/lib/actions/calendar-approval.actions";
+import type { CalendarApprovalRequest } from "@/lib/actions/calendar-approval.actions";
 import {
 	getCalendarApprovalById,
 	getLatestApprovalRequestByEventId,
@@ -140,11 +133,8 @@ import {
 import type { SharedCalendar } from "@/lib/actions/shared-calendar.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { resolveCalendarPermissions } from "@/lib/auth/permissions";
-import {
-	getUSHolidaysForMonth,
-	parseHolidayDate,
-} from "@/lib/utils/holidays";
 import { cn, convertFileSize, getFileType } from "@/lib/utils";
+import { getUSHolidaysForMonth, parseHolidayDate } from "@/lib/utils/holidays";
 
 // Event attachments are stored as file IDs (references to files collection)
 // Full file details are fetched when needed
@@ -3123,7 +3113,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						<div
 							key={day.toISOString()}
 							className={cn(
-								"min-h-[105px] max-h-[105px] overflow-hidden p-2 bg-white border border-gray-200 cursor-pointer transition-colors flex flex-col",
+								"min-h-[72px] sm:min-h-[105px] max-h-[72px] sm:max-h-[105px] overflow-hidden p-1.5 sm:p-2 bg-white border border-gray-200 cursor-pointer transition-colors flex flex-col",
 								!isCurrentMonth && "bg-gray-50 text-gray-400",
 								isSelected && "bg-gray-50 border-blue-300",
 							)}
@@ -3153,30 +3143,32 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							{/* Events for this day */}
 							<div className="flex flex-col flex-1 min-h-0">
 								<div className="space-y-1">
-									{dayEvents.slice(0, VISIBLE_CHIPS_PER_DAY).map((event, index) => {
-										const canViewSensitive =
-											canViewEventSensitiveDetails(event);
-										const displayTitle = canViewSensitive
-											? event.title
-											: "Restricted event";
-										return (
-											<EventChip
-												key={event.$id || `event-${index}-${event.title}`}
-												event={event}
-												displayTitle={displayTitle}
-												timeLabel={
-													event.startTime
-														? formatTimeForDisplay(event.startTime)
-														: "All Day"
-												}
-												canViewSensitive={canViewSensitive}
-												onClick={(e) => {
-													e.stopPropagation();
-													openEditDialog(event);
-												}}
-											/>
-										);
-									})}
+									{dayEvents
+										.slice(0, VISIBLE_CHIPS_PER_DAY)
+										.map((event, index) => {
+											const canViewSensitive =
+												canViewEventSensitiveDetails(event);
+											const displayTitle = canViewSensitive
+												? event.title
+												: "Restricted event";
+											return (
+												<EventChip
+													key={event.$id || `event-${index}-${event.title}`}
+													event={event}
+													displayTitle={displayTitle}
+													timeLabel={
+														event.startTime
+															? formatTimeForDisplay(event.startTime)
+															: "All Day"
+													}
+													canViewSensitive={canViewSensitive}
+													onClick={(e) => {
+														e.stopPropagation();
+														openEditDialog(event);
+													}}
+												/>
+											);
+										})}
 								</div>
 								{dayEvents.length > VISIBLE_CHIPS_PER_DAY && (
 									<button
@@ -3354,7 +3346,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		</Dialog>
 	);
 
-	const renderWeekView = (eventsToRender: LocalCalendarEvent[] = normalizedEvents) => {
+	const renderWeekView = (
+		eventsToRender: LocalCalendarEvent[] = normalizedEvents,
+	) => {
 		return (
 			<TimeGridWeekView
 				selectedDate={selectedDate || new Date()}
@@ -3374,7 +3368,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		);
 	};
 
-	const renderDayView = (eventsToRender: LocalCalendarEvent[] = normalizedEvents) => {
+	const renderDayView = (
+		eventsToRender: LocalCalendarEvent[] = normalizedEvents,
+	) => {
 		return (
 			<DayView
 				selectedDate={selectedDate || new Date()}
@@ -3553,646 +3549,197 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 									</TabsList>
 								</Tabs>
 
-						{/* New Event Button - PRIMARY ACTION */}
-						<Dialog
-							open={isAddEventOpen}
-							onOpenChange={(open) => {
-								if (open && !canCreateEvent) {
-									toast({
-										title: "Permission denied",
-										description: "You do not have permission to create events.",
-										variant: "destructive",
-									});
-									return;
-								}
-								setIsAddEventOpen(open);
-							}}
-						>
-							<DialogTrigger asChild>
-								<Button
-									size="sm"
-									variant="outline"
-									className="primary-btn px-3 sm:px-4"
-									disabled={!canCreateEvent}
-									onClick={() => {
-										// Ensure this dialog opens in create mode
-										setSelectedEvent(null);
-										setNewEvent({
-											title: "",
-											date: new Date(),
-											endDate: new Date(),
-											type: "meeting",
-											description: "",
-											startTime: getSmartPlaceholderTimes(new Date()).startTime,
-											endTime: getSmartPlaceholderTimes(new Date()).endTime,
-											contractName: "",
-											participants: "",
-											location: "",
-											sensitivityLevel: "standard",
-										});
+								{/* New Event Button - PRIMARY ACTION */}
+								<Dialog
+									open={isAddEventOpen}
+									onOpenChange={(open) => {
+										if (open && !canCreateEvent) {
+											toast({
+												title: "Permission denied",
+												description:
+													"You do not have permission to create events.",
+												variant: "destructive",
+											});
+											return;
+										}
+										setIsAddEventOpen(open);
 									}}
 								>
-									<Plus className="h-4 w-4 text-white" />
-									New Event
-								</Button>
-							</DialogTrigger>
-							<DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col">
-								<VisuallyHiddenPrimitive.Root>
-									<DialogTitle>
-										{selectedEvent ? "Update Event" : "Create New Event"}
-									</DialogTitle>
-								</VisuallyHiddenPrimitive.Root>
-								<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-								{/* Professional Header */}
-								<div className="glass-dialog-wizard-header mt-4">
-									<div className="flex items-center justify-between ml-6">
-										<div className="flex items-center">
-											<div>
-												<div className="flex items-center gap-2">
-													{selectedEvent ? (
-														<Pencil className="h-5 w-5 text-[#0f5384]" />
-													) : (
-														<CalendarIcon className="h-5 w-5 text-[#0f5384]" />
-													)}
-													<h2 className="text-xl font-semibold sidebar-gradient-text">
-														{selectedEvent
-															? "Update Event"
-															: "Create New Event"}
-													</h2>
-												</div>
-												<p className="text-sm text-slate-600 mt-1 ml-7">
-													{selectedEvent
-														? "Update the details for your event"
-														: "Schedule a professional meeting or event"}
-												</p>
-											</div>
-										</div>
-									</div>
-								</div>
-
-								{/* Content section with scroll */}
-								<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-									{/* Event Title Section */}
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-										<Label
-											className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-											htmlFor="title"
-										>
-											<FileText className="w-4 h-4 text-blue-600" />
-											Event Title
-										</Label>
-										<Input
-											id="title"
-											value={newEvent.title}
-											onChange={(e) =>
-												setNewEvent({ ...newEvent, title: e.target.value })
-											}
-											placeholder="Enter a descriptive title for your event"
-											className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11 text-base"
-										/>
-									</div>
-									{/* Participants Section */}
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-										<Label
-											className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-											htmlFor="participants"
-										>
-											<Users className="w-4 h-4 text-blue-600" />
-											Participants
-										</Label>
-
-										{/* Selected Participants Display */}
-										{selectedParticipants.length > 0 && (
-											<div className="flex flex-wrap gap-2 mb-3">
-												{selectedParticipants.map((participant) => (
-													<Badge
-														key={participant.$id}
-														variant="secondary"
-														className="flex items-center gap-2 bg-blue-100 text-blue-800 border-blue-200 px-3 py-1"
-													>
-														<Avatar
-															name={participant.fullName || participant.name}
-															userId={participant.$id}
-															size="sm"
-														/>
-														<span className="text-sm font-medium">
-															{participant.fullName || participant.name}
-														</span>
-														<Button
-															variant="ghost"
-															size="sm"
-															className="h-4 w-4 p-0 hover:bg-blue-200 rounded-full"
-															onClick={() => removeParticipant(participant.$id)}
-														>
-															<X className="h-3 w-3" />
-														</Button>
-													</Badge>
-												))}
-											</div>
-										)}
-
-										{/* Participant Search */}
-										<div className="space-y-2">
-											<Input
-												placeholder="Search for team members..."
-												value={participantSearch}
-												onChange={(e) => {
-													const value = e.target.value;
-													setParticipantSearch(value);
-													searchUsers(value);
-												}}
-												className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11"
-											/>
-
-											{/* Search Results */}
-											{participantSearch.length >= 2 && (
-												<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
-													{isSearching && (
-														<div className="p-3 text-sm text-slate-500 flex items-center gap-2">
-															<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-															Searching team members...
-														</div>
-													)}
-													{!isSearching && searchResults.length === 0 && (
-														<div className="p-3 text-sm text-slate-500">
-															No team members found.
-														</div>
-													)}
-													{searchResults.length > 0 && (
-														<div className="divide-y divide-slate-100">
-															{searchResults.map((user) => (
-																<div
-																	key={user.$id}
-																	className="p-3 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-																	onClick={() => addParticipant(user)}
-																>
-																	<div className="flex items-center gap-3">
-																		<div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-sm font-medium">
-																			{(user.fullName || user.name || "?")
-																				.charAt(0)
-																				.toUpperCase()}
-																		</div>
-																		<div className="flex flex-col">
-																			<span className="font-medium text-sm text-slate-900">
-																				{user.fullName || user.name}
-																			</span>
-																			<span className="text-xs text-slate-500">
-																				{user.email}
-																			</span>
-																		</div>
-																	</div>
-																	<Button
-																		variant="ghost"
-																		size="sm"
-																		className="h-8 w-8 p-0 hover:bg-blue-100 rounded-full"
-																	>
-																		<UserPlus className="h-4 w-4 text-blue-600" />
-																	</Button>
-																</div>
-															))}
-														</div>
-													)}
-												</div>
-											)}
-										</div>
-									</div>
-									{/* Date and Time Section */}
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-										<div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
-											<Clock className="w-4 h-4 text-blue-600" />
-											Schedule
-										</div>
-
-										<div className="grid grid-cols-2 gap-4">
-											{/* Column 1: Dates */}
-											<div className="space-y-4">
-												<div>
-													<Label
-														htmlFor="date"
-														className="text-sm font-medium text-slate-700 mb-2 block"
-													>
-														Start Date
-													</Label>
-													<Popover>
-														<PopoverTrigger asChild>
-															<Button
-																variant="outline"
-																className="w-full justify-between font-normal text-sm h-11 bg-white border-slate-300 hover:border-blue-500"
-															>
-																{newEvent.date
-																	? newEvent.date.toLocaleDateString("en-US", {
-																			weekday: "short",
-																			month: "short",
-																			day: "numeric",
-																			year: "numeric",
-																		})
-																	: "Select start date"}
-																<CalendarDays className="h-4 w-4 text-slate-500" />
-															</Button>
-														</PopoverTrigger>
-														<PopoverContent
-															className="w-auto overflow-hidden p-0 shadow-lg border-slate-200"
-															align="start"
-														>
-															<Calendar
-																mode="single"
-																selected={newEvent.date}
-																disabled={(date) => {
-																	const today = new Date();
-																	today.setHours(0, 0, 0, 0);
-																	const checkDate = new Date(date);
-																	checkDate.setHours(0, 0, 0, 0);
-																	return checkDate < today;
-																}}
-																onSelect={(date) => {
-																	const selectedDate = date || new Date();
-																	const smartTimes =
-																		getSmartPlaceholderTimes(selectedDate);
-																	setNewEvent({
-																		...newEvent,
-																		date: selectedDate,
-																		startTime:
-																			newEvent.startTime ||
-																			smartTimes.startTime,
-																		endTime:
-																			newEvent.endTime || smartTimes.endTime,
-																	});
-																}}
-															/>
-														</PopoverContent>
-													</Popover>
-												</div>
-
-												<div>
-													<Label
-														htmlFor="endDate"
-														className="text-sm font-medium text-slate-700 mb-2 block"
-													>
-														End Date
-													</Label>
-													<Popover>
-														<PopoverTrigger asChild>
-															<Button
-																variant="outline"
-																className="w-full justify-between font-normal text-sm h-11 bg-white border-slate-300 hover:border-blue-500"
-															>
-																{newEvent.endDate
-																	? newEvent.endDate.toLocaleDateString(
-																			"en-US",
-																			{
-																				weekday: "short",
-																				month: "short",
-																				day: "numeric",
-																				year: "numeric",
-																			},
-																		)
-																	: "Select end date"}
-																<CalendarDays className="h-4 w-4 text-slate-500" />
-															</Button>
-														</PopoverTrigger>
-														<PopoverContent
-															className="w-auto overflow-hidden p-0 shadow-lg border-slate-200"
-															align="start"
-														>
-															<Calendar
-																mode="single"
-																selected={newEvent.endDate}
-																disabled={(date) => {
-																	const today = new Date();
-																	today.setHours(0, 0, 0, 0);
-																	const checkDate = new Date(date);
-																	checkDate.setHours(0, 0, 0, 0);
-																	return checkDate < today;
-																}}
-																onSelect={(date) => {
-																	const selectedEndDate = date || new Date();
-																	setNewEvent({
-																		...newEvent,
-																		endDate: selectedEndDate,
-																	});
-																}}
-															/>
-														</PopoverContent>
-													</Popover>
-												</div>
-											</div>
-
-											{/* Column 2: Times */}
-											<div className="space-y-4">
-												<div>
-													<Label
-														htmlFor="startTime"
-														className="text-sm font-medium text-slate-700 mb-2 block"
-													>
-														Start Time
-													</Label>
-													<Select
-														value={
-															newEvent.startTime ||
-															getSmartPlaceholderTimes(newEvent.date).startTime
-														}
-														onValueChange={(value) =>
-															setNewEvent({ ...newEvent, startTime: value })
-														}
-													>
-														<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-															<SelectValue placeholder="Select start time" />
-														</SelectTrigger>
-														<SelectContent className="shadow-lg border-slate-200">
-															{generateTimeOptions(newEvent.date).map(
-																(time) => (
-																	<SelectItem
-																		key={time.value}
-																		value={time.value}
-																		disabled={time.disabled}
-																		className={
-																			time.disabled
-																				? "opacity-50 cursor-not-allowed"
-																				: ""
-																		}
-																	>
-																		{time.label}
-																	</SelectItem>
-																),
-															)}
-														</SelectContent>
-													</Select>
-												</div>
-												<div>
-													<Label
-														htmlFor="endTime"
-														className="text-sm font-medium text-slate-700 mb-2 block"
-													>
-														End Time
-													</Label>
-													<Select
-														value={
-															newEvent.endTime ||
-															getSmartPlaceholderTimes(newEvent.date).endTime
-														}
-														onValueChange={(value) =>
-															setNewEvent({ ...newEvent, endTime: value })
-														}
-													>
-														<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-															<SelectValue placeholder="Select end time" />
-														</SelectTrigger>
-														<SelectContent className="shadow-lg border-slate-200">
-															{generateTimeOptions(newEvent.date).map(
-																(time) => (
-																	<SelectItem
-																		key={time.value}
-																		value={time.value}
-																		disabled={time.disabled}
-																		className={
-																			time.disabled
-																				? "opacity-50 cursor-not-allowed"
-																				: ""
-																		}
-																	>
-																		{time.label}
-																	</SelectItem>
-																),
-															)}
-														</SelectContent>
-													</Select>
-												</div>
-											</div>
-										</div>
-									</div>
-
-									{/* Event Type Section */}
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-										<Label
-											htmlFor="type"
-											className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-										>
-											<Tag className="w-4 h-4 text-blue-600" />
-											Event Type
-										</Label>
-										<Select
-											value={newEvent.type}
-											onValueChange={(value) =>
+									<DialogTrigger asChild>
+										<Button
+											size="sm"
+											variant="outline"
+											className="primary-btn px-3 sm:px-4"
+											disabled={!canCreateEvent}
+											onClick={() => {
+												// Ensure this dialog opens in create mode
+												setSelectedEvent(null);
 												setNewEvent({
-													...newEvent,
-													type: value as NewEventForm["type"],
-												})
-											}
+													title: "",
+													date: new Date(),
+													endDate: new Date(),
+													type: "meeting",
+													description: "",
+													startTime: getSmartPlaceholderTimes(new Date())
+														.startTime,
+													endTime: getSmartPlaceholderTimes(new Date()).endTime,
+													contractName: "",
+													participants: "",
+													location: "",
+													sensitivityLevel: "standard",
+												});
+											}}
 										>
-											<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-												<SelectValue placeholder="Select event type" />
-											</SelectTrigger>
-											<SelectContent className="shadow-lg border-slate-200">
-												<SelectItem value="audit">
-													<div className="flex items-center gap-2">
-														<div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-														Audit
-													</div>
-												</SelectItem>
-												<SelectItem value="contract">
-													<div className="flex items-center gap-2">
-														<div className="w-2 h-2 bg-blue rounded-full"></div>
-														Contract Review
-													</div>
-												</SelectItem>
-												<SelectItem value="meeting">
-													<div className="flex items-center gap-2">
-														<div className="w-2 h-2 bg-green rounded-full"></div>
-														Meeting
-													</div>
-												</SelectItem>
-												<SelectItem value="deadline">
-													<div className="flex items-center gap-2">
-														<div className="w-2 h-2 bg-red rounded-full"></div>
-														Deadline Discussion
-													</div>
-												</SelectItem>
-												<SelectItem value="review">
-													<div className="flex items-center gap-2">
-														<div className="w-2 h-2 bg-orange rounded-full"></div>
-														Internal Review
-													</div>
-												</SelectItem>
-											</SelectContent>
-										</Select>
-									</div>
-
-									{/* Sensitivity Section */}
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-										<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
-											<AlertTriangle className="w-4 h-4 text-blue-600" />
-											Sensitivity Level
-										</Label>
-										<Select
-											value={newEvent.sensitivityLevel}
-											onValueChange={(value: CalendarSensitivity) =>
-												setNewEvent({
-													...newEvent,
-													sensitivityLevel: value,
-												})
-											}
-										>
-											<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-												<SelectValue placeholder="Select sensitivity level" />
-											</SelectTrigger>
-											<SelectContent className="shadow-lg border-slate-200">
-												{(
-													["standard", "restricted", "confidential"] as const
-												).map((level) => (
-													<SelectItem key={level} value={level}>
-														<div className="flex flex-col text-left">
-															<span className="text-sm font-medium">
-																{SENSITIVITY_LABELS[level]}
-															</span>
-															<span className="text-xs text-slate-500">
-																{level === "standard"
-																	? "Visible to users with calendar access."
-																	: level === "restricted"
-																		? "Requires approver review before publishing."
-																		: "Visible only to approvers until approved."}
-															</span>
+											<Plus className="h-4 w-4 text-white" />
+											New Event
+										</Button>
+									</DialogTrigger>
+									<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[700px] p-0 max-h-[90vh] flex flex-col">
+										<VisuallyHiddenPrimitive.Root>
+											<DialogTitle>
+												{selectedEvent ? "Update Event" : "Create New Event"}
+											</DialogTitle>
+										</VisuallyHiddenPrimitive.Root>
+										<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+										{/* Professional Header */}
+										<div className="glass-dialog-wizard-header mt-4">
+											<div className="flex items-center justify-between ml-6">
+												<div className="flex items-center">
+													<div>
+														<div className="flex items-center gap-2">
+															{selectedEvent ? (
+																<Pencil className="h-5 w-5 text-[#0f5384]" />
+															) : (
+																<CalendarIcon className="h-5 w-5 text-[#0f5384]" />
+															)}
+															<h2 className="text-xl font-semibold sidebar-gradient-text">
+																{selectedEvent
+																	? "Update Event"
+																	: "Create New Event"}
+															</h2>
 														</div>
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										{newEvent.sensitivityLevel !== "standard" && (
-											<p className="mt-2 text-xs text-slate-500">
-												This event will remain hidden until an approver approves
-												it.
-											</p>
-										)}
-									</div>
-
-									{/* Contract Selection (conditional) */}
-									{["contract", "contract review"].includes(
-										(newEvent.type as unknown as string).toLowerCase(),
-									) && (
-										<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-											<Label
-												htmlFor="contractName"
-												className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-											>
-												<FileText className="w-4 h-4 text-blue-600" />
-												Related Contract
-											</Label>
-											<Select
-												value={newEvent.contractName}
-												onValueChange={(value) =>
-													setNewEvent({ ...newEvent, contractName: value })
-												}
-											>
-												<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-													<SelectValue placeholder="Select a contract to review" />
-												</SelectTrigger>
-												<SelectContent className="shadow-lg border-slate-200">
-													{loadingContracts ? (
-														<SelectItem value="loading" disabled>
-															<div className="flex items-center gap-2">
-																<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-																Loading contracts...
-															</div>
-														</SelectItem>
-													) : contracts.length > 0 ? (
-														contracts.map((contract) => (
-															<SelectItem
-																key={contract.id}
-																value={contract.name}
-															>
-																<div className="flex items-center gap-2">
-																	<FileText className="w-4 h-4 text-slate-500" />
-																	{contract.name}
-																</div>
-															</SelectItem>
-														))
-													) : (
-														<SelectItem value="no-contracts" disabled>
-															No contracts available
-														</SelectItem>
-													)}
-												</SelectContent>
-											</Select>
+														<p className="text-sm text-slate-600 mt-1 ml-7">
+															{selectedEvent
+																? "Update the details for your event"
+																: "Schedule a professional meeting or event"}
+														</p>
+													</div>
+												</div>
+											</div>
 										</div>
-									)}
 
-									{/* Location Section */}
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-										<Label
-											htmlFor="location"
-											className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-										>
-											<MapPin className="w-4 h-4 text-blue-600" />
-											Location
-										</Label>
-										{/* Location Search */}
-										<div className="space-y-2">
-											<div className="relative">
+										{/* Content section with scroll */}
+										<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+											{/* Event Title Section */}
+											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+												<Label
+													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+													htmlFor="title"
+												>
+													<FileText className="w-4 h-4 text-blue-600" />
+													Event Title
+												</Label>
 												<Input
-													placeholder="Search for a meeting room or location..."
-													value={locationSearch}
-													onChange={(e) => {
-														const value = e.target.value;
-														setLocationSearch(value);
-														setNewEvent({ ...newEvent, location: value });
-														searchLocations(value);
-													}}
-													onFocus={() => {
-														if (locationSearch.length >= 2) {
-															searchLocations(locationSearch);
-														}
-													}}
-													className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11 pl-10"
+													id="title"
+													value={newEvent.title}
+													onChange={(e) =>
+														setNewEvent({ ...newEvent, title: e.target.value })
+													}
+													placeholder="Enter a descriptive title for your event"
+													className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11 text-base"
 												/>
-												<MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
 											</div>
+											{/* Participants Section */}
+											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+												<Label
+													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+													htmlFor="participants"
+												>
+													<Users className="w-4 h-4 text-blue-600" />
+													Participants
+												</Label>
 
-											{/* Location Search Results */}
-											{locationSearch.length >= 2 &&
-												locationResults.length > 0 && (
-													<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
-														{isSearchingLocation && (
-															<div className="p-3 text-sm text-slate-500 flex items-center gap-2">
-																<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-																Searching locations...
-															</div>
-														)}
-														{!isSearchingLocation &&
-															locationResults.length > 0 && (
+												{/* Selected Participants Display */}
+												{selectedParticipants.length > 0 && (
+													<div className="flex flex-wrap gap-2 mb-3">
+														{selectedParticipants.map((participant) => (
+															<Badge
+																key={participant.$id}
+																variant="secondary"
+																className="flex items-center gap-2 bg-blue-100 text-blue-800 border-blue-200 px-3 py-1"
+															>
+																<Avatar
+																	name={
+																		participant.fullName || participant.name
+																	}
+																	userId={participant.$id}
+																	size="sm"
+																/>
+																<span className="text-sm font-medium">
+																	{participant.fullName || participant.name}
+																</span>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="h-4 w-4 p-0 hover:bg-blue-200 rounded-full"
+																	onClick={() =>
+																		removeParticipant(participant.$id)
+																	}
+																>
+																	<X className="h-3 w-3" />
+																</Button>
+															</Badge>
+														))}
+													</div>
+												)}
+
+												{/* Participant Search */}
+												<div className="space-y-2">
+													<Input
+														placeholder="Search for team members..."
+														value={participantSearch}
+														onChange={(e) => {
+															const value = e.target.value;
+															setParticipantSearch(value);
+															searchUsers(value);
+														}}
+														className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11"
+													/>
+
+													{/* Search Results */}
+													{participantSearch.length >= 2 && (
+														<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
+															{isSearching && (
+																<div className="p-3 text-sm text-slate-500 flex items-center gap-2">
+																	<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+																	Searching team members...
+																</div>
+															)}
+															{!isSearching && searchResults.length === 0 && (
+																<div className="p-3 text-sm text-slate-500">
+																	No team members found.
+																</div>
+															)}
+															{searchResults.length > 0 && (
 																<div className="divide-y divide-slate-100">
-																	{locationResults.map((location) => (
+																	{searchResults.map((user) => (
 																		<div
-																			key={location.id}
+																			key={user.$id}
 																			className="p-3 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-																			onClick={() => {
-																				setNewEvent({
-																					...newEvent,
-																					location: location.address,
-																				});
-																				setLocationSearch(location.address);
-																				setLocationResults([]);
-																				// If this is a resource, set the resourceId
-																				if (
-																					location.type === "resource" &&
-																					location.resourceId
-																				) {
-																					setSelectedResourceId(
-																						location.resourceId,
-																					);
-																				} else {
-																					setSelectedResourceId(null);
-																				}
-																			}}
+																			onClick={() => addParticipant(user)}
 																		>
 																			<div className="flex items-center gap-3">
-																				<div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-																					<MapPin className="h-4 w-4 text-slate-500" />
+																				<div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-sm font-medium">
+																					{(user.fullName || user.name || "?")
+																						.charAt(0)
+																						.toUpperCase()}
 																				</div>
 																				<div className="flex flex-col">
 																					<span className="font-medium text-sm text-slate-900">
-																						{location.name}
+																						{user.fullName || user.name}
 																					</span>
 																					<span className="text-xs text-slate-500">
-																						{location.address}
+																						{user.email}
 																					</span>
 																				</div>
 																			</div>
@@ -4201,208 +3748,679 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																				size="sm"
 																				className="h-8 w-8 p-0 hover:bg-blue-100 rounded-full"
 																			>
-																				<Plus className="h-4 w-4 text-blue-600" />
+																				<UserPlus className="h-4 w-4 text-blue-600" />
+																			</Button>
+																		</div>
+																	))}
+																</div>
+															)}
+														</div>
+													)}
+												</div>
+											</div>
+											{/* Date and Time Section */}
+											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+												<div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
+													<Clock className="w-4 h-4 text-blue-600" />
+													Schedule
+												</div>
+
+												<div className="grid grid-cols-2 gap-4">
+													{/* Column 1: Dates */}
+													<div className="space-y-4">
+														<div>
+															<Label
+																htmlFor="date"
+																className="text-sm font-medium text-slate-700 mb-2 block"
+															>
+																Start Date
+															</Label>
+															<Popover>
+																<PopoverTrigger asChild>
+																	<Button
+																		variant="outline"
+																		className="w-full justify-between font-normal text-sm h-11 bg-white border-slate-300 hover:border-blue-500"
+																	>
+																		{newEvent.date
+																			? newEvent.date.toLocaleDateString(
+																					"en-US",
+																					{
+																						weekday: "short",
+																						month: "short",
+																						day: "numeric",
+																						year: "numeric",
+																					},
+																				)
+																			: "Select start date"}
+																		<CalendarDays className="h-4 w-4 text-slate-500" />
+																	</Button>
+																</PopoverTrigger>
+																<PopoverContent
+																	className="w-auto overflow-hidden p-0 shadow-lg border-slate-200"
+																	align="start"
+																>
+																	<Calendar
+																		mode="single"
+																		selected={newEvent.date}
+																		disabled={(date) => {
+																			const today = new Date();
+																			today.setHours(0, 0, 0, 0);
+																			const checkDate = new Date(date);
+																			checkDate.setHours(0, 0, 0, 0);
+																			return checkDate < today;
+																		}}
+																		onSelect={(date) => {
+																			const selectedDate = date || new Date();
+																			const smartTimes =
+																				getSmartPlaceholderTimes(selectedDate);
+																			setNewEvent({
+																				...newEvent,
+																				date: selectedDate,
+																				startTime:
+																					newEvent.startTime ||
+																					smartTimes.startTime,
+																				endTime:
+																					newEvent.endTime ||
+																					smartTimes.endTime,
+																			});
+																		}}
+																	/>
+																</PopoverContent>
+															</Popover>
+														</div>
+
+														<div>
+															<Label
+																htmlFor="endDate"
+																className="text-sm font-medium text-slate-700 mb-2 block"
+															>
+																End Date
+															</Label>
+															<Popover>
+																<PopoverTrigger asChild>
+																	<Button
+																		variant="outline"
+																		className="w-full justify-between font-normal text-sm h-11 bg-white border-slate-300 hover:border-blue-500"
+																	>
+																		{newEvent.endDate
+																			? newEvent.endDate.toLocaleDateString(
+																					"en-US",
+																					{
+																						weekday: "short",
+																						month: "short",
+																						day: "numeric",
+																						year: "numeric",
+																					},
+																				)
+																			: "Select end date"}
+																		<CalendarDays className="h-4 w-4 text-slate-500" />
+																	</Button>
+																</PopoverTrigger>
+																<PopoverContent
+																	className="w-auto overflow-hidden p-0 shadow-lg border-slate-200"
+																	align="start"
+																>
+																	<Calendar
+																		mode="single"
+																		selected={newEvent.endDate}
+																		disabled={(date) => {
+																			const today = new Date();
+																			today.setHours(0, 0, 0, 0);
+																			const checkDate = new Date(date);
+																			checkDate.setHours(0, 0, 0, 0);
+																			return checkDate < today;
+																		}}
+																		onSelect={(date) => {
+																			const selectedEndDate =
+																				date || new Date();
+																			setNewEvent({
+																				...newEvent,
+																				endDate: selectedEndDate,
+																			});
+																		}}
+																	/>
+																</PopoverContent>
+															</Popover>
+														</div>
+													</div>
+
+													{/* Column 2: Times */}
+													<div className="space-y-4">
+														<div>
+															<Label
+																htmlFor="startTime"
+																className="text-sm font-medium text-slate-700 mb-2 block"
+															>
+																Start Time
+															</Label>
+															<Select
+																value={
+																	newEvent.startTime ||
+																	getSmartPlaceholderTimes(newEvent.date)
+																		.startTime
+																}
+																onValueChange={(value) =>
+																	setNewEvent({ ...newEvent, startTime: value })
+																}
+															>
+																<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+																	<SelectValue placeholder="Select start time" />
+																</SelectTrigger>
+																<SelectContent className="shadow-lg border-slate-200">
+																	{generateTimeOptions(newEvent.date).map(
+																		(time) => (
+																			<SelectItem
+																				key={time.value}
+																				value={time.value}
+																				disabled={time.disabled}
+																				className={
+																					time.disabled
+																						? "opacity-50 cursor-not-allowed"
+																						: ""
+																				}
+																			>
+																				{time.label}
+																			</SelectItem>
+																		),
+																	)}
+																</SelectContent>
+															</Select>
+														</div>
+														<div>
+															<Label
+																htmlFor="endTime"
+																className="text-sm font-medium text-slate-700 mb-2 block"
+															>
+																End Time
+															</Label>
+															<Select
+																value={
+																	newEvent.endTime ||
+																	getSmartPlaceholderTimes(newEvent.date)
+																		.endTime
+																}
+																onValueChange={(value) =>
+																	setNewEvent({ ...newEvent, endTime: value })
+																}
+															>
+																<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+																	<SelectValue placeholder="Select end time" />
+																</SelectTrigger>
+																<SelectContent className="shadow-lg border-slate-200">
+																	{generateTimeOptions(newEvent.date).map(
+																		(time) => (
+																			<SelectItem
+																				key={time.value}
+																				value={time.value}
+																				disabled={time.disabled}
+																				className={
+																					time.disabled
+																						? "opacity-50 cursor-not-allowed"
+																						: ""
+																				}
+																			>
+																				{time.label}
+																			</SelectItem>
+																		),
+																	)}
+																</SelectContent>
+															</Select>
+														</div>
+													</div>
+												</div>
+											</div>
+
+											{/* Event Type Section */}
+											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+												<Label
+													htmlFor="type"
+													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+												>
+													<Tag className="w-4 h-4 text-blue-600" />
+													Event Type
+												</Label>
+												<Select
+													value={newEvent.type}
+													onValueChange={(value) =>
+														setNewEvent({
+															...newEvent,
+															type: value as NewEventForm["type"],
+														})
+													}
+												>
+													<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+														<SelectValue placeholder="Select event type" />
+													</SelectTrigger>
+													<SelectContent className="shadow-lg border-slate-200">
+														<SelectItem value="audit">
+															<div className="flex items-center gap-2">
+																<div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+																Audit
+															</div>
+														</SelectItem>
+														<SelectItem value="contract">
+															<div className="flex items-center gap-2">
+																<div className="w-2 h-2 bg-blue rounded-full"></div>
+																Contract Review
+															</div>
+														</SelectItem>
+														<SelectItem value="meeting">
+															<div className="flex items-center gap-2">
+																<div className="w-2 h-2 bg-green rounded-full"></div>
+																Meeting
+															</div>
+														</SelectItem>
+														<SelectItem value="deadline">
+															<div className="flex items-center gap-2">
+																<div className="w-2 h-2 bg-red rounded-full"></div>
+																Deadline Discussion
+															</div>
+														</SelectItem>
+														<SelectItem value="review">
+															<div className="flex items-center gap-2">
+																<div className="w-2 h-2 bg-orange rounded-full"></div>
+																Internal Review
+															</div>
+														</SelectItem>
+													</SelectContent>
+												</Select>
+											</div>
+
+											{/* Sensitivity Section */}
+											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+												<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+													<AlertTriangle className="w-4 h-4 text-blue-600" />
+													Sensitivity Level
+												</Label>
+												<Select
+													value={newEvent.sensitivityLevel}
+													onValueChange={(value: CalendarSensitivity) =>
+														setNewEvent({
+															...newEvent,
+															sensitivityLevel: value,
+														})
+													}
+												>
+													<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+														<SelectValue placeholder="Select sensitivity level" />
+													</SelectTrigger>
+													<SelectContent className="shadow-lg border-slate-200">
+														{(
+															[
+																"standard",
+																"restricted",
+																"confidential",
+															] as const
+														).map((level) => (
+															<SelectItem key={level} value={level}>
+																<div className="flex flex-col text-left">
+																	<span className="text-sm font-medium">
+																		{SENSITIVITY_LABELS[level]}
+																	</span>
+																	<span className="text-xs text-slate-500">
+																		{level === "standard"
+																			? "Visible to users with calendar access."
+																			: level === "restricted"
+																				? "Requires approver review before publishing."
+																				: "Visible only to approvers until approved."}
+																	</span>
+																</div>
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+												{newEvent.sensitivityLevel !== "standard" && (
+													<p className="mt-2 text-xs text-slate-500">
+														This event will remain hidden until an approver
+														approves it.
+													</p>
+												)}
+											</div>
+
+											{/* Contract Selection (conditional) */}
+											{["contract", "contract review"].includes(
+												(newEvent.type as unknown as string).toLowerCase(),
+											) && (
+												<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+													<Label
+														htmlFor="contractName"
+														className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+													>
+														<FileText className="w-4 h-4 text-blue-600" />
+														Related Contract
+													</Label>
+													<Select
+														value={newEvent.contractName}
+														onValueChange={(value) =>
+															setNewEvent({ ...newEvent, contractName: value })
+														}
+													>
+														<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+															<SelectValue placeholder="Select a contract to review" />
+														</SelectTrigger>
+														<SelectContent className="shadow-lg border-slate-200">
+															{loadingContracts ? (
+																<SelectItem value="loading" disabled>
+																	<div className="flex items-center gap-2">
+																		<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+																		Loading contracts...
+																	</div>
+																</SelectItem>
+															) : contracts.length > 0 ? (
+																contracts.map((contract) => (
+																	<SelectItem
+																		key={contract.id}
+																		value={contract.name}
+																	>
+																		<div className="flex items-center gap-2">
+																			<FileText className="w-4 h-4 text-slate-500" />
+																			{contract.name}
+																		</div>
+																	</SelectItem>
+																))
+															) : (
+																<SelectItem value="no-contracts" disabled>
+																	No contracts available
+																</SelectItem>
+															)}
+														</SelectContent>
+													</Select>
+												</div>
+											)}
+
+											{/* Location Section */}
+											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+												<Label
+													htmlFor="location"
+													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+												>
+													<MapPin className="w-4 h-4 text-blue-600" />
+													Location
+												</Label>
+												{/* Location Search */}
+												<div className="space-y-2">
+													<div className="relative">
+														<Input
+															placeholder="Search for a meeting room or location..."
+															value={locationSearch}
+															onChange={(e) => {
+																const value = e.target.value;
+																setLocationSearch(value);
+																setNewEvent({ ...newEvent, location: value });
+																searchLocations(value);
+															}}
+															onFocus={() => {
+																if (locationSearch.length >= 2) {
+																	searchLocations(locationSearch);
+																}
+															}}
+															className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11 pl-10"
+														/>
+														<MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+													</div>
+
+													{/* Location Search Results */}
+													{locationSearch.length >= 2 &&
+														locationResults.length > 0 && (
+															<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
+																{isSearchingLocation && (
+																	<div className="p-3 text-sm text-slate-500 flex items-center gap-2">
+																		<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+																		Searching locations...
+																	</div>
+																)}
+																{!isSearchingLocation &&
+																	locationResults.length > 0 && (
+																		<div className="divide-y divide-slate-100">
+																			{locationResults.map((location) => (
+																				<div
+																					key={location.id}
+																					className="p-3 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
+																					onClick={() => {
+																						setNewEvent({
+																							...newEvent,
+																							location: location.address,
+																						});
+																						setLocationSearch(location.address);
+																						setLocationResults([]);
+																						// If this is a resource, set the resourceId
+																						if (
+																							location.type === "resource" &&
+																							location.resourceId
+																						) {
+																							setSelectedResourceId(
+																								location.resourceId,
+																							);
+																						} else {
+																							setSelectedResourceId(null);
+																						}
+																					}}
+																				>
+																					<div className="flex items-center gap-3">
+																						<div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
+																							<MapPin className="h-4 w-4 text-slate-500" />
+																						</div>
+																						<div className="flex flex-col">
+																							<span className="font-medium text-sm text-slate-900">
+																								{location.name}
+																							</span>
+																							<span className="text-xs text-slate-500">
+																								{location.address}
+																							</span>
+																						</div>
+																					</div>
+																					<Button
+																						variant="ghost"
+																						size="sm"
+																						className="h-8 w-8 p-0 hover:bg-blue-100 rounded-full"
+																					>
+																						<Plus className="h-4 w-4 text-blue-600" />
+																					</Button>
+																				</div>
+																			))}
+																		</div>
+																	)}
+															</div>
+														)}
+
+													{/* No results message - only show when actively searching and no results */}
+													{locationSearch.length >= 2 &&
+														!isSearchingLocation &&
+														locationResults.length === 0 &&
+														!newEvent.location && (
+															<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
+																<div className="p-3 text-sm text-slate-500">
+																	No locations found. You can enter a custom
+																	location.
+																</div>
+															</div>
+														)}
+												</div>
+											</div>
+
+											{/* Priority 2: Reminders Section */}
+											<EventReminderConfigComponent
+												reminders={newEvent.reminders || []}
+												onChange={(reminders) =>
+													setNewEvent({ ...newEvent, reminders })
+												}
+											/>
+
+											{/* Description Section */}
+											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+												<Label
+													htmlFor="description"
+													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+												>
+													<MessageSquare className="w-4 h-4 text-blue-600" />
+													Description
+												</Label>
+												<Textarea
+													id="description"
+													value={newEvent.description}
+													onChange={(e) =>
+														setNewEvent({
+															...newEvent,
+															description: e.target.value,
+														})
+													}
+													placeholder="Add meeting agenda, objectives, or any additional details..."
+													rows={4}
+													className="bg-white border-slate-300 focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0 resize-none"
+												/>
+											</div>
+
+											{/* Attachments Section - Only for specific event types */}
+											{supportsAttachments(newEvent.type) && (
+												<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+													<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+														<Paperclip className="w-4 h-4 text-blue-600" />
+														Attachments
+													</Label>
+													<div className="space-y-3">
+														<div className="flex items-center gap-2">
+															<Input
+																type="file"
+																id="file-upload"
+																multiple
+																accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+																onChange={(e) =>
+																	handleFileUpload(e.target.files)
+																}
+																className="hidden"
+																disabled={uploadingFiles}
+															/>
+															<Label
+																htmlFor="file-upload"
+																className={cn(
+																	"flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors",
+																	uploadingFiles &&
+																		"opacity-50 cursor-not-allowed",
+																)}
+															>
+																{uploadingFiles ? (
+																	<>
+																		<Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+																		<span className="text-sm text-slate-600">
+																			Uploading...
+																		</span>
+																	</>
+																) : (
+																	<>
+																		<Paperclip className="w-4 h-4 text-blue-600" />
+																		<span className="text-sm text-slate-700">
+																			Upload Documents
+																		</span>
+																	</>
+																)}
+															</Label>
+															<span className="text-xs text-slate-500">
+																JPG, JPEG, PNG, PDF, DOC, DOCX (Max 50MB each)
+															</span>
+														</div>
+
+														{/* Display uploaded attachments */}
+														{newEvent.attachments &&
+															newEvent.attachments.length > 0 && (
+																<div className="space-y-2">
+																	{newEvent.attachments.map((attachment) => (
+																		<div
+																			key={attachment.$id}
+																			className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg"
+																		>
+																			<div className="flex items-center gap-2 flex-1 min-w-0">
+																				<FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+																				<div className="flex-1 min-w-0">
+																					<p className="text-sm font-medium text-slate-900 truncate">
+																						{attachment.name || "Unknown file"}
+																					</p>
+																					<p className="text-xs text-slate-500">
+																						{convertFileSize({
+																							sizeInBytes: attachment.size,
+																						})}
+																						{attachment.extension && (
+																							<>
+																								{" "}
+																								•{" "}
+																								{attachment.extension.toUpperCase()}
+																							</>
+																						)}
+																					</p>
+																				</div>
+																			</div>
+																			<Button
+																				type="button"
+																				variant="ghost"
+																				size="sm"
+																				className="h-8 w-8 p-0 hover:bg-red-50"
+																				onClick={() =>
+																					handleRemoveAttachment(attachment.$id)
+																				}
+																			>
+																				<Trash2 className="w-4 h-4 text-red-600" />
 																			</Button>
 																		</div>
 																	))}
 																</div>
 															)}
 													</div>
-												)}
-
-											{/* No results message - only show when actively searching and no results */}
-											{locationSearch.length >= 2 &&
-												!isSearchingLocation &&
-												locationResults.length === 0 &&
-												!newEvent.location && (
-													<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
-														<div className="p-3 text-sm text-slate-500">
-															No locations found. You can enter a custom
-															location.
-														</div>
-													</div>
-												)}
+												</div>
+											)}
 										</div>
-									</div>
 
-									{/* Priority 2: Reminders Section */}
-									<EventReminderConfigComponent
-										reminders={newEvent.reminders || []}
-										onChange={(reminders) =>
-											setNewEvent({ ...newEvent, reminders })
-										}
-									/>
-
-									{/* Description Section */}
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-										<Label
-											htmlFor="description"
-											className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-										>
-											<MessageSquare className="w-4 h-4 text-blue-600" />
-											Description
-										</Label>
-										<Textarea
-											id="description"
-											value={newEvent.description}
-											onChange={(e) =>
-												setNewEvent({
-													...newEvent,
-													description: e.target.value,
-												})
-											}
-											placeholder="Add meeting agenda, objectives, or any additional details..."
-											rows={4}
-											className="bg-white border-slate-300 focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0 resize-none"
-										/>
-									</div>
-
-									{/* Attachments Section - Only for specific event types */}
-									{supportsAttachments(newEvent.type) && (
-										<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-											<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
-												<Paperclip className="w-4 h-4 text-blue-600" />
-												Attachments
-											</Label>
-											<div className="space-y-3">
-												<div className="flex items-center gap-2">
-													<Input
-														type="file"
-														id="file-upload"
-														multiple
-														accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
-														onChange={(e) => handleFileUpload(e.target.files)}
-														className="hidden"
-														disabled={uploadingFiles}
-													/>
-													<Label
-														htmlFor="file-upload"
-														className={cn(
-															"flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors",
-															uploadingFiles && "opacity-50 cursor-not-allowed",
-														)}
+										{/* Professional Footer */}
+										<div className="border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
+											<div className="flex items-center justify-between">
+												<div className="text-sm text-slate-500">
+													{newEvent.description
+														? `${newEvent.description.length} characters`
+														: "Enter event details"}
+												</div>
+												<div className="flex items-center gap-3">
+													<Button
+														variant="outline"
+														className="primary-btn px-3 sm:px-4"
+														onClick={handleCancelEvent}
 													>
-														{uploadingFiles ? (
+														<Ban className="w-4 h-4" />
+														Cancel
+													</Button>
+													<Button
+														className="primary-btn px-3 sm:px-4"
+														onClick={
+															selectedEvent
+																? handleUpdateEventFromDialog
+																: handleCreateEvent
+														}
+														disabled={
+															creatingEvent ||
+															!newEvent.title.trim() ||
+															!canCreateEvent
+														}
+													>
+														{creatingEvent ? (
 															<>
-																<Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-																<span className="text-sm text-slate-600">
-																	Uploading...
-																</span>
+																<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+																{selectedEvent ? "Updating..." : "Creating..."}
 															</>
 														) : (
 															<>
-																<Paperclip className="w-4 h-4 text-blue-600" />
-																<span className="text-sm text-slate-700">
-																	Upload Documents
-																</span>
+																{selectedEvent ? (
+																	<Pencil className="w-4 h-4" />
+																) : (
+																	<Plus className="w-4 h-4" />
+																)}
+																{selectedEvent
+																	? "Update Event"
+																	: "Create Event"}
 															</>
 														)}
-													</Label>
-													<span className="text-xs text-slate-500">
-														JPG, JPEG, PNG, PDF, DOC, DOCX (Max 50MB each)
-													</span>
+													</Button>
 												</div>
-
-												{/* Display uploaded attachments */}
-												{newEvent.attachments &&
-													newEvent.attachments.length > 0 && (
-														<div className="space-y-2">
-															{newEvent.attachments.map((attachment) => (
-																<div
-																	key={attachment.$id}
-																	className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg"
-																>
-																	<div className="flex items-center gap-2 flex-1 min-w-0">
-																		<FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
-																		<div className="flex-1 min-w-0">
-																			<p className="text-sm font-medium text-slate-900 truncate">
-																				{attachment.name || "Unknown file"}
-																			</p>
-																			<p className="text-xs text-slate-500">
-																				{convertFileSize({
-																					sizeInBytes: attachment.size,
-																				})}
-																				{attachment.extension && (
-																					<>
-																						{" "}
-																						•{" "}
-																						{attachment.extension.toUpperCase()}
-																					</>
-																				)}
-																			</p>
-																		</div>
-																	</div>
-																	<Button
-																		type="button"
-																		variant="ghost"
-																		size="sm"
-																		className="h-8 w-8 p-0 hover:bg-red-50"
-																		onClick={() =>
-																			handleRemoveAttachment(attachment.$id)
-																		}
-																	>
-																		<Trash2 className="w-4 h-4 text-red-600" />
-																	</Button>
-																</div>
-															))}
-														</div>
-													)}
 											</div>
 										</div>
-									)}
-								</div>
-
-								{/* Professional Footer */}
-								<div className="border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-									<div className="flex items-center justify-between">
-										<div className="text-sm text-slate-500">
-											{newEvent.description
-												? `${newEvent.description.length} characters`
-												: "Enter event details"}
-										</div>
-										<div className="flex items-center gap-3">
-											<Button
-												variant="outline"
-												className="primary-btn px-3 sm:px-4"
-												onClick={handleCancelEvent}
-											>
-												<Ban className="w-4 h-4" />
-												Cancel
-											</Button>
-											<Button
-												className="primary-btn px-3 sm:px-4"
-												onClick={
-													selectedEvent
-														? handleUpdateEventFromDialog
-														: handleCreateEvent
-												}
-												disabled={
-													creatingEvent ||
-													!newEvent.title.trim() ||
-													!canCreateEvent
-												}
-											>
-												{creatingEvent ? (
-													<>
-														<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-														{selectedEvent ? "Updating..." : "Creating..."}
-													</>
-												) : (
-													<>
-														{selectedEvent ? (
-															<Pencil className="w-4 h-4" />
-														) : (
-															<Plus className="w-4 h-4" />
-														)}
-														{selectedEvent ? "Update Event" : "Create Event"}
-													</>
-												)}
-											</Button>
-										</div>
-									</div>
-								</div>
-							</DialogContent>
-						</Dialog>
+									</DialogContent>
+								</Dialog>
 
 								<Button
 									size="sm"
@@ -4430,204 +4448,208 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							</DialogContent>
 						</Dialog>
 
-				{/* Management + Calendar View */}
-				<div className="flex flex-col lg:flex-row gap-0 min-h-[640px]">
-					<CalendarSidebar
-						selectedMyCalendars={selectedMyCalendars}
-						selectedSharedCalendars={selectedSharedCalendars}
-						onMyCalendarChange={handleMyCalendarChange}
-						onSharedCalendarChange={handleSharedCalendarChange}
-						sharedCalendars={sharedCalendars.map((cal) => ({
-							...cal,
-							ownerName: sharedCalendarOwnerNames[cal.$id] || cal.name,
-						}))}
-						loadingSharedCalendars={loadingSharedCalendars}
-						selectedDate={selectedDate}
-						currentMonth={currentMonth}
-						onSelectDate={(date) => setSelectedDate(date)}
-						onMonthChange={(month) => setCurrentMonth(month)}
-					>
-						<SharedCalendarManager />
-						<ResourceManager />
-						<CalendarDelegationManager />
-					</CalendarSidebar>
+						{/* Management + Calendar View */}
+						<div className="flex flex-col lg:flex-row gap-0 min-h-[640px]">
+							<CalendarSidebar
+								selectedMyCalendars={selectedMyCalendars}
+								selectedSharedCalendars={selectedSharedCalendars}
+								onMyCalendarChange={handleMyCalendarChange}
+								onSharedCalendarChange={handleSharedCalendarChange}
+								sharedCalendars={sharedCalendars.map((cal) => ({
+									...cal,
+									ownerName: sharedCalendarOwnerNames[cal.$id] || cal.name,
+								}))}
+								loadingSharedCalendars={loadingSharedCalendars}
+								selectedDate={selectedDate}
+								currentMonth={currentMonth}
+								onSelectDate={(date) => setSelectedDate(date)}
+								onMonthChange={(month) => setCurrentMonth(month)}
+							>
+								<SharedCalendarManager />
+								<ResourceManager />
+								<CalendarDelegationManager />
+							</CalendarSidebar>
 
-					{/* Calendar Display Area */}
-					<div
-						ref={calendarContainerRef}
-						className={`flex-1 bg-white/40 ${
-							(selectedMyCalendars.calendar ? 1 : 0) +
-								(selectedMyCalendars.usHolidays ? 1 : 0) +
-								selectedSharedCalendars.length >
-							1
-								? "overflow-x-auto"
-								: "overflow-x-hidden"
-						}`}
-					>
-						<div
-							className="flex gap-4 p-4"
-							style={{
-								minWidth:
+							{/* Calendar Display Area */}
+							<div
+								ref={calendarContainerRef}
+								className={`flex-1 bg-white/40 ${
 									(selectedMyCalendars.calendar ? 1 : 0) +
 										(selectedMyCalendars.usHolidays ? 1 : 0) +
 										selectedSharedCalendars.length >
 									1
-										? "max-content"
-										: "auto",
-							}}
-						>
-							{(() => {
-								// Calculate number of visible calendars
-								const _visibleCalendarsCount =
-									(selectedMyCalendars.calendar ? 1 : 0) +
-									(selectedMyCalendars.usHolidays ? 1 : 0) +
-									selectedSharedCalendars.length;
+										? "overflow-x-auto"
+										: "overflow-x-hidden"
+								}`}
+							>
+								<div
+									className="flex gap-4 p-4"
+									style={{
+										minWidth:
+											(selectedMyCalendars.calendar ? 1 : 0) +
+												(selectedMyCalendars.usHolidays ? 1 : 0) +
+												selectedSharedCalendars.length >
+											1
+												? "max-content"
+												: "auto",
+									}}
+								>
+									{(() => {
+										// Calculate number of visible calendars
+										const _visibleCalendarsCount =
+											(selectedMyCalendars.calendar ? 1 : 0) +
+											(selectedMyCalendars.usHolidays ? 1 : 0) +
+											selectedSharedCalendars.length;
 
-								// Use the calculated calendarWidth from state
+										// Use the calculated calendarWidth from state
 
-								return (
-									<>
-										{/* Main Calendar */}
-										{selectedMyCalendars.calendar && (
-											<div
-												className="flex-shrink-0"
-												style={{ width: calendarWidth }}
-											>
-												<div className="flex items-center justify-between mb-2 px-1">
-													<h3 className="text-lg font-semibold text-slate-700">
-														Calendar
-													</h3>
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => handleCloseCalendar("calendar")}
-														className="h-6 w-6 p-0 hover:bg-slate-100"
+										return (
+											<>
+												{/* Main Calendar */}
+												{selectedMyCalendars.calendar && (
+													<div
+														className="flex-shrink-0"
+														style={{ width: calendarWidth }}
 													>
-														<X className="h-4 w-4" />
-													</Button>
-												</div>
-												<Card>
-													<CardContent className="p-0">
-														{renderActiveView(defaultCalendarEvents)}
-													</CardContent>
-												</Card>
-											</div>
-										)}
-
-										{/* US Holidays Calendar */}
-										{selectedMyCalendars.usHolidays && (
-											<div
-												className="flex-shrink-0"
-												style={{ width: calendarWidth }}
-											>
-												<div className="flex items-center justify-between mb-2 px-1">
-													<h3 className="text-lg font-semibold text-slate-700">
-														United States holidays
-													</h3>
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => handleCloseCalendar("usHolidays")}
-														className="h-6 w-6 p-0 hover:bg-slate-100"
-													>
-														<X className="h-4 w-4" />
-													</Button>
-												</div>
-												<Card>
-													<CardContent className="p-0">
-														{renderActiveView(usHolidaysEvents)}
-													</CardContent>
-												</Card>
-											</div>
-										)}
-
-										{/* Shared Calendars */}
-										{selectedSharedCalendars.map((calendarId) => {
-											const calendar = sharedCalendars.find(
-												(cal) => cal.$id === calendarId,
-											);
-											if (!calendar) return null;
-
-											// Get events for this specific shared calendar (filtered by owner)
-											const sharedCalendarEvents =
-												getSharedCalendarEvents(calendar);
-
-											return (
-												<div
-													key={calendarId}
-													className="flex-shrink-0"
-													style={{ width: calendarWidth }}
-												>
-													<div className="flex items-center justify-between mb-2 px-1">
-														<h3 className="text-lg font-semibold text-slate-700">
-															{sharedCalendarOwnerNames[calendarId] ||
-																calendar.name}
-														</h3>
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => handleCloseCalendar(calendarId)}
-															className="h-6 w-6 p-0 hover:bg-slate-100"
-														>
-															<X className="h-4 w-4" />
-														</Button>
+														<div className="flex items-center justify-between mb-2 px-1">
+															<h3 className="text-lg font-semibold text-slate-700">
+																Calendar
+															</h3>
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => handleCloseCalendar("calendar")}
+																className="h-6 w-6 p-0 hover:bg-slate-100"
+															>
+																<X className="h-4 w-4" />
+															</Button>
+														</div>
+														<Card>
+															<CardContent className="p-0">
+																{renderActiveView(defaultCalendarEvents)}
+															</CardContent>
+														</Card>
 													</div>
-													<Card>
-														<CardContent className="p-0">
-															{renderActiveView(sharedCalendarEvents)}
-														</CardContent>
-													</Card>
-												</div>
-											);
-										})}
-									</>
-								);
-							})()}
-						</div>
-					</div>
+												)}
 
-					{isApprover && (
-						<CalendarApprovalsRail
-							approvals={approvals}
-							isLoading={approvalsLoading}
-							isExpanded={isApprovalsExpanded}
-							onExpandedChange={setIsApprovalsExpanded}
-							onSelectApproval={(approval) => {
-								setSelectedApproval(approval);
-								setIsApprovalDialogOpen(true);
-								setReviewerNotes("");
+												{/* US Holidays Calendar */}
+												{selectedMyCalendars.usHolidays && (
+													<div
+														className="flex-shrink-0"
+														style={{ width: calendarWidth }}
+													>
+														<div className="flex items-center justify-between mb-2 px-1">
+															<h3 className="text-lg font-semibold text-slate-700">
+																United States holidays
+															</h3>
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() =>
+																	handleCloseCalendar("usHolidays")
+																}
+																className="h-6 w-6 p-0 hover:bg-slate-100"
+															>
+																<X className="h-4 w-4" />
+															</Button>
+														</div>
+														<Card>
+															<CardContent className="p-0">
+																{renderActiveView(usHolidaysEvents)}
+															</CardContent>
+														</Card>
+													</div>
+												)}
+
+												{/* Shared Calendars */}
+												{selectedSharedCalendars.map((calendarId) => {
+													const calendar = sharedCalendars.find(
+														(cal) => cal.$id === calendarId,
+													);
+													if (!calendar) return null;
+
+													// Get events for this specific shared calendar (filtered by owner)
+													const sharedCalendarEvents =
+														getSharedCalendarEvents(calendar);
+
+													return (
+														<div
+															key={calendarId}
+															className="flex-shrink-0"
+															style={{ width: calendarWidth }}
+														>
+															<div className="flex items-center justify-between mb-2 px-1">
+																<h3 className="text-lg font-semibold text-slate-700">
+																	{sharedCalendarOwnerNames[calendarId] ||
+																		calendar.name}
+																</h3>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	onClick={() =>
+																		handleCloseCalendar(calendarId)
+																	}
+																	className="h-6 w-6 p-0 hover:bg-slate-100"
+																>
+																	<X className="h-4 w-4" />
+																</Button>
+															</div>
+															<Card>
+																<CardContent className="p-0">
+																	{renderActiveView(sharedCalendarEvents)}
+																</CardContent>
+															</Card>
+														</div>
+													);
+												})}
+											</>
+										);
+									})()}
+								</div>
+							</div>
+
+							{isApprover && (
+								<CalendarApprovalsRail
+									approvals={approvals}
+									isLoading={approvalsLoading}
+									isExpanded={isApprovalsExpanded}
+									onExpandedChange={setIsApprovalsExpanded}
+									onSelectApproval={(approval) => {
+										setSelectedApproval(approval);
+										setIsApprovalDialogOpen(true);
+										setReviewerNotes("");
+									}}
+								/>
+							)}
+						</div>
+
+						<CalendarFiltersDrawer
+							open={isFiltersDrawerOpen}
+							onOpenChange={setIsFiltersDrawerOpen}
+							outlookConnected={outlookConnected}
+							syncing={syncing}
+							onShare={() => setIsSharePrimaryCalendarOpen(true)}
+							onPrint={() => window.print()}
+							onSettings={() => setShowSettings(true)}
+							onSync={() => {
+								void handleSync();
 							}}
 						/>
-					)}
-				</div>
 
-				<CalendarFiltersDrawer
-					open={isFiltersDrawerOpen}
-					onOpenChange={setIsFiltersDrawerOpen}
-					outlookConnected={outlookConnected}
-					syncing={syncing}
-					onShare={() => setIsSharePrimaryCalendarOpen(true)}
-					onPrint={() => window.print()}
-					onSettings={() => setShowSettings(true)}
-					onSync={() => {
-						void handleSync();
-					}}
-				/>
-
-				<QuickCreateEventPopover
-					open={isQuickCreateOpen}
-					onOpenChange={setIsQuickCreateOpen}
-					anchorDate={quickCreateDate}
-					canCreate={canCreateEvent}
-					creating={creatingEvent}
-					defaultStartTime={
-						quickCreateHour != null
-							? `${String(quickCreateHour).padStart(2, "0")}:00`
-							: "09:00"
-					}
-					onCreate={handleQuickCreate}
-					onMoreOptions={handleQuickCreateMoreOptions}
-				/>
+						<QuickCreateEventPopover
+							open={isQuickCreateOpen}
+							onOpenChange={setIsQuickCreateOpen}
+							anchorDate={quickCreateDate}
+							canCreate={canCreateEvent}
+							creating={creatingEvent}
+							defaultStartTime={
+								quickCreateHour != null
+									? `${String(quickCreateHour).padStart(2, "0")}:00`
+									: "09:00"
+							}
+							onCreate={handleQuickCreate}
+							onMoreOptions={handleQuickCreateMoreOptions}
+						/>
 					</CardContent>
 				</Card>
 
@@ -4636,7 +4658,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					open={isApprovalDialogOpen}
 					onOpenChange={setIsApprovalDialogOpen}
 				>
-					<DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
+					<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[700px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
 						<VisuallyHiddenPrimitive.Root>
 							<DialogTitle>
 								{selectedApproval

@@ -12,10 +12,10 @@ import { matchesStatusTab } from "@/lib/licenses/licensesListUtils";
 import type { License } from "@/types/licenses";
 import { useLicensesView } from "./LicensesView";
 
-const LicenseUploadForm = dynamic(
-	() => import("@/components/license-upload"),
-	{ ssr: false, loading: () => null },
-);
+const LicenseUploadForm = dynamic(() => import("@/components/license-upload"), {
+	ssr: false,
+	loading: () => null,
+});
 
 interface LicensesHeaderActionsProps {
 	licenses: License[];

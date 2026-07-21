@@ -23,37 +23,17 @@ export async function GET(request: NextRequest) {
 
 		const { tablesDB } = await createAdminClient();
 
-		// Get the collection to see all attributes
-		// Try getCollection first, fallback to listColumns if needed
-		let collection;
-		try {
-			collection = await tablesDB.getCollection({
-				databaseId: appwriteConfig.databaseId,
-				tableId: collectionId,
-			});
-		} catch (error: any) {
-			// Fallback: try to get attributes via listColumns
-			try {
-				const columns = await tablesDB.listColumns({
-					databaseId: appwriteConfig.databaseId,
-					tableId: collectionId,
-				});
-				return NextResponse.json({
-					success: true,
-					collectionId,
-					totalAttributes: columns.total || 0,
-					attributes: columns.columns || [],
-				});
-			} catch (_listError: any) {
-				throw error; // Throw original error
-			}
-		}
+		// List the table columns to see all attributes
+		const columns = await tablesDB.listColumns({
+			databaseId: appwriteConfig.databaseId,
+			tableId: collectionId,
+		});
 
 		return NextResponse.json({
 			success: true,
 			collectionId,
-			totalAttributes: collection.attributes?.length || 0,
-			attributes: collection.attributes || [],
+			totalAttributes: columns.total || 0,
+			attributes: columns.columns || [],
 		});
 	} catch (error: any) {
 		console.error("Error listing attributes:", error);

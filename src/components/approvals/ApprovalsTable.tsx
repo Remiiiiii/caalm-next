@@ -3,9 +3,11 @@
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { agingLabel } from "@/components/approvals/ApprovalsAttentionStrip";
+import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
+import FormattedDateTime from "@/components/FormattedDateTime";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Table,
@@ -15,7 +17,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import {
 	type ApprovalQueueItem,
@@ -29,10 +33,6 @@ import {
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
-import FormattedDateTime from "@/components/FormattedDateTime";
-import { Button } from "@/components/ui/button";
-import { PERMISSIONS } from "@/constants/permissions";
-import { usePermissions } from "@/hooks/usePermissions";
 
 interface ApprovalsTableProps {
 	items: ApprovalQueueItem[];
@@ -211,9 +211,7 @@ export default function ApprovalsTable({
 								{item.department || "—"}
 							</TableCell>
 							<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm max-w-[140px] truncate">
-								{item.assignees.length > 0
-									? item.assignees.join(", ")
-									: "—"}
+								{item.assignees.length > 0 ? item.assignees.join(", ") : "—"}
 							</TableCell>
 							<TableCell className="py-3 text-slate-700 whitespace-nowrap">
 								<FormattedDateTime date={item.submittedAt} className="body-2" />
@@ -222,7 +220,9 @@ export default function ApprovalsTable({
 								<span
 									className={cn(
 										"text-sm",
-										isAgingUrgent(item) ? "text-orange font-medium" : "text-slate-600",
+										isAgingUrgent(item)
+											? "text-orange font-medium"
+											: "text-slate-600",
 									)}
 								>
 									{agingLabel(item)}

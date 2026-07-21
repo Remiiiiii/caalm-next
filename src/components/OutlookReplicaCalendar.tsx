@@ -30,7 +30,6 @@ import {
 	Search,
 	Settings,
 	Share2,
-	Trash2,
 	User,
 	Users,
 } from "lucide-react";
@@ -246,8 +245,8 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
 				{/* Days */}
 				{days.map((day) => {
 					const dayEvents = filteredEvents.filter((event) => {
-						if (!event.date) return false;
-						const eventDate = new Date(event.date);
+						if (!event.startDate) return false;
+						const eventDate = new Date(event.startDate);
 						return isSameDay(eventDate, day);
 					});
 

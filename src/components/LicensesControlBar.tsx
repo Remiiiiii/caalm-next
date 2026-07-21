@@ -6,8 +6,8 @@ import LicensesFilterChips from "./LicensesFilterChips";
 import LicensesSavedViews from "./LicensesSavedViews";
 import LicensesStatusTabs from "./LicensesStatusTabs";
 import LicensesTopControls from "./LicensesTopControls";
-import { LicensesViewToggle } from "./LicensesViewToggle";
 import { useLicensesView } from "./LicensesView";
+import { LicensesViewToggle } from "./LicensesViewToggle";
 import Sort from "./Sort";
 
 interface LicensesControlBarProps {

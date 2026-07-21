@@ -2,9 +2,9 @@
 
 import { format } from "date-fns";
 import { X } from "lucide-react";
+import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { countActiveApprovalFilters } from "@/lib/approvals/approvalsListUtils";
 
 const TAB_LABELS: Record<string, string> = {
@@ -61,9 +61,7 @@ export default function ApprovalsFilterChips() {
 		const from = filters.submittedFrom
 			? format(filters.submittedFrom, "MMM d")
 			: "…";
-		const to = filters.submittedTo
-			? format(filters.submittedTo, "MMM d")
-			: "…";
+		const to = filters.submittedTo ? format(filters.submittedTo, "MMM d") : "…";
 		chips.push({
 			key: "submitted",
 			label: `Submitted: ${from} – ${to}`,

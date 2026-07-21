@@ -649,13 +649,9 @@ const Card = ({
 
 			<div className="min-w-0 rounded-lg bg-white/40 border border-white/50 px-3 py-1">
 				{contractAmount != null && (
-					<MetaRow label="Value">
-						${formattedContractAmount} USD
-					</MetaRow>
+					<MetaRow label="Value">${formattedContractAmount} USD</MetaRow>
 				)}
-				{contractVendor && (
-					<MetaRow label="Vendor">{contractVendor}</MetaRow>
-				)}
+				{contractVendor && <MetaRow label="Vendor">{contractVendor}</MetaRow>}
 				{file.$createdAt && (
 					<MetaRow label="Uploaded">
 						<FormattedDateTime
@@ -671,10 +667,7 @@ const Card = ({
 							isExpired ? "danger" : isExpiringSoon ? "warning" : undefined
 						}
 					>
-						<FormattedDate
-							date={contractExpiryDate}
-							className="text-inherit"
-						/>
+						<FormattedDate date={contractExpiryDate} className="text-inherit" />
 					</MetaRow>
 				)}
 				{(assignedTo ||

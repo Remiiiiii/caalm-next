@@ -4,6 +4,7 @@ import { ArrowLeft, CreditCard, Puzzle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PermissionGate } from "@/components/PermissionGate";
 import BillingOverviewCard from "@/components/settings/BillingOverviewCard";
 import IntegrationsPanel from "@/components/settings/IntegrationsPanel";
 import InvoiceHistoryTable, {
@@ -11,7 +12,6 @@ import InvoiceHistoryTable, {
 } from "@/components/settings/InvoiceHistoryTable";
 import PlanUpgradeSection from "@/components/settings/PlanUpgradeSection";
 import UsageMetersCard from "@/components/settings/UsageMetersCard";
-import { PermissionGate } from "@/components/PermissionGate";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -286,7 +286,9 @@ export default function BillingIntegrationsPage() {
 							{subscription && (
 								<>
 									<BillingOverviewCard
-										planName={subscription.plan?.name || subscription.subscriptionTier}
+										planName={
+											subscription.plan?.name || subscription.subscriptionTier
+										}
 										tier={subscription.subscriptionTier}
 										status={subscription.billingStatus}
 										interval={subscription.billingInterval}
@@ -353,9 +355,7 @@ export default function BillingIntegrationsPage() {
 							{user?.$id && (
 								<IntegrationsPanel
 									userId={user.$id}
-									subscriptionTier={
-										subscription?.subscriptionTier || "starter"
-									}
+									subscriptionTier={subscription?.subscriptionTier || "starter"}
 									onViewPlans={() => {
 										if (canBilling) {
 											setTab("billing");

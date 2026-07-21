@@ -43,7 +43,7 @@ export async function GET(_request: NextRequest) {
 			debugInfo.caalmEvents = caalmEvents.map((event) => ({
 				id: event.$id,
 				title: event.title,
-				date: event.date,
+				date: event.startDate,
 				type: event.type,
 				outlook_id: event.outlook_id,
 				createdBy: event.createdBy,

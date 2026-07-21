@@ -1,4 +1,15 @@
 import type { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/contracts/middleware/auth.middleware";
+import {
+	FileService,
+	MAX_ARRAYBUFFER_SIZE,
+} from "@/lib/api/contracts/services/FileService";
+import {
+	errorResponse,
+	generateRequestId,
+	successResponse,
+	validationErrorResponse,
+} from "@/lib/api/contracts/utils/response.util";
 import { appwriteConfig } from "@/lib/appwrite/config";
 
 export async function POST(request: NextRequest) {
@@ -46,8 +57,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Download file content for smaller files
-		const fileContent = await FileService.downloadFileFromStorage(bucketFileId);
-		const arrayBuffer = await fileContent.arrayBuffer();
+		const arrayBuffer = await FileService.downloadFileFromStorage(bucketFileId);
 
 		return successResponse(
 			{

@@ -50,7 +50,8 @@ const MyContractsPage = () => {
 				!permissions.includes(PERMISSIONS.SETTINGS.VIEW) &&
 				division
 			) {
-				const divisionContracts = (await getContractsByUserDivision(division)) || [];
+				const divisionContracts =
+					(await getContractsByUserDivision(division)) || [];
 
 				// Get the corresponding file documents for these contracts
 				const contractFiles: UIFileDoc[] = [];

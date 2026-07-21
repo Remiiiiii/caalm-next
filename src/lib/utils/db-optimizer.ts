@@ -7,14 +7,14 @@ import { Query } from "node-appwrite";
 /**
  * Optimize query by limiting fields
  */
-export function selectFields(fields: string[]): Query[] {
+export function selectFields(fields: string[]): string[] {
 	return fields.map((_field) => Query.select(fields));
 }
 
 /**
  * Create optimized pagination query
  */
-export function createPaginationQuery(page: number, limit: number): Query[] {
+export function createPaginationQuery(page: number, limit: number): string[] {
 	const offset = (page - 1) * limit;
 	return [Query.limit(limit), Query.offset(offset)];
 }
@@ -25,19 +25,19 @@ export function createPaginationQuery(page: number, limit: number): Query[] {
 export function createSortQuery(
 	field: string,
 	direction: "asc" | "desc" = "desc",
-): Query {
+): string {
 	return direction === "asc" ? Query.orderAsc(field) : Query.orderDesc(field);
 }
 
 /**
  * Memoized query builder
  */
-const queryCache = new Map<string, Query[]>();
+const queryCache = new Map<string, string[]>();
 
 /**
  * Memoize query construction
  */
-export function memoizeQuery<T extends (...args: any[]) => Query[]>(
+export function memoizeQuery<T extends (...args: any[]) => string[]>(
 	fn: T,
 	keyFn: (...args: Parameters<T>) => string,
 ): T {
@@ -70,9 +70,9 @@ export function optimizeQuery(options: {
 	limit?: number;
 	offset?: number;
 	orderBy?: { field: string; direction: "asc" | "desc" };
-	filters?: Query[];
-}): Query[] {
-	const queries: Query[] = [];
+	filters?: string[];
+}): string[] {
+	const queries: string[] = [];
 
 	// Add field selection if specified
 	if (options.fields && options.fields.length > 0) {

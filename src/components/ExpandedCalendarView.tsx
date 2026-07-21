@@ -1110,7 +1110,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 
 			{/* Expanded Calendar Modal */}
 			<Dialog open={isExpanded} onOpenChange={setIsExpanded}>
-				<DialogContent className="max-w-5xl w-full h-[90vh] p-0">
+				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-5xl max-sm:inset-2 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:left-2 max-sm:top-2 max-sm:h-[calc(100vh-1rem)] h-[90vh] p-0">
 					<DialogHeader className="sr-only">
 						<DialogTitle>Expanded Calendar View</DialogTitle>
 					</DialogHeader>
@@ -1500,7 +1500,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 				open={isApprovalDialogOpen}
 				onOpenChange={setIsApprovalDialogOpen}
 			>
-				<DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
+				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[700px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
 					<DialogHeader className="sr-only">
 						<DialogTitle>
 							{selectedApproval

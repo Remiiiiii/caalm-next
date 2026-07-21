@@ -102,7 +102,7 @@ export async function createNewsArticle(
 			data: articleData,
 		});
 
-		return article as NewsArticle;
+		return article as unknown as NewsArticle;
 	} catch (error) {
 		console.error("Error creating news article:", error);
 		throw error;
@@ -122,7 +122,7 @@ export async function getNewsArticle(id: string): Promise<NewsArticle | null> {
 			rowId: id,
 		});
 
-		return article as NewsArticle;
+		return article as unknown as NewsArticle;
 	} catch (error: any) {
 		if (error.code === 404) {
 			return null;
@@ -166,7 +166,7 @@ export async function updateNewsArticle(
 			data: updateData,
 		});
 
-		return article as NewsArticle;
+		return article as unknown as NewsArticle;
 	} catch (error) {
 		console.error("Error updating news article:", error);
 		throw error;
@@ -229,7 +229,7 @@ export async function publishNewsArticle(
 			data: updateData,
 		});
 
-		return article as NewsArticle;
+		return article as unknown as NewsArticle;
 	} catch (error) {
 		console.error("Error publishing news article:", error);
 		throw error;
@@ -298,7 +298,7 @@ export async function listNewsArticles(
 		});
 
 		return {
-			articles: response.rows as NewsArticle[],
+			articles: response.rows as unknown as NewsArticle[],
 			total: response.total,
 		};
 	} catch (error) {

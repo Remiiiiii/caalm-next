@@ -193,7 +193,7 @@ export const CalendarDelegationManager: React.FC<
 					Manage Delegations
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col">
+			<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[700px] p-0 max-h-[90vh] flex flex-col">
 				<VisuallyHiddenPrimitive.Root>
 					<DialogTitle>Manage Calendar Delegations</DialogTitle>
 					<DialogDescription>

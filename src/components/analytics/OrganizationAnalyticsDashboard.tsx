@@ -6,7 +6,6 @@ import {
 	BarChart3,
 	Building,
 	ClipboardCheck,
-	DollarSign,
 	Download,
 	Eye,
 	FileText,
@@ -14,7 +13,7 @@ import {
 	TrendingUp,
 	Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	Area,
 	AreaChart,
@@ -44,7 +43,7 @@ import {
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { DepartmentComplianceCard } from "./AnalyticsReadinessOverview";
 interface ContractStats {
 	totalContracts: number;
 	totalBudget: number;
@@ -124,9 +123,9 @@ const mockData = {
 };
 
 const OrganizationAnalyticsDashboard = () => {
-	const [_selectedDepartment, _setSelectedDepartment] = useState<string>("all");
 	const [selectedDepartmentTab, setSelectedDepartmentTab] =
-		useState<string>("all");
+		useState<string>("");
+	const detailRef = useRef<HTMLDivElement>(null);
 
 	// Use SWR for lightning-fast cached responses
 	const { data, error, isLoading } = useSWR<{
@@ -160,13 +159,135 @@ const OrganizationAnalyticsDashboard = () => {
 
 	const analyticsData = data?.data || null;
 
+	useEffect(() => {
+		if (!analyticsData?.departments?.length) return;
+		const first = analyticsData.departments[0].name.toLowerCase();
+		const stillValid = analyticsData.departments.some(
+			(d) => d.name.toLowerCase() === selectedDepartmentTab,
+		);
+		if (!selectedDepartmentTab || !stillValid) {
+			setSelectedDepartmentTab(first);
+		}
+	}, [analyticsData, selectedDepartmentTab]);
+
 	const handleExport = () => {
-		console.log("Exporting analytics data...");
+		if (!analyticsData?.departments?.length) return;
+
+		const escapeCsv = (value: string | number) => {
+			const str = String(value);
+			if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+				return `"${str.replace(/"/g, '""')}"`;
+			}
+			return str;
+		};
+
+		const headers = [
+			"Department",
+			"Contracts",
+			"Staff",
+			"Budget",
+			"Compliance %",
+			"Divisions",
+		];
+		const rows = analyticsData.departments.map((dept) => [
+			dept.name,
+			dept.totalStats.totalContracts,
+			dept.totalStats.staffCount,
+			dept.totalStats.totalBudget,
+			dept.totalStats.complianceRate,
+			dept.divisions.map((d) => d.name).join("; "),
+		]);
+
+		const csv = [headers, ...rows]
+			.map((row) => row.map(escapeCsv).join(","))
+			.join("\n");
+		const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `department-performance-${new Date().toISOString().slice(0, 10)}.csv`;
+		link.click();
+		URL.revokeObjectURL(url);
+	};
+
+	const handleView = () => {
+		detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 	};
 
 	// Get department-specific data for charts
 	const getDepartmentData = (deptName: string) => {
 		if (!analyticsData || deptName === "all") {
+			if (analyticsData) {
+				const budgetData = analyticsData.departments.map((dept) => ({
+					department: dept.name,
+					budget: dept.totalStats.totalBudget,
+					spent: Math.round(dept.totalStats.totalBudget * 0.85),
+				}));
+
+				const totalContracts = analyticsData.totalStats.totalContracts;
+				const complianceRate = analyticsData.totalStats.complianceRate;
+
+				const complianceData = [
+					{
+						status: "Compliant",
+						count: Math.round(totalContracts * (complianceRate / 100)),
+						color: "#03AFBF",
+					},
+					{
+						status: "At Risk",
+						count: Math.round(totalContracts * 0.1),
+						color: "#F59E0B",
+					},
+					{
+						status: "Non-Compliant",
+						count: Math.max(
+							0,
+							totalContracts -
+								Math.round(totalContracts * (complianceRate / 100)) -
+								Math.round(totalContracts * 0.1),
+						),
+						color: "#EF4444",
+					},
+				].filter((item) => item.count > 0);
+
+				const staffData = analyticsData.departments.map((dept) => ({
+					role: dept.name,
+					count: dept.totalStats.staffCount,
+				}));
+
+				const contractTypesData = analyticsData.departments
+					.filter((d) => d.totalStats.totalContracts > 0)
+					.map((dept, index) => ({
+						type: dept.name,
+						count: dept.totalStats.totalContracts,
+						color: ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EF4444"][
+							index % 5
+						],
+					}));
+
+				const scale = totalContracts / 67 || 1;
+				const trendsData = mockData.contractTrends.map((item) => ({
+					...item,
+					active: Math.round(item.active * scale * (complianceRate / 100)),
+					pending: Math.round(item.pending * scale * 0.3),
+					expired: Math.round(item.expired * scale * 0.1),
+				}));
+
+				return {
+					budgetData,
+					expensesData: mockData.monthlyExpenses.map((item) => ({
+						...item,
+						expenses: Math.round(
+							item.expenses * (analyticsData.totalStats.totalBudget / 2000000),
+						),
+					})),
+					staffData,
+					contractTypesData,
+					complianceData,
+					trendsData,
+				};
+			}
+
 			return {
 				budgetData: mockData.budgetAllocation,
 				expensesData: mockData.monthlyExpenses,
@@ -343,25 +464,34 @@ const OrganizationAnalyticsDashboard = () => {
 				</div>
 			</div>
 
+			{/* Department compliance — animated bars */}
+			<DepartmentComplianceCard
+				departments={analyticsData.departments.map((dept) => ({
+					name: dept.name,
+					complianceRate: dept.totalStats.complianceRate,
+				}))}
+			/>
+
 			{/* Department Navigation */}
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardHeader>
-					<div className="flex items-center justify-between">
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 						<CardTitle className="h2 sidebar-gradient-text">
 							Departmental Performance Breakdown
 						</CardTitle>
-						<div className="flex items-center space-x-3">
+						<div className="flex flex-wrap items-center gap-3">
 							<Button
 								onClick={handleExport}
-								className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+								className="primary-btn px-3 sm:px-4"
 							>
 								<Download className="h-4 w-4" />
 								Export
 							</Button>
 							<Button
 								variant="outline"
-								className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+								onClick={handleView}
+								className="primary-btn px-3 sm:px-4"
 							>
 								<Eye className="h-4 w-4" />
 								View
@@ -370,525 +500,429 @@ const OrganizationAnalyticsDashboard = () => {
 					</div>
 				</CardHeader>
 				<CardContent>
-					<Tabs
-						defaultValue="all"
-						className="w-full"
-						onValueChange={(value) => setSelectedDepartmentTab(value)}
-					>
-						<TabsList className="flex w-full bg-white/20 backdrop-blur border border-white/40 overflow-x-auto">
-							<TabsTrigger
-								value="all"
-								className="tabs-underline flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-navy"
-							>
-								All Departments
-							</TabsTrigger>
+					{selectedDepartmentTab ? (
+						<Tabs
+							value={selectedDepartmentTab}
+							className="w-full"
+							onValueChange={(value) => setSelectedDepartmentTab(value)}
+						>
+							<TabsList className="flex h-auto w-full flex-wrap gap-1 bg-white/20 backdrop-blur border border-white/40 p-1">
+								{analyticsData.departments.map((dept) => (
+									<TabsTrigger
+										key={dept.name}
+										value={dept.name.toLowerCase()}
+										className="flex-1 min-w-[4.5rem] data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+									>
+										{dept.name}
+									</TabsTrigger>
+								))}
+							</TabsList>
+
 							{analyticsData.departments.map((dept) => (
-								<TabsTrigger
+								<TabsContent
 									key={dept.name}
 									value={dept.name.toLowerCase()}
-									className="tabs-underline flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-navy"
+									className="mt-6"
 								>
-									{dept.name}
-								</TabsTrigger>
-							))}
-						</TabsList>
-
-						<TabsContent value="all" className="mt-6">
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-								{analyticsData.departments.map((dept) => {
-									// Enterprise-level IT card
-									if (dept.name === "IT") {
-										return (
-											<Card
-												key={dept.name}
-												className="group relative bg-gray-50 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
-											>
-												{/* Accent gradient bar */}
-												<div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#03AFBF] via-[#56B8FF] to-[#03AFBF]" />
-
-												<CardHeader className="pb-4 pt-5 px-5 bg-white">
-													<div className="flex items-center justify-between mb-1">
-														<div className="flex items-center gap-3">
-															<div className="relative">
-																<div className="absolute inset-0 bg-gradient-to-br from-[#03AFBF]/20 to-[#56B8FF]/20 rounded-lg blur-sm" />
-																<div className="relative bg-gradient-to-br from-[#03AFBF]/10 to-[#56B8FF]/10 p-2.5 rounded-lg border border-[#03AFBF]/20">
-																	<Activity
-																		className="h-5 w-5"
-																		style={{ color: "#03AFBF" }}
-																	/>
-																</div>
-															</div>
-															<div>
-																<CardTitle className="text-lg font-bold sidebar-gradient-text">
-																	{dept.name}
-																</CardTitle>
-																<p className="text-xs text-slate-500 mt-0.5">
-																	Information Technology
-																</p>
-															</div>
-														</div>
-													</div>
-												</CardHeader>
-												<CardContent className="px-5 pb-5 bg-gray-50">
-													<div className="space-y-3">
-														{/* Contracts Metric */}
-														<div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-															<div className="flex items-center gap-2.5">
-																<div className="p-1.5 bg-blue-100 rounded-md">
-																	<FileText className="h-3.5 w-3.5 text-blue-600" />
-																</div>
-																<span className="text-sm font-medium text-slate-700">
-																	Contracts
-																</span>
-															</div>
-															<Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
+									<div className="space-y-6">
+										{/* Department Stats */}
+										<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+											<Card className="glass-card">
+												<div className="glass-card-cap" />
+												<CardContent className="p-4">
+													<div className="flex items-center justify-between">
+														<div>
+															<p className="text-sm text-slate-600">
+																Contracts
+															</p>
+															<p className="text-2xl font-bold text-navy">
 																{dept.totalStats.totalContracts}
-															</Badge>
+															</p>
 														</div>
-
-														{/* Staff Metric */}
-														<div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-															<div className="flex items-center gap-2.5">
-																<div className="p-1.5 bg-purple-100 rounded-md">
-																	<Users className="h-3.5 w-3.5 text-purple-600" />
-																</div>
-																<span className="text-sm font-medium text-slate-700">
-																	Staff
-																</span>
-															</div>
-															<Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
-																{dept.totalStats.staffCount}
-															</Badge>
-														</div>
-
-														{/* Budget Metric */}
-														<div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-															<div className="flex items-center gap-2.5">
-																<div className="p-1.5 bg-green-100 rounded-md">
-																	<DollarSign className="h-3.5 w-3.5 text-green-600" />
-																</div>
-																<span className="text-sm font-medium text-slate-700">
-																	Budget
-																</span>
-															</div>
-															<Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
-																$
+														<FileText
+															className="h-8 w-8"
+															style={{ color: "#524E4E" }}
+														/>
+													</div>
+												</CardContent>
+											</Card>
+											<Card className="glass-card">
+												<div className="glass-card-cap" />
+												<CardContent className="p-4">
+													<div className="flex items-center justify-between">
+														<div>
+															<p className="text-sm text-slate-600">Budget</p>
+															<p className="text-2xl font-bold text-navy">
 																{(
 																	dept.totalStats.totalBudget / 1000000
 																).toFixed(1)}
 																M
-															</Badge>
+															</p>
 														</div>
-
-														{/* Compliance Metric */}
-														<div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-															<div className="flex items-center gap-2.5">
-																<div className="p-1.5 bg-emerald-100 rounded-md">
-																	<Shield className="h-3.5 w-3.5 text-emerald-600" />
-																</div>
-																<span className="text-sm font-medium text-slate-700">
-																	Compliance
-																</span>
-															</div>
-															<Badge className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
-																{dept.totalStats.complianceRate}%
-															</Badge>
-														</div>
-
-														{/* Divisions Section */}
-														{dept.divisions.length > 0 && (
-															<div className="mt-4 pt-4 border-t border-gray-200">
-																<div className="flex items-center justify-between mb-2.5">
-																	<span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-																		Divisions
-																	</span>
-																	<span className="text-xs text-slate-500 bg-gray-100 px-2 py-0.5 rounded-full">
-																		{dept.divisions.length}
-																	</span>
-																</div>
-																<div className="flex flex-wrap gap-2">
-																	{dept.divisions
-																		.slice(0, 3)
-																		.map((division) => (
-																			<Badge
-																				key={division.id}
-																				className="text-xs font-medium bg-white text-slate-700 border border-gray-200 hover:border-[#03AFBF] hover:bg-[#03AFBF]/5 transition-all px-2.5 py-1 shadow-sm"
-																			>
-																				{division.name}
-																			</Badge>
-																		))}
-																	{dept.divisions.length > 3 && (
-																		<Badge className="text-xs font-medium bg-gray-100 text-slate-600 border border-gray-200 px-2.5 py-1 shadow-sm">
-																			+{dept.divisions.length - 3} more
-																		</Badge>
-																	)}
-																</div>
-															</div>
-														)}
+														<TrendingUp
+															className="h-8 w-8"
+															style={{ color: "#03AFBF" }}
+														/>
 													</div>
 												</CardContent>
 											</Card>
-										);
-									}
-
-									// Enterprise-level card for other departments
-									return (
-										<Card
-											key={dept.name}
-											className="group relative bg-gray-50 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
-										>
-											{/* Accent gradient bar */}
-											<div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#03AFBF] via-[#56B8FF] to-[#03AFBF]" />
-
-											<CardHeader className="pb-4 pt-5 px-5 bg-white">
-												<div className="flex items-center justify-between mb-1">
-													<div className="flex items-center gap-3">
-														<div className="relative">
-															<div className="absolute inset-0 bg-gradient-to-br from-[#03AFBF]/20 to-[#56B8FF]/20 rounded-lg blur-sm" />
-															<div className="relative bg-gradient-to-br from-[#03AFBF]/10 to-[#56B8FF]/10 p-2.5 rounded-lg border border-[#03AFBF]/20">
-																<Building
-																	className="h-5 w-5"
-																	style={{ color: "#03AFBF" }}
-																/>
-															</div>
-														</div>
+											<Card className="glass-card">
+												<div className="glass-card-cap" />
+												<CardContent className="p-4">
+													<div className="flex items-center justify-between">
 														<div>
-															<CardTitle className="text-lg font-bold sidebar-gradient-text">
-																{dept.name}
-															</CardTitle>
+															<p className="text-sm text-slate-600">Staff</p>
+															<p className="text-2xl font-bold text-navy">
+																{dept.totalStats.staffCount}
+															</p>
 														</div>
+														<Users
+															className="h-8 w-8"
+															style={{ color: "#56B8FF" }}
+														/>
 													</div>
-												</div>
-											</CardHeader>
-											<CardContent className="px-5 pb-5 bg-gray-50">
-												<div className="space-y-3">
-													{/* Contracts Metric */}
-													<div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-														<div className="flex items-center gap-2.5">
-															<div className="p-1.5 bg-blue-100 rounded-md">
-																<FileText className="h-3.5 w-3.5 text-blue-600" />
-															</div>
-															<span className="text-sm font-medium text-slate-700">
-																Contracts
-															</span>
-														</div>
-														<Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
-															{dept.totalStats.totalContracts}
-														</Badge>
-													</div>
-
-													{/* Staff Metric */}
-													<div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-														<div className="flex items-center gap-2.5">
-															<div className="p-1.5 bg-purple-100 rounded-md">
-																<Users className="h-3.5 w-3.5 text-purple-600" />
-															</div>
-															<span className="text-sm font-medium text-slate-700">
-																Staff
-															</span>
-														</div>
-														<Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
-															{dept.totalStats.staffCount}
-														</Badge>
-													</div>
-
-													{/* Budget Metric */}
-													<div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-														<div className="flex items-center gap-2.5">
-															<div className="p-1.5 bg-green-100 rounded-md">
-																<DollarSign className="h-3.5 w-3.5 text-green-600" />
-															</div>
-															<span className="text-sm font-medium text-slate-700">
-																Budget
-															</span>
-														</div>
-														<Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
-															$
-															{(dept.totalStats.totalBudget / 1000000).toFixed(
-																1,
-															)}
-															M
-														</Badge>
-													</div>
-
-													{/* Compliance Metric */}
-													<div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-														<div className="flex items-center gap-2.5">
-															<div className="p-1.5 bg-emerald-100 rounded-md">
-																<Shield className="h-3.5 w-3.5 text-emerald-600" />
-															</div>
-															<span className="text-sm font-medium text-slate-700">
+												</CardContent>
+											</Card>
+											<Card className="glass-card">
+												<div className="glass-card-cap" />
+												<CardContent className="p-4">
+													<div className="flex items-center justify-between">
+														<div>
+															<p className="text-sm text-slate-600">
 																Compliance
-															</span>
+															</p>
+															<p className="text-2xl font-bold text-navy">
+																{dept.totalStats.complianceRate}%
+															</p>
 														</div>
-														<Badge className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-0 font-semibold px-2.5 py-0.5 shadow-sm">
-															{dept.totalStats.complianceRate}%
-														</Badge>
+														<ClipboardCheck
+															className="h-8 w-8"
+															style={{ color: "#8B5CF6" }}
+														/>
 													</div>
+												</CardContent>
+											</Card>
+										</div>
 
-													{/* Divisions Section */}
-													{dept.divisions.length > 0 && (
-														<div className="mt-4 pt-4 border-t border-gray-200">
-															<div className="flex items-center justify-between mb-2.5">
-																<span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-																	Divisions
-																</span>
-																<span className="text-xs text-slate-500 bg-gray-100 px-2 py-0.5 rounded-full">
-																	{dept.divisions.length}
-																</span>
-															</div>
-															<div className="flex flex-wrap gap-2">
-																{dept.divisions.slice(0, 3).map((division) => (
-																	<Badge
-																		key={division.id}
-																		className="text-xs font-medium bg-white text-slate-700 border border-gray-200 hover:border-[#03AFBF] hover:bg-[#03AFBF]/5 transition-all px-2.5 py-1 shadow-sm"
-																	>
+										{/* Divisions */}
+										<Card className="glass-card">
+											<div className="glass-card-cap" />
+											<CardHeader>
+												<CardTitle className="h3 sidebar-gradient-text">
+													{dept.name} Divisions
+												</CardTitle>
+											</CardHeader>
+											<CardContent>
+												{dept.divisions.length > 0 ? (
+													<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+														{dept.divisions.map((division) => (
+															<Card
+																key={division.id}
+																className="bg-white/40 backdrop-blur border border-white/40"
+															>
+																<CardHeader className="pb-3">
+																	<CardTitle className="text-sm text-navy">
 																		{division.name}
-																	</Badge>
-																))}
-																{dept.divisions.length > 3 && (
-																	<Badge className="text-xs font-medium bg-gray-100 text-slate-600 border border-gray-200 px-2.5 py-1 shadow-sm">
-																		+{dept.divisions.length - 3} more
-																	</Badge>
-																)}
+																	</CardTitle>
+																	<CardDescription className="text-xs">
+																		{division.description}
+																	</CardDescription>
+																</CardHeader>
+																<CardContent className="pt-0">
+																	<div className="space-y-1 text-xs">
+																		<div className="flex justify-between">
+																			<span>Contracts:</span>
+																			<span className="font-medium">
+																				{division.stats.totalContracts}
+																			</span>
+																		</div>
+																		<div className="flex justify-between">
+																			<span>Staff:</span>
+																			<span className="font-medium">
+																				{division.stats.staffCount}
+																			</span>
+																		</div>
+																		<div className="flex justify-between">
+																			<span>Budget:</span>
+																			<span className="font-medium">
+																				$
+																				{(
+																					division.stats.totalBudget / 1000
+																				).toFixed(0)}
+																				K
+																			</span>
+																		</div>
+																		<div className="flex justify-between">
+																			<span>Compliance:</span>
+																			<span className="font-medium">
+																				{division.stats.complianceRate}%
+																			</span>
+																		</div>
+																	</div>
+																</CardContent>
+															</Card>
+														))}
+													</div>
+												) : (
+													<div className="text-center py-8">
+														<div className="flex flex-col items-center space-y-3">
+															<Building className="h-12 w-12 text-slate-400" />
+															<div>
+																<h4 className="body-1 text-slate-600 mb-2">
+																	No Divisions Found
+																</h4>
+																<p className="text-sm text-slate-500">
+																	The {dept.name} department currently has no
+																	divisions configured. All operations are
+																	managed at the department level.
+																</p>
 															</div>
 														</div>
-													)}
-												</div>
-											</CardContent>
-										</Card>
-									);
-								})}
-							</div>
-						</TabsContent>
-
-						{analyticsData.departments.map((dept) => (
-							<TabsContent
-								key={dept.name}
-								value={dept.name.toLowerCase()}
-								className="mt-6"
-							>
-								<div className="space-y-6">
-									{/* Department Stats */}
-									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-										<Card className="glass-card">
-											<div className="glass-card-cap" />
-											<CardContent className="p-4">
-												<div className="flex items-center justify-between">
-													<div>
-														<p className="text-sm text-slate-600">Contracts</p>
-														<p className="text-2xl font-bold text-navy">
-															{dept.totalStats.totalContracts}
-														</p>
 													</div>
-													<FileText
-														className="h-8 w-8"
-														style={{ color: "#524E4E" }}
-													/>
-												</div>
-											</CardContent>
-										</Card>
-										<Card className="glass-card">
-											<div className="glass-card-cap" />
-											<CardContent className="p-4">
-												<div className="flex items-center justify-between">
-													<div>
-														<p className="text-sm text-slate-600">Budget</p>
-														<p className="text-2xl font-bold text-navy">
-															$
-															{(dept.totalStats.totalBudget / 1000000).toFixed(
-																1,
-															)}
-															M
-														</p>
-													</div>
-													<DollarSign
-														className="h-8 w-8"
-														style={{ color: "#03AFBF" }}
-													/>
-												</div>
-											</CardContent>
-										</Card>
-										<Card className="glass-card">
-											<div className="glass-card-cap" />
-											<CardContent className="p-4">
-												<div className="flex items-center justify-between">
-													<div>
-														<p className="text-sm text-slate-600">Staff</p>
-														<p className="text-2xl font-bold text-navy">
-															{dept.totalStats.staffCount}
-														</p>
-													</div>
-													<Users
-														className="h-8 w-8"
-														style={{ color: "#56B8FF" }}
-													/>
-												</div>
-											</CardContent>
-										</Card>
-										<Card className="glass-card">
-											<div className="glass-card-cap" />
-											<CardContent className="p-4">
-												<div className="flex items-center justify-between">
-													<div>
-														<p className="text-sm text-slate-600">Compliance</p>
-														<p className="text-2xl font-bold text-navy">
-															{dept.totalStats.complianceRate}%
-														</p>
-													</div>
-													<ClipboardCheck
-														className="h-8 w-8"
-														style={{ color: "#8B5CF6" }}
-													/>
-												</div>
+												)}
 											</CardContent>
 										</Card>
 									</div>
-
-									{/* Divisions */}
-									<Card className="glass-card">
-										<div className="glass-card-cap" />
-										<CardHeader>
-											<CardTitle className="h3 sidebar-gradient-text">
-												{dept.name} Divisions
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											{dept.divisions.length > 0 ? (
-												<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-													{dept.divisions.map((division) => (
-														<Card
-															key={division.id}
-															className="bg-white/40 backdrop-blur border border-white/40"
-														>
-															<CardHeader className="pb-3">
-																<CardTitle className="text-sm text-navy">
-																	{division.name}
-																</CardTitle>
-																<CardDescription className="text-xs">
-																	{division.description}
-																</CardDescription>
-															</CardHeader>
-															<CardContent className="pt-0">
-																<div className="space-y-1 text-xs">
-																	<div className="flex justify-between">
-																		<span>Contracts:</span>
-																		<span className="font-medium">
-																			{division.stats.totalContracts}
-																		</span>
-																	</div>
-																	<div className="flex justify-between">
-																		<span>Staff:</span>
-																		<span className="font-medium">
-																			{division.stats.staffCount}
-																		</span>
-																	</div>
-																	<div className="flex justify-between">
-																		<span>Budget:</span>
-																		<span className="font-medium">
-																			$
-																			{(
-																				division.stats.totalBudget / 1000
-																			).toFixed(0)}
-																			K
-																		</span>
-																	</div>
-																	<div className="flex justify-between">
-																		<span>Compliance:</span>
-																		<span className="font-medium">
-																			{division.stats.complianceRate}%
-																		</span>
-																	</div>
-																</div>
-															</CardContent>
-														</Card>
-													))}
-												</div>
-											) : (
-												<div className="text-center py-8">
-													<div className="flex flex-col items-center space-y-3">
-														<Building className="h-12 w-12 text-slate-400" />
-														<div>
-															<h4 className="body-1 text-slate-600 mb-2">
-																No Divisions Found
-															</h4>
-															<p className="text-sm text-slate-500">
-																The {dept.name} department currently has no
-																divisions configured. All operations are managed
-																at the department level.
-															</p>
-														</div>
-													</div>
-												</div>
-											)}
-										</CardContent>
-									</Card>
-								</div>
-							</TabsContent>
-						))}
-					</Tabs>
+								</TabsContent>
+							))}
+						</Tabs>
+					) : null}
 				</CardContent>
 			</Card>
 
 			{/* Tabbed Analytics Content */}
-			<Tabs defaultValue="overview" className="w-full">
-				<TabsList className="grid w-full grid-cols-4 bg-white/20 backdrop-blur border border-white/40">
-					<TabsTrigger
-						value="overview"
-						className="data-[state=active]:bg-white/30 data-[state=active]:text-navy flex items-center gap-2"
-					>
-						<BarChart3 className="h-4 w-4" />
-						Overview
-					</TabsTrigger>
-					<TabsTrigger
-						value="metrics"
-						className="data-[state=active]:bg-white/30 data-[state=active]:text-navy flex items-center gap-2"
-					>
-						<Activity className="h-4 w-4" />
-						Metrics
-					</TabsTrigger>
-					<TabsTrigger
-						value="compliance"
-						className="data-[state=active]:bg-white/30 data-[state=active]:text-navy flex items-center gap-2"
-					>
-						<Shield className="h-4 w-4" />
-						Compliance
-					</TabsTrigger>
-					<TabsTrigger
-						value="trends"
-						className="data-[state=active]:bg-white/30 data-[state=active]:text-navy flex items-center gap-2"
-					>
-						<TrendingUp className="h-4 w-4" />
-						Trends
-					</TabsTrigger>
-				</TabsList>
+			<div ref={detailRef}>
+				<Tabs defaultValue="overview" className="w-full">
+					<TabsList className="responsive-tab-list h-auto bg-white/20 backdrop-blur border border-white/40 p-1">
+						<TabsTrigger
+							value="overview"
+							className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+						>
+							<BarChart3 className="h-4 w-4" />
+							Overview
+						</TabsTrigger>
+						<TabsTrigger
+							value="metrics"
+							className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+						>
+							<Activity className="h-4 w-4" />
+							Metrics
+						</TabsTrigger>
+						<TabsTrigger
+							value="compliance"
+							className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+						>
+							<Shield className="h-4 w-4" />
+							Compliance
+						</TabsTrigger>
+						<TabsTrigger
+							value="trends"
+							className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+						>
+							<TrendingUp className="h-4 w-4" />
+							Trends
+						</TabsTrigger>
+					</TabsList>
 
-				{/* Overview Tab */}
-				<TabsContent value="overview" className="space-y-6">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						{/* Budget Allocation */}
+					{/* Overview Tab */}
+					<TabsContent value="overview" className="space-y-6">
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+							{/* Budget Allocation */}
+							<Card className="glass-card">
+								<div className="glass-card-cap" />
+								<CardHeader>
+									<CardTitle className="h3 sidebar-gradient-text">
+										Budget Allocation
+									</CardTitle>
+									<CardDescription className="text-slate-700">
+										Department budget distribution
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<ResponsiveContainer width="100%" height={300}>
+										<BarChart
+											data={currentDepartmentData.budgetData}
+											margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+										>
+											<CartesianGrid
+												strokeDasharray="3 3"
+												stroke="rgba(3, 175, 191, 0.1)"
+											/>
+											<XAxis dataKey="department" stroke="#524E4E" />
+											<YAxis stroke="#524E4E" />
+											<Tooltip
+												contentStyle={{
+													backgroundColor: "rgba(255,255,255,0.9)",
+													border: "1px solid rgba(255,255,255,0.2)",
+													borderRadius: "8px",
+												}}
+											/>
+											<Legend />
+											<Bar dataKey="budget" fill="#03AFBF" />
+											<Bar dataKey="spent" fill="#56B8FF" />
+										</BarChart>
+									</ResponsiveContainer>
+								</CardContent>
+							</Card>
+
+							{/* Monthly Expenses */}
+							<Card className="glass-card">
+								<div className="glass-card-cap" />
+								<CardHeader>
+									<CardTitle className="h3 sidebar-gradient-text">
+										Monthly Expenses
+									</CardTitle>
+									<CardDescription className="text-slate-700">
+										Expense trends over time
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<ResponsiveContainer width="100%" height={300}>
+										<AreaChart
+											data={currentDepartmentData.expensesData}
+											margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+										>
+											<CartesianGrid
+												strokeDasharray="3 3"
+												stroke="rgba(255,255,255,0.1)"
+											/>
+											<XAxis dataKey="month" stroke="rgba(255,255,255,0.6)" />
+											<YAxis stroke="rgba(255,255,255,0.6)" />
+											<Tooltip
+												contentStyle={{
+													backgroundColor: "rgba(255,255,255,0.9)",
+													border: "1px solid rgba(255,255,255,0.2)",
+													borderRadius: "8px",
+												}}
+											/>
+											<Area
+												type="monotone"
+												dataKey="expenses"
+												stroke="#03AFBF"
+												fill="#03AFBF"
+												fillOpacity={0.3}
+											/>
+										</AreaChart>
+									</ResponsiveContainer>
+								</CardContent>
+							</Card>
+						</div>
+
+						{/* Staff and Contract Distribution */}
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+							<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+								<CardHeader>
+									<CardTitle className="h3 sidebar-gradient-text">
+										Staff Distribution
+									</CardTitle>
+									<CardDescription className="text-slate-700">
+										Staff by role and department
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="space-y-4">
+										{currentDepartmentData.staffData.map((item, index) => (
+											<div
+												key={index}
+												className="flex items-center justify-between"
+											>
+												<span className="body-2 text-slate-700">
+													{item.role}
+												</span>
+												<Badge
+													variant="secondary"
+													className="bg-white/20 backdrop-blur border border-white/40"
+													style={{ color: "#524E4E" }}
+												>
+													{item.count}
+												</Badge>
+											</div>
+										))}
+									</div>
+								</CardContent>
+							</Card>
+
+							<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
+								<CardHeader>
+									<CardTitle className="h3 sidebar-gradient-text">
+										Contract Types
+									</CardTitle>
+									<CardDescription className="text-slate-700">
+										Distribution by contract type
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="space-y-4">
+										{currentDepartmentData.contractTypesData.map(
+											(item, index) => (
+												<div
+													key={index}
+													className="flex items-center justify-between"
+												>
+													<span className="body-2 text-slate-700">
+														{item.type}
+													</span>
+													<Badge
+														variant="secondary"
+														className="bg-white/20 backdrop-blur border border-white/40"
+														style={{ color: "#524E4E" }}
+													>
+														{item.count}
+													</Badge>
+												</div>
+											),
+										)}
+									</div>
+								</CardContent>
+							</Card>
+						</div>
+					</TabsContent>
+
+					{/* Metrics Tab */}
+					<TabsContent value="metrics" className="space-y-6">
+						<div className="text-center py-12">
+							<h3 className="h3 text-navy mb-4">Metrics Dashboard</h3>
+							<p className="body-1 text-light-200">
+								Detailed metrics and KPI tracking will be displayed here.
+							</p>
+						</div>
+					</TabsContent>
+
+					{/* Compliance Tab */}
+					<TabsContent value="compliance" className="space-y-6">
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
 							<CardHeader>
 								<CardTitle className="h3 sidebar-gradient-text">
-									Budget Allocation
+									License Compliance
 								</CardTitle>
 								<CardDescription className="text-slate-700">
-									Department budget distribution
+									Current compliance status
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
-								<ResponsiveContainer width="100%" height={300}>
-									<BarChart
-										data={currentDepartmentData.budgetData}
-										margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-									>
-										<CartesianGrid
-											strokeDasharray="3 3"
-											stroke="rgba(3, 175, 191, 0.1)"
-										/>
-										<XAxis dataKey="department" stroke="#524E4E" />
-										<YAxis stroke="#524E4E" />
+								<ResponsiveContainer width="100%" height={400}>
+									<PieChart>
+										<Pie
+											data={currentDepartmentData.complianceData}
+											cx="50%"
+											cy="50%"
+											labelLine={false}
+											label={({ name, percent }) =>
+												`${name ?? ""} ${(Number(percent || 0) * 100).toFixed(
+													0,
+												)}%`
+											}
+											outerRadius={120}
+											fill="#8884d8"
+											dataKey="count"
+										>
+											{currentDepartmentData.complianceData.map(
+												(entry, index) => (
+													<Cell key={`cell-${index}`} fill={entry.color} />
+												),
+											)}
+										</Pie>
 										<Tooltip
 											contentStyle={{
 												backgroundColor: "rgba(255,255,255,0.9)",
@@ -896,29 +930,28 @@ const OrganizationAnalyticsDashboard = () => {
 												borderRadius: "8px",
 											}}
 										/>
-										<Legend />
-										<Bar dataKey="budget" fill="#03AFBF" />
-										<Bar dataKey="spent" fill="#56B8FF" />
-									</BarChart>
+									</PieChart>
 								</ResponsiveContainer>
 							</CardContent>
 						</Card>
+					</TabsContent>
 
-						{/* Monthly Expenses */}
+					{/* Trends Tab */}
+					<TabsContent value="trends" className="space-y-6">
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
 							<CardHeader>
 								<CardTitle className="h3 sidebar-gradient-text">
-									Monthly Expenses
+									Contract Trends
 								</CardTitle>
 								<CardDescription className="text-slate-700">
-									Expense trends over time
+									Monthly contract status overview
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
-								<ResponsiveContainer width="100%" height={300}>
-									<AreaChart
-										data={currentDepartmentData.expensesData}
+								<ResponsiveContainer width="100%" height={400}>
+									<LineChart
+										data={currentDepartmentData.trendsData}
 										margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
 									>
 										<CartesianGrid
@@ -934,201 +967,32 @@ const OrganizationAnalyticsDashboard = () => {
 												borderRadius: "8px",
 											}}
 										/>
-										<Area
+										<Legend />
+										<Line
 											type="monotone"
-											dataKey="expenses"
+											dataKey="active"
 											stroke="#03AFBF"
-											fill="#03AFBF"
-											fillOpacity={0.3}
+											strokeWidth={2}
 										/>
-									</AreaChart>
+										<Line
+											type="monotone"
+											dataKey="pending"
+											stroke="#56B8FF"
+											strokeWidth={2}
+										/>
+										<Line
+											type="monotone"
+											dataKey="expired"
+											stroke="#524E4E"
+											strokeWidth={2}
+										/>
+									</LineChart>
 								</ResponsiveContainer>
 							</CardContent>
 						</Card>
-					</div>
-
-					{/* Staff and Contract Distribution */}
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-							<CardHeader>
-								<CardTitle className="h3 sidebar-gradient-text">
-									Staff Distribution
-								</CardTitle>
-								<CardDescription className="text-slate-700">
-									Staff by role and department
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="space-y-4">
-									{currentDepartmentData.staffData.map((item, index) => (
-										<div
-											key={index}
-											className="flex items-center justify-between"
-										>
-											<span className="body-2 text-slate-700">{item.role}</span>
-											<Badge
-												variant="secondary"
-												className="bg-white/20 backdrop-blur border border-white/40"
-												style={{ color: "#524E4E" }}
-											>
-												{item.count}
-											</Badge>
-										</div>
-									))}
-								</div>
-							</CardContent>
-						</Card>
-
-						<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-							<CardHeader>
-								<CardTitle className="h3 sidebar-gradient-text">
-									Contract Types
-								</CardTitle>
-								<CardDescription className="text-slate-700">
-									Distribution by contract type
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="space-y-4">
-									{currentDepartmentData.contractTypesData.map(
-										(item, index) => (
-											<div
-												key={index}
-												className="flex items-center justify-between"
-											>
-												<span className="body-2 text-slate-700">
-													{item.type}
-												</span>
-												<Badge
-													variant="secondary"
-													className="bg-white/20 backdrop-blur border border-white/40"
-													style={{ color: "#524E4E" }}
-												>
-													{item.count}
-												</Badge>
-											</div>
-										),
-									)}
-								</div>
-							</CardContent>
-						</Card>
-					</div>
-				</TabsContent>
-
-				{/* Metrics Tab */}
-				<TabsContent value="metrics" className="space-y-6">
-					<div className="text-center py-12">
-						<h3 className="h3 text-navy mb-4">Metrics Dashboard</h3>
-						<p className="body-1 text-light-200">
-							Detailed metrics and KPI tracking will be displayed here.
-						</p>
-					</div>
-				</TabsContent>
-
-				{/* Compliance Tab */}
-				<TabsContent value="compliance" className="space-y-6">
-					<Card className="glass-card">
-						<div className="glass-card-cap" />
-						<CardHeader>
-							<CardTitle className="h3 sidebar-gradient-text">
-								License Compliance
-							</CardTitle>
-							<CardDescription className="text-slate-700">
-								Current compliance status
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<ResponsiveContainer width="100%" height={400}>
-								<PieChart>
-									<Pie
-										data={currentDepartmentData.complianceData}
-										cx="50%"
-										cy="50%"
-										labelLine={false}
-										label={({ name, percent }) =>
-											`${name ?? ""} ${(Number(percent || 0) * 100).toFixed(
-												0,
-											)}%`
-										}
-										outerRadius={120}
-										fill="#8884d8"
-										dataKey="count"
-									>
-										{currentDepartmentData.complianceData.map(
-											(entry, index) => (
-												<Cell key={`cell-${index}`} fill={entry.color} />
-											),
-										)}
-									</Pie>
-									<Tooltip
-										contentStyle={{
-											backgroundColor: "rgba(255,255,255,0.9)",
-											border: "1px solid rgba(255,255,255,0.2)",
-											borderRadius: "8px",
-										}}
-									/>
-								</PieChart>
-							</ResponsiveContainer>
-						</CardContent>
-					</Card>
-				</TabsContent>
-
-				{/* Trends Tab */}
-				<TabsContent value="trends" className="space-y-6">
-					<Card className="glass-card">
-						<div className="glass-card-cap" />
-						<CardHeader>
-							<CardTitle className="h3 sidebar-gradient-text">
-								Contract Trends
-							</CardTitle>
-							<CardDescription className="text-slate-700">
-								Monthly contract status overview
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<ResponsiveContainer width="100%" height={400}>
-								<LineChart
-									data={currentDepartmentData.trendsData}
-									margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-								>
-									<CartesianGrid
-										strokeDasharray="3 3"
-										stroke="rgba(255,255,255,0.1)"
-									/>
-									<XAxis dataKey="month" stroke="rgba(255,255,255,0.6)" />
-									<YAxis stroke="rgba(255,255,255,0.6)" />
-									<Tooltip
-										contentStyle={{
-											backgroundColor: "rgba(255,255,255,0.9)",
-											border: "1px solid rgba(255,255,255,0.2)",
-											borderRadius: "8px",
-										}}
-									/>
-									<Legend />
-									<Line
-										type="monotone"
-										dataKey="active"
-										stroke="#03AFBF"
-										strokeWidth={2}
-									/>
-									<Line
-										type="monotone"
-										dataKey="pending"
-										stroke="#56B8FF"
-										strokeWidth={2}
-									/>
-									<Line
-										type="monotone"
-										dataKey="expired"
-										stroke="#524E4E"
-										strokeWidth={2}
-									/>
-								</LineChart>
-							</ResponsiveContainer>
-						</CardContent>
-					</Card>
-				</TabsContent>
-			</Tabs>
+					</TabsContent>
+				</Tabs>
+			</div>
 		</div>
 	);
 };

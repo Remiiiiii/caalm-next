@@ -1,9 +1,4 @@
 import { Query } from "node-appwrite";
-import {
-	DIVISION_TO_DEPARTMENT,
-	formatDivisionName,
-	type UserDivision,
-} from "../../../constants";
 import { listCalendarApprovalRequests } from "@/lib/actions/calendar-approval.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
@@ -13,6 +8,11 @@ import type {
 	DepartmentDashboardData,
 	DepartmentRecentActivityItem,
 } from "@/lib/dashboard/department-dashboard.types";
+import {
+	DIVISION_TO_DEPARTMENT,
+	formatDivisionName,
+	type UserDivision,
+} from "../../../constants";
 
 const EXPIRING_SOON_DAYS = 90;
 
@@ -73,7 +73,9 @@ function contractNeedsAttention(contract: ContractRow): boolean {
 	return days !== null && days <= EXPIRING_SOON_DAYS;
 }
 
-async function fetchDivisionContracts(division: string): Promise<ContractRow[]> {
+async function fetchDivisionContracts(
+	division: string,
+): Promise<ContractRow[]> {
 	const { tablesDB } = await createAdminClient();
 	const databaseId = appwriteConfig.databaseId!;
 	const tableId = appwriteConfig.contractsCollectionId!;
@@ -128,18 +130,13 @@ async function fetchDivisionLicenses(departmentLabel: string) {
 		const response = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.licensesCollectionId,
-			queries: [
-				Query.equal("department", departmentLabel),
-				Query.limit(200),
-			],
+			queries: [Query.equal("department", departmentLabel), Query.limit(200)],
 		});
 		const rows = response.rows as Array<Record<string, unknown>>;
 		const needsAttention = rows.filter((row) => {
 			const status = String(row.status || "").toLowerCase();
 			const expiry = row.expiryDate || row.expirationDate || row.renewalDate;
-			const days = daysUntil(
-				typeof expiry === "string" ? expiry : undefined,
-			);
+			const days = daysUntil(typeof expiry === "string" ? expiry : undefined);
 			return (
 				status.includes("expir") ||
 				status === "pending" ||
@@ -236,7 +233,8 @@ function buildActionQueue(params: {
 			dueDate: contract.contractExpiryDate,
 			href: `/my-contracts`,
 			priority: days !== null && days <= 30 ? "high" : "medium",
-			meta: days !== null ? `${days} day${days === 1 ? "" : "s"} left` : undefined,
+			meta:
+				days !== null ? `${days} day${days === 1 ? "" : "s"} left` : undefined,
 		});
 	}
 
@@ -246,7 +244,9 @@ function buildActionQueue(params: {
 		.slice(0, 10);
 }
 
-function mapContractsAtRisk(contracts: ContractRow[]): DepartmentContractAtRisk[] {
+function mapContractsAtRisk(
+	contracts: ContractRow[],
+): DepartmentContractAtRisk[] {
 	return contracts
 		.filter(contractNeedsAttention)
 		.map((c) => ({
@@ -316,7 +316,10 @@ export async function getDepartmentDashboardData(
 	});
 
 	// Also surface contract reviews in queue (already included via buildActionQueue)
-	if (pendingContractReviews > 0 && !actionQueue.some((i) => i.type === "contract_review")) {
+	if (
+		pendingContractReviews > 0 &&
+		!actionQueue.some((i) => i.type === "contract_review")
+	) {
 		actionQueue.unshift({
 			id: "contracts-pending-reviews",
 			type: "contract_review",

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { RelationMutate, RelationshipType } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 
@@ -24,11 +25,11 @@ export async function POST(_request: NextRequest) {
 				appwriteConfig.databaseId,
 				CONTRACT_DRAFTS_COLLECTION_ID,
 				CONTRACTS_COLLECTION_ID,
-				"oneToOne", // type
+				RelationshipType.OneToOne, // type
 				false, // twoWay
 				"contractId", // key
 				undefined, // twoWayKey (not needed for one-way)
-				"setNull", // onDelete - if contract is deleted, set draft.contractId to null
+				RelationMutate.SetNull, // onDelete - if contract is deleted, set draft.contractId to null
 			);
 
 			return NextResponse.json({

@@ -398,7 +398,7 @@ const ActionDropdown = ({
 		);
 		if (value === "assign") {
 			return (
-				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
+				<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
 					{/* Professional Cap */}
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
@@ -732,7 +732,7 @@ const ActionDropdown = ({
 		// Details dialog
 		if (value === "details") {
 			return (
-				<DialogContent className="flex max-h-[90vh] max-w-[800px] flex-col overflow-hidden p-0 shadow-xl">
+				<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[800px] flex-col overflow-hidden p-0 shadow-xl">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>{label}</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
@@ -791,7 +791,7 @@ const ActionDropdown = ({
 		// Share dialog
 		if (value === "share") {
 			return (
-				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
+				<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>{label}</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
@@ -1366,9 +1366,7 @@ const ActionDropdown = ({
 							);
 						}
 
-						return (
-							<Fragment key={actionItem.value}>{menuItem}</Fragment>
-						);
+						return <Fragment key={actionItem.value}>{menuItem}</Fragment>;
 					})}
 				</AppDropdownMenuContent>
 			</DropdownMenu>

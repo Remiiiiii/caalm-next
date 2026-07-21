@@ -1,4 +1,6 @@
 import { ID, Query } from "node-appwrite";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
 import {
 	type AuditAction,
 	type AuditChangeDiff,
@@ -6,8 +8,6 @@ import {
 	extractStructuredFields,
 	packStructuredMetadata,
 } from "@/lib/audits/audit-log.utils";
-import { createAdminClient } from "@/lib/appwrite";
-import { appwriteConfig } from "@/lib/appwrite/config";
 
 export interface AuditLogEntry {
 	event_id: string;
@@ -120,9 +120,7 @@ function mapRowToEntry(row: Record<string, unknown>): AuditLogEntry {
 		user_agent: row.user_agent ? String(row.user_agent) : undefined,
 		reason: row.reason ? String(row.reason) : undefined,
 		status: (row.status as AuditLogEntry["status"]) || "success",
-		error_message: row.error_message
-			? String(row.error_message)
-			: undefined,
+		error_message: row.error_message ? String(row.error_message) : undefined,
 		metadata: structured.publicMetadata || undefined,
 		module:
 			(typeof row.module === "string"
@@ -323,11 +321,7 @@ export async function getAuditLogsPage(
 		const response = await adminClient.tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId,
 			tableId: appwriteConfig.auditLogsCollectionId,
-			queries: [
-				...baseQueries,
-				Query.limit(limit),
-				Query.offset(offset),
-			],
+			queries: [...baseQueries, Query.limit(limit), Query.offset(offset)],
 		});
 
 		return {

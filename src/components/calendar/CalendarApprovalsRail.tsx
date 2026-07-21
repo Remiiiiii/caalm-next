@@ -16,10 +16,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { Badge } from "@/components/ui/badge";
-import {
-	type CalendarSensitivity,
-	SENSITIVITY_LABELS,
-} from "@/constants/rbac";
+import { type CalendarSensitivity, SENSITIVITY_LABELS } from "@/constants/rbac";
 import type {
 	CalendarApprovalChangeSummary,
 	CalendarApprovalRequest,

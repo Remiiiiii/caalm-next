@@ -2,10 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getDepartmentDashboardData } from "@/lib/dashboard/department-dashboard.service";
-import {
-	getOrgIdFromRequest,
-	requirePermission,
-} from "@/lib/rbac/middleware";
+import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
@@ -45,13 +42,8 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const orgId =
-			getOrgIdFromRequest(request) || "default_organization";
-		const cacheKey = CACHE_KEYS.dashboard.department(
-			orgId,
-			user.$id,
-			division,
-		);
+		const orgId = getOrgIdFromRequest(request) || "default_organization";
+		const cacheKey = CACHE_KEYS.dashboard.department(orgId, user.$id, division);
 
 		const data = await CacheManager.withCache(
 			"dashboard/department",

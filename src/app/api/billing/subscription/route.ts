@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
+import { getTotalSpaceUsed } from "@/lib/actions/file.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { loadPricingFromMarkdown } from "@/lib/pricing";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
-import { PERMISSIONS } from "@/constants/permissions";
 import { isStripeConfigured } from "@/lib/stripe/client";
 import { TIER_LIMITS } from "@/lib/stripe/prices";
-import { getTotalSpaceUsed } from "@/lib/actions/file.actions";
-import { loadPricingFromMarkdown } from "@/lib/pricing";
 
 export async function GET(request: NextRequest) {
 	const permissionCheck = await requirePermission(request, {
@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const orgId =
@@ -26,16 +29,17 @@ export async function GET(request: NextRequest) {
 
 	const org = await getOrganization(orgId);
 	if (!org) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const rawTier = String(org.subscriptionTier || "starter")
 		.toLowerCase()
 		.trim();
 	const tier =
-		rawTier in TIER_LIMITS
-			? (rawTier as keyof typeof TIER_LIMITS)
-			: "starter";
+		rawTier in TIER_LIMITS ? (rawTier as keyof typeof TIER_LIMITS) : "starter";
 	const limits = TIER_LIMITS[tier];
 	const settings = org.settings || {
 		maxUsers: limits.maxUsers,

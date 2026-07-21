@@ -1,0 +1,575 @@
+﻿
+.next/dev/types/validator.ts(1066,31): error TS2344: Type 'typeof 
+import("C:/Users/victo/Development/caalm-next/src/app/api/calendar/escalation-rules/[ruleId]/route")' does not satisfy 
+the constraint 'RouteHandlerConfig<"/api/calendar/escalation-rules/[ruleId]">'.
+.next/dev/types/validator.ts(1147,31): error TS2344: Type 'typeof 
+import("C:/Users/victo/Development/caalm-next/src/app/api/calendar/shared/[calendarId]/route")' does not satisfy the 
+constraint 'RouteHandlerConfig<"/api/calendar/shared/[calendarId]">'.
+.next/dev/types/validator.ts(1156,31): error TS2344: Type 'typeof 
+import("C:/Users/victo/Development/caalm-next/src/app/api/calendar/shared/[calendarId]/users/route")' does not satisfy 
+the constraint 'RouteHandlerConfig<"/api/calendar/shared/[calendarId]/users">'.
+.next/dev/types/validator.ts(1732,31): error TS2344: Type 'typeof 
+import("C:/Users/victo/Development/caalm-next/src/app/api/invitations/[token]/resend/route")' does not satisfy the 
+constraint 'RouteHandlerConfig<"/api/invitations/[token]/resend">'.
+.next/dev/types/validator.ts(2218,31): error TS2344: Type 'typeof 
+import("C:/Users/victo/Development/caalm-next/src/app/api/reports/[reportId]/content/route")' does not satisfy the 
+constraint 'RouteHandlerConfig<"/api/reports/[reportId]/content">'.
+src/app/(root)/dashboard/DashboardHeader.tsx(65,24): error TS2339: Property 'division' does not exist on type 
+'Preferences'.
+src/app/(root)/dashboard/it/storage/page.tsx(68,6): error TS2448: Block-scoped variable 'fetchStorageMetrics' used 
+before its declaration.
+src/app/(root)/dashboard/it/storage/page.tsx(68,6): error TS2454: Variable 'fetchStorageMetrics' is used before being 
+assigned.
+src/app/(root)/search/page.tsx(29,20): error TS2322: Type '{ onResultClick: (result: any) => void; }' is not 
+assignable to type 'IntrinsicAttributes & AdvancedSearchProps'.
+src/app/api/admin/users/[userId]/department/route.ts(17,34): error TS2339: Property 'UPDATE' does not exist on type '{ 
+readonly VIEW: "users.view"; readonly INVITE: "users.invite"; readonly EDIT: "users.edit"; readonly ASSIGN_ROLES: 
+"users.assign_roles"; readonly DEACTIVATE: "users.deactivate"; }'.
+src/app/api/calendar/reminders/process/route.ts(79,29): error TS2339: Property 'phone' does not exist on type 
+'AppUser'.
+src/app/api/calendar/reminders/send/route.ts(67,27): error TS2339: Property 'phone' does not exist on type 'AppUser'.
+src/app/api/collections/add-draft-contract-relationship/route.ts(27,5): error TS2345: Argument of type '"oneToOne"' is 
+not assignable to parameter of type 'RelationshipType'.
+src/app/api/collections/check-relationship-status/route.ts(130,32): error TS2339: Property 'status' does not exist on 
+type '{}'.
+src/app/api/collections/check-relationship-status/route.ts(131,43): error TS2339: Property 'relatedCollection' does 
+not exist on type '{}'.
+src/app/api/collections/list-attributes/route.ts(30,32): error TS2339: Property 'getCollection' does not exist on type 
+'TablesDB'.
+src/app/api/contract-analysis/route.ts(49,5): error TS2454: Variable 'body' is used before being assigned.
+src/app/api/contract-analysis/route.ts(50,7): error TS2322: Type 'string | undefined' is not assignable to type 
+'string'.
+src/app/api/contract-analysis/route.ts(50,14): error TS2454: Variable 'body' is used before being assigned.
+src/app/api/contract-analysis/route.ts(50,34): error TS2322: Type 'string | undefined' is not assignable to type 
+'string'.
+src/app/api/contract-analysis/route.ts(50,40): error TS2454: Variable 'body' is used before being assigned.
+src/app/api/contracts/backfill-drafts/route.ts(136,23): error TS2304: Cannot find name 'FileService'.
+src/app/api/contracts/backfill-drafts/route.ts(195,31): error TS2304: Cannot find name 'ContractService'.
+src/app/api/contracts/backfill-drafts/route.ts(205,14): error TS2304: Cannot find name 'ContractService'.
+src/app/api/contracts/check-expiry/route.ts(16,10): error TS2552: Cannot find name 'NextResponse'. Did you mean 
+'Response'?
+src/app/api/contracts/check-expiry/route.ts(23,10): error TS2552: Cannot find name 'NextResponse'. Did you mean 
+'Response'?
+src/app/api/contracts/drafts/delete-by-contract/route.ts(23,11): error TS2552: Cannot find name 'NextResponse'. Did 
+you mean 'Response'?
+src/app/api/contracts/drafts/delete-by-contract/route.ts(33,11): error TS2552: Cannot find name 'NextResponse'. Did 
+you mean 'Response'?
+src/app/api/contracts/drafts/delete-by-contract/route.ts(84,5): error TS2552: Cannot find name 'requestId'. Did you 
+mean 'request'?
+src/app/api/contracts/drafts/delete-by-contract/route.ts(93,6): error TS2552: Cannot find name 'requestId'. Did you 
+mean 'request'?
+src/app/api/contracts/drafts/fetch-file/route.ts(5,20): error TS2304: Cannot find name 'generateRequestId'.
+src/app/api/contracts/drafts/fetch-file/route.ts(11,27): error TS2304: Cannot find name 'requireAuth'.
+src/app/api/contracts/drafts/fetch-file/route.ts(15,11): error TS2304: Cannot find name 'validationErrorResponse'.
+src/app/api/contracts/drafts/fetch-file/route.ts(19,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/contracts/drafts/fetch-file/route.ts(25,22): error TS2304: Cannot find name 'FileService'.
+src/app/api/contracts/drafts/fetch-file/route.ts(28,27): error TS2304: Cannot find name 'MAX_ARRAYBUFFER_SIZE'.
+src/app/api/contracts/drafts/fetch-file/route.ts(30,11): error TS2304: Cannot find name 'successResponse'.
+src/app/api/contracts/drafts/fetch-file/route.ts(40,20): error TS2304: Cannot find name 'FileService'.
+src/app/api/contracts/drafts/fetch-file/route.ts(49,29): error TS2304: Cannot find name 'FileService'.
+src/app/api/contracts/drafts/fetch-file/route.ts(52,10): error TS2304: Cannot find name 'successResponse'.
+src/app/api/contracts/drafts/fetch-file/route.ts(69,10): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/contracts/drafts/get-contract-id/route.ts(6,20): error TS2304: Cannot find name 'generateRequestId'.
+src/app/api/contracts/drafts/get-contract-id/route.ts(13,11): error TS2304: Cannot find name 'validationErrorResponse'.
+src/app/api/contracts/drafts/get-contract-id/route.ts(20,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/contracts/drafts/get-contract-id/route.ts(26,27): error TS2304: Cannot find name 'requireAuth'.
+src/app/api/contracts/drafts/get-contract-id/route.ts(53,10): error TS2304: Cannot find name 'successResponse'.
+src/app/api/contracts/drafts/get-contract-id/route.ts(55,14): error TS2304: Cannot find name 'query'.
+src/app/api/contracts/drafts/get-contract-id/route.ts(63,10): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/contracts/drafts/mark-completed/route.ts(28,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/drafts/mark-completed/route.ts(35,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/drafts/mark-completed/route.ts(45,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/drafts/mark-completed/route.ts(104,5): error TS18004: No value exists in scope for the shorthand 
+property 'requestId'. Either declare one or provide an initializer.
+src/app/api/contracts/drafts/mark-completed/route.ts(115,6): error TS18004: No value exists in scope for the shorthand 
+property 'requestId'. Either declare one or provide an initializer.
+src/app/api/contracts/drafts/optimize-existing/route.ts(8,20): error TS2304: Cannot find name 'generateRequestId'.
+src/app/api/contracts/drafts/optimize-existing/route.ts(10,26): error TS2304: Cannot find name 'requireAuth'.
+src/app/api/contracts/drafts/optimize-existing/route.ts(19,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/contracts/drafts/optimize-existing/route.ts(194,10): error TS2304: Cannot find name 'successResponse'.
+src/app/api/contracts/drafts/optimize-existing/route.ts(197,10): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/contracts/extract-data/route.ts(11,9): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/extract-data/route.ts(39,12): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/extract-data/route.ts(73,12): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/extract-data/route.ts(107,12): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/process-draft/route.ts(8,20): error TS2304: Cannot find name 'generateRequestId'.
+src/app/api/contracts/process-draft/route.ts(11,22): error TS2304: Cannot find name 'parseAndValidateBody'.
+src/app/api/contracts/process-draft/route.ts(11,52): error TS2304: Cannot find name 'processDraftSchema'.
+src/app/api/contracts/process-draft/route.ts(21,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/process-draft/route.ts(35,11): error TS2304: Cannot find name 'notFoundResponse'.
+src/app/api/contracts/process-draft/route.ts(42,28): error TS2304: Cannot find name 'requireAuthAndOwner'.
+src/app/api/contracts/process-draft/route.ts(52,11): error TS2304: Cannot find name 'validationErrorResponse'.
+src/app/api/contracts/process-draft/route.ts(72,25): error TS2304: Cannot find name 'FileService'.
+src/app/api/contracts/process-draft/route.ts(95,32): error TS2304: Cannot find name 'FileService'.
+src/app/api/contracts/process-draft/route.ts(99,24): error TS2304: Cannot find name 'FileService'.
+src/app/api/contracts/process-draft/route.ts(104,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/process-draft/route.ts(119,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/contracts/process-draft/route.ts(132,20): error TS2304: Cannot find name 'getFileType'.
+src/app/api/contracts/process-draft/route.ts(143,9): error TS2304: Cannot find name 'constructFileUrl'.
+src/app/api/contracts/process-draft/route.ts(172,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/contracts/process-draft/route.ts(186,11): error TS2304: Cannot find name 'successResponse'.
+src/app/api/contracts/process-draft/route.ts(194,27): error TS2304: Cannot find name 'ContractService'.
+src/app/api/contracts/process-draft/route.ts(204,10): error TS2304: Cannot find name 'ContractService'.
+src/app/api/contracts/process-draft/route.ts(212,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/contracts/process-draft/route.ts(246,10): error TS2304: Cannot find name 'successResponse'.
+src/app/api/contracts/process-draft/route.ts(252,10): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/contracts/route.ts(23,29): error TS2304: Cannot find name 'parsePaginationParams'.
+src/app/api/contracts/route.ts(37,4): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+src/app/api/contracts/route.ts(38,4): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+src/app/api/dashboard/unified/route.ts(48,53): error TS2339: Property 'timestamp' does not exist on type '{}'.
+src/app/api/dashboard/unified/route.ts(49,35): error TS2339: Property 'timestamp' does not exist on type '{}'.
+src/app/api/invite/resend/route.ts(13,41): error TS2345: Argument of type '{ name: any; email: any; role: any; orgId: 
+any; invitedBy: any; }' is not assignable to parameter of type 'CreateInvitationParams'.
+src/app/api/invite/route.ts(14,41): error TS2345: Argument of type '{ name: any; email: any; role: any; orgId: any; 
+invitedBy: any; }' is not assignable to parameter of type 'CreateInvitationParams'.
+src/app/api/licenses/[id]/renew/route.ts(31,57): error TS2345: Argument of type '{ renewedBy: any; renewalDate: 
+string; currencyCode: string; extendExpiration: boolean; cost?: string | number | undefined; notes?: string | 
+undefined; }' is not assignable to parameter of type '{ renewalDate: string; cost?: number | undefined; currencyCode?: 
+string | undefined; notes?: string | undefined; extendExpiration?: boolean | undefined; renewedBy?: string | 
+undefined; }'.
+src/app/api/microsoft/debug-sync/route.ts(46,17): error TS2339: Property 'date' does not exist on type 'CalendarEvent'.
+src/app/api/microsoft/sync-diagnostics/route.ts(63,7): error TS7034: Variable 'caalmEvents' implicitly has type 
+'any[]' in some locations where its type cannot be determined.
+src/app/api/microsoft/sync-diagnostics/route.ts(77,7): error TS7034: Variable 'outlookEvents' implicitly has type 
+'any[]' in some locations where its type cannot be determined.
+src/app/api/microsoft/sync-diagnostics/route.ts(106,28): error TS7005: Variable 'caalmEvents' implicitly has an 
+'any[]' type.
+src/app/api/microsoft/sync-diagnostics/route.ts(107,31): error TS7005: Variable 'outlookEvents' implicitly has an 
+'any[]' type.
+src/app/api/microsoft/sync-diagnostics/route.ts(132,23): error TS7005: Variable 'caalmEvents' implicitly has an 
+'any[]' type.
+src/app/api/microsoft/sync-diagnostics/route.ts(143,23): error TS7005: Variable 'outlookEvents' implicitly has an 
+'any[]' type.
+src/app/api/microsoft/sync-errors/route.ts(50,7): error TS7034: Variable 'calendars' implicitly has type 'any[]' in 
+some locations where its type cannot be determined.
+src/app/api/microsoft/sync-errors/route.ts(64,7): error TS7034: Variable 'outlookEvents' implicitly has type 'any[]' 
+in some locations where its type cannot be determined.
+src/app/api/microsoft/sync-errors/route.ts(69,6): error TS7005: Variable 'calendars' implicitly has an 'any[]' type.
+src/app/api/microsoft/sync-errors/route.ts(69,56): error TS7005: Variable 'calendars' implicitly has an 'any[]' type.
+src/app/api/microsoft/sync-errors/route.ts(109,18): error TS2339: Property 'date' does not exist on type 
+'CalendarEvent'.
+src/app/api/microsoft/sync-errors/route.ts(122,16): error TS7005: Variable 'calendars' implicitly has an 'any[]' type.
+src/app/api/microsoft/sync-errors/route.ts(131,13): error TS7005: Variable 'outlookEvents' implicitly has an 'any[]' 
+type.
+src/app/api/microsoft/sync-errors/route.ts(143,34): error TS2345: Argument of type '{ type: string; severity: string; 
+message: string; error: string; solution: string; }' is not assignable to parameter of type 'never'.
+src/app/api/microsoft/sync-errors/route.ts(153,34): error TS2345: Argument of type '{ type: string; severity: string; 
+message: string; error: string; solution: string; }' is not assignable to parameter of type 'never'.
+src/app/api/microsoft/sync-errors/route.ts(163,34): error TS2345: Argument of type '{ type: string; severity: string; 
+message: string; error: string; solution: string; }' is not assignable to parameter of type 'never'.
+src/app/api/microsoft/sync-errors/route.ts(173,34): error TS2345: Argument of type '{ type: string; severity: string; 
+message: string; solution: string; }' is not assignable to parameter of type 'never'.
+src/app/api/microsoft/sync-errors/route.ts(182,34): error TS2345: Argument of type '{ type: string; severity: string; 
+message: string; solution: string; }' is not assignable to parameter of type 'never'.
+src/app/api/notification-types/route.ts(53,8): error TS18047: 'body' is possibly 'null'.
+src/app/api/notification-types/route.ts(53,26): error TS18047: 'body' is possibly 'null'.
+src/app/api/notification-types/route.ts(53,41): error TS18047: 'body' is possibly 'null'.
+src/app/api/notifications/[notificationId]/unread/route.ts(40,12): error TS2304: Cannot find name 'notificationId'.
+src/app/api/notifications/read-all/route.ts(31,4): error TS2304: Cannot find name 'databases'.
+src/app/api/notifications/route.ts(138,8): error TS18047: 'body' is possibly 'null'.
+src/app/api/notifications/route.ts(138,24): error TS18047: 'body' is possibly 'null'.
+src/app/api/notifications/route.ts(138,39): error TS18047: 'body' is possibly 'null'.
+src/app/api/notifications/route.ts(138,56): error TS18047: 'body' is possibly 'null'.
+src/app/api/notifications/route.ts(145,69): error TS2345: Argument of type 'CreateNotificationRequest | null' is not 
+assignable to parameter of type 'CreateNotificationRequest'.
+src/app/api/notifications/route.ts(149,47): error TS18047: 'body' is possibly 'null'.
+src/app/api/notifications/route.ts(157,26): error TS18047: 'body' is possibly 'null'.
+src/app/api/reports/generate-pdf/route.ts(260,5): error TS2353: Object literal may only specify known properties, and 
+'collectionId' does not exist in type '{ databaseId: string; tableId: string; rowId: string; data?: (Partial<Row> & 
+Record<string, any>) | undefined; permissions?: string[] | undefined; }'.
+src/app/api/search/analytics/route.ts(71,27): error TS2304: Cannot find name 'tablesDB'.
+src/app/api/search/analytics/route.ts(89,27): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/api/search/analytics/route.ts(125,54): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/api/search/saved/route.ts(21,31): error TS2304: Cannot find name 'tablesDB'.
+src/app/api/search/saved/route.ts(54,34): error TS2304: Cannot find name 'tablesDB'.
+src/app/api/search/saved/route.ts(68,29): error TS2304: Cannot find name 'tablesDB'.
+src/app/api/user/profile-picture/route.ts(84,50): error TS2559: Type 'DefaultDocument' has no properties in common 
+with type '{ avatar?: string | null | undefined; profileImageId?: string | null | undefined; }'.
+src/app/api/user/profile-picture/route.ts(168,49): error TS2559: Type 'DefaultDocument' has no properties in common 
+with type '{ avatar?: string | null | undefined; profileImageId?: string | null | undefined; }'.
+src/app/api/v1/contracts/backfill-drafts/route.ts(136,23): error TS2304: Cannot find name 'FileService'.
+src/app/api/v1/contracts/backfill-drafts/route.ts(195,31): error TS2304: Cannot find name 'ContractService'.
+src/app/api/v1/contracts/backfill-drafts/route.ts(205,14): error TS2304: Cannot find name 'ContractService'.
+src/app/api/v1/contracts/check-expiry/route.ts(16,10): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/check-expiry/route.ts(23,10): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/database/route.ts(15,29): error TS2304: Cannot find name 'parsePaginationParams'.
+src/app/api/v1/contracts/database/route.ts(38,26): error TS2304: Cannot find name 'buildPaginationMeta'.
+src/app/api/v1/contracts/drafts/delete-by-contract/route.ts(23,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/drafts/delete-by-contract/route.ts(33,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/drafts/delete-by-contract/route.ts(84,5): error TS18004: No value exists in scope for the 
+shorthand property 'requestId'. Either declare one or provide an initializer.
+src/app/api/v1/contracts/drafts/delete-by-contract/route.ts(93,6): error TS18004: No value exists in scope for the 
+shorthand property 'requestId'. Either declare one or provide an initializer.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(5,20): error TS2304: Cannot find name 'generateRequestId'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(11,27): error TS2304: Cannot find name 'requireAuth'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(15,11): error TS2304: Cannot find name 'validationErrorResponse'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(19,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(25,22): error TS2304: Cannot find name 'FileService'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(28,27): error TS2304: Cannot find name 'MAX_ARRAYBUFFER_SIZE'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(30,11): error TS2304: Cannot find name 'successResponse'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(40,20): error TS2304: Cannot find name 'FileService'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(49,29): error TS2304: Cannot find name 'FileService'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(52,10): error TS2304: Cannot find name 'successResponse'.
+src/app/api/v1/contracts/drafts/fetch-file/route.ts(69,10): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/drafts/get-contract-id/route.ts(6,20): error TS2304: Cannot find name 'generateRequestId'.
+src/app/api/v1/contracts/drafts/get-contract-id/route.ts(13,11): error TS2304: Cannot find name 
+'validationErrorResponse'.
+src/app/api/v1/contracts/drafts/get-contract-id/route.ts(20,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/drafts/get-contract-id/route.ts(26,27): error TS2304: Cannot find name 'requireAuth'.
+src/app/api/v1/contracts/drafts/get-contract-id/route.ts(53,10): error TS2304: Cannot find name 'successResponse'.
+src/app/api/v1/contracts/drafts/get-contract-id/route.ts(55,14): error TS2304: Cannot find name 'query'.
+src/app/api/v1/contracts/drafts/get-contract-id/route.ts(63,10): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/drafts/mark-completed/route.ts(28,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/drafts/mark-completed/route.ts(35,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/drafts/mark-completed/route.ts(45,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/drafts/mark-completed/route.ts(104,5): error TS18004: No value exists in scope for the 
+shorthand property 'requestId'. Either declare one or provide an initializer.
+src/app/api/v1/contracts/drafts/mark-completed/route.ts(115,6): error TS18004: No value exists in scope for the 
+shorthand property 'requestId'. Either declare one or provide an initializer.
+src/app/api/v1/contracts/drafts/optimize-existing/route.ts(8,20): error TS2304: Cannot find name 'generateRequestId'.
+src/app/api/v1/contracts/drafts/optimize-existing/route.ts(10,26): error TS2304: Cannot find name 'requireAuth'.
+src/app/api/v1/contracts/drafts/optimize-existing/route.ts(19,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/drafts/optimize-existing/route.ts(194,10): error TS2304: Cannot find name 'successResponse'.
+src/app/api/v1/contracts/drafts/optimize-existing/route.ts(197,10): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/drafts/route.ts(95,17): error TS2304: Cannot find name 'parseAndValidateQuery'.
+src/app/api/v1/contracts/drafts/route.ts(95,48): error TS2304: Cannot find name 'draftQuerySchema'.
+src/app/api/v1/contracts/drafts/route.ts(111,48): error TS2304: Cannot find name 'ownerId'.
+src/app/api/v1/contracts/drafts/route.ts(116,41): error TS2304: Cannot find name 'ownerId'.
+src/app/api/v1/contracts/drafts/route.ts(142,17): error TS2304: Cannot find name 'parseAndValidateQuery'.
+src/app/api/v1/contracts/drafts/route.ts(142,48): error TS2304: Cannot find name 'draftDeleteSchema'.
+src/app/api/v1/contracts/extract-data/route.ts(11,9): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/extract-data/route.ts(39,12): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/extract-data/route.ts(73,12): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/extract-data/route.ts(107,12): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/manager/[userId]/route.ts(8,20): error TS2304: Cannot find name 'generateRequestId'.
+src/app/api/v1/contracts/manager/[userId]/route.ts(10,26): error TS2304: Cannot find name 'requireAuth'.
+src/app/api/v1/contracts/manager/[userId]/route.ts(20,10): error TS2304: Cannot find name 'successResponse'.
+src/app/api/v1/contracts/manager/[userId]/route.ts(23,10): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(8,20): error TS2304: Cannot find name 'generateRequestId'.
+src/app/api/v1/contracts/process-draft/route.ts(11,22): error TS2304: Cannot find name 'parseAndValidateBody'.
+src/app/api/v1/contracts/process-draft/route.ts(11,52): error TS2304: Cannot find name 'processDraftSchema'.
+src/app/api/v1/contracts/process-draft/route.ts(21,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(35,11): error TS2304: Cannot find name 'notFoundResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(42,28): error TS2304: Cannot find name 'requireAuthAndOwner'.
+src/app/api/v1/contracts/process-draft/route.ts(52,11): error TS2304: Cannot find name 'validationErrorResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(72,25): error TS2304: Cannot find name 'FileService'.
+src/app/api/v1/contracts/process-draft/route.ts(95,32): error TS2304: Cannot find name 'FileService'.
+src/app/api/v1/contracts/process-draft/route.ts(99,24): error TS2304: Cannot find name 'FileService'.
+src/app/api/v1/contracts/process-draft/route.ts(104,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(119,11): error TS2304: Cannot find name 'NextResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(132,20): error TS2304: Cannot find name 'getFileType'.
+src/app/api/v1/contracts/process-draft/route.ts(143,9): error TS2304: Cannot find name 'constructFileUrl'.
+src/app/api/v1/contracts/process-draft/route.ts(172,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(186,11): error TS2304: Cannot find name 'successResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(194,27): error TS2304: Cannot find name 'ContractService'.
+src/app/api/v1/contracts/process-draft/route.ts(204,10): error TS2304: Cannot find name 'ContractService'.
+src/app/api/v1/contracts/process-draft/route.ts(212,11): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(246,10): error TS2304: Cannot find name 'successResponse'.
+src/app/api/v1/contracts/process-draft/route.ts(252,10): error TS2304: Cannot find name 'errorResponse'.
+src/app/api/v1/contracts/route.ts(23,29): error TS2304: Cannot find name 'parsePaginationParams'.
+src/app/api/v1/contracts/route.ts(37,4): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+src/app/api/v1/contracts/route.ts(38,4): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+src/components/AdvancedSearch.tsx(123,13): error TS2448: Block-scoped variable 'loadSuggestions' used before its 
+declaration.
+src/components/AdvancedSearch.tsx(123,13): error TS2454: Variable 'loadSuggestions' is used before being assigned.
+src/components/analytics/BudgetComplianceCard.tsx(246,9): error TS2322: Type '(value: number) => [string, "Amount"]' 
+is not assignable to type 'Formatter<number, "Amount"> & ((value: number, name: "Amount", item: Payload<number, 
+"Amount">, index: number, payload: Payload<number, "Amount">[]) => ReactNode | [...])'.
+src/components/analytics/MeetingLoadChart.tsx(176,24): error TS18048: 'percent' is possibly 'undefined'.
+src/components/CalendarSettings.tsx(66,6): error TS2448: Block-scoped variable 'loadIntegrationStatus' used before its 
+declaration.
+src/components/CalendarSettings.tsx(66,6): error TS2454: Variable 'loadIntegrationStatus' is used before being 
+assigned.
+src/components/contract-upload/hooks/useDraftManagement.ts(177,7): error TS2322: Type '{}' is not assignable to type 
+'string'.
+src/components/contract-upload/hooks/useManagers.ts(24,46): error TS2448: Block-scoped variable 'fetchManagers' used 
+before its declaration.
+src/components/contract-upload/hooks/useManagers.ts(24,46): error TS2454: Variable 'fetchManagers' is used before 
+being assigned.
+src/components/ContractExpiryAlertsWidget.tsx(141,9): error TS2367: This comparison appears to be unintentional 
+because the types '30' and '-1' have no overlap.
+src/components/ContractExpiryAlertsWidget.tsx(328,5): error TS2322: Type 'Dispatch<SetStateAction<30>>' is not 
+assignable to type '(value: number) => void'.
+src/components/ContractExpiryAlertsWidget.tsx(345,4): error TS2322: Type 'Dispatch<SetStateAction<30>>' is not 
+assignable to type '(value: number) => void'.
+src/components/ContractOpportunitiesWidget.tsx(36,75): error TS2345: Argument of type '{ keyword: string; limit: 
+number; noticeType: "o"; }' is not assignable to parameter of type 'Omit<SAMContractSearchParams, "api_key">'.
+src/components/EnhancedSearch.tsx(62,32): error TS2448: Block-scoped variable 'loadAnalytics' used before its 
+declaration.
+src/components/EnhancedSearch.tsx(62,32): error TS2454: Variable 'loadAnalytics' is used before being assigned.
+src/components/EnhancedSearch.tsx(62,47): error TS2448: Block-scoped variable 'loadSearchHistory' used before its 
+declaration.
+src/components/EnhancedSearch.tsx(62,47): error TS2454: Variable 'loadSearchHistory' is used before being assigned.
+src/components/EnhancedSearch.tsx(71,13): error TS2448: Block-scoped variable 'loadSuggestions' used before its 
+declaration.
+src/components/EnhancedSearch.tsx(71,13): error TS2454: Variable 'loadSuggestions' is used before being assigned.
+src/components/EnhancedSearch.tsx(98,39): error TS2554: Expected 1 arguments, but got 2.
+src/components/EscalationRulesManager.tsx(98,14): error TS2448: Block-scoped variable 'fetchRules' used before its 
+declaration.
+src/components/EscalationRulesManager.tsx(98,14): error TS2454: Variable 'fetchRules' is used before being assigned.
+src/components/EscalationRulesManager.tsx(106,18): error TS2448: Block-scoped variable 'searchUsers' used before its 
+declaration.
+src/components/EscalationRulesManager.tsx(106,18): error TS2454: Variable 'searchUsers' is used before being assigned.
+src/components/license-upload/hooks/useDraftManagement.ts(187,7): error TS2322: Type '{}' is not assignable to type 
+'string'.
+src/components/license-upload/index.tsx(578,32): error TS2769: No overload matches this call.
+src/components/licenses/LicenseRenewalDialog.tsx(53,3): error TS2322: Type 'Resolver<{ renewalDate: string; cost?: 
+string | number | undefined; currencyCode?: string | undefined; notes?: string | undefined; extendExpiration?: boolean 
+| undefined; }, any, { renewalDate: string; currencyCode: string; extendExpiration: boolean; cost?: string | ... 1 
+more ... | undefined; notes?: string | undef...' is not assignable to type 'Resolver<{ renewalDate: string; 
+currencyCode: string; extendExpiration: boolean; cost?: string | number | undefined; notes?: string | undefined; }, 
+any, { renewalDate: string; currencyCode: string; extendExpiration: boolean; cost?: string | ... 1 more ... | 
+undefined; notes?: string | undefined; }>'.
+src/components/licenses/LicenseRenewalDialog.tsx(126,41): error TS2345: Argument of type '(data: LicenseRenewalInput) 
+=> Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+src/components/licenses/LicenseRenewalDialog.tsx(143,9): error TS2322: Type 'Control<{ renewalDate: string; 
+currencyCode: string; extendExpiration: boolean; cost?: string | number | undefined; notes?: string | undefined; }, 
+any, TFieldValues>' is not assignable to type 'Control<{ renewalDate: string; currencyCode: string; extendExpiration: 
+boolean; cost?: string | number | undefined; notes?: string | undefined; }, any, { renewalDate: string; currencyCode: 
+string; extendExpiration: boolean; cost?: string | ... 1 more ... | undefined; notes?: string | undefined; }>'.
+src/components/licenses/LicenseRenewalDialog.tsx(158,10): error TS2322: Type 'Control<{ renewalDate: string; 
+currencyCode: string; extendExpiration: boolean; cost?: string | number | undefined; notes?: string | undefined; }, 
+any, TFieldValues>' is not assignable to type 'Control<{ renewalDate: string; currencyCode: string; extendExpiration: 
+boolean; cost?: string | number | undefined; notes?: string | undefined; }, any, { renewalDate: string; currencyCode: 
+string; extendExpiration: boolean; cost?: string | ... 1 more ... | undefined; notes?: string | undefined; }>'.
+src/components/licenses/LicenseRenewalDialog.tsx(183,10): error TS2322: Type 'Control<{ renewalDate: string; 
+currencyCode: string; extendExpiration: boolean; cost?: string | number | undefined; notes?: string | undefined; }, 
+any, TFieldValues>' is not assignable to type 'Control<{ renewalDate: string; currencyCode: string; extendExpiration: 
+boolean; cost?: string | number | undefined; notes?: string | undefined; }, any, { renewalDate: string; currencyCode: 
+string; extendExpiration: boolean; cost?: string | ... 1 more ... | undefined; notes?: string | undefined; }>'.
+src/components/licenses/LicenseRenewalDialog.tsx(198,9): error TS2322: Type 'Control<{ renewalDate: string; 
+currencyCode: string; extendExpiration: boolean; cost?: string | number | undefined; notes?: string | undefined; }, 
+any, TFieldValues>' is not assignable to type 'Control<{ renewalDate: string; currencyCode: string; extendExpiration: 
+boolean; cost?: string | number | undefined; notes?: string | undefined; }, any, { renewalDate: string; currencyCode: 
+string; extendExpiration: boolean; cost?: string | ... 1 more ... | undefined; notes?: string | undefined; }>'.
+src/components/licenses/LicenseRenewalDialog.tsx(218,9): error TS2322: Type 'Control<{ renewalDate: string; 
+currencyCode: string; extendExpiration: boolean; cost?: string | number | undefined; notes?: string | undefined; }, 
+any, TFieldValues>' is not assignable to type 'Control<{ renewalDate: string; currencyCode: string; extendExpiration: 
+boolean; cost?: string | number | undefined; notes?: string | undefined; }, any, { renewalDate: string; currencyCode: 
+string; extendExpiration: boolean; cost?: string | ... 1 more ... | undefined; notes?: string | undefined; }>'.
+src/components/licenses/LicenseRenewalDialog.tsx(253,35): error TS2345: Argument of type '(data: LicenseRenewalInput) 
+=> Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+src/components/news/ArticleEditor.tsx(228,3): error TS2448: Block-scoped variable 'resetForm' used before its 
+declaration.
+src/components/news/ArticleEditor.tsx(228,3): error TS2454: Variable 'resetForm' is used before being assigned.
+src/components/news/ArticleEditor.tsx(229,3): error TS2448: Block-scoped variable 'loadArticle' used before its 
+declaration.
+src/components/news/ArticleEditor.tsx(229,3): error TS2454: Variable 'loadArticle' is used before being assigned.
+src/components/news/NewsAnalytics.tsx(85,6): error TS2448: Block-scoped variable 'fetchAnalytics' used before its 
+declaration.
+src/components/news/NewsAnalytics.tsx(85,6): error TS2454: Variable 'fetchAnalytics' is used before being assigned.
+src/components/news/NewsAnalytics.tsx(217,23): error TS18048: 'percent' is possibly 'undefined'.
+src/components/news/NewsAnalytics.tsx(254,23): error TS18048: 'percent' is possibly 'undefined'.
+src/components/OutlookReplicaCalendar.tsx(249,18): error TS2339: Property 'date' does not exist on type 
+'LocalCalendarEvent'.
+src/components/OutlookReplicaCalendar.tsx(250,40): error TS2339: Property 'date' does not exist on type 
+'LocalCalendarEvent'.
+src/components/pdf/ReportDocument.tsx(345,9): error TS2769: No overload matches this call.
+src/components/ReportGenerator.tsx(94,5): error TS2353: Object literal may only specify known properties, and 
+'userRole' does not exist in type 'GenerateReportData'.
+src/components/Search.tsx(93,21): error TS2339: Property '$id' does not exist on type 'SearchResult'.
+src/components/Search.tsx(94,42): error TS2345: Argument of type 'SearchResult' is not assignable to parameter of type 
+'Record<string, unknown>'.
+src/components/Search.tsx(99,29): error TS2339: Property 'extension' does not exist on type 'SearchResult'.
+src/components/Search.tsx(100,23): error TS2339: Property 'url' does not exist on type 'SearchResult'.
+src/components/Search.tsx(125,5): error TS2322: Type '{ isOpen: boolean; onClose: () => void; onResultClick: (result: 
+any) => void; }' is not assignable to type 'IntrinsicAttributes & SearchModalProps'.
+src/components/Search.tsx(125,21): error TS7006: Parameter 'result' implicitly has an 'any' type.
+src/components/SearchDashboard.tsx(41,17): error TS2448: Block-scoped variable 'loadAnalytics' used before its 
+declaration.
+src/components/SearchDashboard.tsx(41,17): error TS2454: Variable 'loadAnalytics' is used before being assigned.
+src/components/SearchModal.tsx(107,27): error TS2339: Property 'role' does not exist on type 'User<Preferences>'.
+src/components/SearchModal.tsx(108,33): error TS2339: Property 'department' does not exist on type 'User<Preferences>'.
+src/components/SearchModal.tsx(315,23): error TS2339: Property 'department' does not exist on type 'SearchResult'.
+src/components/SearchModal.tsx(318,23): error TS2339: Property 'contractType' does not exist on type 'SearchResult'.
+src/components/ui/chart.tsx(124,4): error TS2339: Property 'payload' does not exist on type 'Omit<Props<ValueType, 
+NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | 
+undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & { ...; }'.
+src/components/ui/chart.tsx(129,4): error TS2339: Property 'label' does not exist on type 'Omit<Props<ValueType, 
+NameType>, PropertiesReadFromContext> & { active?: boolean | undefined; allowEscapeViewBox?: AllowInDimension | 
+undefined; ... 24 more ...; wrapperStyle?: CSSProperties | undefined; } & { ...; }'.
+src/components/ui/collapsible.tsx(1,39): error TS2307: Cannot find module '@radix-ui/react-collapsible' or its 
+corresponding type declarations.
+src/components/ui/resizable.tsx(9,51): error TS2339: Property 'PanelGroup' does not exist on type 'typeof import("C:/Us
+ers/victo/Development/caalm-next/node_modules/.pnpm/react-resizable-panels@4.6._0f5f21b11f63da7b2ab02e60da912937/node_m
+odules/react-resizable-panels/dist/react-resizable-panels")'.
+src/components/ui/resizable.tsx(10,22): error TS2339: Property 'PanelGroup' does not exist on type 'typeof import("C:/U
+sers/victo/Development/caalm-next/node_modules/.pnpm/react-resizable-panels@4.6._0f5f21b11f63da7b2ab02e60da912937/node_
+modules/react-resizable-panels/dist/react-resizable-panels")'.
+src/components/ui/resizable.tsx(25,51): error TS2339: Property 'PanelResizeHandle' does not exist on type 'typeof impor
+t("C:/Users/victo/Development/caalm-next/node_modules/.pnpm/react-resizable-panels@4.6._0f5f21b11f63da7b2ab02e60da91293
+7/node_modules/react-resizable-panels/dist/react-resizable-panels")'.
+src/components/ui/resizable.tsx(28,22): error TS2339: Property 'PanelResizeHandle' does not exist on type 'typeof impor
+t("C:/Users/victo/Development/caalm-next/node_modules/.pnpm/react-resizable-panels@4.6._0f5f21b11f63da7b2ab02e60da91293
+7/node_modules/react-resizable-panels/dist/react-resizable-panels")'.
+src/components/ui/resizable.tsx(40,23): error TS2339: Property 'PanelResizeHandle' does not exist on type 'typeof impor
+t("C:/Users/victo/Development/caalm-next/node_modules/.pnpm/react-resizable-panels@4.6._0f5f21b11f63da7b2ab02e60da91293
+7/node_modules/react-resizable-panels/dist/react-resizable-panels")'.
+src/hooks/useDashboardData.ts(91,5): error TS2322: Type '"pending"' is not assignable to type '"active" | "inactive" | 
+"expired" | "action-required" | "pending-review"'.
+src/hooks/useEnhancedAnalytics.ts(69,29): error TS2304: Cannot find name 'useCallback'.
+src/hooks/useNotificationsSSE.ts(47,30): error TS2554: Expected 1 arguments, but got 0.
+src/hooks/useSearch.ts(102,33): error TS2448: Block-scoped variable 'performSearch' used before its declaration.
+src/hooks/useSearch.ts(102,33): error TS2454: Variable 'performSearch' is used before being assigned.
+src/hooks/useSearch.ts(128,21): error TS2345: Argument of type 'SearchResult[]' is not assignable to parameter of type 
+'SetStateAction<SearchResult[]>'.
+src/hooks/useSharedCalendars.ts(48,3): error TS2769: No overload matches this call.
+src/hooks/useTwoFactor.ts(89,20): error TS2339: Property 'data' does not exist on type 'Response'.
+src/hooks/useTwoFactor.ts(112,20): error TS2339: Property 'data' does not exist on type 'Response'.
+src/hooks/useTwoFactor.ts(149,20): error TS2339: Property 'data' does not exist on type 'Response'.
+src/hooks/useTwoFactor.ts(174,20): error TS2339: Property 'data' does not exist on type 'Response'.
+src/hooks/useUnifiedDashboardData.ts(68,3): error TS2769: No overload matches this call.
+src/lib/actions/calendar-integration.actions.ts(345,3): error TS2322: Type 'boolean | undefined' is not assignable to 
+type 'boolean'.
+src/lib/actions/notes.actions.ts(49,10): error TS2352: Conversion of type 'DefaultDocument' to type 'Note' may be a 
+mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 
+'unknown' first.
+src/lib/actions/notes.actions.ts(79,10): error TS2352: Conversion of type 'DefaultDocument[]' to type 'Note[]' may be 
+a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression 
+to 'unknown' first.
+src/lib/actions/notes.actions.ts(104,10): error TS2352: Conversion of type 'DefaultDocument' to type 'Note' may be a 
+mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 
+'unknown' first.
+src/lib/actions/report.actions.ts(195,4): error TS18004: No value exists in scope for the shorthand property 
+'userRole'. Either declare one or provide an initializer.
+src/lib/actions/shared-calendar.actions.ts(874,2): error TS2322: Type '{ userPermission: CalendarPermissionLevel | 
+undefined; $id: string; name: string; description?: string | undefined; ownerId: string; ownerAccountId: string; ... 9 
+more ...; updatedAt: string; }[]' is not assignable to type '(SharedCalendar & { userPermission: 
+CalendarPermissionLevel; })[]'.
+src/lib/actions/user.actions.ts(716,43): error TS2559: Type 'DefaultRow' has no properties in common with type '{ 
+avatar?: string | undefined; profileImageId?: string | null | undefined; }'.
+src/lib/ai/gemini.ts(104,10): error TS2554: Expected 3 arguments, but got 2.
+src/lib/api/contracts/middleware/validation.middleware.ts(22,33): error TS2339: Property 'errors' does not exist on 
+type 'ZodError<T>'.
+src/lib/api/contracts/middleware/validation.middleware.ts(23,7): error TS7006: Parameter 'acc' implicitly has an 'any' 
+type.
+src/lib/api/contracts/middleware/validation.middleware.ts(23,12): error TS7006: Parameter 'err' implicitly has an 
+'any' type.
+src/lib/api/contracts/middleware/validation.middleware.ts(35,48): error TS18046: 'messages' is of type 'unknown'.
+src/lib/api/contracts/middleware/validation.middleware.ts(62,31): error TS2339: Property 'errors' does not exist on 
+type 'ZodError<T>'.
+src/lib/api/contracts/middleware/validation.middleware.ts(63,5): error TS7006: Parameter 'acc' implicitly has an 'any' 
+type.
+src/lib/api/contracts/middleware/validation.middleware.ts(63,10): error TS7006: Parameter 'err' implicitly has an 
+'any' type.
+src/lib/api/contracts/middleware/validation.middleware.ts(75,46): error TS18046: 'messages' is of type 'unknown'.
+src/lib/api/contracts/middleware/validation.middleware.ts(94,31): error TS2339: Property 'errors' does not exist on 
+type 'ZodError<T>'.
+src/lib/api/contracts/middleware/validation.middleware.ts(95,5): error TS7006: Parameter 'acc' implicitly has an 'any' 
+type.
+src/lib/api/contracts/middleware/validation.middleware.ts(95,10): error TS7006: Parameter 'err' implicitly has an 
+'any' type.
+src/lib/api/contracts/middleware/validation.middleware.ts(107,46): error TS18046: 'messages' is of type 'unknown'.
+src/lib/api/contracts/middleware/validation.middleware.ts(127,31): error TS2339: Property 'errors' does not exist on 
+type 'ZodError<T>'.
+src/lib/api/contracts/middleware/validation.middleware.ts(128,5): error TS7006: Parameter 'acc' implicitly has an 
+'any' type.
+src/lib/api/contracts/middleware/validation.middleware.ts(128,10): error TS7006: Parameter 'err' implicitly has an 
+'any' type.
+src/lib/api/contracts/middleware/validation.middleware.ts(140,46): error TS18046: 'messages' is of type 'unknown'.
+src/lib/api/contracts/schemas/draft.schema.ts(10,14): error TS2554: Expected 2-3 arguments, but got 1.
+src/lib/api/contracts/schemas/draft.schema.ts(23,19): error TS2554: Expected 2-3 arguments, but got 1.
+src/lib/api/contracts/services/FileService.ts(25,54): error TS2769: No overload matches this call.
+src/lib/api/contracts/services/FileService.ts(93,16): error TS2339: Property 'body' does not exist on type 
+'ArrayBuffer'.
+src/lib/api/contracts/services/FileService.ts(94,20): error TS2339: Property 'body' does not exist on type 
+'ArrayBuffer'.
+src/lib/api/contracts/services/FileService.ts(98,38): error TS2339: Property 'arrayBuffer' does not exist on type 
+'ArrayBuffer'.
+src/lib/api/contracts/utils/response.util.ts(117,3): error TS2698: Spread types may only be created from object types.
+src/lib/database/news-articles.ts(105,10): error TS2352: Conversion of type 'DefaultRow' to type 'NewsArticle' may be 
+a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression 
+to 'unknown' first.
+src/lib/database/news-articles.ts(125,10): error TS2352: Conversion of type 'DefaultRow' to type 'NewsArticle' may be 
+a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression 
+to 'unknown' first.
+src/lib/database/news-articles.ts(169,10): error TS2352: Conversion of type 'DefaultRow' to type 'NewsArticle' may be 
+a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression 
+to 'unknown' first.
+src/lib/database/news-articles.ts(232,10): error TS2352: Conversion of type 'DefaultRow' to type 'NewsArticle' may be 
+a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression 
+to 'unknown' first.
+src/lib/database/news-articles.ts(301,14): error TS2352: Conversion of type 'DefaultRow[]' to type 'NewsArticle[]' may 
+be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the 
+expression to 'unknown' first.
+src/lib/database/news-versions.ts(51,10): error TS2352: Conversion of type 'DefaultRow' to type 'NewsVersion' may be a 
+mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 
+'unknown' first.
+src/lib/database/news-versions.ts(75,10): error TS2352: Conversion of type 'DefaultRow[]' to type 'NewsVersion[]' may 
+be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the 
+expression to 'unknown' first.
+src/lib/database/news-versions.ts(95,10): error TS2352: Conversion of type 'DefaultRow' to type 'NewsVersion' may be a 
+mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 
+'unknown' first.
+src/lib/microsoft/graph-client.ts(75,8): error TS2339: Property 'client' does not exist on type 'MicrosoftGraphClient'.
+src/lib/microsoft/graph-client.ts(77,5): error TS2353: Object literal may only specify known properties, and 
+'getAccessToken' does not exist in type 'AuthProvider'.
+src/lib/microsoft/graph-client.ts(212,11): error TS7022: 'response' implicitly has type 'any' because it does not have 
+a type annotation and is referenced directly or indirectly in its own initializer.
+src/lib/microsoft/graph-client.ts(228,11): error TS7022: 'data' implicitly has type 'any' because it does not have a 
+type annotation and is referenced directly or indirectly in its own initializer.
+src/lib/rbac/permissions.ts(125,18): error TS2558: Expected 0 type arguments, but got 1.
+src/lib/rbac/permissions.ts(247,18): error TS2558: Expected 0 type arguments, but got 1.
+src/lib/rbac/permissions.ts(326,18): error TS2558: Expected 0 type arguments, but got 1.
+src/lib/rbac/roles.ts(350,7): error TS2353: Object literal may only specify known properties, and 'roleId' does not 
+exist in type 'Partial<Row> & Omit<Row, keyof Row>'.
+src/lib/sam-contract-details.ts(345,4): error TS2322: Type '{ title: string; url: string; type: string; }[]' is not 
+assignable to type '{ filename: string; url: string; size?: number | undefined; type?: string | undefined; }[]'.
+src/lib/services/cache-manager.ts(279,20): error TS2339: Property 'timestamp' does not exist on type '{}'.
+src/lib/services/cache-manager.ts(280,33): error TS2339: Property 'timestamp' does not exist on type '{}'.
+src/lib/services/deletion-sync.ts(131,9): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(131,15): error TS2339: Property 'deleted_by' does not exist on type 'Event'.
+src/lib/services/deletion-sync.ts(135,44): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(135,50): error TS2339: Property 'deleted_by' does not exist on type 'Event'.
+src/lib/services/deletion-sync.ts(148,18): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(148,24): error TS2339: Property 'title' does not exist on type 'Event'.
+src/lib/services/deletion-sync.ts(151,14): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(151,20): error TS2339: Property 'deleted_by' does not exist on type 'Event'.
+src/lib/services/digestService.ts(145,23): error TS2352: Conversion of type 'DefaultRow[]' to type 
+'NotificationDigestQueue[]' may be a mistake because neither type sufficiently overlaps with the other. If this was 
+intentional, convert the expression to 'unknown' first.
+src/lib/services/notificationService.ts(514,5): error TS18047: 'notificationType' is possibly 'null'.
+src/lib/services/twilioService.ts(26,3): error TS2322: Type 'string | undefined' is not assignable to type 'string | 
+null'.
+src/lib/services/twilioService.ts(139,15): error TS2345: Argument of type 'string | undefined' is not assignable to 
+parameter of type 'string'.
+src/lib/utils/batch-processor.ts(78,3): error TS2322: Type '{ item: T; error: Error; }[]' is not assignable to type '{ 
+item: R; error: Error; }[]'.
+src/lib/utils/db-optimizer.ts(11,2): error TS2322: Type 'string[]' is not assignable to type 'Query[]'.
+src/lib/utils/db-optimizer.ts(19,10): error TS2322: Type 'string' is not assignable to type 'Query'.
+src/lib/utils/db-optimizer.ts(19,30): error TS2322: Type 'string' is not assignable to type 'Query'.
+src/lib/utils/db-optimizer.ts(29,31): error TS2322: Type 'string' is not assignable to type 'Query'.
+src/lib/utils/db-optimizer.ts(29,55): error TS2322: Type 'string' is not assignable to type 'Query'.
+src/lib/utils/db-optimizer.ts(79,16): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/lib/utils/db-optimizer.ts(90,17): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/lib/utils/db-optimizer.ts(92,17): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/lib/utils/db-optimizer.ts(98,16): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/lib/utils/db-optimizer.ts(101,16): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/scripts/verify-contract-drafts-collection.ts(25,38): error TS2339: Property 'getCollection' does not exist on type 
+'TablesDB'.
+src/scripts/verify-contract-drafts-collection.ts(32,38): error TS2339: Property 'listAttributes' does not exist on 
+type 'TablesDB'.
+src/types/notifications.ts(6,2): error TS2300: Duplicate identifier 'phone_number'.
+src/types/notifications.ts(9,2): error TS2300: Duplicate identifier 'phone_number'.
+src/types/notifications.ts(16,2): error TS2300: Duplicate identifier 'phoneNumber'.
+src/types/notifications.ts(19,2): error TS2300: Duplicate identifier 'phoneNumber'.
+tailwind.config.ts(5,2): error TS2322: Type '["class"]' is not assignable to type 'DarkModeStrategy | undefined'.
+tests/components/contract-status-widget/ContractStatusPieChart.test.tsx(425,35): error TS2322: Type '({ status: 
+"active"; count: number; percentage: number; color: string; } | { status: "expiring"; count: number; percentage: 
+number; color: string; } | { status: "completed"; count: number; percentage: number; color: string; })[]' is not 
+assignable to type 'ContractData[]'.
+tests/components/contract-status-widget/ContractStatusPieChart.test.tsx(547,6): error TS2820: Type '"ACTIVE"' is not 
+assignable to type '"active" | "inactive" | "expired" | "action-required" | "pending-review" | undefined'. Did you 
+mean '"active"'?
+tests/components/contract-status-widget/ContractStatusPieChart.test.tsx(551,6): error TS2820: Type '"Active"' is not 
+assignable to type '"active" | "inactive" | "expired" | "action-required" | "pending-review" | undefined'. Did you 
+mean '"active"'?
+tests/components/rate-limiting/rate-limit-middleware.test.ts(48,15): error TS2540: Cannot assign to 'NODE_ENV' because 
+it is a read-only property.
+
+

@@ -142,7 +142,7 @@ class DigestService {
 
 			// Fetch the actual notifications (lazy import to avoid circular dependency)
 			const notifications: Notification[] = [];
-			for (const item of queueItems.rows as NotificationDigestQueue[]) {
+			for (const item of queueItems.rows as unknown as NotificationDigestQueue[]) {
 				try {
 					const { notificationService } = await import("./notificationService");
 					const notification = await notificationService.getNotification(

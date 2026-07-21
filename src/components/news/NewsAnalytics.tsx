@@ -80,10 +80,6 @@ const NewsAnalytics: React.FC<NewsAnalyticsProps> = ({ className }) => {
 	const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 	const [loading, setLoading] = useState(true);
 
-	useEffect(() => {
-		fetchAnalytics();
-	}, [fetchAnalytics]);
-
 	const fetchAnalytics = async () => {
 		try {
 			setLoading(true);
@@ -98,6 +94,10 @@ const NewsAnalytics: React.FC<NewsAnalyticsProps> = ({ className }) => {
 			setLoading(false);
 		}
 	};
+
+	useEffect(() => {
+		fetchAnalytics();
+	}, [fetchAnalytics]);
 
 	if (loading) {
 		return (
@@ -214,7 +214,7 @@ const NewsAnalytics: React.FC<NewsAnalyticsProps> = ({ className }) => {
 									cy="50%"
 									labelLine={false}
 									label={({ name, percent }) =>
-										`${name} ${(percent * 100).toFixed(0)}%`
+										`${name} ${((percent ?? 0) * 100).toFixed(0)}%`
 									}
 									outerRadius={80}
 									fill="#8884d8"
@@ -251,7 +251,7 @@ const NewsAnalytics: React.FC<NewsAnalyticsProps> = ({ className }) => {
 									cy="50%"
 									labelLine={false}
 									label={({ name, percent }) =>
-										`${name} ${(percent * 100).toFixed(0)}%`
+										`${name} ${((percent ?? 0) * 100).toFixed(0)}%`
 									}
 									outerRadius={80}
 									fill="#8884d8"

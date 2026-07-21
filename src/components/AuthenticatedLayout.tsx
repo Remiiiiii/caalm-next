@@ -9,6 +9,7 @@ import Sidebar from "@/components/Sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { normalizeUserRole, type UserRole } from "@/constants/rbac";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 import { useInactivityTimer } from "@/hooks/useInactivityTimer";
 import { avatarPlaceholderUrl } from "../../constants";
 
@@ -43,38 +44,40 @@ const AuthenticatedLayout = ({
 
 	return (
 		<OrganizationProvider>
-			<main className="flex h-screen">
-				<Sidebar
-					name={user.name || "Unknown User"}
-					avatar={user.prefs?.avatar || avatarPlaceholderUrl}
-					email={currentUser.email}
-					role={normalizedRole}
-					division={user.division}
-				/>
-				<section className="flex h-full w-full flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
-					<MobileNavigation
-						$id={currentUser.$id}
-						accountId={user.accountId || currentUser.$id}
-						fullName={user.fullName || user.name || "Unknown User"}
+			<SidebarProvider>
+				<main className="flex h-screen">
+					<Sidebar
+						name={user.name || "Unknown User"}
 						avatar={user.prefs?.avatar || avatarPlaceholderUrl}
 						email={currentUser.email}
 						role={normalizedRole}
+						division={user.division}
 					/>
-					<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
-						<DashboardHeader user={currentUser} />
-					</div>
-					<div className="main-content">{children}</div>
-				</section>
-				<Toaster />
+					<section className="flex h-full w-full flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
+						<MobileNavigation
+							$id={currentUser.$id}
+							accountId={user.accountId || currentUser.$id}
+							fullName={user.fullName || user.name || "Unknown User"}
+							avatar={user.prefs?.avatar || avatarPlaceholderUrl}
+							email={currentUser.email}
+							role={normalizedRole}
+						/>
+						<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
+							<DashboardHeader user={currentUser} />
+						</div>
+						<div className="main-content">{children}</div>
+					</section>
+					<Toaster />
 
-				{/* Inactivity Dialog */}
-				<InactivityDialog
-					isOpen={showDialog}
-					onClose={handleClose}
-					onContinue={handleContinue}
-					onLogout={handleLogout}
-				/>
-			</main>
+					{/* Inactivity Dialog */}
+					<InactivityDialog
+						isOpen={showDialog}
+						onClose={handleClose}
+						onContinue={handleContinue}
+						onLogout={handleLogout}
+					/>
+				</main>
+			</SidebarProvider>
 		</OrganizationProvider>
 	);
 };

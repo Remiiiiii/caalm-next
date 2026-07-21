@@ -18,8 +18,8 @@ import {
 import Image from "next/image";
 import type { ReactNode } from "react";
 import Thumbnail from "@/components/Thumbnail";
-import { LICENSE_MOCK_ROWS } from "../landingContent";
 import { cn } from "@/lib/utils";
+import { LICENSE_MOCK_ROWS } from "../landingContent";
 
 const STATUS_STYLES = {
 	active: "bg-green/10 text-green border-green/20",
@@ -122,6 +122,27 @@ const SIDEBAR_SECTIONS = [
 			},
 		],
 	},
+	{
+		header: "Settings",
+		headerIcon: "/assets/icons/settings.svg",
+		items: [
+			{
+				name: "System Settings",
+				icon: "/assets/icons/settings2.svg",
+				active: false,
+			},
+			{
+				name: "Organization Settings",
+				icon: "/assets/icons/settings2.svg",
+				active: false,
+			},
+			{
+				name: "Billing & Integrations",
+				icon: "/assets/icons/settings2.svg",
+				active: false,
+			},
+		],
+	},
 ] as const;
 
 const STATUS_TABS = [
@@ -203,7 +224,7 @@ export default function LicensesMock() {
 						<nav className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
 							{SIDEBAR_SECTIONS.map((section) => (
 								<div key={section.header} className="shrink-0">
-									<p className="mb-1 flex items-center gap-1.5 px-1 text-[10px] font-bold text-slate-800 lg:text-[11px]">
+									<p className="mb-1 flex items-center gap-1.5 px-1 text-[10px] font-bold lg:text-[11px]">
 										{section.header === "Dashboard" ? (
 											<span className="text-[#03AFBF] shrink-0">
 												<svg
@@ -231,7 +252,9 @@ export default function LicensesMock() {
 												/>
 											</span>
 										)}
-										<span className="truncate">{section.header}</span>
+										<span className="truncate sidebar-gradient-text">
+											{section.header}
+										</span>
 									</p>
 									<ul className="relative ml-2 space-y-0.5 border-l border-transparent pl-0">
 										{section.items.map((item, index) => (
@@ -381,7 +404,7 @@ export default function LicensesMock() {
 
 					{/* Status tabs + control bar + table */}
 					<div className="mb-2 rounded-lg border border-slate-200/80 bg-white/70 overflow-hidden">
-						<div className="grid grid-cols-4 sm:grid-cols-7 gap-0.5 bg-slate-100/80 p-1">
+						<div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-0.5 bg-slate-100/80 p-1">
 							{STATUS_TABS.map((tab, i) => (
 								<span
 									key={tab.label}
@@ -403,7 +426,7 @@ export default function LicensesMock() {
 						</div>
 
 						<div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 px-2 py-2 sm:px-3">
-							<div className="relative min-w-[140px] flex-1 sm:max-w-[11rem]">
+							<div className="relative min-w-0 flex-1 sm:min-w-[140px] sm:max-w-[11rem]">
 								<Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
 								<span className="flex h-7 w-full items-center rounded-md border border-slate-200 bg-white pl-7 pr-2 text-[10px] text-slate-400">
 									Search licenses...

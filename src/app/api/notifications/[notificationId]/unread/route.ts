@@ -5,10 +5,8 @@ export async function PUT(
 	_request: NextRequest,
 	{ params }: { params: Promise<{ notificationId: string }> },
 ) {
+	const { notificationId } = await params;
 	try {
-		const resolvedParams = await params;
-		const { notificationId } = resolvedParams;
-
 		if (!notificationId) {
 			return NextResponse.json(
 				{ success: false, error: "Notification ID is required" },

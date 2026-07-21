@@ -4,8 +4,6 @@ import {
 	Activity,
 	AlertTriangle,
 	CheckCircle,
-	ChevronLeft,
-	ChevronRight,
 	Database,
 	FileStack,
 	FileText,
@@ -21,7 +19,7 @@ import {
 import dynamic from "next/dynamic";
 import type { Models } from "node-appwrite";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import CalendarView from "@/components/CalendarView";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
@@ -43,6 +41,7 @@ import {
 	StatCardSkeleton,
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
+import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import WeatherWidget from "@/components/WeatherWidget";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -118,48 +117,6 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 	} = useUnifiedDashboardData(orgId || "default_organization");
 
 	const { toast } = useToast();
-
-	// Widget pagination state
-	const widgetScrollRef = useRef<HTMLDivElement>(null);
-	const [currentPage, setCurrentPage] = useState(0);
-	const widgetsPerPage = 3;
-	const widgetWidth = 240;
-	const widgetGap = 16;
-	const pageWidth =
-		widgetsPerPage * widgetWidth + (widgetsPerPage - 1) * widgetGap;
-
-	const scrollToPage = (pageNumber: number) => {
-		if (widgetScrollRef.current) {
-			const scrollAmount = pageNumber * pageWidth;
-			widgetScrollRef.current.scrollTo({
-				left: scrollAmount,
-				behavior: "smooth",
-			});
-			setCurrentPage(pageNumber);
-		}
-	};
-
-	const scrollWidgets = (direction: "left" | "right") => {
-		const newPage = direction === "left" ? currentPage - 1 : currentPage + 1;
-		if (newPage >= 0 && newPage <= 1) scrollToPage(newPage);
-	};
-
-	useEffect(() => {
-		const handleScroll = () => {
-			if (widgetScrollRef.current) {
-				const scrollLeft = widgetScrollRef.current.scrollLeft;
-				const newPage = Math.round(scrollLeft / pageWidth);
-				if (newPage !== currentPage && newPage >= 0 && newPage <= 1) {
-					setCurrentPage(newPage);
-				}
-			}
-		};
-		const scrollContainer = widgetScrollRef.current;
-		if (scrollContainer) {
-			scrollContainer.addEventListener("scroll", handleScroll);
-			return () => scrollContainer.removeEventListener("scroll", handleScroll);
-		}
-	}, [currentPage, pageWidth]);
 
 	// Invitation management
 	const [inviteForm, setInviteForm] = useState({
@@ -470,57 +427,18 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-3 sm:p-4 lg:p-6">
-					<Button
-						variant="outline"
-						size="sm"
-						className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
-						onClick={() => scrollWidgets("left")}
-					>
-						<ChevronLeft className="h-4 w-4" />
-					</Button>
-					<Button
-						variant="outline"
-						size="sm"
-						className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
-						onClick={() => scrollWidgets("right")}
-					>
-						<ChevronRight className="h-4 w-4" />
-					</Button>
-					<div
-						ref={widgetScrollRef}
-						className="flex gap-3 sm:gap-4 lg:gap-6 overflow-x-auto scrollbar-hide w-full py-2 rounded-lg"
-						style={{
-							scrollbarWidth: "none",
-							msOverflowStyle: "none",
-						}}
-					>
-						<div className="flex gap-3 sm:gap-4 lg:gap-6 min-w-full flex-shrink-0">
-							<div className="flex-1 min-w-0">
-								<WeatherWidget />
-							</div>
-							<div className="flex-1 min-w-0">
-								<CompanyNewsFeed />
-							</div>
-							<div className="flex-1 min-w-0">
-								<ContractStatusPieChart />
-							</div>
-						</div>
-						<div className="flex gap-3 sm:gap-4 lg:gap-6 min-w-full flex-shrink-0">
-							<div className="flex-1 min-w-0">
-								<DepartmentPerformanceWidget />
-							</div>
-							<div className="flex-1 min-w-0">
-								{user && <QuickNotesWidget user={user as any} />}
-							</div>
-							<div className="flex-1 min-w-0">
-								<ContractExpiryAlertsWidget
-									maxVisible={2}
-									showSettings={false}
-									compact={true}
-								/>
-							</div>
-						</div>
-					</div>
+					<WidgetCarousel ariaLabel="Admin dashboard widgets">
+						<WeatherWidget />
+						<CompanyNewsFeed />
+						<ContractStatusPieChart />
+						<DepartmentPerformanceWidget />
+						{user && <QuickNotesWidget user={user as any} />}
+						<ContractExpiryAlertsWidget
+							maxVisible={2}
+							showSettings={false}
+							compact={true}
+						/>
+					</WidgetCarousel>
 				</CardContent>
 			</Card>
 
@@ -618,7 +536,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 				{/* Row 1: System Status, System Alerts (col 1) | Activity Overview (col 2) */}
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					{/* Column 1: System Status & Activity Overview  */}
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						{/* System Status */}
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
@@ -645,7 +563,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 										<p className="text-xs text-slate-dark">
 											Overall system performance
 										</p>
-										<div className="grid grid-cols-2 gap-2 mt-3">
+										<div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
 											<div className="text-center p-2 bg-blue-50 border border-blue-200 rounded">
 												<p className="text-xs text-blue-600 font-medium">
 													UPTIME
@@ -845,7 +763,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 								</CardTitle>
 							</CardHeader>
 							<CardContent className="pt-0">
-								<div className="grid grid-cols-2 gap-2">
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 									<Button
 										variant="outline"
 										className="justify-start bg-white/30 backdrop-blur border border-white/40 text-slate-700 hover:bg-white/40 h-12"
@@ -990,14 +908,14 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 							</Button>
 						</div>
 
-						<div className="flex flex-col md:flex-row gap-4 items-center">
+						<div className="responsive-filter-row">
 							<SelectScrollable
 								value={inviteForm.role}
 								onValueChange={(value) =>
 									setInviteForm({ ...inviteForm, role: value })
 								}
 								placeholder="Select role"
-								className="min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+								className="w-full sm:min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
 							>
 								<SelectItem value="executive">Executive</SelectItem>
 								<SelectItem value="manager">Manager</SelectItem>
@@ -1010,7 +928,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 									setInviteForm({ ...inviteForm, department: value })
 								}
 								placeholder="Select department"
-								className="min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+								className="w-full sm:min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
 							>
 								<SelectItem value="IT">IT</SelectItem>
 								<SelectItem value="Finance">Finance</SelectItem>
@@ -1029,7 +947,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 									setInviteForm({ ...inviteForm, division: value })
 								}
 								placeholder="Select division"
-								className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+								className="w-full sm:min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
 							>
 								<SelectItem value="behavioral-health">
 									Behavioral Health

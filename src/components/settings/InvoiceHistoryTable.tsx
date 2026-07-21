@@ -4,6 +4,7 @@ import { Download, FileText, Inbox } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import {
 	Table,
 	TableBody,
@@ -18,7 +19,6 @@ import {
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
-import { LoadingSpinner } from "@/components/ui/loading";
 
 export interface InvoiceRow {
 	id: string;
@@ -64,9 +64,7 @@ export default function InvoiceHistoryTable({
 					</div>
 				)}
 
-				{!loading && error && (
-					<p className="text-sm text-red py-4">{error}</p>
-				)}
+				{!loading && error && <p className="text-sm text-red py-4">{error}</p>}
 
 				{!loading && !error && invoices.length === 0 && (
 					<div className="flex flex-col items-center justify-center py-10 text-center gap-2">

@@ -1,5 +1,10 @@
 import type { NextRequest } from "next/server";
 import { requireAuthAndOwner } from "@/lib/api/contracts/middleware/auth.middleware";
+import { parseAndValidateQuery } from "@/lib/api/contracts/middleware/validation.middleware";
+import {
+	draftDeleteSchema,
+	draftQuerySchema,
+} from "@/lib/api/contracts/schemas/draft.schema";
 import { DraftService } from "@/lib/api/contracts/services/DraftService";
 import {
 	errorResponse,
@@ -108,12 +113,12 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Use cache for lightning-fast response
-		const cacheKey = CACHE_KEYS.contracts.drafts(ownerId);
+		const cacheKey = CACHE_KEYS.contracts.drafts(query.ownerId);
 		const cachedData = await CacheManager.withCache(
 			"contracts/drafts",
 			cacheKey,
 			async () => {
-				return await DraftService.getDrafts(ownerId);
+				return await DraftService.getDrafts(query.ownerId);
 			},
 			CACHE_TTLS.medium,
 		);

@@ -225,7 +225,7 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
 							</div>
 						</CardHeader>
 						<CardContent className="bg-slate-50 p-6">
-							<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+							<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
 								<div className="p-4 bg-white rounded-lg border border-slate-200">
 									<p className="text-sm text-slate-600 mb-1">CPU Usage</p>
 									<p className="text-2xl font-bold text-slate-900">

@@ -1,8 +1,14 @@
 "use client";
 
 import { format } from "date-fns";
+import {
+	ArrowRight,
+	CheckCircle,
+	Clock,
+	ExternalLink,
+	XCircle,
+} from "lucide-react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle, Clock, ExternalLink, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -86,13 +92,17 @@ export function AuditEvidenceTable({
 			<div className="glass-card-cap" />
 			<CardContent className="p-4 sm:p-6">
 				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-xl font-semibold sidebar-gradient-text">{title}</h2>
+					<h2 className="text-xl font-semibold sidebar-gradient-text">
+						{title}
+					</h2>
 					<Button
 						variant="outline"
 						className="primary-btn px-3 sm:px-4"
 						asChild
 					>
-						<Link href={`/audits/audit?domain=${logDomain}&module=${logDomain}`}>
+						<Link
+							href={`/audits/audit?domain=${logDomain}&module=${logDomain}`}
+						>
 							View audit logs
 							<ArrowRight className="h-4 w-4" />
 						</Link>
@@ -102,13 +112,21 @@ export function AuditEvidenceTable({
 					<Table>
 						<TableHeader>
 							<TableRow className="border-slate-200 bg-slate-50">
-								<TableHead className="font-semibold text-slate-700">ID</TableHead>
+								<TableHead className="font-semibold text-slate-700">
+									ID
+								</TableHead>
 								<TableHead className="font-semibold text-slate-700">
 									Obligation
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">Owner</TableHead>
-								<TableHead className="font-semibold text-slate-700">Status</TableHead>
-								<TableHead className="font-semibold text-slate-700">Due</TableHead>
+								<TableHead className="font-semibold text-slate-700">
+									Owner
+								</TableHead>
+								<TableHead className="font-semibold text-slate-700">
+									Status
+								</TableHead>
+								<TableHead className="font-semibold text-slate-700">
+									Due
+								</TableHead>
 								<TableHead className="font-semibold text-slate-700">
 									Last reviewed
 								</TableHead>
@@ -120,7 +138,10 @@ export function AuditEvidenceTable({
 						<TableBody>
 							{rows.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={7} className="text-center py-8 text-slate-500">
+									<TableCell
+										colSpan={7}
+										className="text-center py-8 text-slate-500"
+									>
 										No obligations match your search.
 									</TableCell>
 								</TableRow>
@@ -141,7 +162,9 @@ export function AuditEvidenceTable({
 												</p>
 											) : null}
 										</TableCell>
-										<TableCell className="text-slate-700">{row.owner}</TableCell>
+										<TableCell className="text-slate-700">
+											{row.owner}
+										</TableCell>
 										<TableCell>{statusBadge(row.status)}</TableCell>
 										<TableCell className="text-slate-700">
 											{format(new Date(row.dueDate), "MMM d, yyyy")}

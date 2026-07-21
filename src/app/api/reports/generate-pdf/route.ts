@@ -257,8 +257,8 @@ export async function POST(request: NextRequest) {
 			const adminClient = await createAdminClient();
 			await adminClient.tablesDB.updateRow({
 				databaseId: appwriteConfig.databaseId,
-				collectionId: appwriteConfig.reportsCollectionId,
-				documentId: reportId,
+				tableId: appwriteConfig.reportsCollectionId,
+				rowId: reportId,
 				data: {
 					pdfFilePath: `/reports/${htmlFileName}`,
 					pdfGenerated: true,

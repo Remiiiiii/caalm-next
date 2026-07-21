@@ -6,8 +6,8 @@ import { useLicensesView } from "@/components/LicensesView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-	LICENSE_STATUS_TAB_LABELS,
 	countActiveAdvancedLicenseFilters,
+	LICENSE_STATUS_TAB_LABELS,
 } from "@/lib/licenses/licensesListUtils";
 
 export default function LicensesFilterChips() {
@@ -65,8 +65,7 @@ export default function LicensesFilterChips() {
 		chips.push({
 			key: "autoRenew",
 			label: filters.autoRenew ? "Auto-renew on" : "Auto-renew off",
-			onRemove: () =>
-				setFilters((prev) => ({ ...prev, autoRenew: undefined })),
+			onRemove: () => setFilters((prev) => ({ ...prev, autoRenew: undefined })),
 		});
 	}
 	if (filters.issuingAuthority) {
@@ -97,9 +96,7 @@ export default function LicensesFilterChips() {
 		const from = filters.issueDateFrom
 			? format(filters.issueDateFrom, "MMM d")
 			: "…";
-		const to = filters.issueDateTo
-			? format(filters.issueDateTo, "MMM d")
-			: "…";
+		const to = filters.issueDateTo ? format(filters.issueDateTo, "MMM d") : "…";
 		chips.push({
 			key: "issued",
 			label: `Issued: ${from} – ${to}`,

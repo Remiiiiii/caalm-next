@@ -1,8 +1,9 @@
-import type { NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { DraftService } from "@/lib/api/contracts/services/DraftService";
 import {
 	errorResponse,
+	generateRequestId,
 	successResponse,
 } from "@/lib/api/contracts/utils/response.util";
 import { appwriteConfig } from "@/lib/appwrite/config";
@@ -20,6 +21,7 @@ const _markCompletedSchema = z
 	});
 
 export async function POST(request: NextRequest) {
+	const requestId = generateRequestId();
 	try {
 		const body = await request.json();
 		const { ownerId, fileName, draftId } = body;

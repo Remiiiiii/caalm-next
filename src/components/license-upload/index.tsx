@@ -20,7 +20,7 @@ import {
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -122,6 +122,19 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		setSelectedManagers,
 		fetchDepartmentManagers,
 	} = useManagers(isOpen);
+
+	// Department options derived from the divisions of available managers.
+	const departments = useMemo(
+		() =>
+			Array.from(
+				new Set(
+					availableManagers
+						.map((manager) => manager.division)
+						.filter((division): division is string => Boolean(division)),
+				),
+			).sort(),
+		[availableManagers],
+	);
 
 	// Reset function
 	const resetForm = useCallback(() => {
@@ -575,7 +588,16 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 								)}
 
 								{/* Step 2: License Details */}
-								{currentStep === 2 && <Step2LicenseDetails form={form} />}
+								{currentStep === 2 && (
+									<Step2LicenseDetails
+										form={form}
+										departments={departments}
+										filteredManagers={filteredManagers}
+										selectedManagers={selectedManagers}
+										setSelectedManagers={setSelectedManagers}
+										fetchDepartmentManagers={fetchDepartmentManagers}
+									/>
+								)}
 
 								{/* Save Progress Card */}
 								{currentStep > 1 && processedFileData && (

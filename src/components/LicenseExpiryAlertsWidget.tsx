@@ -114,10 +114,10 @@ export default function LicenseExpiryAlertsWidget({
 		return (
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6">
+				<CardContent className="px-4 pt-6 pb-4 sm:px-6 sm:pb-6">
 					<div className="flex items-center gap-2 mb-4">
-						<AlertTriangle className="h-5 w-5 text-orange" />
-						<h3 className="text-lg font-semibold sidebar-gradient-text">
+						<AlertTriangle className="h-4 w-4 text-orange" />
+						<h3 className="text-sm font-semibold sidebar-gradient-text">
 							Expiring Licenses
 						</h3>
 					</div>
@@ -133,10 +133,10 @@ export default function LicenseExpiryAlertsWidget({
 		return (
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6">
+				<CardContent className="px-4 pt-6 pb-4 sm:px-6 sm:pb-6">
 					<div className="flex items-center gap-2 mb-4">
-						<AlertTriangle className="h-5 w-5 text-red" />
-						<h3 className="text-lg font-semibold sidebar-gradient-text">
+						<AlertTriangle className="h-4 w-4 text-red" />
+						<h3 className="text-sm font-semibold sidebar-gradient-text">
 							Expiring Licenses
 						</h3>
 					</div>
@@ -150,10 +150,10 @@ export default function LicenseExpiryAlertsWidget({
 		return (
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6">
+				<CardContent className="px-4 pt-6 pb-4 sm:px-6 sm:pb-6">
 					<div className="flex items-center gap-2 mb-4">
-						<AlertTriangle className="h-5 w-5 text-green" />
-						<h3 className="text-lg font-semibold sidebar-gradient-text">
+						<AlertTriangle className="h-4 w-4 text-green" />
+						<h3 className="text-sm font-semibold sidebar-gradient-text">
 							Expiring Licenses
 						</h3>
 					</div>
@@ -166,11 +166,11 @@ export default function LicenseExpiryAlertsWidget({
 	return (
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6">
+			<CardContent className="px-4 pt-6 pb-4 sm:px-6 sm:pb-6">
 				<div className="flex items-center justify-between mb-4">
 					<div className="flex items-center gap-2">
-						<AlertTriangle className="h-5 w-5 text-orange" />
-						<h3 className="text-lg font-semibold sidebar-gradient-text">
+						<AlertTriangle className="h-4 w-4 text-orange" />
+						<h3 className="text-sm font-semibold sidebar-gradient-text">
 							Expiring Licenses
 						</h3>
 						<Badge className="bg-orange/10 text-orange">

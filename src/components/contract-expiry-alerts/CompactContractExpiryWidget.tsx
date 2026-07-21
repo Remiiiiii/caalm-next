@@ -146,7 +146,7 @@ export const CompactContractExpiryWidget: React.FC<
 							>
 								<CountdownTimer
 									targetDate={contract.contractExpiryDate || ""}
-									contractName={contract.contractName}
+									contractName={contract.contractName ?? contract.name ?? ""}
 									size="sm"
 									className="transition-all duration-200"
 								/>

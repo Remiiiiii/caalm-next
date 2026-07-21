@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
 import { requireAuth } from "@/lib/api/contracts/middleware/auth.middleware";
+import { ContractService } from "@/lib/api/contracts/services/ContractService";
+import { FileService } from "@/lib/api/contracts/services/FileService";
 import {
 	errorResponse,
 	generateRequestId,

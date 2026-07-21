@@ -63,10 +63,10 @@ export default function LicenseStatusPieChart({
 		return (
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6">
+				<CardContent className="px-4 pt-6 pb-4 sm:px-6 sm:pb-6">
 					<div className="flex items-center gap-2 mb-4">
-						<Key className="h-5 w-5 text-[#0f5384]" />
-						<h3 className="text-lg font-semibold sidebar-gradient-text">
+						<Key className="h-4 w-4 text-[#0f5384]" />
+						<h3 className="text-sm font-semibold sidebar-gradient-text">
 							License Status
 						</h3>
 					</div>
@@ -82,10 +82,10 @@ export default function LicenseStatusPieChart({
 		return (
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6">
+				<CardContent className="px-4 pt-6 pb-4 sm:px-6 sm:pb-6">
 					<div className="flex items-center gap-2 mb-4">
-						<Key className="h-5 w-5 text-[#0f5384]" />
-						<h3 className="text-lg font-semibold sidebar-gradient-text">
+						<Key className="h-4 w-4 text-[#0f5384]" />
+						<h3 className="text-sm font-semibold sidebar-gradient-text">
 							License Status
 						</h3>
 					</div>
@@ -101,10 +101,10 @@ export default function LicenseStatusPieChart({
 		return (
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6">
+				<CardContent className="px-4 pt-6 pb-4 sm:px-6 sm:pb-6">
 					<div className="flex items-center gap-2 mb-4">
-						<Key className="h-5 w-5 text-[#0f5384]" />
-						<h3 className="text-lg font-semibold sidebar-gradient-text">
+						<Key className="h-4 w-4 text-[#0f5384]" />
+						<h3 className="text-sm font-semibold sidebar-gradient-text">
 							License Status
 						</h3>
 					</div>
@@ -119,10 +119,10 @@ export default function LicenseStatusPieChart({
 	return (
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6">
+			<CardContent className="px-4 pt-6 pb-4 sm:px-6 sm:pb-6">
 				<div className="flex items-center gap-2 mb-4">
-					<Key className="h-5 w-5 text-[#0f5384]" />
-					<h3 className="text-lg font-semibold sidebar-gradient-text">
+					<Key className="h-4 w-4 text-[#0f5384]" />
+					<h3 className="text-sm font-semibold sidebar-gradient-text">
 						License Status
 					</h3>
 				</div>

@@ -13,7 +13,7 @@ import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
  */
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { calendarId: string } },
+	{ params }: { params: Promise<{ calendarId: string }> },
 ) {
 	try {
 		const userId = await getCurrentUserId();
@@ -103,7 +103,7 @@ export async function PUT(
  */
 export async function DELETE(
 	_request: NextRequest,
-	{ params }: { params: { calendarId: string } },
+	{ params }: { params: Promise<{ calendarId: string }> },
 ) {
 	try {
 		const userId = await getCurrentUserId();

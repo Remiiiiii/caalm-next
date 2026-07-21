@@ -342,7 +342,7 @@ export const hasActiveCalendarIntegration = async (
 ): Promise<boolean> => {
 	try {
 		const integration = await getValidIntegration(userId, provider);
-		return integration?.sync_enabled;
+		return integration?.sync_enabled ?? false;
 	} catch (error) {
 		console.error("Error checking active calendar integration:", error);
 		return false;

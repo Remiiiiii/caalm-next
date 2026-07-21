@@ -257,7 +257,7 @@ export default function AuditsMock() {
 					{/* Posture card */}
 					<div className="glass-card relative mb-3 border-2 border-green/30">
 						<div className="glass-card-cap" />
-						<div className="p-3 sm:p-4">
+						<div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-4 sm:pt-5">
 							<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 								<div className="min-w-0">
 									<div className="flex items-start gap-2">
@@ -304,14 +304,14 @@ export default function AuditsMock() {
 						{STAT_CARDS.map((stat) => (
 							<div key={stat.label} className="glass-card relative min-w-0">
 								<div className="glass-card-cap" />
-								<div className="p-2.5 sm:p-3">
+								<div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-4 sm:pt-5 text-center">
 									<p className="text-[10px] sm:text-xs font-medium sidebar-gradient-text">
 										{stat.label}
 									</p>
 									<div className="pt-1 text-lg sm:text-2xl font-bold text-slate-700 tabular-nums">
 										{stat.value}
 									</div>
-									<p className="mt-0.5 text-[9px] sm:text-[10px] text-slate-600 line-clamp-2">
+									<p className="mt-0.5 text-[9px] sm:text-[10px] text-slate-600 line-clamp-2 text-left">
 										{stat.hint}
 									</p>
 								</div>
@@ -348,24 +348,26 @@ export default function AuditsMock() {
 										: "bg-red/10 text-red border-red/20";
 							const Icon = mod.icon;
 							return (
-								<div key={mod.label} className="glass-card relative p-2.5 pt-3">
+								<div key={mod.label} className="glass-card relative min-w-0">
 									<div className="glass-card-cap" />
-									<p className="text-[10px] font-medium text-slate-800">
-										{mod.label}
-									</p>
-									<span
-										className={cn(
-											"mt-1.5 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-medium",
-											badge,
-										)}
-									>
-										<Icon className="h-2.5 w-2.5" />
-										{mod.tone === "green"
-											? "On track"
-											: mod.tone === "amber"
-												? "Attention"
-												: "At risk"}
-									</span>
+									<div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-4 sm:pt-5 flex flex-col items-center text-center">
+										<p className="text-[10px] sm:text-xs font-medium sidebar-gradient-text">
+											{mod.label}
+										</p>
+										<span
+											className={cn(
+												"mt-1.5 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-medium",
+												badge,
+											)}
+										>
+											<Icon className="h-2.5 w-2.5" />
+											{mod.tone === "green"
+												? "On track"
+												: mod.tone === "amber"
+													? "Attention"
+													: "At risk"}
+										</span>
+									</div>
 								</div>
 							);
 						})}

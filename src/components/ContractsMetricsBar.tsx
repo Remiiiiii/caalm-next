@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle, DollarSign, FileText } from "lucide-react";
+import { AlertTriangle, CheckCircle, FileText } from "lucide-react";
 import { useMemo } from "react";
 import { useContractsView } from "@/components/ContractsViewContext";
 import { Card, CardContent } from "@/components/ui/card";

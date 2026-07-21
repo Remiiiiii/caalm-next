@@ -22,10 +22,30 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AUDIT_PERIOD_OPTIONS, type AuditPeriod } from "@/lib/audits/types";
 import { AttachmentEngagementStats } from "./AttachmentEngagementStats";
 import { ComplianceDeadlineTracker } from "./ComplianceDeadlineTracker";
 import { MeetingLoadChart } from "./MeetingLoadChart";
+
+const periodToDays = (period: AuditPeriod): number => {
+	if (period === "7d") return 7;
+	if (period === "30d") return 30;
+	if (period === "90d") return 90;
+	const now = new Date();
+	const startOfYear = new Date(now.getFullYear(), 0, 1);
+	return Math.max(
+		1,
+		Math.ceil((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)),
+	);
+};
 
 interface CalendarAnalyticsData {
 	meetingLoad: {
@@ -103,18 +123,22 @@ const fetcher = async (url: string) => {
 };
 
 export const CalendarAnalyticsDashboard: React.FC = () => {
-	const [dateRange, setDateRange] = useState(30);
-	const { data, error, isLoading, mutate } = useSWR<CalendarAnalyticsData>(
-		`/api/analytics/calendar?days=${dateRange}`,
-		fetcher,
-		{
-			revalidateOnFocus: false,
-			revalidateOnReconnect: true,
-			onError: (err) => {
-				console.error("[CalendarAnalyticsDashboard] SWR Error:", err);
+	const [period, setPeriod] = useState<AuditPeriod>("30d");
+	const dateRange = periodToDays(period);
+	const { data, error, isLoading, isValidating, mutate } =
+		useSWR<CalendarAnalyticsData>(
+			`/api/analytics/calendar?days=${dateRange}`,
+			fetcher,
+			{
+				refreshInterval: 30000, // Auto-refresh every 30s for live data
+				revalidateOnFocus: true,
+				revalidateOnReconnect: true,
+				keepPreviousData: true,
+				onError: (err) => {
+					console.error("[CalendarAnalyticsDashboard] SWR Error:", err);
+				},
 			},
-		},
-	);
+		);
 
 	if (isLoading) {
 		return (
@@ -128,6 +152,90 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 			</div>
 		);
 	}
+
+	const handleExport = () => {
+		if (!data?.meetingLoad) return;
+
+		const escapeCsv = (value: string | number) => {
+			const str = String(value ?? "");
+			return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+		};
+		const toRows = (rows: Array<Array<string | number>>) =>
+			rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
+
+		const sections: string[] = [];
+
+		sections.push(
+			`Calendar analytics,${data.dateRange.start} to ${data.dateRange.end}`,
+		);
+
+		sections.push(
+			toRows([
+				["Meeting load"],
+				["Total meetings", data.meetingLoad.totalMeetings],
+				["Total hours", data.meetingLoad.totalHours],
+				["Average duration (min)", data.meetingLoad.averageDuration],
+			]),
+		);
+
+		sections.push(
+			toRows([
+				["Meetings by department", "Meetings", "Hours"],
+				...data.meetingLoad.byDepartment.map((d) => [
+					d.department,
+					d.meetings,
+					d.hours,
+				]),
+			]),
+		);
+
+		sections.push(
+			toRows([
+				["Compliance"],
+				["Compliance rate (%)", data.compliance.complianceRate],
+				["At risk", data.compliance.atRisk],
+				["Overdue", data.compliance.overdue],
+			]),
+		);
+
+		sections.push(
+			toRows([
+				[
+					"Upcoming deadlines",
+					"Deadline",
+					"Days until",
+					"Status",
+					"Assigned to",
+				],
+				...data.compliance.upcoming.map((c) => [
+					c.title,
+					c.deadlineDate,
+					c.daysUntil,
+					c.status,
+					c.assignedTo,
+				]),
+			]),
+		);
+
+		sections.push(
+			toRows([
+				["Attachments"],
+				["Total", data.attachments.total],
+				["Total views", data.attachments.totalViews],
+				["Total downloads", data.attachments.totalDownloads],
+				["Engagement rate (%)", data.attachments.engagementRate],
+			]),
+		);
+
+		const csv = sections.join("\n\n");
+		const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `calendar-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+		link.click();
+		URL.revokeObjectURL(url);
+	};
 
 	// Check if we have valid data
 	const hasValidData = data?.meetingLoad;
@@ -200,37 +308,59 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardHeader>
-					<div className="flex items-center justify-between">
-						<CardTitle className="h2 sidebar-gradient-text">
-							Calendar Analytics
-						</CardTitle>
-						<div className="flex items-center gap-2">
-							<select
-								value={dateRange}
-								onChange={(e) => setDateRange(Number(e.target.value))}
-								className="px-3 py-2 bg-white/30 backdrop-blur border border-white/40 rounded-lg text-sm text-slate-700"
-							>
-								<option value={7}>Last 7 days</option>
-								<option value={30}>Last 30 days</option>
-								<option value={90}>Last 90 days</option>
-								<option value={180}>Last 6 months</option>
-							</select>
-							<Button
-								onClick={() => mutate()}
-								size="sm"
-								variant="outline"
-								className="bg-white/30 backdrop-blur border border-white/40"
-							>
-								<RefreshCw className="h-4 w-4" />
-							</Button>
-							<Button
-								size="sm"
-								variant="outline"
-								className="bg-white/30 backdrop-blur border border-white/40"
-							>
-								<Download className="h-4 w-4" />
-								Export
-							</Button>
+					<div className="flex flex-col gap-3">
+						<div>
+							<CardTitle className="h2 sidebar-gradient-text">
+								Calendar Analytics
+							</CardTitle>
+							<p className="text-sm text-slate-600 mt-1">
+								Track meeting load, upcoming compliance deadlines, and how
+								attachments are used across your calendars. Adjust the range or
+								refresh to update every metric below.
+							</p>
+						</div>
+						<div className="flex flex-wrap items-center justify-between gap-2">
+							<div className="flex items-center gap-3">
+								<div className="w-36 shrink-0">
+									<Select
+										value={period}
+										onValueChange={(v) => setPeriod(v as AuditPeriod)}
+									>
+										<SelectTrigger className="h-9 shad-input">
+											<SelectValue placeholder="Period" />
+										</SelectTrigger>
+										<SelectContent>
+											{AUDIT_PERIOD_OPTIONS.map((opt) => (
+												<SelectItem key={opt.value} value={opt.value}>
+													{opt.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+								<span className="inline-flex items-center gap-1.5 rounded-full bg-white/30 px-2.5 py-1 text-xs font-medium text-slate-600 backdrop-blur-sm border border-white/20">
+									<span
+										className={`h-2 w-2 rounded-full ${
+											isValidating
+												? "bg-blue-400 animate-pulse"
+												: "bg-green-400 animate-pulse"
+										}`}
+									/>
+									{isValidating ? "Updating..." : "Live"}
+								</span>
+							</div>
+							<div className="flex flex-wrap items-center gap-2">
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={handleExport}
+									disabled={!data?.meetingLoad}
+									className="primary-btn px-3 sm:px-4"
+								>
+									<Download className="h-4 w-4" />
+									Export
+								</Button>
+							</div>
 						</div>
 					</div>
 				</CardHeader>

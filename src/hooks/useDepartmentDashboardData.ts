@@ -17,9 +17,7 @@ export function useDepartmentDashboardData(division?: string) {
 	const { orgId } = useOrganization();
 
 	const resolvedDivision =
-		division ||
-		(user as { division?: string } | null)?.division ||
-		"";
+		division || (user as { division?: string } | null)?.division || "";
 
 	const url =
 		user?.$id && resolvedDivision
@@ -31,10 +29,8 @@ export function useDepartmentDashboardData(division?: string) {
 		return getCachedData<DepartmentDashboardResponse>(url) ?? undefined;
 	}, [url]);
 
-	const { data, error, isLoading, mutate } = useSWR<DepartmentDashboardResponse>(
-		url,
-		fetcher,
-		{
+	const { data, error, isLoading, mutate } =
+		useSWR<DepartmentDashboardResponse>(url, fetcher, {
 			refreshInterval: 120000,
 			revalidateOnFocus: false,
 			revalidateOnReconnect: true,
@@ -45,8 +41,7 @@ export function useDepartmentDashboardData(division?: string) {
 					setCachedData(url, payload, 120000);
 				}
 			},
-		},
-	);
+		});
 
 	return {
 		data: data?.data ?? null,

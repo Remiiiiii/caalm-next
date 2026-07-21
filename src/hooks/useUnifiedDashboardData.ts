@@ -52,7 +52,7 @@ export const useUnifiedDashboardData = (orgId: string) => {
 	// Get cached data as fallback for stale-while-revalidate
 	const fallbackData = useMemo(() => {
 		if (!url || typeof window === "undefined") return undefined;
-		return getCachedData<UnifiedDashboardDataResponse>(url);
+		return getCachedData<UnifiedDashboardDataResponse>(url) ?? undefined;
 	}, [url]);
 
 	const { data, error, isLoading, mutate } = useSWR(url, fetcher, {

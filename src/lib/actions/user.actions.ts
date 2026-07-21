@@ -39,6 +39,7 @@ export type AppUser = {
 	role: CalendarRole; // For calendar permissions compatibility only
 	division?: UserDivision;
 	department?: string; // Direct department field (if available)
+	phone?: string;
 	status?: "active" | "inactive";
 	profileImageId?: string | null;
 };
@@ -713,7 +714,10 @@ const getCurrentUserFrom2FAImpl = async () => {
 				role: calendarRole,
 				division: user.division,
 				status: user.status,
-				profileImageId: resolveProfileImageId(user),
+				profileImageId: resolveProfileImageId({
+					avatar: user.avatar,
+					profileImageId: user.profileImageId,
+				}),
 				$createdAt: user.$createdAt,
 				$updatedAt: user.$updatedAt,
 			});

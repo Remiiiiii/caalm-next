@@ -1,8 +1,8 @@
 "use client";
 
 import {
-	TimeGridWeekView,
 	type TimeGridEvent,
+	TimeGridWeekView,
 } from "@/components/calendar/TimeGridWeekView";
 
 interface DayViewProps {

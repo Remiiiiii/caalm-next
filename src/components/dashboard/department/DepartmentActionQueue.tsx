@@ -105,11 +105,14 @@ export function DepartmentActionQueue({
 											{item.dueDate ? (
 												<span>
 													Due{" "}
-													{new Date(item.dueDate).toLocaleDateString(undefined, {
-														month: "short",
-														day: "numeric",
-														year: "numeric",
-													})}
+													{new Date(item.dueDate).toLocaleDateString(
+														undefined,
+														{
+															month: "short",
+															day: "numeric",
+															year: "numeric",
+														},
+													)}
 												</span>
 											) : null}
 										</span>

@@ -404,7 +404,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 	return (
 		<Dialog open={open} onOpenChange={onClose}>
 			<DialogContent
-				className="flex max-h-[90vh] max-w-[800px] flex-col overflow-hidden p-0 shadow-xl"
+				className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[800px] flex-col overflow-hidden p-0 shadow-xl"
 				data-testid="notification-center"
 			>
 				{/* Professional Cap */}

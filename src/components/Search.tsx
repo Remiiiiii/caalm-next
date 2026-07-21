@@ -4,7 +4,7 @@ import { Filter } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import React, { useState } from "react";
-import { useSearch } from "@/hooks/useSearch";
+import { type SearchResult, useSearch } from "@/hooks/useSearch";
 import FormattedDateTime from "./FormattedDateTime";
 import SearchModal from "./SearchModal";
 import Thumbnail from "./Thumbnail";
@@ -45,15 +45,14 @@ const Search = () => {
 	// Show results when we have them
 	const open = results.length > 0 || (query.length > 0 && !isLoading);
 
-	const handleClickItem = (file: Record<string, unknown>) => {
+	const handleClickItem = (file: SearchResult) => {
 		// Save the search query
 		saveSearch(query);
 
+		const fileType: string = file.type;
 		router.push(
 			`/${
-				file.type === "video" || file.type === "audio"
-					? "media"
-					: `${file.type}s`
+				fileType === "video" || fileType === "audio" ? "media" : `${fileType}s`
 			}?query=${query}`,
 		);
 	};
@@ -96,8 +95,8 @@ const Search = () => {
 										<div className="flex cursor-pointer items-center gap-4">
 											<Thumbnail
 												type={file.type}
-												extension={file.extension}
-												url={file.url}
+												extension={file.extension ?? ""}
+												url={file.url ?? ""}
 												className="size-9 min-w-9"
 											/>
 											<p className="subtitle-2 line-clamp-1 text-light-100">

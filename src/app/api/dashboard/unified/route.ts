@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
 		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:page:${page}:limit:${limit}`;
 
 		// Try to get cached data first to check ETag
-		const existingCache = await import("@/lib/services/redis-cache").then((m) =>
-			m.get(cacheKey),
-		);
+		const existingCache = (await import("@/lib/services/redis-cache").then(
+			(m) => m.get(cacheKey),
+		)) as { timestamp?: string | number } | null;
 		if (existingCache && ifNoneMatch && existingCache.timestamp) {
 			const etag = `"${existingCache.timestamp}"`;
 			if (ifNoneMatch === etag) {

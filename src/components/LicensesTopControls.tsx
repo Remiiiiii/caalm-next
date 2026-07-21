@@ -10,7 +10,7 @@ interface LicensesTopControlsProps {
 	licenses: License[];
 }
 
-export default function LicensesTopControls({}: LicensesTopControlsProps) {
+export default function LicensesTopControls(_props: LicensesTopControlsProps) {
 	const { filters, setFilters } = useLicensesFilter();
 	const [searchQuery, setSearchQuery] = useState(filters.searchQuery || "");
 

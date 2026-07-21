@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	type ApprovalQueueItem,
 	type ApprovalTab,

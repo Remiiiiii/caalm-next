@@ -1,16 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { useMemo } from "react";
 import { AuditDomainCharts } from "@/components/audits/AuditDomainCharts";
 import { AuditEvidenceTable } from "@/components/audits/AuditEvidenceTable";
 import { AuditStatCardRow } from "@/components/audits/AuditStatCardRow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useComplianceStatus } from "@/hooks/useComplianceStatus";
-import { getTimeSeriesForPeriod } from "@/lib/audits/mock-data";
 import { mergeDomainWithLiveData } from "@/lib/audits/merge-live-data";
+import { getTimeSeriesForPeriod } from "@/lib/audits/mock-data";
 import type { AuditControlDomain, AuditPeriod } from "@/lib/audits/types";
 
 const CHART_TITLES: Record<

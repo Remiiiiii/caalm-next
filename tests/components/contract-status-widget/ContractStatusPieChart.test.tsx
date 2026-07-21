@@ -422,7 +422,7 @@ describe("ContractStatusPieChart", () => {
 				error: null,
 			});
 
-			render(<ContractStatusPieChart data={propData} />);
+			render(<ContractStatusPieChart data={propData as never} />);
 
 			// Verify total from prop data (may appear multiple times)
 			const totalElements = screen.getAllByText("20");
@@ -544,11 +544,11 @@ describe("ContractStatusPieChart", () => {
 		it("should handle contracts with case-insensitive status", () => {
 			const mockContracts = [
 				createActiveContract(200, {
-					status: "ACTIVE", // Uppercase
+					status: "ACTIVE" as never, // Uppercase
 					contractName: "Uppercase Active",
 				}),
 				createActiveContract(200, {
-					status: "Active", // Title case
+					status: "Active" as never, // Title case
 					contractName: "Title Case Active",
 				}),
 			];

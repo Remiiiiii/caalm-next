@@ -1,9 +1,6 @@
 import type { AuditControlDomain } from "@/lib/audits/types";
 
-export type AuditModule =
-	| AuditControlDomain
-	| "auth"
-	| "system";
+export type AuditModule = AuditControlDomain | "auth" | "system";
 
 export type AuditAction =
 	| "create"
@@ -41,7 +38,14 @@ const DOMAIN_KEYWORDS: Record<AuditControlDomain, string[]> = {
 		"compliance",
 		"audit finding",
 	],
-	contracts: ["contract", "grant", "vendor", "agreement", "dismiss", "approval"],
+	contracts: [
+		"contract",
+		"grant",
+		"vendor",
+		"agreement",
+		"dismiss",
+		"approval",
+	],
 	licenses: ["license", "certification", "renewal", "credential"],
 	documents: ["document", "upload", "file", "evidence", "minutes", "policy"],
 	governance: [
@@ -75,10 +79,18 @@ export function inferModuleFromTitle(
 	}
 
 	const lower = title.toLowerCase();
-	if (lower.includes("login") || lower.includes("logout") || lower.includes("auth")) {
+	if (
+		lower.includes("login") ||
+		lower.includes("logout") ||
+		lower.includes("auth")
+	) {
 		return "auth";
 	}
-	if (lower.includes("export") || lower.includes("cron") || lower.includes("sync")) {
+	if (
+		lower.includes("export") ||
+		lower.includes("cron") ||
+		lower.includes("sync")
+	) {
 		return "system";
 	}
 
@@ -141,16 +153,15 @@ export function extractStructuredFields(
 ): AuditStructuredFields & { publicMetadata: Record<string, unknown> | null } {
 	const meta = metadata || {};
 	const module =
-		(typeof meta.module === "string" ? (meta.module as AuditModule) : undefined) ||
-		inferModuleFromTitle(eventTitle, meta);
+		(typeof meta.module === "string"
+			? (meta.module as AuditModule)
+			: undefined) || inferModuleFromTitle(eventTitle, meta);
 	const target_type =
 		typeof meta.target_type === "string" ? meta.target_type : undefined;
 	const target_id =
 		typeof meta.target_id === "string" ? meta.target_id : undefined;
 	const target_label =
-		typeof meta.target_label === "string"
-			? meta.target_label
-			: eventTitle;
+		typeof meta.target_label === "string" ? meta.target_label : eventTitle;
 	const summary =
 		typeof meta.summary === "string"
 			? meta.summary
@@ -165,9 +176,7 @@ export function extractStructuredFields(
 		? (meta.changes as AuditChangeDiff[])
 		: undefined;
 	const correlation_id =
-		typeof meta.correlation_id === "string"
-			? meta.correlation_id
-			: undefined;
+		typeof meta.correlation_id === "string" ? meta.correlation_id : undefined;
 
 	const publicMetadata: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(meta)) {

@@ -91,7 +91,6 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 		try {
 			const reportData = await generateReport({
 				userId: user.$id,
-				userRole: user?.role || "user",
 				department: selectedDepartment || "All",
 				userName: user?.fullName || user?.email || "Unknown User",
 			});

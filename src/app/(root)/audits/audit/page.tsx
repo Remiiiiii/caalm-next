@@ -14,16 +14,19 @@ import { useCallback, useMemo, useState } from "react";
 import useSWR from "swr";
 import { AuditLogChart } from "@/components/audits/AuditLogChart";
 import {
-	AuditLogFiltersBar,
 	type AuditLogFilters,
+	AuditLogFiltersBar,
 } from "@/components/audits/AuditLogFiltersBar";
-import { AuditLogTable, type AuditLog } from "@/components/audits/AuditLogTable";
+import {
+	type AuditLog,
+	AuditLogTable,
+} from "@/components/audits/AuditLogTable";
 import { AuditPageShell } from "@/components/audits/AuditPageShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import { PERMISSIONS } from "@/constants/permissions";
 import {
 	AUDIT_CONTROL_TABS,
 	type AuditControlDomain,
@@ -92,11 +95,11 @@ export default function AuditLogsPage() {
 		refreshInterval: 30000,
 	});
 
-	const { data: statsData, error: statsError, isLoading: statsLoading } = useSWR(
-		"/api/audits/stats",
-		fetcher,
-		{ refreshInterval: 60000 },
-	);
+	const {
+		data: statsData,
+		error: statsError,
+		isLoading: statsLoading,
+	} = useSWR("/api/audits/stats", fetcher, { refreshInterval: 60000 });
 
 	const auditLogs: AuditLog[] = logsData?.logs || [];
 	const total = logsData?.total ?? 0;
@@ -252,7 +255,11 @@ export default function AuditLogsPage() {
 			subtitle="Activity across contracts, licenses, filings, documents, and governance."
 			actions={
 				<>
-					<Button variant="outline" className="primary-btn px-3 sm:px-4" asChild>
+					<Button
+						variant="outline"
+						className="primary-btn px-3 sm:px-4"
+						asChild
+					>
 						<Link href="/audits/status">
 							<Shield className="h-4 w-4" />
 							Compliance status

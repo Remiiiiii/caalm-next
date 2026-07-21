@@ -375,7 +375,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 		return (
 			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-4 px-4">
+				<CardHeader className="pb-3 pt-6 px-4">
 					<div className="flex items-center gap-2">
 						<StickyNote className="h-4 w-4 text-slate-600" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -397,7 +397,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 		return (
 			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-4 px-4">
+				<CardHeader className="pb-3 pt-6 px-4">
 					<div className="flex items-center gap-2">
 						<AlertTriangle className="h-4 w-4 text-red" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -420,7 +420,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
 				{/* Header */}
-				<CardHeader className="pb-1 pt-4 px-4">
+				<CardHeader className="pb-1 pt-6 px-4">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-2">
 							<StickyNote className="h-4 w-4 text-slate-600" />

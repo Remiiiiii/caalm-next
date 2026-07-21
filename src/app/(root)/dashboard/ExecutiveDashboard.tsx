@@ -4,8 +4,6 @@ import {
 	AlertTriangle,
 	Ban,
 	CheckCircle,
-	ChevronLeft,
-	ChevronRight,
 	FileText,
 	RefreshCw,
 	Trash2,
@@ -16,7 +14,7 @@ import Link from "next/link";
 import { type Models, Query } from "node-appwrite";
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import CalendarView from "@/components/CalendarView";
 import ClientTimestamp from "@/components/ClientTimestamp";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
@@ -60,6 +58,7 @@ import {
 	StatCardSkeleton,
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
+import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import WeatherWidget from "@/components/WeatherWidget";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -151,53 +150,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const { toast } = useToast();
 	const { orgId } = useOrganization();
 	const adminName = "Executive"; // Replace with actual admin name
-
-	// Widget pagination functionality - responsive
-	const widgetScrollRef = useRef<HTMLDivElement>(null);
-	const [currentPage, setCurrentPage] = useState(0);
-
-	const scrollWidgets = (direction: "left" | "right") => {
-		if (widgetScrollRef.current) {
-			const container = widgetScrollRef.current;
-			const scrollAmount = container.clientWidth;
-			const newScrollLeft =
-				direction === "left"
-					? container.scrollLeft - scrollAmount
-					: container.scrollLeft + scrollAmount;
-
-			container.scrollTo({
-				left: newScrollLeft,
-				behavior: "smooth",
-			});
-
-			// Update page based on scroll position
-			const newPage = Math.round(newScrollLeft / scrollAmount);
-			if (newPage >= 0 && newPage <= 1) {
-				setCurrentPage(newPage);
-			}
-		}
-	};
-
-	// Track scroll position to update current page
-	useEffect(() => {
-		const handleScroll = () => {
-			if (widgetScrollRef.current) {
-				const container = widgetScrollRef.current;
-				const scrollLeft = container.scrollLeft;
-				const scrollAmount = container.clientWidth;
-				const newPage = Math.round(scrollLeft / scrollAmount);
-				if (newPage !== currentPage && newPage >= 0 && newPage <= 1) {
-					setCurrentPage(newPage);
-				}
-			}
-		};
-
-		const scrollContainer = widgetScrollRef.current;
-		if (scrollContainer) {
-			scrollContainer.addEventListener("scroll", handleScroll);
-			return () => scrollContainer.removeEventListener("scroll", handleScroll);
-		}
-	}, [currentPage]);
 
 	// Use unified dashboard data hook
 	const {
@@ -775,91 +727,30 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				<Card className="glass-card mb-6 overflow-visible">
 					<div className="glass-card-cap" />
 					<CardContent className="relative p-3 sm:p-4 lg:p-6">
-						{/* Navigation Arrows - centered with widget row */}
-						<Button
-							variant="outline"
-							size="sm"
-							className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
-							onClick={() => scrollWidgets("left")}
-						>
-							<ChevronLeft className="h-4 w-4" />
-						</Button>
-
-						<Button
-							variant="outline"
-							size="sm"
-							className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm border-white/40 shadow-lg hover:bg-white/90"
-							onClick={() => scrollWidgets("right")}
-						>
-							<ChevronRight className="h-4 w-4" />
-						</Button>
-
-						{/* Scrollable Widgets Container - items-center aligns widgets with chevrons; height is content-driven */}
-						<div
-							ref={widgetScrollRef}
-							className="flex max-h-[325px] overflow-y-hidden  items-center gap-3 sm:gap-4 lg:gap-6 overflow-x-auto scrollbar-hide w-full py-2 rounded-lg min-h-0"
-							style={{
-								scrollbarWidth: "none",
-								msOverflowStyle: "none",
-							}}
-						>
-							{/* Page 1: Weather, Company News, Contract Status */}
-							<div className="flex items-center gap-3 sm:gap-2 lg:gap-3 xl:gap-3 2xl:gap-3 3xl:gap-3 4xl:gap-3 ml-8 min-w-full flex-shrink-0 mx-auto">
-								<div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[400px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0 h-fit">
-									<WeatherWidget
-										location="Miami"
-										latitude={25.7617}
-										longitude={-80.1918}
-									/>
-								</div>
-								<div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[535px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0 h-fit">
-									<ContractExpiryAlertsWidget
-										maxVisible={2}
-										showSettings={false}
-										compact={true}
-										contracts={contractsFromApi}
-									/>
-								</div>
-								<div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[425px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0 h-fit">
-									<ContractStatusPieChart contracts={contractsFromApi} />
-								</div>
-							</div>
-
-							{/* Page 2: Department Performance, Contract Expiry Alerts, Quick Notes */}
-							<div className="flex items-center gap-3 sm:gap-2 lg:gap-3 xl:gap-3 2xl:gap-3 3xl:gap-3 4xl:gap-3 min-w-full -ml-6 flex-shrink-0 mx-auto">
-								<div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[455px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0 h-fit">
-									<DepartmentPerformanceWidget />
-								</div>
-								<div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[450px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0 h-fit">
-									<CompanyNewsFeed />
-								</div>
-								<div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[455px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0 h-fit">
-									<QuickNotesWidget user={user ?? undefined} />
-								</div>
-							</div>
-
-							{/* Page 3: License Status, License Expiry Alerts */}
-							<div className="flex items-center gap-3 sm:gap-2 lg:gap-3 xl:gap-3 2xl:gap-3 3xl:gap-3 4xl:gap-3 min-w-full -ml-6 flex-shrink-0 mx-auto">
-								<div className="w-[260px] lg:w-[250px] xl:w-[300px] 2xl:w-[425px] 3xl:w-[670px] 4xl:w-[1095px] flex-shrink-0 h-fit">
-									<LicenseStatusPieChart licenses={dashboardLicenses} />
-								</div>
-								<div className="w-[260px] lg:w-[250px] xl:w-[280px] 2xl:w-[535px] 3xl:w-[660px] 4xl:w-[1090px] flex-shrink-0 h-fit">
-									<LicenseExpiryAlertsWidget
-										maxVisible={2}
-										compact={true}
-										licenses={dashboardLicenses}
-									/>
-								</div>
-							</div>
-						</div>
+						<WidgetCarousel ariaLabel="Executive dashboard widgets">
+							<WeatherWidget
+								location="Miami"
+								latitude={25.7617}
+								longitude={-80.1918}
+							/>
+							<ContractExpiryAlertsWidget
+								maxVisible={2}
+								showSettings={false}
+								compact={true}
+								contracts={contractsFromApi}
+							/>
+							<ContractStatusPieChart contracts={contractsFromApi} />
+							<LicenseExpiryAlertsWidget
+								maxVisible={2}
+								compact={true}
+								licenses={dashboardLicenses}
+							/>
+							<LicenseStatusPieChart licenses={dashboardLicenses} />
+							<DepartmentPerformanceWidget />
+							<CompanyNewsFeed />
+							<QuickNotesWidget user={user ?? undefined} />
+						</WidgetCarousel>
 					</CardContent>
-
-					{/* Custom scrollbar styles */}
-					<style jsx>{`
-            .scrollbar-hide::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
 				</Card>
 
 				{/* Stats Grid */}
@@ -1118,14 +1009,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									</div>
 
 									{/* Role and Department Selection Section */}
-									<div className="flex flex-col md:flex-row gap-4 items-center">
+									<div className="responsive-filter-row">
 										<SelectScrollable
 											value={inviteForm.role}
 											onValueChange={(value) =>
 												setInviteForm({ ...inviteForm, role: value })
 											}
 											placeholder="Select role"
-											className="min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+											className="w-full sm:min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
 										>
 											<SelectItem value="executive">Executive</SelectItem>
 											<SelectItem value="manager">Manager</SelectItem>
@@ -1138,7 +1029,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												setInviteForm({ ...inviteForm, department: value })
 											}
 											placeholder="Select department"
-											className="min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+											className="w-full sm:min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
 										>
 											<SelectItem value="IT">IT</SelectItem>
 											<SelectItem value="Finance">Finance</SelectItem>
@@ -1159,7 +1050,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												setInviteForm({ ...inviteForm, division: value })
 											}
 											placeholder="Select division"
-											className="min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+											className="w-full sm:min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
 										>
 											<SelectItem value="behavioral-health">
 												Behavioral Health

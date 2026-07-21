@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const { databases } = await createAdminClient();
+		const { tablesDB } = await createAdminClient();
 
 		// Get saved searches for the user
 		const savedSearches = await tablesDB.listRows({
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const { databases } = await createAdminClient();
+		const { tablesDB } = await createAdminClient();
 
 		// Check if a saved search with the same name already exists
 		const existingSearches = await tablesDB.listRows({

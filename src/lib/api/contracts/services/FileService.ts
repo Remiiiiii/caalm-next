@@ -6,6 +6,12 @@ import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { constructFileUrl, getFileType } from "@/lib/utils";
 
 /**
+ * Maximum file size to load fully into an ArrayBuffer (10MB).
+ * Larger files should be streamed or served via download URL.
+ */
+export const MAX_ARRAYBUFFER_SIZE = 10 * 1024 * 1024; // 10MB
+
+/**
  * File Service
  * Handles file upload, storage, and retrieval operations
  */
@@ -22,7 +28,10 @@ export class FileService {
 		}
 
 		const { storage } = await createAdminClient();
-		const inputFile = InputFile.fromBuffer(Buffer.from(arrayBuffer), fileName);
+		const buffer = Buffer.isBuffer(arrayBuffer)
+			? arrayBuffer
+			: Buffer.from(arrayBuffer);
+		const inputFile = InputFile.fromBuffer(buffer, fileName);
 
 		const bucketFile = await storage.createFile({
 			bucketId: appwriteConfig.bucketId,
@@ -84,18 +93,11 @@ export class FileService {
 		}
 
 		const { storage } = await createAdminClient();
-		const response = await storage.getFileDownload({
+		const arrayBuffer = await storage.getFileDownload({
 			bucketId: appwriteConfig.bucketId,
 			fileId: bucketFileId,
 		});
 
-		// Convert Response to ReadableStream
-		if (response.body) {
-			return response.body;
-		}
-
-		// Fallback: convert to stream
-		const arrayBuffer = await response.arrayBuffer();
 		const stream = new ReadableStream({
 			start(controller) {
 				controller.enqueue(new Uint8Array(arrayBuffer));

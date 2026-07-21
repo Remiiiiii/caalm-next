@@ -12,8 +12,8 @@ interface BatchOptions<T> {
 	onError?: (item: T, error: Error) => void;
 }
 
-interface BatchResult<T> {
-	successful: T[];
+interface BatchResult<R, T = R> {
+	successful: R[];
 	failed: Array<{ item: T; error: Error }>;
 	total: number;
 	processed: number;
@@ -26,7 +26,7 @@ export async function processBatches<T, R>(
 	items: T[],
 	processor: (item: T) => Promise<R>,
 	options: BatchOptions<T> = {},
-): Promise<BatchResult<R>> {
+): Promise<BatchResult<R, T>> {
 	const {
 		batchSize = 10,
 		concurrency = 5,

@@ -30,8 +30,8 @@ import {
 	SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-	type LicenseFilters,
 	countActiveAdvancedLicenseFilters,
+	type LicenseFilters,
 } from "@/lib/licenses/licensesListUtils";
 import { useLicensesFilter } from "./LicensesView";
 
@@ -299,7 +299,7 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Issue date</Label>
-							<div className="grid grid-cols-2 gap-2">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 								<Popover>
 									<PopoverTrigger asChild>
 										<Button
@@ -347,7 +347,7 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Expiry date</Label>
-							<div className="grid grid-cols-2 gap-2">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 								<Popover>
 									<PopoverTrigger asChild>
 										<Button

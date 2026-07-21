@@ -239,9 +239,7 @@ export default function LicenseCard({
 			{/* Flat meta rows (Remote / Etsy pattern) */}
 			<div className="min-w-0 rounded-lg bg-white/40 border border-white/50 px-3 py-1">
 				{license.licenseNumber && (
-					<MetaRow label="License #">
-						{license.licenseNumber}
-					</MetaRow>
+					<MetaRow label="License #">{license.licenseNumber}</MetaRow>
 				)}
 				{issueDate && (
 					<MetaRow label="Issued">

@@ -73,7 +73,9 @@ class ErrorBoundary extends Component<Props, State> {
 					</p>
 					<div className="flex justify-center">
 						<button
-							onClick={() => this.setState({ hasError: false, error: undefined })}
+							onClick={() =>
+								this.setState({ hasError: false, error: undefined })
+							}
 							className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200 cursor-pointer"
 						>
 							Try Again

@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 import { TrendingUp } from "lucide-react";
 import CountUp from "react-countup";
 import { Button } from "@/components/ui/button";
-import { PERFORMANCE_METRICS } from "./landingContent";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
+import { PERFORMANCE_METRICS } from "./landingContent";
 import { fadeUp, staggerContainer, viewportOnce } from "./motion";
 
 export default function PerformanceMetrics() {
@@ -37,7 +37,7 @@ export default function PerformanceMetrics() {
 					</p>
 				</motion.div>
 
-				<div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
 					{PERFORMANCE_METRICS.map((metric) => (
 						<motion.div
 							key={metric.label}
@@ -45,7 +45,7 @@ export default function PerformanceMetrics() {
 							className="flex justify-center"
 						>
 							<LandingFrostedCard
-								className="w-full max-w-[220px]"
+								className="w-full"
 								contentClassName="p-4 sm:p-5"
 							>
 								<p className="text-sm font-medium sidebar-gradient-text">

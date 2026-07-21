@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import {
 	Bar,
 	BarChart,
@@ -10,7 +11,6 @@ import {
 	YAxis,
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
-import { format } from "date-fns";
 
 interface AuditLogChartProps {
 	data?: Array<{ date: string; count: number }>;

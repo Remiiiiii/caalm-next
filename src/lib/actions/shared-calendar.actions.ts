@@ -869,7 +869,13 @@ export const getCalendarsSharedWithUser = async (
 				...cal,
 				userPermission: permission?.permissionLevel,
 			};
-		});
+		})
+		.filter(
+			(
+				cal,
+			): cal is SharedCalendar & { userPermission: CalendarPermissionLevel } =>
+				cal.userPermission !== undefined,
+		);
 
 	return sharedCalendars;
 };

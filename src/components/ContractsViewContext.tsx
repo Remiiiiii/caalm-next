@@ -2,27 +2,27 @@
 
 import {
 	createContext,
+	type ReactNode,
 	useCallback,
 	useContext,
 	useEffect,
 	useMemo,
 	useRef,
 	useState,
-	type ReactNode,
 } from "react";
-import type { UIFileDoc } from "@/types/files";
 import {
 	type ContractFilters,
+	DENSITY_STORAGE_KEY,
 	type DensityMode,
+	deserializeFilters,
+	SAVED_VIEWS_STORAGE_KEY,
 	type SavedContractView,
 	type StatusTab,
-	type ViewType,
-	DENSITY_STORAGE_KEY,
-	SAVED_VIEWS_STORAGE_KEY,
-	VIEW_STORAGE_KEY,
-	deserializeFilters,
 	serializeFilters,
+	VIEW_STORAGE_KEY,
+	type ViewType,
 } from "@/lib/contracts/contractsListUtils";
+import type { UIFileDoc } from "@/types/files";
 
 interface ContractsViewContextType {
 	view: ViewType;
@@ -242,4 +242,4 @@ export function useContractsFilter() {
 }
 
 // Re-export types used by other modules
-export type { ContractFilters, StatusTab, DensityMode, ViewType };
+export type { ContractFilters, DensityMode, StatusTab, ViewType };

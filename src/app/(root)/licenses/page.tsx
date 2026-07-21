@@ -8,10 +8,7 @@ import LicensesHeaderActions from "@/components/LicensesHeaderActions";
 import LicensesMetricsBar from "@/components/LicensesMetricsBar";
 import { LicensesViewProvider } from "@/components/LicensesView";
 import LicensesViewClient from "@/components/LicensesViewClient";
-import {
-	Card as GlassCard,
-	CardContent,
-} from "@/components/ui/card";
+import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";

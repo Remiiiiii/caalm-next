@@ -1,9 +1,6 @@
 import type Stripe from "stripe";
+import { clearOrgSubscription, syncSubscriptionToOrg } from "./billing";
 import { getStripe } from "./client";
-import {
-	clearOrgSubscription,
-	syncSubscriptionToOrg,
-} from "./billing";
 
 export function constructWebhookEvent(
 	payload: string | Buffer,
@@ -32,9 +29,7 @@ export async function handleStripeWebhookEvent(
 					: session.subscription.id;
 			const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 			const orgId =
-				session.metadata?.orgId ||
-				session.client_reference_id ||
-				undefined;
+				session.metadata?.orgId || session.client_reference_id || undefined;
 			await syncSubscriptionToOrg(subscription, orgId || undefined);
 			break;
 		}
@@ -60,9 +55,7 @@ export async function handleStripeWebhookEvent(
 				typeof (invoice as { subscription?: string | { id: string } })
 					.subscription === "string"
 					? ((invoice as { subscription?: string }).subscription as string)
-					: (
-							invoice as { subscription?: { id: string } }
-						).subscription?.id;
+					: (invoice as { subscription?: { id: string } }).subscription?.id;
 			if (!subscriptionId) break;
 			const stripe = getStripe();
 			const subscription = await stripe.subscriptions.retrieve(subscriptionId);

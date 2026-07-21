@@ -2,6 +2,7 @@
 
 import { Bookmark, BookmarkPlus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,15 +10,10 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 
 export default function ApprovalsSavedViews() {
-	const {
-		savedViews,
-		saveCurrentView,
-		applySavedView,
-		deleteSavedView,
-	} = useApprovalsView();
+	const { savedViews, saveCurrentView, applySavedView, deleteSavedView } =
+		useApprovalsView();
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
 
@@ -36,16 +32,14 @@ export default function ApprovalsSavedViews() {
 			</PopoverTrigger>
 			<PopoverContent
 				align="end"
-				className="w-72 p-0 border border-slate-200 shadow-xl"
+				className="w-[min(18rem,calc(100vw-2rem))] p-0 border border-slate-200 shadow-xl"
 			>
 				<div className="absolute top-0 left-0 right-0 h-3 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 				<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-3 px-4 border-b border-slate-200 mt-3">
 					<p className="text-sm font-semibold sidebar-gradient-text">
 						Saved views
 					</p>
-					<p className="text-xs text-slate-600 mt-0.5">
-						Save tabs and filters
-					</p>
+					<p className="text-xs text-slate-600 mt-0.5">Save tabs and filters</p>
 				</div>
 				<div className="p-3 bg-slate-50 space-y-2 max-h-56 overflow-y-auto">
 					{savedViews.length === 0 ? (

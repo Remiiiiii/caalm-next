@@ -6,8 +6,8 @@ import ContractsFilterChips from "./ContractsFilterChips";
 import ContractsSavedViews from "./ContractsSavedViews";
 import ContractsStatusTabs from "./ContractsStatusTabs";
 import ContractsTopControls from "./ContractsTopControls";
-import { ContractsViewToggle } from "./ContractsViewToggle";
 import { useContractsView } from "./ContractsViewContext";
+import { ContractsViewToggle } from "./ContractsViewToggle";
 import Sort from "./Sort";
 
 interface ContractsControlBarProps {

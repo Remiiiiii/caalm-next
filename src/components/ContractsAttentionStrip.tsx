@@ -2,11 +2,9 @@
 
 import { AlertTriangle } from "lucide-react";
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { useContractsView } from "@/components/ContractsViewContext";
-import {
-	isExpiringWithinDays,
-} from "@/lib/contracts/contractsListUtils";
+import { Button } from "@/components/ui/button";
+import { isExpiringWithinDays } from "@/lib/contracts/contractsListUtils";
 import type { UIFileDoc } from "@/types/files";
 
 interface ContractsAttentionStripProps {
@@ -36,7 +34,9 @@ export default function ContractsAttentionStrip({
 			<div className="flex items-start gap-3 min-w-0">
 				<AlertTriangle className="h-5 w-5 text-orange shrink-0 mt-0.5" />
 				<div>
-					<p className="text-sm font-semibold text-slate-900">Needs attention</p>
+					<p className="text-sm font-semibold text-slate-900">
+						Needs attention
+					</p>
 					<p className="text-xs text-slate-600 mt-0.5">
 						{counts.expiring > 0 && (
 							<span>{counts.expiring} expiring within 90 days</span>

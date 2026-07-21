@@ -375,7 +375,7 @@ const RolesManagement = () => {
 	};
 
 	return (
-		<div className="container mx-auto space-y-8 p-6">
+		<div className="page-container space-y-8 py-6">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div>
 					<h1 className="text-3xl font-bold sidebar-gradient-text">
@@ -436,7 +436,7 @@ const RolesManagement = () => {
 								description when your organization needs a different baseline.
 							</p>
 						</div>
-						<Card className="w-[99.5%] border border-white/40 bg-white/30 shadow-lg backdrop-blur">
+						<Card className="w-full glass-card border border-white/40 bg-white/30 shadow-lg backdrop-blur">
 							<div className="glass-card-cap" />
 							<CardContent className="p-6">
 								{renderRolesTable(defaultRoles, {
@@ -458,7 +458,7 @@ const RolesManagement = () => {
 								access beyond the defaults.
 							</p>
 						</div>
-						<Card className="w-[99.5%] border border-white/40 bg-white/30 shadow-lg backdrop-blur">
+						<Card className="w-full glass-card border border-white/40 bg-white/30 shadow-lg backdrop-blur">
 							<div className="glass-card-cap" />
 							<CardContent className="p-6">
 								{renderRolesTable(customRoles, {

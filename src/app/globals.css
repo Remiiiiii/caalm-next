@@ -94,19 +94,43 @@
 @layer utilities {
 	/* ===== TYPOGRAPHY (plain CSS to avoid Tailwind v4 @apply arbitrary-value parsing) */
 	.h1 {
-		font-size: 34px;
-		line-height: 42px;
+		font-size: 24px;
+		line-height: 32px;
 		font-weight: 700;
+	}
+	@media (min-width: 640px) {
+		.h1 {
+			font-size: 28px;
+			line-height: 36px;
+		}
+	}
+	@media (min-width: 1024px) {
+		.h1 {
+			font-size: 34px;
+			line-height: 42px;
+		}
 	}
 	.h2 {
-		font-size: 24px;
-		line-height: 36px;
-		font-weight: 700;
-	}
-	.h3 {
 		font-size: 20px;
 		line-height: 28px;
+		font-weight: 700;
+	}
+	@media (min-width: 640px) {
+		.h2 {
+			font-size: 24px;
+			line-height: 36px;
+		}
+	}
+	.h3 {
+		font-size: 18px;
+		line-height: 26px;
 		font-weight: 600;
+	}
+	@media (min-width: 640px) {
+		.h3 {
+			font-size: 20px;
+			line-height: 28px;
+		}
 	}
 	.h4 {
 		font-size: 18px;
@@ -504,8 +528,25 @@
 		@apply relative inline-block size-[50px] shrink-0;
 	}
 	/* Dashboard */
-	.dashboard-container {
+	.dashboard-container,
+	.page-container {
 		@apply w-full px-4 sm:px-6 lg:px-8 xl:px-12;
+	}
+
+	.responsive-form-grid {
+		@apply grid grid-cols-1 gap-4 sm:grid-cols-2;
+	}
+
+	.responsive-tab-list {
+		@apply grid w-full grid-cols-2 gap-1 sm:grid-cols-4;
+	}
+
+	.responsive-filter-row {
+		@apply flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center;
+	}
+
+	.table-scroll-wrapper {
+		@apply w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
 	}
 
 	.dashboard-grid {
@@ -708,6 +749,22 @@
 		box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.14);
 	}
 
+	/* Stronger frost for collapsed-sidebar hover flyouts */
+	.sidebar-flyout-frost {
+		background: rgba(255, 255, 255, 0.82);
+		backdrop-filter: blur(24px) saturate(1.35);
+		-webkit-backdrop-filter: blur(24px) saturate(1.35);
+		border: 1px solid rgba(255, 255, 255, 0.7);
+		box-shadow:
+			0 8px 32px 0 rgba(31, 38, 135, 0.12),
+			inset 0 1px 0 0 rgba(255, 255, 255, 0.55);
+		isolation: isolate;
+	}
+	.sidebar-flyout-frost:hover {
+		background: rgba(255, 255, 255, 0.88);
+		border-color: rgba(147, 197, 253, 0.65);
+	}
+
 	/* Chart */
 	.chart {
 		@apply flex items-center rounded-[20px] p-5 text-white md:flex-col xl:flex-row;
@@ -772,7 +829,7 @@
 
 	/* Mobile Navigation */
 	.mobile-header {
-		@apply flex h-[60px] justify-between px-5 sm:hidden;
+		@apply flex h-[60px] justify-between px-5 lg:hidden;
 	}
 	.header-user {
 		@apply my-3 flex items-center gap-2 rounded-full p-1 text-light-100 sm:justify-center lg:justify-start lg:p-3;
@@ -823,6 +880,21 @@
 	/* Sidebar */
 	.sidebar {
 		@apply flex h-screen flex-col overflow-auto px-5 py-7;
+		width: 280px;
+		min-width: 280px;
+		max-width: 280px;
+		flex-shrink: 0;
+		transition:
+			width 200ms ease,
+			min-width 200ms ease,
+			max-width 200ms ease,
+			padding 200ms ease;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.sidebar {
+			transition: none;
+		}
 	}
 	.sidebar::-webkit-scrollbar {
 		width: 0;
@@ -835,17 +907,9 @@
 		background: transparent;
 		border-radius: 0;
 	}
-	.sidebar {
-		/* Fully visible on all screen sizes except mobile */
-		/* Fixed width optimized for MacBook Pro and desktop displays */
-		width: 280px;
-		min-width: 280px;
-		max-width: 280px;
-		flex-shrink: 0;
-	}
 
-	/* Hide sidebar only on mobile devices (< 640px) */
-	@media (max-width: 639px) {
+	/* Hide fixed sidebar below lg — tablet and mobile use drawer nav */
+	@media (max-width: 1023px) {
 		.sidebar {
 			@apply hidden;
 		}
@@ -853,19 +917,41 @@
 
 	/* Ensure sidebar stays fully visible on MacBook Pro sizes (1024px - 1440px) */
 	@media (min-width: 1024px) and (max-width: 1440px) {
-		.sidebar {
+		.sidebar:not(.sidebar-collapsed) {
 			width: 280px;
 			min-width: 280px;
 			max-width: 280px;
 		}
 	}
-	.sidebar.collapsed {
-		width: 90px;
-		min-width: 90px;
-		max-width: 90px;
+
+	/* Spotify-style icon rail when collapsed */
+	.sidebar.sidebar-collapsed {
+		width: 4rem;
+		min-width: 4rem;
+		max-width: 4rem;
+		padding-left: 0.5rem;
+		padding-right: 0.5rem;
+		overflow: visible;
 	}
+
+	.sidebar.sidebar-collapsed .dashboard-logo,
+	.sidebar.sidebar-collapsed .dashboard-logo-collapsed {
+		width: 2rem;
+		height: 2rem;
+		min-width: 2rem;
+		position: relative;
+	}
+
+	.sidebar.sidebar-collapsed .sidebar-storage-info {
+		display: none;
+	}
+
+	.sidebar-collapsed-rail {
+		overflow: visible;
+	}
+
 	.sidebar-nav {
-		@apply text-[16px] leading-[24px] font-semibold mt-9 flex-1 gap-1;
+		@apply text-sm leading-5 font-semibold mt-6 flex-1 gap-1;
 	}
 	.sidebar-nav-item {
 		@apply flex text-light-100 gap-4 rounded-xl w-full justify-start items-center text-[16px] leading-[24px] font-semibold px-[30px] h-[52px] rounded-full;
@@ -1462,6 +1548,9 @@ button[data-state="active"] > span {
 	margin: 0;
 }
 
+/* biome-ignore-start lint/complexity/noImportantStyles: override React DayPicker's own stylesheet, which loads after globals.css */
+/* biome-ignore-start lint/style/noDescendingSpecificity: selectors mirror React DayPicker's today/selected states and must stay grouped */
+
 /* Beat RDP fit-content so the matrix fills the card with even L/R gutters */
 .caalm-mini-cal .rdp-months {
 	width: 100% !important;
@@ -1547,6 +1636,9 @@ button[data-state="active"] > span {
 	background: linear-gradient(135deg, #12477d 0%, #03afbf 100%) !important;
 	color: #fff !important;
 }
+
+/* biome-ignore-end lint/complexity/noImportantStyles: end React DayPicker override block */
+/* biome-ignore-end lint/style/noDescendingSpecificity: end React DayPicker override block */
 
 /* Hide Spline "Built with Spline" watermark badge - Aggressive CSS rules */
 a[href*="spline.design"],

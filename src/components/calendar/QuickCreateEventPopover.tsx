@@ -1,13 +1,10 @@
 "use client";
 
+import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { CalendarPlus, MoreHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,7 +14,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 
 export type QuickCreateEventType =
 	| "meeting"

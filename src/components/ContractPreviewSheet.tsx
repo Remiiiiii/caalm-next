@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import {
 	AlertTriangle,
 	Calendar,
@@ -128,7 +127,10 @@ export default function ContractPreviewSheet({
 								<p className="text-xs text-slate-500">Uploaded</p>
 								<p className="text-sm text-slate-900">
 									{file.$createdAt ? (
-										<FormattedDateTime date={file.$createdAt} className="body-2" />
+										<FormattedDateTime
+											date={file.$createdAt}
+											className="body-2"
+										/>
 									) : (
 										"—"
 									)}

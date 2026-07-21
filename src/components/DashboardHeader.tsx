@@ -53,11 +53,11 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 	};
 
 	return (
-		<div className="flex flex-nowrap items-center gap-2 min-w-0 w-full">
-			<div className="min-w-0 flex-1">
+		<div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+			<div className="min-w-0 flex-1 overflow-x-auto">
 				<QuickActions user={user} />
 			</div>
-			<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-full w-fit px-2.5 sm:px-3 shrink-0">
+			<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-full w-full sm:w-fit px-2.5 sm:px-3 shrink-0 self-end sm:self-auto">
 				<div className="flex items-center h-9">
 					{user && (
 						<div className="flex items-center gap-1">

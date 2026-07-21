@@ -125,7 +125,7 @@ export default function AnimatedContractInfo({
 			{/* Contract Details - appears with stagger (600-1000ms) */}
 			<motion.div
 				variants={containerVariants}
-				className="grid grid-cols-2 gap-4 mt-8 w-[930px]"
+				className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 w-full max-w-4xl mx-auto"
 			>
 				{contract.status && (
 					<motion.div variants={itemVariants} className="glass-card p-4">

@@ -60,11 +60,6 @@ export default function CalendarSettings({
 	const [syncing, setSyncing] = useState(false);
 	const { toast } = useToast();
 
-	// Load integration status
-	useEffect(() => {
-		loadIntegrationStatus();
-	}, [loadIntegrationStatus]);
-
 	const loadIntegrationStatus = async () => {
 		try {
 			setIntegrationStatus((prev) => ({ ...prev, loading: true }));
@@ -105,6 +100,11 @@ export default function CalendarSettings({
 			});
 		}
 	};
+
+	// Load integration status
+	useEffect(() => {
+		loadIntegrationStatus();
+	}, [loadIntegrationStatus]);
 
 	const handleConnect = () => {
 		// Redirect to Microsoft OAuth endpoint

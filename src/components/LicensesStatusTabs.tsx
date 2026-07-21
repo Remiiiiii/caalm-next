@@ -4,11 +4,11 @@ import { useMemo } from "react";
 import { useLicensesView } from "@/components/LicensesView";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-	type LicenseStatusTab,
 	computeLicenseMetrics,
 	isComplianceAtRisk,
 	isLicenseExpired,
 	isLicenseExpiringWithinDays,
+	type LicenseStatusTab,
 } from "@/lib/licenses/licensesListUtils";
 import { cn } from "@/lib/utils";
 import type { License } from "@/types/licenses";
@@ -32,7 +32,8 @@ export default function LicensesStatusTabs({
 			all: licenses.length,
 			active: metrics.activeCount,
 			pending: metrics.pendingCount,
-			expiring: licenses.filter((l) => isLicenseExpiringWithinDays(l, 90)).length,
+			expiring: licenses.filter((l) => isLicenseExpiringWithinDays(l, 90))
+				.length,
 			expired: licenses.filter((l) => isLicenseExpired(l)).length,
 			"action-required": metrics.actionRequiredCount,
 			"compliance-risk": complianceRisk,

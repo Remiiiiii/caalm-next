@@ -6,6 +6,7 @@ import {
 	AlertCircle,
 	BarChart3,
 	Building2,
+	Calendar,
 	ClipboardCheck,
 	Crown,
 	DollarSign,
@@ -13,13 +14,19 @@ import {
 	Megaphone,
 	Monitor,
 	Scale,
+	Shield,
 	TrendingUp,
 	Users,
 	Wrench,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AnalyticsComplianceTab } from "@/components/analytics/AnalyticsComplianceTab";
 import AnalyticsErrorBoundary from "@/components/analytics/AnalyticsErrorBoundary";
+import { AnalyticsReadinessSummary } from "@/components/analytics/AnalyticsReadinessOverview";
+import { AnalyticsPageShell } from "@/components/analytics/AnalyticsPageShell";
+import { AnalyticsStatCard } from "@/components/analytics/AnalyticsStatCard";
+import { AuditReadinessHero } from "@/components/analytics/AuditReadinessHero";
 import { CalendarAnalyticsDashboard } from "@/components/analytics/CalendarAnalyticsDashboard";
 import OrganizationAnalyticsDashboard from "@/components/analytics/OrganizationAnalyticsDashboard";
 import ReportsPage from "@/components/ReportsPage";
@@ -31,9 +38,20 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { mapDatabaseToRouteDivision } from "@/constants/navigation";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useAuditReadiness } from "@/hooks/useAuditReadiness";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUnifiedAnalyticsData } from "@/hooks/useUnifiedAnalyticsData";
 import { useUserRole } from "@/hooks/useUserRole";
+import type { AuditPeriod } from "@/lib/audits/types";
+
+type AnalyticsTab = "organization" | "contracts" | "calendar" | "compliance";
+
+const ANALYTICS_TABS: AnalyticsTab[] = [
+	"organization",
+	"contracts",
+	"compliance",
+	"calendar",
+];
 
 const AnalyticsPage = () => {
 	const { division: userDivision, loading, role } = useUserRole();
@@ -42,22 +60,18 @@ const AnalyticsPage = () => {
 	const searchParams = useSearchParams();
 	const [selectedDepartment, setSelectedDepartment] = useState<string>("IT");
 
-	// Get initial tab from URL parameter, default to 'organization'
 	const initialTab =
-		(searchParams?.get("tab") as "organization" | "contracts" | "calendar") ||
-		"organization";
-	const [activeTab, setActiveTab] = useState<
-		"organization" | "contracts" | "calendar"
-	>(initialTab);
+		(searchParams?.get("tab") as AnalyticsTab) || "organization";
+	const [activeTab, setActiveTab] = useState<AnalyticsTab>(
+		ANALYTICS_TABS.includes(initialTab) ? initialTab : "organization",
+	);
+	const [period, setPeriod] = useState<AuditPeriod>("30d");
 
 	// Update tab when URL parameter changes
 	useEffect(() => {
-		const tabParam = searchParams?.get("tab");
-		if (
-			tabParam &&
-			["organization", "contracts", "calendar"].includes(tabParam)
-		) {
-			setActiveTab(tabParam as "organization" | "contracts" | "calendar");
+		const tabParam = searchParams?.get("tab") as AnalyticsTab | null;
+		if (tabParam && ANALYTICS_TABS.includes(tabParam)) {
+			setActiveTab(tabParam);
 		}
 	}, [searchParams]);
 	const {
@@ -67,6 +81,10 @@ const AnalyticsPage = () => {
 		isLoading: analyticsLoading,
 		error: analyticsError,
 	} = useUnifiedAnalyticsData();
+
+	const { summary, isLoading: readinessLoading } = useAuditReadiness({
+		period,
+	});
 
 	// Using mapDatabaseToRouteDivision from constants/navigation.ts
 
@@ -258,109 +276,98 @@ const AnalyticsPage = () => {
 	}
 
 	return (
-		<div className="space-y-6">
-			{/* Global Quick Stats */}
-			<div className="mb-6">
-				<h1 className="h1 text-center sidebar-gradient-text mb-2">
-					Reports & Analytics
-				</h1>
-				<p className="body-1 text-center text-slate-700">
-					Comprehensive analytics and reporting for all departments
-				</p>
-			</div>
+		<AnalyticsPageShell
+			title="Reports & analytics"
+			subtitle="Comprehensive analytics and reporting for all departments"
+		>
+			<AnalyticsReadinessSummary
+				overallComplianceRate={
+					summary?.kpis.overallComplianceRate ?? totals.overallComplianceRate
+				}
+				departments={(
+					departments as Array<{
+						name: string;
+						totalStats?: { complianceRate?: number };
+					}>
+				).map((dept) => ({
+					name: dept.name,
+					complianceRate: dept.totalStats?.complianceRate ?? 0,
+				}))}
+			/>
+
+			<AuditReadinessHero
+				score={summary?.readinessScore ?? totals.overallComplianceRate}
+				ragStatus={summary?.ragStatus ?? "amber"}
+				areasAtRisk={summary?.kpis.evidenceGaps ?? 0}
+				upcomingDeadlines={summary?.kpis.upcomingDeadlines ?? 0}
+				isLoading={readinessLoading}
+				period={period}
+				onPeriodChange={setPeriod}
+				lastUpdated={summary?.lastUpdated}
+			/>
+
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-				<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="body-2 text-slate-700">
-							Total Contracts
-						</CardTitle>
-						<FileText className="h-4 w-4" style={{ color: "#524E4E" }} />
-					</CardHeader>
-					<CardContent>
-						<div className="h2 text-navy font-bold">
-							{totals.totalContracts.toLocaleString()}
-						</div>
-						<p className="text-xs text-[#10B981]">+12.5% vs last month</p>
-					</CardContent>
-				</Card>
-
-				<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="body-2 text-slate-700">
-							Total Budget
-						</CardTitle>
-						<DollarSign className="h-4 w-4" style={{ color: "#03AFBF" }} />
-					</CardHeader>
-					<CardContent>
-						<div className="h2 text-navy font-bold">
-							${(totals.totalBudget / 1000000).toFixed(1)}M
-						</div>
-						<p className="text-xs text-[#10B981]">+8.2% vs last month</p>
-					</CardContent>
-				</Card>
-
-				<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="body-2 text-slate-700">
-							Active Staff
-						</CardTitle>
-						<Users className="h-4 w-4" style={{ color: "#56B8FF" }} />
-					</CardHeader>
-					<CardContent>
-						<div className="h2 text-navy font-bold">
-							{totals.totalStaff.toLocaleString()}
-						</div>
-						<p className="text-xs text-[#10B981]">+5.1% vs last month</p>
-					</CardContent>
-				</Card>
-
-				<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="body-2 text-slate-700">
-							Compliance Rate
-						</CardTitle>
-						<ClipboardCheck className="h-4 w-4" style={{ color: "#8B5CF6" }} />
-					</CardHeader>
-					<CardContent>
-						<div className="h2 text-navy font-bold">
-							{totals.overallComplianceRate}%
-						</div>
-						<p className="text-xs text-[#10B981]">+2.1% vs last month</p>
-					</CardContent>
-				</Card>
+				<AnalyticsStatCard
+					title="Total contracts"
+					value={totals.totalContracts.toLocaleString()}
+					icon={FileText}
+				/>
+				<AnalyticsStatCard
+					title="Total budget"
+					value={`$${(totals.totalBudget / 1000000).toFixed(1)}M`}
+					icon={TrendingUp}
+				/>
+				<AnalyticsStatCard
+					title="Active staff"
+					value={totals.totalStaff.toLocaleString()}
+					icon={Users}
+				/>
+				<AnalyticsStatCard
+					title="Compliance rate"
+					value={`${summary?.kpis.overallComplianceRate ?? totals.overallComplianceRate}%`}
+					icon={ClipboardCheck}
+				/>
 			</div>
 
-			{/* Main Analytics Tabs */}
 			<Tabs
 				value={activeTab}
 				onValueChange={(v) => {
-					const newTab = v as "organization" | "contracts" | "calendar";
+					const newTab = v as AnalyticsTab;
 					setActiveTab(newTab);
-					// Update URL without causing a page reload
 					const params = new URLSearchParams(searchParams?.toString() || "");
 					params.set("tab", newTab);
 					router.replace(`/analytics?${params.toString()}`, { scroll: false });
 				}}
 				className="w-full"
 			>
-				<TabsList className="grid w-full max-w-2xl grid-cols-3 bg-white/30 backdrop-blur border border-white/40 mb-6 mx-auto">
+				<TabsList className="responsive-tab-list h-auto w-full max-w-3xl bg-white/30 backdrop-blur border border-white/40 mb-6 p-1">
 					<TabsTrigger
 						value="organization"
-						className="tabs-underline data-[state=active]:bg-white/50 data-[state=active]:text-navy"
+						className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
 					>
-						Organization Analytics
+						<Building2 className="h-4 w-4" />
+						<span>Organization</span>
 					</TabsTrigger>
 					<TabsTrigger
 						value="contracts"
-						className="tabs-underline data-[state=active]:bg-white/50 data-[state=active]:text-navy"
+						className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
 					>
-						Contracts Analytics
+						<FileText className="h-4 w-4" />
+						<span>Contracts</span>
+					</TabsTrigger>
+					<TabsTrigger
+						value="compliance"
+						className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+					>
+						<Shield className="h-4 w-4" />
+						<span className="truncate">Compliance & audit</span>
 					</TabsTrigger>
 					<TabsTrigger
 						value="calendar"
-						className="tabs-underline data-[state=active]:bg-white/50 data-[state=active]:text-navy"
+						className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
 					>
-						Calendar Analytics
+						<Calendar className="h-4 w-4" />
+						<span>Calendar</span>
 					</TabsTrigger>
 				</TabsList>
 				<TabsContent value="organization" className="mt-0">
@@ -401,13 +408,17 @@ const AnalyticsPage = () => {
 						</div>
 					</div>
 					{/* Department Navigation Tabs */}
-					<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-						<CardHeader>
-							<CardTitle className="h2 sidebar-gradient-text">
-								Department Analytics
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
+					<Card className="glass-card">
+						<div className="glass-card-cap" />
+						<CardContent className="p-4 sm:p-6">
+							<h2 className="text-xl font-semibold sidebar-gradient-text">
+								Department analytics
+							</h2>
+							<p className="text-sm text-slate-600 mt-1 mb-6">
+								Compare contract volume, budget, staffing, and compliance across
+								departments. Select a department below to drill into its
+								divisions and details.
+							</p>
 							{analyticsLoading ? (
 								<div className="space-y-6">
 									<div className="flex w-full bg-white/20 backdrop-blur border border-white/40 rounded-lg p-1">
@@ -439,7 +450,7 @@ const AnalyticsPage = () => {
 															<div className="h-4 bg-gray-200 rounded-lg w-full animate-pulse"></div>
 														</div>
 													</div>
-													<div className="grid grid-cols-2 gap-3">
+													<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 														{[...Array(4)].map((_, j) => (
 															<div
 																key={j}
@@ -458,14 +469,14 @@ const AnalyticsPage = () => {
 									onValueChange={handleTabChange}
 									className="w-full"
 								>
-									<TabsList className="flex w-full bg-white/20 backdrop-blur border border-white/40">
+									<TabsList className="flex w-full flex-wrap h-auto gap-1 bg-white/20 backdrop-blur border border-white/40 p-1">
 										{departments.map((department) => {
 											const dept = department as { name: string };
 											return (
 												<TabsTrigger
 													key={dept.name}
 													value={dept.name}
-													className="tabs-underline flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-navy"
+													className="flex-1 min-w-[4.5rem] data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
 												>
 													{dept.name}
 												</TabsTrigger>
@@ -569,7 +580,7 @@ const AnalyticsPage = () => {
 															{dept.divisions.map((division) => (
 																<Card
 																	key={division.id}
-																	className="bg-white/95 backdrop-blur border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] rounded-xl overflow-hidden"
+																	className="glass-card interactive-glass-card"
 																>
 																	<CardHeader className="pb-4 px-6 pt-6">
 																		<div className="flex items-start space-x-4">
@@ -589,7 +600,7 @@ const AnalyticsPage = () => {
 																		</div>
 																	</CardHeader>
 																	<CardContent className="pt-0 px-6 pb-6">
-																		<div className="grid grid-cols-2 gap-3">
+																		<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 																			<div className="text-center p-3 bg-gray-50 rounded-lg min-h-[80px] flex flex-col justify-center">
 																				<div className="text-xl font-bold text-gray-800 mb-1">
 																					{division.stats.totalContracts}
@@ -670,11 +681,15 @@ const AnalyticsPage = () => {
 					</Card>
 				</TabsContent>
 
+				<TabsContent value="compliance" className="mt-0">
+					<AnalyticsComplianceTab period={period} />
+				</TabsContent>
+
 				<TabsContent value="calendar" className="mt-0">
 					<CalendarAnalyticsDashboard />
 				</TabsContent>
 			</Tabs>
-		</div>
+		</AnalyticsPageShell>
 	);
 };
 

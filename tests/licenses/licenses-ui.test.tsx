@@ -199,9 +199,7 @@ describe("LicensesStatusTabs", () => {
 
 describe("LicensesAttentionStrip", () => {
 	it("appears when action-required licenses exist", () => {
-		const licenses = [
-			createLicense({ $id: "1", status: "action-required" }),
-		];
+		const licenses = [createLicense({ $id: "1", status: "action-required" })];
 		render(
 			<LicensesViewProvider>
 				<LicensesAttentionStrip licenses={licenses} />

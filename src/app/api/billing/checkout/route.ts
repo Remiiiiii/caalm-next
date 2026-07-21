@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	let json: unknown;
@@ -49,11 +52,13 @@ export async function POST(request: NextRequest) {
 	const { orgId, tier, interval } = parsed.data;
 	const org = await getOrganization(orgId);
 	if (!org) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
-	const appUrl =
-		process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+	const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
 
 	try {
 		const url = await createCheckoutSession({

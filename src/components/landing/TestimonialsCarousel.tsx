@@ -60,7 +60,7 @@ export default function TestimonialsCarousel() {
 							{looped.map((t, i) => (
 								<article
 									key={`${t.name}-${i}`}
-									className="w-[280px] sm:w-[300px] shrink-0 landing-frosted-card landing-frosted-card-marquee"
+									className="w-[min(280px,85vw)] sm:w-[300px] shrink-0 landing-frosted-card landing-frosted-card-marquee"
 								>
 									<div className="glass-card-cap" />
 									<div className="relative z-[1] h-full p-5 flex flex-col justify-between min-h-[200px]">

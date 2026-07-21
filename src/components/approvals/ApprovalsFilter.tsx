@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 import { Filter } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,7 +28,6 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
-import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import {
 	type ApprovalFilters,
 	countActiveApprovalFilters,
@@ -175,7 +175,7 @@ export default function ApprovalsFilter({
 
 					<div className="space-y-2">
 						<Label className="text-slate-700 font-medium">Submitted</Label>
-						<div className="grid grid-cols-2 gap-2">
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							<Popover>
 								<PopoverTrigger asChild>
 									<Button

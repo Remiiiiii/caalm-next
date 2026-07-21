@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import TextMarquee from "@/components/TextMarquee";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import AboutMission from "../components/landing/AboutMission";
@@ -13,7 +14,6 @@ import TestimonialsCarousel from "../components/landing/TestimonialsCarousel";
 import WaveLoopBackground from "../components/landing/WaveLoopBackground";
 import Pricing from "../components/Pricing";
 import QA from "../components/QA";
-import TextMarquee from "@/components/TextMarquee";
 import { loadPricingFromMarkdown } from "../lib/pricing";
 
 const FeaturesDynamic = dynamic(() => import("../components/Features"));

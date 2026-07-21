@@ -49,10 +49,7 @@ export function parseExpiryDate(raw?: string | null): Date | null {
 	return d;
 }
 
-export function isExpiringWithinDays(
-	file: UIFileDoc,
-	days: number,
-): boolean {
+export function isExpiringWithinDays(file: UIFileDoc, days: number): boolean {
 	const expiry = parseExpiryDate(file.contractExpiryDate);
 	if (!expiry) return false;
 	const now = new Date();
@@ -76,7 +73,8 @@ export function isContractExpired(file: UIFileDoc): boolean {
 
 export function matchesStatusTab(file: UIFileDoc, tab: StatusTab): boolean {
 	if (tab === "all") return true;
-	if (tab === "active") return file.status === "active" && !isContractExpired(file);
+	if (tab === "active")
+		return file.status === "active" && !isContractExpired(file);
 	if (tab === "pending") {
 		return (
 			file.status === "pending-review" || file.status === "action-required"
@@ -120,9 +118,7 @@ export function deserializeFilters(
 			? new Date(raw.uploadedOnFrom)
 			: undefined,
 		uploadedOnTo: raw.uploadedOnTo ? new Date(raw.uploadedOnTo) : undefined,
-		expiresOnFrom: raw.expiresOnFrom
-			? new Date(raw.expiresOnFrom)
-			: undefined,
+		expiresOnFrom: raw.expiresOnFrom ? new Date(raw.expiresOnFrom) : undefined,
 		expiresOnTo: raw.expiresOnTo ? new Date(raw.expiresOnTo) : undefined,
 		department: raw.department,
 		assignedTo: raw.assignedTo,

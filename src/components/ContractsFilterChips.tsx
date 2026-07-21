@@ -2,9 +2,9 @@
 
 import { format } from "date-fns";
 import { X } from "lucide-react";
+import { useContractsView } from "@/components/ContractsViewContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useContractsView } from "@/components/ContractsViewContext";
 import { countActiveAdvancedFilters } from "@/lib/contracts/contractsListUtils";
 
 const STATUS_TAB_LABELS: Record<string, string> = {
@@ -88,9 +88,7 @@ export default function ContractsFilterChips() {
 		const from = filters.expiresOnFrom
 			? format(filters.expiresOnFrom, "MMM d")
 			: "…";
-		const to = filters.expiresOnTo
-			? format(filters.expiresOnTo, "MMM d")
-			: "…";
+		const to = filters.expiresOnTo ? format(filters.expiresOnTo, "MMM d") : "…";
 		chips.push({
 			key: "expires",
 			label: `Expires: ${from} – ${to}`,

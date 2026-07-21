@@ -88,7 +88,7 @@ export const useDashboardData = (orgId: string) => {
 				role: invitationData.role as string,
 				token: `temp_token_${Date.now()}`, // Temporary token
 				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-				status: "pending",
+				status: "pending-review",
 				revoked: false,
 				$createdAt: new Date().toISOString(),
 			};

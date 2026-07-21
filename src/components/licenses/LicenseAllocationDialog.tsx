@@ -105,7 +105,7 @@ export default function LicenseAllocationDialog({
 					</Button>
 				</DialogTrigger>
 			)}
-			<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
+			<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
 				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 				<div className="glass-dialog-wizard-header mt-4">
 					<div className="flex items-center gap-3 px-6">

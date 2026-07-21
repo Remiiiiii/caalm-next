@@ -134,6 +134,13 @@ export async function POST(request: NextRequest) {
 	try {
 		body = await request.json();
 
+		if (!body) {
+			return NextResponse.json(
+				{ error: "Invalid request body" },
+				{ status: 400 },
+			);
+		}
+
 		// Validate required fields
 		if (!body.userId || !body.title || !body.message || !body.type) {
 			return NextResponse.json(

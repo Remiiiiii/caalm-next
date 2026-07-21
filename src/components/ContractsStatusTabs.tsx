@@ -1,21 +1,23 @@
 "use client";
 
 import { useMemo } from "react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useContractsView } from "@/components/ContractsViewContext";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-	type StatusTab,
 	isContractExpired,
 	isExpiringWithinDays,
+	type StatusTab,
 } from "@/lib/contracts/contractsListUtils";
-import type { UIFileDoc } from "@/types/files";
 import { cn } from "@/lib/utils";
+import type { UIFileDoc } from "@/types/files";
 
 interface ContractsStatusTabsProps {
 	files: UIFileDoc[];
 }
 
-export default function ContractsStatusTabs({ files }: ContractsStatusTabsProps) {
+export default function ContractsStatusTabs({
+	files,
+}: ContractsStatusTabsProps) {
 	const { statusTab, setStatusTab, scrollToList } = useContractsView();
 
 	const counts = useMemo(() => {

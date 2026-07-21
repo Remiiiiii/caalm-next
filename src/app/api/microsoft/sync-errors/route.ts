@@ -2,7 +2,19 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCalendarEvents } from "@/lib/actions/calendar.actions";
 import { getValidIntegration } from "@/lib/actions/calendar-integration.actions";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
-import { createGraphClient } from "@/lib/microsoft/graph-client";
+import {
+	createGraphClient,
+	type GraphCalendar,
+	type GraphEvent,
+} from "@/lib/microsoft/graph-client";
+
+interface PotentialSyncIssue {
+	type: string;
+	severity: string;
+	message: string;
+	error?: string;
+	solution: string;
+}
 
 export async function GET(_request: NextRequest) {
 	try {
@@ -47,7 +59,7 @@ export async function GET(_request: NextRequest) {
 		}
 
 		// Try to get calendars
-		let calendars = [];
+		let calendars: GraphCalendar[] = [];
 		let calendarError = null;
 		if (graphClient && !graphConnectionError) {
 			try {
@@ -61,7 +73,7 @@ export async function GET(_request: NextRequest) {
 		}
 
 		// Try to get events
-		let outlookEvents = [];
+		let outlookEvents: GraphEvent[] = [];
 		let eventsError = null;
 		if (graphClient && !graphConnectionError && calendars.length > 0) {
 			try {
@@ -106,7 +118,7 @@ export async function GET(_request: NextRequest) {
 				events: caalmEvents.map((event) => ({
 					id: event.$id,
 					title: event.title,
-					date: event.date,
+					date: event.startDate,
 					type: event.type,
 					outlook_id: event.outlook_id,
 					createdBy: event.createdBy,
@@ -135,7 +147,7 @@ export async function GET(_request: NextRequest) {
 					end: event.end?.dateTime,
 				})),
 			},
-			potentialIssues: [],
+			potentialIssues: [] as PotentialSyncIssue[],
 		};
 
 		// Identify potential issues

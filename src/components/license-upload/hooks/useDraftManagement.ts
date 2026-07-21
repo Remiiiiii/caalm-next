@@ -179,7 +179,7 @@ export function useDraftManagement({
 				isResumingDraftRef.current = true;
 
 				// Parse form data if it's a string (should already be parsed from API, but safe check)
-				let parsedFormData = draft.formData;
+				let parsedFormData: string | Record<string, unknown> = draft.formData;
 				if (typeof draft.formData === "string") {
 					try {
 						parsedFormData = JSON.parse(draft.formData);

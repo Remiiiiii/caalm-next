@@ -190,8 +190,7 @@ async function fetchLicenseCompliance(
 					license.status,
 				),
 				dueDate:
-					license.licenseExpiryDate ||
-					new Date().toISOString().split("T")[0],
+					license.licenseExpiryDate || new Date().toISOString().split("T")[0],
 				category: license.licenseType,
 				moduleLink: "/licenses",
 				moduleLabel: "Licenses",
@@ -200,7 +199,9 @@ async function fetchLicenseCompliance(
 	}
 
 	for (const license of expiring) {
-		if (evidence.some((row) => row.id === license.$id.slice(0, 8).toUpperCase())) {
+		if (
+			evidence.some((row) => row.id === license.$id.slice(0, 8).toUpperCase())
+		) {
 			continue;
 		}
 		evidence.push({

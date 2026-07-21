@@ -32,7 +32,7 @@ export const useSharedCalendars = () => {
 	// Get cached data as fallback for stale-while-revalidate
 	const fallbackData = useMemo(() => {
 		if (!url || typeof window === "undefined") return undefined;
-		return getCachedData<SharedCalendarsResponse>(url);
+		return getCachedData<SharedCalendarsResponse>(url) ?? undefined;
 	}, [url]);
 
 	const { data, error, isLoading, mutate } = useSWR(url, fetcher, {

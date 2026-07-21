@@ -28,10 +28,10 @@ export async function PUT(request: NextRequest) {
 
 		// Mark all as read
 		const updatePromises = notifications.rows.map((notification) =>
-			databases.updateDocument({
+			tablesDB.updateRow({
 				databaseId: appwriteConfig.databaseId,
-				collectionId: "notifications",
-				documentId: notification.$id,
+				tableId: "notifications",
+				rowId: notification.$id,
 				data: { read: true, readAt: new Date().toISOString() },
 			}),
 		);

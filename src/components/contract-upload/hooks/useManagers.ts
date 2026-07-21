@@ -16,13 +16,6 @@ export function useManagers(isDialogOpen: boolean) {
 	const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
 	const [selectedApprovers, setSelectedApprovers] = useState<string[]>([]);
 
-	// Fetch all managers when dialog opens (deferred loading)
-	useEffect(() => {
-		if (isDialogOpen && availableManagers.length === 0) {
-			fetchManagers();
-		}
-	}, [isDialogOpen, availableManagers.length, fetchManagers]);
-
 	const fetchManagers = async () => {
 		try {
 			const managers = await getAllManagers();
@@ -47,6 +40,13 @@ export function useManagers(isDialogOpen: boolean) {
 			console.error("Failed to fetch managers:", error);
 		}
 	};
+
+	// Fetch all managers when dialog opens (deferred loading)
+	useEffect(() => {
+		if (isDialogOpen && availableManagers.length === 0) {
+			fetchManagers();
+		}
+	}, [isDialogOpen, availableManagers.length, fetchManagers]);
 
 	const fetchDepartmentManagers = async (department: string) => {
 		try {

@@ -1,8 +1,15 @@
-// Test/CI fallback values when secrets are not configured
-const getTestFallback = (
+// Test/CI fallback values when secrets are not configured.
+// When a defaultValue is supplied the result is always a string, so callers
+// that pass a fallback get a `string` (not `string | undefined`).
+function getTestFallback(key: string, defaultValue: string): string;
+function getTestFallback(
 	key: string,
 	defaultValue?: string,
-): string | undefined => {
+): string | undefined;
+function getTestFallback(
+	key: string,
+	defaultValue?: string,
+): string | undefined {
 	if (process.env.CI || process.env.NODE_ENV === "test") {
 		// In CI/test, use test values if env var is not set
 		return (
@@ -15,7 +22,7 @@ const getTestFallback = (
 		);
 	}
 	return process.env[key] || defaultValue;
-};
+}
 
 export const appwriteConfig = {
 	endpointUrl:

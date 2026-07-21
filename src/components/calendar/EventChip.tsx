@@ -5,8 +5,8 @@ import type React from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-	type CalendarSource,
 	CALENDAR_SOURCE_STYLES,
+	type CalendarSource,
 	resolveCalendarSource,
 } from "./eventChipStyles";
 

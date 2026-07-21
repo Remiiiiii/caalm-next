@@ -18,20 +18,27 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { performAdvancedSearch } from "@/lib/actions/search.actions";
 
-interface SearchModalProps {
-	isOpen: boolean;
-	onClose: () => void;
-}
-
 interface SearchResult {
 	id: string;
 	name: string;
 	type: string;
+	department?: string;
+	contractType?: string;
 	searchScore?: number;
 	$createdAt: string;
 }
 
-const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
+interface SearchModalProps {
+	isOpen: boolean;
+	onClose: () => void;
+	onResultClick?: (result: SearchResult) => void;
+}
+
+const SearchModal: React.FC<SearchModalProps> = ({
+	isOpen,
+	onClose,
+	onResultClick,
+}) => {
 	const [query, setQuery] = useState("");
 	const [recentSearches, setRecentSearches] = useState<string[]>([]);
 	const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -104,8 +111,12 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
 
 		try {
 			// Get user info for role-based filtering
-			const userRole = user?.role || "user";
-			const userDepartment = user?.department;
+			const extendedUser = user as {
+				role?: string;
+				department?: string;
+			} | null;
+			const userRole = extendedUser?.role || "user";
+			const userDepartment = extendedUser?.department;
 
 			const response = await fetch(
 				`/api/search/quick?type=${action}&userId=${
@@ -298,6 +309,11 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
 													key={result.id}
 													className="hover:bg-slate-50 cursor-pointer"
 													onClick={() => {
+														if (onResultClick) {
+															onResultClick(result);
+															handleClose();
+															return;
+														}
 														if (
 															result.type === "contract" ||
 															result.type === "file"

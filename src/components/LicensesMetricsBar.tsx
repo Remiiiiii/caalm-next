@@ -17,8 +17,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
 	computeLicenseMetrics,
 	getLicenseExpiryRaw,
-	parseLicenseExpiryDate,
 	type LicenseStatusTab,
+	parseLicenseExpiryDate,
 } from "@/lib/licenses/licensesListUtils";
 import { cn } from "@/lib/utils";
 import type { License } from "@/types/licenses";
@@ -40,7 +40,9 @@ export default function LicensesMetricsBar({
 
 	const hasExpiryDates = useMemo(
 		() =>
-			licenses.some((l) => Boolean(parseLicenseExpiryDate(getLicenseExpiryRaw(l)))),
+			licenses.some((l) =>
+				Boolean(parseLicenseExpiryDate(getLicenseExpiryRaw(l))),
+			),
 		[licenses],
 	);
 
@@ -69,7 +71,11 @@ export default function LicensesMetricsBar({
 							<div className="flex items-center gap-2 pt-2">
 								<span className="text-2xl sm:text-3xl font-bold text-slate-700 tabular-nums">
 									$
-									<CountUp end={metrics.totalCost} duration={1.2} separator="," />
+									<CountUp
+										end={metrics.totalCost}
+										duration={1.2}
+										separator=","
+									/>
 								</span>
 								<DollarSign className="h-8 w-8 text-[#0f5384] shrink-0" />
 							</div>
@@ -107,11 +113,17 @@ export default function LicensesMetricsBar({
 					</Card>
 				</button>
 
-				<button type="button" className="text-left" onClick={() => goTab("active")}>
+				<button
+					type="button"
+					className="text-left"
+					onClick={() => goTab("active")}
+				>
 					<Card className={cn(interactiveCard)}>
 						<div className="glass-card-cap" />
 						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">Active</p>
+							<p className="text-sm font-medium sidebar-gradient-text">
+								Active
+							</p>
 							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 								<span className="tabular-nums">
 									<CountUp end={metrics.activeCount} duration={1.2} />
@@ -208,7 +220,10 @@ export default function LicensesMetricsBar({
 								</p>
 								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 gap-2">
 									<span className="tabular-nums">
-										<CountUp end={metrics.complianceAtRiskCount} duration={1.2} />
+										<CountUp
+											end={metrics.complianceAtRiskCount}
+											duration={1.2}
+										/>
 									</span>
 									<ShieldAlert className="h-8 w-8 text-red" />
 								</div>
@@ -238,7 +253,9 @@ export default function LicensesMetricsBar({
 									</span>
 									<ClipboardList className="h-8 w-8 text-orange" />
 								</div>
-								<p className="text-xs text-slate-600 mt-1">Needs owner follow-up</p>
+								<p className="text-xs text-slate-600 mt-1">
+									Needs owner follow-up
+								</p>
 							</CardContent>
 						</Card>
 					</button>
@@ -314,7 +331,10 @@ export default function LicensesMetricsBar({
 								</p>
 								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 gap-2">
 									<span className="tabular-nums">
-										<CountUp end={metrics.renewalPipelineCount} duration={1.2} />
+										<CountUp
+											end={metrics.renewalPipelineCount}
+											duration={1.2}
+										/>
 									</span>
 									<RefreshCw className="h-8 w-8 text-slate-600" />
 								</div>

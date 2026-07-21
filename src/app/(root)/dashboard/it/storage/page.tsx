@@ -63,10 +63,6 @@ export default function StorageMetricsPage() {
 	const [metrics, setMetrics] = useState<StorageMetrics | null>(null);
 	const [loading, setLoading] = useState(true);
 
-	useEffect(() => {
-		fetchStorageMetrics();
-	}, [fetchStorageMetrics]);
-
 	const fetchStorageMetrics = async () => {
 		try {
 			const response = await fetch("/api/it/storage-metrics");
@@ -84,6 +80,10 @@ export default function StorageMetricsPage() {
 			setLoading(false);
 		}
 	};
+
+	useEffect(() => {
+		fetchStorageMetrics();
+	}, [fetchStorageMetrics]);
 
 	const getMockMetrics = (): StorageMetrics => {
 		return {
@@ -162,7 +162,7 @@ export default function StorageMetricsPage() {
 				</div>
 				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
 					{/* Overview Cards */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						<Card>
 							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 								<CardTitle className="text-sm font-medium">
@@ -288,7 +288,7 @@ export default function StorageMetricsPage() {
 					</Card>
 
 					{/* Detailed Information */}
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<Card>
 							<CardHeader>
 								<CardTitle>Storage Components</CardTitle>

@@ -2,7 +2,10 @@
 
 import { format, isSameDay, isToday, startOfDay } from "date-fns";
 import { CalendarDays } from "lucide-react";
-import { EventChip, type EventChipEvent } from "@/components/calendar/EventChip";
+import {
+	EventChip,
+	type EventChipEvent,
+} from "@/components/calendar/EventChip";
 import { cn } from "@/lib/utils";
 
 export interface AgendaEvent extends EventChipEvent {

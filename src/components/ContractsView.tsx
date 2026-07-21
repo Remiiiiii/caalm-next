@@ -3,23 +3,23 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import Card from "@/components/Card";
-import EqualHeightGrid from "@/components/EqualHeightGrid";
 import ContractPreviewSheet from "@/components/ContractPreviewSheet";
 import { useContractsView } from "@/components/ContractsViewContext";
+import EqualHeightGrid from "@/components/EqualHeightGrid";
 import type { UIFileDoc } from "@/types/files";
 import ContractsPagination from "./ContractsPagination";
 import ContractsTableView from "./ContractsTableView";
 
-export {
-	ContractsViewProvider,
-	useContractsView,
-	useContractsFilter,
-} from "@/components/ContractsViewContext";
 export type {
 	ContractFilters,
-	StatusTab,
 	DensityMode,
+	StatusTab,
 	ViewType,
+} from "@/components/ContractsViewContext";
+export {
+	ContractsViewProvider,
+	useContractsFilter,
+	useContractsView,
 } from "@/components/ContractsViewContext";
 
 interface ContractsViewProps {

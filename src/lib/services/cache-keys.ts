@@ -23,6 +23,8 @@ export const CACHE_KEYS = {
 	// Analytics
 	analytics: {
 		unified: (userId: string) => `analytics:unified:${userId}`,
+		auditReadiness: (userId: string, period: string) =>
+			`analytics:audit-readiness:${userId}:${period}`,
 		admin: () => `analytics:admin`,
 		department: (deptId: string) => `analytics:dept:${deptId}`,
 		contracts: (department: string) => `analytics:contracts:${department}`,

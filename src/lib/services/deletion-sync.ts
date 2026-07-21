@@ -1,4 +1,4 @@
-import { Query } from "node-appwrite";
+import { type Models, Query } from "node-appwrite";
 import { getValidIntegration } from "@/lib/actions/calendar-integration.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
@@ -21,12 +21,13 @@ export async function syncDeletionToOutlook(
 ): Promise<DeletionSyncResult> {
 	let retryCount = 0;
 	let lastError: string | undefined;
+	let event: Models.DefaultRow | undefined;
 
 	while (retryCount < maxRetries) {
 		try {
 			// Get the event details
 			const adminClient = await createAdminClient();
-			const event = await adminClient.tablesDB.getRow({
+			event = await adminClient.tablesDB.getRow<Models.DefaultRow>({
 				databaseId: appwriteConfig.databaseId!,
 				tableId: appwriteConfig.calendarEventsCollectionId!,
 				rowId: eventId,
@@ -128,7 +129,7 @@ export async function syncDeletionToOutlook(
 			// Get orgId for audit logging
 			let orgId: string | undefined;
 			try {
-				if (event.deleted_by) {
+				if (event?.deleted_by) {
 					const { getUserByAccountId } = await import(
 						"@/lib/actions/user.actions"
 					);
@@ -145,10 +146,10 @@ export async function syncDeletionToOutlook(
 			// Log the error
 			await logAuditEvent({
 				event_id: eventId,
-				event_title: event.title || "Unknown",
+				event_title: event?.title || "Unknown",
 				action: "sync_delete",
 				source: "caalm",
-				user_id: event.deleted_by || "system",
+				user_id: event?.deleted_by || "system",
 				user_name: "System",
 				user_email: "system@caalm.com",
 				orgId: orgId || "default_organization",

@@ -8,7 +8,7 @@ import {
 	TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,10 +33,24 @@ export default function ContractOpportunitiesWidget({
 	const [currentKeywordIndex, setCurrentKeywordIndex] = useState(0);
 	const currentKeyword = searchKeywords[currentKeywordIndex];
 
+	// SAM.gov requires a posted date range (MM/dd/yyyy). Default to the last 30 days.
+	const { postedFrom, postedTo } = useMemo(() => {
+		const format = (date: Date) =>
+			`${String(date.getMonth() + 1).padStart(2, "0")}/${String(
+				date.getDate(),
+			).padStart(2, "0")}/${date.getFullYear()}`;
+		const to = new Date();
+		const from = new Date();
+		from.setDate(from.getDate() - 30);
+		return { postedFrom: format(from), postedTo: format(to) };
+	}, []);
+
 	const { contracts, totalRecords, loading, error, mutate } = useContracts({
 		keyword: currentKeyword,
 		limit: maxItems,
 		noticeType: "o", // Solicitations only
+		postedFrom,
+		postedTo,
 	});
 
 	// Auto-refresh every 5 minutes

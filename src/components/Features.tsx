@@ -5,11 +5,7 @@ import { CloudCog } from "lucide-react";
 import { features } from "../../constants";
 import LandingFrostedCard from "./landing/LandingFrostedCard";
 import LandingSection from "./landing/LandingSection";
-import {
-	fadeUp,
-	staggerContainer,
-	viewportOnce,
-} from "./landing/motion";
+import { fadeUp, staggerContainer, viewportOnce } from "./landing/motion";
 import SectionDivider2 from "./SectionDivider2";
 
 const Features = () => {

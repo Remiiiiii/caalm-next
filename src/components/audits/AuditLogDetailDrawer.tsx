@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { AlertTriangle, CheckCircle, Clock, XCircle } from "lucide-react";
+import type { AuditLog } from "@/components/audits/AuditLogTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import type { AuditLog } from "@/components/audits/AuditLogTable";
 
 interface AuditLogDetailDrawerProps {
 	log: AuditLog | null;
@@ -69,7 +69,7 @@ export function AuditLogDetailDrawer({
 
 				{log ? (
 					<div className="space-y-6 py-6">
-						<div className="grid grid-cols-2 gap-4 text-sm">
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
 							<div>
 								<p className="text-xs text-slate-500 mb-1">Timestamp</p>
 								<p className="text-slate-900">
@@ -88,9 +88,7 @@ export function AuditLogDetailDrawer({
 							</div>
 							<div>
 								<p className="text-xs text-slate-500 mb-1">Module</p>
-								<p className="text-slate-900 capitalize">
-									{log.module || "—"}
-								</p>
+								<p className="text-slate-900 capitalize">{log.module || "—"}</p>
 							</div>
 							<div className="col-span-2">
 								<p className="text-xs text-slate-500 mb-1">Actor</p>
@@ -116,7 +114,9 @@ export function AuditLogDetailDrawer({
 							</div>
 							<div>
 								<p className="text-xs text-slate-500 mb-1">Event ID</p>
-								<p className="text-slate-900 break-all text-xs">{log.event_id}</p>
+								<p className="text-slate-900 break-all text-xs">
+									{log.event_id}
+								</p>
 							</div>
 						</div>
 
@@ -163,9 +163,7 @@ export function AuditLogDetailDrawer({
 															: String(change.before)}
 													</td>
 													<td className="px-3 py-2 text-slate-900">
-														{change.after == null
-															? "—"
-															: String(change.after)}
+														{change.after == null ? "—" : String(change.after)}
 													</td>
 												</tr>
 											))}

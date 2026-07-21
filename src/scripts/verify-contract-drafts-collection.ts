@@ -22,20 +22,20 @@ async function verifyCollection() {
 
 		// Try to get the collection
 		try {
-			const collection = await tablesDB.getCollection({
+			const collection = await tablesDB.getTable({
 				databaseId: appwriteConfig.databaseId,
-				collectionId: collectionId,
+				tableId: collectionId,
 			});
 			console.log("Collection exists:", collection.name);
 
-			// List attributes
-			const attributes = await tablesDB.listAttributes({
+			// List attributes (columns)
+			const attributes = await tablesDB.listColumns({
 				databaseId: appwriteConfig.databaseId,
-				collectionId: collectionId,
+				tableId: collectionId,
 			});
 			console.log(
 				"Collection attributes:",
-				attributes.attributes.map((a: any) => a.key),
+				attributes.columns.map((a: any) => a.key),
 			);
 		} catch (error: any) {
 			if (error.code === 404) {

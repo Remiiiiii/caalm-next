@@ -86,7 +86,7 @@ export const useTwoFactor = (userId?: string) => {
 			// Clear setup data
 			mutate(`/api/2fa/setup`, null, false);
 
-			return response.data;
+			return await response.json();
 		} catch (error) {
 			console.error("Failed to setup 2FA:", error);
 			throw error;
@@ -109,7 +109,7 @@ export const useTwoFactor = (userId?: string) => {
 
 			if (!response.ok) throw new Error("Invalid verification code");
 
-			return response.data;
+			return await response.json();
 		} catch (error) {
 			console.error("Failed to verify 2FA:", error);
 			throw error;
@@ -146,7 +146,7 @@ export const useTwoFactor = (userId?: string) => {
 				false,
 			);
 
-			return response.data;
+			return await response.json();
 		} catch (error) {
 			console.error("Failed to disable 2FA:", error);
 			throw error;
@@ -171,7 +171,7 @@ export const useTwoFactor = (userId?: string) => {
 			// Refresh setup data
 			mutate(`/api/2fa/setup`);
 
-			return response.data;
+			return await response.json();
 		} catch (error) {
 			console.error("Failed to regenerate 2FA secret:", error);
 			throw error;

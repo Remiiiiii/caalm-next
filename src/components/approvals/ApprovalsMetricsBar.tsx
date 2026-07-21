@@ -1,11 +1,6 @@
 "use client";
 
-import {
-	AlertTriangle,
-	CheckCircle,
-	ClipboardList,
-	Clock,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle, ClipboardList, Clock } from "lucide-react";
 import { useMemo } from "react";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,7 +46,11 @@ export default function ApprovalsMetricsBar({
 	return (
 		<section className="mb-6 w-full">
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-				<button type="button" className="text-left" onClick={() => go("needs-me")}>
+				<button
+					type="button"
+					className="text-left"
+					onClick={() => go("needs-me")}
+				>
 					<Card className={cn(interactiveCard)}>
 						<div className="glass-card-cap" />
 						<CardContent className="p-4 sm:p-6">

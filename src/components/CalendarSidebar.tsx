@@ -4,11 +4,11 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import type { DayButtonProps } from "react-day-picker";
+import { CALENDAR_SOURCE_STYLES } from "@/components/calendar/eventChipStyles";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { CALENDAR_SOURCE_STYLES } from "@/components/calendar/eventChipStyles";
 
 const MINI_CAL_TODAY_GRADIENT =
 	"linear-gradient(135deg, #12477d 0%, #03afbf 100%)";
@@ -185,9 +185,7 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
 							<div className="flex items-center space-x-2">
 								<Checkbox
 									className={`h-4 w-4 rounded-full cursor-pointer ${
-										selectedMyCalendars.resources
-											? "!bg-[#00c1cb]"
-											: "bg-white"
+										selectedMyCalendars.resources ? "!bg-[#00c1cb]" : "bg-white"
 									}`}
 									id="calendar-resources"
 									checked={selectedMyCalendars.resources}

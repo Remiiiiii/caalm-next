@@ -399,6 +399,9 @@ function DepartmentOwnershipTemplates({
 	);
 }
 
+const REPORT_CYCLE_MS = 3200;
+const ALERT_PHASE_OFFSET_MS = 1600;
+
 function CustomReportsFolder({
 	reduceMotion,
 }: {
@@ -411,20 +414,22 @@ function CustomReportsFolder({
 		if (reduceMotion) return;
 		const id = window.setInterval(() => {
 			setReportIndex((i) => (i + 1) % REPORT_CARDS.length);
-		}, 3200);
+		}, REPORT_CYCLE_MS);
 		return () => window.clearInterval(id);
 	}, [reduceMotion]);
 
-	const sheetOffsets = [
-		{ y: -58, rotate: -5, x: -10, z: 1 },
-		{ y: -72, rotate: 2, x: 2, z: 2 },
-		{ y: -86, rotate: 5, x: 12, z: 3 },
+	/** Fan out of the Files pocket: rise + horizontal spread */
+	const sheets = [
+		{ peekY: -42, peekX: -18, rotate: -8, delay: 0 },
+		{ peekY: -54, peekX: 0, rotate: 2, delay: 0.12 },
+		{ peekY: -66, peekX: 18, rotate: 8, delay: 0.24 },
 	] as const;
+	const tuckedY = 22;
+	const cycleS = REPORT_CYCLE_MS / 1000;
 
 	return (
 		<div className="relative z-[1] flex flex-1 flex-col items-center justify-center py-1">
-			<div className="relative flex h-[150px] w-[180px] items-end justify-center">
-				{/* Soft glow */}
+			<div className="relative flex h-[150px] w-full max-w-[180px] items-end justify-center overflow-visible">
 				<motion.div
 					className="pointer-events-none absolute bottom-2 left-1/2 h-16 w-36 -translate-x-1/2 rounded-full blur-xl"
 					style={{
@@ -444,76 +449,84 @@ function CustomReportsFolder({
 					aria-hidden
 				/>
 
-				{/* Folder back */}
+				{/* Folder back (pocket) */}
 				<div
 					className="absolute bottom-7 left-1/2 z-0 h-[52px] w-[148px] -translate-x-1/2 rounded-t-lg bg-[#7ed8e8]"
 					aria-hidden
 				/>
 
-				{/* Sliding report sheets */}
-				{sheetOffsets.map((sheet, i) => {
-					const isFront = i === sheetOffsets.length - 1;
+				{/* Sheets: centered wrapper + numeric spread (avoids % x keyframe bugs) */}
+				{sheets.map((sheet, i) => {
+					const isFront = i === sheets.length - 1;
 					return (
-						<motion.div
-							key={`sheet-${i}`}
-							className="absolute bottom-10 left-1/2 w-[118px] origin-bottom rounded-md border border-slate-100 bg-white p-2.5 shadow-[0_8px_20px_-6px_rgba(15,83,132,0.28)]"
-							style={{ zIndex: sheet.z, marginLeft: sheet.x }}
-							initial={false}
-							animate={
-								reduceMotion
-									? {
-											x: "-50%",
-											y: sheet.y + 40,
-											rotate: sheet.rotate,
-											opacity: 1,
-										}
-									: {
-											x: "-50%",
-											y: [12, sheet.y + 40, sheet.y + 40, 12],
-											rotate: [0, sheet.rotate, sheet.rotate, 0],
-											opacity: [0.4, 1, 1, 0.4],
-										}
-							}
-							transition={
-								reduceMotion
-									? { duration: 0 }
-									: {
-											duration: 3.2,
-											times: [0, 0.28, 0.72, 1],
-											repeat: Infinity,
-											ease: "easeInOut",
-											delay: i * 0.12,
-										}
-							}
+						<div
+							key={`report-anchor-${i}`}
+							className="absolute bottom-9 left-1/2 z-[1] -translate-x-1/2"
+							style={{ zIndex: i + 1 }}
 						>
-							{isFront ? (
-								<>
-									<p className="truncate text-[10px] font-semibold text-[#0f5384]">
-										{active.title}
-									</p>
-									<div className="mt-1.5 flex items-start gap-2">
-										<div className="flex flex-1 flex-col gap-1 pt-0.5">
-											{active.bars.map((w) => (
-												<div
-													key={w}
-													className={cn("h-1.5 rounded-full bg-[#d7e8f0]", w)}
-												/>
-											))}
+							<motion.div
+								className="w-[118px] origin-bottom rounded-md border border-slate-100 bg-white p-2.5 shadow-[0_8px_20px_-6px_rgba(15,83,132,0.28)]"
+								initial={
+									reduceMotion
+										? false
+										: { x: 0, y: tuckedY, rotate: 0, opacity: 0.5 }
+								}
+								animate={
+									reduceMotion
+										? {
+												x: sheet.peekX,
+												y: sheet.peekY,
+												rotate: sheet.rotate,
+												opacity: 1,
+											}
+										: {
+												x: [0, sheet.peekX, sheet.peekX, 0],
+												y: [tuckedY, sheet.peekY, sheet.peekY, tuckedY],
+												rotate: [0, sheet.rotate, sheet.rotate, 0],
+												opacity: [0.5, 1, 1, 0.5],
+											}
+								}
+								transition={
+									reduceMotion
+										? { duration: 0 }
+										: {
+												duration: cycleS,
+												times: [0, 0.3, 0.7, 1],
+												repeat: Infinity,
+												ease: "easeInOut",
+												delay: sheet.delay,
+											}
+								}
+							>
+								{isFront ? (
+									<>
+										<p className="truncate text-[10px] font-semibold text-[#0f5384]">
+											{active.title}
+										</p>
+										<div className="mt-1.5 flex items-start gap-2">
+											<div className="flex flex-1 flex-col gap-1 pt-0.5">
+												{active.bars.map((w) => (
+													<div
+														key={w}
+														className={cn("h-1.5 rounded-full bg-[#d7e8f0]", w)}
+													/>
+												))}
+											</div>
+											<div className="h-7 w-7 shrink-0 rounded-md bg-[#e8f4f8]" />
 										</div>
-										<div className="h-7 w-7 shrink-0 rounded-md bg-[#e8f4f8]" />
+									</>
+								) : (
+									<div className="space-y-1.5 pt-1">
+										<div className="h-1.5 w-2/3 rounded-full bg-[#e8eef3]" />
+										<div className="h-1.5 w-1/2 rounded-full bg-[#e8eef3]" />
 									</div>
-								</>
-							) : (
-								<div className="space-y-1.5 pt-1">
-									<div className="h-1.5 w-2/3 rounded-full bg-[#e8eef3]" />
-									<div className="h-1.5 w-1/2 rounded-full bg-[#e8eef3]" />
-								</div>
-							)}
-						</motion.div>
+								)}
+							</motion.div>
+						</div>
 					);
 				})}
 
-				{/* Folder front */}
+				{/* Folder front — covers sheet bottoms so they emerge from Files */}
 				<div className="relative z-20 h-[58px] w-[152px] overflow-hidden rounded-lg bg-[#00C1CB] shadow-[0_10px_24px_-8px_rgba(0,193,203,0.55)]">
 					<div className="absolute inset-x-0 top-0 h-2 bg-[#0f5384]/15" />
 					<span className="absolute inset-x-0 bottom-3 text-center text-xs font-bold tracking-wide text-white">
@@ -532,24 +545,35 @@ function RenewalAlertsStack({
 }) {
 	const [alertIndex, setAlertIndex] = useState(0);
 	const active = ALERT_CARDS[alertIndex];
+	const phaseOffsetS = ALERT_PHASE_OFFSET_MS / 1000;
+	const cycleS = REPORT_CYCLE_MS / 1000;
 
 	useEffect(() => {
 		if (reduceMotion) return;
-		const id = window.setInterval(() => {
+		let intervalId: number | undefined;
+		const startId = window.setTimeout(() => {
 			setAlertIndex((i) => (i + 1) % ALERT_CARDS.length);
-		}, 3200);
-		return () => window.clearInterval(id);
+			intervalId = window.setInterval(() => {
+				setAlertIndex((i) => (i + 1) % ALERT_CARDS.length);
+			}, REPORT_CYCLE_MS);
+		}, ALERT_PHASE_OFFSET_MS);
+		return () => {
+			window.clearTimeout(startId);
+			if (intervalId) window.clearInterval(intervalId);
+		};
 	}, [reduceMotion]);
 
-	const sheetOffsets = [
-		{ y: -58, rotate: -4, x: -10, z: 1 },
-		{ y: -72, rotate: 1.5, x: 2, z: 2 },
-		{ y: -86, rotate: 4, x: 12, z: 3 },
+	/** Fan out from behind the bell: rise + horizontal spread */
+	const sheets = [
+		{ peekY: -44, peekX: -20, rotate: -7, delay: phaseOffsetS },
+		{ peekY: -56, peekX: 0, rotate: 1.5, delay: phaseOffsetS + 0.12 },
+		{ peekY: -68, peekX: 20, rotate: 7, delay: phaseOffsetS + 0.24 },
 	] as const;
+	const tuckedY = 10;
 
 	return (
 		<div className="relative z-[1] flex flex-1 flex-col items-center justify-center py-1">
-			<div className="relative flex h-[150px] w-[200px] items-end justify-center pb-1">
+			<div className="relative flex h-[150px] w-full max-w-[200px] items-end justify-center overflow-visible pb-1">
 				<motion.div
 					className="pointer-events-none absolute bottom-4 left-1/2 h-20 w-28 -translate-x-1/2 rounded-full blur-xl"
 					style={{
@@ -564,88 +588,100 @@ function RenewalAlertsStack({
 					transition={
 						reduceMotion
 							? undefined
-							: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+							: {
+									duration: 3,
+									repeat: Infinity,
+									ease: "easeInOut",
+									delay: phaseOffsetS,
+								}
 					}
 					aria-hidden
 				/>
 
-				{/* Sliding notification cards */}
-				{sheetOffsets.map((sheet, i) => {
-					const isFront = i === sheetOffsets.length - 1;
+				{sheets.map((sheet, i) => {
+					const isFront = i === sheets.length - 1;
 					return (
-						<motion.div
-							key={`alert-sheet-${i}`}
-							className="absolute bottom-14 left-1/2 w-[156px] origin-bottom rounded-lg border border-slate-200/80 bg-white p-2 shadow-[0_8px_20px_-6px_rgba(15,83,132,0.28)]"
-							style={{ zIndex: sheet.z, marginLeft: sheet.x }}
-							initial={false}
-							animate={
-								reduceMotion
-									? {
-											x: "-50%",
-											y: sheet.y + 48,
-											rotate: sheet.rotate,
-											opacity: 1,
-										}
-									: {
-											x: "-50%",
-											y: [16, sheet.y + 48, sheet.y + 48, 16],
-											rotate: [0, sheet.rotate, sheet.rotate, 0],
-											opacity: [0.35, 1, 1, 0.35],
-										}
-							}
-							transition={
-								reduceMotion
-									? { duration: 0 }
-									: {
-											duration: 3.2,
-											times: [0, 0.28, 0.72, 1],
-											repeat: Infinity,
-											ease: "easeInOut",
-											delay: i * 0.12,
-										}
-							}
+						<div
+							key={`alert-anchor-${i}`}
+							className="absolute bottom-10 left-1/2 -translate-x-1/2"
+							style={{ zIndex: i + 1 }}
 						>
-							{isFront ? (
-								<div className="flex items-start gap-1.5">
-									<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#e8f4f8]">
-										<Bell className="h-3.5 w-3.5 text-[#0f5384]" />
-									</div>
-									<div className="min-w-0 flex-1">
-										<p className="truncate text-[9px] font-semibold leading-tight text-slate-800">
-											{active.title}
-										</p>
-										<p className="mt-0.5 truncate text-[8px] leading-tight text-slate-500">
-											{active.desc}
-										</p>
-										<div className="mt-1 flex items-center gap-1">
-											<span
-												className={cn(
-													"rounded-full border px-1.5 py-px text-[7px] font-medium capitalize",
-													active.priorityClass,
-												)}
-											>
-												{active.priority}
-											</span>
-											<span className="h-1.5 w-1.5 rounded-full bg-[#00C1CB]" />
+							<motion.div
+								className="w-[156px] origin-bottom rounded-lg border border-slate-200/80 bg-white p-2 shadow-[0_8px_20px_-6px_rgba(15,83,132,0.28)]"
+								initial={
+									reduceMotion
+										? false
+										: { x: 0, y: tuckedY, rotate: 0, opacity: 0.4 }
+								}
+								animate={
+									reduceMotion
+										? {
+												x: sheet.peekX,
+												y: sheet.peekY,
+												rotate: sheet.rotate,
+												opacity: 1,
+											}
+										: {
+												x: [0, sheet.peekX, sheet.peekX, 0],
+												y: [tuckedY, sheet.peekY, sheet.peekY, tuckedY],
+												rotate: [0, sheet.rotate, sheet.rotate, 0],
+												opacity: [0.4, 1, 1, 0.4],
+											}
+								}
+								transition={
+									reduceMotion
+										? { duration: 0 }
+										: {
+												duration: cycleS,
+												times: [0, 0.3, 0.7, 1],
+												repeat: Infinity,
+												ease: "easeInOut",
+												delay: sheet.delay,
+											}
+								}
+							>
+								{isFront ? (
+									<div className="flex items-start gap-1.5">
+										<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#e8f4f8]">
+											<Bell className="h-3.5 w-3.5 text-[#0f5384]" />
+										</div>
+										<div className="min-w-0 flex-1">
+											<p className="truncate text-[9px] font-semibold leading-tight text-slate-800">
+												{active.title}
+											</p>
+											<p className="mt-0.5 truncate text-[8px] leading-tight text-slate-500">
+												{active.desc}
+											</p>
+											<div className="mt-1 flex items-center gap-1">
+												<span
+													className={cn(
+														"rounded-full border px-1.5 py-px text-[7px] font-medium capitalize",
+														active.priorityClass,
+													)}
+												>
+													{active.priority}
+												</span>
+												<span className="h-1.5 w-1.5 rounded-full bg-[#00C1CB]" />
+											</div>
 										</div>
 									</div>
-								</div>
-							) : (
-								<div className="flex items-start gap-1.5">
-									<div className="h-7 w-7 shrink-0 rounded-md bg-[#eef2f6]" />
-									<div className="flex flex-1 flex-col gap-1 pt-1">
-										<div className="h-1.5 w-4/5 rounded-full bg-[#e8eef3]" />
-										<div className="h-1.5 w-1/2 rounded-full bg-[#e8eef3]" />
+								) : (
+									<div className="flex items-start gap-1.5">
+										<div className="h-7 w-7 shrink-0 rounded-md bg-[#eef2f6]" />
+										<div className="flex flex-1 flex-col gap-1 pt-1">
+											<div className="h-1.5 w-4/5 rounded-full bg-[#e8eef3]" />
+											<div className="h-1.5 w-1/2 rounded-full bg-[#e8eef3]" />
+										</div>
 									</div>
-								</div>
-							)}
-						</motion.div>
+								)}
+							</motion.div>
+						</div>
 					);
 				})}
 
-				{/* Notification bell */}
+				{/* Bell in front — cards fan out from behind its upper half */}
 				<motion.div
-					className="relative z-20 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#00C1CB]/35 bg-[#e8f4f8] shadow-[0_10px_24px_-8px_rgba(0,193,203,0.45)]"
+					className="relative z-30 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#00C1CB]/35 bg-[#e8f4f8] shadow-[0_10px_24px_-8px_rgba(0,193,203,0.45)]"
 					animate={reduceMotion ? undefined : { rotate: [0, -8, 8, -6, 6, 0] }}
 					transition={
 						reduceMotion
@@ -655,6 +691,7 @@ function RenewalAlertsStack({
 									repeat: Infinity,
 									repeatDelay: 2.5,
 									ease: "easeInOut",
+									delay: phaseOffsetS,
 								}
 					}
 				>
@@ -819,36 +856,35 @@ function ComplianceRing({
 	color: string;
 	reduceMotion: boolean | null;
 }) {
-	const size = 64;
-	const stroke = 5;
+	const size = 68;
+	const stroke = 6;
 	const r = (size - stroke) / 2;
-	const circ = 2 * Math.PI * r;
-	const offset = circ * (1 - value / 100);
+	const target = value / 100;
 	const [countKey, setCountKey] = useState(0);
 
 	useEffect(() => {
 		if (reduceMotion) return;
-		const cycleMs = 4200;
 		const id = window.setInterval(() => {
 			setCountKey((k) => k + 1);
-		}, cycleMs);
+		}, 4200);
 		return () => window.clearInterval(id);
 	}, [reduceMotion]);
 
 	return (
 		<div className="text-center">
-			<div className="relative mx-auto mb-1.5 h-16 w-16">
+			<div className="relative mx-auto mb-1.5 h-[68px] w-[68px]">
 				<svg width={size} height={size} className="-rotate-90" aria-hidden>
 					<circle
 						cx={size / 2}
 						cy={size / 2}
 						r={r}
 						fill="none"
-						stroke="rgba(15, 83, 132, 0.12)"
+						stroke="rgba(15, 83, 132, 0.14)"
 						strokeWidth={stroke}
 						strokeLinecap="round"
 					/>
 					<motion.circle
+						key={countKey}
 						cx={size / 2}
 						cy={size / 2}
 						r={r}
@@ -856,24 +892,12 @@ function ComplianceRing({
 						stroke={color}
 						strokeWidth={stroke}
 						strokeLinecap="round"
-						strokeDasharray={circ}
-						initial={false}
-						animate={
-							reduceMotion
-								? { strokeDashoffset: offset }
-								: {
-										strokeDashoffset: [circ, offset, offset, circ],
-									}
-						}
+						initial={reduceMotion ? false : { pathLength: 0 }}
+						animate={{ pathLength: target }}
 						transition={
 							reduceMotion
 								? { duration: 0 }
-								: {
-										duration: 4.2,
-										times: [0, 0.38, 0.72, 1],
-										repeat: Infinity,
-										ease: "easeInOut",
-									}
+								: { duration: 1.4, ease: "easeOut" }
 						}
 					/>
 				</svg>
@@ -931,11 +955,11 @@ export default function FeatureSpotlightGrid() {
 		>
 			<motion.div variants={fadeUp} className="text-center mb-8">
 				<h3 className="text-xl sm:text-2xl md:text-3xl sidebar-gradient-text landing-section-title">
-					Built for the moments that matter
+					Powerful workflows that make sense
 				</h3>
 				<p className="mt-2 text-sm text-slate-600 max-w-xl mx-auto">
-					Interactive previews of the workflows teams use every day inside
-					CAALM.
+					Interactive previews of search, compliance, reports, and renewals
+					inside CAALM.
 				</p>
 			</motion.div>
 
@@ -948,8 +972,12 @@ export default function FeatureSpotlightGrid() {
 						transition={{ duration: 0.2 }}
 					>
 						<LandingFrostedCard
-							className="h-full min-h-[200px]"
-							contentClassName="relative flex h-full min-h-[200px] flex-col p-4 sm:p-5"
+							className={cn(
+								"h-full min-h-[200px]",
+								(tile.id === "reports" || tile.id === "alerts") &&
+									"!overflow-visible",
+							)}
+							contentClassName="relative flex h-full min-h-[200px] flex-col overflow-visible p-4 sm:p-5"
 						>
 							{tile.id !== "alerts" && <BentoDottedBackdrop />}
 
@@ -998,7 +1026,7 @@ export default function FeatureSpotlightGrid() {
 									<p className="relative z-[1] text-sm font-semibold sidebar-gradient-text mb-3">
 										{tile.title}
 									</p>
-									<div className="relative z-[1] mx-auto flex h-[180px] w-[180px] items-center justify-center overflow-visible">
+									<div className="relative z-[1] mx-auto flex h-[180px] w-full max-w-[180px] items-center justify-center overflow-visible">
 										{!reduceMotion && (
 											<div className="absolute inset-[10%] animate-spin-slow opacity-70 [animation-direction:reverse]">
 												<svg

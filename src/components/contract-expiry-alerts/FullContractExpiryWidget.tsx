@@ -198,7 +198,7 @@ export const FullContractExpiryWidget: React.FC<
 								<CountdownTimer
 									key={contract.$id}
 									targetDate={contract.contractExpiryDate || ""}
-									contractName={contract.contractName}
+									contractName={contract.contractName ?? contract.name ?? ""}
 									size="sm"
 									className="transition-all duration-200 hover:shadow-md"
 								/>

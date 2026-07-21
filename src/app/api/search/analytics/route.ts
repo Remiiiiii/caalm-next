@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const { databases } = await createAdminClient();
+		const { tablesDB } = await createAdminClient();
 
 		// Calculate date range
 		const endDate = new Date();

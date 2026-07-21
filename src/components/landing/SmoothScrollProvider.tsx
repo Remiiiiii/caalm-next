@@ -36,10 +36,7 @@ export default function SmoothScrollProvider({
 	// Always wrap with Lenis so children never remount (remounting left
 	// whileInView sections stuck at opacity: 0 after refresh).
 	return (
-		<ReactLenis
-			root
-			options={reducedMotion ? REDUCED_OPTIONS : SMOOTH_OPTIONS}
-		>
+		<ReactLenis root options={reducedMotion ? REDUCED_OPTIONS : SMOOTH_OPTIONS}>
 			{children}
 		</ReactLenis>
 	);

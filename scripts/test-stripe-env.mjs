@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import Stripe from "stripe";
 
 function loadEnv(file) {
@@ -9,7 +9,7 @@ function loadEnv(file) {
 		const idx = trimmed.indexOf("=");
 		if (idx === -1) continue;
 		const key = trimmed.slice(0, idx).trim();
-		let value = trimmed.slice(idx + 1).trim();
+		const value = trimmed.slice(idx + 1).trim();
 		if (!process.env[key]) process.env[key] = value;
 	}
 }
@@ -57,7 +57,7 @@ for (const [name, result] of Object.entries(checks)) {
 for (const key of priceKeys) {
 	const val = process.env[key];
 	console.log(
-		`- ${key}: ${val && val.startsWith("price_") ? "OK" : val ? "invalid" : "missing"}`,
+		`- ${key}: ${val?.startsWith("price_") ? "OK" : val ? "invalid" : "missing"}`,
 	);
 }
 

@@ -19,7 +19,9 @@ interface WaveLoopBackgroundProps {
 }
 
 /** Muted looping wave.mp4 with Chromium-friendly restart (same as hero). */
-export default function WaveLoopBackground({ className }: WaveLoopBackgroundProps) {
+export default function WaveLoopBackground({
+	className,
+}: WaveLoopBackgroundProps) {
 	const reduceMotion = useReducedMotion();
 	const videoRef = useRef<HTMLVideoElement | null>(null);
 

@@ -6,8 +6,8 @@
 
 "use server";
 
-import { cache } from "react";
 import { Query } from "node-appwrite";
+import { cache } from "react";
 import type { PermissionKey } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
@@ -15,11 +15,11 @@ import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 
 // Lazy load redis-cache to avoid bundling in client components
-const getOrSet = async (
+const getOrSet = async <T>(
 	key: string,
-	fetchFn: () => Promise<any>,
+	fetchFn: () => Promise<T>,
 	ttl: number,
-) => {
+): Promise<T> => {
 	if (typeof window === "undefined") {
 		// Server-side: use Redis cache
 		const { getOrSet: redisGetOrSet } = await import(

@@ -408,7 +408,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
 						value={activeTab}
 						onValueChange={(value) => setActiveTab(value as any)}
 					>
-						<TabsList className="grid w-full grid-cols-4 bg-white/20 backdrop-blur border border-white/40">
+						<TabsList className="responsive-tab-list bg-white/20 backdrop-blur border border-white/40">
 							<TabsTrigger
 								value="contracts"
 								className="data-[state=active]:bg-white/30"

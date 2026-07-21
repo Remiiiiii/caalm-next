@@ -14,8 +14,9 @@ import {
  */
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { ruleId: string } },
+	{ params }: { params: Promise<{ ruleId: string }> },
 ) {
+	const { ruleId } = await params;
 	try {
 		// Check permission - only admins can update escalation rules
 		const permissionCheck = await requirePermission(request, {
@@ -64,7 +65,7 @@ export async function PUT(
 			updates.isActive = body.isActive;
 		}
 
-		const rule = await updateEscalationRule(params.ruleId, updates);
+		const rule = await updateEscalationRule(ruleId, updates);
 
 		return NextResponse.json({
 			success: true,
@@ -92,8 +93,9 @@ export async function PUT(
  */
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: { ruleId: string } },
+	{ params }: { params: Promise<{ ruleId: string }> },
 ) {
+	const { ruleId } = await params;
 	try {
 		// Check permission - only admins can delete escalation rules
 		const permissionCheck = await requirePermission(request, {
@@ -112,7 +114,7 @@ export async function DELETE(
 			);
 		}
 
-		await deleteEscalationRule(params.ruleId);
+		await deleteEscalationRule(ruleId);
 
 		return NextResponse.json({
 			success: true,

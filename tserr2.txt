@@ -1,0 +1,128 @@
+﻿
+src/app/(root)/dashboard/DashboardHeader.tsx(65,24): error TS2339: Property 'division' does not exist on type 
+'Preferences'.
+src/app/(root)/dashboard/it/storage/page.tsx(68,6): error TS2448: Block-scoped variable 'fetchStorageMetrics' used 
+before its declaration.
+src/app/(root)/dashboard/it/storage/page.tsx(68,6): error TS2454: Variable 'fetchStorageMetrics' is used before being 
+assigned.
+src/app/(root)/search/page.tsx(29,20): error TS2322: Type '{ onResultClick: (result: any) => void; }' is not 
+assignable to type 'IntrinsicAttributes & AdvancedSearchProps'.
+src/app/api/admin/users/[userId]/department/route.ts(17,34): error TS2339: Property 'UPDATE' does not exist on type '{ 
+readonly VIEW: "users.view"; readonly INVITE: "users.invite"; readonly EDIT: "users.edit"; readonly ASSIGN_ROLES: 
+"users.assign_roles"; readonly DEACTIVATE: "users.deactivate"; }'.
+src/app/api/collections/add-draft-contract-relationship/route.ts(27,5): error TS2345: Argument of type '"oneToOne"' is 
+not assignable to parameter of type 'RelationshipType'.
+src/app/api/collections/check-relationship-status/route.ts(130,32): error TS2339: Property 'status' does not exist on 
+type '{}'.
+src/app/api/collections/check-relationship-status/route.ts(131,43): error TS2339: Property 'relatedCollection' does 
+not exist on type '{}'.
+src/app/api/collections/list-attributes/route.ts(30,32): error TS2339: Property 'getCollection' does not exist on type 
+'TablesDB'.
+src/app/api/contract-analysis/route.ts(64,5): error TS2345: Argument of type '{ title: string; type: string; }' is not 
+assignable to parameter of type 'SAMContract'.
+src/app/api/dashboard/unified/route.ts(48,53): error TS2339: Property 'timestamp' does not exist on type '{}'.
+src/app/api/dashboard/unified/route.ts(49,35): error TS2339: Property 'timestamp' does not exist on type '{}'.
+src/app/api/invite/resend/route.ts(13,41): error TS2345: Argument of type '{ name: any; email: any; role: any; orgId: 
+any; invitedBy: any; }' is not assignable to parameter of type 'CreateInvitationParams'.
+src/app/api/invite/route.ts(14,41): error TS2345: Argument of type '{ name: any; email: any; role: any; orgId: any; 
+invitedBy: any; }' is not assignable to parameter of type 'CreateInvitationParams'.
+src/app/api/licenses/[id]/renew/route.ts(31,57): error TS2345: Argument of type '{ renewedBy: any; renewalDate: 
+string; currencyCode: string; extendExpiration: boolean; cost?: string | number | undefined; notes?: string | 
+undefined; }' is not assignable to parameter of type '{ renewalDate: string; cost?: number | undefined; currencyCode?: 
+string | undefined; notes?: string | undefined; extendExpiration?: boolean | undefined; renewedBy?: string | 
+undefined; }'.
+src/app/api/reports/generate-pdf/route.ts(260,5): error TS2353: Object literal may only specify known properties, and 
+'collectionId' does not exist in type '{ databaseId: string; tableId: string; rowId: string; data?: (Partial<Row> & 
+Record<string, any>) | undefined; permissions?: string[] | undefined; }'.
+src/app/api/user/profile-picture/route.ts(84,50): error TS2559: Type 'DefaultDocument' has no properties in common 
+with type '{ avatar?: string | null | undefined; profileImageId?: string | null | undefined; }'.
+src/app/api/user/profile-picture/route.ts(168,49): error TS2559: Type 'DefaultDocument' has no properties in common 
+with type '{ avatar?: string | null | undefined; profileImageId?: string | null | undefined; }'.
+src/components/ContractExpiryAlertsWidget.tsx(141,9): error TS2367: This comparison appears to be unintentional 
+because the types '30' and '-1' have no overlap.
+src/components/ContractExpiryAlertsWidget.tsx(328,5): error TS2322: Type 'Dispatch<SetStateAction<30>>' is not 
+assignable to type '(value: number) => void'.
+src/components/ContractExpiryAlertsWidget.tsx(345,4): error TS2322: Type 'Dispatch<SetStateAction<30>>' is not 
+assignable to type '(value: number) => void'.
+src/components/ContractOpportunitiesWidget.tsx(36,75): error TS2345: Argument of type '{ keyword: string; limit: 
+number; noticeType: "o"; }' is not assignable to parameter of type 'Omit<SAMContractSearchParams, "api_key">'.
+src/components/license-upload/index.tsx(578,32): error TS2769: No overload matches this call.
+src/components/OutlookReplicaCalendar.tsx(249,18): error TS2339: Property 'date' does not exist on type 
+'LocalCalendarEvent'.
+src/components/OutlookReplicaCalendar.tsx(250,40): error TS2339: Property 'date' does not exist on type 
+'LocalCalendarEvent'.
+src/components/pdf/ReportDocument.tsx(345,9): error TS2769: No overload matches this call.
+src/components/ReportGenerator.tsx(94,5): error TS2353: Object literal may only specify known properties, and 
+'userRole' does not exist in type 'GenerateReportData'.
+src/components/Search.tsx(54,5): error TS2367: This comparison appears to be unintentional because the types '"file" | 
+"department" | "contract" | "vendor"' and '"video"' have no overlap.
+src/components/Search.tsx(54,30): error TS2367: This comparison appears to be unintentional because the types '"file" 
+| "department" | "contract" | "vendor"' and '"audio"' have no overlap.
+src/hooks/useDashboardData.ts(91,5): error TS2322: Type '"pending"' is not assignable to type '"active" | "inactive" | 
+"expired" | "action-required" | "pending-review"'.
+src/hooks/useNotificationsSSE.ts(47,30): error TS2554: Expected 1 arguments, but got 0.
+src/hooks/useSharedCalendars.ts(48,3): error TS2769: No overload matches this call.
+src/hooks/useUnifiedDashboardData.ts(68,3): error TS2769: No overload matches this call.
+src/lib/actions/calendar-integration.actions.ts(345,3): error TS2322: Type 'boolean | undefined' is not assignable to 
+type 'boolean'.
+src/lib/actions/notes.actions.ts(49,10): error TS2352: Conversion of type 'DefaultDocument' to type 'Note' may be a 
+mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 
+'unknown' first.
+src/lib/actions/notes.actions.ts(79,10): error TS2352: Conversion of type 'DefaultDocument[]' to type 'Note[]' may be 
+a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression 
+to 'unknown' first.
+src/lib/actions/notes.actions.ts(104,10): error TS2352: Conversion of type 'DefaultDocument' to type 'Note' may be a 
+mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 
+'unknown' first.
+src/lib/actions/report.actions.ts(195,4): error TS18004: No value exists in scope for the shorthand property 
+'userRole'. Either declare one or provide an initializer.
+src/lib/actions/shared-calendar.actions.ts(874,2): error TS2322: Type '{ userPermission: CalendarPermissionLevel | 
+undefined; $id: string; name: string; description?: string | undefined; ownerId: string; ownerAccountId: string; ... 9 
+more ...; updatedAt: string; }[]' is not assignable to type '(SharedCalendar & { userPermission: 
+CalendarPermissionLevel; })[]'.
+src/lib/actions/user.actions.ts(717,43): error TS2559: Type 'DefaultRow' has no properties in common with type '{ 
+avatar?: string | undefined; profileImageId?: string | null | undefined; }'.
+src/lib/services/deletion-sync.ts(30,4): error TS2322: Type 'Row' is not assignable to type 'DefaultRow'.
+src/lib/services/deletion-sync.ts(36,9): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(54,5): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(81,34): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(97,9): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(101,44): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(113,18): error TS18048: 'event' is possibly 'undefined'.
+src/lib/services/deletion-sync.ts(116,14): error TS18048: 'event' is possibly 'undefined'.
+src/lib/utils/batch-processor.ts(78,3): error TS2322: Type '{ item: T; error: Error; }[]' is not assignable to type '{ 
+item: R; error: Error; }[]'.
+src/lib/utils/db-optimizer.ts(11,2): error TS2322: Type 'string[]' is not assignable to type 'Query[]'.
+src/lib/utils/db-optimizer.ts(19,10): error TS2322: Type 'string' is not assignable to type 'Query'.
+src/lib/utils/db-optimizer.ts(19,30): error TS2322: Type 'string' is not assignable to type 'Query'.
+src/lib/utils/db-optimizer.ts(29,31): error TS2322: Type 'string' is not assignable to type 'Query'.
+src/lib/utils/db-optimizer.ts(29,55): error TS2322: Type 'string' is not assignable to type 'Query'.
+src/lib/utils/db-optimizer.ts(79,16): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/lib/utils/db-optimizer.ts(90,17): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/lib/utils/db-optimizer.ts(92,17): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/lib/utils/db-optimizer.ts(98,16): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/lib/utils/db-optimizer.ts(101,16): error TS2345: Argument of type 'string' is not assignable to parameter of type 
+'Query'.
+src/scripts/verify-contract-drafts-collection.ts(25,38): error TS2339: Property 'getCollection' does not exist on type 
+'TablesDB'.
+src/scripts/verify-contract-drafts-collection.ts(32,38): error TS2339: Property 'listAttributes' does not exist on 
+type 'TablesDB'.
+tailwind.config.ts(5,2): error TS2322: Type '["class"]' is not assignable to type 'DarkModeStrategy | undefined'.
+tests/components/contract-status-widget/ContractStatusPieChart.test.tsx(425,35): error TS2322: Type '({ status: 
+"active"; count: number; percentage: number; color: string; } | { status: "expiring"; count: number; percentage: 
+number; color: string; } | { status: "completed"; count: number; percentage: number; color: string; })[]' is not 
+assignable to type 'ContractData[]'.
+tests/components/contract-status-widget/ContractStatusPieChart.test.tsx(547,6): error TS2820: Type '"ACTIVE"' is not 
+assignable to type '"active" | "inactive" | "expired" | "action-required" | "pending-review" | undefined'. Did you 
+mean '"active"'?
+tests/components/contract-status-widget/ContractStatusPieChart.test.tsx(551,6): error TS2820: Type '"Active"' is not 
+assignable to type '"active" | "inactive" | "expired" | "action-required" | "pending-review" | undefined'. Did you 
+mean '"active"'?
+tests/components/rate-limiting/rate-limit-middleware.test.ts(48,15): error TS2540: Cannot assign to 'NODE_ENV' because 
+it is a read-only property.
+
+

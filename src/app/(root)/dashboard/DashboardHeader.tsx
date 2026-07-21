@@ -62,7 +62,8 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 									<p className="font-medium text-navy">{user.name}</p>
 									<p className="text-xs text-slate-dark">
 										<UserRoleDisplay userId={user.$id} /> -{" "}
-										{user.prefs?.division || "Unknown Division"}
+										{(user.prefs as { division?: string })?.division ||
+											"Unknown Division"}
 									</p>
 								</div>
 

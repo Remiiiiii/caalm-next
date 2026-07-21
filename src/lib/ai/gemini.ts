@@ -101,7 +101,11 @@ ${answersText}${note}`;
 	try {
 		const result = await contractTypeSuggestionModel.generateContent(prompt);
 		const text = result.response.text() ?? "{}";
-		return parseContractTypeSuggestionJson(text, validIds);
+		return parseContractTypeSuggestionJson(
+			text,
+			validIds,
+			CONTRACT_TYPE_CONFIGS,
+		);
 	} catch (error) {
 		console.error("suggestContractType error:", error);
 		return buildContractTypeFallbackResult(

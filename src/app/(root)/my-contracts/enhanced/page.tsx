@@ -133,7 +133,7 @@ const EnhancedMyContractsPage = () => {
 
 	if (error) {
 		return (
-			<div className="container mx-auto p-6">
+			<div className="page-container py-6">
 				<div className="text-center">
 					<h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
 					<p className="text-gray-600">{error}</p>
@@ -143,7 +143,7 @@ const EnhancedMyContractsPage = () => {
 	}
 
 	return (
-		<div className="container mx-auto p-6 space-y-6">
+		<div className="page-container py-6 space-y-6">
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-4">

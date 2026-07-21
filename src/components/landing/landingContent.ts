@@ -96,7 +96,13 @@ export const SPOTLIGHT_TABS = [
 		searchPlaceholder: "Search analytics…",
 		kpis: [
 			{ label: "Compliance rate", value: 85, suffix: "%" },
-			{ label: "Budget tracked", value: 1.9, suffix: "M", prefix: "$", decimals: 1 },
+			{
+				label: "Budget tracked",
+				value: 1.9,
+				suffix: "M",
+				prefix: "$",
+				decimals: 1,
+			},
 			{ label: "Staff covered", value: 89, suffix: "" },
 		],
 		stats: [
@@ -111,22 +117,26 @@ export const SPOTLIGHT_TABS = [
 export const INTEGRATIONS = [
 	{
 		title: "Calendar sync",
-		description: "Surface renewal and audit dates on the calendars your teams already use.",
+		description:
+			"Surface renewal and audit dates on the calendars your teams already use.",
 		icon: Calendar,
 	},
 	{
 		title: "Email notifications",
-		description: "Route deadline alerts to owners and managers with role-aware delivery.",
+		description:
+			"Route deadline alerts to owners and managers with role-aware delivery.",
 		icon: Mail,
 	},
 	{
 		title: "Document storage",
-		description: "Keep signed files, versions, and evidence linked to every agreement.",
+		description:
+			"Keep signed files, versions, and evidence linked to every agreement.",
 		icon: FolderLock,
 	},
 	{
 		title: "SSO & RBAC",
-		description: "Permission-based access so users only see what their roles allow.",
+		description:
+			"Permission-based access so users only see what their roles allow.",
 		icon: KeyRound,
 	},
 ] as const;

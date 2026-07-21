@@ -22,8 +22,8 @@ export default function AuditStatusPage() {
 				<ClipboardCheck className="h-4 w-4 text-[#0f5384] shrink-0 mt-0.5" />
 				<span className="min-w-0">
 					Contracts and licenses pull live data from your organization.
-					Regulatory, document, and governance metrics reflect standard nonprofit
-					KRIs until those workflows are fully connected in CAALM.
+					Regulatory, document, and governance metrics reflect standard
+					nonprofit KRIs until those workflows are fully connected in CAALM.
 				</span>
 			</div>
 

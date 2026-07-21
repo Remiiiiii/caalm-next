@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
 	AlertTriangle,
 	CheckCircle2,
@@ -9,6 +8,7 @@ import {
 	ScrollText,
 	Shield,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PERMISSIONS } from "@/constants/permissions";

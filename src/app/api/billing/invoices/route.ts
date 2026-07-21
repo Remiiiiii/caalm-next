@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
 
 	const org = await getOrganization(orgId);
 	if (!org) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {

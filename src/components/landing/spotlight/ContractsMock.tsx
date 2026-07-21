@@ -16,8 +16,8 @@ import {
 import Image from "next/image";
 import type { ReactNode } from "react";
 import Thumbnail from "@/components/Thumbnail";
-import { CONTRACT_MOCK_ROWS } from "../landingContent";
 import { cn } from "@/lib/utils";
+import { CONTRACT_MOCK_ROWS } from "../landingContent";
 
 const STATUS_STYLES = {
 	active: "bg-green/10 text-green border-green/20",
@@ -368,7 +368,7 @@ export default function ContractsMock() {
 
 						{/* Control bar — mirrors ContractsControlBar / TopControls / Filter / Views / Sort / ViewToggle */}
 						<div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 px-2 py-2 sm:px-3">
-							<div className="relative min-w-[140px] flex-1 sm:max-w-[11rem]">
+							<div className="relative min-w-0 flex-1 sm:min-w-[140px] sm:max-w-[11rem]">
 								<Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
 								<span className="flex h-7 w-full items-center rounded-md border border-slate-200 bg-white pl-7 pr-2 text-[10px] text-slate-400">
 									Search contracts...

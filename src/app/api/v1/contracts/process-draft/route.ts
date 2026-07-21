@@ -1,8 +1,21 @@
-import type { NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { ID } from "node-appwrite";
+import { requireAuthAndOwner } from "@/lib/api/contracts/middleware/auth.middleware";
+import { parseAndValidateBody } from "@/lib/api/contracts/middleware/validation.middleware";
+import { processDraftSchema } from "@/lib/api/contracts/schemas/draft.schema";
+import { ContractService } from "@/lib/api/contracts/services/ContractService";
+import { FileService } from "@/lib/api/contracts/services/FileService";
+import {
+	errorResponse,
+	generateRequestId,
+	notFoundResponse,
+	successResponse,
+	validationErrorResponse,
+} from "@/lib/api/contracts/utils/response.util";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { constructFileUrl, getFileType } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
 	const requestId = generateRequestId();

@@ -1,4 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api/contracts/middleware/auth.middleware";
+import {
+	errorResponse,
+	generateRequestId,
+	successResponse,
+	validationErrorResponse,
+} from "@/lib/api/contracts/utils/response.util";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 
@@ -52,7 +59,7 @@ export async function GET(request: NextRequest) {
 
 		return successResponse(
 			{
-				draftId: query.draftId,
+				draftId,
 				contractId,
 				hasRelationship: !!contractId,
 			},

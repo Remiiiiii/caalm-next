@@ -16,7 +16,11 @@ interface DepartmentMonitoringGridProps {
 function MonitoringCard({ domain }: { domain: DepartmentMonitoringDomain }) {
 	const total = Math.max(domain.total, 0);
 	const okPct =
-		total > 0 ? Math.round((domain.ok / total) * 100) : domain.needsAttention === 0 ? 100 : 0;
+		total > 0
+			? Math.round((domain.ok / total) * 100)
+			: domain.needsAttention === 0
+				? 100
+				: 0;
 
 	return (
 		<Link

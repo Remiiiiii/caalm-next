@@ -23,7 +23,7 @@ class TwilioService {
 			appwriteConfig.twilioAccountSid,
 			appwriteConfig.twilioAuthToken,
 		);
-		this.phoneNumber = appwriteConfig.twilioPhoneNumber;
+		this.phoneNumber = appwriteConfig.twilioPhoneNumber ?? null;
 		this.initialized = true;
 	}
 
@@ -133,6 +133,10 @@ class TwilioService {
 
 			if (!this.client) {
 				throw new Error("Twilio client not initialized");
+			}
+
+			if (!appwriteConfig.twilioAccountSid) {
+				throw new Error("Twilio account SID not configured");
 			}
 
 			const account = await this.client.api

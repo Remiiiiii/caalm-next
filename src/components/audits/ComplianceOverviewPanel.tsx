@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
 	AlertTriangle,
 	ArrowRight,
@@ -10,8 +9,9 @@ import {
 	ScrollText,
 	Shield,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import type { ComplianceStatusSnapshot } from "@/lib/audits/types";
 
 const RAG_STYLES = {
@@ -148,7 +148,7 @@ export function ComplianceOverviewPanel({
 						  Only Reports wraps beneath when the actions column is too narrow.
 						*/}
 						<div className="compliance-quick-actions order-5 lg:order-0 lg:col-start-3 lg:row-start-2 lg:self-center flex flex-wrap items-center gap-2 max-w-full lg:px-5 lg:pb-3">
-							<div className="flex flex-nowrap items-center gap-2">
+							<div className="flex flex-wrap items-center gap-2">
 								{PRIMARY_ACTION_LINKS.map((link) => (
 									<ActionLinkButton
 										key={link.href}

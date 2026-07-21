@@ -570,7 +570,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	useEffect(() => {
 		const q = visibleAiQuizQuestions[aiQuizStep];
 		if (q?.id === "free_text") {
-			setAiQuizFreeTextDraft(aiQuizAnswers["free_text"] ?? "");
+			setAiQuizFreeTextDraft(aiQuizAnswers.free_text ?? "");
 		}
 	}, [aiQuizStep, visibleAiQuizQuestions, aiQuizAnswers]);
 
@@ -589,7 +589,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				typeof performance !== "undefined" ? performance.now() : Date.now();
 			setAiQuizPhase("loading");
 			try {
-				const freeText = pruned["free_text"]?.trim();
+				const freeText = pruned.free_text?.trim();
 				const answersForApi = Object.entries(pruned)
 					.filter(([questionId]) => questionId !== "free_text")
 					.map(([questionId, answer]) => ({ questionId, answer }));

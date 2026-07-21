@@ -11,6 +11,7 @@ import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
 import { SPOTLIGHT_TABS } from "./landingContent";
 import { fadeUp, staggerContainer, viewportOnce } from "./motion";
+import AnalyticsMock from "./spotlight/AnalyticsMock";
 import AuditsMock from "./spotlight/AuditsMock";
 import ContractsMock from "./spotlight/ContractsMock";
 import LicensesMock from "./spotlight/LicensesMock";
@@ -42,7 +43,8 @@ export default function ProductSpotlight() {
 	const showFullMock =
 		activeId === "contracts" ||
 		activeId === "licenses" ||
-		activeId === "audits";
+		activeId === "audits" ||
+		activeId === "analytics";
 
 	return (
 		<LandingSection id="platform" fadeTop fadeBottom className="bg-white">
@@ -101,11 +103,13 @@ export default function ProductSpotlight() {
 						<LandingFrostedCard contentClassName="p-4 sm:p-6 md:p-8">
 							{showFullMock ? (
 								activeId === "contracts" ? (
-									<ContractsMock />
+									<ContractsMock key="contracts" />
 								) : activeId === "licenses" ? (
-									<LicensesMock />
+									<LicensesMock key="licenses" />
+								) : activeId === "audits" ? (
+									<AuditsMock key="audits" />
 								) : (
-									<AuditsMock />
+									<AnalyticsMock key="analytics" />
 								)
 							) : (
 								<>
@@ -138,7 +142,7 @@ export default function ProductSpotlight() {
 										))}
 									</div>
 
-									<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+									<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
 										{active.stats.map((stat) => (
 											<div
 												key={`${active.id}-${stat.label}`}

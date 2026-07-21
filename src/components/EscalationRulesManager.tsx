@@ -91,20 +91,6 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 	});
 	const { toast } = useToast();
 
-	useEffect(() => {
-		if (isOpen) {
-			fetchRules();
-		}
-	}, [isOpen, fetchRules]);
-
-	useEffect(() => {
-		if (userSearch.length >= 2) {
-			searchUsers(userSearch);
-		} else {
-			setUserSearchResults([]);
-		}
-	}, [userSearch, searchUsers]);
-
 	const fetchRules = async () => {
 		try {
 			setLoading(true);
@@ -143,6 +129,20 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 			setIsSearchingUsers(false);
 		}
 	};
+
+	useEffect(() => {
+		if (isOpen) {
+			fetchRules();
+		}
+	}, [isOpen, fetchRules]);
+
+	useEffect(() => {
+		if (userSearch.length >= 2) {
+			searchUsers(userSearch);
+		} else {
+			setUserSearchResults([]);
+		}
+	}, [userSearch, searchUsers]);
 
 	const handleCreate = () => {
 		setFormData({

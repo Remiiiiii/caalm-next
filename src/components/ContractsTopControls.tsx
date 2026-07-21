@@ -12,7 +12,9 @@ interface ContractsTopControlsProps {
 	assignedManagers?: string[];
 }
 
-export default function ContractsTopControls({}: ContractsTopControlsProps) {
+export default function ContractsTopControls(
+	_props: ContractsTopControlsProps,
+) {
 	const { filters, setFilters } = useContractsFilter();
 	const [searchQuery, setSearchQuery] = useState(filters.searchQuery || "");
 

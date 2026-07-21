@@ -60,15 +60,6 @@ const MemoizedTwoFactorModal = memo(
 	}) => {
 		const shouldShowModal = show2FASetup && !!userId;
 
-		// Only log when modal should actually show
-		if (shouldShowModal) {
-			console.log("AuthForm: TwoFactorModal should show:", {
-				show2FASetup,
-				userId,
-				shouldShowModal,
-			});
-		}
-
 		return (
 			<TwoFactorModal
 				email={email}
@@ -98,15 +89,6 @@ const MemoizedTwoFactorVerificationModal = memo(
 	}) => {
 		const shouldShowModal = show2FAVerification && !!userId;
 
-		// Only log when modal should actually show
-		if (shouldShowModal) {
-			console.log("AuthForm: TwoFactorVerificationModal should show:", {
-				show2FAVerification,
-				userId,
-				shouldShowModal,
-			});
-		}
-
 		return (
 			<TwoFactorVerificationModal
 				userId={userId || ""}
@@ -134,18 +116,6 @@ const AuthForm = ({ type }: { type: FormType }) => {
 	const [show2FAVerification, setShow2FAVerification] = useState(false);
 	const [invitationMessage, setInvitationMessage] = useState("");
 
-	// Debug logging for 2FA modal states (only when they change to true)
-	useEffect(() => {
-		if (show2FASetup || show2FAVerification) {
-			console.log("AuthForm: 2FA modal states changed:", {
-				show2FASetup,
-				show2FAVerification,
-				userId,
-				type,
-			});
-		}
-	}, [show2FASetup, show2FAVerification, userId, type]);
-
 	const formSchema = authFormSchema(type);
 	const searchParams = useSearchParams();
 	const router = useRouter();
@@ -166,7 +136,6 @@ const AuthForm = ({ type }: { type: FormType }) => {
 				"2fa_completed=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 			document.cookie =
 				"2fa_user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-			console.log("AuthForm: Cleared 2FA cookies on sign-in page");
 		}
 	}, [type]);
 
@@ -473,22 +442,29 @@ const AuthForm = ({ type }: { type: FormType }) => {
 						// Close the OTP modal first
 						setShowOTPModal(false);
 
-						// After successful OTP verification, get user info and check 2FA status
+						// Reuse the accountId resolved during sign-in to avoid a second user
+						// lookup round-trip. Only fall back to a fetch if it's missing.
 						try {
-							const user = await getUserByEmail(form.getValues("email"));
+							let resolvedAccountId = accountId;
+							if (!resolvedAccountId) {
+								const user = await getUserByEmail(form.getValues("email"));
+								resolvedAccountId = user?.accountId ?? null;
+							}
 
-							if (user?.accountId) {
-								setUserId(user.accountId);
-								await checkTwoFactorStatus(user.accountId);
+							if (resolvedAccountId) {
+								setUserId(resolvedAccountId);
+								await checkTwoFactorStatus(resolvedAccountId);
 							} else {
 								// If no user found, redirect to dashboard
 								router.push("/dashboard");
 							}
 						} catch (error) {
-							console.error(
-								"Error getting user info after OTP verification:",
-								error,
-							);
+							if (process.env.NODE_ENV === "development") {
+								console.error(
+									"Error getting user info after OTP verification:",
+									error,
+								);
+							}
 							router.push("/dashboard");
 						}
 					}}
@@ -504,17 +480,10 @@ const AuthForm = ({ type }: { type: FormType }) => {
 					onSuccess={async () => {
 						// After successful 2FA setup, ensure session is established and redirect by role
 						try {
-							console.log("2FA Setup completed, refreshing user data...");
-
-							// Add a small delay to ensure database is updated
-							await new Promise((resolve) => setTimeout(resolve, 1000));
-
 							const user = await getUserByEmail(form.getValues("email"));
-							console.log("2FA Setup Success - User data:", user);
 
 							if (!user) {
-								console.error("User not found after 2FA setup");
-								router.push("/dashboard");
+								window.location.href = "/dashboard";
 								return;
 							}
 
@@ -526,14 +495,20 @@ const AuthForm = ({ type }: { type: FormType }) => {
 									user.$id,
 									"default_organization",
 								);
-								console.log("Redirecting to dashboard:", dashboardUrl);
 								window.location.href = dashboardUrl;
 							} catch (error) {
-								console.error("Error fetching dashboard URL:", error);
+								if (process.env.NODE_ENV === "development") {
+									console.error("Error fetching dashboard URL:", error);
+								}
 								window.location.href = "/dashboard";
 							}
 						} catch (error) {
-							console.error("Error during 2FA setup success callback:", error);
+							if (process.env.NODE_ENV === "development") {
+								console.error(
+									"Error during 2FA setup success callback:",
+									error,
+								);
+							}
 							// Fallback navigation with page reload
 							window.location.href = "/dashboard";
 						}

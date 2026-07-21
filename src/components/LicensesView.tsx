@@ -3,24 +3,24 @@
 import Image from "next/image";
 import {
 	createContext,
+	type ReactNode,
 	useCallback,
 	useContext,
 	useEffect,
 	useMemo,
 	useRef,
 	useState,
-	type ReactNode,
 } from "react";
-import LicenseCard from "@/components/licenses/LicenseCard";
 import EqualHeightGrid from "@/components/EqualHeightGrid";
+import LicenseCard from "@/components/licenses/LicenseCard";
 import {
+	deserializeLicenseFilters,
+	LICENSE_SAVED_VIEWS_STORAGE_KEY,
+	LICENSE_VIEW_STORAGE_KEY,
 	type LicenseFilters,
 	type LicenseStatusTab,
 	type LicenseViewType,
 	type SavedLicenseView,
-	LICENSE_SAVED_VIEWS_STORAGE_KEY,
-	LICENSE_VIEW_STORAGE_KEY,
-	deserializeLicenseFilters,
 	serializeLicenseFilters,
 } from "@/lib/licenses/licensesListUtils";
 import type { License } from "@/types/licenses";

@@ -1,9 +1,9 @@
+import { getAuditDomainData } from "@/lib/audits/mock-data";
 import type {
 	AuditDomainData,
 	AuditKpi,
 	ComplianceStatusSnapshot,
 } from "@/lib/audits/types";
-import { getAuditDomainData } from "@/lib/audits/mock-data";
 
 const CHART_FILLS = ["#03AFBF", "#F59E0B", "#EF4444", "#524E4E"];
 
@@ -100,11 +100,7 @@ function buildLicenseKpis(snapshot: ComplianceStatusSnapshot): AuditKpi[] {
 			trendDirection:
 				renewalHealth >= 85 ? "up" : renewalHealth >= 70 ? "neutral" : "down",
 			ragStatus:
-				renewalHealth >= 85
-					? "green"
-					: renewalHealth >= 70
-						? "amber"
-						: "red",
+				renewalHealth >= 85 ? "green" : renewalHealth >= 70 ? "amber" : "red",
 		},
 	];
 }

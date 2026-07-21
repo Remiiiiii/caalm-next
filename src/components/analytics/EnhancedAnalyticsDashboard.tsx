@@ -307,7 +307,7 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
 						)
 					}
 				>
-					<TabsList className="grid w-full grid-cols-4 bg-white/60 backdrop-blur border border-white/40">
+					<TabsList className="responsive-tab-list bg-white/60 backdrop-blur border border-white/40">
 						<TabsTrigger
 							value="overview"
 							className="flex items-center space-x-2"

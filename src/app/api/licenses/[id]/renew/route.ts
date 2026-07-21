@@ -29,7 +29,14 @@ export async function POST(
 		const validatedData = licenseRenewalSchema.parse(body);
 
 		const license = await LicenseService.renewLicense(id, {
-			...validatedData,
+			renewalDate: validatedData.renewalDate,
+			currencyCode: validatedData.currencyCode,
+			notes: validatedData.notes,
+			extendExpiration: validatedData.extendExpiration,
+			cost:
+				validatedData.cost !== undefined
+					? Number(validatedData.cost)
+					: undefined,
 			renewedBy: user.$id,
 		});
 

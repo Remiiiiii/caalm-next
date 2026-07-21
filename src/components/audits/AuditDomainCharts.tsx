@@ -21,7 +21,10 @@ import {
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@/components/ui/chart";
-import type { AuditBreakdownPoint, AuditTimeSeriesPoint } from "@/lib/audits/types";
+import type {
+	AuditBreakdownPoint,
+	AuditTimeSeriesPoint,
+} from "@/lib/audits/types";
 
 const timeChartConfig = {
 	value: { label: "Primary", color: "#0f5384" },
@@ -52,7 +55,8 @@ export function AuditDomainCharts({
 	const pieConfig = donut.reduce((acc, item, index) => {
 		acc[item.name] = {
 			label: item.name,
-			color: item.fill || ["#0f5384", "#03AFBF", "#56B8FF", "#1E40AF"][index % 4],
+			color:
+				item.fill || ["#0f5384", "#03AFBF", "#56B8FF", "#1E40AF"][index % 4],
 		};
 		return acc;
 	}, {} as ChartConfig);

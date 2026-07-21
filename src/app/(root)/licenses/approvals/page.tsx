@@ -28,9 +28,7 @@ export default async function LicensesApprovalsPage() {
 	try {
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		const orgId =
-			defaultOrg?.orgId ||
-			(user as { orgId?: string }).orgId ||
-			"default-org";
+			defaultOrg?.orgId || (user as { orgId?: string }).orgId || "default-org";
 		const { tablesDB } = await createAdminClient();
 		const result = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId || "default-db",

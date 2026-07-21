@@ -56,8 +56,7 @@ export function DepartmentStatCardRow({
 		},
 		{
 			title: "Compliance health",
-			value:
-				stats.complianceRate !== null ? `${stats.complianceRate}%` : "—",
+			value: stats.complianceRate !== null ? `${stats.complianceRate}%` : "—",
 			description: division
 				? "Active contracts vs total"
 				: "Requires division assignment",

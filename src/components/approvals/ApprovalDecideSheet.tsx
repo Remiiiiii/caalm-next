@@ -11,13 +11,12 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import DocumentViewer from "@/components/DocumentViewer";
-import FormattedDateTime from "@/components/FormattedDateTime";
 import { agingLabel } from "@/components/approvals/ApprovalsAttentionStrip";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
+import DocumentViewer from "@/components/DocumentViewer";
+import FormattedDateTime from "@/components/FormattedDateTime";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
 	Sheet,
 	SheetContent,
@@ -25,6 +24,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -162,7 +162,9 @@ export default function ApprovalDecideSheet({
 						</div>
 						<SheetDescription className="text-sm text-slate-600 ml-8">
 							{item.subtitle ||
-								(item.entity === "contract" ? "Contract review" : "License review")}
+								(item.entity === "contract"
+									? "Contract review"
+									: "License review")}
 						</SheetDescription>
 					</SheetHeader>
 
@@ -189,7 +191,9 @@ export default function ApprovalDecideSheet({
 							<div className="flex items-start gap-3">
 								<Users className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
 								<div className="min-w-0">
-									<p className="text-xs text-slate-500">Department / Assignees</p>
+									<p className="text-xs text-slate-500">
+										Department / Assignees
+									</p>
 									<p className="text-sm text-slate-900">
 										{item.department || "—"}
 										{item.assignees.length > 0
@@ -260,17 +264,20 @@ export default function ApprovalDecideSheet({
 
 					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 space-y-3">
 						<div className="flex items-center gap-2 flex-wrap">
-							{canReview && docUrl && item.entity === "contract" && item.bucketFileId && (
-								<Button
-									type="button"
-									variant="outline"
-									className="primary-btn px-3 sm:px-4 cursor-pointer"
-									onClick={() => setViewerOpen(true)}
-								>
-									<FileText className="h-4 w-4" />
-									Open document
-								</Button>
-							)}
+							{canReview &&
+								docUrl &&
+								item.entity === "contract" &&
+								item.bucketFileId && (
+									<Button
+										type="button"
+										variant="outline"
+										className="primary-btn px-3 sm:px-4 cursor-pointer"
+										onClick={() => setViewerOpen(true)}
+									>
+										<FileText className="h-4 w-4" />
+										Open document
+									</Button>
+								)}
 							{docUrl && (
 								<Button asChild variant="outline" className="cursor-pointer">
 									<a href={docUrl} target="_blank" rel="noopener noreferrer">

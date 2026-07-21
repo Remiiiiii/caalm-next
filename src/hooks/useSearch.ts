@@ -2,26 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
 	type AdvancedSearchFilters,
+	type SearchResult as AdvancedSearchResult,
 	getRecentSearches,
 	getSearchSuggestions,
 	performAdvancedSearch,
 } from "@/lib/actions/search.actions";
 
-interface SearchResult {
-	id: string;
-	type: "contract" | "file";
-	name: string;
-	contractName?: string;
-	vendor?: string;
-	department?: string;
-	status?: string;
-	priority?: string;
-	amount?: number;
-	contractExpiryDate?: string;
-	assignedManagers?: string[];
-	$createdAt: string;
-	$updatedAt: string;
-	searchScore: number;
+export interface SearchResult extends AdvancedSearchResult {
+	$id?: string;
+	extension?: string;
+	url?: string;
 }
 
 interface SearchFilters {
@@ -91,16 +81,6 @@ export const useSearch = () => {
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 
-	// Perform search when debounced query changes
-	useEffect(() => {
-		if (debouncedQuery.trim() && user?.$id) {
-			performSearch(debouncedQuery, filters);
-		} else {
-			setSearchResults([]);
-			setIsSearching(false);
-		}
-	}, [debouncedQuery, user?.$id, performSearch, filters]);
-
 	const performSearch = async (
 		searchQuery: string,
 		searchFilters: SearchFilters,
@@ -134,6 +114,16 @@ export const useSearch = () => {
 			setIsLoading(false);
 		}
 	};
+
+	// Perform search when debounced query changes
+	useEffect(() => {
+		if (debouncedQuery.trim() && user?.$id) {
+			performSearch(debouncedQuery, filters);
+		} else {
+			setSearchResults([]);
+			setIsSearching(false);
+		}
+	}, [debouncedQuery, user?.$id, performSearch, filters]);
 
 	// Recent searches
 	const [recentSearches, setRecentSearches] = useState<any[]>([]);

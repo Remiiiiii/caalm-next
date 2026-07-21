@@ -37,7 +37,7 @@ export function AuditLogFiltersBar({
 		<Card className="glass-card mb-6">
 			<div className="glass-card-cap" />
 			<CardContent className="p-4 sm:p-6">
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3">
 					<div>
 						<label
 							htmlFor="audit-start-date"

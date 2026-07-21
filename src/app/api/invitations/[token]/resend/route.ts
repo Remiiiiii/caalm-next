@@ -3,10 +3,10 @@ import { resendInvitation } from "@/lib/actions/user.actions";
 
 export async function POST(
 	_request: NextRequest,
-	{ params }: { params: { token: string } },
+	{ params }: { params: Promise<{ token: string }> },
 ) {
 	try {
-		const { token } = params;
+		const { token } = await params;
 
 		if (!token) {
 			return NextResponse.json({ error: "Token is required" }, { status: 400 });

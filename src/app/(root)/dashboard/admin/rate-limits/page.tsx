@@ -21,7 +21,7 @@ export default async function RateLimitsPage() {
 	}
 
 	return (
-		<div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+		<div className="page-container py-6">
 			<RateLimitMonitoring />
 		</div>
 	);

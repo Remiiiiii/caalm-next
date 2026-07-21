@@ -3,8 +3,8 @@
 import { AlertTriangle, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
+import { Button } from "@/components/ui/button";
 import {
 	type ApprovalQueueItem,
 	daysSince,
@@ -39,11 +39,11 @@ export default function ApprovalsAttentionStrip({
 			<div className="flex items-start gap-3 min-w-0">
 				<AlertTriangle className="h-5 w-5 text-orange shrink-0 mt-0.5" />
 				<div>
-					<p className="text-sm font-semibold text-slate-900">Needs attention</p>
+					<p className="text-sm font-semibold text-slate-900">
+						Needs attention
+					</p>
 					<p className="text-xs text-slate-600 mt-0.5">
-						{counts.aging > 0 && (
-							<span>{counts.aging} waiting 5+ days</span>
-						)}
+						{counts.aging > 0 && <span>{counts.aging} waiting 5+ days</span>}
 						{counts.aging > 0 && counts.actionRequired > 0 && " · "}
 						{counts.actionRequired > 0 && (
 							<span>{counts.actionRequired} action required</span>

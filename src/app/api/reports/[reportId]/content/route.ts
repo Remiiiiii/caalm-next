@@ -4,10 +4,10 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 
 export async function GET(
 	_request: NextRequest,
-	{ params }: { params: { reportId: string } },
+	{ params }: { params: Promise<{ reportId: string }> },
 ) {
 	try {
-		const { reportId } = params;
+		const { reportId } = await params;
 
 		if (!reportId) {
 			return NextResponse.json(

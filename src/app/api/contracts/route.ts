@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/contracts/middleware/auth.middleware";
+import { parsePaginationParams } from "@/lib/api/contracts/utils/pagination.util";
 import {
 	errorResponse,
 	generateRequestId,
@@ -34,8 +35,8 @@ export async function GET(request: NextRequest) {
 				(searchParams.get("setAside") as keyof typeof SET_ASIDE_TYPES) ||
 				undefined,
 			naicsCode: searchParams.get("naicsCode") || undefined,
-			postedFrom: searchParams.get("postedFrom") || undefined,
-			postedTo: searchParams.get("postedTo") || undefined,
+			postedFrom: searchParams.get("postedFrom") || "",
+			postedTo: searchParams.get("postedTo") || "",
 			state: searchParams.get("state") || undefined,
 			dept: searchParams.get("dept") || undefined,
 		};

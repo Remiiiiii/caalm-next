@@ -621,7 +621,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 						Manage Shared Calendars
 					</Button>
 				</DialogTrigger>
-				<DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col">
+				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[700px] p-0 max-h-[90vh] flex flex-col">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Manage Shared Calendars</DialogTitle>
 						<DialogDescription>
@@ -934,7 +934,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 
 			{/* Edit Calendar Dialog */}
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-				<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col">
+				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] p-0 max-h-[90vh] flex flex-col">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Edit Shared Calendar</DialogTitle>
 						<DialogDescription>

@@ -511,7 +511,7 @@ class NotificationService {
 
 			console.log(
 				"[SERVER] NotificationService.createNotification] Notification type validated:",
-				notificationType.type_key,
+				notificationType?.type_key,
 			);
 
 			// Get user's organization ID (required field)

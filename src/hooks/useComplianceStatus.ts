@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR from "swr";
-import { fetcher } from "@/lib/swr-config";
 import type { ComplianceStatusSnapshot } from "@/lib/audits/types";
+import { fetcher } from "@/lib/swr-config";
 
 interface ComplianceStatusResponse {
 	success?: boolean;

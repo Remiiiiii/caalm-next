@@ -42,13 +42,15 @@ export async function generateReport(
 	console.log("Starting report generation with data:", data);
 	const adminClient = await createAdminClient();
 
+	let userRole = "User";
+
 	try {
 		// Get user's role name from database
 		const defaultOrg = await getUserDefaultOrganization(data.userId);
 		const userRoles = defaultOrg
 			? await getUserRoles(data.userId, defaultOrg.orgId)
 			: [];
-		const userRole = userRoles[0]?.roleName || "User";
+		userRole = userRoles[0]?.roleName || "User";
 
 		console.log("Fetching metrics...");
 		// Fetch metrics for all collections

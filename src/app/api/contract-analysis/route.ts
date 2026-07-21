@@ -5,10 +5,17 @@ import {
 } from "@/lib/ai-contract-analyzer";
 
 export async function POST(request: NextRequest) {
-	let body: AIAnalysisRequest;
+	let body: AIAnalysisRequest | null = null;
 
 	try {
 		body = await request.json();
+
+		if (!body) {
+			return NextResponse.json(
+				{ error: "Invalid request body" },
+				{ status: 400 },
+			);
+		}
 
 		if (!body.content) {
 			return NextResponse.json(
@@ -43,11 +50,23 @@ export async function POST(request: NextRequest) {
 	} catch (error) {
 		console.error("Contract analysis API error:", error);
 
+		if (!body) {
+			return NextResponse.json(
+				{ error: "Invalid request body" },
+				{ status: 400 },
+			);
+		}
+
 		// If AI analysis fails, try fallback analysis
 		try {
 			const fallbackAnalysis = contractAnalyzer.generateFallbackAnalysis(
 				body.content,
-				{ title: body.contractTitle, type: body.contractType },
+				{
+					noticeId: "",
+					title: body.contractTitle ?? "",
+					type: body.contractType ?? "",
+					postedDate: "",
+				},
 			);
 
 			return NextResponse.json({

@@ -486,7 +486,7 @@ const UserManagement = () => {
 				</div>
 			</div>
 
-			<Card className="w-[99.5%] border border-white/40 bg-white/30 shadow-lg backdrop-blur">
+			<Card className="w-full glass-card border border-white/40 bg-white/30 shadow-lg backdrop-blur">
 				<div className="glass-card-cap" />
 				<CardContent className="p-6 space-y-4">
 					{listLoading ? (

@@ -5,12 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import type { ApprovalQueueItem } from "@/lib/approvals/approvalsListUtils";
@@ -180,7 +176,7 @@ export default function ApprovalsBulkBar({
 			</div>
 
 			<Dialog open={denyOpen} onOpenChange={setDenyOpen}>
-				<DialogContent className="max-w-[480px] p-0 overflow-hidden border border-slate-200 shadow-xl">
+				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[480px] p-0 overflow-hidden border border-slate-200 shadow-xl">
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4 px-6">
 						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">

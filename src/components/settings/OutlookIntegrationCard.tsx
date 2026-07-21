@@ -183,9 +183,7 @@ export default function OutlookIntegrationCard({
 			status={connected ? "connected" : "disconnected"}
 			meta={userEmail || null}
 			lastSync={
-				lastSync
-					? format(new Date(lastSync), "MMM d, yyyy h:mm a")
-					: null
+				lastSync ? format(new Date(lastSync), "MMM d, yyyy h:mm a") : null
 			}
 			onConnect={handleConnect}
 			onDisconnect={handleDisconnect}

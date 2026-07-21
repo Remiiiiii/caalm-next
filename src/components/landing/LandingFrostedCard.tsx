@@ -17,7 +17,12 @@ export default function LandingFrostedCard({
 	return (
 		<div className={cn("landing-frosted-card", className)}>
 			{showCap ? <div className="glass-card-cap" /> : null}
-			<div className={cn("relative z-[1] h-full rounded-[inherit]", contentClassName)}>
+			<div
+				className={cn(
+					"relative z-[1] h-full rounded-[inherit]",
+					contentClassName,
+				)}
+			>
 				{children}
 			</div>
 		</div>

@@ -60,7 +60,10 @@ export function getUSHolidays(year: number): USHoliday[] {
 /**
  * Get US holidays for a specific month (1-12)
  */
-export function getUSHolidaysForMonth(year: number, month: number): USHoliday[] {
+export function getUSHolidaysForMonth(
+	year: number,
+	month: number,
+): USHoliday[] {
 	const allHolidays = getUSHolidays(year);
 	return allHolidays.filter((holiday) => {
 		const [, holidayMonth] = holiday.date.split("-").map(Number);

@@ -1,10 +1,7 @@
 export type PricingTier = "starter" | "growth" | "enterprise";
 export type BillingInterval = "monthly" | "yearly";
 
-const PRICE_ENV_KEYS: Record<
-	PricingTier,
-	Record<BillingInterval, string>
-> = {
+const PRICE_ENV_KEYS: Record<PricingTier, Record<BillingInterval, string>> = {
 	starter: {
 		monthly: "STRIPE_PRICE_STARTER_MONTHLY",
 		yearly: "STRIPE_PRICE_STARTER_YEARLY",

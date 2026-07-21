@@ -4,7 +4,7 @@ import { createInvitation } from "@/lib/actions/user.actions";
 export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json();
-		const { name, email, role, orgId, invitedBy } = body;
+		const { name, email, role, orgId, invitedBy, department, division } = body;
 		if (!name || !email || !role || !orgId || !invitedBy) {
 			return NextResponse.json(
 				{ error: "Missing required fields" },
@@ -17,6 +17,8 @@ export async function POST(req: NextRequest) {
 			role,
 			orgId,
 			invitedBy,
+			department: department ?? "",
+			division,
 		});
 		return NextResponse.json(result, { status: 200 });
 	} catch (err: unknown) {

@@ -112,16 +112,6 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 		}
 	}, [user?.$id, loadRecentSearches, loadSavedSearches]);
 
-	// Load suggestions when query changes
-	useEffect(() => {
-		if (query.length >= 2) {
-			loadSuggestions();
-		} else {
-			setSuggestions([]);
-			setShowSuggestions(false);
-		}
-	}, [query, loadSuggestions]);
-
 	const loadSuggestions = async () => {
 		try {
 			const suggestions = await getSearchSuggestions(query);
@@ -131,6 +121,16 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 			console.error("Failed to load suggestions:", error);
 		}
 	};
+
+	// Load suggestions when query changes
+	useEffect(() => {
+		if (query.length >= 2) {
+			loadSuggestions();
+		} else {
+			setSuggestions([]);
+			setShowSuggestions(false);
+		}
+	}, [query, loadSuggestions]);
 
 	const handleSearch = async () => {
 		if (!query.trim() && Object.keys(filters).length === 0) {

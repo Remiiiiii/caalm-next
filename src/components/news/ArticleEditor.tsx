@@ -214,21 +214,6 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 		}
 	}, [content, editor]);
 
-	// Load article if editing
-	useEffect(() => {
-		if (open && articleId) {
-			loadArticle();
-		} else if (open && !articleId) {
-			// Reset form for new article
-			resetForm();
-		}
-	}, [
-		open,
-		articleId, // Reset form for new article
-		resetForm,
-		loadArticle,
-	]);
-
 	const loadArticle = async () => {
 		try {
 			setLoading(true);
@@ -278,6 +263,21 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 			editor.commands.clearContent();
 		}
 	};
+
+	// Load article if editing
+	useEffect(() => {
+		if (open && articleId) {
+			loadArticle();
+		} else if (open && !articleId) {
+			// Reset form for new article
+			resetForm();
+		}
+	}, [
+		open,
+		articleId, // Reset form for new article
+		resetForm,
+		loadArticle,
+	]);
 
 	const handleSave = async (publish: boolean = false) => {
 		if (!title.trim()) {
@@ -457,7 +457,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 					}
 				}}
 			>
-				<DialogContent className="flex max-h-[90vh] max-w-7xl flex-col overflow-hidden p-0 shadow-xl">
+				<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-7xl max-sm:inset-2 max-sm:left-2 max-sm:top-2 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:h-[calc(100vh-1rem)] flex-col overflow-hidden p-0 shadow-xl">
 					{/* Professional Cap */}
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 

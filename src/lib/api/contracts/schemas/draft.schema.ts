@@ -7,7 +7,7 @@ export const draftCreateSchema = z.object({
 	ownerId: z.string().min(1, "Owner ID is required"),
 	accountId: z.string().min(1, "Account ID is required"),
 	draftId: z.string().optional(),
-	formData: z.record(z.unknown()).optional(),
+	formData: z.record(z.string(), z.unknown()).optional(),
 	currentStep: z.number().int().min(1).max(10),
 	processedFileData: z
 		.object({
@@ -20,7 +20,7 @@ export const draftCreateSchema = z.object({
 			bucketFileId: z.string().optional(),
 		})
 		.optional(),
-	extractedData: z.record(z.unknown()).optional(),
+	extractedData: z.record(z.string(), z.unknown()).optional(),
 	isCompleted: z.boolean().optional().default(false),
 });
 
@@ -40,6 +40,15 @@ export const draftDeleteSchema = z.object({
 	ownerId: z.string().optional(),
 });
 
+/**
+ * Schema for processing a draft into a contract
+ */
+export const processDraftSchema = z.object({
+	draftId: z.string().min(1, "Draft ID is required"),
+	ownerId: z.string().optional(),
+});
+
 export type DraftCreateInput = z.infer<typeof draftCreateSchema>;
 export type DraftQueryInput = z.infer<typeof draftQuerySchema>;
 export type DraftDeleteInput = z.infer<typeof draftDeleteSchema>;
+export type ProcessDraftInput = z.infer<typeof processDraftSchema>;

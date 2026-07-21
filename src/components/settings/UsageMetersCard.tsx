@@ -37,7 +37,8 @@ function formatBytes(bytes: number): string {
 
 function MeterRow({ label, used, limit, icon, formatValue }: UsageMeter) {
 	const infinite = !Number.isFinite(limit);
-	const displayUsed = used === null ? "—" : formatValue ? formatValue(used) : String(used);
+	const displayUsed =
+		used === null ? "—" : formatValue ? formatValue(used) : String(used);
 	const displayLimit = infinite
 		? "Unlimited"
 		: formatValue

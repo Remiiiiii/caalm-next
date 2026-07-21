@@ -6,13 +6,10 @@ import ContractsHeaderActions from "@/components/ContractsHeaderActions";
 import ContractsMetricsBar from "@/components/ContractsMetricsBar";
 import { ContractsViewProvider } from "@/components/ContractsView";
 import ContractsViewClient from "@/components/ContractsViewClient";
-import {
-	Card as GlassCard,
-	CardContent,
-} from "@/components/ui/card";
 import FileUsageOverview from "@/components/FileUsageOverview";
 import Sort from "@/components/Sort";
 import StorageProgressBar from "@/components/StorageProgressBar";
+import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { getFiles, getTotalSpaceUsed } from "@/lib/actions/file.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getFileTypesParams } from "@/lib/utils";

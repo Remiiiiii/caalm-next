@@ -30,7 +30,10 @@ export default function FooterMarquee() {
 						key={`${keyword}-${i}`}
 						className="inline-flex shrink-0 items-center gap-2 text-sm text-slate-600"
 					>
-						<span className="h-1.5 w-1.5 rounded-full bg-[#03AFBF]" aria-hidden />
+						<span
+							className="h-1.5 w-1.5 rounded-full bg-[#03AFBF]"
+							aria-hidden
+						/>
 						{keyword}
 					</span>
 				))}

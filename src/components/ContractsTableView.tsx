@@ -143,7 +143,6 @@ export default function ContractsTableView({
 			selected ? "bg-blue-50/50" : "bg-white/10 group-hover:bg-white/25",
 		);
 
-
 	// Fetch owner names for all contracts
 	useEffect(() => {
 		const fetchAllOwnerNames = async () => {
@@ -603,10 +602,7 @@ export default function ContractsTableView({
 							<TableCell
 								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
 							>
-								<FormattedDateTime
-									date={file.$createdAt}
-									className="body-2"
-								/>
+								<FormattedDateTime date={file.$createdAt} className="body-2" />
 							</TableCell>
 							<TableCell
 								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}

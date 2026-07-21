@@ -449,9 +449,7 @@ const LicenseActionDropdown = ({
 							);
 						}
 
-						return (
-							<Fragment key={actionItem.value}>{menuItem}</Fragment>
-						);
+						return <Fragment key={actionItem.value}>{menuItem}</Fragment>;
 					})}
 				</AppDropdownMenuContent>
 			</DropdownMenu>

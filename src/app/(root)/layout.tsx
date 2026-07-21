@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 
 const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	const { user, loading } = useAuth();
@@ -94,27 +95,29 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 					</div>
 				</div>
 			) : (
-				<main className="flex h-screen overflow-hidden">
-					<Sidebar {...sidebarProps} />
-					<section className="flex h-full flex-1 flex-col min-w-0 pt-4 sm:pt-5 md:pt-6 lg:pt-7">
-						<MobileNavigation {...navigationProps} />
-						<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
-							<DashboardHeader user={user} />
-						</div>
-						<div className="main-content">
-							<Suspense
-								fallback={
-									<div className="flex min-h-[200px] items-center justify-center">
-										<LoadingSpinner size="md" />
-									</div>
-								}
-							>
-								{children}
-							</Suspense>
-						</div>
-					</section>
-					<Toaster />
-				</main>
+				<SidebarProvider>
+					<main className="flex h-screen overflow-hidden">
+						<Sidebar {...sidebarProps} />
+						<section className="flex h-full flex-1 flex-col min-w-0 pt-4 sm:pt-5 md:pt-6 lg:pt-7">
+							<MobileNavigation {...navigationProps} />
+							<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
+								<DashboardHeader user={user} />
+							</div>
+							<div className="main-content">
+								<Suspense
+									fallback={
+										<div className="flex min-h-[200px] items-center justify-center">
+											<LoadingSpinner size="md" />
+										</div>
+									}
+								>
+									{children}
+								</Suspense>
+							</div>
+						</section>
+						<Toaster />
+					</main>
+				</SidebarProvider>
 			)}
 		</>
 	);

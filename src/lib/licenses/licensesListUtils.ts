@@ -62,9 +62,7 @@ export const LICENSE_STATUS_TAB_LABELS: Record<LicenseStatusTab, string> = {
 	"compliance-risk": "Compliance risk",
 };
 
-export function parseLicenseExpiryDate(
-	raw?: string | null,
-): Date | null {
+export function parseLicenseExpiryDate(raw?: string | null): Date | null {
 	if (!raw) return null;
 	const expiryStr = raw.split("T")[0];
 	const [year, month, day] = expiryStr.split("-").map(Number);

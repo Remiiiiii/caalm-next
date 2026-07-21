@@ -8,9 +8,11 @@ import {
 	isToday,
 	startOfWeek,
 } from "date-fns";
-import type React from "react";
-import { EventChip, type EventChipEvent } from "@/components/calendar/EventChip";
 import { CalendarNowLine } from "@/components/calendar/CalendarNowLine";
+import {
+	EventChip,
+	type EventChipEvent,
+} from "@/components/calendar/EventChip";
 import { cn } from "@/lib/utils";
 
 const START_HOUR = 6;
@@ -43,19 +45,14 @@ function getEventTopAndHeight(
 ): { top: number; height: number } | null {
 	if (!startTime) return null;
 	const startMins = parseTimeToMinutes(startTime);
-	const endMins = endTime
-		? parseTimeToMinutes(endTime)
-		: startMins + 60;
+	const endMins = endTime ? parseTimeToMinutes(endTime) : startMins + 60;
 	const gridStart = START_HOUR * 60;
 	const gridEnd = END_HOUR * 60;
 	if (endMins <= gridStart || startMins >= gridEnd) return null;
 	const clampedStart = Math.max(startMins, gridStart);
 	const clampedEnd = Math.min(endMins, gridEnd);
 	const top = ((clampedStart - gridStart) / 60) * HOUR_HEIGHT;
-	const height = Math.max(
-		((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT,
-		24,
-	);
+	const height = Math.max(((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT, 24);
 	return { top, height };
 }
 
@@ -99,7 +96,9 @@ export function TimeGridWeekView({
 			<div
 				className={cn(
 					"grid border-b border-slate-200 sticky top-0 z-10 bg-white",
-					singleDay ? "grid-cols-[3.5rem_1fr]" : "grid-cols-[3.5rem_repeat(7,1fr)]",
+					singleDay
+						? "grid-cols-[3.5rem_1fr]"
+						: "grid-cols-[3.5rem_repeat(7,1fr)]",
 				)}
 			>
 				<div className="border-r border-slate-200" />
@@ -144,7 +143,9 @@ export function TimeGridWeekView({
 			<div
 				className={cn(
 					"grid border-b border-slate-200 min-h-[40px]",
-					singleDay ? "grid-cols-[3.5rem_1fr]" : "grid-cols-[3.5rem_repeat(7,1fr)]",
+					singleDay
+						? "grid-cols-[3.5rem_1fr]"
+						: "grid-cols-[3.5rem_repeat(7,1fr)]",
 				)}
 			>
 				<div className="text-[10px] text-slate-500 p-1 border-r border-slate-200 flex items-start">
@@ -185,7 +186,9 @@ export function TimeGridWeekView({
 				<div
 					className={cn(
 						"grid relative",
-						singleDay ? "grid-cols-[3.5rem_1fr]" : "grid-cols-[3.5rem_repeat(7,1fr)]",
+						singleDay
+							? "grid-cols-[3.5rem_1fr]"
+							: "grid-cols-[3.5rem_repeat(7,1fr)]",
 					)}
 					style={{ height: hours.length * HOUR_HEIGHT }}
 				>
@@ -282,5 +285,5 @@ export function TimeGridWeekView({
 	);
 }
 
-export { START_HOUR, END_HOUR, HOUR_HEIGHT };
+export { END_HOUR, HOUR_HEIGHT, START_HOUR };
 export default TimeGridWeekView;

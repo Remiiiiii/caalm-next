@@ -33,8 +33,7 @@ export async function GET(request: NextRequest) {
 		const expiringLicenses = await CacheManager.withCache(
 			"licenses/expiring",
 			`${CACHE_KEYS.licenses.expiring(days)}:${defaultOrg.orgId}`,
-			async () =>
-				LicenseService.getExpiringLicenses(defaultOrg.orgId, days),
+			async () => LicenseService.getExpiringLicenses(defaultOrg.orgId, days),
 			CACHE_TTLS.long,
 		);
 

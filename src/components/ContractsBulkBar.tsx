@@ -2,8 +2,8 @@
 
 import { Download, X } from "lucide-react";
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { useContractsView } from "@/components/ContractsViewContext";
+import { Button } from "@/components/ui/button";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { UIFileDoc } from "@/types/files";

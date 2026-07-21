@@ -77,7 +77,11 @@ export function DepartmentContractsTable({
 							Expiring soon, pending review, or action required
 						</p>
 					</div>
-					<Button variant="outline" className="primary-btn px-3 sm:px-4" asChild>
+					<Button
+						variant="outline"
+						className="primary-btn px-3 sm:px-4"
+						asChild
+					>
 						<Link href="/my-contracts">
 							View all
 							<ArrowRight className="h-4 w-4" />
@@ -109,13 +113,19 @@ export function DepartmentContractsTable({
 						<TableBody>
 							{isLoading ? (
 								<TableRow>
-									<TableCell colSpan={5} className="py-8 text-center text-slate-500">
+									<TableCell
+										colSpan={5}
+										className="py-8 text-center text-slate-500"
+									>
 										Loading contracts…
 									</TableCell>
 								</TableRow>
 							) : contracts.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={5} className="py-8 text-center text-slate-500">
+									<TableCell
+										colSpan={5}
+										className="py-8 text-center text-slate-500"
+									>
 										No contracts need attention in your division.
 									</TableCell>
 								</TableRow>

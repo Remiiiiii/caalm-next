@@ -127,8 +127,12 @@ export async function GET(request: NextRequest) {
 			result.checks.push({
 				collection: "files (old) (685ed9e90020d8f09173)",
 				attribute: "owner",
-				status: oldOwnerAttribute?.status || "not found",
-				relatedCollection: oldOwnerAttribute?.relatedCollection || null,
+				status:
+					(oldOwnerAttribute as { status?: string } | null)?.status ||
+					"not found",
+				relatedCollection:
+					(oldOwnerAttribute as { relatedCollection?: string | null } | null)
+						?.relatedCollection || null,
 				note: "This is the old collection for comparison",
 			});
 		} catch (_error: any) {

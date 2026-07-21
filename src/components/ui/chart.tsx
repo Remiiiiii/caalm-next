@@ -116,6 +116,8 @@ const ChartTooltipContent = React.forwardRef<
 		indicator?: "line" | "dot" | "dashed";
 		nameKey?: string;
 		labelKey?: string;
+		payload?: Payload<ValueType, NameType>[];
+		label?: React.ReactNode;
 	}
 >(
 	(

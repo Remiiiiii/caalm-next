@@ -132,10 +132,12 @@ export const AUDIT_CONTROL_TABS: Array<{
 	},
 ];
 
-export const AUDIT_PERIOD_OPTIONS: Array<{ value: AuditPeriod; label: string }> =
-	[
-		{ value: "7d", label: "Last 7 days" },
-		{ value: "30d", label: "Last 30 days" },
-		{ value: "90d", label: "Last 90 days" },
-		{ value: "ytd", label: "Year to date" },
-	];
+export const AUDIT_PERIOD_OPTIONS: Array<{
+	value: AuditPeriod;
+	label: string;
+}> = [
+	{ value: "7d", label: "Last 7 days" },
+	{ value: "30d", label: "Last 30 days" },
+	{ value: "90d", label: "Last 90 days" },
+	{ value: "ytd", label: "Year to date" },
+];
