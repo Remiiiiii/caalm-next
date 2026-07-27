@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type React from "react";
 import CountUp from "@/components/CountUp";
+import DemoBanner from "@/components/DemoBanner";
 import OrbitingBlocks from "@/components/OrbitingBlocks";
 import SplineCanvas from "@/components/SplineCanvas";
 import { useSplineWatermarkRemoval } from "@/hooks/useSplineWatermarkRemoval";
@@ -12,7 +13,9 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 	// Remove Spline watermark badges
 	useSplineWatermarkRemoval();
 	return (
-		<div className="flex min-h-screen bg-white relative overflow-hidden">
+		<div className="flex min-h-screen bg-white relative overflow-hidden flex-col">
+			<DemoBanner />
+			<div className="flex flex-1 relative overflow-hidden">
 			{/* Video Background */}
 			<video
 				autoPlay
@@ -123,6 +126,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 					</div>
 					{children}
 				</section>
+			</div>
 			</div>
 		</div>
 	);
