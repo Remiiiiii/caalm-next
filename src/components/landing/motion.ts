@@ -22,6 +22,15 @@ export const fadeUp: Variants = {
 	visible: { opacity: 1, y: 0, transition: easeOut },
 };
 
+/**
+ * Opacity only — safe for `.sidebar-gradient-text` / background-clip text.
+ * Transform on clipped text paints ghosted/overlapping glyphs on refresh.
+ */
+export const fadeInText: Variants = {
+	hidden: { opacity: 0 },
+	visible: { opacity: 1, transition: easeOut },
+};
+
 /** Softer rise for metrics / trust moments */
 export const softRise: Variants = {
 	hidden: { opacity: 0, y: 40 },

@@ -10,7 +10,7 @@ import Logo from "../Logo";
 import SectionDivider from "../SectionDivider";
 import SignupSuccessBanner from "../SignupSuccessBanner";
 import { TRUSTED_BRAND_LOGOS } from "./landingContent";
-import { fadeUp, staggerContainer } from "./motion";
+import { fadeInText, fadeUp, staggerContainer } from "./motion";
 import PillSwing3D from "./PillSwing3D";
 import ShimmerBadge from "./ShimmerBadge";
 
@@ -253,11 +253,11 @@ export default function LandingHero() {
 						</motion.div>
 
 						<motion.h1
-							variants={fadeUp}
-							className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] text-center lg:text-left leading-[1.2] sidebar-gradient-text landing-section-title"
+							variants={fadeInText}
+							className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] text-center lg:text-left leading-[1.35] sidebar-gradient-text landing-section-title"
 						>
 							Simplify compliance with{" "}
-							<PillSwing3D className="sidebar-gradient-text text-[0.85em] font-extrabold">
+							<PillSwing3D className="text-[0.85em] font-extrabold">
 								AI-powered
 							</PillSwing3D>{" "}
 							contract control
