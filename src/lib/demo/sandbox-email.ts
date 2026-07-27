@@ -4,6 +4,8 @@
  */
 
 export const DEMO_SANDBOX_EMAIL_STORAGE_KEY = "caalm_demo_sandbox_email";
+export const DEMO_SANDBOX_FULL_NAME_STORAGE_KEY =
+	"caalm_demo_sandbox_full_name";
 
 export function createUniqueDemoEmail(): string {
 	const id =
@@ -26,6 +28,26 @@ export function saveDemoSandboxEmail(email: string): void {
 	if (typeof window === "undefined") return;
 	try {
 		localStorage.setItem(DEMO_SANDBOX_EMAIL_STORAGE_KEY, email);
+	} catch {
+		// ignore quota / private mode
+	}
+}
+
+export function getStoredDemoSandboxFullName(): string | null {
+	if (typeof window === "undefined") return null;
+	try {
+		return localStorage.getItem(DEMO_SANDBOX_FULL_NAME_STORAGE_KEY);
+	} catch {
+		return null;
+	}
+}
+
+export function saveDemoSandboxFullName(fullName: string): void {
+	if (typeof window === "undefined") return;
+	const trimmed = fullName.trim();
+	if (!trimmed) return;
+	try {
+		localStorage.setItem(DEMO_SANDBOX_FULL_NAME_STORAGE_KEY, trimmed);
 	} catch {
 		// ignore quota / private mode
 	}

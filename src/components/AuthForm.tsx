@@ -31,7 +31,9 @@ import { getLogoutMessage } from "@/lib/auth-utils";
 import {
 	createUniqueDemoEmail,
 	getStoredDemoSandboxEmail,
+	getStoredDemoSandboxFullName,
 	saveDemoSandboxEmail,
+	saveDemoSandboxFullName,
 } from "@/lib/demo/sandbox-email";
 import { getDashboardUrlForUser } from "@/lib/utils/dashboard-redirect";
 
@@ -135,6 +137,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
 	const [show2FASetup, setShow2FASetup] = useState(false);
 	const [show2FAVerification, setShow2FAVerification] = useState(false);
 	const [invitationMessage, setInvitationMessage] = useState("");
+	const [returningSandboxName, setReturningSandboxName] = useState<
+		string | null
+	>(null);
 
 	const formSchema = authFormSchema(type);
 	const searchParams = useSearchParams();
@@ -181,9 +186,30 @@ const AuthForm = ({ type }: { type: FormType }) => {
 		}
 
 		const stored = getStoredDemoSandboxEmail();
-		if (stored) {
-			form.setValue("email", stored);
+		if (!stored) return;
+
+		form.setValue("email", stored);
+
+		const storedName = getStoredDemoSandboxFullName();
+		if (storedName) {
+			setReturningSandboxName(storedName);
+			return;
 		}
+
+		let cancelled = false;
+		getUserByEmail(stored)
+			.then((user) => {
+				if (cancelled || !user?.fullName) return;
+				saveDemoSandboxFullName(user.fullName);
+				setReturningSandboxName(user.fullName);
+			})
+			.catch(() => {
+				// Returning name is optional UI context
+			});
+
+		return () => {
+			cancelled = true;
+		};
 	}, [type, searchParams, form]);
 
 	// Check for logout reason and invitation acceptance in URL params
@@ -232,6 +258,14 @@ const AuthForm = ({ type }: { type: FormType }) => {
 					setAccountId(res.accountId);
 					if (isClientDemoMode()) {
 						saveDemoSandboxEmail(values.email);
+						getUserByEmail(values.email)
+							.then((user) => {
+								if (user?.fullName) {
+									saveDemoSandboxFullName(user.fullName);
+									setReturningSandboxName(user.fullName);
+								}
+							})
+							.catch(() => {});
 					}
 
 					// Check if user came from invitation acceptance
@@ -282,6 +316,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
 				await createAccount({ email: values.email });
 				if (isClientDemoMode()) {
 					saveDemoSandboxEmail(values.email);
+					if (values.fullName) {
+						saveDemoSandboxFullName(values.fullName);
+					}
 				}
 				setPendingSignup({
 					email: values.email,
@@ -344,8 +381,19 @@ const AuthForm = ({ type }: { type: FormType }) => {
 						<span className="font-semibold text-[#0f5384]">
 							{DEMO_OTP_HINT}
 						</span>{" "}
-						(no email is sent). A unique sandbox address is assigned
-						automatically.
+						(no email is sent).
+						{type === "sign-in" && returningSandboxName ? (
+							<>
+								{" "}
+								Returning as{" "}
+								<span className="font-semibold text-[#0f5384]">
+									{returningSandboxName}
+								</span>
+								.
+							</>
+						) : (
+							<> A unique sandbox address is assigned automatically.</>
+						)}
 					</p>
 				)}
 				{type === "sign-up" && (
@@ -379,36 +427,45 @@ const AuthForm = ({ type }: { type: FormType }) => {
 				<FormField
 					control={form.control}
 					name="email"
-					render={({ field }) => (
-						<FormItem>
-							<div className="shad-form-item">
-								<FormLabel className="shad-form-label">
-									{isClientDemoMode() ? "Sandbox ID" : "Email"}
-								</FormLabel>
-								<FormControl>
-									<Input
-										placeholder={
-											isClientDemoMode()
-												? " Assigned automatically"
-												: " Enter your email"
-										}
-										{...field}
-										readOnly={isClientDemoMode()}
-										value={
-											field.value ? ` ${field.value.replace(/^ /, "")}` : ""
-										}
-										onChange={(e) => {
-											if (isClientDemoMode()) return;
-											const value = e.target.value.replace(/^ /, "");
-											field.onChange(value);
-										}}
-										className="shad-input"
-									/>
-								</FormControl>
-							</div>
-							<FormMessage className="shad-form-message" />
-						</FormItem>
-					)}
+					render={({ field }) =>
+						isClientDemoMode() ? (
+							<FormItem>
+								<div className="shad-form-item min-h-[88px] h-auto! min-w-0 py-3">
+									<p className="flex w-full min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1 text-left text-[14px] leading-5">
+										<span className="shrink-0 font-medium text-slate-900">
+											Sandbox ID:
+										</span>
+										<span className="min-w-0 break-all text-slate-700 sm:break-words">
+											{field.value?.trim() || "Assigning…"}
+										</span>
+									</p>
+								</div>
+								<input type="hidden" {...field} value={field.value || ""} />
+								<FormMessage className="shad-form-message" />
+							</FormItem>
+						) : (
+							<FormItem>
+								<div className="shad-form-item">
+									<FormLabel className="shad-form-label">Email</FormLabel>
+									<FormControl>
+										<Input
+											placeholder=" Enter your email"
+											{...field}
+											value={
+												field.value ? ` ${field.value.replace(/^ /, "")}` : ""
+											}
+											onChange={(e) => {
+												const value = e.target.value.replace(/^ /, "");
+												field.onChange(value);
+											}}
+											className="shad-input"
+										/>
+									</FormControl>
+								</div>
+								<FormMessage className="shad-form-message" />
+							</FormItem>
+						)
+					}
 				/>
 				<Button
 					type="submit"
@@ -659,6 +716,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
 									email: pendingSignup.email,
 								});
 								await completeDemoSession(pendingSignup.email);
+								saveDemoSandboxEmail(pendingSignup.email);
+								saveDemoSandboxFullName(pendingSignup.fullName);
 								if (result?.orgId) {
 									localStorage.setItem("caalm_org_id", result.orgId);
 								}

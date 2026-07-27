@@ -1,4 +1,3 @@
-import DOMPurify from "isomorphic-dompurify";
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
@@ -9,6 +8,7 @@ import {
 } from "@/lib/database/news-articles";
 import { createNewsVersion } from "@/lib/database/news-versions";
 import { getUserPermissions } from "@/lib/rbac/permissions";
+import { sanitizeNewsHtml } from "@/lib/sanitize-news-html";
 
 export async function GET(
 	_request: NextRequest,
@@ -159,26 +159,7 @@ export async function PUT(
 					{ status: 400 },
 				);
 			}
-			sanitizedContent = DOMPurify.sanitize(content, {
-				ALLOWED_TAGS: [
-					"p",
-					"br",
-					"strong",
-					"em",
-					"u",
-					"h1",
-					"h2",
-					"h3",
-					"h4",
-					"h5",
-					"h6",
-					"ul",
-					"ol",
-					"li",
-					"a",
-				],
-				ALLOWED_ATTR: ["href", "target"],
-			});
+			sanitizedContent = await sanitizeNewsHtml(content);
 		}
 
 		// Validate type if provided
