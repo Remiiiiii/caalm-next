@@ -343,6 +343,8 @@ export const finalizeAccountAfterEmailVerification = async ({
 					email: email,
 					avatar: avatarPlaceholderUrl,
 					accountId: accountId,
+					department: "Administration",
+					orgId: isDemoMode() ? "pending-demo" : "default_organization",
 				},
 			});
 			console.log(
@@ -387,6 +389,14 @@ export const finalizeAccountAfterEmailVerification = async ({
 			userId: usersCollectionId,
 			email,
 			fullName,
+		});
+		await tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId || "default-db",
+			tableId: appwriteConfig.usersCollectionId || "users",
+			rowId: usersCollectionId,
+			data: {
+				orgId: sandbox.orgId,
+			},
 		});
 		return {
 			accountId,
@@ -871,6 +881,7 @@ export const signInUser = async ({ email }: { email: string }) => {
 
 		if (authUser) {
 			// Create user record and send OTP in parallel
+			const { isDemoMode } = await import("@/lib/config/demo-mode");
 			const { tablesDB } = await createAdminClient();
 			const userId = ID.unique();
 
@@ -885,10 +896,29 @@ export const signInUser = async ({ email }: { email: string }) => {
 						email: authUser.email,
 						avatar: avatarPlaceholderUrl,
 						accountId: authUser.$id,
+						department: "Administration",
+						orgId: isDemoMode() ? "pending-demo" : "default_organization",
 					},
 				}),
 				sendEmailOTP({ email }),
 			]);
+
+			if (isDemoMode()) {
+				const { provisionDemoSandbox } = await import(
+					"@/lib/demo/provision-sandbox"
+				);
+				const sandbox = await provisionDemoSandbox({
+					userId,
+					email: authUser.email,
+					fullName: authUser.name || "Demo Visitor",
+				});
+				await tablesDB.updateRow({
+					databaseId: appwriteConfig.databaseId || "default-db",
+					tableId: appwriteConfig.usersCollectionId || "users",
+					rowId: userId,
+					data: { orgId: sandbox.orgId },
+				});
+			}
 
 			// Invalidate cache for this email to ensure fresh data
 			await CacheManager.invalidateUsers(email);

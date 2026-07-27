@@ -114,7 +114,7 @@ export const getCalendarIntegration = async (
 		return integration;
 	} catch (error) {
 		console.error("Error getting calendar integration:", error);
-		throw error;
+		return null;
 	}
 };
 
@@ -156,7 +156,7 @@ export const getUserCalendarIntegrations = async (
 		return integrations;
 	} catch (error) {
 		console.error("Error getting user calendar integrations:", error);
-		throw error;
+		return [];
 	}
 };
 
@@ -329,7 +329,7 @@ export const getValidIntegration = async (
 		return integration;
 	} catch (error) {
 		console.error("Error getting valid integration:", error);
-		throw error;
+		return null;
 	}
 };
 

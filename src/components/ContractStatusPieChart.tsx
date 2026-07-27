@@ -32,7 +32,7 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 		data: fetchedContracts,
 		isLoading,
 		error: contractsError,
-	} = useSWR<UIFileDoc[]>(
+	} = useSWR<UIFileDoc[] | { data?: UIFileDoc[] }>(
 		skipFetch ? null : swrKeys.allContracts(),
 		swrConfig.fetcher ?? null,
 		{
@@ -41,7 +41,22 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 		},
 	);
 
-	const contracts = propContracts ?? fetchedContracts ?? [];
+	const contracts = useMemo(() => {
+		if (propContracts != null) {
+			return Array.isArray(propContracts) ? propContracts : [];
+		}
+		if (Array.isArray(fetchedContracts)) {
+			return fetchedContracts;
+		}
+		if (
+			fetchedContracts &&
+			typeof fetchedContracts === "object" &&
+			Array.isArray((fetchedContracts as { data?: UIFileDoc[] }).data)
+		) {
+			return (fetchedContracts as { data: UIFileDoc[] }).data;
+		}
+		return [];
+	}, [propContracts, fetchedContracts]);
 
 	// Transform contracts into pie chart data
 	const contractData = useMemo(() => {
@@ -51,7 +66,7 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 		}
 
 		// Don't process data while still loading (wait for first load to complete)
-		if (!skipFetch && isLoading && contracts === undefined) {
+		if (!skipFetch && isLoading) {
 			// Return empty data structure while loading (will be replaced once data loads)
 			return [
 				{
@@ -78,19 +93,20 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 		// Debug logging in development
 		if (process.env.NODE_ENV === "development") {
 			console.log("[ContractStatusPieChart] Contracts data:", {
-				contractsLength: contracts?.length || 0,
-				contracts: contracts?.slice(0, 3) || [],
+				contractsLength: contracts.length,
+				contracts: contracts.slice(0, 3),
 				isLoading,
 				error: contractsError,
-				contractsIsUndefined: contracts === undefined,
 			});
 			// Log all status values to see what we're working with
-			const statusCounts =
-				contracts?.reduce((acc: Record<string, number>, c) => {
+			const statusCounts = contracts.reduce(
+				(acc: Record<string, number>, c) => {
 					const status = c.status || "(no status)";
 					acc[status] = (acc[status] || 0) + 1;
 					return acc;
-				}, {}) || {};
+				},
+				{},
+			);
 			console.log(
 				"[ContractStatusPieChart] Status value counts:",
 				statusCounts,
@@ -98,13 +114,12 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 		}
 
 		// If no contracts after loading completes, return empty data
-		if (!contracts || contracts.length === 0) {
+		if (contracts.length === 0) {
 			if (process.env.NODE_ENV === "development") {
 				console.log(
 					"[ContractStatusPieChart] No contracts found, returning empty data",
 					{
 						isLoading,
-						contractsIsUndefined: contracts === undefined,
 						contractsIsArray: Array.isArray(contracts),
 					},
 				);

@@ -258,16 +258,17 @@ export const getSharedCalendarsForUser = async (
 	userId: string,
 	organizationId: string,
 ): Promise<SharedCalendar[]> => {
-	const { tablesDB } = await createAdminClient();
-	const collectionId = getSharedCalendarsCollectionId();
+	try {
+		const { tablesDB } = await createAdminClient();
+		const collectionId = getSharedCalendarsCollectionId();
 
-	// Optimized: Fetch all calendars in organization in a single query, then filter client-side
-	// This reduces from 4 queries to 1 query, significantly improving performance
-	const allOrgCalendars = await tablesDB.listRows({
-		databaseId: appwriteConfig.databaseId!,
-		tableId: collectionId,
-		queries: [Query.equal("organizationId", organizationId)],
-	});
+		// Optimized: Fetch all calendars in organization in a single query, then filter client-side
+		// This reduces from 4 queries to 1 query, significantly improving performance
+		const allOrgCalendars = await tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: collectionId,
+			queries: [Query.equal("organizationId", organizationId)],
+		});
 
 	// Filter calendars client-side for better performance
 	const _ownedCalendars = {
@@ -325,7 +326,12 @@ export const getSharedCalendarsForUser = async (
 	// Return ONLY calendars shared WITH the user (recipient perspective)
 	// Do NOT include calendars owned by the user - those belong in "My Calendars", not "Shared Calendars"
 	// Normalize all calendars (handle both array and JSON string formats for both fields)
-	return sharedCalendars.map((cal: any) => normalizeCalendar(cal));
+		return sharedCalendars.map((cal: any) => normalizeCalendar(cal));
+	} catch (error) {
+		// Demo / incomplete schemas may lack organizationId; don't fail the calendar page
+		console.error("Error getting shared calendars for user:", error);
+		return [];
+	}
 };
 
 /**
