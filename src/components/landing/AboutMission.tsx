@@ -6,7 +6,7 @@ import Link from "next/link";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
 import { ABOUT_TRUST_BULLETS } from "./landingContent";
-import { fadeUp, staggerContainer, viewportOnce } from "./motion";
+import { blurIn, fadeLeft, softRise, staggerContainer, viewportOnce } from "./motion";
 
 export default function AboutMission() {
 	return (
@@ -18,7 +18,7 @@ export default function AboutMission() {
 				whileInView="visible"
 				viewport={viewportOnce}
 			>
-				<motion.div variants={fadeUp} className="text-center mb-10 sm:mb-12">
+				<motion.div variants={blurIn} className="text-center mb-10 sm:mb-12">
 					<div className="mb-4 flex justify-center">
 						<div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
 							<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
@@ -37,7 +37,7 @@ export default function AboutMission() {
 				</motion.div>
 
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-					<motion.div variants={fadeUp} className="relative">
+					<motion.div variants={fadeLeft} className="relative">
 						<div
 							className="relative rounded-2xl shadow-xl border border-white/60 w-full aspect-[560/420] bg-transparent"
 							aria-hidden
@@ -46,7 +46,7 @@ export default function AboutMission() {
 
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						{ABOUT_TRUST_BULLETS.map((bullet) => (
-							<motion.div key={bullet.title} variants={fadeUp}>
+							<motion.div key={bullet.title} variants={softRise}>
 								<LandingFrostedCard
 									className="h-full"
 									contentClassName="p-4 sm:p-5"
@@ -67,7 +67,7 @@ export default function AboutMission() {
 				</div>
 
 				<motion.div
-					variants={fadeUp}
+					variants={softRise}
 					className="mt-8 flex flex-wrap justify-center gap-4 text-sm"
 				>
 					<Link

@@ -6,39 +6,55 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import LandingSection from "./landing/LandingSection";
 import { FAQ_ITEMS } from "./landing/landingContent";
+import {
+	fadeUp,
+	softRise,
+	staggerFast,
+	viewportOnce,
+} from "./landing/motion";
 
 export default function QA() {
 	const [openIndex, setOpenIndex] = useState<number | null>(null);
 
 	return (
 		<LandingSection id="faq" ariaLabelledBy="qa-heading" featuresBg>
-			<div className="max-w-3xl mx-auto relative z-10">
-				{/* Kept: FAQ badge */}
-				<div className="mb-6 flex justify-center">
+			<motion.div
+				className="max-w-3xl mx-auto relative z-10"
+				variants={staggerFast}
+				initial="hidden"
+				whileInView="visible"
+				viewport={viewportOnce}
+			>
+				<motion.div variants={fadeUp} className="mb-6 flex justify-center">
 					<div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
 						<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
 							<HelpCircle className="h-3.5 w-3.5 text-slate-700" />
 						</span>
 						<span className="text-slate-700 text-sm">FAQ</span>
 					</div>
-				</div>
+				</motion.div>
 
-				<h2
+				<motion.h2
 					id="qa-heading"
+					variants={fadeUp}
 					className="text-center text-2xl sm:text-3xl md:text-[3em] py-2 sidebar-gradient-text landing-section-title"
 				>
 					Questions? Answers!
-				</h2>
-				<p className="mt-2 text-center text-slate-700 text-sm sm:text-base">
+				</motion.h2>
+				<motion.p
+					variants={softRise}
+					className="mt-2 text-center text-slate-700 text-sm sm:text-base"
+				>
 					Find quick answers to the most common questions about our platform
-				</p>
+				</motion.p>
 
 				<div className="mt-8 space-y-3">
 					{FAQ_ITEMS.map((item, index) => {
 						const isOpen = openIndex === index;
 						return (
-							<div
+							<motion.div
 								key={item.question}
+								variants={softRise}
 								className="rounded-lg shadow-md bg-[#f6fafd]/50 border border-white overflow-hidden"
 							>
 								<button
@@ -79,13 +95,15 @@ export default function QA() {
 										</motion.div>
 									)}
 								</AnimatePresence>
-							</div>
+							</motion.div>
 						);
 					})}
 				</div>
 
-				{/* Kept: Still have questions? */}
-				<div className="mt-8 text-slate-600 text-sm text-center">
+				<motion.div
+					variants={fadeUp}
+					className="mt-8 text-slate-600 text-sm text-center"
+				>
 					<span className="inline-flex items-center gap-2">
 						<span aria-hidden>
 							<MailOpen className="h-4 w-4 text-slate-700" />
@@ -100,8 +118,8 @@ export default function QA() {
 							</a>
 						</span>
 					</span>
-				</div>
-			</div>
+				</motion.div>
+			</motion.div>
 		</LandingSection>
 	);
 }

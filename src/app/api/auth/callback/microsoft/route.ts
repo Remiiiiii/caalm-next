@@ -11,6 +11,13 @@ import {
 
 export async function GET(request: NextRequest) {
 	try {
+		const { isDemoMode } = await import("@/lib/config/demo-mode");
+		if (isDemoMode()) {
+			return NextResponse.redirect(
+				`${getAppUrl()}/settings/billing?tab=integrations&error=demo_integrations_disabled`,
+			);
+		}
+
 		const { searchParams } = new URL(request.url);
 		const code = searchParams.get("code");
 		const state = searchParams.get("state");

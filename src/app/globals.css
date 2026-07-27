@@ -525,7 +525,7 @@
 
 	/* Dashboard */
 	.dashboard-logo {
-		@apply relative inline-block size-[50px] shrink-0;
+		@apply relative inline-block size-8 shrink-0;
 	}
 	/* Dashboard */
 	.dashboard-container,

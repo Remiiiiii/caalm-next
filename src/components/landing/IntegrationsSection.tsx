@@ -5,7 +5,12 @@ import { Plug } from "lucide-react";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
 import { INTEGRATIONS } from "./landingContent";
-import { fadeUp, staggerContainer, viewportOnce } from "./motion";
+import {
+	fadeLeft,
+	fadeRight,
+	staggerContainer,
+	viewportOnce,
+} from "./motion";
 
 export default function IntegrationsSection() {
 	return (
@@ -18,7 +23,7 @@ export default function IntegrationsSection() {
 				viewport={viewportOnce}
 			>
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
-					<motion.div variants={fadeUp}>
+					<motion.div variants={fadeRight}>
 						<div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
 							<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
 								<Plug className="h-3.5 w-3.5 text-slate-700" />
@@ -52,7 +57,7 @@ export default function IntegrationsSection() {
 
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						{INTEGRATIONS.map((item) => (
-							<motion.div key={item.title} variants={fadeUp}>
+							<motion.div key={item.title} variants={fadeLeft}>
 								<LandingFrostedCard
 									className="h-full"
 									contentClassName="p-4 sm:p-5"

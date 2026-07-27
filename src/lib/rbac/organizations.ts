@@ -26,6 +26,10 @@ export interface Organization {
 		maxUsers: number;
 		maxDepartments: number;
 		features: string[];
+		isDemo?: boolean;
+		expiresAt?: string;
+		ownerEmail?: string;
+		[key: string]: unknown;
 	};
 	stripeCustomerId?: string;
 	stripeSubscriptionId?: string;
@@ -61,6 +65,11 @@ export async function createOrganization({
 		maxUsers: number;
 		maxDepartments: number;
 		features: string[];
+		/** Demo sandbox metadata (stored inside settings JSON) */
+		isDemo?: boolean;
+		expiresAt?: string;
+		ownerEmail?: string;
+		[key: string]: unknown;
 	};
 	createdBy: string;
 }): Promise<Organization> {

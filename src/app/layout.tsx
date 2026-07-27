@@ -2,6 +2,7 @@ import "./globals.css";
 
 import { Poppins } from "next/font/google";
 import type { ReactNode } from "react";
+import DemoBanner from "@/components/DemoBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SWRProvider from "@/components/providers/SWRProvider";
 
@@ -45,7 +46,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 				className={`${poppins.variable} font-poppins antialiased`}
 			>
 				<ErrorBoundary>
-					<SWRProvider>{children}</SWRProvider>
+					<SWRProvider>
+						<DemoBanner />
+						{children}
+					</SWRProvider>
 				</ErrorBoundary>
 			</body>
 		</html>

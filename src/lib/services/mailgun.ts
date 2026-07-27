@@ -55,6 +55,15 @@ class MailgunService {
 		try {
 			const { to, subject, text, html, from } = options;
 
+			const { isDemoMode } = await import("@/lib/config/demo-mode");
+			if (isDemoMode()) {
+				console.log("[demo] Mailgun no-op:", {
+					to,
+					subject,
+				});
+				return { success: true, data: { id: "demo-noop" } };
+			}
+
 			const fromAddress = from || `Mailgun Sandbox <postmaster@${this.domain}>`;
 
 			const client = this.getClient();

@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { BadgeDollarSign, Check, HandHeart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +10,13 @@ import { cn } from "@/lib/utils";
 import LandingFrostedCard from "./landing/LandingFrostedCard";
 import LandingSection from "./landing/LandingSection";
 import { TRUSTED_BRAND_LOGOS } from "./landing/landingContent";
+import {
+	fadeUp,
+	scaleIn,
+	softRise,
+	staggerContainer,
+	viewportOnce,
+} from "./landing/motion";
 
 type Props = {
 	plans: PricingPlan[];
@@ -40,17 +48,26 @@ export default function Pricing({ plans }: Props) {
 
 	return (
 		<LandingSection id="pricing" ariaLabelledBy="pricing-heading">
-			<div className="mb-6 flex justify-center relative z-10">
-				<div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
-					<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
-						<BadgeDollarSign className="h-3.5 w-3.5 text-slate-700" />
-					</span>
-					<span className="text-slate-700 text-sm">Transparent pricing</span>
-				</div>
-			</div>
+			<motion.div
+				className="max-w-6xl mx-auto"
+				variants={staggerContainer}
+				initial="hidden"
+				whileInView="visible"
+				viewport={viewportOnce}
+			>
+				<motion.div
+					variants={fadeUp}
+					className="mb-6 flex justify-center relative z-10"
+				>
+					<div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
+						<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
+							<BadgeDollarSign className="h-3.5 w-3.5 text-slate-700" />
+						</span>
+						<span className="text-slate-700 text-sm">Transparent pricing</span>
+					</div>
+				</motion.div>
 
-			<div className="max-w-6xl mx-auto">
-				<div className="text-center mb-6 sm:mb-8">
+				<motion.div variants={fadeUp} className="text-center mb-6 sm:mb-8">
 					<h2
 						id="pricing-heading"
 						className="text-2xl sm:text-3xl md:text-[3em] py-2 sidebar-gradient-text landing-section-title"
@@ -60,8 +77,12 @@ export default function Pricing({ plans }: Props) {
 					<p className="mt-2 text-slate-700 text-sm sm:text-base">
 						Flexible monthly plans and cost-effective annual subscriptions.
 					</p>
-				</div>
-				<div className="flex items-center justify-center mb-8">
+				</motion.div>
+
+				<motion.div
+					variants={softRise}
+					className="flex items-center justify-center mb-8"
+				>
 					<div
 						role="tablist"
 						aria-label="Billing period"
@@ -108,78 +129,79 @@ export default function Pricing({ plans }: Props) {
 							</span>
 						)}
 					</div>
-				</div>
+				</motion.div>
 
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
 					{formattedPlans.map((plan, idx) => (
-						<LandingFrostedCard
-							key={plan.key}
-							className={cn(
-								"flex flex-col transition-all duration-200",
-								idx === 1 ? "ring-2 ring-[#05A1B7]/70" : "",
-							)}
-							contentClassName="p-6 flex flex-col h-full"
-						>
-							<h3 className="text-lg font-semibold text-slate-900 mb-2 mt-2">
-								{plan.name}
-							</h3>
-							<div className="flex items-baseline gap-1 mb-4">
-								<span className="text-4xl font-bold text-slate-700">
-									${plan.displayPrice}
-								</span>
-								<span className="text-sm text-slate-600">
-									{period === "monthly" ? "user/month" : "user/year"}
-								</span>
-							</div>
-							{idx === 2 ? (
-								<a href="#contact">
-									<button
-										type="button"
-										className="w-full rounded-full py-3 cursor-pointer font-semibold shadow-sm transition-all duration-200 bg-gradient-to-r from-slate-500 to-slate-700 text-white hover:opacity-90"
-									>
-										Contact sales
-									</button>
-								</a>
-							) : (
-								<Link href="/sign-in">
-									<button
-										type="button"
-										className={cn(
-											"w-full rounded-full py-3 cursor-pointer font-semibold shadow-sm transition-all duration-200",
-											idx === 1
-												? "primary-btn"
-												: "bg-gradient-to-r from-slate-500 to-slate-700 text-white hover:opacity-90",
-										)}
-									>
-										Get started
-									</button>
-								</Link>
-							)}
-							<hr className="my-6 border-slate-200" />
-							<h4 className="text-sm font-semibold text-slate-800 mb-3">
-								{idx === 0
-									? "Everything in starter plan"
-									: idx === 1
-										? "Everything in Starter plan plus"
-										: "Everything in Growth plan plus"}
-							</h4>
-							<ul className="space-y-2 text-slate-600 text-sm">
-								{plan.features.slice(0, 8).map((feature) => (
-									<li key={feature} className="flex items-start gap-2">
-										<Check
-											className="mt-0.5 h-5 w-5"
-											aria-hidden
-											style={{ color: "#05A1B7" }}
-										/>
-										<span>{stripMarkdown(feature)}</span>
-									</li>
-								))}
-							</ul>
-						</LandingFrostedCard>
+						<motion.div key={plan.key} variants={scaleIn}>
+							<LandingFrostedCard
+								className={cn(
+									"flex flex-col transition-all duration-200 h-full",
+									idx === 1 ? "ring-2 ring-[#05A1B7]/70" : "",
+								)}
+								contentClassName="p-6 flex flex-col h-full"
+							>
+								<h3 className="text-lg font-semibold text-slate-900 mb-2 mt-2">
+									{plan.name}
+								</h3>
+								<div className="flex items-baseline gap-1 mb-4">
+									<span className="text-4xl font-bold text-slate-700">
+										${plan.displayPrice}
+									</span>
+									<span className="text-sm text-slate-600">
+										{period === "monthly" ? "user/month" : "user/year"}
+									</span>
+								</div>
+								{idx === 2 ? (
+									<a href="#contact">
+										<button
+											type="button"
+											className="w-full rounded-full py-3 cursor-pointer font-semibold shadow-sm transition-all duration-200 bg-gradient-to-r from-slate-500 to-slate-700 text-white hover:opacity-90"
+										>
+											Contact sales
+										</button>
+									</a>
+								) : (
+									<Link href="/sign-in">
+										<button
+											type="button"
+											className={cn(
+												"w-full rounded-full py-3 cursor-pointer font-semibold shadow-sm transition-all duration-200",
+												idx === 1
+													? "primary-btn"
+													: "bg-gradient-to-r from-slate-500 to-slate-700 text-white hover:opacity-90",
+											)}
+										>
+											Get started
+										</button>
+									</Link>
+								)}
+								<hr className="my-6 border-slate-200" />
+								<h4 className="text-sm font-semibold text-slate-800 mb-3">
+									{idx === 0
+										? "Everything in starter plan"
+										: idx === 1
+											? "Everything in Starter plan plus"
+											: "Everything in Growth plan plus"}
+								</h4>
+								<ul className="space-y-2 text-slate-600 text-sm">
+									{plan.features.slice(0, 8).map((feature) => (
+										<li key={feature} className="flex items-start gap-2">
+											<Check
+												className="mt-0.5 h-5 w-5"
+												aria-hidden
+												style={{ color: "#05A1B7" }}
+											/>
+											<span>{stripMarkdown(feature)}</span>
+										</li>
+									))}
+								</ul>
+							</LandingFrostedCard>
+						</motion.div>
 					))}
 				</div>
 
-				<div className="mt-10">
+				<motion.div variants={fadeUp} className="mt-10">
 					<p className="text-center text-xs font-medium uppercase tracking-wider text-slate-500 mb-4">
 						Trusted by market leaders
 					</p>
@@ -195,15 +217,18 @@ export default function Pricing({ plans }: Props) {
 							/>
 						))}
 					</div>
-				</div>
+				</motion.div>
 
-				<p className="flex items-center gap-2 justify-center mt-8 text-center text-slate-600 text-sm">
+				<motion.p
+					variants={softRise}
+					className="flex items-center gap-2 justify-center mt-8 text-center text-slate-600 text-sm"
+				>
 					<span>
 						<HandHeart />
 					</span>
 					We donate 2% of your membership to child and family wellbeing
-				</p>
-			</div>
+				</motion.p>
+			</motion.div>
 		</LandingSection>
 	);
 }

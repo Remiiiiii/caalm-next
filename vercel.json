@@ -3,7 +3,7 @@
 	"git": {
 		"deploymentEnabled": false
 	},
-	"ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 0; else exit 1; fi",
+	"ignoreCommand": "exit 1",
 	"crons": [
 		{
 			"path": "/api/notifications/process-digest",
@@ -12,6 +12,10 @@
 		{
 			"path": "/api/contracts/update-expired",
 			"schedule": "0 1 * * *"
+		},
+		{
+			"path": "/api/cron/demo-cleanup",
+			"schedule": "0 4 * * *"
 		}
 	]
 }

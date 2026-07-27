@@ -18,25 +18,51 @@ const OrganizationContext = createContext<OrganizationContextType | undefined>(
 	undefined,
 );
 
-export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
+const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 	const [orgId, setOrgId] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		// Try to get orgId from localStorage first
-		const savedOrgId = localStorage.getItem("caalm_org_id");
+		let cancelled = false;
 
-		if (savedOrgId) {
-			setOrgId(savedOrgId);
-		} else {
-			// For now, use a default organization ID
-			// In a real app, this would come from user preferences or be set during onboarding
-			const defaultOrgId = "default_organization";
-			setOrgId(defaultOrgId);
-			localStorage.setItem("caalm_org_id", defaultOrgId);
-		}
+		const resolveOrg = async () => {
+			const savedOrgId = localStorage.getItem("caalm_org_id");
+			if (savedOrgId && savedOrgId !== "default_organization") {
+				if (!cancelled) {
+					setOrgId(savedOrgId);
+					setLoading(false);
+				}
+			}
 
-		setLoading(false);
+			try {
+				const res = await fetch("/api/organization/default", {
+					cache: "no-store",
+				});
+				if (res.ok) {
+					const data = await res.json();
+					if (data.orgId && !cancelled) {
+						setOrgId(data.orgId);
+						localStorage.setItem("caalm_org_id", data.orgId);
+						setLoading(false);
+						return;
+					}
+				}
+			} catch {
+				// Fall through to saved / null
+			}
+
+			if (!cancelled) {
+				if (savedOrgId) {
+					setOrgId(savedOrgId);
+				}
+				setLoading(false);
+			}
+		};
+
+		resolveOrg();
+		return () => {
+			cancelled = true;
+		};
 	}, []);
 
 	const handleSetOrgId = (newOrgId: string) => {
@@ -56,6 +82,8 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 		</OrganizationContext.Provider>
 	);
 };
+
+export { OrganizationProvider };
 
 export const useOrganization = () => {
 	const context = useContext(OrganizationContext);

@@ -32,6 +32,23 @@ import { getDashboardUrlForUser } from "@/lib/utils/dashboard-redirect";
 
 type FormType = "sign-in" | "sign-up";
 
+const isClientDemoMode = () =>
+	process.env.NEXT_PUBLIC_APP_MODE === "demo";
+
+const DEMO_OTP_HINT =
+	process.env.NEXT_PUBLIC_DEMO_OTP_HINT || "123456";
+
+async function completeDemoSession(email: string): Promise<void> {
+	const res = await fetch("/api/demo/session", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ email }),
+	});
+	if (!res.ok) {
+		throw new Error("Failed to create demo session");
+	}
+}
+
 const authFormSchema = (formType: FormType) => {
 	return z.object({
 		email: z.string().email(),
@@ -289,8 +306,19 @@ const AuthForm = ({ type }: { type: FormType }) => {
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="auth-form">
 				<h1 className="form-title sidebar-gradient-text">
-					{type === "sign-in" ? "Sign In" : "Sign Up"}
+					{type === "sign-in"
+						? "Sign In"
+						: isClientDemoMode()
+							? "Start free sandbox"
+							: "Sign Up"}
 				</h1>
+				{isClientDemoMode() && (
+					<p className="text-sm text-slate-600 mb-4 -mt-2">
+						Demo OTP:{" "}
+						<span className="font-semibold text-[#0f5384]">{DEMO_OTP_HINT}</span>
+						{" "}(no email is sent)
+					</p>
+				)}
 				{type === "sign-up" && (
 					<FormField
 						control={form.control}
@@ -409,7 +437,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
 				)}
 				{success && (
 					<p className="text-navy text-center">
-						Check your email for a login link or OTP.
+						{isClientDemoMode()
+							? `Enter the demo OTP (${DEMO_OTP_HINT}). No email is sent.`
+							: "Check your email for a login link or OTP."}
 					</p>
 				)}
 
@@ -442,12 +472,38 @@ const AuthForm = ({ type }: { type: FormType }) => {
 						// Close the OTP modal first
 						setShowOTPModal(false);
 
-						// Reuse the accountId resolved during sign-in to avoid a second user
-						// lookup round-trip. Only fall back to a fetch if it's missing.
 						try {
+							const email = form.getValues("email");
+
+							if (isClientDemoMode()) {
+								await completeDemoSession(email);
+								const orgRes = await fetch("/api/organization/default");
+								if (orgRes.ok) {
+									const orgData = await orgRes.json();
+									if (orgData.orgId) {
+										localStorage.setItem("caalm_org_id", orgData.orgId);
+									}
+								}
+								const user = await getUserByEmail(email);
+								if (user?.$id) {
+									const orgId =
+										localStorage.getItem("caalm_org_id") || undefined;
+									const url = await getDashboardUrlForUser(
+										user.$id,
+										orgId,
+									);
+									window.location.href = url;
+									return;
+								}
+								window.location.href = "/dashboard/organizationadmin";
+								return;
+							}
+
+							// Reuse the accountId resolved during sign-in to avoid a second user
+							// lookup round-trip. Only fall back to a fetch if it's missing.
 							let resolvedAccountId = accountId;
 							if (!resolvedAccountId) {
-								const user = await getUserByEmail(form.getValues("email"));
+								const user = await getUserByEmail(email);
 								resolvedAccountId = user?.accountId ?? null;
 							}
 
@@ -562,6 +618,28 @@ const AuthForm = ({ type }: { type: FormType }) => {
 						setPendingSignup(null);
 					}}
 					onSuccess={async () => {
+						if (isClientDemoMode()) {
+							try {
+								const result = await finalizeAccountAfterEmailVerification({
+									fullName: pendingSignup.fullName,
+									email: pendingSignup.email,
+								});
+								await completeDemoSession(pendingSignup.email);
+								if (result?.orgId) {
+									localStorage.setItem("caalm_org_id", result.orgId);
+								}
+								window.location.href =
+									result?.dashboardPath || "/dashboard/organizationadmin";
+							} catch (error) {
+								console.error("Demo signup finalization error:", error);
+								setErrorMessage(
+									"Could not create your sandbox. Please try again.",
+								);
+								setPendingSignup(null);
+							}
+							return;
+						}
+
 						// Redirect immediately for better UX
 						router.push("/?signup=success");
 

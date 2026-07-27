@@ -14,6 +14,14 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+	const { isDemoMode } = await import("@/lib/config/demo-mode");
+	if (isDemoMode()) {
+		return NextResponse.json(
+			{ error: "Billing is disabled in demo mode" },
+			{ status: 403 },
+		);
+	}
+
 	const permissionCheck = await requirePermission(request, {
 		permission: PERMISSIONS.SETTINGS.BILLING,
 	});

@@ -64,6 +64,12 @@ async function getDepartmentManagers(department: string) {
 // Send SMS (awaitable for reliability in serverless environments)
 export async function sendOnboardingSMS(recipients: any[], message: string) {
 	try {
+		const { isDemoMode } = await import("@/lib/config/demo-mode");
+		if (isDemoMode()) {
+			console.log("[demo] SMS no-op:", { recipients: recipients.length, message });
+			return;
+		}
+
 		if (recipients.length === 0) {
 			console.log("SMS: No recipients with phone numbers for SMS notification");
 			return;

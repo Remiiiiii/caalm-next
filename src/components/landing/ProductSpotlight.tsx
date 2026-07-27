@@ -10,7 +10,7 @@ import FeatureSpotlightGrid from "./FeatureSpotlightGrid";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
 import { SPOTLIGHT_TABS } from "./landingContent";
-import { fadeUp, staggerContainer, viewportOnce } from "./motion";
+import { fadeIn, softRise, staggerContainer, viewportOnce } from "./motion";
 import AnalyticsMock from "./spotlight/AnalyticsMock";
 import AuditsMock from "./spotlight/AuditsMock";
 import ContractsMock from "./spotlight/ContractsMock";
@@ -55,7 +55,7 @@ export default function ProductSpotlight() {
 				whileInView="visible"
 				viewport={viewportOnce}
 			>
-				<motion.div variants={fadeUp} className="text-center mb-8 sm:mb-10">
+				<motion.div variants={fadeIn} className="text-center mb-8 sm:mb-10">
 					<div className="mb-4 flex justify-center">
 						<div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
 							<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
@@ -74,7 +74,7 @@ export default function ProductSpotlight() {
 				</motion.div>
 
 				<motion.div
-					variants={fadeUp}
+					variants={softRise}
 					className="flex flex-wrap justify-center gap-2 mb-8"
 					role="tablist"
 					aria-label="Platform areas"
@@ -98,7 +98,7 @@ export default function ProductSpotlight() {
 					))}
 				</motion.div>
 
-				<motion.div variants={fadeUp}>
+				<motion.div variants={softRise}>
 					<div ref={paperRef} className="paper-3d">
 						<LandingFrostedCard contentClassName="p-4 sm:p-6 md:p-8">
 							{showFullMock ? (

@@ -5,14 +5,14 @@ import { ArrowRight, Workflow } from "lucide-react";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
 import { HOW_IT_WORKS_STEPS } from "./landingContent";
-import { fadeUp, staggerContainer, viewportOnce } from "./motion";
+import { fadeLeft, fadeUp, staggerSlow, viewportOnce } from "./motion";
 
 export default function HowItWorks() {
 	return (
 		<LandingSection id="how-it-works" className="landing-soft-brand-wash">
 			<motion.div
 				className="max-w-6xl mx-auto"
-				variants={staggerContainer}
+				variants={staggerSlow}
 				initial="hidden"
 				whileInView="visible"
 				viewport={viewportOnce}
@@ -37,7 +37,7 @@ export default function HowItWorks() {
 
 				<div className="hidden sm:grid grid-cols-2 gap-6">
 					{HOW_IT_WORKS_STEPS.map((item) => (
-						<motion.div key={item.step} variants={fadeUp}>
+						<motion.div key={item.step} variants={fadeLeft}>
 							<LandingFrostedCard
 								className="h-full"
 								contentClassName="p-4 sm:p-6"
@@ -69,7 +69,7 @@ export default function HowItWorks() {
 						aria-hidden
 					/>
 					{HOW_IT_WORKS_STEPS.map((item) => (
-						<motion.div key={item.step} variants={fadeUp} className="relative">
+						<motion.div key={item.step} variants={fadeLeft} className="relative">
 							<div className="absolute -left-6 top-5 h-3 w-3 rounded-full bg-[#0f5384] ring-4 ring-white" />
 							<LandingFrostedCard contentClassName="p-4">
 								<p className="text-xs font-semibold uppercase tracking-wider text-[#0f5384]">

@@ -15,6 +15,7 @@ export default function IntegrationsPanel({
 	subscriptionTier,
 	onViewPlans,
 }: IntegrationsPanelProps) {
+	const isDemo = process.env.NEXT_PUBLIC_APP_MODE === "demo";
 	const hasApiAccess =
 		subscriptionTier === "growth" || subscriptionTier === "enterprise";
 	const hasSso = subscriptionTier === "enterprise";
@@ -23,13 +24,14 @@ export default function IntegrationsPanel({
 		<div className="space-y-6">
 			<div>
 				<p className="text-sm text-slate-600 mb-4">
-					Connect third-party tools to extend CAALM. Connected apps appear with
-					status badges; upgrade unlocks API and SSO options.
+					{isDemo
+						? "External integrations are disabled in the demo sandbox."
+						: "Connect third-party tools to extend CAALM. Connected apps appear with status badges; upgrade unlocks API and SSO options."}
 				</p>
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-				<OutlookIntegrationCard userId={userId} />
+				{!isDemo && <OutlookIntegrationCard userId={userId} />}
 
 				<IntegrationCard
 					title="API & Webhooks"

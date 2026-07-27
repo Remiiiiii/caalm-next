@@ -8,7 +8,13 @@ import { cn } from "@/lib/utils";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
 import { TESTIMONIALS } from "./landingContent";
-import { fadeUp, staggerContainer, viewportOnce } from "./motion";
+import {
+	blurIn,
+	fadeIn,
+	softRise,
+	staggerContainer,
+	viewportOnce,
+} from "./motion";
 
 const MARQUEE_ITEMS = TESTIMONIALS.slice(1);
 const CARD_COUNT = MARQUEE_ITEMS.length;
@@ -131,7 +137,7 @@ export default function TestimonialsCarousel() {
 				whileInView="visible"
 				viewport={viewportOnce}
 			>
-				<motion.div variants={fadeUp} className="mb-6 flex justify-center">
+				<motion.div variants={fadeIn} className="mb-6 flex justify-center">
 					<div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
 						<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
 							<BadgeCheck className="h-3.5 w-3.5 text-slate-700" />
@@ -142,20 +148,20 @@ export default function TestimonialsCarousel() {
 
 				<motion.h2
 					id="feedback-heading"
-					variants={fadeUp}
+					variants={blurIn}
 					className="text-center text-2xl sm:text-3xl md:text-[2.75em] sidebar-gradient-text landing-section-title leading-tight"
 				>
 					What our clients say
 				</motion.h2>
 				<motion.p
-					variants={fadeUp}
+					variants={softRise}
 					className="mt-3 text-center text-slate-600 text-sm sm:text-base max-w-2xl mx-auto"
 				>
 					Hear how teams keep contracts, licenses, and audits on track with
 					CAALM.
 				</motion.p>
 
-				<motion.div variants={fadeUp} className="mt-10">
+				<motion.div variants={softRise} className="mt-10">
 					<LandingFrostedCard contentClassName="p-6 sm:p-8">
 						<p className="text-lg sm:text-xl text-slate-800 leading-relaxed">
 							<span className="sidebar-gradient-text text-2xl mr-1" aria-hidden>

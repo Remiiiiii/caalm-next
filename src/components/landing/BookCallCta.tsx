@@ -5,7 +5,7 @@ import { ArrowRight, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import LandingSection from "./LandingSection";
-import { fadeUp, viewportOnce } from "./motion";
+import { scaleIn, viewportOnce } from "./motion";
 
 export default function BookCallCta() {
 	return (
@@ -15,7 +15,7 @@ export default function BookCallCta() {
 				initial="hidden"
 				whileInView="visible"
 				viewport={viewportOnce}
-				variants={fadeUp}
+				variants={scaleIn}
 			>
 				<div className="mb-4 flex justify-center">
 					<span className="inline-flex items-center justify-center size-12 rounded-2xl bg-white/80 border border-slate-200 shadow-sm">

@@ -5,7 +5,7 @@ import { CloudCog } from "lucide-react";
 import { features } from "../../constants";
 import LandingFrostedCard from "./landing/LandingFrostedCard";
 import LandingSection from "./landing/LandingSection";
-import { fadeUp, staggerContainer, viewportOnce } from "./landing/motion";
+import { fadeDown, scaleIn, staggerContainer, viewportOnce } from "./landing/motion";
 import SectionDivider2 from "./SectionDivider2";
 
 const Features = () => {
@@ -18,7 +18,7 @@ const Features = () => {
 				whileInView="visible"
 				viewport={viewportOnce}
 			>
-				<motion.div variants={fadeUp} className="text-center mb-10 sm:mb-14">
+				<motion.div variants={fadeDown} className="text-center mb-10 sm:mb-14">
 					<div className="mb-4 flex justify-center">
 						<div className="inline-flex mb-2 items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
 							<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
@@ -40,7 +40,7 @@ const Features = () => {
 
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 					{features.map((feature) => (
-						<motion.div key={feature.title} variants={fadeUp}>
+						<motion.div key={feature.title} variants={scaleIn}>
 							<LandingFrostedCard
 								className="h-full"
 								contentClassName="p-4 sm:p-6 pt-6"

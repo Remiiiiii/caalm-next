@@ -166,19 +166,31 @@ const Sidebar = memo(
 					<Link
 						href="/"
 						className={cn(
-							"dashboard-logo",
-							isCollapsed && "dashboard-logo-collapsed",
+							"flex items-center gap-2 min-w-0",
+							isCollapsed && "justify-center",
 						)}
 					>
-						<Image
-							src="/assets/images/logo.svg"
-							alt="logo"
-							fill
-							className="object-contain"
-							sizes="50px"
-							priority
-							fetchPriority="high"
-						/>
+						<span
+							className={cn(
+								"dashboard-logo",
+								isCollapsed && "dashboard-logo-collapsed",
+							)}
+						>
+							<Image
+								src="/assets/images/logo.svg"
+								alt="CAALM"
+								fill
+								className="object-contain"
+								sizes="32px"
+								priority
+								fetchPriority="high"
+							/>
+						</span>
+						{!isCollapsed ? (
+							<span className="text-lg font-bold sidebar-gradient-text truncate">
+								CAALM
+							</span>
+						) : null}
 					</Link>
 
 					<SidebarCollapseToggle compact={isCollapsed} />

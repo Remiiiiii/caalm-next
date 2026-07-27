@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
 import { PERFORMANCE_METRICS } from "./landingContent";
-import { fadeUp, staggerContainer, viewportOnce } from "./motion";
+import { scaleIn, softRise, staggerContainer, viewportOnce } from "./motion";
 
 export default function PerformanceMetrics() {
 	return (
@@ -19,7 +19,7 @@ export default function PerformanceMetrics() {
 				whileInView="visible"
 				viewport={viewportOnce}
 			>
-				<motion.div variants={fadeUp} className="text-center mb-10 sm:mb-12">
+				<motion.div variants={softRise} className="text-center mb-10 sm:mb-12">
 					<div className="mb-4 flex justify-center">
 						<div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
 							<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
@@ -37,21 +37,17 @@ export default function PerformanceMetrics() {
 					</p>
 				</motion.div>
 
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+				<div className="flex flex-wrap justify-center gap-4 sm:gap-5">
 					{PERFORMANCE_METRICS.map((metric) => (
-						<motion.div
-							key={metric.label}
-							variants={fadeUp}
-							className="flex justify-center"
-						>
+						<motion.div key={metric.label} variants={scaleIn}>
 							<LandingFrostedCard
-								className="w-full"
-								contentClassName="p-4 sm:p-5"
+								className="w-[12.5rem]"
+								contentClassName="px-4 py-4 sm:px-5 sm:py-5 text-center h-full"
 							>
-								<p className="text-sm font-medium sidebar-gradient-text">
+								<p className="text-sm font-medium sidebar-gradient-text leading-snug">
 									{metric.label}
 								</p>
-								<div className="flex items-center text-3xl sm:text-4xl font-bold text-slate-700 pt-2">
+								<div className="flex items-center justify-center text-3xl sm:text-4xl font-bold text-slate-700 pt-2">
 									<span>
 										<CountUp
 											end={metric.value}
@@ -69,7 +65,7 @@ export default function PerformanceMetrics() {
 				</div>
 
 				<motion.div
-					variants={fadeUp}
+					variants={softRise}
 					className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
 				>
 					<p className="text-sm sm:text-base text-slate-600 text-center">

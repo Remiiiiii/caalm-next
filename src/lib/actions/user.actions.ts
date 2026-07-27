@@ -146,7 +146,28 @@ const handleError = (error: unknown, message: string) => {
 
 export const sendEmailOTP = async ({ email }: { email: string }) => {
 	try {
+		const { isDemoMode, getDemoOtpCode } = await import(
+			"@/lib/config/demo-mode"
+		);
 		const { tablesDB } = await createAdminClient();
+
+		// Demo mode: store fixed OTP, never send email
+		if (isDemoMode()) {
+			const expirationTime = new Date();
+			expirationTime.setMinutes(expirationTime.getMinutes() + 60);
+			await tablesDB.createRow({
+				databaseId: appwriteConfig.databaseId || "default-db",
+				tableId: appwriteConfig.otpTokensCollectionId || "otp-tokens",
+				rowId: ID.unique(),
+				data: {
+					email,
+					otp: getDemoOtpCode(),
+					expiresAt: expirationTime.toISOString(),
+					used: false,
+				},
+			});
+			return ID.unique();
+		}
 
 		// Check if an OTP was recently sent (within the last 30 seconds) to prevent duplicates
 		const thirtySecondsAgo = new Date();
@@ -305,15 +326,18 @@ export const finalizeAccountAfterEmailVerification = async ({
 	});
 
 	// 3. Create users collection document with the fullName (if not already exists)
+	const { isDemoMode } = await import("@/lib/config/demo-mode");
 	const { tablesDB } = await createAdminClient();
+	let usersCollectionId: string | null = null;
 	try {
 		// Check if user already exists in users collection
 		const existingUser = await getUserByEmail(email);
 		if (!existingUser) {
+			usersCollectionId = ID.unique();
 			await tablesDB.createRow({
 				databaseId: appwriteConfig.databaseId || "default-db",
 				tableId: appwriteConfig.usersCollectionId || "users",
-				rowId: ID.unique(),
+				rowId: usersCollectionId,
 				data: {
 					fullName: fullName,
 					email: email,
@@ -326,6 +350,7 @@ export const finalizeAccountAfterEmailVerification = async ({
 				fullName,
 			);
 		} else {
+			usersCollectionId = existingUser.$id;
 			// Update existing user's fullName if it's empty
 			if (!existingUser.fullName || existingUser.fullName === "") {
 				await tablesDB.updateRow({
@@ -351,6 +376,24 @@ export const finalizeAccountAfterEmailVerification = async ({
 		);
 		// Don't throw error here as the Auth user was created successfully
 		// The user can still sign in, but their name won't be in the custom collection
+	}
+
+	// Demo mode: provision per-visitor sandbox and skip executive notifications
+	if (isDemoMode() && usersCollectionId) {
+		const { provisionDemoSandbox } = await import(
+			"@/lib/demo/provision-sandbox"
+		);
+		const sandbox = await provisionDemoSandbox({
+			userId: usersCollectionId,
+			email,
+			fullName,
+		});
+		return {
+			accountId,
+			userId: usersCollectionId,
+			orgId: sandbox.orgId,
+			dashboardPath: sandbox.dashboardPath,
+		};
 	}
 
 	// 4-6. Run non-critical operations in parallel (don't await)
@@ -401,7 +444,7 @@ export const finalizeAccountAfterEmailVerification = async ({
 	});
 
 	// Return immediately without waiting for background tasks
-	return { accountId };
+	return { accountId, userId: usersCollectionId };
 };
 
 export const verifyOTP = async ({
@@ -414,6 +457,18 @@ export const verifyOTP = async ({
 	accountId?: string;
 }) => {
 	try {
+		const { isDemoMode, getDemoOtpCode } = await import(
+			"@/lib/config/demo-mode"
+		);
+
+		// Demo mode: accept fixed OTP even if DB token is missing/stale
+		if (isDemoMode() && otp === getDemoOtpCode()) {
+			if (accountId) {
+				return { success: true, accountId };
+			}
+			return { success: true };
+		}
+
 		const { tablesDB } = await createAdminClient();
 
 		// Find the OTP in the database (optimized query with limit)
