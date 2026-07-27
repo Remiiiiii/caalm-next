@@ -28,15 +28,18 @@ import {
 	signInUser,
 } from "@/lib/actions/user.actions";
 import { getLogoutMessage } from "@/lib/auth-utils";
+import {
+	createUniqueDemoEmail,
+	getStoredDemoSandboxEmail,
+	saveDemoSandboxEmail,
+} from "@/lib/demo/sandbox-email";
 import { getDashboardUrlForUser } from "@/lib/utils/dashboard-redirect";
 
 type FormType = "sign-in" | "sign-up";
 
-const isClientDemoMode = () =>
-	process.env.NEXT_PUBLIC_APP_MODE === "demo";
+const isClientDemoMode = () => process.env.NEXT_PUBLIC_APP_MODE === "demo";
 
-const DEMO_OTP_HINT =
-	process.env.NEXT_PUBLIC_DEMO_OTP_HINT || "123456";
+const DEMO_OTP_HINT = process.env.NEXT_PUBLIC_DEMO_OTP_HINT || "123456";
 
 async function completeDemoSession(email: string): Promise<void> {
 	const res = await fetch("/api/demo/session", {
@@ -166,6 +169,23 @@ const AuthForm = ({ type }: { type: FormType }) => {
 		},
 	});
 
+	// Demo: unique sandbox email per visitor; sign-in reuses localStorage
+	useEffect(() => {
+		if (!isClientDemoMode()) return;
+		if (searchParams?.get("invitation") === "accepted") return;
+
+		if (type === "sign-up") {
+			const email = createUniqueDemoEmail();
+			form.setValue("email", email);
+			return;
+		}
+
+		const stored = getStoredDemoSandboxEmail();
+		if (stored) {
+			form.setValue("email", stored);
+		}
+	}, [type, searchParams, form]);
+
 	// Check for logout reason and invitation acceptance in URL params
 	useEffect(() => {
 		const reason = searchParams?.get("reason");
@@ -210,6 +230,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
 				if (res?.accountId) {
 					setSuccess(true);
 					setAccountId(res.accountId);
+					if (isClientDemoMode()) {
+						saveDemoSandboxEmail(values.email);
+					}
 
 					// Check if user came from invitation acceptance
 					const invitation = searchParams?.get("invitation");
@@ -257,6 +280,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
 		} else {
 			try {
 				await createAccount({ email: values.email });
+				if (isClientDemoMode()) {
+					saveDemoSandboxEmail(values.email);
+				}
 				setPendingSignup({
 					email: values.email,
 					fullName: values.fullName || "",
@@ -315,8 +341,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
 				{isClientDemoMode() && (
 					<p className="text-sm text-slate-600 mb-4 -mt-2">
 						Demo OTP:{" "}
-						<span className="font-semibold text-[#0f5384]">{DEMO_OTP_HINT}</span>
-						{" "}(no email is sent)
+						<span className="font-semibold text-[#0f5384]">
+							{DEMO_OTP_HINT}
+						</span>{" "}
+						(no email is sent). A unique sandbox address is assigned
+						automatically.
 					</p>
 				)}
 				{type === "sign-up" && (
@@ -329,7 +358,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 									<FormLabel className="shad-form-label">Full Name</FormLabel>
 									<FormControl>
 										<Input
-											placeholder=" Enter your full name"
+											placeholder="Demo User"
 											{...field}
 											value={
 												field.value ? ` ${field.value.replace(/^ /, "")}` : ""
@@ -353,15 +382,23 @@ const AuthForm = ({ type }: { type: FormType }) => {
 					render={({ field }) => (
 						<FormItem>
 							<div className="shad-form-item">
-								<FormLabel className="shad-form-label">Email</FormLabel>
+								<FormLabel className="shad-form-label">
+									{isClientDemoMode() ? "Sandbox ID" : "Email"}
+								</FormLabel>
 								<FormControl>
 									<Input
-										placeholder=" Enter your email"
+										placeholder={
+											isClientDemoMode()
+												? " Assigned automatically"
+												: " Enter your email"
+										}
 										{...field}
+										readOnly={isClientDemoMode()}
 										value={
 											field.value ? ` ${field.value.replace(/^ /, "")}` : ""
 										}
 										onChange={(e) => {
+											if (isClientDemoMode()) return;
 											const value = e.target.value.replace(/^ /, "");
 											field.onChange(value);
 										}}
@@ -488,10 +525,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 								if (user?.$id) {
 									const orgId =
 										localStorage.getItem("caalm_org_id") || undefined;
-									const url = await getDashboardUrlForUser(
-										user.$id,
-										orgId,
-									);
+									const url = await getDashboardUrlForUser(user.$id, orgId);
 									window.location.href = url;
 									return;
 								}

@@ -101,8 +101,8 @@ const TwoFactorVerificationModal = ({
 
 	return (
 		<AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-			<AlertDialogContent className="shad-alert-dialog">
-				<AlertDialogHeader className="relative flex justify-center">
+			<AlertDialogContent className="shad-alert-dialog !max-h-none overflow-hidden">
+				<AlertDialogHeader className="relative flex justify-center max-w-full">
 					<AlertDialogTitle className="h2 text-center flex items-center gap-2">
 						<Shield className="h-5 w-5 text-blue-500" />
 						Two-Factor Authentication
@@ -123,16 +123,23 @@ const TwoFactorVerificationModal = ({
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 
-				<InputOTP maxLength={6} value={otp} onChange={setOtp}>
-					<InputOTPGroup className="shad-otp">
-						<InputOTPSlot index={0} className="shad-otp-slot" />
-						<InputOTPSlot index={1} className="shad-otp-slot" />
-						<InputOTPSlot index={2} className="shad-otp-slot" />
-						<InputOTPSlot index={3} className="shad-otp-slot" />
-						<InputOTPSlot index={4} className="shad-otp-slot" />
-						<InputOTPSlot index={5} className="shad-otp-slot" />
-					</InputOTPGroup>
-				</InputOTP>
+				<div className="w-full max-w-full overflow-hidden flex justify-center">
+					<InputOTP
+						maxLength={6}
+						value={otp}
+						onChange={setOtp}
+						containerClassName="w-full max-w-full justify-center"
+					>
+						<InputOTPGroup className="shad-otp">
+							<InputOTPSlot index={0} className="shad-otp-slot" />
+							<InputOTPSlot index={1} className="shad-otp-slot" />
+							<InputOTPSlot index={2} className="shad-otp-slot" />
+							<InputOTPSlot index={3} className="shad-otp-slot" />
+							<InputOTPSlot index={4} className="shad-otp-slot" />
+							<InputOTPSlot index={5} className="shad-otp-slot" />
+						</InputOTPGroup>
+					</InputOTP>
+				</div>
 
 				{error && <div className="text-red text-center text-sm">{error}</div>}
 

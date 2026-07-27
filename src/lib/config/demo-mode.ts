@@ -8,7 +8,10 @@ export const PROD_APPWRITE_DATABASE_ID =
 	process.env.PROD_APPWRITE_DATABASE_ID || "685ed87c0009d8189fc7";
 
 export function isDemoMode(): boolean {
-	return process.env.APP_MODE === "demo";
+	return (
+		process.env.APP_MODE === "demo" ||
+		process.env.NEXT_PUBLIC_APP_MODE === "demo"
+	);
 }
 
 export function getDemoOtpCode(): string {

@@ -189,8 +189,8 @@ const OTPModal = ({
 
 	return (
 		<AlertDialog open={modalIsOpen} onOpenChange={handleModalClose}>
-			<AlertDialogContent className="shad-alert-dialog">
-				<AlertDialogHeader className="relative flex justify-center">
+			<AlertDialogContent className="shad-alert-dialog !max-h-none overflow-hidden">
+				<AlertDialogHeader className="relative flex justify-center max-w-full">
 					<AlertDialogTitle className="h2 text-center">
 						Enter Your OTP
 						<Image
@@ -208,33 +208,36 @@ const OTPModal = ({
 							}}
 						/>
 					</AlertDialogTitle>
-					<AlertDialogDescription className="subtitle-2 text-center">
+					<AlertDialogDescription className="subtitle-2 text-center break-all px-1 max-w-full">
 						{hasAutoSent
 							? `We've sent you a code to ${email}`
 							: `Sending verification code to ${email}...`}
 					</AlertDialogDescription>
 				</AlertDialogHeader>
-				<InputOTP
-					maxLength={6}
-					value={otp}
-					onChange={(value) => {
-						setOtp(value);
-						// Clear errors when user starts typing
-						if (value.length > 0 && (error || lastError)) {
-							setError("");
-							setLastError("");
-						}
-					}}
-				>
-					<InputOTPGroup className="shad-otp">
-						<InputOTPSlot index={0} className="shad-otp-slot" />
-						<InputOTPSlot index={1} className="shad-otp-slot" />
-						<InputOTPSlot index={2} className="shad-otp-slot" />
-						<InputOTPSlot index={3} className="shad-otp-slot" />
-						<InputOTPSlot index={4} className="shad-otp-slot" />
-						<InputOTPSlot index={5} className="shad-otp-slot" />
-					</InputOTPGroup>
-				</InputOTP>
+				<div className="w-full max-w-full overflow-hidden flex justify-center">
+					<InputOTP
+						maxLength={6}
+						value={otp}
+						containerClassName="w-full max-w-full justify-center"
+						onChange={(value) => {
+							setOtp(value);
+							// Clear errors when user starts typing
+							if (value.length > 0 && (error || lastError)) {
+								setError("");
+								setLastError("");
+							}
+						}}
+					>
+						<InputOTPGroup className="shad-otp">
+							<InputOTPSlot index={0} className="shad-otp-slot" />
+							<InputOTPSlot index={1} className="shad-otp-slot" />
+							<InputOTPSlot index={2} className="shad-otp-slot" />
+							<InputOTPSlot index={3} className="shad-otp-slot" />
+							<InputOTPSlot index={4} className="shad-otp-slot" />
+							<InputOTPSlot index={5} className="shad-otp-slot" />
+						</InputOTPGroup>
+					</InputOTP>
+				</div>
 
 				{(error || lastError) && (
 					<div
@@ -290,7 +293,10 @@ const OTPModal = ({
 				<AlertDialogFooter>
 					<div className="flex w-full flex-col gap-4">
 						<AlertDialogAction
-							onClick={handleVerify}
+							onClick={(e) => {
+								e.preventDefault();
+								void handleVerify();
+							}}
 							className="shad-submit-btn h-12"
 							type="button"
 						>

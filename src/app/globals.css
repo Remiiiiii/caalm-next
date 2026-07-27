@@ -417,7 +417,7 @@
 
 	/* Matches .glass-dialog-panel — OTP / 2FA alert shells */
 	.shad-alert-dialog {
-		@apply space-y-4 max-w-[95%] sm:w-fit rounded-xl md:rounded-[30px] px-4 md:px-8 py-10 outline-hidden;
+		@apply space-y-4 w-full max-w-[min(95vw,28rem)] overflow-hidden rounded-xl md:rounded-[30px] px-4 md:px-8 py-10 outline-hidden;
 		background: rgba(255, 255, 255, 0.45);
 		backdrop-filter: blur(24px);
 		-webkit-backdrop-filter: blur(24px);
@@ -432,10 +432,10 @@
 		background-color: #1565c0;
 	}
 	.shad-otp {
-		@apply w-full flex gap-1 sm:gap-2 justify-between;
+		@apply w-full max-w-full flex flex-nowrap items-center justify-between gap-1 sm:gap-2;
 	}
 	.shad-otp-slot {
-		@apply text-[40px] font-medium rounded-xl ring-brand shadow-drop-1 text-brand-100 justify-center flex border-2 border-light-300 size-12 md:size-16 gap-5;
+		@apply text-[24px] sm:text-[32px] md:text-[36px] font-medium rounded-xl shadow-drop-1 text-brand-100 justify-center flex border-2 border-light-300 h-9 w-9 sm:h-11 sm:w-11 md:h-12 md:w-12 shrink min-w-0 basis-0 flex-1 max-w-12;
 	}
 
 	.shad-sheet {
