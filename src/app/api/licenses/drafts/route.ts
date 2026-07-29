@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { ID, Query } from "node-appwrite";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { FileService } from "@/lib/api/contracts/services/FileService";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
 import {
 	errorResponse,
@@ -15,6 +16,23 @@ import { appwriteConfig } from "@/lib/appwrite/config";
  * License Draft Service - Simple inline service for license drafts
  */
 class LicenseDraftService {
+	static toUploadBuffer(parsed: any): Buffer | null {
+		if (!parsed) return null;
+
+		if (Array.isArray(parsed.arrayBuffer) && parsed.arrayBuffer.length > 0) {
+			return Buffer.from(parsed.arrayBuffer);
+		}
+
+		if (
+			typeof parsed.base64Content === "string" &&
+			parsed.base64Content.length > 0
+		) {
+			return Buffer.from(parsed.base64Content, "base64");
+		}
+
+		return null;
+	}
+
 	/**
 	 * Optimize processed file data by removing large binary fields
 	 */
@@ -39,34 +57,96 @@ class LicenseDraftService {
 	}
 
 	/**
-	 * Optimize form data by removing empty values
+	 * Optimize form data by removing empty values (keep Date instances)
 	 */
 	static optimizeFormData(formData: any): any {
 		if (!formData || typeof formData !== "object") return formData;
 
 		return Object.fromEntries(
-			Object.entries(formData).filter(([_, value]) => {
-				if (value === null || value === undefined || value === "") return false;
-				if (Array.isArray(value) && value.length === 0) return false;
-				if (typeof value === "object" && Object.keys(value).length === 0)
-					return false;
-				return true;
-			}),
+			Object.entries(formData)
+				.filter(([_, value]) => {
+					if (value === null || value === undefined || value === "")
+						return false;
+					if (Array.isArray(value) && value.length === 0) return false;
+					if (
+						typeof value === "object" &&
+						!(value instanceof Date) &&
+						!Array.isArray(value) &&
+						Object.keys(value).length === 0
+					) {
+						return false;
+					}
+					return true;
+				})
+				.map(([key, value]) => {
+					if (value instanceof Date) {
+						return [key, value.toISOString()];
+					}
+					return [key, value];
+				}),
 		);
 	}
 
 	/**
-	 * Optimize extracted data by removing empty values
+	 * Optimize extracted data by removing empty values and bulky AI metadata
 	 */
 	static optimizeExtractedData(extractedData: any): any {
 		if (!extractedData || typeof extractedData !== "object")
 			return extractedData;
 
+		const omitKeys = new Set([
+			"fieldConfidence",
+			"filledFieldNames",
+			"lowConfidenceFields",
+			"textLength",
+			"filename",
+		]);
+
 		return Object.fromEntries(
-			Object.entries(extractedData).filter(([_, value]) => {
+			Object.entries(extractedData).filter(([key, value]) => {
+				if (omitKeys.has(key)) return false;
 				return value !== null && value !== undefined && value !== "";
 			}),
 		);
+	}
+
+	static stringifyWithinLimit(
+		value: unknown,
+		maxChars: number,
+		label: string,
+	): string | null {
+		if (value === null || value === undefined) return null;
+		const json = typeof value === "string" ? value : JSON.stringify(value);
+		if (json.length <= maxChars) return json;
+
+		console.warn(
+			`[LicenseDraftService] ${label} JSON is ${json.length} chars; truncating to fit ${maxChars}`,
+		);
+
+		if (typeof value !== "object" || value === null) {
+			return json.slice(0, maxChars);
+		}
+
+		const pruned: Record<string, unknown> = { ...(value as object) };
+		const longStringKeys = Object.entries(pruned)
+			.filter(([, v]) => typeof v === "string" && (v as string).length > 200)
+			.sort(
+				(a, b) =>
+					((b[1] as string).length || 0) - ((a[1] as string).length || 0),
+			);
+
+		for (const [key] of longStringKeys) {
+			const current = JSON.stringify(pruned);
+			if (current.length <= maxChars) break;
+			const str = String(pruned[key]);
+			const overBy = current.length - maxChars;
+			const keep = Math.max(80, str.length - overBy - 20);
+			pruned[key] = `${str.slice(0, keep)}…`;
+		}
+
+		const finalJson = JSON.stringify(pruned);
+		if (finalJson.length <= maxChars) return finalJson;
+		return finalJson.slice(0, maxChars);
 	}
 
 	/**
@@ -94,13 +174,41 @@ class LicenseDraftService {
 			throw new Error("Database configuration missing");
 		}
 
-		// Optimize data
-		const optimizedProcessedFileData = draftData.processedFileData
-			? LicenseDraftService.optimizeProcessedFileData(
-					draftData.processedFileData,
-					null,
-				)
-			: null;
+		let bucketFileId: string | null = null;
+		let optimizedProcessedFileData = null;
+
+		if (draftData.processedFileData) {
+			const parsed =
+				typeof draftData.processedFileData === "string"
+					? JSON.parse(draftData.processedFileData)
+					: draftData.processedFileData;
+
+			if (!parsed.bucketFileId) {
+				const uploadBuffer = LicenseDraftService.toUploadBuffer(parsed);
+				if (uploadBuffer) {
+					try {
+						bucketFileId = await FileService.uploadFileToStorage(
+							uploadBuffer,
+							parsed.name || "license-draft.pdf",
+						);
+					} catch (uploadError: unknown) {
+						const message =
+							uploadError instanceof Error
+								? uploadError.message
+								: String(uploadError);
+						console.warn(
+							"Failed to upload license draft file to storage:",
+							message,
+						);
+					}
+				}
+			} else {
+				bucketFileId = parsed.bucketFileId;
+			}
+
+			optimizedProcessedFileData =
+				LicenseDraftService.optimizeProcessedFileData(parsed, bucketFileId);
+		}
 
 		const optimizedFormData = LicenseDraftService.optimizeFormData(
 			draftData.formData,
@@ -117,36 +225,65 @@ class LicenseDraftService {
 		const draftPayload = {
 			ownerId,
 			accountId,
-			formData: optimizedFormData ? JSON.stringify(optimizedFormData) : null,
+			formData: LicenseDraftService.stringifyWithinLimit(
+				optimizedFormData,
+				5000,
+				"formData",
+			),
 			currentStep: draftData.currentStep,
-			processedFileData: optimizedProcessedFileData
-				? JSON.stringify(optimizedProcessedFileData)
-				: null,
-			extractedData: optimizedExtractedData
-				? JSON.stringify(optimizedExtractedData)
-				: null,
+			processedFileData: LicenseDraftService.stringifyWithinLimit(
+				optimizedProcessedFileData,
+				5000,
+				"processedFileData",
+			),
+			extractedData: LicenseDraftService.stringifyWithinLimit(
+				optimizedExtractedData,
+				3000,
+				"extractedData",
+			),
 			progressPercentage,
 			lastSavedAt: new Date().toISOString(),
 			isCompleted: draftData.isCompleted || false,
+			...(bucketFileId ? { fileId: bucketFileId } : {}),
 		};
 
 		if (draftData.draftId) {
-			// Update existing draft
-			return await tablesDB.updateRow({
-				databaseId: appwriteConfig.databaseId,
-				tableId: appwriteConfig.licenseDraftsCollectionId,
-				rowId: draftData.draftId,
-				data: draftPayload,
-			});
-		} else {
-			// Create new draft
-			return await tablesDB.createRow({
-				databaseId: appwriteConfig.databaseId,
-				tableId: appwriteConfig.licenseDraftsCollectionId,
-				rowId: ID.unique(),
-				data: draftPayload,
-			});
+			try {
+				return await tablesDB.updateRow({
+					databaseId: appwriteConfig.databaseId,
+					tableId: appwriteConfig.licenseDraftsCollectionId,
+					rowId: draftData.draftId,
+					data: draftPayload,
+				});
+			} catch (error: unknown) {
+				const code =
+					typeof error === "object" && error && "code" in error
+						? (error as { code?: number }).code
+						: undefined;
+				const message =
+					error instanceof Error ? error.message : String(error ?? "");
+				const missing =
+					code === 404 ||
+					/could not be found|not found/i.test(message);
+
+				if (!missing) throw error;
+
+				// Stale draftId (deleted or expired) — create a fresh draft
+				return await tablesDB.createRow({
+					databaseId: appwriteConfig.databaseId,
+					tableId: appwriteConfig.licenseDraftsCollectionId,
+					rowId: ID.unique(),
+					data: draftPayload,
+				});
+			}
 		}
+
+		return await tablesDB.createRow({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.licenseDraftsCollectionId,
+			rowId: ID.unique(),
+			data: draftPayload,
+		});
 	}
 
 	/**
@@ -185,21 +322,32 @@ class LicenseDraftService {
 			],
 		});
 
-		// Parse JSON fields safely
-		return drafts.rows.map((draft: any) => {
+		// Parse JSON fields safely (Tables API may nest columns under `data`)
+		return drafts.rows.map((raw: any) => {
+			const draft =
+				raw?.data && typeof raw.data === "object"
+					? { ...raw, ...raw.data }
+					: raw;
+
 			let formData = null;
 			let processedFileData = null;
 			let extractedData = null;
 
 			try {
-				formData = draft.formData ? JSON.parse(draft.formData) : null;
+				formData = draft.formData
+					? typeof draft.formData === "string"
+						? JSON.parse(draft.formData)
+						: draft.formData
+					: null;
 			} catch (e) {
 				console.warn("Failed to parse formData for draft:", draft.$id, e);
 			}
 
 			try {
 				processedFileData = draft.processedFileData
-					? JSON.parse(draft.processedFileData)
+					? typeof draft.processedFileData === "string"
+						? JSON.parse(draft.processedFileData)
+						: draft.processedFileData
 					: null;
 			} catch (e) {
 				console.warn(
@@ -211,7 +359,9 @@ class LicenseDraftService {
 
 			try {
 				extractedData = draft.extractedData
-					? JSON.parse(draft.extractedData)
+					? typeof draft.extractedData === "string"
+						? JSON.parse(draft.extractedData)
+						: draft.extractedData
 					: null;
 			} catch (e) {
 				console.warn("Failed to parse extractedData for draft:", draft.$id, e);
@@ -222,8 +372,8 @@ class LicenseDraftService {
 				ownerId: draft.ownerId,
 				accountId: draft.accountId,
 				formData,
-				currentStep: draft.currentStep,
-				progressPercentage: draft.progressPercentage,
+				currentStep: Number(draft.currentStep) || 1,
+				progressPercentage: Number(draft.progressPercentage) || 0,
 				lastSavedAt: draft.lastSavedAt,
 				isCompleted: draft.isCompleted,
 				processedFileData,

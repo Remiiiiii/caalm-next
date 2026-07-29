@@ -1,36 +1,22 @@
 "use client";
 
 import { Upload } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import LicenseForm from "@/components/licenses/LicenseForm";
 import { Button } from "@/components/ui/button";
-import { PERMISSIONS } from "@/constants/permissions";
-import { usePermissions } from "@/hooks/usePermissions";
 import { applyLicenseFilters } from "@/lib/licenses/applyLicenseFilters";
 import { matchesStatusTab } from "@/lib/licenses/licensesListUtils";
 import type { License } from "@/types/licenses";
 import { useLicensesView } from "./LicensesView";
 
-const LicenseUploadForm = dynamic(() => import("@/components/license-upload"), {
-	ssr: false,
-	loading: () => null,
-});
-
 interface LicensesHeaderActionsProps {
 	licenses: License[];
-	userId?: string;
-	accountId?: string;
 }
 
 export default function LicensesHeaderActions({
 	licenses,
-	userId,
-	accountId,
 }: LicensesHeaderActionsProps) {
 	const { filters, statusTab } = useLicensesView();
-	const { permissions } = usePermissions();
-	const canCreate = permissions.includes(PERMISSIONS.LICENSES.CREATE);
 
 	const filteredForExport = useMemo(() => {
 		return applyLicenseFilters(licenses, filters).filter((l) =>
@@ -97,14 +83,6 @@ export default function LicensesHeaderActions({
 
 	return (
 		<div className="flex items-center gap-2 justify-end flex-wrap">
-			{canCreate && userId && accountId && (
-				<LicenseUploadForm
-					ownerId={userId}
-					accountId={accountId}
-					triggerLabel="Upload"
-					className="primary-btn px-3 sm:px-4 h-9 cursor-pointer"
-				/>
-			)}
 			<Button
 				variant="outline"
 				size="sm"

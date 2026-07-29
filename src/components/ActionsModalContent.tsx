@@ -507,6 +507,14 @@ export const FileDetails = ({
 				Vendor_Contract: "Vendor Contract",
 				Lease_Agreement: "Lease Agreement",
 				Consulting_Agreement: "Consulting Agreement",
+				Government_Grant: "Government Grant",
+				Government_Contract: "Government Contract",
+				Grant_Agreement: "Grant Agreement",
+				Vendor_Service_Agreement: "Vendor/Service Agreement",
+				MOU: "Memorandum of Understanding",
+				Donation_Agreement: "Donation/Gift Agreement",
+				Independent_Contractor: "Independent Contractor Agreement",
+				Fiscal_Sponsorship: "Fiscal Sponsorship Agreement",
 				Other: "Other",
 			};
 			return contractTypeMapping[String(value)] || String(value);

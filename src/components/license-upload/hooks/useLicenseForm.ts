@@ -20,29 +20,43 @@ export function useLicenseForm() {
 			status: "active",
 			licenseExpiryDate: undefined,
 			issueDate: undefined,
+			renewalDate: undefined,
 			issuingAuthority: "",
 			vendor: "",
 			product: "",
 			description: "",
+			notes: "",
 			quantity: "",
 			cost: "",
 			currencyCode: "USD",
 			division: "",
 			department: "",
+			subDepartment: "",
+			businessUnit: "",
+			compliance: undefined,
 			assignedManagers: [],
 			autoRenew: false,
 			renewalNoticeDays: "",
 		},
 	});
 
-	// Synchronous file processing function
 	const processFileSynchronously = useCallback(
-		(file: File): Promise<ProcessedFileData> => {
+		(
+			file: File,
+			onProgress?: (percent: number) => void,
+		): Promise<ProcessedFileData> => {
 			return new Promise((resolve, reject) => {
 				const reader = new FileReader();
 
+				reader.onprogress = (event) => {
+					if (event.lengthComputable && event.total > 0) {
+						onProgress?.(Math.round((event.loaded / event.total) * 100));
+					}
+				};
+
 				reader.onload = (event) => {
 					try {
+						onProgress?.(100);
 						const arrayBuffer = event.target?.result as ArrayBuffer;
 						const base64Content = btoa(
 							new Uint8Array(arrayBuffer).reduce(
@@ -73,11 +87,10 @@ export function useLicenseForm() {
 		[],
 	);
 
-	// Extract license data from file
 	const extractLicenseData = useCallback(
 		async (
 			processedData: ProcessedFileData,
-		): Promise<Record<string, unknown>> => {
+		): Promise<Record<string, unknown> | null> => {
 			try {
 				const response = await fetch("/api/licenses/extract-data", {
 					method: "POST",
@@ -96,11 +109,14 @@ export function useLicenseForm() {
 					throw new Error("Extraction failed");
 				}
 
-				const data = await response.json();
-				return data.data || {};
+				const result = await response.json();
+				if (result.success && result.data) {
+					return result.data as Record<string, unknown>;
+				}
+				return null;
 			} catch (error) {
 				console.error("License extraction error:", error);
-				return {};
+				return null;
 			}
 		},
 		[],

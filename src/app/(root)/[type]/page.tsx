@@ -242,11 +242,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 						<h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
 					</div>
 					<div className="mb-6 flex items-center justify-end">
-						<ContractsHeaderActions
-							files={contractDocuments}
-							userId={user?.$id}
-							accountId={user?.accountId}
-						/>
+						<ContractsHeaderActions files={contractDocuments} />
 					</div>
 					<ContractsAttentionStrip files={contractDocuments} />
 					<ContractsMetricsBar files={contractDocuments} />

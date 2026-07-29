@@ -4,7 +4,9 @@
 
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import {
+	CheckCircle2,
 	FileCheck,
 	FileText,
 	Loader2,
@@ -24,6 +26,8 @@ interface Step1Props {
 	processedFileData: ProcessedFileData | null;
 	isExtracting: boolean;
 	savedDrafts: Draft[];
+	fileIngestUi: "hidden" | "progress" | "success";
+	fileIngestProgress: number;
 	onDrop: (files: File[]) => void;
 	onResumeDraft: (draft: Draft) => void;
 	onDeleteDraft: (draftId: string) => void;
@@ -33,6 +37,8 @@ export default function Step1FileUpload({
 	processedFileData,
 	isExtracting,
 	savedDrafts,
+	fileIngestUi,
+	fileIngestProgress,
 	onDrop,
 	onResumeDraft,
 	onDeleteDraft,
@@ -56,9 +62,57 @@ export default function Step1FileUpload({
 			{/* File Upload Card */}
 			<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
 				<CardHeader className="pb-4">
-					<CardTitle className="text-lg font-semibold sidebar-gradient-text">
-						1. Upload License File
-					</CardTitle>
+					<div className="flex items-center gap-3">
+						<CardTitle className="text-lg font-semibold sidebar-gradient-text">
+							1. Upload License File
+						</CardTitle>
+						<AnimatePresence mode="wait">
+							{fileIngestUi === "progress" ? (
+								<motion.div
+									key="file-ingest-progress"
+									initial={{ opacity: 0, x: -6 }}
+									animate={{ opacity: 1, x: 0 }}
+									exit={{ opacity: 0, scale: 0.9 }}
+									transition={{ duration: 0.2 }}
+									className="flex min-w-0 items-center gap-2"
+									aria-live="polite"
+									aria-label={`Upload ${fileIngestProgress}% complete`}
+								>
+									<div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200 sm:w-28">
+										<div
+											className="h-full rounded-full bg-[#078FAB] transition-[width] duration-200 ease-out"
+											style={{
+												width: `${fileIngestProgress}%`,
+											}}
+										/>
+									</div>
+									<span className="tabular-nums text-xs font-medium text-slate-600">
+										{fileIngestProgress}%
+									</span>
+								</motion.div>
+							) : null}
+							{fileIngestUi === "success" ? (
+								<motion.div
+									key="file-ingest-success"
+									initial={{ opacity: 0, scale: 0.5 }}
+									animate={{ opacity: 1, scale: 1 }}
+									exit={{ opacity: 0, scale: 0.8 }}
+									transition={{
+										type: "spring",
+										stiffness: 420,
+										damping: 18,
+									}}
+									className="flex items-center"
+									aria-label="Upload complete"
+								>
+									<CheckCircle2
+										className="h-5 w-5 text-green"
+										strokeWidth={2.25}
+									/>
+								</motion.div>
+							) : null}
+						</AnimatePresence>
+					</div>
 				</CardHeader>
 				<CardContent>
 					<div
@@ -156,6 +210,7 @@ export default function Step1FileUpload({
 										</div>
 										<div className="flex items-center gap-2">
 											<Button
+												type="button"
 												variant="outline"
 												size="sm"
 												onClick={() => onResumeDraft(draft)}
@@ -165,6 +220,7 @@ export default function Step1FileUpload({
 												Resume
 											</Button>
 											<Button
+												type="button"
 												variant="ghost"
 												size="sm"
 												onClick={() => onDeleteDraft(draft.$id)}

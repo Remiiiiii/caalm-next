@@ -1,7 +1,6 @@
 "use client";
 
 import { Upload } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -11,26 +10,16 @@ import type { UIFileDoc } from "@/types/files";
 import ContractsExpiryModalTestButton from "./ContractsExpiryModalTestButton";
 import { useContractsView } from "./ContractsViewContext";
 
-const ContractUploadForm = dynamic(
-	() => import("@/components/ContractUploadForm"),
-	{ ssr: false, loading: () => null },
-);
-
 interface ContractsHeaderActionsProps {
 	files: UIFileDoc[];
-	userId?: string;
-	accountId?: string;
 }
 
 export default function ContractsHeaderActions({
 	files,
-	userId,
-	accountId,
 }: ContractsHeaderActionsProps) {
 	const { filters, statusTab, selectedIds } = useContractsView();
 	const { permissions } = usePermissions();
 	const canView = permissions.includes(PERMISSIONS.CONTRACTS.VIEW);
-	const canCreate = permissions.includes(PERMISSIONS.CONTRACTS.CREATE);
 
 	const exportFiles = useMemo(() => {
 		const base = files.filter((file) => {
@@ -147,13 +136,6 @@ export default function ContractsHeaderActions({
 
 	return (
 		<div className="flex items-center gap-2 justify-end flex-wrap">
-			{canCreate && userId && accountId && (
-				<ContractUploadForm
-					ownerId={userId}
-					accountId={accountId}
-					className="primary-btn px-3 sm:px-4 h-9 cursor-pointer"
-				/>
-			)}
 			{canView && (
 				<Button
 					variant="outline"

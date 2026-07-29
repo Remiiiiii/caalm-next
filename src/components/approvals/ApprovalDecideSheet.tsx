@@ -13,6 +13,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { agingLabel } from "@/components/approvals/ApprovalsAttentionStrip";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
+import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import DocumentViewer from "@/components/DocumentViewer";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +28,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
+import { useContractApprovalWorkflow } from "@/hooks/useContractApprovalWorkflow";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import {
 	type ApprovalQueueItem,
 	statusBadgeClasses,
@@ -56,9 +57,13 @@ export default function ApprovalDecideSheet({
 	const pathname = usePathname();
 	const { toast } = useToast();
 	const { setPreviewItem } = useApprovalsView();
-	const { updateStatus } = useUpdateContractStatus({
-		onStatusChange: () => router.refresh(),
-	});
+	const contractIdForWorkflow =
+		open && item?.entity === "contract" ? item.decisionId : null;
+	const {
+		workflow,
+		decide: decideWorkflow,
+		isLoading: workflowLoading,
+	} = useContractApprovalWorkflow(contractIdForWorkflow);
 	const [notes, setNotes] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [viewerOpen, setViewerOpen] = useState(false);
@@ -85,7 +90,7 @@ export default function ApprovalDecideSheet({
 	};
 
 	const handleDecision = async (decision: Decision) => {
-		if (!canDecide) return;
+		if (!canDecide && !(workflow?.canDecide || workflow?.canOverride)) return;
 		if (
 			(decision === "rejected" || decision === "changes_requested") &&
 			!notes.trim()
@@ -108,12 +113,21 @@ export default function ApprovalDecideSheet({
 		setBusy(true);
 		try {
 			if (item.entity === "contract") {
-				const ok = await updateStatus({
-					fileId: item.decisionId,
-					status: nextStatus,
+				await decideWorkflow({
+					decision,
+					notes,
 					path: pathname || "/contracts/approvals",
 				});
-				if (!ok) return;
+				toast({
+					title:
+						decision === "approved"
+							? "Step approved"
+							: decision === "changes_requested"
+								? "Changes requested"
+								: "Rejected",
+					description: "Approval workflow updated.",
+				});
+				router.refresh();
 			} else {
 				await decideLicense(nextStatus);
 				toast({
@@ -131,10 +145,11 @@ export default function ApprovalDecideSheet({
 			setNotes("");
 			setPreviewItem(null);
 			onOpenChange(false);
-		} catch {
+		} catch (err) {
 			toast({
 				title: "Error",
-				description: "Could not complete decision.",
+				description:
+					err instanceof Error ? err.message : "Could not complete decision.",
 				variant: "destructive",
 			});
 		} finally {
@@ -144,6 +159,11 @@ export default function ApprovalDecideSheet({
 
 	const isPending =
 		item.status === "pending-review" || item.status === "action-required";
+
+	const canActOnWorkflow =
+		item.entity === "contract"
+			? !!(workflow?.canDecide || workflow?.canOverride) && isPending
+			: canDecide && isPending;
 
 	return (
 		<>
@@ -186,6 +206,28 @@ export default function ApprovalDecideSheet({
 								Waiting {agingLabel(item)}
 							</Badge>
 						</div>
+
+						{item.entity === "contract" && (
+							<div className="-mx-2 overflow-hidden rounded-xl border border-slate-200 bg-white p-3">
+								<p className="mb-2 px-1 text-xs font-medium text-slate-600">
+									Approval workflow
+								</p>
+								{workflowLoading ? (
+									<div className="flex h-24 items-center justify-center text-xs text-slate-500">
+										<Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+										Loading workflow…
+									</div>
+								) : workflow ? (
+									<div className="overflow-x-auto">
+										<ContractApprovalFlowCanvas workflow={workflow} />
+									</div>
+								) : (
+									<p className="px-1 text-xs text-slate-500">
+										Workflow unavailable
+									</p>
+								)}
+							</div>
+						)}
 
 						<div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
 							<div className="flex items-start gap-3">
@@ -243,7 +285,7 @@ export default function ApprovalDecideSheet({
 							)}
 						</div>
 
-						{canDecide && isPending && (
+						{canActOnWorkflow && (
 							<div className="space-y-2">
 								<label
 									htmlFor="approval-notes"
@@ -288,7 +330,7 @@ export default function ApprovalDecideSheet({
 							)}
 						</div>
 
-						{canDecide && isPending ? (
+						{canActOnWorkflow ? (
 							<div className="flex items-center justify-between gap-2 flex-wrap">
 								<Button
 									type="button"

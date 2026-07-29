@@ -55,7 +55,7 @@
 		--destructive-foreground: 0 0% 98%;
 		--border: 0 0% 89.8%;
 		--input: 0 0% 89.8%;
-		--ring: 0 0% 3.9%;
+		--ring: 190 92% 35%; /* #078FAB — form focus teal */
 		--chart-1: 12 76% 61%;
 		--chart-2: 173 58% 39%;
 		--chart-3: 197 37% 24%;
@@ -354,12 +354,44 @@
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
+		/* Beat preflight input { padding: 0 } so text never hugs the border */
+		padding-left: 0.75rem;
+		padding-right: 0.75rem;
+		padding-top: 0.5rem;
+		padding-bottom: 0.5rem;
+		box-sizing: border-box;
+	}
+	.glass-form-control:focus,
+	.glass-form-control:focus-visible {
+		outline: none;
+		border-color: #078fab;
+		box-shadow: 0 0 0 1px #078fab;
 	}
 	input.glass-form-control[type="file"],
 	.glass-form-control[type="file"] {
 		background: transparent;
 		border-style: dashed;
 		border-color: rgba(255, 255, 255, 0.45);
+		padding: 0.5rem;
+	}
+	input.glass-form-control[type="file"]:focus,
+	input.glass-form-control[type="file"]:focus-visible,
+	.glass-form-control[type="file"]:focus,
+	.glass-form-control[type="file"]:focus-visible {
+		border-color: #078fab;
+		box-shadow: 0 0 0 1px #078fab;
+	}
+
+	/* Native bordered controls (upload forms, etc.) — teal focus, not black */
+	input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus,
+	input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus-visible,
+	textarea:focus,
+	textarea:focus-visible,
+	select:focus,
+	select:focus-visible {
+		outline: none;
+		border-color: #078fab;
+		--tw-ring-color: #078fab;
 	}
 
 	/* Dialog / modal content shell (ContractExpiryModal-style frosted pane) */
@@ -680,6 +712,13 @@
 		-webkit-backdrop-filter: blur(12px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
 		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+	}
+
+	/* Toast notifications — higher fill so status messages stay readable */
+	.toast-glass.glass-card {
+		background: rgba(255, 255, 255, 0.94);
+		border: 1px solid rgba(255, 255, 255, 0.72);
+		box-shadow: 0 10px 36px 0 rgba(31, 38, 135, 0.22);
 	}
 
 	/* Clickable glass surfaces — pointer, hover, keyboard focus */
@@ -1186,6 +1225,40 @@
 	z-index: 2;
 	animation: orbit-snake-move 4s linear infinite;
 	pointer-events: none;
+}
+
+@keyframes notification-bell-shake {
+	0%,
+	100% {
+		transform: rotate(0deg);
+	}
+	/* ~0.7s shake, then ~2.5s rest (matches landing FeatureSpotlightGrid) */
+	5% {
+		transform: rotate(-8deg);
+	}
+	10% {
+		transform: rotate(8deg);
+	}
+	14% {
+		transform: rotate(-6deg);
+	}
+	18% {
+		transform: rotate(6deg);
+	}
+	22% {
+		transform: rotate(0deg);
+	}
+}
+
+.notification-bell-shake {
+	animation: notification-bell-shake 3.2s ease-in-out infinite;
+	transform-origin: top center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.notification-bell-shake {
+		animation: none;
+	}
 }
 
 @keyframes orbit-snake-move {

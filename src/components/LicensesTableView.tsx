@@ -76,12 +76,14 @@ interface LicensesTableViewProps {
 		role?: string;
 	} | null;
 	onRefresh?: () => void;
+	onLicenseRemoved?: (licenseId: string) => void;
 }
 
 export default function LicensesTableView({
 	licenses,
 	user,
 	onRefresh,
+	onLicenseRemoved,
 }: LicensesTableViewProps) {
 	const { toast } = useToast();
 	const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
@@ -519,6 +521,7 @@ export default function LicensesTableView({
 										<LicenseActionDropdown
 											license={license}
 											onRefresh={onRefresh}
+											onLicenseRemoved={onLicenseRemoved}
 											userRole={user?.role as "executive" | "admin" | "manager"}
 										/>
 									</TableCell>

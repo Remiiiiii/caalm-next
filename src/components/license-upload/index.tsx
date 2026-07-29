@@ -9,7 +9,6 @@ import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
 	Ban,
-	CheckCircle,
 	ChevronLeft,
 	ChevronRight,
 	FileCheck,
@@ -20,26 +19,28 @@ import {
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+	AiExtractionReviewPanel,
+	AiExtractionStatusBadge,
+} from "@/components/contract-upload/AiExtractionReview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
+import {
+	buildFormPatchFromLicenseExtraction,
+	isRealLicenseExtractionMethod,
+	parseLicenseExtractionJson,
+} from "@/lib/ai/licenseExtractionSchema";
 import { STEP_TITLES, TOTAL_STEPS } from "./constants";
 import { useDraftManagement } from "./hooks/useDraftManagement";
 import { useLicenseForm } from "./hooks/useLicenseForm";
@@ -104,6 +105,26 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		unknown
 	> | null>(null);
 	const [isExtracting, setIsExtracting] = useState(false);
+	/** Step 1 file ingest: progress bar → brief check → hide */
+	const [fileIngestUi, setFileIngestUi] = useState<
+		"hidden" | "progress" | "success"
+	>("hidden");
+	const [fileIngestProgress, setFileIngestProgress] = useState(0);
+	const fileIngestSuccessTimeoutRef = useRef<ReturnType<
+		typeof setTimeout
+	> | null>(null);
+	const [extractionMethod, setExtractionMethod] = useState<string | null>(
+		null,
+	);
+	const [aiFilledFields, setAiFilledFields] = useState<string[]>([]);
+	const [lowConfidenceFields, setLowConfidenceFields] = useState<string[]>(
+		[],
+	);
+	const [fieldConfidence, setFieldConfidence] = useState<
+		Record<string, number>
+	>({});
+	const [overallExtractionConfidence, setOverallExtractionConfidence] =
+		useState<number | null>(null);
 	const [currentStep, setCurrentStep] = useState(1);
 	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -142,6 +163,17 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		setProcessedFileData(null);
 		setExtractedData(null);
 		setIsExtracting(false);
+		setFileIngestUi("hidden");
+		setFileIngestProgress(0);
+		if (fileIngestSuccessTimeoutRef.current) {
+			clearTimeout(fileIngestSuccessTimeoutRef.current);
+			fileIngestSuccessTimeoutRef.current = null;
+		}
+		setExtractionMethod(null);
+		setAiFilledFields([]);
+		setLowConfidenceFields([]);
+		setFieldConfidence({});
+		setOverallExtractionConfidence(null);
 		setSelectedManagers([]);
 		setIsUploading(false);
 		setUploadProgress(0);
@@ -170,11 +202,44 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		form,
 		processedFileData,
 		extractedData,
+		isExtracting,
 		setProcessedFileData,
 		setExtractedData,
 		setCurrentStep,
 		setIsOpen,
 		resetForm,
+		onRestoreManagers: setSelectedManagers,
+		onRestoreExtraction: (extracted) => {
+			if (!extracted) {
+				setExtractionMethod(null);
+				setAiFilledFields([]);
+				setLowConfidenceFields([]);
+				setFieldConfidence({});
+				setOverallExtractionConfidence(null);
+				return;
+			}
+			const method = String(extracted.method || "");
+			setExtractionMethod(method || null);
+			const filled = Array.isArray(extracted.filledFieldNames)
+				? (extracted.filledFieldNames as string[])
+				: [];
+			const low = Array.isArray(extracted.lowConfidenceFields)
+				? (extracted.lowConfidenceFields as string[])
+				: [];
+			const conf =
+				extracted.fieldConfidence &&
+				typeof extracted.fieldConfidence === "object"
+					? (extracted.fieldConfidence as Record<string, number>)
+					: {};
+			setAiFilledFields(filled);
+			setLowConfidenceFields(low);
+			setFieldConfidence(conf);
+			setOverallExtractionConfidence(
+				typeof extracted.overallConfidence === "number"
+					? extracted.overallConfidence
+					: null,
+			);
+		},
 	});
 
 	// Step navigation
@@ -211,51 +276,100 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 			if (acceptedFiles.length > 0) {
 				const file = acceptedFiles[0];
 
+				if (fileIngestSuccessTimeoutRef.current) {
+					clearTimeout(fileIngestSuccessTimeoutRef.current);
+					fileIngestSuccessTimeoutRef.current = null;
+				}
+
 				try {
 					// Reset draft ID - each file upload creates a new draft
 					setCurrentDraftId(null);
+					setFileIngestUi("progress");
+					setFileIngestProgress(0);
 
-					// Process file synchronously and cache all data
-					const processedData = await processFileSynchronously(file);
+					// Process file synchronously and cache all data (0–40%)
+					const processedData = await processFileSynchronously(
+						file,
+						(readPct) => {
+							setFileIngestProgress(Math.round(readPct * 0.4));
+						},
+					);
 					setProcessedFileData(processedData);
+					setFileIngestProgress(40);
 
-					// Auto-extract data from license using cached data
+					// Auto-extract data (40–95%)
 					setIsExtracting(true);
+					let extractPct = 40;
+					const extractTick = setInterval(() => {
+						extractPct = Math.min(extractPct + 2, 92);
+						setFileIngestProgress(extractPct);
+					}, 180);
+
 					try {
 						const extracted = await extractLicenseData(processedData);
 						setExtractedData(extracted);
 
-						// Pre-fill form with extracted data
 						if (extracted) {
-							form.reset({
-								...form.getValues(),
-								licenseName:
-									(extracted.licenseName as string) ||
-									file.name.replace(/\.[^/.]+$/, ""),
-								licenseNumber: (extracted.licenseNumber as string) || "",
-								licenseType:
-									(extracted.licenseType as string) || "subscription",
-								category: (extracted.category as string) || "saas",
-								vendor: (extracted.vendor as string) || "",
-								product: (extracted.product as string) || "",
-								licenseExpiryDate: extracted.licenseExpiryDate
-									? new Date(extracted.licenseExpiryDate as string)
-									: undefined,
-								issueDate: extracted.issueDate
-									? new Date(extracted.issueDate as string)
-									: undefined,
-								cost: (extracted.cost as string) || "",
-								quantity: (extracted.quantity as string) || "",
-								description: (extracted.description as string) || "",
-							});
+							const method = String(extracted.method || "");
+							setExtractionMethod(method);
+
+							const parsed = parseLicenseExtractionJson(
+								JSON.stringify(extracted),
+							);
+							const patch = buildFormPatchFromLicenseExtraction(
+								parsed,
+								file.name,
+							);
+
+							const filledFromApi = Array.isArray(extracted.filledFieldNames)
+								? (extracted.filledFieldNames as string[])
+								: parsed.filledFieldNames;
+							const lowFromApi = Array.isArray(extracted.lowConfidenceFields)
+								? (extracted.lowConfidenceFields as string[])
+								: parsed.lowConfidenceFields;
+							const confMap =
+								(extracted.fieldConfidence as Record<string, number>) ||
+								parsed.fieldConfidence;
+
+							if (isRealLicenseExtractionMethod(method)) {
+								setAiFilledFields(filledFromApi);
+								setLowConfidenceFields(lowFromApi);
+								setFieldConfidence(confMap);
+								setOverallExtractionConfidence(
+									typeof extracted.overallConfidence === "number"
+										? (extracted.overallConfidence as number)
+										: parsed.overallConfidence,
+								);
+								form.reset({
+									...form.getValues(),
+									...patch,
+								});
+							} else {
+								setExtractedData(null);
+								setExtractionMethod(null);
+								setAiFilledFields([]);
+								setLowConfidenceFields([]);
+								setFieldConfidence({});
+								setOverallExtractionConfidence(null);
+							}
 						}
 					} catch (error) {
 						console.error("Failed to extract license data:", error);
 					} finally {
+						clearInterval(extractTick);
 						setIsExtracting(false);
+						setFileIngestProgress(100);
+						setFileIngestUi("success");
+						fileIngestSuccessTimeoutRef.current = setTimeout(() => {
+							setFileIngestUi("hidden");
+							setFileIngestProgress(0);
+							fileIngestSuccessTimeoutRef.current = null;
+						}, 1600);
 					}
 				} catch (error) {
 					console.error("File processing failed:", error);
+					setFileIngestUi("hidden");
+					setFileIngestProgress(0);
 					toast({
 						title: "File Processing Failed",
 						description:
@@ -274,19 +388,27 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		],
 	);
 
+	useEffect(() => {
+		return () => {
+			if (fileIngestSuccessTimeoutRef.current) {
+				clearTimeout(fileIngestSuccessTimeoutRef.current);
+			}
+		};
+	}, []);
+
 	// Step validation - defines required fields for each step
 	const getRequiredFieldsForStep = (step: number): string[] => {
 		switch (step) {
-			case 1: // File Upload - file required
-				return []; // Handled separately by processedFileData check
-			case 2: // License Basics
-				return ["licenseName", "licenseType", "status", "vendor", "product"];
-			case 3: // License Details
-				return ["issueDate", "licenseExpiryDate", "issuingAuthority"];
-			case 4: // Financial Details
-				return ["cost", "currencyCode", "quantity"];
-			case 5: // Department & Ownership
-				return ["division", "department", "assignedManager"];
+			case 1:
+				return [];
+			case 2:
+				return [
+					"licenseName",
+					"licenseType",
+					"status",
+					"licenseExpiryDate",
+					"issuingAuthority",
+				];
 			default:
 				return [];
 		}
@@ -374,15 +496,23 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					status: values.status || "active",
 					licenseExpiryDate: values.licenseExpiryDate?.toISOString(),
 					issueDate: values.issueDate?.toISOString(),
-					issuingAuthority: sanitizeString(values.issuingAuthority),
+					renewalDate: values.renewalDate?.toISOString(),
+					issuingAuthority:
+						sanitizeString(values.issuingAuthority) ||
+						sanitizeString(values.vendor) ||
+						"Unknown",
 					vendor: sanitizeString(values.vendor),
 					product: sanitizeString(values.product),
 					description: sanitizeString(values.description),
+					notes: sanitizeString(values.notes),
 					quantity: quantityAsNumber,
 					cost: costAsNumber,
 					currencyCode: values.currencyCode || "USD",
 					division: sanitizeString(values.division),
 					department: sanitizeString(values.department || values.division),
+					subDepartment: sanitizeString(values.subDepartment),
+					businessUnit: sanitizeString(values.businessUnit),
+					compliance: values.compliance,
 					assignedManagers: selectedManagers,
 					autoRenew: values.autoRenew || false,
 					renewalNoticeDays: parseIntegerInput(values.renewalNoticeDays),
@@ -455,15 +585,16 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		setDeleteDialogOpen(true);
 	}, []);
 
-	// Auto-save on step change
+	// Auto-save on step change (wait until OCR finishes so form/extracted data persist)
 	useEffect(() => {
+		if (isExtracting) return;
 		if (currentStep > 1 || processedFileData) {
 			const timeout = setTimeout(() => {
 				autoSaveDraft();
 			}, 2000);
 			return () => clearTimeout(timeout);
 		}
-	}, [currentStep, autoSaveDraft, processedFileData]);
+	}, [currentStep, autoSaveDraft, processedFileData, isExtracting]);
 
 	// Auto-save on dialog close
 	useEffect(() => {
@@ -522,12 +653,11 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 											{STEP_TITLES[currentStep - 1]}
 										</p>
 										<div className="flex items-center gap-2">
-											{extractedData && (
-												<Badge className=" sidebar-gradient-text border-sidebar-gradient-text">
-													<CheckCircle className="h-3 w-3 mr-1 text-[#0f5384]" />
-													Data extracted automatically
-												</Badge>
-											)}
+											<AiExtractionStatusBadge
+												method={extractionMethod}
+												overallConfidence={overallExtractionConfidence}
+												filledCount={aiFilledFields.length}
+											/>
 											{isSaving && (
 												<Badge
 													variant="outline"
@@ -581,6 +711,8 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 										processedFileData={processedFileData}
 										isExtracting={isExtracting}
 										savedDrafts={savedDrafts}
+										fileIngestUi={fileIngestUi}
+										fileIngestProgress={fileIngestProgress}
 										onDrop={onDrop}
 										onResumeDraft={resumeDraft}
 										onDeleteDraft={handleDeleteClick}
@@ -589,14 +721,24 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 
 								{/* Step 2: License Details */}
 								{currentStep === 2 && (
-									<Step2LicenseDetails
-										form={form}
-										departments={departments}
-										filteredManagers={filteredManagers}
-										selectedManagers={selectedManagers}
-										setSelectedManagers={setSelectedManagers}
-										fetchDepartmentManagers={fetchDepartmentManagers}
-									/>
+									<>
+										<AiExtractionReviewPanel
+											method={extractionMethod}
+											overallConfidence={overallExtractionConfidence}
+											filledCount={aiFilledFields.length}
+											lowConfidenceFields={lowConfidenceFields}
+										/>
+										<Step2LicenseDetails
+											form={form}
+											departments={departments}
+											filteredManagers={filteredManagers}
+											selectedManagers={selectedManagers}
+											setSelectedManagers={setSelectedManagers}
+											fetchDepartmentManagers={fetchDepartmentManagers}
+											aiFilledFields={aiFilledFields}
+											fieldConfidence={fieldConfidence}
+										/>
+									</>
 								)}
 
 								{/* Save Progress Card */}
@@ -697,61 +839,75 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 				onConfirm={handleCancelConfirm}
 			/>
 
-			{/* Delete Draft Dialog */}
-			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<AlertDialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
-					<AlertDialogTitle className="sr-only">Delete Draft</AlertDialogTitle>
-					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
-					<div className="glass-dialog-alert-section">
-						<div className="flex gap-2">
-							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+			{/* Delete Draft Dialog — matches ContractUploadForm Delete Draft */}
+			<Dialog
+				open={deleteDialogOpen}
+				onOpenChange={(open) => {
+					setDeleteDialogOpen(open);
+					if (!open) setDraftToDelete(null);
+				}}
+			>
+				<DialogContent className="overflow-hidden p-0 gap-0 shadow-xl sm:max-w-md border border-slate-200">
+					<DialogTitle className="sr-only">Delete Draft</DialogTitle>
+					{/* Professional Cap */}
+					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+					{/* Header */}
+					<div className="px-6 py-4 mt-4 bg-white border-b border-slate-200">
+						<div className="flex items-center gap-2">
+							<AlertTriangle className="w-5 h-5 shrink-0 text-[#f7d333]" />
 							<h2 className="text-base font-semibold sidebar-gradient-text">
 								Delete Draft
 							</h2>
 						</div>
-						<AlertDialogDescription className="text-sm text-slate-600 mt-1 ml-7">
+						<DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
 							Are you sure you want to delete this draft? This action cannot be
 							undone.
-						</AlertDialogDescription>
+						</DialogDescription>
 					</div>
-					<div className="glass-dialog-alert-body">
+
+					{/* Body */}
+					<div className="px-6 py-5 space-y-3 bg-white">
 						<p className="text-sm text-slate-600">
 							Your decision to delete is irreversible, so please make sure you
 							want to continue.
 						</p>
-					</div>
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500">
+						<p className="text-xs font-medium text-slate-500">
 							This action is permanent.
-						</div>
-						<div className="flex items-center gap-3">
-							<AlertDialogCancel
-								onClick={() => {
-									setDeleteDialogOpen(false);
-									setDraftToDelete(null);
-								}}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Ban className="h-4 w-4" />
-								Cancel
-							</AlertDialogCancel>
-							<AlertDialogAction
-								onClick={async () => {
-									if (draftToDelete) {
-										await deleteDraft(draftToDelete);
-										setDraftToDelete(null);
-										setDeleteDialogOpen(false);
-									}
-								}}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Trash2 className="h-4 w-4" />
-								Delete Draft
-							</AlertDialogAction>
-						</div>
+						</p>
 					</div>
-				</AlertDialogContent>
-			</AlertDialog>
+
+					{/* Footer — centered actions */}
+					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={() => {
+								setDeleteDialogOpen(false);
+								setDraftToDelete(null);
+							}}
+							className="primary-btn gap-2 px-3 sm:px-4"
+						>
+							<Ban className="h-4 w-4 shrink-0" />
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={async () => {
+								if (draftToDelete) {
+									await deleteDraft(draftToDelete);
+									setDraftToDelete(null);
+									setDeleteDialogOpen(false);
+								}
+							}}
+							className="primary-btn gap-2 px-3 sm:px-4"
+						>
+							<Trash2 className="h-4 w-4 shrink-0" />
+							Delete Draft
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 };

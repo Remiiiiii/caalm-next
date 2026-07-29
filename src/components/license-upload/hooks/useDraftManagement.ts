@@ -9,6 +9,65 @@ import { useToast } from "@/hooks/use-toast";
 import type { LicenseUploadFormData } from "../schema";
 import type { Draft, ProcessedFileData } from "../types";
 
+const DATE_KEYS = new Set([
+	"licenseExpiryDate",
+	"issueDate",
+	"renewalDate",
+]);
+
+const STRING_KEYS = new Set([
+	"quantity",
+	"cost",
+	"renewalNoticeDays",
+	"licenseName",
+	"licenseNumber",
+	"licenseType",
+	"category",
+	"issuingAuthority",
+	"vendor",
+	"product",
+	"description",
+	"notes",
+	"currencyCode",
+	"division",
+	"department",
+	"subDepartment",
+	"businessUnit",
+]);
+
+function toArrayBuffer(value: unknown): ArrayBuffer | null {
+	if (!value) return null;
+	if (value instanceof ArrayBuffer) return value;
+	if (Array.isArray(value)) return new Uint8Array(value).buffer;
+	if (typeof value === "object" && value !== null && "data" in value) {
+		const data = (value as { data?: unknown }).data;
+		if (Array.isArray(data)) return new Uint8Array(data).buffer;
+	}
+	return null;
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+	const binary = atob(base64);
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i++) {
+		bytes[i] = binary.charCodeAt(i);
+	}
+	return bytes.buffer;
+}
+
+function parseMaybeJson<T>(value: unknown): T | null {
+	if (value == null) return null;
+	if (typeof value === "string") {
+		try {
+			return JSON.parse(value) as T;
+		} catch {
+			return null;
+		}
+	}
+	if (typeof value === "object") return value as T;
+	return null;
+}
+
 interface UseDraftManagementProps {
 	ownerId: string;
 	accountId: string;
@@ -17,11 +76,16 @@ interface UseDraftManagementProps {
 	form: UseFormReturn<LicenseUploadFormData>;
 	processedFileData: ProcessedFileData | null;
 	extractedData: Record<string, unknown> | null;
-	setProcessedFileData: (data: ProcessedFileData | null) => void;
+	isExtracting?: boolean;
+	setProcessedFileData: (
+		data: ProcessedFileData | null | ((prev: ProcessedFileData | null) => ProcessedFileData | null),
+	) => void;
 	setExtractedData: (data: Record<string, unknown> | null) => void;
 	setCurrentStep: (step: number) => void;
 	setIsOpen: (open: boolean) => void;
 	resetForm: () => void;
+	onRestoreExtraction?: (extracted: Record<string, unknown> | null) => void;
+	onRestoreManagers?: (managerIds: string[]) => void;
 }
 
 export function useDraftManagement({
@@ -32,11 +96,14 @@ export function useDraftManagement({
 	form,
 	processedFileData,
 	extractedData,
+	isExtracting = false,
 	setProcessedFileData,
 	setExtractedData,
 	setCurrentStep,
 	setIsOpen,
 	resetForm,
+	onRestoreExtraction,
+	onRestoreManagers,
 }: UseDraftManagementProps) {
 	const { toast } = useToast();
 	const [savedDrafts, setSavedDrafts] = useState<Draft[]>([]);
@@ -48,9 +115,11 @@ export function useDraftManagement({
 	// Auto-save draft
 	const autoSaveDraft = useCallback(async (): Promise<boolean> => {
 		if (isResumingDraftRef.current) {
-			return false; // Don't save while resuming a draft
+			return false;
 		}
-		// Don't save if no file data is available (required for all drafts)
+		if (isExtracting) {
+			return false;
+		}
 		if (!processedFileData) {
 			return false;
 		}
@@ -59,6 +128,24 @@ export function useDraftManagement({
 		let success = false;
 		try {
 			const formValues = form.getValues();
+			// ArrayBuffer does not survive JSON — send base64 until we have bucketFileId
+			const filePayload = processedFileData.bucketFileId
+				? {
+						name: processedFileData.name,
+						type: processedFileData.type,
+						size: processedFileData.size,
+						lastModified: processedFileData.lastModified,
+						bucketFileId: processedFileData.bucketFileId,
+					}
+				: {
+						name: processedFileData.name,
+						type: processedFileData.type,
+						size: processedFileData.size,
+						lastModified: processedFileData.lastModified,
+						base64Content: processedFileData.base64Content,
+						bucketFileId: null,
+					};
+
 			const response = await fetch("/api/licenses/drafts", {
 				method: "POST",
 				headers: {
@@ -69,18 +156,28 @@ export function useDraftManagement({
 					accountId,
 					formData: formValues,
 					currentStep,
-					processedFileData,
+					processedFileData: filePayload,
 					extractedData,
-					draftId: currentDraftId, // Pass draftId to update existing or create new
+					draftId: currentDraftId,
 				}),
 			});
 
 			if (response.ok) {
 				const result = await response.json();
-				// Store the draft ID if this is a new draft
 				const draft = result.data?.draft || result.draft;
-				if (draft?.$id && !currentDraftId) {
+				if (draft?.$id) {
 					setCurrentDraftId(draft.$id);
+				}
+				const savedFile = parseMaybeJson<{ bucketFileId?: string }>(
+					draft?.processedFileData,
+				);
+				if (savedFile?.bucketFileId) {
+					setProcessedFileData((prev) => {
+						if (!prev || prev.bucketFileId === savedFile.bucketFileId) {
+							return prev;
+						}
+						return { ...prev, bucketFileId: savedFile.bucketFileId };
+					});
 				}
 				setLastSavedAt(new Date());
 				toast({
@@ -100,7 +197,6 @@ export function useDraftManagement({
 					errorData = { error: errorText || "Unknown error" };
 				}
 
-				// Extract error message from response structure
 				const errorMessage =
 					errorData.error ||
 					errorData.message ||
@@ -114,7 +210,6 @@ export function useDraftManagement({
 					errorMessage,
 					url: response.url,
 				});
-				// Show error toast only if it's not a silent save (e.g., on dialog close)
 				if (currentStep > 1) {
 					toast({
 						title: "Save failed",
@@ -132,7 +227,6 @@ export function useDraftManagement({
 				name: error?.name,
 				error: error,
 			});
-			// Don't show error toast to avoid annoying the user during auto-save
 			success = false;
 		} finally {
 			setIsSaving(false);
@@ -145,16 +239,17 @@ export function useDraftManagement({
 		accountId,
 		processedFileData,
 		extractedData,
+		isExtracting,
 		totalSteps,
 		toast,
 		currentDraftId,
+		setProcessedFileData,
 	]);
 
 	// Load saved drafts
 	const loadSavedDrafts = useCallback(
 		async (forceRefresh = false) => {
 			try {
-				// Add cache busting parameter if force refresh is requested
 				const url = forceRefresh
 					? `/api/licenses/drafts?ownerId=${ownerId}&_t=${Date.now()}`
 					: `/api/licenses/drafts?ownerId=${ownerId}`;
@@ -175,86 +270,157 @@ export function useDraftManagement({
 	const resumeDraft = useCallback(
 		async (draft: Draft) => {
 			try {
-				// Set flag to prevent auto-save during resume
 				isResumingDraftRef.current = true;
 
-				// Parse form data if it's a string (should already be parsed from API, but safe check)
-				let parsedFormData: string | Record<string, unknown> = draft.formData;
-				if (typeof draft.formData === "string") {
-					try {
-						parsedFormData = JSON.parse(draft.formData);
-					} catch {
-						parsedFormData = {};
-					}
-				}
+				const parsedFormData =
+					parseMaybeJson<Record<string, unknown>>(draft.formData) || {};
+				const parsedFile = parseMaybeJson<ProcessedFileData & { bucketFileId?: string | null }>(
+					draft.processedFileData,
+				);
+				const parsedExtracted = parseMaybeJson<Record<string, unknown>>(
+					draft.extractedData,
+				);
 
-				// Prepare form values with proper date handling
+				const savedStep = Math.max(1, Number(draft.currentStep) || 1);
+				// Step 1 is done once a file exists — jump to details so Resume feels real
+				const targetStep = Math.min(
+					totalSteps,
+					Math.max(savedStep, parsedFile ? 2 : 1),
+				);
+
+				setCurrentDraftId(draft.$id);
+				setCurrentStep(targetStep);
+				setIsOpen(true);
+
 				const formValues: Partial<LicenseUploadFormData> = {
 					...form.getValues(),
 				};
-				if (parsedFormData) {
-					Object.keys(parsedFormData).forEach((key) => {
-						const value = (parsedFormData as any)[key];
-						if (value !== undefined && value !== null) {
-							// Handle date fields
-							if (
-								(key.includes("Date") ||
-									key === "licenseExpiryDate" ||
-									key === "issueDate") &&
-								typeof value === "string"
-							) {
-								const dateValue = new Date(value);
-								if (!Number.isNaN(dateValue.getTime())) {
-									formValues[key as keyof LicenseUploadFormData] =
-										dateValue as any;
-								}
-							} else {
-								formValues[key as keyof LicenseUploadFormData] = value as any;
-							}
-						}
-					});
-				}
 
-				// Batch all updates at once using form.reset() to prevent multiple re-renders
+				Object.keys(parsedFormData).forEach((key) => {
+					const value = parsedFormData[key];
+					if (value === undefined || value === null) return;
+
+					if (DATE_KEYS.has(key) || key.includes("Date")) {
+						if (typeof value === "string" || typeof value === "number") {
+							const dateValue = new Date(value);
+							if (!Number.isNaN(dateValue.getTime())) {
+								formValues[key as keyof LicenseUploadFormData] =
+									dateValue as never;
+							}
+						} else if (value instanceof Date) {
+							formValues[key as keyof LicenseUploadFormData] =
+								value as never;
+						}
+						return;
+					}
+
+					if (STRING_KEYS.has(key) && typeof value === "number") {
+						formValues[key as keyof LicenseUploadFormData] = String(
+							value,
+						) as never;
+						return;
+					}
+
+					formValues[key as keyof LicenseUploadFormData] = value as never;
+				});
+
 				form.reset(formValues as LicenseUploadFormData);
 
-				// Set file data and extracted data
-				if (draft.processedFileData) {
-					const parsed =
-						typeof draft.processedFileData === "string"
-							? JSON.parse(draft.processedFileData)
-							: draft.processedFileData;
-					setProcessedFileData(parsed);
+				const managerIds = Array.isArray(formValues.assignedManagers)
+					? formValues.assignedManagers.filter(
+							(id): id is string => typeof id === "string",
+						)
+					: [];
+				onRestoreManagers?.(managerIds);
+
+				if (parsedFile) {
+					const fromBase64 =
+						typeof parsedFile.base64Content === "string" &&
+						parsedFile.base64Content.length > 0
+							? base64ToArrayBuffer(parsedFile.base64Content)
+							: null;
+					const fromBuffer = toArrayBuffer(parsedFile.arrayBuffer);
+					let restored: ProcessedFileData = {
+						name: parsedFile.name,
+						type: parsedFile.type,
+						size: parsedFile.size,
+						lastModified: parsedFile.lastModified,
+						base64Content: parsedFile.base64Content || "",
+						arrayBuffer: fromBase64 || fromBuffer || new ArrayBuffer(0),
+						bucketFileId: parsedFile.bucketFileId || null,
+					};
+
+					setProcessedFileData(restored);
+
+					if (
+						!(fromBase64 || fromBuffer) &&
+						parsedFile.bucketFileId
+					) {
+						try {
+							const fileRes = await fetch(
+								"/api/licenses/drafts/fetch-file",
+								{
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify({
+										bucketFileId: parsedFile.bucketFileId,
+									}),
+								},
+							);
+							if (fileRes.ok) {
+								const fileJson = await fileRes.json();
+								const file = fileJson.data?.file || fileJson.file;
+								const fetched = toArrayBuffer(file?.arrayBuffer);
+								if (fetched) {
+									const bytes = new Uint8Array(fetched);
+									let binary = "";
+									for (let i = 0; i < bytes.length; i++) {
+										binary += String.fromCharCode(bytes[i]);
+									}
+									restored = {
+										...restored,
+										arrayBuffer: fetched,
+										base64Content: btoa(binary),
+										bucketFileId: parsedFile.bucketFileId,
+									};
+									setProcessedFileData(restored);
+								}
+							}
+						} catch (fileError) {
+							console.error(
+								"Failed to restore draft file bytes:",
+								fileError,
+							);
+						}
+					} else if (!(fromBase64 || fromBuffer)) {
+						toast({
+							title: "File missing from draft",
+							description:
+								"Re-upload the license file on step 1, then continue. Form fields were restored when available.",
+							variant: "destructive",
+							duration: 5000,
+						});
+					}
 				}
-				if (draft.extractedData) {
-					const parsed =
-						typeof draft.extractedData === "string"
-							? JSON.parse(draft.extractedData)
-							: draft.extractedData;
-					setExtractedData(parsed);
-				}
 
-				// Set current step
-				setCurrentStep(draft.currentStep || 1);
+				setExtractedData(parsedExtracted);
+				onRestoreExtraction?.(parsedExtracted);
 
-				// Set the current draft ID so updates go to this draft
-				setCurrentDraftId(draft.$id);
-
-				// Open dialog
-				setIsOpen(true);
-
-				// Clear the resume flag after a delay to allow auto-save to resume
 				setTimeout(() => {
 					isResumingDraftRef.current = false;
-				}, 3000); // 3 seconds should be enough for all updates to complete
+				}, 3000);
 
 				toast({
 					title: "Draft resumed",
-					description: `Continuing from step ${draft.currentStep} (${draft.progressPercentage}% complete)`,
+					description: `Continuing from step ${targetStep}${
+						draft.progressPercentage != null
+							? ` (${draft.progressPercentage}% complete)`
+							: ""
+					}`,
 				});
 			} catch (error) {
 				console.error("Error resuming draft:", error);
-				isResumingDraftRef.current = false; // Clear flag on error
+				isResumingDraftRef.current = false;
 				toast({
 					title: "Error",
 					description: "Failed to resume draft",
@@ -265,10 +431,13 @@ export function useDraftManagement({
 		[
 			form,
 			toast,
+			totalSteps,
 			setProcessedFileData,
 			setExtractedData,
 			setCurrentStep,
 			setIsOpen,
+			onRestoreExtraction,
+			onRestoreManagers,
 		],
 	);
 
@@ -284,11 +453,9 @@ export function useDraftManagement({
 				);
 				if (response.ok) {
 					setSavedDrafts((prev) => prev.filter((d) => d.$id !== draftId));
-					// If deleting the current draft, reset the draft ID
 					if (currentDraftId === draftId) {
 						setCurrentDraftId(null);
 					}
-					// Reload drafts to ensure cache is fresh
 					await loadSavedDrafts();
 					toast({
 						title: "Draft deleted",
@@ -324,14 +491,12 @@ export function useDraftManagement({
 				}
 			} catch (error) {
 				console.error("Error deleting draft on cancel:", error);
-				// Continue with cancel even if delete fails
 			}
 		}
 	}, [currentDraftId]);
 
 	// Manual save and close
 	const handleManualSave = useCallback(async () => {
-		// Don't save if no file data is available
 		if (!processedFileData) {
 			toast({
 				title: "No file uploaded",
@@ -341,7 +506,6 @@ export function useDraftManagement({
 			return;
 		}
 		const success = await autoSaveDraft();
-		// Close form after successful save
 		if (success) {
 			setIsOpen(false);
 			resetForm();

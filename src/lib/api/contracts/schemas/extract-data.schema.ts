@@ -8,6 +8,8 @@ export const extractDataJsonSchema = z.object({
 	fileType: z.string().optional(),
 	fileSize: z.number().optional(),
 	fileContent: z.string().min(1, "File content is required"),
+	contractTypeId: z.string().optional().nullable(),
+	contractTypeLabel: z.string().optional().nullable(),
 });
 
 /**
@@ -16,6 +18,8 @@ export const extractDataJsonSchema = z.object({
  */
 export const extractDataFormDataSchema = z.object({
 	file: z.instanceof(File, { message: "File is required" }),
+	contractTypeId: z.string().optional(),
+	contractTypeLabel: z.string().optional(),
 });
 
 export type ExtractDataJsonInput = z.infer<typeof extractDataJsonSchema>;

@@ -1,6 +1,10 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import {
+	getContractTypeConfig,
+	resolveDraftContractTypeId,
+} from "@/lib/contracts/contractTypeConfigs";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 import { FileService } from "./FileService";
@@ -10,6 +14,27 @@ import { FileService } from "./FileService";
  * Handles draft CRUD operations
  */
 export class DraftService {
+	/**
+	 * Build a Buffer suitable for storage upload from draft file payload.
+	 * JSON.stringify turns ArrayBuffer into {}, so prefer base64 / number[].
+	 */
+	static toUploadBuffer(parsed: any): Buffer | null {
+		if (!parsed) return null;
+
+		if (Array.isArray(parsed.arrayBuffer) && parsed.arrayBuffer.length > 0) {
+			return Buffer.from(parsed.arrayBuffer);
+		}
+
+		if (
+			typeof parsed.base64Content === "string" &&
+			parsed.base64Content.length > 0
+		) {
+			return Buffer.from(parsed.base64Content, "base64");
+		}
+
+		return null;
+	}
+
 	/**
 	 * Optimize processed file data by removing large binary fields
 	 */
@@ -34,34 +59,96 @@ export class DraftService {
 	}
 
 	/**
-	 * Optimize form data by removing empty values
+	 * Optimize form data by removing empty values and serializing dates.
 	 */
 	static optimizeFormData(formData: any): any {
 		if (!formData || typeof formData !== "object") return formData;
 
 		return Object.fromEntries(
-			Object.entries(formData).filter(([_, value]) => {
-				if (value === null || value === undefined || value === "") return false;
-				if (Array.isArray(value) && value.length === 0) return false;
-				if (typeof value === "object" && Object.keys(value).length === 0)
-					return false;
-				return true;
-			}),
+			Object.entries(formData)
+				.filter(([_, value]) => {
+					if (value === null || value === undefined || value === "") return false;
+					if (Array.isArray(value) && value.length === 0) return false;
+					if (
+						typeof value === "object" &&
+						!(value instanceof Date) &&
+						!Array.isArray(value) &&
+						Object.keys(value).length === 0
+					)
+						return false;
+					return true;
+				})
+				.map(([key, value]) => {
+					if (value instanceof Date) {
+						return [key, value.toISOString()];
+					}
+					return [key, value];
+				}),
 		);
 	}
 
 	/**
-	 * Optimize extracted data by removing empty values
+	 * Optimize extracted data: drop empty values and bulky AI metadata
+	 * (confidence maps / field lists) that are not needed to resume a draft.
 	 */
 	static optimizeExtractedData(extractedData: any): any {
 		if (!extractedData || typeof extractedData !== "object")
 			return extractedData;
 
+		const omitKeys = new Set([
+			"fieldConfidence",
+			"filledFieldNames",
+			"lowConfidenceFields",
+			"textLength",
+			"filename",
+		]);
+
 		return Object.fromEntries(
-			Object.entries(extractedData).filter(([_, value]) => {
+			Object.entries(extractedData).filter(([key, value]) => {
+				if (omitKeys.has(key)) return false;
 				return value !== null && value !== undefined && value !== "";
 			}),
 		);
+	}
+
+	/** Ensure a JSON payload fits the Appwrite string column size. */
+	static stringifyWithinLimit(
+		value: unknown,
+		maxChars: number,
+		label: string,
+	): string | null {
+		if (value === null || value === undefined) return null;
+		const json = typeof value === "string" ? value : JSON.stringify(value);
+		if (json.length <= maxChars) return json;
+
+		console.warn(
+			`[DraftService] ${label} JSON is ${json.length} chars; truncating long string fields to fit ${maxChars}`,
+		);
+
+		if (typeof value !== "object" || value === null) {
+			return json.slice(0, maxChars);
+		}
+
+		const pruned: Record<string, unknown> = { ...(value as object) };
+		const longStringKeys = Object.entries(pruned)
+			.filter(([, v]) => typeof v === "string" && (v as string).length > 200)
+			.sort(
+				(a, b) =>
+					((b[1] as string).length || 0) - ((a[1] as string).length || 0),
+			);
+
+		for (const [key] of longStringKeys) {
+			const current = JSON.stringify(pruned);
+			if (current.length <= maxChars) break;
+			const str = String(pruned[key]);
+			const overBy = current.length - maxChars;
+			const keep = Math.max(80, str.length - overBy - 20);
+			pruned[key] = `${str.slice(0, keep)}…`;
+		}
+
+		const finalJson = JSON.stringify(pruned);
+		if (finalJson.length <= maxChars) return finalJson;
+		return finalJson.slice(0, maxChars);
 	}
 
 	/**
@@ -77,6 +164,7 @@ export class DraftService {
 			processedFileData?: any;
 			extractedData?: any;
 			isCompleted?: boolean;
+			selectedContractType?: string | null;
 		},
 	) {
 		const { tablesDB } = await createAdminClient();
@@ -99,21 +187,20 @@ export class DraftService {
 					: draftData.processedFileData;
 
 			// Upload to storage if user has progressed to step 2 or beyond
-			if (
-				draftData.currentStep > 1 &&
-				parsed.arrayBuffer &&
-				!parsed.bucketFileId
-			) {
-				try {
-					bucketFileId = await FileService.uploadFileToStorage(
-						parsed.arrayBuffer,
-						parsed.name,
-					);
-				} catch (uploadError: any) {
-					console.warn(
-						"Failed to upload draft file to storage:",
-						uploadError.message,
-					);
+			if (draftData.currentStep > 1 && !parsed.bucketFileId) {
+				const uploadBuffer = DraftService.toUploadBuffer(parsed);
+				if (uploadBuffer) {
+					try {
+						bucketFileId = await FileService.uploadFileToStorage(
+							uploadBuffer,
+							parsed.name,
+						);
+					} catch (uploadError: any) {
+						console.warn(
+							"Failed to upload draft file to storage:",
+							uploadError.message,
+						);
+					}
 				}
 			} else if (parsed.bucketFileId) {
 				bucketFileId = parsed.bucketFileId;
@@ -125,7 +212,22 @@ export class DraftService {
 			);
 		}
 
-		const optimizedFormData = DraftService.optimizeFormData(draftData.formData);
+		const selectedContractType = resolveDraftContractTypeId({
+			selectedContractType: draftData.selectedContractType,
+			formData: draftData.formData,
+		});
+
+		const formDataWithType =
+			draftData.formData && typeof draftData.formData === "object"
+				? {
+						...draftData.formData,
+						...(selectedContractType ? { selectedContractType } : {}),
+					}
+				: selectedContractType
+					? { selectedContractType }
+					: draftData.formData;
+
+		const optimizedFormData = DraftService.optimizeFormData(formDataWithType);
 		const optimizedExtractedData = DraftService.optimizeExtractedData(
 			draftData.extractedData,
 		);
@@ -148,18 +250,33 @@ export class DraftService {
 			}
 		}
 
+		const contentSteps = selectedContractType
+			? getContractTypeConfig(selectedContractType)?.steps || 10
+			: 10;
+		const totalSteps = contentSteps + 1;
+
 		const draftPayload = {
 			ownerId,
 			accountId,
-			formData: optimizedFormData ? JSON.stringify(optimizedFormData) : null,
+			formData: DraftService.stringifyWithinLimit(
+				optimizedFormData,
+				65000,
+				"formData",
+			),
 			currentStep: draftData.currentStep,
-			processedFileData: optimizedProcessedFileData
-				? JSON.stringify(optimizedProcessedFileData)
-				: null,
-			extractedData: optimizedExtractedData
-				? JSON.stringify(optimizedExtractedData)
-				: null,
-			progressPercentage: Math.round((draftData.currentStep / 10) * 100),
+			processedFileData: DraftService.stringifyWithinLimit(
+				optimizedProcessedFileData,
+				65000,
+				"processedFileData",
+			),
+			extractedData: DraftService.stringifyWithinLimit(
+				optimizedExtractedData,
+				65000,
+				"extractedData",
+			),
+			progressPercentage: Math.round(
+				(draftData.currentStep / totalSteps) * 100,
+			),
 			lastSavedAt: new Date().toISOString(),
 			isCompleted: draftData.isCompleted || false,
 			fileId: fileRow?.$id || null,
@@ -281,6 +398,9 @@ export class DraftService {
 				formData,
 				processedFileData,
 				extractedData,
+				selectedContractType: resolveDraftContractTypeId({
+					formData,
+				}),
 			};
 		});
 	}

@@ -38,6 +38,70 @@ const sanitizePayload = <T extends Record<string, unknown>>(payload: T) =>
 		}),
 	);
 
+/** Appwrite string attributes reject oversize / non-string values. */
+const clampAppwriteString = (
+	value: unknown,
+	maxChars: number,
+): string | undefined => {
+	if (value === undefined || value === null) return undefined;
+	const str = String(value).trim();
+	if (!str) return undefined;
+	return str.length > maxChars ? str.slice(0, maxChars) : str;
+};
+
+const clampAppwriteStringArray = (
+	value: unknown,
+	maxChars: number,
+): string[] | undefined => {
+	if (!Array.isArray(value) || value.length === 0) return undefined;
+	const clamped = value
+		.map((item) => clampAppwriteString(item, maxChars))
+		.filter((item): item is string => Boolean(item));
+	return clamped.length > 0 ? clamped : undefined;
+};
+
+/**
+ * Contracts collection string sizes (TablesDB). Keep in sync with Appwrite.
+ * Free-text / AI-filled fields target 1000; IDs and codes stay smaller.
+ */
+const CONTRACT_STRING_LIMITS = {
+	contractName: 255,
+	contractNumber: 50,
+	vendor: 1000,
+	description: 1000,
+	departmentOwner: 128,
+	businessUnit: 128,
+	subDepartment: 128,
+	budgetCode: 255,
+	costCenter: 255,
+	dataPrivacyRequirements: 1000,
+	regulatoryRequirements: 500,
+	counterpartyLegalName: 1000,
+	counterpartyContactPhone: 100,
+	counterpartyAddress: 1000,
+	counterpartyTaxId: 100,
+	counterpartyDunsNumber: 100,
+	keyObligations: 1000,
+	serviceLevelAgreements: 500,
+	performanceMetrics: 500,
+	reportingRequirements: 500,
+	postTerminationObligations: 500,
+	attachmentReferences: 1000,
+	relatedDocumentIds: 64,
+	versionNumber: 50,
+	parentContractId: 64,
+	templateUsed: 255,
+	internalApproverIds: 64,
+	assignedManagers: 64,
+	currentApprovalStage: 255,
+	approvalHistoryLog: 500,
+	approvalWorkflowState: 16384,
+	reviewerComments: 1000,
+	orgId: 64,
+	contractOwnerId: 64,
+	fileId: 100,
+} as const;
+
 const mapRiskToPriority = (risk?: string) => {
 	if (!risk) return "Medium";
 	switch (risk) {
@@ -230,8 +294,9 @@ export const uploadFile = async ({
 				);
 			}
 
+			const assignedManagerIds = metadata?.assignedManagers || [];
 			const assignedManagers = await (async () => {
-				const managerIds = metadata?.assignedManagers || [];
+				const managerIds = assignedManagerIds;
 				if (managerIds.length === 0) return [];
 
 				const managerNames: string[] = [];
@@ -253,7 +318,10 @@ export const uploadFile = async ({
 
 			// Build contract document, explicitly excluding contractId (not in Contracts collection schema)
 			const contractDocumentRaw: any = {
-				contractName: metadata?.contractName || bucketFile.name,
+				contractName: clampAppwriteString(
+					metadata?.contractName || bucketFile.name,
+					CONTRACT_STRING_LIMITS.contractName,
+				),
 				contractExpiryDate,
 				status,
 				startDate: metadata?.startDate,
@@ -265,8 +333,14 @@ export const uploadFile = async ({
 				notToExceedAmount: metadata?.notToExceedAmount,
 				paymentTerms: metadata?.paymentTerms,
 				paymentSchedule: metadata?.paymentSchedule,
-				budgetCode: metadata?.budgetCode,
-				costCenter: metadata?.costCenter,
+				budgetCode: clampAppwriteString(
+					metadata?.budgetCode,
+					CONTRACT_STRING_LIMITS.budgetCode,
+				),
+				costCenter: clampAppwriteString(
+					metadata?.costCenter,
+					CONTRACT_STRING_LIMITS.costCenter,
+				),
 				daysUntilExpiry: (() => {
 					if (contractExpiryDate) {
 						try {
@@ -290,11 +364,23 @@ export const uploadFile = async ({
 				})(),
 				compliance:
 					metadata?.compliance ?? mapRiskToCompliance(metadata?.riskLevel),
-				assignedManagers,
+				assignedManagers: clampAppwriteStringArray(
+					assignedManagers,
+					CONTRACT_STRING_LIMITS.assignedManagers,
+				),
 				department: metadata?.assignToDepartment,
-				businessUnit: metadata?.businessUnit,
-				subDepartment: metadata?.subDepartment,
-				departmentOwner: metadata?.departmentOwner,
+				businessUnit: clampAppwriteString(
+					metadata?.businessUnit,
+					CONTRACT_STRING_LIMITS.businessUnit,
+				),
+				subDepartment: clampAppwriteString(
+					metadata?.subDepartment,
+					CONTRACT_STRING_LIMITS.subDepartment,
+				),
+				departmentOwner: clampAppwriteString(
+					metadata?.departmentOwner,
+					CONTRACT_STRING_LIMITS.departmentOwner,
+				),
 				contractType: (() => {
 					const contractType = metadata?.contractType;
 					if (typeof contractType === "string") {
@@ -313,6 +399,14 @@ export const uploadFile = async ({
 							"Statement of Work (SOW)": "Consulting_Agreement",
 							"Statement of Work": "Consulting_Agreement",
 							"Master Agreement": "Service_Agreement",
+							"Government Grant": "Government_Grant",
+							"Government Contract": "Government_Contract",
+							"Grant Agreement": "Grant_Agreement",
+							"Vendor/Service Agreement": "Vendor_Service_Agreement",
+							"Memorandum of Understanding": "MOU",
+							"Donation/Gift Agreement": "Donation_Agreement",
+							"Independent Contractor Agreement": "Independent_Contractor",
+							"Fiscal Sponsorship Agreement": "Fiscal_Sponsorship",
 							Amendment: "Other",
 							Other: "Other",
 						};
@@ -321,12 +415,24 @@ export const uploadFile = async ({
 					return "Other";
 				})(),
 				contractCategory: metadata?.contractCategory,
-				vendor: metadata?.vendor ?? metadata?.counterpartyLegalName,
-				contractNumber: metadata?.contractNumber,
+				vendor: clampAppwriteString(
+					metadata?.vendor ?? metadata?.counterpartyLegalName,
+					CONTRACT_STRING_LIMITS.vendor,
+				),
+				contractNumber: clampAppwriteString(
+					metadata?.contractNumber,
+					CONTRACT_STRING_LIMITS.contractNumber,
+				),
 				priority: metadata?.priority ?? mapRiskToPriority(metadata?.riskLevel),
-				description: metadata?.description,
+				description: clampAppwriteString(
+					metadata?.description,
+					CONTRACT_STRING_LIMITS.description,
+				),
 				// Always set contractOwnerId to the user who uploaded the contract
-				contractOwnerId: ownerId,
+				contractOwnerId: clampAppwriteString(
+					ownerId,
+					CONTRACT_STRING_LIMITS.contractOwnerId,
+				),
 				lifecycleStatus: metadata?.lifecycleStatus || "draft",
 				riskLevel: metadata?.riskLevel,
 				insuranceRequired: metadata?.insuranceRequired,
@@ -334,53 +440,108 @@ export const uploadFile = async ({
 				insuranceExpiryDate: metadata?.insuranceExpiryDate,
 				indemnificationIncluded: metadata?.indemnificationIncluded,
 				hipaaRequired: metadata?.hipaaRequired,
-				dataPrivacyRequirements: metadata?.dataPrivacyRequirements,
+				dataPrivacyRequirements: clampAppwriteString(
+					metadata?.dataPrivacyRequirements,
+					CONTRACT_STRING_LIMITS.dataPrivacyRequirements,
+				),
 				backgroundCheckRequired: metadata?.backgroundCheckRequired,
-				regulatoryRequirements: metadata?.regulatoryRequirements,
+				regulatoryRequirements: clampAppwriteString(
+					metadata?.regulatoryRequirements,
+					CONTRACT_STRING_LIMITS.regulatoryRequirements,
+				),
 				auditRightsGranted: metadata?.auditRightsGranted,
-				counterpartyLegalName: metadata?.counterpartyLegalName,
+				counterpartyLegalName: clampAppwriteString(
+					metadata?.counterpartyLegalName,
+					CONTRACT_STRING_LIMITS.counterpartyLegalName,
+				),
 				counterpartyContactEmail: metadata?.counterpartyContactEmail,
-				counterpartyContactPhone: metadata?.counterpartyContactPhone,
-				counterpartyAddress: metadata?.counterpartyAddress,
+				counterpartyContactPhone: clampAppwriteString(
+					metadata?.counterpartyContactPhone,
+					CONTRACT_STRING_LIMITS.counterpartyContactPhone,
+				),
+				counterpartyAddress: clampAppwriteString(
+					metadata?.counterpartyAddress,
+					CONTRACT_STRING_LIMITS.counterpartyAddress,
+				),
 				counterpartyType: metadata?.counterpartyType,
-				counterpartyTaxId: metadata?.counterpartyTaxId,
-				counterpartyDunsNumber: metadata?.counterpartyDunsNumber,
-				keyObligations:
-					metadata?.keyObligations && metadata.keyObligations.length > 0
-						? metadata.keyObligations
-						: undefined,
-				serviceLevelAgreements: metadata?.serviceLevelAgreements,
-				performanceMetrics: metadata?.performanceMetrics,
-				reportingRequirements: metadata?.reportingRequirements,
-				postTerminationObligations: metadata?.postTerminationObligations,
+				counterpartyTaxId: clampAppwriteString(
+					metadata?.counterpartyTaxId,
+					CONTRACT_STRING_LIMITS.counterpartyTaxId,
+				),
+				counterpartyDunsNumber: clampAppwriteString(
+					metadata?.counterpartyDunsNumber,
+					CONTRACT_STRING_LIMITS.counterpartyDunsNumber,
+				),
+				keyObligations: clampAppwriteStringArray(
+					metadata?.keyObligations,
+					CONTRACT_STRING_LIMITS.keyObligations,
+				),
+				serviceLevelAgreements: clampAppwriteString(
+					metadata?.serviceLevelAgreements,
+					CONTRACT_STRING_LIMITS.serviceLevelAgreements,
+				),
+				performanceMetrics: clampAppwriteString(
+					metadata?.performanceMetrics,
+					CONTRACT_STRING_LIMITS.performanceMetrics,
+				),
+				reportingRequirements: clampAppwriteString(
+					metadata?.reportingRequirements,
+					CONTRACT_STRING_LIMITS.reportingRequirements,
+				),
+				postTerminationObligations: clampAppwriteString(
+					metadata?.postTerminationObligations,
+					CONTRACT_STRING_LIMITS.postTerminationObligations,
+				),
 				terminationNoticeDays: metadata?.terminationNoticeDays,
 				terminationRights: metadata?.terminationRights,
 				curePeriodDays: metadata?.curePeriodDays,
-				attachmentReferences:
-					metadata?.attachmentReferences &&
-					metadata.attachmentReferences.length > 0
-						? metadata.attachmentReferences
-						: undefined,
-				relatedDocumentIds:
-					metadata?.relatedDocumentIds && metadata.relatedDocumentIds.length > 0
-						? metadata.relatedDocumentIds
-						: undefined,
-				versionNumber: metadata?.versionNumber,
-				parentContractId: metadata?.parentContractId,
-				templateUsed: metadata?.templateUsed,
+				attachmentReferences: clampAppwriteStringArray(
+					metadata?.attachmentReferences,
+					CONTRACT_STRING_LIMITS.attachmentReferences,
+				),
+				relatedDocumentIds: clampAppwriteStringArray(
+					metadata?.relatedDocumentIds,
+					CONTRACT_STRING_LIMITS.relatedDocumentIds,
+				),
+				versionNumber: clampAppwriteString(
+					metadata?.versionNumber,
+					CONTRACT_STRING_LIMITS.versionNumber,
+				),
+				parentContractId: clampAppwriteString(
+					metadata?.parentContractId,
+					CONTRACT_STRING_LIMITS.parentContractId,
+				),
+				templateUsed: clampAppwriteString(
+					metadata?.templateUsed,
+					CONTRACT_STRING_LIMITS.templateUsed,
+				),
 				approvalWorkflowTemplate: metadata?.approvalWorkflowTemplate,
-				internalApproverIds:
-					metadata?.internalApproverIds &&
-					metadata.internalApproverIds.length > 0
-						? metadata.internalApproverIds
-						: undefined,
-				currentApprovalStage: metadata?.currentApprovalStage,
-				approvalHistoryLog: metadata?.approvalHistoryLog,
-				reviewerComments: metadata?.reviewerComments,
-				fileId: newFile.$id,
+				internalApproverIds: clampAppwriteStringArray(
+					metadata?.internalApproverIds,
+					CONTRACT_STRING_LIMITS.internalApproverIds,
+				),
+				currentApprovalStage: clampAppwriteString(
+					metadata?.currentApprovalStage,
+					CONTRACT_STRING_LIMITS.currentApprovalStage,
+				),
+				approvalHistoryLog: clampAppwriteString(
+					metadata?.approvalHistoryLog,
+					CONTRACT_STRING_LIMITS.approvalHistoryLog,
+				),
+				reviewerComments: clampAppwriteString(
+					metadata?.reviewerComments,
+					CONTRACT_STRING_LIMITS.reviewerComments,
+				),
+				fileId: clampAppwriteString(
+					newFile.$id,
+					CONTRACT_STRING_LIMITS.fileId,
+				),
 				// fileRef is a relationship attribute - Appwrite will handle it automatically
 				// Setting it as a string causes validation errors
-				orgId: resolvedOrgId,
+				orgId: clampAppwriteString(
+					resolvedOrgId,
+					CONTRACT_STRING_LIMITS.orgId,
+				),
 			};
 
 			// Explicitly remove contractId if it exists (not in Contracts collection schema)
@@ -413,6 +574,22 @@ export const uploadFile = async ({
 				rowId: ID.unique(),
 				data: contractDocument,
 			});
+
+			// Initialize multi-step approval workflow (pending-review → exec → active)
+			try {
+				const { initializeOnUpload } = await import(
+					"@/lib/approvals/ContractApprovalWorkflowService"
+				);
+				await initializeOnUpload({
+					contractId: contract.$id,
+					departmentManagerIds: assignedManagerIds,
+				});
+			} catch (workflowError) {
+				console.error(
+					"Failed to initialize contract approval workflow:",
+					workflowError,
+				);
+			}
 
 			// Update drafts with the new fileId (from the file row created during upload)
 			// This ensures drafts can be found by fileId for deletion
@@ -2288,10 +2465,16 @@ export const contractStatus = async ({
 	fileId,
 	status,
 	path,
+	workflowDecision = false,
+	adminOverride = false,
 }: {
 	fileId: string;
 	status: string;
 	path: string;
+	/** Set true when status change comes from approval workflow decide() */
+	workflowDecision?: boolean;
+	/** Super Admin / Org Admin emergency override */
+	adminOverride?: boolean;
 }) => {
 	const { tablesDB } = await createAdminClient();
 
@@ -2316,6 +2499,18 @@ export const contractStatus = async ({
 				tableId: appwriteConfig.contractsCollectionId!,
 				rowId: fileId,
 			});
+
+			const previousStatus = String(contract?.status || "").toLowerCase();
+			const nextStatus = String(status || "").toLowerCase();
+			const activatingFromReview =
+				nextStatus === "active" &&
+				(previousStatus === "pending-review" ||
+					previousStatus === "action-required");
+			if (activatingFromReview && !workflowDecision && !adminOverride) {
+				throw new Error(
+					"Contracts in review must be activated through the approval workflow (executive step).",
+				);
+			}
 
 			// Get relationship fields from schema
 			try {

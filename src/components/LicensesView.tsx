@@ -200,12 +200,14 @@ interface LicensesViewProps {
 		role?: string;
 	} | null;
 	onRefresh?: () => void;
+	onLicenseRemoved?: (licenseId: string) => void;
 }
 
 export default function LicensesView({
 	licenses,
 	user,
 	onRefresh,
+	onLicenseRemoved,
 }: LicensesViewProps) {
 	const { view } = useLicensesView();
 	const [currentPage, setCurrentPage] = useState(1);
@@ -262,6 +264,7 @@ export default function LicensesView({
 						licenses={paginatedLicenses}
 						user={user}
 						onRefresh={onRefresh}
+						onLicenseRemoved={onLicenseRemoved}
 					/>
 					{licenses.length > itemsPerPage && (
 						<LicensesPagination
@@ -276,7 +279,11 @@ export default function LicensesView({
 					<EqualHeightGrid className="grid w-full min-w-0 grid-cols-1 gap-6 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
 						{paginatedLicenses.map((license: License) => (
 							<div key={license.$id} className="min-w-0 h-full">
-								<LicenseCard license={license} onRefresh={onRefresh} />
+								<LicenseCard
+									license={license}
+									onRefresh={onRefresh}
+									onLicenseRemoved={onLicenseRemoved}
+								/>
 							</div>
 						))}
 					</EqualHeightGrid>

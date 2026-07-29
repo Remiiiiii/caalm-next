@@ -16,7 +16,6 @@ import {
 	UserRoundCheck,
 } from "lucide-react";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +91,7 @@ const licenseActionsDropdownItems = [
 interface LicenseActionDropdownProps {
 	license: License;
 	onRefresh?: () => void;
+	onLicenseRemoved?: (licenseId: string) => void;
 	userRole?: string;
 }
 
@@ -104,6 +104,7 @@ type ActionType = {
 const LicenseActionDropdown = ({
 	license,
 	onRefresh,
+	onLicenseRemoved,
 	userRole,
 }: LicenseActionDropdownProps) => {
 	const [_isModalOpen, setIsModalOpen] = useState(false);
@@ -130,8 +131,6 @@ const LicenseActionDropdown = ({
 		}
 	}, [showStatus, license.status]);
 
-	const _path = usePathname() || "";
-	const _router = useRouter();
 	const { toast } = useToast();
 	const { permissions } = usePermissions();
 	const { roles: userRoles } = useUserRoles();
@@ -161,24 +160,34 @@ const LicenseActionDropdown = ({
 		setIsLoading(true);
 
 		try {
-			// Actions that don't need API calls are handled by their respective dialogs
-			// This is mainly for delete and share actions
 			if (action.value === "delete") {
-				// Delete will be handled by the delete dialog
-				closeAllModals();
-			} else if (action.value === "share") {
-				// Share will be handled by the share dialog
-				closeAllModals();
-			}
+				const res = await fetch(`/api/licenses/${license.$id}`, {
+					method: "DELETE",
+				});
 
-			if (onRefresh) {
-				onRefresh();
+				if (!res.ok) {
+					const err = await res.json().catch(() => ({}));
+					throw new Error(
+						err?.error || err?.message || "Failed to delete license",
+					);
+				}
+
+				toast({
+					title: "License deleted",
+					description: `"${license.licenseName}" has been removed.`,
+				});
+				onLicenseRemoved?.(license.$id);
+				closeAllModals();
+				onRefresh?.();
+			} else if (action.value === "share") {
+				closeAllModals();
 			}
 		} catch (error) {
 			console.error("Action failed:", error);
 			toast({
 				title: "Error",
-				description: "Failed to perform action",
+				description:
+					error instanceof Error ? error.message : "Failed to perform action",
 				variant: "destructive",
 			});
 		} finally {
@@ -635,66 +644,71 @@ const LicenseActionDropdown = ({
 				</Dialog>
 			)}
 
-			{/* Delete Dialog */}
+			{/* Delete Dialog — matches Delete Draft design */}
 			{showDelete && (
 				<Dialog open={showDelete} onOpenChange={setShowDelete}>
-					<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
+					<DialogContent className="overflow-hidden p-0 gap-0 shadow-xl sm:max-w-md border border-slate-200">
 						<DialogTitle className="sr-only">Delete License</DialogTitle>
-						<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
-						<div className="px-6 py-4 bg-white border-b border-slate-200">
-							<div className="flex gap-2">
-								<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+						{/* Professional Cap */}
+						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+						{/* Header */}
+						<div className="px-6 py-4 mt-4 bg-white border-b border-slate-200">
+							<div className="flex items-center gap-2">
+								<AlertTriangle className="w-5 h-5 shrink-0 text-[#f7d333]" />
 								<h2 className="text-base font-semibold sidebar-gradient-text">
 									Delete License
 								</h2>
 							</div>
-							<div>
-								<p className="text-sm text-slate-600 mt-1 ml-7">
-									Are you sure you want to delete &quot;{license.licenseName}
-									&quot;? This action cannot be undone.
-								</p>
-							</div>
+							<p className="text-sm text-slate-600 mt-1 ml-7">
+								Are you sure you want to delete &quot;{license.licenseName}
+								&quot;? This action cannot be undone.
+							</p>
 						</div>
+
+						{/* Body */}
 						<div className="px-6 py-5 space-y-3 bg-white">
 							<p className="text-sm text-slate-600">
 								This will permanently remove the license from the system.
 							</p>
-						</div>
-						<div className="glass-dialog-alert-footer">
-							<div className="text-xs text-slate-500 w-20">
+							<p className="text-xs font-medium text-slate-500">
 								This action is permanent.
-							</div>
-							<div className="flex items-center gap-3">
-								<Button
-									variant="ghost"
-									onClick={(e) => closeAllModals(e)}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Ban className="w-4 h-4" />
-									Cancel
-								</Button>
-								<Button
-									onClick={(e) => {
-										e.stopPropagation();
-										e.preventDefault();
-										handleAction();
-									}}
-									disabled={isLoading}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Trash2 className="w-4 h-4" />
-									{isLoading ? "Deleting..." : "Delete License"}
-									{isLoading && (
-										<Image
-											src="/assets/icons/loader.svg"
-											alt="loader"
-											width={16}
-											height={16}
-											className="animate-spin ml-2"
-										/>
-									)}
-								</Button>
-							</div>
+							</p>
+						</div>
+
+						{/* Footer — centered actions */}
+						<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
+							<Button
+								type="button"
+								variant="ghost"
+								onClick={(e) => closeAllModals(e)}
+								className="primary-btn gap-2 px-3 sm:px-4"
+							>
+								<Ban className="h-4 w-4 shrink-0" />
+								Cancel
+							</Button>
+							<Button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									handleAction();
+								}}
+								disabled={isLoading}
+								className="primary-btn gap-2 px-3 sm:px-4"
+							>
+								<Trash2 className="h-4 w-4 shrink-0" />
+								{isLoading ? "Deleting..." : "Delete License"}
+								{isLoading && (
+									<Image
+										src="/assets/icons/loader.svg"
+										alt="loader"
+										width={16}
+										height={16}
+										className="animate-spin ml-2"
+									/>
+								)}
+							</Button>
 						</div>
 					</DialogContent>
 				</Dialog>

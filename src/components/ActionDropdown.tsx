@@ -86,46 +86,6 @@ const getStatusBadgeClasses = (status: string): string => {
 	}
 };
 
-// Map status to badge color matching ContractsControlBar styles
-const getStatusDialogBadgeClasses = (status: string): string => {
-	const normalized = status?.toLowerCase?.() ?? "";
-	switch (normalized) {
-		case "active":
-			return "!font-medium border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D]";
-		case "pending-review":
-		case "under_review":
-			return "!font-medium border-2 border-amber-400 bg-[#FFEA99] text-[#E86100]";
-		case "action-required":
-			return "!font-medium border-2 border-red-400 bg-destructive/10 text-destructive";
-		case "inactive":
-			return "!font-medium border-2 border-slate-500 bg-[#D3D3D3] text-[#878787]";
-		case "expired":
-			return "!font-medium border-2 border-red-600 bg-red-100 text-red-800";
-		default:
-			return "!font-medium border-2 border-slate-200 bg-slate-100 text-slate-800";
-	}
-};
-
-// Get status label for display
-const getStatusLabel = (status: string): string => {
-	const normalized = status?.toLowerCase?.() ?? "";
-	switch (normalized) {
-		case "pending-review":
-		case "under_review":
-			return "Pending Review";
-		case "action-required":
-			return "Action Required";
-		case "active":
-			return "Active";
-		case "inactive":
-			return "Inactive";
-		case "expired":
-			return "Expired";
-		default:
-			return status.replace(/-/g, " ");
-	}
-};
-
 import {
 	AlertTriangle,
 	Ban,
@@ -143,12 +103,10 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ShareInput } from "@/components/ActionsModalContent";
+import ContractApprovalFlowDialog from "@/components/contracts/approval/ContractApprovalFlowDialog";
 import { PERMISSIONS } from "@/constants/permissions";
-import { useContractStatusEnums } from "@/hooks/useContractStatusEnums";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
-import { useUserRoles } from "@/hooks/useUserRoles";
 import {
 	assignContract,
 	deleteFile,
@@ -159,7 +117,6 @@ import { assignContractToDepartment } from "@/lib/actions/notification.actions";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { FileDetails } from "./ActionsModalContent";
 import DocumentViewer from "./DocumentViewer";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -169,7 +126,7 @@ const ActionDropdown = ({
 	onStatusChange,
 	onRefresh,
 	onExpiryDateChange,
-	userRole,
+	userRole: _userRole,
 }: {
 	file: UIFileDoc;
 	onStatusChange?: () => void;
@@ -211,18 +168,6 @@ const ActionDropdown = ({
 		return false;
 	}, [file?.status, file?.isExpired, file?.contractExpiryDate]);
 
-	// Initialize selectedStatus - auto-select expired if contract is expired
-	const [selectedStatus, setSelectedStatus] = useState<string>(() => {
-		if (isContractExpired) return "expired";
-		return file?.status || "";
-	});
-
-	// Update selectedStatus when dialog opens if contract is expired
-	useEffect(() => {
-		if (action?.value === "status" && isContractExpired) {
-			setSelectedStatus("expired");
-		}
-	}, [action?.value, isContractExpired]);
 	const {
 		departmentEnums,
 		filteredManagers,
@@ -232,14 +177,8 @@ const ActionDropdown = ({
 		handleManagerToggle,
 	} = useDepartmentAssignment();
 	const path = usePathname() || "";
-	const { enums: statusOptions, error: statusError } = useContractStatusEnums();
-	const { updateStatus } = useUpdateContractStatus({ onStatusChange });
 	const [isViewerOpen, setIsViewerOpen] = useState(false);
 	const { permissions } = usePermissions();
-	const { roles: userRoles } = useUserRoles();
-
-	// Get the actual role name from user roles (e.g., 'Super Admin', 'Organization Admin')
-	const actualRoleName = userRoles[0]?.roleName || userRole || "";
 
 	// SWR automatically fetches data when hook is used, no need for manual fetch
 
@@ -361,27 +300,6 @@ const ActionDropdown = ({
 			// Don't close the dialog - just update the list
 			// The dialog will show "No users shared yet" if updateEmails is empty
 		}
-	};
-
-	const handleStatusChange = async () => {
-		setIsLoading(true);
-		const contractId = file.contractId || file.$id;
-		const success = await updateStatus({
-			fileId: contractId,
-			status: selectedStatus,
-			path,
-		});
-		if (success) {
-			closeAllModals();
-			// Trigger immediate UI update
-			if (onStatusChange) {
-				onStatusChange();
-			}
-			if (onRefresh) {
-				onRefresh();
-			}
-		}
-		setIsLoading(false);
 	};
 
 	const renderDialogContent = () => {
@@ -944,196 +862,9 @@ const ActionDropdown = ({
 				</DialogContent>
 			);
 		}
-		// Status dialog
+		// Approval workflow is rendered outside renderDialogContent
 		if (value === "status") {
-			return (
-				<Dialog
-					open={isModalOpen && action?.value === "status"}
-					onOpenChange={(open) => {
-						if (!open) closeAllModals();
-					}}
-				>
-					<DialogContent className="flex max-h-[90vh] max-w-[500px] flex-col overflow-hidden p-0 shadow-xl">
-						{/* Professional Cap */}
-						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-						{/* Header with white background */}
-						<div className="sticky top-0 z-10 bg-white py-4 border-b border-slate-200 mt-4">
-							<div className="flex items-center gap-3 ml-6">
-								{/* Icon with circular background
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                </div> */}
-
-								{/* Title */}
-								<RefreshCw className="w-5 h-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									Change Status
-								</DialogTitle>
-							</div>
-							<p className="text-sm text-slate-600 mt-1 ml-14">
-								Select a new status for this contract
-							</p>
-						</div>
-
-						{/* Scrollable Content */}
-						<div className="flex-1 overflow-y-auto bg-white/20 p-6 backdrop-blur-sm">
-							<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
-								{statusError && (
-									<div className="text-red mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
-										{statusError}
-									</div>
-								)}
-								<div className="space-y-2">
-									{statusOptions.map((option) => {
-										const isOptionExpired = option.toLowerCase() === "expired";
-										const isMuted = isContractExpired && !isOptionExpired;
-										const showWarning =
-											!isContractExpired &&
-											isOptionExpired &&
-											selectedStatus === "expired";
-
-										return (
-											<div key={option}>
-												<label
-													className={`flex items-center gap-3 transition-all duration-200 p-3 rounded-lg border-2 bg-white group shadow-sm ${
-														isMuted
-															? "border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed"
-															: "border-slate-200 cursor-pointer hover:bg-blue-50 hover:border-blue-300 hover:shadow-md"
-													}`}
-													onClick={(e) => {
-														e.stopPropagation();
-														if (!isMuted) {
-															setSelectedStatus(option);
-														}
-													}}
-												>
-													<input
-														type="radio"
-														name="contract-status"
-														value={option}
-														checked={selectedStatus === option}
-														onChange={(e) => {
-															e.stopPropagation();
-															if (!isMuted) {
-																setSelectedStatus(option);
-															}
-														}}
-														onClick={(e) => {
-															e.stopPropagation();
-															if (isMuted) {
-																e.preventDefault();
-															}
-														}}
-														disabled={isLoading || isMuted}
-														className={`w-4 h-4 ${isMuted ? "cursor-not-allowed opacity-50" : "cursor-pointer text-blue-600"}`}
-													/>
-													<Badge
-														variant="outline"
-														className={`${getStatusDialogBadgeClasses(
-															option,
-														)} transition-all duration-200 shadow-sm`}
-													>
-														{getStatusLabel(option)}
-													</Badge>
-												</label>
-												{showWarning && (
-													<div className="mt-2 ml-7 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-														<p className="font-medium mb-1 flex items-center gap-2">
-															<AlertTriangle
-																className="h-4 w-4 shrink-0"
-																aria-hidden
-															/>
-															Warning: Marking contract as expired
-														</p>
-														<p className="text-xs">
-															This action will mark the contract as expired.
-															Please review the contract details and click
-															"Update Status" to confirm this change.
-														</p>
-													</div>
-												)}
-											</div>
-										);
-									})}
-								</div>
-							</div>
-						</div>
-
-						{/* Professional Footer */}
-						{actualRoleName === "Super Admin" ||
-						actualRoleName === "Organization Admin" ? (
-							<div className="glass-dialog-footer-centered px-6">
-								<div className="flex items-center gap-3">
-									<Button
-										variant="outline"
-										onClick={(e) => {
-											e.stopPropagation();
-											closeAllModals();
-										}}
-										className="primary-btn px-3 sm:px-4"
-										disabled={isLoading}
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
-									</Button>
-									<Button
-										onClick={(e) => {
-											e.stopPropagation();
-											e.preventDefault();
-											handleStatusChange();
-										}}
-										disabled={isLoading || !selectedStatus}
-										className="primary-btn px-3 sm:px-4"
-									>
-										{isLoading ? (
-											<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-										) : (
-											<RefreshCw className="w-4 h-4 mr-2" />
-										)}
-										Update Status
-									</Button>
-								</div>
-							</div>
-						) : (
-							<div className="glass-dialog-alert-footer">
-								<div className="text-xs text-slate-500">
-									Status changes require review
-								</div>
-								<div className="flex items-center gap-3">
-									<Button
-										variant="outline"
-										onClick={(e) => {
-											e.stopPropagation();
-											closeAllModals();
-										}}
-										className="primary-btn px-3 sm:px-4"
-										disabled={isLoading}
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
-									</Button>
-									<Button
-										onClick={(e) => {
-											e.stopPropagation();
-											e.preventDefault();
-											handleStatusChange();
-										}}
-										disabled={isLoading || !selectedStatus}
-										className="primary-btn px-3 sm:px-4"
-									>
-										{isLoading ? (
-											<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-										) : (
-											<RefreshCw className="w-4 h-4 mr-2" />
-										)}
-										Update Status
-									</Button>
-								</div>
-							</div>
-						)}
-					</DialogContent>
-				</Dialog>
-			);
+			return null;
 		}
 
 		if (value === "review") {
@@ -1176,8 +907,12 @@ const ActionDropdown = ({
 				// Review requires contracts.review
 				return permissions.includes(PERMISSIONS.CONTRACTS.REVIEW);
 			case "status":
-				// Status requires contracts.approve
-				return permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
+				// Workflow viewer: view/review/approve
+				return (
+					permissions.includes(PERMISSIONS.CONTRACTS.VIEW) ||
+					permissions.includes(PERMISSIONS.CONTRACTS.REVIEW) ||
+					permissions.includes(PERMISSIONS.CONTRACTS.APPROVE)
+				);
 			case "assign":
 				// Assign requires contracts.edit
 				return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
@@ -1207,22 +942,26 @@ const ActionDropdown = ({
 	}
 
 	return (
-		<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-			<DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-				<DropdownMenuTrigger className="shad-no-focus rounded-full transition-colors hover:bg-white/30">
-					<Image
-						src="/assets/icons/dots.svg"
-						alt="dots"
-						width={34}
-						height={34}
-					/>
-				</DropdownMenuTrigger>
-				<AppDropdownMenuContent>
-					<DropdownMenuLabel className="max-w-[200px] truncate">
-						{file.name || file.contractName}
-					</DropdownMenuLabel>
-					<DropdownMenuSeparator />
-					{filteredActions.map((actionItem) => {
+		<>
+			<Dialog
+				open={isModalOpen && action?.value !== "status"}
+				onOpenChange={setIsModalOpen}
+			>
+				<DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+					<DropdownMenuTrigger className="shad-no-focus rounded-full transition-colors hover:bg-white/30">
+						<Image
+							src="/assets/icons/dots.svg"
+							alt="dots"
+							width={34}
+							height={34}
+						/>
+					</DropdownMenuTrigger>
+					<AppDropdownMenuContent>
+						<DropdownMenuLabel className="max-w-[200px] truncate">
+							{file.name || file.contractName}
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						{filteredActions.map((actionItem) => {
 						const actionIconMap = {
 							assign: UserRoundCheck,
 							rename: Pencil,
@@ -1391,7 +1130,20 @@ const ActionDropdown = ({
 					}}
 				/>
 			)}
-		</Dialog>
+			</Dialog>
+			<ContractApprovalFlowDialog
+				open={isModalOpen && action?.value === "status"}
+				onOpenChange={(open) => {
+					if (!open) {
+						closeAllModals();
+						onStatusChange?.();
+						onRefresh?.();
+					}
+				}}
+				contractId={String(file.contractId || file.$id)}
+				contractName={file.contractName || file.name}
+			/>
+		</>
 	);
 };
 

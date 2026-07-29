@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
 			processedFileData: body.processedFileData,
 			extractedData: body.extractedData,
 			isCompleted: body.isCompleted || false,
+			selectedContractType: body.selectedContractType || null,
 		});
 
 		// Invalidate cache for this owner's drafts to ensure fresh data

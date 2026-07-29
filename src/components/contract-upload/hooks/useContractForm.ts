@@ -156,24 +156,20 @@ export function useContractForm() {
 	// Extract contract data using base64 approach
 	const extractContractData = async (
 		fileData: ProcessedFileData,
+		options?: {
+			contractTypeId?: string | null;
+			contractTypeLabel?: string | null;
+		},
 	): Promise<Record<string, unknown> | null> => {
 		try {
-			console.log("=== EXTRACT CONTRACT DATA START ===");
-			console.log("Starting contract data extraction for file:", fileData.name);
-			console.log("File type:", fileData.type);
-			console.log("File size:", fileData.size);
-			console.log("Base64 content length:", fileData.base64Content.length);
-
-			// Send file data as base64 in JSON payload instead of FormData
 			const requestBody = {
 				fileName: fileData.name,
 				fileType: fileData.type,
 				fileSize: fileData.size,
 				fileContent: fileData.base64Content,
+				contractTypeId: options?.contractTypeId ?? null,
+				contractTypeLabel: options?.contractTypeLabel ?? null,
 			};
-
-			console.log("Request body prepared, making API call...");
-			console.log("Making request to /api/contracts/extract-data");
 
 			const response = await fetch("/api/contracts/extract-data", {
 				method: "POST",
@@ -183,45 +179,24 @@ export function useContractForm() {
 				body: JSON.stringify(requestBody),
 			});
 
-			console.log("Response received, status:", response.status);
-			console.log(
-				"Response headers:",
-				Object.fromEntries(response.headers.entries()),
-			);
-
 			if (!response.ok) {
-				console.error("Response not OK, attempting to read error...");
-
-				// Clone the response to avoid stream consumption issues
 				const responseClone = response.clone();
-
-				let errorData;
+				let errorData: { error?: string } | null = null;
 				try {
 					errorData = await responseClone.json();
-					console.error("Error data (JSON):", errorData);
 				} catch {
-					console.error("Failed to parse error as JSON, trying text...");
-					try {
-						const textContent = await response.text();
-						console.error("Response text content:", textContent);
-						throw new Error(
-							`HTTP ${response.status}: ${textContent.substring(0, 200)}`,
-						);
-					} catch (textError) {
-						console.error("Failed to read error as text:", textError);
-						throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-					}
+					const textContent = await response.text();
+					throw new Error(
+						`HTTP ${response.status}: ${textContent.substring(0, 200)}`,
+					);
 				}
 				throw new Error(errorData?.error || "Contract extraction failed");
 			}
 
 			const data = await response.json();
-			console.log("Extraction successful, data received:", data);
-			console.log("=== EXTRACT CONTRACT DATA END ===");
-			return data.extractedData || null;
+			return data.extractedData || data.data || null;
 		} catch (error) {
 			console.error("Contract extraction error:", error);
-			console.log("=== EXTRACT CONTRACT DATA END (ERROR) ===");
 			return null;
 		}
 	};

@@ -100,12 +100,14 @@ interface LicenseCardProps {
 	license: License;
 	onClick?: () => void;
 	onRefresh?: () => void;
+	onLicenseRemoved?: (licenseId: string) => void;
 }
 
 export default function LicenseCard({
 	license,
 	onClick,
 	onRefresh,
+	onLicenseRemoved,
 }: LicenseCardProps) {
 	const [uploaderName, setUploaderName] = useState<string | null>(null);
 	const [loadingUploader, setLoadingUploader] = useState(false);
@@ -212,7 +214,11 @@ export default function LicenseCard({
 					onClick={(e) => e.stopPropagation()}
 					onKeyDown={(e) => e.stopPropagation()}
 				>
-					<LicenseActionDropdown license={license} onRefresh={onRefresh} />
+					<LicenseActionDropdown
+						license={license}
+						onRefresh={onRefresh}
+						onLicenseRemoved={onLicenseRemoved}
+					/>
 					{license.fileSize != null && license.fileSize > 0 && (
 						<span className="text-[10px] text-slate-500 tabular-nums">
 							{convertFileSize({ sizeInBytes: license.fileSize })}

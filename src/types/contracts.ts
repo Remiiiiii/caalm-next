@@ -119,6 +119,7 @@ export interface ContractMetadataPayload {
 	parentContractId?: string;
 	templateUsed?: string;
 	approvalWorkflowTemplate?: string;
+	approvalWorkflowState?: string;
 	internalApproverIds?: string[];
 	currentApprovalStage?: string;
 	approvalHistoryLog?: string;

@@ -20,7 +20,6 @@ import {
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import {
 	type ApprovalQueueItem,
 	isAgingUrgent,
@@ -55,9 +54,6 @@ export default function ApprovalsTable({
 	const router = useRouter();
 	const pathname = usePathname();
 	const { toast } = useToast();
-	const { updateStatus } = useUpdateContractStatus({
-		onStatusChange: () => router.refresh(),
-	});
 	const [busyId, setBusyId] = useState<string | null>(null);
 
 	const allSelected =
@@ -77,16 +73,39 @@ export default function ApprovalsTable({
 		if (!res.ok) throw new Error("Failed to update license");
 	};
 
+	const decideContractStep = async (contractId: string) => {
+		const res = await fetch(
+			`/api/contracts/${contractId}/approval-workflow/decide`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					decision: "approved",
+					path: pathname || "/contracts/approvals",
+				}),
+			},
+		);
+		const json = await res.json();
+		if (!res.ok || !json.success) {
+			throw new Error(json.error || "Failed to approve step");
+		}
+		return json.data;
+	};
+
 	const quickApprove = async (item: ApprovalQueueItem) => {
 		if (!canDecide) return;
 		setBusyId(item.id);
 		try {
 			if (item.entity === "contract") {
-				await updateStatus({
-					fileId: item.decisionId,
-					status: "active",
-					path: pathname || "/contracts/approvals",
+				const result = await decideContractStep(item.decisionId);
+				toast({
+					title: "Step approved",
+					description:
+						result?.contractStatus === "active"
+							? "Contract is now active."
+							: "Approval workflow advanced.",
 				});
+				router.refresh();
 			} else {
 				await decideLicense(item.decisionId, "active");
 				toast({
@@ -95,10 +114,11 @@ export default function ApprovalsTable({
 				});
 				router.refresh();
 			}
-		} catch {
+		} catch (err) {
 			toast({
 				title: "Error",
-				description: "Failed to approve item.",
+				description:
+					err instanceof Error ? err.message : "Failed to approve item.",
 				variant: "destructive",
 			});
 		} finally {

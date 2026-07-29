@@ -4,12 +4,7 @@
 
 import { CONTRACT_TYPE_CONFIGS } from "@/lib/contracts/contractTypeConfigs";
 
-// Export contract types from central config for consistency
-export const CONTRACT_TYPES = CONTRACT_TYPE_CONFIGS.map(
-	(config) => config.label,
-);
-
-// Legacy contract types (kept for backward compatibility)
+// Legacy + document-classification labels used by the step-2 Contract Type select
 export const LEGACY_CONTRACT_TYPES = [
 	"Service Agreement",
 	"Professional Services",
@@ -21,10 +16,20 @@ export const LEGACY_CONTRACT_TYPES = [
 	"Vendor Contract",
 	"Master Agreement",
 	"Statement of Work (SOW)",
+	"Government Grant",
+	"Government Contract",
+	"Grant Agreement",
 	"Amendment",
 	"Other",
 ];
 
+// Wizard labels + legacy document types (deduped) for filters and selects
+export const CONTRACT_TYPES = Array.from(
+	new Set([
+		...CONTRACT_TYPE_CONFIGS.map((config) => config.label),
+		...LEGACY_CONTRACT_TYPES,
+	]),
+);
 export const CONTRACT_CATEGORY_OPTIONS = [
 	{ value: "service_agreement", label: "Service Agreement" },
 	{ value: "professional_services", label: "Professional Services" },
@@ -35,6 +40,9 @@ export const CONTRACT_CATEGORY_OPTIONS = [
 	{ value: "confidentiality_nda", label: "Confidentiality / NDA" },
 	{ value: "master_agreement", label: "Master Agreement" },
 	{ value: "statement_of_work", label: "Statement of Work (SOW)" },
+	{ value: "government_grant", label: "Government Grant" },
+	{ value: "government_contract", label: "Government Contract" },
+	{ value: "grant_agreement", label: "Grant Agreement" },
 	{ value: "amendment", label: "Amendment" },
 ];
 

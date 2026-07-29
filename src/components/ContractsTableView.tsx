@@ -32,6 +32,21 @@ import FormattedDateTime, { FormattedDate } from "./FormattedDateTime";
 import ManagerAvatars from "./ManagerAvatars";
 import Thumbnail from "./Thumbnail";
 
+function formatContractValue(amount: number): string {
+	if (amount >= 1_000_000_000) {
+		return `$${(amount / 1_000_000_000).toFixed(1)}B`;
+	}
+	if (amount >= 1_000_000) {
+		return `$${(amount / 1_000_000).toFixed(1)}M`;
+	}
+	return new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: "USD",
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(amount);
+}
+
 function statusBadge(file: UIFileDoc) {
 	const expired = isContractExpired(file);
 	const status = expired ? "expired" : file.status || "";
@@ -519,6 +534,9 @@ export default function ContractsTableView({
 							Status
 						</TableHead>
 						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Value
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 							Size
 						</TableHead>
 						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
@@ -593,6 +611,18 @@ export default function ContractsTableView({
 							</TableCell>
 							<TableCell className={cn(rowPad, "whitespace-nowrap")}>
 								{statusBadge(file)}
+							</TableCell>
+							<TableCell
+								className={cn(
+									rowPad,
+									"text-slate-700 whitespace-nowrap tabular-nums",
+								)}
+							>
+								{file.amount != null && Number(file.amount) > 0 ? (
+									formatContractValue(Number(file.amount))
+								) : (
+									<span className="body-2 text-slate-400">-</span>
+								)}
 							</TableCell>
 							<TableCell
 								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}

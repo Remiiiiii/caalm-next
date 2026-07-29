@@ -26,6 +26,7 @@ export class ContractTypeMapper {
 		// New nonprofit contract types
 		"Vendor/Service Agreement": "Vendor_Service_Agreement",
 		"Grant Agreement": "Grant_Agreement",
+		"Government Grant": "Government_Grant",
 		"Government Contract": "Government_Contract",
 		"Memorandum of Understanding": "MOU",
 		"Donation/Gift Agreement": "Donation_Agreement",

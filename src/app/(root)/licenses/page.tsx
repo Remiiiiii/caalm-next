@@ -52,7 +52,7 @@ const Page = async () => {
 				return result.rows as unknown as License[];
 			},
 			["licenses-list", orgId],
-			{ revalidate: 60 },
+			{ revalidate: 60, tags: [`licenses-list-${orgId}`, "licenses-list"] },
 		);
 
 		licenses = await getCachedLicenses();
@@ -84,11 +84,7 @@ const Page = async () => {
 					<h1 className="h1 capitalize sidebar-gradient-text">Licenses</h1>
 				</div>
 				<div className="mb-6 flex items-center justify-end">
-					<LicensesHeaderActions
-						licenses={licenses}
-						userId={user.$id}
-						accountId={user.accountId}
-					/>
+					<LicensesHeaderActions licenses={licenses} />
 				</div>
 
 				<LicensesAttentionStrip licenses={licenses} />

@@ -6,18 +6,26 @@ import {
 	AlertTriangle,
 	Ban,
 	Calendar as CalendarIcon,
-	CheckCircle,
+	CheckCircle2,
 	ChevronLeft,
 	ChevronRight,
 	FileCheck,
 	FileText,
+	FolderOpen,
 	Loader2,
 	StepForward,
 	Trash2,
 	Upload,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import DatePicker from "react-datepicker";
 import { useDropzone } from "react-dropzone";
 import { SaveProgressCard } from "@/components/SaveProgressCard";
@@ -54,7 +62,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { cn, constructFileUrl } from "@/lib/utils";
 import "react-datepicker/dist/react-datepicker.css";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
@@ -88,6 +96,18 @@ import {
 } from "@/lib/actions/database.actions";
 import { uploadFile } from "@/lib/actions/file.actions";
 import {
+	AiExtractionReviewPanel,
+	AiExtractionStatusBadge,
+	AiFilledLabelHint,
+	aiFieldItemClassName,
+} from "@/components/contract-upload/AiExtractionReview";
+import ContractReviewStep from "@/components/contract-upload/ContractReviewStep";
+import {
+	buildFormPatchFromExtraction,
+	isRealExtractionMethod,
+	parseContractExtractionJson,
+} from "@/lib/ai/contractExtractionSchema";
+import {
 	buildContractTypeFallbackResult,
 	type ContractTypeSuggestionResult,
 } from "@/lib/ai/contractTypeSuggestionSchema";
@@ -96,8 +116,31 @@ import {
 	getContractTypeConfig,
 	getFieldsForStep,
 	getRequiredFields,
+	resolveDraftContractTypeId,
 } from "@/lib/contracts/contractTypeConfigs";
-import { CONTRACT_DEPARTMENTS } from "../../constants";
+import { getNoticeThresholds } from "@/lib/renewals/expiryNotice";
+import { fireConfetti } from "@/lib/ui/confetti";
+import {
+	CONTRACT_DEPARTMENTS,
+	DIVISION_TO_DEPARTMENT,
+	formatDivisionName,
+	type UserDivision,
+	USER_DIVISIONS,
+} from "../../constants";
+
+const LocalPdfPreviewDialog = dynamic(
+	() => import("@/components/contract-upload/LocalPdfPreviewDialog"),
+	{ ssr: false },
+);
+
+function formatAlertLeadTimesLabel(renewalNoticeDays?: string): string {
+	const thresholds = getNoticeThresholds(renewalNoticeDays || "30");
+	return `${thresholds.join(", ")} days`;
+}
+
+function alertLeadTimesFromRenewalNotice(renewalNoticeDays?: string): string {
+	return getNoticeThresholds(renewalNoticeDays || "30").join(",");
+}
 
 interface ContractUploadFormProps {
 	ownerId: string;
@@ -112,9 +155,42 @@ interface ProcessedFileData {
 	name: string;
 	type: string;
 	size: number;
-	base64Content: string;
-	arrayBuffer: ArrayBuffer;
+	base64Content?: string;
+	arrayBuffer?: ArrayBuffer | number[];
 	lastModified: number;
+	bucketFileId?: string | null;
+}
+
+function toArrayBuffer(
+	data: ArrayBuffer | number[] | Uint8Array | undefined | null,
+): ArrayBuffer | null {
+	if (!data) return null;
+	if (data instanceof ArrayBuffer) {
+		return data.byteLength > 0 ? data : null;
+	}
+	if (data instanceof Uint8Array) {
+		if (data.byteLength === 0) return null;
+		const copy = new Uint8Array(data.byteLength);
+		copy.set(data);
+		return copy.buffer;
+	}
+	if (Array.isArray(data) && data.length > 0) {
+		return new Uint8Array(data).buffer;
+	}
+	return null;
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer | null {
+	try {
+		const binary = atob(base64);
+		const bytes = new Uint8Array(binary.length);
+		for (let i = 0; i < binary.length; i++) {
+			bytes[i] = binary.charCodeAt(i);
+		}
+		return bytes.buffer;
+	} catch {
+		return null;
+	}
 }
 
 const CONTRACT_TYPES = [
@@ -128,6 +204,9 @@ const CONTRACT_TYPES = [
 	"Vendor Contract",
 	"Master Agreement",
 	"Statement of Work (SOW)",
+	"Government Grant",
+	"Government Contract",
+	"Grant Agreement",
 	"Amendment",
 	"Other",
 ];
@@ -341,6 +420,69 @@ const COUNTERPARTY_TYPES = [
 	{ value: "other", label: "Other" },
 ];
 
+const NOTICE_DAY_OPTIONS = ["15", "30", "45", "60", "90", "120", "180"];
+
+const CURE_PERIOD_OPTIONS = ["5", "10", "15", "30", "45", "60"];
+
+const TERMINATION_RIGHTS_OPTIONS = [
+	{ value: "for_cause", label: "For cause" },
+	{ value: "for_convenience", label: "For convenience" },
+	{ value: "both", label: "For cause and convenience" },
+	{ value: "mutual", label: "Mutual agreement only" },
+	{ value: "other", label: "Other" },
+];
+
+const GOVERNING_LAW_OPTIONS = [
+	"State of Florida",
+	"Florida",
+	"United States",
+	"Delaware",
+	"New York",
+	"California",
+	"Texas",
+	"Other",
+];
+
+const JURISDICTION_OPTIONS = [
+	"Miami-Dade County, FL",
+	"Broward County, FL",
+	"Palm Beach County, FL",
+	"Hillsborough County, FL",
+	"Orange County, FL",
+	"Duval County, FL",
+	"State of Florida courts",
+	"Federal courts in Florida",
+	"Other",
+];
+
+const ALERT_CHANNEL_OPTIONS = [
+	{ value: "email", label: "Email" },
+	{ value: "email,sms", label: "Email + SMS" },
+	{ value: "email,in_app", label: "Email + In-app" },
+	{ value: "email,sms,in_app", label: "Email + SMS + In-app" },
+];
+
+const ALERT_STRATEGY_OPTIONS = [
+	{ value: "standard", label: "Standard" },
+	{ value: "executive", label: "Executive" },
+	{ value: "aggressive", label: "Aggressive" },
+	{ value: "custom", label: "Custom" },
+];
+
+const SIGNATURE_PLATFORM_OPTIONS = [
+	{ value: "docusign", label: "DocuSign" },
+	{ value: "adobe_sign", label: "Adobe Sign" },
+	{ value: "hellosign", label: "HelloSign / Dropbox Sign" },
+	{ value: "built_in", label: "Built-in" },
+	{ value: "other", label: "Other" },
+];
+
+function divisionsForDepartment(department: string): UserDivision[] {
+	return USER_DIVISIONS.filter(
+		(div) => DIVISION_TO_DEPARTMENT[div] === department,
+	);
+}
+
 const _ALERT_TIMING_OPTIONS = [
 	{ value: "none", label: "No Alerts" },
 	{ value: "30_days", label: "30 Days" },
@@ -372,6 +514,23 @@ const SIGNATURE_STATUS_OPTIONS = [
 ];
 
 const ACCESS_SCOPE_OPTIONS = ["organization", "department", "restricted"];
+
+const VISIBILITY_ROLE_OPTIONS = [
+	"Super Admin",
+	"Organization Admin",
+	"Department Manager",
+	"Viewer",
+	"IT",
+];
+
+const RETENTION_MONTH_OPTIONS = [
+	{ value: "12", label: "12 months (1 year)" },
+	{ value: "24", label: "24 months (2 years)" },
+	{ value: "36", label: "36 months (3 years)" },
+	{ value: "60", label: "60 months (5 years)" },
+	{ value: "84", label: "84 months (7 years)" },
+	{ value: "120", label: "120 months (10 years)" },
+];
 
 const contractSchema = z.object({
 	contractName: z
@@ -517,11 +676,29 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const [uploadProgress, setUploadProgress] = useState(0);
 	const [processedFileData, setProcessedFileData] =
 		useState<ProcessedFileData | null>(null);
+	/** Survives draft JSON round-trips that drop ArrayBuffer / base64 */
+	const fileBytesRef = useRef<ArrayBuffer | null>(null);
 	const [extractedData, setExtractedData] = useState<Record<
 		string,
 		unknown
 	> | null>(null);
+	const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
+	const [overallExtractionConfidence, setOverallExtractionConfidence] =
+		useState<number | null>(null);
+	const [aiFilledFields, setAiFilledFields] = useState<string[]>([]);
+	const [lowConfidenceFields, setLowConfidenceFields] = useState<string[]>([]);
+	const [fieldConfidence, setFieldConfidence] = useState<
+		Record<string, number>
+	>({});
 	const [isExtracting, setIsExtracting] = useState(false);
+	/** Step 1 file ingest: progress bar → brief check → hide */
+	const [fileIngestUi, setFileIngestUi] = useState<
+		"hidden" | "progress" | "success"
+	>("hidden");
+	const [fileIngestProgress, setFileIngestProgress] = useState(0);
+	const fileIngestSuccessTimeoutRef = useRef<ReturnType<
+		typeof setTimeout
+	> | null>(null);
 	const [availableManagers, setAvailableManagers] = useState<
 		Array<{ $id: string; fullName: string; email: string; division?: string }>
 	>([]);
@@ -538,6 +715,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
 	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+	const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+	const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 	const isResumingDraftRef = React.useRef(false);
 
 	// Contract type selection state
@@ -545,6 +724,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		string | null
 	>(null);
 	const [showTypeSelection, setShowTypeSelection] = useState(true);
+	const [showDraftsList, setShowDraftsList] = useState(false);
 
 	// AI quiz state
 	const [showAiQuiz, setShowAiQuiz] = useState(false);
@@ -722,9 +902,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		? getContractTypeConfig(selectedContractType)
 		: null;
 
-	// Define form steps dynamically based on selected contract type
-	const totalSteps = currentTypeConfig?.steps || 10;
-	const stepTitles = currentTypeConfig?.stepTitles || [
+	// Define form steps dynamically based on selected contract type (+ Review before upload)
+	const contentSteps = currentTypeConfig?.steps || 10;
+	const contentStepTitles = currentTypeConfig?.stepTitles || [
 		"Upload File",
 		"Contract Basics",
 		"Parties & Contacts",
@@ -736,6 +916,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		"Legal & Governance",
 		"Digital Signatures",
 	];
+	const totalSteps = contentSteps + 1;
+	const stepTitles = [...contentStepTitles, "Review"];
+	const isReviewStep = currentStep === totalSteps;
 
 	type ContractFormData = z.infer<typeof contractSchema>;
 
@@ -818,7 +1001,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			workflowNotes: "",
 			alertRecipientIds: "",
 			alertEscalationContactIds: "",
-			alertLeadTimes: "30,60,90",
+			alertLeadTimes: alertLeadTimesFromRenewalNotice("60"),
 			alertChannels: "email",
 			alertNotes: "",
 			alertStrategy: "standard",
@@ -879,7 +1062,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const watchedAssignToDepartment = form.watch("assignToDepartment");
 	useEffect(() => {
 		if (watchedAssignToDepartment) {
-			// Fetch managers for the selected department
 			const fetchDepartmentManagers = async () => {
 				try {
 					const departmentManagers = await getUsersByDepartment(
@@ -900,40 +1082,76 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							}),
 						);
 						setFilteredManagers(typedManagers);
-						// Clear selected managers when department changes
 						setSelectedManagers([]);
 						form.setValue("assignedManagers", []);
+
+						// Default department owner when only one manager matches
+						const currentOwner = form.getValues("departmentOwner");
+						const ownerStillValid = typedManagers.some(
+							(m) => m.$id === currentOwner || m.fullName === currentOwner,
+						);
+						if (!ownerStillValid) {
+							form.setValue(
+								"departmentOwner",
+								typedManagers.length === 1 ? typedManagers[0].$id : "",
+							);
+						}
+
+						// Clear sub-department if it doesn't belong to this department
+						const currentSub = form.getValues("subDepartment") as UserDivision;
+						const allowed = divisionsForDepartment(watchedAssignToDepartment);
+						if (currentSub && !allowed.includes(currentSub)) {
+							form.setValue("subDepartment", "");
+						}
+
+						// Keep business unit aligned with department when empty
+						if (!form.getValues("businessUnit")) {
+							form.setValue("businessUnit", watchedAssignToDepartment);
+						}
 					} else {
-						// No managers found in this department
 						setFilteredManagers([]);
-						// Clear selected managers when no managers found
 						setSelectedManagers([]);
 						form.setValue("assignedManagers", []);
+						form.setValue("departmentOwner", "");
 					}
 				} catch (error) {
 					console.error("Failed to fetch department managers:", error);
-					// Fallback to empty array if department filtering fails
 					setFilteredManagers([]);
 				}
 			};
 			fetchDepartmentManagers();
 		} else {
-			// If no department is selected, show no managers
 			setFilteredManagers([]);
-			// Clear selected managers when no department is selected
-			setSelectedManagers([]);
-			form.setValue("assignedManagers", []);
 		}
 	}, [watchedAssignToDepartment, form]);
 
+	// Keep alert lead times in sync with Renewal Notice (Days) from Step 2
+	const watchedRenewalNoticeDays = form.watch("renewalNoticeDays");
+	useEffect(() => {
+		form.setValue(
+			"alertLeadTimes",
+			alertLeadTimesFromRenewalNotice(watchedRenewalNoticeDays),
+		);
+	}, [watchedRenewalNoticeDays, form]);
+
 	// Synchronous file processing function
 	const processFileSynchronously = useCallback(
-		(file: File): Promise<ProcessedFileData> => {
+		(
+			file: File,
+			onProgress?: (percent: number) => void,
+		): Promise<ProcessedFileData> => {
 			return new Promise((resolve, reject) => {
 				const reader = new FileReader();
 
+				reader.onprogress = (event) => {
+					if (event.lengthComputable && event.total > 0) {
+						onProgress?.(Math.round((event.loaded / event.total) * 100));
+					}
+				};
+
 				reader.onload = (event) => {
 					try {
+						onProgress?.(100);
 						const arrayBuffer = event.target?.result as ArrayBuffer;
 						const base64Content = btoa(
 							new Uint8Array(arrayBuffer).reduce(
@@ -969,24 +1187,18 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			fileData: ProcessedFileData,
 		): Promise<Record<string, unknown> | null> => {
 			try {
-				console.log("=== EXTRACT CONTRACT DATA START ===");
-				console.log(
-					"Starting contract data extraction for file:",
-					fileData.name,
-				);
-				console.log("File type:", fileData.type);
-				console.log("File size:", fileData.size);
-				console.log("Base64 content length:", fileData.base64Content.length);
+				const typeConfig = selectedContractType
+					? getContractTypeConfig(selectedContractType)
+					: null;
 
 				const requestBody = {
 					fileName: fileData.name,
 					fileType: fileData.type,
 					fileSize: fileData.size,
 					fileContent: fileData.base64Content,
+					contractTypeId: selectedContractType,
+					contractTypeLabel: typeConfig?.label ?? null,
 				};
-
-				console.log("Request body prepared, making API call...");
-				console.log("Making request to /api/contracts/extract-data");
 
 				const response = await fetch("/api/contracts/extract-data", {
 					method: "POST",
@@ -996,74 +1208,53 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					body: JSON.stringify(requestBody),
 				});
 
-				console.log("Response received, status:", response.status);
-				console.log(
-					"Response headers:",
-					Object.fromEntries(response.headers.entries()),
-				);
-
 				if (!response.ok) {
-					console.error("Response not OK, attempting to read error...");
-
 					const responseClone = response.clone();
-
-					let errorData;
+					let errorData: { error?: string } | null = null;
 					try {
 						errorData = await responseClone.json();
-						console.error("Error data (JSON):", errorData);
 					} catch {
-						console.error("Failed to parse error as JSON, trying text...");
-						try {
-							const textContent = await response.text();
-							console.error("Response text content:", textContent);
-							throw new Error(
-								`HTTP ${response.status}: ${textContent.substring(0, 200)}`,
-							);
-						} catch (textError) {
-							console.error("Failed to read response text:", textError);
-							throw new Error(
-								`HTTP ${response.status}: Unable to read error response`,
-							);
-						}
+						const textContent = await response.text();
+						throw new Error(
+							`HTTP ${response.status}: ${textContent.substring(0, 200)}`,
+						);
 					}
-					console.error("Extraction failed:", errorData);
 					throw new Error(
-						errorData.error || `HTTP ${response.status}: Extraction failed`,
+						errorData?.error || `HTTP ${response.status}: Extraction failed`,
 					);
 				}
 
-				console.log("Response OK, parsing JSON...");
 				const result = await response.json();
-				console.log("Extraction result:", result);
-
 				if (result.success && result.data) {
-					console.log("=== EXTRACT CONTRACT DATA SUCCESS ===");
-					return result.data;
+					return result.data as Record<string, unknown>;
 				}
-				console.error("Unexpected response structure:", result);
-				console.log(
-					"=== EXTRACT CONTRACT DATA FAILED - UNEXPECTED STRUCTURE ===",
-				);
 				return null;
 			} catch (error) {
-				console.error("=== EXTRACT CONTRACT DATA ERROR ===");
 				console.error("Contract data extraction error:", error);
-				console.error(
-					"Error stack:",
-					error instanceof Error ? error.stack : "No stack trace",
-				);
 				return null;
 			}
 		},
-		[],
+		[selectedContractType],
 	);
 
 	// Reset function to clear all form data and file
 	const resetForm = useCallback(() => {
 		form.reset();
+		fileBytesRef.current = null;
 		setProcessedFileData(null);
 		setExtractedData(null);
+		setExtractionMethod(null);
+		setOverallExtractionConfidence(null);
+		setAiFilledFields([]);
+		setLowConfidenceFields([]);
+		setFieldConfidence({});
 		setIsExtracting(false);
+		setFileIngestUi("hidden");
+		setFileIngestProgress(0);
+		if (fileIngestSuccessTimeoutRef.current) {
+			clearTimeout(fileIngestSuccessTimeoutRef.current);
+			fileIngestSuccessTimeoutRef.current = null;
+		}
 		setSelectedManagers([]);
 		setSelectedApprovers([]);
 		setIsUploading(false);
@@ -1072,6 +1263,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		setCurrentDraftId(null);
 		setSelectedContractType(null);
 		setShowTypeSelection(true);
+		setShowDraftsList(false);
 		setShowAiQuiz(false);
 		setAiQuizStep(0);
 		setAiQuizAnswers({});
@@ -1191,13 +1383,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 	// Step navigation functions
 	const nextStep = async () => {
-		if (currentStep < totalSteps) {
-			// Validate current step before proceeding
+		if (currentStep >= totalSteps) return;
+		// Validate content steps before leaving them (skip on Review itself)
+		if (currentStep <= contentSteps) {
 			const isValid = await validateStep(currentStep);
-			if (isValid) {
-				setCurrentStep((prev) => prev + 1);
-			}
+			if (!isValid) return;
 		}
+		setCurrentStep((prev) => prev + 1);
 	};
 
 	const prevStep = () => {
@@ -1212,112 +1404,245 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		}
 	};
 
+	const closePdfPreview = useCallback(() => {
+		setPdfPreviewOpen(false);
+		setPdfPreviewUrl((prev) => {
+			if (prev) URL.revokeObjectURL(prev);
+			return null;
+		});
+	}, []);
+
+	const openPdfPreview = useCallback(async () => {
+		if (!processedFileData) {
+			toast({
+				title: "Preview unavailable",
+				description: "No file is loaded yet.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		const isPdf =
+			processedFileData.type === "application/pdf" ||
+			processedFileData.name.toLowerCase().endsWith(".pdf");
+		if (!isPdf) {
+			toast({
+				title: "Preview unavailable",
+				description: "Only PDF files can be opened in the viewer.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		const setPreviewFromBuffer = (buffer: ArrayBuffer) => {
+			fileBytesRef.current = buffer;
+			const url = URL.createObjectURL(
+				new Blob([new Uint8Array(buffer)], { type: "application/pdf" }),
+			);
+			setPdfPreviewUrl((prev) => {
+				if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+				return url;
+			});
+			setPdfPreviewOpen(true);
+		};
+
+		const fromRef = fileBytesRef.current;
+		if (fromRef && fromRef.byteLength > 0) {
+			setPreviewFromBuffer(fromRef);
+			return;
+		}
+
+		const fromState = toArrayBuffer(processedFileData.arrayBuffer);
+		if (fromState) {
+			setPreviewFromBuffer(fromState);
+			return;
+		}
+
+		if (processedFileData.base64Content) {
+			const fromBase64 = base64ToArrayBuffer(processedFileData.base64Content);
+			if (fromBase64) {
+				setPreviewFromBuffer(fromBase64);
+				return;
+			}
+		}
+
+		const bucketFileId = processedFileData.bucketFileId;
+		if (bucketFileId) {
+			try {
+				const response = await fetch("/api/contracts/drafts/fetch-file", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ bucketFileId }),
+				});
+				if (response.ok) {
+					const result = await response.json();
+					const file = result.data?.file || result.file;
+					const fetched = toArrayBuffer(file?.arrayBuffer);
+					if (fetched) {
+						setProcessedFileData((prev) =>
+							prev
+								? {
+										...prev,
+										arrayBuffer: fetched,
+										bucketFileId,
+									}
+								: prev,
+						);
+						setPreviewFromBuffer(fetched);
+						return;
+					}
+					if (file?.downloadUrl) {
+						setPdfPreviewUrl((prev) => {
+							if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+							return file.downloadUrl as string;
+						});
+						setPdfPreviewOpen(true);
+						return;
+					}
+				}
+				const viewUrl = constructFileUrl(bucketFileId);
+				if (viewUrl) {
+					setPdfPreviewUrl((prev) => {
+						if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+						return viewUrl;
+					});
+					setPdfPreviewOpen(true);
+					return;
+				}
+			} catch (error) {
+				console.error("Failed to fetch draft PDF for preview:", error);
+			}
+		}
+
+		toast({
+			title: "Preview unavailable",
+			description:
+				"Could not read the file data. Re-upload the PDF on step 1, then try again.",
+			variant: "destructive",
+		});
+	}, [processedFileData, toast]);
+
+	useEffect(() => {
+		return () => {
+			if (pdfPreviewUrl?.startsWith("blob:")) {
+				URL.revokeObjectURL(pdfPreviewUrl);
+			}
+		};
+	}, [pdfPreviewUrl]);
+
 	// File drop handling with synchronous processing
 	const onDrop = useCallback(
 		async (acceptedFiles: File[]) => {
 			if (acceptedFiles.length > 0) {
 				const file = acceptedFiles[0];
 
+				if (fileIngestSuccessTimeoutRef.current) {
+					clearTimeout(fileIngestSuccessTimeoutRef.current);
+					fileIngestSuccessTimeoutRef.current = null;
+				}
+
 				try {
 					// Reset draft ID - each file upload creates a new draft
 					setCurrentDraftId(null);
+					setFileIngestUi("progress");
+					setFileIngestProgress(0);
 
-					// Process file synchronously and cache all data
-					const processedData = await processFileSynchronously(file);
+					// Process file synchronously and cache all data (0–40%)
+					const processedData = await processFileSynchronously(
+						file,
+						(readPct) => {
+							setFileIngestProgress(Math.round(readPct * 0.4));
+						},
+					);
+					fileBytesRef.current = toArrayBuffer(processedData.arrayBuffer);
 					setProcessedFileData(processedData);
+					setFileIngestProgress(40);
 
-					// Auto-extract data from contract using cached data
+					// Auto-extract data from contract using cached data (40–95%)
 					setIsExtracting(true);
+					let extractPct = 40;
+					const extractTick = setInterval(() => {
+						extractPct = Math.min(extractPct + 2, 92);
+						setFileIngestProgress(extractPct);
+					}, 180);
+
 					try {
 						const extracted = await extractContractData(processedData);
 						setExtractedData(extracted);
 
-						// Pre-fill form with extracted data
 						if (extracted) {
-							form.reset({
-								...form.getValues(),
-								contractName:
-									(extracted.contractName as string) ||
-									file.name.replace(/\.[^/.]+$/, ""),
-								counterpartyLegalName:
-									(extracted.counterpartyLegalName as string) || "",
-								expiryDate: extracted.expiryDate
-									? (() => {
-											// Parse date string as local date to avoid timezone issues
-											const dateStr = extracted.expiryDate as string;
-											const dateOnlyMatch = dateStr.match(
-												/^(\d{4})-(\d{2})-(\d{2})/,
-											);
-											if (dateOnlyMatch) {
-												const [, year, month, day] = dateOnlyMatch;
-												// Create date in local timezone (month is 0-indexed)
-												return new Date(
-													parseInt(year, 10),
-													parseInt(month, 10) - 1,
-													parseInt(day, 10),
-												);
-											}
-											// Fallback for ISO strings
-											const isoMatch = dateStr.match(
-												/^(\d{4})-(\d{2})-(\d{2})T/,
-											);
-											if (isoMatch) {
-												const [, year, month, day] = isoMatch;
-												return new Date(
-													parseInt(year, 10),
-													parseInt(month, 10) - 1,
-													parseInt(day, 10),
-												);
-											}
-											// Last resort: use standard Date parsing
-											return new Date(dateStr);
-										})()
-									: undefined,
-								startDate: extracted.startDate
-									? (() => {
-											// Parse date string as local date to avoid timezone issues
-											const dateStr = extracted.startDate as string;
-											const dateOnlyMatch = dateStr.match(
-												/^(\d{4})-(\d{2})-(\d{2})/,
-											);
-											if (dateOnlyMatch) {
-												const [, year, month, day] = dateOnlyMatch;
-												return new Date(
-													parseInt(year, 10),
-													parseInt(month, 10) - 1,
-													parseInt(day, 10),
-												);
-											}
-											const isoMatch = dateStr.match(
-												/^(\d{4})-(\d{2})-(\d{2})T/,
-											);
-											if (isoMatch) {
-												const [, year, month, day] = isoMatch;
-												return new Date(
-													parseInt(year, 10),
-													parseInt(month, 10) - 1,
-													parseInt(day, 10),
-												);
-											}
-											return new Date(dateStr);
-										})()
-									: undefined,
-								amount:
-									(extracted.amount as string) ||
-									(extracted.amount as number)?.toString() ||
-									"",
-								contractNumber: (extracted.contractNumber as string) || "",
-								description: (extracted.description as string) || "",
-							});
+							const method = String(extracted.method || "");
+							setExtractionMethod(method);
+
+							const parsed = parseContractExtractionJson(
+								JSON.stringify(extracted),
+							);
+							const patch = buildFormPatchFromExtraction(
+								parsed,
+								file.name,
+							);
+
+							// Prefer API-provided confidence lists when present
+							const filledFromApi = Array.isArray(extracted.filledFieldNames)
+								? (extracted.filledFieldNames as string[])
+								: parsed.filledFieldNames;
+							const lowFromApi = Array.isArray(extracted.lowConfidenceFields)
+								? (extracted.lowConfidenceFields as string[])
+								: parsed.lowConfidenceFields;
+							const confMap =
+								(extracted.fieldConfidence as Record<string, number>) ||
+								parsed.fieldConfidence;
+
+							setAiFilledFields(
+								isRealExtractionMethod(method) ? filledFromApi : [],
+							);
+							setLowConfidenceFields(
+								isRealExtractionMethod(method) ? lowFromApi : [],
+							);
+							setFieldConfidence(
+								isRealExtractionMethod(method) ? confMap : {},
+							);
+							setOverallExtractionConfidence(
+								isRealExtractionMethod(method)
+									? typeof extracted.overallConfidence === "number"
+										? (extracted.overallConfidence as number)
+										: parsed.overallConfidence
+									: null,
+							);
+
+							if (isRealExtractionMethod(method)) {
+								form.reset({
+									...form.getValues(),
+									...patch,
+								});
+							} else {
+								// Stub / non-AI methods must not look like real extraction
+								setExtractedData(null);
+								setExtractionMethod(null);
+								setAiFilledFields([]);
+								setLowConfidenceFields([]);
+								setFieldConfidence({});
+								setOverallExtractionConfidence(null);
+							}
 						}
 					} catch (error) {
 						console.error("Failed to extract contract data:", error);
 						// Continue with manual input if extraction fails
 					} finally {
+						clearInterval(extractTick);
 						setIsExtracting(false);
+						setFileIngestProgress(100);
+						setFileIngestUi("success");
+						fileIngestSuccessTimeoutRef.current = setTimeout(() => {
+							setFileIngestUi("hidden");
+							setFileIngestProgress(0);
+							fileIngestSuccessTimeoutRef.current = null;
+						}, 1600);
 					}
 				} catch (error) {
 					console.error("File processing failed:", error);
+					setFileIngestUi("hidden");
+					setFileIngestProgress(0);
 					toast({
 						title: "File Processing Failed",
 						description:
@@ -1329,6 +1654,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		},
 		[form, processFileSynchronously, toast, extractContractData],
 	);
+
+	useEffect(() => {
+		return () => {
+			if (fileIngestSuccessTimeoutRef.current) {
+				clearTimeout(fileIngestSuccessTimeoutRef.current);
+			}
+		};
+	}, []);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
 		onDrop,
@@ -1366,105 +1699,150 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		value && value.trim().length > 0 ? value.trim() : undefined;
 
 	// Auto-save draft
-	const autoSaveDraft = useCallback(async (): Promise<boolean> => {
-		if (isResumingDraftRef.current) {
-			return false; // Don't save while resuming a draft
-		}
-		// Don't save to database until user progresses to step 2
-		if (currentStep === 1) {
-			return false; // Don't save on step 1 - wait until step 2
-		}
-		if (!processedFileData) {
-			return false; // Don't save if no file uploaded
-		}
-
-		setIsSaving(true);
-		let success = false;
-		try {
-			const formValues = form.getValues();
-			const response = await fetch("/api/contracts/drafts", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					ownerId,
-					accountId,
-					formData: formValues,
-					currentStep,
-					processedFileData,
-					extractedData,
-					selectedContractType, // Save contract type selection
-					draftId: currentDraftId, // Pass draftId to update existing or create new
-				}),
-			});
-
-			if (response.ok) {
-				const result = await response.json();
-				// Store the draft ID if this is a new draft
-				if (result.draft?.$id && !currentDraftId) {
-					setCurrentDraftId(result.draft.$id);
-				}
-				setLastSavedAt(new Date());
-				toast({
-					title: "Progress saved",
-					description: `Your progress has been saved (${Math.round(
-						(currentStep / totalSteps) * 100,
-					)}% complete)`,
-					duration: 2000,
-				});
-				success = true;
-			} else {
-				const errorText = await response.text();
-				let errorData;
-				try {
-					errorData = JSON.parse(errorText);
-				} catch {
-					errorData = { error: errorText || "Unknown error" };
-				}
-				console.error("Failed to save draft:", {
-					status: response.status,
-					statusText: response.statusText,
-					error: errorData,
-					url: response.url,
-				});
-				// Show error toast only if it's not a silent save (e.g., on dialog close)
-				if (currentStep > 1) {
-					toast({
-						title: "Save failed",
-						description:
-							errorData.error || `Failed to save progress (${response.status})`,
-						variant: "destructive",
-						duration: 3000,
-					});
-				}
-				success = false;
+	const autoSaveDraft = useCallback(
+		async (options?: { silent?: boolean }): Promise<boolean> => {
+			if (isResumingDraftRef.current) {
+				return false; // Don't save while resuming a draft
 			}
-		} catch (error: any) {
-			console.error("Error auto-saving draft:", {
-				message: error?.message,
-				stack: error?.stack,
-				name: error?.name,
-				error: error,
-			});
-			// Don't show error toast to avoid annoying the user during auto-save
-			success = false;
-		} finally {
-			setIsSaving(false);
-		}
-		return success;
-	}, [
-		currentStep,
-		form,
-		ownerId,
-		accountId,
-		processedFileData,
-		extractedData,
-		totalSteps,
-		toast,
-		currentDraftId,
-		selectedContractType,
-	]);
+			// Don't save to database until user progresses to step 2
+			if (currentStep === 1) {
+				return false; // Don't save on step 1 - wait until step 2
+			}
+			if (!processedFileData) {
+				return false; // Don't save if no file uploaded
+			}
+
+			setIsSaving(true);
+			let success = false;
+			const silent = options?.silent === true;
+			try {
+				const formValues = form.getValues();
+				// ArrayBuffer does not survive JSON — send base64 until we have bucketFileId
+				const filePayload = processedFileData.bucketFileId
+					? {
+							name: processedFileData.name,
+							type: processedFileData.type,
+							size: processedFileData.size,
+							lastModified: processedFileData.lastModified,
+							bucketFileId: processedFileData.bucketFileId,
+						}
+					: {
+							name: processedFileData.name,
+							type: processedFileData.type,
+							size: processedFileData.size,
+							lastModified: processedFileData.lastModified,
+							base64Content: processedFileData.base64Content,
+							bucketFileId: null,
+						};
+
+				const response = await fetch("/api/contracts/drafts", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						ownerId,
+						accountId,
+						formData: {
+							...formValues,
+							...(selectedContractType
+								? { selectedContractType }
+								: {}),
+						},
+						currentStep,
+						processedFileData: filePayload,
+						extractedData,
+						selectedContractType, // Save contract type selection
+						draftId: currentDraftId, // Pass draftId to update existing or create new
+					}),
+				});
+
+				if (response.ok) {
+					const result = await response.json();
+					const draft = result.data?.draft || result.draft;
+					// Store the draft ID if this is a new draft
+					if (draft?.$id && !currentDraftId) {
+						setCurrentDraftId(draft.$id);
+					}
+					// Keep bucketFileId on the client so preview/upload can use storage.
+					// Only update when the id is new — a new object every save re-triggers auto-save.
+					const savedFile =
+						typeof draft?.processedFileData === "string"
+							? JSON.parse(draft.processedFileData)
+							: draft?.processedFileData;
+					if (savedFile?.bucketFileId) {
+						setProcessedFileData((prev) => {
+							if (!prev || prev.bucketFileId === savedFile.bucketFileId) {
+								return prev;
+							}
+							return { ...prev, bucketFileId: savedFile.bucketFileId };
+						});
+					}
+					setLastSavedAt(new Date());
+					if (!silent) {
+						toast({
+							title: "Progress saved",
+							description: `Your progress has been saved (${Math.round(
+								(currentStep / totalSteps) * 100,
+							)}% complete)`,
+							duration: 2000,
+						});
+					}
+					success = true;
+				} else {
+					const errorText = await response.text();
+					let errorData;
+					try {
+						errorData = JSON.parse(errorText);
+					} catch {
+						errorData = { error: errorText || "Unknown error" };
+					}
+					console.error("Failed to save draft:", {
+						status: response.status,
+						statusText: response.statusText,
+						error: errorData,
+						url: response.url,
+					});
+					// Show error toast only for manual saves
+					if (!silent && currentStep > 1) {
+						toast({
+							title: "Save failed",
+							description:
+								errorData.error ||
+								`Failed to save progress (${response.status})`,
+							variant: "destructive",
+							duration: 3000,
+						});
+					}
+					success = false;
+				}
+			} catch (error: any) {
+				console.error("Error auto-saving draft:", {
+					message: error?.message,
+					stack: error?.stack,
+					name: error?.name,
+					error: error,
+				});
+				// Don't show error toast to avoid annoying the user during auto-save
+				success = false;
+			} finally {
+				setIsSaving(false);
+			}
+			return success;
+		},
+		[
+			currentStep,
+			form,
+			ownerId,
+			accountId,
+			processedFileData,
+			extractedData,
+			totalSteps,
+			toast,
+			currentDraftId,
+			selectedContractType,
+		],
+	);
 
 	// Manual save function
 	const handleManualSave = useCallback(async () => {
@@ -1485,7 +1863,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			});
 			return;
 		}
-		const success = await autoSaveDraft();
+		const success = await autoSaveDraft({ silent: false });
 		// Close form after successful save
 		if (success) {
 			setIsOpen(false);
@@ -1606,13 +1984,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				// Set flag to prevent auto-save during resume
 				isResumingDraftRef.current = true;
 
-				// Restore contract type selection
-				if (draft.selectedContractType) {
-					setSelectedContractType(draft.selectedContractType);
-					setShowTypeSelection(false);
-				}
+				// Leave drafts / type selection and jump to saved step before any
+				// awaits (file fetch), or the form opens on step 1.
+				setShowDraftsList(false);
+				setShowAiQuiz(false);
+				setShowTypeSelection(false);
 
-				// Parse form data if it's a string (should already be parsed from API, but safe check)
+				// Parse form data early so we can restore contract type (drives step count)
 				let parsedFormData = draft.formData;
 				if (typeof draft.formData === "string") {
 					try {
@@ -1622,10 +2000,34 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					}
 				}
 
+				const restoredTypeId = resolveDraftContractTypeId({
+					selectedContractType: draft.selectedContractType,
+					formData:
+						parsedFormData && typeof parsedFormData === "object"
+							? parsedFormData
+							: null,
+				});
+
+				if (restoredTypeId) {
+					setSelectedContractType(restoredTypeId);
+				}
+
+				const typeConfig = restoredTypeId
+					? getContractTypeConfig(restoredTypeId)
+					: null;
+				const maxStep = (typeConfig?.steps || 10) + 1;
+				const targetStep = Math.min(
+					maxStep,
+					Math.max(1, Number(draft.currentStep) || 1),
+				);
+				setCurrentStep(targetStep);
+				setCurrentDraftId(draft.$id);
+
 				// Prepare form values with proper date handling
 				const formValues: Partial<ContractFormData> = { ...form.getValues() };
 				if (parsedFormData) {
 					Object.keys(parsedFormData).forEach((key) => {
+						if (key === "selectedContractType") return;
 						const value = parsedFormData[key];
 						if (value !== undefined && value !== null) {
 							// Handle date fields
@@ -1647,31 +2049,86 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				// Batch all updates at once using form.reset() to prevent multiple re-renders
 				form.reset(formValues as ContractFormData);
 
+				if (typeConfig && !formValues.contractType) {
+					form.setValue("contractType", typeConfig.label);
+				}
+
 				// Set file data and extracted data
 				if (draft.processedFileData) {
-					setProcessedFileData(draft.processedFileData);
+					const parsed =
+						typeof draft.processedFileData === "string"
+							? JSON.parse(draft.processedFileData)
+							: draft.processedFileData;
+					fileBytesRef.current =
+						toArrayBuffer(parsed?.arrayBuffer) ||
+						(parsed?.base64Content
+							? base64ToArrayBuffer(parsed.base64Content)
+							: null);
+
+					setProcessedFileData(parsed);
+
+					// Drafts store metadata only — pull bytes from storage when needed
+					if (!fileBytesRef.current && parsed?.bucketFileId) {
+						try {
+							const fileRes = await fetch(
+								"/api/contracts/drafts/fetch-file",
+								{
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify({
+										bucketFileId: parsed.bucketFileId,
+									}),
+								},
+							);
+							if (fileRes.ok) {
+								const fileJson = await fileRes.json();
+								const file = fileJson.data?.file || fileJson.file;
+								const fetched = toArrayBuffer(file?.arrayBuffer);
+								if (fetched) {
+									fileBytesRef.current = fetched;
+									setProcessedFileData({
+										...parsed,
+										arrayBuffer: fetched,
+										bucketFileId: parsed.bucketFileId,
+									});
+								}
+							}
+						} catch (fileError) {
+							console.error(
+								"Failed to restore draft file bytes:",
+								fileError,
+							);
+						}
+					}
 				}
+
 				if (draft.extractedData) {
-					setExtractedData(draft.extractedData);
+					try {
+						const extracted =
+							typeof draft.extractedData === "string"
+								? JSON.parse(draft.extractedData)
+								: draft.extractedData;
+						setExtractedData(extracted);
+					} catch {
+						setExtractedData(draft.extractedData);
+					}
 				}
 
-				// Set current step
-				setCurrentStep(draft.currentStep || 1);
-
-				// Set the current draft ID so updates go to this draft
-				setCurrentDraftId(draft.$id);
-
-				// Open dialog
+				// Keep dialog open (already open when resuming from Drafts)
 				setIsOpen(true);
 
 				// Clear the resume flag after a delay to allow auto-save to resume
 				setTimeout(() => {
 					isResumingDraftRef.current = false;
-				}, 3000); // 3 seconds should be enough for all updates to complete
+				}, 3000);
 
 				toast({
 					title: "Draft resumed",
-					description: `Continuing from step ${draft.currentStep} (${draft.progressPercentage}% complete)`,
+					description: `Continuing from step ${targetStep}${
+						draft.progressPercentage != null
+							? ` (${draft.progressPercentage}% complete)`
+							: ""
+					}`,
 				});
 			} catch (error) {
 				console.error("Error resuming draft:", error);
@@ -1726,7 +2183,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		[toast, currentDraftId, ownerId, loadSavedDrafts],
 	);
 
-	// Auto-save on step change (only after step 2)
+	// Auto-save on step change only (not when processedFileData / draft id update after save)
 	useEffect(() => {
 		if (isResumingDraftRef.current) {
 			return; // Don't auto-save while resuming a draft
@@ -1735,13 +2192,15 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		if (currentStep > 1 && processedFileData) {
 			const timeout = setTimeout(() => {
 				if (!isResumingDraftRef.current) {
-					autoSaveDraft();
+					void autoSaveDraft({ silent: true });
 				}
 			}, 2000); // Save 2 seconds after step change
 			return () => clearTimeout(timeout);
 		}
+		// Intentionally omit autoSaveDraft / processedFileData — those change after each
+		// save and would re-trigger an endless save + toast loop.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentStep, autoSaveDraft, processedFileData]);
+	}, [currentStep]);
 
 	// Auto-save when dialog is about to close (only if user has progressed to step 2)
 	useEffect(() => {
@@ -1751,6 +2210,22 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			const saveOnClose = async () => {
 				try {
 					const formValues = form.getValues();
+					const filePayload = processedFileData.bucketFileId
+						? {
+								name: processedFileData.name,
+								type: processedFileData.type,
+								size: processedFileData.size,
+								lastModified: processedFileData.lastModified,
+								bucketFileId: processedFileData.bucketFileId,
+							}
+						: {
+								name: processedFileData.name,
+								type: processedFileData.type,
+								size: processedFileData.size,
+								lastModified: processedFileData.lastModified,
+								base64Content: processedFileData.base64Content,
+								bucketFileId: null,
+							};
 					await fetch("/api/contracts/drafts", {
 						method: "POST",
 						headers: {
@@ -1759,10 +2234,17 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						body: JSON.stringify({
 							ownerId,
 							accountId,
-							formData: formValues,
+							formData: {
+								...formValues,
+								...(selectedContractType
+									? { selectedContractType }
+									: {}),
+							},
 							currentStep,
-							processedFileData,
+							processedFileData: filePayload,
 							extractedData,
+							selectedContractType,
+							draftId: currentDraftId,
 						}),
 					});
 				} catch (error) {
@@ -1832,12 +2314,26 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				contractCategory: values.contractCategory,
 				lifecycleStatus: values.lifecycleStatus,
 				contractNumber: values.contractNumber,
-				description: sanitizeString(values.description),
+				description: (() => {
+					const d = sanitizeString(values.description);
+					return d && d.length > 1000 ? d.slice(0, 1000) : d;
+				})(),
 				assignToDepartment: values.assignToDepartment,
 				department: values.assignToDepartment,
 				businessUnit: sanitizeString(values.businessUnit),
 				subDepartment: sanitizeString(values.subDepartment),
-				departmentOwner: sanitizeString(values.departmentOwner),
+				departmentOwner: (() => {
+					const raw = sanitizeString(values.departmentOwner);
+					if (!raw) return undefined;
+					const owners = [
+						...filteredManagers,
+						...availableManagers,
+					];
+					const match = owners.find(
+						(m) => m.$id === raw || m.fullName === raw,
+					);
+					return match?.fullName || raw;
+				})(),
 				contractOwnerId: values.contractOwnerId || ownerId,
 				selectedContractType: selectedContractType || undefined,
 				grantTerms: sanitizeString(values.grantTerms),
@@ -2036,8 +2532,19 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			};
 
 			// Create File object from cached data for upload
+			const uploadBuffer =
+				fileBytesRef.current ||
+				toArrayBuffer(processedFileData.arrayBuffer) ||
+				(processedFileData.base64Content
+					? base64ToArrayBuffer(processedFileData.base64Content)
+					: null);
+			if (!uploadBuffer) {
+				throw new Error(
+					"Contract file data is missing. Re-upload the PDF on step 1.",
+				);
+			}
 			const fileForUpload = new File(
-				[processedFileData.arrayBuffer],
+				[new Uint8Array(uploadBuffer)],
 				processedFileData.name,
 				{
 					type: processedFileData.type,
@@ -2064,6 +2571,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				title: "Contract Uploaded Successfully",
 				description: `${values.contractName} has been uploaded and processed.`,
 			});
+
+			fireConfetti({ durationMs: 2800, particleCount: 140 });
+			await new Promise((resolve) => setTimeout(resolve, 900));
 
 			// Draft deletion is now handled automatically in uploadFile function
 			// using fileId matching (primary) and filename matching (fallback)
@@ -2109,11 +2619,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	};
 
 	return (
+		<>
 		<Dialog
 			open={isOpen}
 			onOpenChange={(open) => {
 				setIsOpen(open);
 				if (!open) {
+					closePdfPreview();
 					// Reset form when dialog closes
 					resetForm();
 					isResumingDraftRef.current = false;
@@ -2137,7 +2649,45 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				</Button>
 			</DialogTrigger>
 
-			<DialogContent className="glass-dialog">
+			<DialogContent
+				className={cn(
+					"glass-dialog",
+					// Override .glass-dialog sm:max-w-4xl when viewing drafts
+					showDraftsList &&
+						(savedDrafts.length > 0 ? "sm:max-w-2xl!" : "sm:max-w-md!"),
+				)}
+				onPointerDownOutside={(e) => {
+					// PDF preview is portaled outside this dialog — don't dismiss on those clicks
+					if (
+						pdfPreviewOpen ||
+						(e.target as HTMLElement | null)?.closest?.("[data-pdf-preview]")
+					) {
+						e.preventDefault();
+					}
+				}}
+				onInteractOutside={(e) => {
+					if (
+						pdfPreviewOpen ||
+						(e.target as HTMLElement | null)?.closest?.("[data-pdf-preview]")
+					) {
+						e.preventDefault();
+					}
+				}}
+				onFocusOutside={(e) => {
+					if (
+						pdfPreviewOpen ||
+						(e.target as HTMLElement | null)?.closest?.("[data-pdf-preview]")
+					) {
+						e.preventDefault();
+					}
+				}}
+				onEscapeKeyDown={(e) => {
+					if (pdfPreviewOpen) {
+						e.preventDefault();
+						closePdfPreview();
+					}
+				}}
+			>
 				<VisuallyHiddenPrimitive.Root>
 					<DialogTitle>Upload Contract</DialogTitle>
 				</VisuallyHiddenPrimitive.Root>
@@ -2146,7 +2696,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				<div className="h-4 w-full shrink-0 rounded-t-[26px] bg-[#d6d7d8]/75" />
 
 				{/* Contract Type Selection Screen */}
-				{showTypeSelection && !selectedContractType && !showAiQuiz ? (
+				{showTypeSelection &&
+				!selectedContractType &&
+				!showAiQuiz &&
+				!showDraftsList ? (
 					<div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
 						{/* Header — frosted strip (matches contract cards) */}
 						<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-4 backdrop-blur-xl">
@@ -2171,6 +2724,52 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						{/* Contract Type Cards Grid */}
 						<div className="min-h-0 flex-1 overflow-y-auto p-6">
 							<div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+								{/* Drafts card — first */}
+								<div
+									role="button"
+									tabIndex={0}
+									className={cn(
+										"glass-card-frosted group cursor-pointer text-card-foreground",
+										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
+									)}
+									onClick={() => {
+										void loadSavedDrafts();
+										setShowDraftsList(true);
+									}}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.preventDefault();
+											void loadSavedDrafts();
+											setShowDraftsList(true);
+										}
+									}}
+								>
+									<div className="glass-card-cap rounded-t-3xl!" />
+									<div className="relative bg-transparent p-4 pt-5 sm:p-6 sm:pt-6">
+										<FolderOpen className="mb-3 h-8 w-8 text-[#0f5384]" />
+										<h3 className="mb-3 text-lg font-semibold sidebar-gradient-text">
+											Drafts
+										</h3>
+										<div className="mb-4 rounded-xl border border-white/40 bg-white/40 p-3 text-sm leading-relaxed text-slate-600 backdrop-blur-md">
+											Resume a contract you started earlier. Pick up where you
+											left off without re-entering details.
+										</div>
+										<div className="flex items-center justify-between rounded-full border border-white/45 bg-white/38 px-4 py-2.5 text-xs text-slate-500 backdrop-blur-md">
+											<span>
+												{savedDrafts.length === 0
+													? "No drafts saved"
+													: `${savedDrafts.length} draft${savedDrafts.length === 1 ? "" : "s"}`}
+											</span>
+											<span
+												className="text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5"
+												aria-hidden
+											>
+												→
+											</span>
+										</div>
+									</div>
+								</div>
+
 								{CONTRACT_TYPE_CONFIGS.map((type) => {
 									const IconComponent = getIconComponent(type.icon);
 									return (
@@ -2249,6 +2848,145 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 									variant="outline"
 									onClick={() => setIsOpen(false)}
 									className="primary-btn w-full shrink-0 px-3 sm:w-auto sm:px-4"
+								>
+									<Ban className="w-4 h-4" />
+									Cancel
+								</Button>
+							</div>
+						</div>
+					</div>
+				) : showDraftsList ? (
+					/* Drafts list view — content-sized (not stretched to type-picker height) */
+					<div className="flex flex-col overflow-hidden bg-transparent">
+						<div className="shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-3 backdrop-blur-xl">
+							<div className="px-5">
+								<div className="flex items-center gap-3">
+									<FolderOpen
+										className="h-5 w-5 shrink-0 text-[#0f5384]"
+										aria-hidden
+									/>
+									<h2 className="text-xl font-semibold sidebar-gradient-text">
+										Drafts
+									</h2>
+								</div>
+								<p className="mt-1 text-sm text-slate-600 sm:ml-8">
+									Resume a saved upload or delete drafts you no longer need.
+								</p>
+							</div>
+						</div>
+
+						<div className="overflow-y-auto px-5 py-4">
+							{savedDrafts.length === 0 ? (
+								<div className="mx-auto flex max-w-md flex-col items-center rounded-xl border border-white/40 bg-white/40 px-5 py-6 text-center backdrop-blur-md">
+									<FolderOpen className="mb-2 h-8 w-8 text-slate-400" />
+									<p className="text-sm font-medium text-slate-700">
+										No drafts yet
+									</p>
+									<p className="mt-1 text-xs text-slate-500">
+										Progress saves after you move past step 1 of a contract
+										upload.
+									</p>
+								</div>
+							) : (
+								<div className="mx-auto max-w-none space-y-3">
+									{savedDrafts.map((draft) => {
+										const restoredTypeId = resolveDraftContractTypeId({
+											selectedContractType: draft.selectedContractType,
+											formData:
+												draft.formData && typeof draft.formData === "object"
+													? draft.formData
+													: null,
+										});
+										const typeConfig = restoredTypeId
+											? getContractTypeConfig(restoredTypeId)
+											: null;
+										const draftStepTitles = typeConfig
+											? [...typeConfig.stepTitles, "Review"]
+											: [];
+										const stepLabel =
+											draftStepTitles[draft.currentStep - 1] ||
+											`Step ${draft.currentStep}`;
+										return (
+											<div
+												key={draft.$id}
+												className="flex flex-col gap-3 rounded-xl border border-white/40 bg-white/50 p-4 shadow-sm backdrop-blur-md sm:flex-row sm:items-center sm:justify-between"
+											>
+												<div className="min-w-0 flex-1">
+													<h3 className="mb-1 truncate text-sm font-medium text-slate-700">
+														{draft.formData?.contractName ||
+															"Untitled Contract"}
+													</h3>
+													<div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+														{typeConfig?.label && (
+															<>
+																<span>{typeConfig.label}</span>
+																<span aria-hidden>•</span>
+															</>
+														)}
+														<span>
+															Step {draft.currentStep}: {stepLabel}
+														</span>
+														<span aria-hidden>•</span>
+														<span>
+															Saved{" "}
+															{new Date(
+																draft.lastSavedAt,
+															).toLocaleDateString()}
+														</span>
+													</div>
+													<Badge
+														variant="outline"
+														className="w-fit border-green/20 bg-green/10 px-2.5 py-0.5 text-xs text-green"
+													>
+														{draft.progressPercentage}% Complete
+													</Badge>
+												</div>
+												<div className="flex shrink-0 items-center gap-2">
+													<Button
+														type="button"
+														variant="outline"
+														size="sm"
+														onClick={() => {
+															void resumeDraft(draft);
+														}}
+														className="primary-btn px-3 sm:px-4 shimmer-hover"
+													>
+														<StepForward className="h-3 w-3" />
+														Resume
+													</Button>
+													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
+														onClick={() => handleDeleteClick(draft.$id)}
+														className="primary-btn h-8 px-3"
+													>
+														<Trash2 className="h-3 w-3" />
+														Delete
+													</Button>
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							)}
+						</div>
+
+						<div className="shrink-0 border-t border-white/35 bg-white/30 px-5 py-3 backdrop-blur-xl">
+							<div className="flex items-center justify-between gap-3">
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => setShowDraftsList(false)}
+									className="primary-btn px-3 sm:px-4"
+								>
+									<ChevronLeft className="h-4 w-4" />
+									Back
+								</Button>
+								<Button
+									variant="outline"
+									onClick={() => setIsOpen(false)}
+									className="primary-btn px-3 sm:px-4"
 								>
 									<Ban className="w-4 h-4" />
 									Cancel
@@ -2587,12 +3325,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 												{stepTitles[currentStep - 1]}
 											</p>
 											<div className="flex items-center gap-2">
-												{extractedData && (
-													<Badge className=" sidebar-gradient-text border-sidebar-gradient-text">
-														<CheckCircle className="h-3 w-3 mr-1 text-[#0f5384]" />
-														Data extracted automatically
-													</Badge>
-												)}
+												<AiExtractionStatusBadge
+													method={extractionMethod}
+													overallConfidence={overallExtractionConfidence}
+													filledCount={aiFilledFields.length}
+												/>
 												{isSaving && (
 													<Badge
 														variant="outline"
@@ -2705,9 +3442,57 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 									{currentStep === 1 && (
 										<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
 											<CardHeader className="pb-4">
-												<CardTitle className="text-lg font-semibold sidebar-gradient-text">
-													1. Upload Contract File
-												</CardTitle>
+												<div className="flex items-center gap-3">
+													<CardTitle className="text-lg font-semibold sidebar-gradient-text">
+														1. Upload Contract File
+													</CardTitle>
+													<AnimatePresence mode="wait">
+														{fileIngestUi === "progress" ? (
+															<motion.div
+																key="file-ingest-progress"
+																initial={{ opacity: 0, x: -6 }}
+																animate={{ opacity: 1, x: 0 }}
+																exit={{ opacity: 0, scale: 0.9 }}
+																transition={{ duration: 0.2 }}
+																className="flex min-w-0 items-center gap-2"
+																aria-live="polite"
+																aria-label={`Upload ${fileIngestProgress}% complete`}
+															>
+																<div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200 sm:w-28">
+																	<div
+																		className="h-full rounded-full bg-[#078FAB] transition-[width] duration-200 ease-out"
+																		style={{
+																			width: `${fileIngestProgress}%`,
+																		}}
+																	/>
+																</div>
+																<span className="tabular-nums text-xs font-medium text-slate-600">
+																	{fileIngestProgress}%
+																</span>
+															</motion.div>
+														) : null}
+														{fileIngestUi === "success" ? (
+															<motion.div
+																key="file-ingest-success"
+																initial={{ opacity: 0, scale: 0.5 }}
+																animate={{ opacity: 1, scale: 1 }}
+																exit={{ opacity: 0, scale: 0.8 }}
+																transition={{
+																	type: "spring",
+																	stiffness: 420,
+																	damping: 18,
+																}}
+																className="flex items-center"
+																aria-label="Upload complete"
+															>
+																<CheckCircle2
+																	className="h-5 w-5 text-green"
+																	strokeWidth={2.25}
+																/>
+															</motion.div>
+														) : null}
+													</AnimatePresence>
+												</div>
 											</CardHeader>
 											<CardContent>
 												<div
@@ -2763,77 +3548,15 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										</Card>
 									)}
 
-									{/* Saved Drafts List */}
-									{currentStep === 1 && savedDrafts.length > 0 && (
-										<Card className="border border-slate-200 shadow-sm rounded-lg bg-slate-50">
-											<CardHeader className="pb-3">
-												<CardTitle className="text-base font-semibold text-slate-700 flex items-center gap-2">
-													<FileCheck className="h-4 w-4 text-green" />
-													Saved Progress ({savedDrafts.length})
-												</CardTitle>
-											</CardHeader>
-											<CardContent>
-												<div className="space-y-2">
-													{savedDrafts.map((draft) => (
-														<div
-															key={draft.$id}
-															className="flex items-center justify-between p-3 bg-white rounded-md border border-slate-200 hover:border-slate-300 transition-colors"
-														>
-															<div className="flex-1">
-																<h3 className="text-sm font-medium text-slate-700 mb-1 max-w-[600px]">
-																	{draft.formData?.contractName ||
-																		"Untitled Contract"}
-																</h3>
-																<div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
-																	<span>
-																		Step {draft.currentStep}:{" "}
-																		{stepTitles[draft.currentStep - 1]}
-																	</span>
-																	<span>•</span>
-																	<span>
-																		Saved{" "}
-																		{new Date(
-																			draft.lastSavedAt,
-																		).toLocaleDateString()}
-																	</span>
-																</div>
-																<Badge
-																	variant="outline"
-																	className="text-xs bg-green/10 text-green border-green/20 w-fit px-2.5 py-0.5"
-																>
-																	{draft.progressPercentage}% Complete
-																</Badge>
-															</div>
-															<div className="flex items-center gap-2">
-																<Button
-																	variant="outline"
-																	size="sm"
-																	onClick={() => resumeDraft(draft)}
-																	className="primary-btn sm:px-4 px-3 shimmer-hover"
-																>
-																	<StepForward className="h-3 w-3" />
-																	Resume
-																</Button>
-																<Button
-																	variant="ghost"
-																	size="sm"
-																	onClick={() => handleDeleteClick(draft.$id)}
-																	className="primary-btn h-8 px-3"
-																>
-																	<Trash2 className="h-3 w-3" />
-																	Delete
-																</Button>
-															</div>
-														</div>
-													))}
-												</div>
-											</CardContent>
-										</Card>
-									)}
-
-									{/* Steps 2-10: Contract Details Sections */}
-									{currentStep >= 2 && currentStep <= 10 && (
+									{/* Steps 2–N: Contract Details Sections */}
+									{currentStep >= 2 && currentStep <= contentSteps && (
 										<div className="">
+											<AiExtractionReviewPanel
+												method={extractionMethod}
+												overallConfidence={overallExtractionConfidence}
+												filledCount={aiFilledFields.length}
+												lowConfidenceFields={lowConfidenceFields}
+											/>
 											<div className="mb-4">
 												<h3 className="text-lg font-semibold text-slate-700">
 													{currentStep}. {stepTitles[currentStep - 1]}
@@ -2848,10 +3571,21 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																control={form.control}
 																name="contractName"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem
+																		className={aiFieldItemClassName(
+																			"contractName",
+																			aiFilledFields,
+																			fieldConfidence,
+																		)}
+																	>
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Contract Title / Description{" "}
 																			<span className="text-red">*</span>
+																			<AiFilledLabelHint
+																				fieldName="contractName"
+																				aiFilledFields={aiFilledFields}
+																				fieldConfidence={fieldConfidence}
+																			/>
 																		</FormLabel>
 																		<FormControl>
 																			<Input
@@ -2870,10 +3604,21 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																control={form.control}
 																name="contractNumber"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem
+																		className={aiFieldItemClassName(
+																			"contractNumber",
+																			aiFilledFields,
+																			fieldConfidence,
+																		)}
+																	>
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Contract Number{" "}
 																			<span className="text-red">*</span>
+																			<AiFilledLabelHint
+																				fieldName="contractNumber"
+																				aiFilledFields={aiFilledFields}
+																				fieldConfidence={fieldConfidence}
+																			/>
 																		</FormLabel>
 																		<FormControl>
 																			<Input
@@ -2897,7 +3642,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -2929,7 +3674,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -2985,8 +3730,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<Select
 																			onValueChange={(value) => {
 																				field.onChange(value);
+																				if (!form.getValues("businessUnit")) {
+																					form.setValue("businessUnit", value);
+																				}
 																			}}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -3014,13 +3762,23 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Business Unit
 																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., Behavioral Health"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
+																		<Select
+																			onValueChange={field.onChange}
+																			value={field.value || undefined}
+																		>
+																			<FormControl>
+																				<SelectTrigger className="bg-white border-slate-300">
+																					<SelectValue placeholder="Select business unit" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				{CONTRACT_DEPARTMENTS.map((dept) => (
+																					<SelectItem key={dept} value={dept}>
+																						{dept}
+																					</SelectItem>
+																				))}
+																			</SelectContent>
+																		</Select>
 																		<FormMessage />
 																	</FormItem>
 																)}
@@ -3030,44 +3788,97 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															<FormField
 																control={form.control}
 																name="subDepartment"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Sub-Department
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., Clinic Ops"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
+																render={({ field }) => {
+																	const dept =
+																		watchedAssignToDepartment ||
+																		form.watch("businessUnit");
+																	const options = dept
+																		? divisionsForDepartment(dept)
+																		: USER_DIVISIONS;
+																	return (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Sub-Department
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																				disabled={options.length === 0}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue
+																							placeholder={
+																								options.length === 0
+																									? "Select department first"
+																									: "Select sub-department"
+																							}
+																						/>
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{options.map((div) => (
+																						<SelectItem key={div} value={div}>
+																							{formatDivisionName(div)}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	);
+																}}
 															/>
 
 															<FormField
 																control={form.control}
 																name="departmentOwner"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Department Owner
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Who is accountable?"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
+																render={({ field }) => {
+																	const owners =
+																		filteredManagers.length > 0
+																			? filteredManagers
+																			: availableManagers;
+																	return (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Department Owner
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																				disabled={owners.length === 0}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue
+																							placeholder={
+																								owners.length === 0
+																									? "No department managers found"
+																									: "Select department manager"
+																							}
+																						/>
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{owners.map((user) => (
+																						<SelectItem
+																							key={user.$id}
+																							value={user.$id}
+																						>
+																							{user.fullName}
+																							{user.email
+																								? ` (${user.email})`
+																								: ""}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	);
+																}}
 															/>
 														</div>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200"></div>
 
 														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
@@ -3200,62 +4011,83 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															/>
 														</div>
 
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="autoRenew"
-																render={({ field }) => (
-																	<FormItem className="space-y-2">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Auto-Renew
-																		</FormLabel>
-																		<FormControl>
-																			<Switch
-																				checked={field.value}
-																				onCheckedChange={field.onChange}
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
+														<div className="space-y-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="flex flex-wrap items-end justify-between gap-4">
+																<FormField
+																	control={form.control}
+																	name="autoRenew"
+																	render={({ field }) => (
+																		<FormItem className="space-y-2 shrink-0">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Auto-Renew
+																			</FormLabel>
+																			<FormControl>
+																				<Switch
+																					checked={field.value}
+																					onCheckedChange={field.onChange}
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
 
-															<FormField
-																control={form.control}
-																name="renewalNoticeDays"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Renewal Notice (Days)
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., 60"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
+																<FormField
+																	control={form.control}
+																	name="renewalNoticeDays"
+																	render={({ field }) => (
+																		<FormItem className="w-[140px] shrink-0">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Renewal Notice (Days)
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300 w-[140px]">
+																						<SelectValue placeholder="Days" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{NOTICE_DAY_OPTIONS.map((days) => (
+																						<SelectItem
+																							key={days}
+																							value={days}
+																						>
+																							{days} days
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="border-t border-slate-200" />
 
 															<FormField
 																control={form.control}
 																name="description"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem className="w-full">
 																		<FormLabel className="shad-form-label">
 																			Summary / Scope
 																		</FormLabel>
 																		<FormControl>
 																			<Textarea
 																				placeholder="Summarize the work, deliverables, or obligations captured in this agreement"
-																				rows={3}
+																				rows={6}
+																				maxLength={1000}
 																				{...field}
-																				className="bg-white border-slate-300 resize-none"
+																				className="min-h-[140px] w-full bg-white border-slate-300 resize-y"
 																			/>
 																		</FormControl>
+																		<p className="mt-1 text-xs text-slate-500">
+																			{(field.value?.length ?? 0)}/1000 characters
+																		</p>
 																		<FormMessage />
 																	</FormItem>
 																)}
@@ -3272,10 +4104,21 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																control={form.control}
 																name="counterpartyLegalName"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem
+																		className={aiFieldItemClassName(
+																			"counterpartyLegalName",
+																			aiFilledFields,
+																			fieldConfidence,
+																		)}
+																	>
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Counterparty Legal Name{" "}
 																			<span className="text-red">*</span>
+																			<AiFilledLabelHint
+																				fieldName="counterpartyLegalName"
+																				aiFilledFields={aiFilledFields}
+																				fieldConfidence={fieldConfidence}
+																			/>
 																		</FormLabel>
 																		<FormControl>
 																			<Input
@@ -3381,7 +4224,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -3472,41 +4315,87 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															<FormField
 																control={form.control}
 																name="primaryInternalContactId"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Primary Internal Contact
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="User ID or email"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
+																render={({ field }) => {
+																	const contacts =
+																		filteredManagers.length > 0
+																			? filteredManagers
+																			: availableManagers;
+																	return (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Primary Internal Contact
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																				disabled={contacts.length === 0}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select contact" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{contacts.map((user) => (
+																						<SelectItem
+																							key={user.$id}
+																							value={user.$id}
+																						>
+																							{user.fullName}
+																							{user.email
+																								? ` (${user.email})`
+																								: ""}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	);
+																}}
 															/>
 
 															<FormField
 																control={form.control}
 																name="secondaryInternalContactId"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Secondary Internal Contact
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="User ID or email"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
+																render={({ field }) => {
+																	const contacts =
+																		filteredManagers.length > 0
+																			? filteredManagers
+																			: availableManagers;
+																	return (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Secondary Internal Contact
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																				disabled={contacts.length === 0}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select contact" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{contacts.map((user) => (
+																						<SelectItem
+																							key={user.$id}
+																							value={user.$id}
+																						>
+																							{user.fullName}
+																							{user.email
+																								? ` (${user.email})`
+																								: ""}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	);
+																}}
 															/>
 														</div>
 													</div>
@@ -3520,10 +4409,21 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																control={form.control}
 																name="amount"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem
+																		className={aiFieldItemClassName(
+																			"amount",
+																			aiFilledFields,
+																			fieldConfidence,
+																		)}
+																	>
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Contract Amount{" "}
 																			<span className="text-red">*</span>
+																			<AiFilledLabelHint
+																				fieldName="amount"
+																				aiFilledFields={aiFilledFields}
+																				fieldConfidence={fieldConfidence}
+																			/>
 																		</FormLabel>
 																		<FormControl>
 																			<Input
@@ -3548,7 +4448,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -3598,7 +4498,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -3631,7 +4531,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -3776,7 +4676,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -4008,84 +4908,21 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															/>
 														</div>
 
-														<FormField
-															control={form.control}
-															name="dataPrivacyRequirements"
-															render={({ field }) => (
-																<FormItem>
-																	<FormLabel className="shad-form-label">
-																		Data Privacy Requirements
-																	</FormLabel>
-																	<FormControl>
-																		<Textarea
-																			rows={2}
-																			placeholder="List HIPAA, PHI, GDPR or other data clauses"
-																			{...field}
-																			className="bg-white border-slate-300 resize-none"
-																		/>
-																	</FormControl>
-																	<FormMessage />
-																</FormItem>
-															)}
-														/>
-
-														<FormField
-															control={form.control}
-															name="regulatoryRequirements"
-															render={({ field }) => (
-																<FormItem>
-																	<FormLabel className="shad-form-label">
-																		Regulatory Requirements
-																	</FormLabel>
-																	<FormControl>
-																		<Textarea
-																			rows={2}
-																			placeholder="DCF, Thriving Mind, CMS or other regulators"
-																			{...field}
-																			className="bg-white border-slate-300 resize-none"
-																		/>
-																	</FormControl>
-																	<FormMessage />
-																</FormItem>
-															)}
-														/>
-
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
-																name="keyObligations"
+																name="dataPrivacyRequirements"
 																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Key Obligations (one per line)
+																	<FormItem className="w-full">
+																		<FormLabel className="shad-form-label">
+																			Data Privacy Requirements
 																		</FormLabel>
 																		<FormControl>
 																			<Textarea
 																				rows={3}
-																				placeholder="Enter obligations separated by newline or comma"
+																				placeholder="List HIPAA, PHI, GDPR or other data clauses"
 																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="serviceLevelAgreements"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Service Level Agreements
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="Document uptime, response or care metrics"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
 																			/>
 																		</FormControl>
 																		<FormMessage />
@@ -4094,42 +4931,113 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															/>
 														</div>
 
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
-																name="performanceMetrics"
+																name="regulatoryRequirements"
 																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Performance Metrics
+																	<FormItem className="w-full">
+																		<FormLabel className="shad-form-label">
+																			Regulatory Requirements
 																		</FormLabel>
 																		<FormControl>
 																			<Textarea
-																				rows={2}
-																				placeholder="KPIs or benchmarks"
+																				rows={3}
+																				placeholder="DCF, Thriving Mind, CMS or other regulators"
 																				{...field}
-																				className="bg-white border-slate-300 resize-none"
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
 																			/>
 																		</FormControl>
 																		<FormMessage />
 																	</FormItem>
 																)}
 															/>
+														</div>
 
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<FormField
+																control={form.control}
+																name="keyObligations"
+																render={({ field }) => (
+																	<FormItem className="w-full">
+																		<FormLabel className="text-sm text-slate-700 mb-1 block">
+																			Key Obligations (one per line)
+																		</FormLabel>
+																		<FormControl>
+																			<Textarea
+																				rows={4}
+																				placeholder="Enter obligations separated by newline or comma"
+																				{...field}
+																				className="min-h-[100px] w-full bg-white border-slate-300 resize-y"
+																			/>
+																		</FormControl>
+																		<FormMessage />
+																	</FormItem>
+																)}
+															/>
+														</div>
+
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<FormField
+																control={form.control}
+																name="serviceLevelAgreements"
+																render={({ field }) => (
+																	<FormItem className="w-full">
+																		<FormLabel className="text-sm text-slate-700 mb-1 block">
+																			Service Level Agreements
+																		</FormLabel>
+																		<FormControl>
+																			<Textarea
+																				rows={4}
+																				placeholder="Document uptime, response or care metrics"
+																				{...field}
+																				className="min-h-[100px] w-full bg-white border-slate-300 resize-y"
+																			/>
+																		</FormControl>
+																		<FormMessage />
+																	</FormItem>
+																)}
+															/>
+														</div>
+
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<FormField
+																control={form.control}
+																name="performanceMetrics"
+																render={({ field }) => (
+																	<FormItem className="w-full">
+																		<FormLabel className="text-sm text-slate-700 mb-1 block">
+																			Performance Metrics
+																		</FormLabel>
+																		<FormControl>
+																			<Textarea
+																				rows={3}
+																				placeholder="KPIs or benchmarks"
+																				{...field}
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																			/>
+																		</FormControl>
+																		<FormMessage />
+																	</FormItem>
+																)}
+															/>
+														</div>
+
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
 																name="reportingRequirements"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem className="w-full">
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Reporting Requirements
 																		</FormLabel>
 																		<FormControl>
 																			<Textarea
-																				rows={2}
+																				rows={3}
 																				placeholder="Monthly metrics, fiscal or progress reports"
 																				{...field}
-																				className="bg-white border-slate-300 resize-none"
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
 																			/>
 																		</FormControl>
 																		<FormMessage />
@@ -4147,13 +5055,23 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Termination Notice (Days)
 																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., 60"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
+																		<Select
+																			onValueChange={field.onChange}
+																			value={field.value || undefined}
+																		>
+																			<FormControl>
+																				<SelectTrigger className="bg-white border-slate-300">
+																					<SelectValue placeholder="Select days" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				{NOTICE_DAY_OPTIONS.map((days) => (
+																					<SelectItem key={days} value={days}>
+																						{days} days
+																					</SelectItem>
+																				))}
+																			</SelectContent>
+																		</Select>
 																		<FormMessage />
 																	</FormItem>
 																)}
@@ -4167,13 +5085,28 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Termination Rights
 																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="For cause, for convenience, both..."
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
+																		<Select
+																			onValueChange={field.onChange}
+																			value={field.value || undefined}
+																		>
+																			<FormControl>
+																				<SelectTrigger className="bg-white border-slate-300">
+																					<SelectValue placeholder="Select rights" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				{TERMINATION_RIGHTS_OPTIONS.map(
+																					(opt) => (
+																						<SelectItem
+																							key={opt.value}
+																							value={opt.value}
+																						>
+																							{opt.label}
+																						</SelectItem>
+																					),
+																				)}
+																			</SelectContent>
+																		</Select>
 																		<FormMessage />
 																	</FormItem>
 																)}
@@ -4187,55 +5120,67 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Cure Period (Days)
 																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., 10"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
+																		<Select
+																			onValueChange={field.onChange}
+																			value={field.value || undefined}
+																		>
+																			<FormControl>
+																				<SelectTrigger className="bg-white border-slate-300">
+																					<SelectValue placeholder="Select days" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				{CURE_PERIOD_OPTIONS.map((days) => (
+																					<SelectItem key={days} value={days}>
+																						{days} days
+																					</SelectItem>
+																				))}
+																			</SelectContent>
+																		</Select>
 																		<FormMessage />
 																	</FormItem>
 																)}
 															/>
 														</div>
 
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
 																name="milestones"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem className="w-full">
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Key Milestones
 																		</FormLabel>
 																		<FormControl>
 																			<Textarea
-																				rows={2}
+																				rows={3}
 																				placeholder="Add one milestone per line"
 																				{...field}
-																				className="bg-white border-slate-300 resize-none"
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
 																			/>
 																		</FormControl>
 																		<FormMessage />
 																	</FormItem>
 																)}
 															/>
+														</div>
 
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
 																name="deliverables"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem className="w-full">
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Deliverables
 																		</FormLabel>
 																		<FormControl>
 																			<Textarea
-																				rows={2}
+																				rows={3}
 																				placeholder="List deliverables per line"
 																				{...field}
-																				className="bg-white border-slate-300 resize-none"
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
 																			/>
 																		</FormControl>
 																		<FormMessage />
@@ -4244,42 +5189,21 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															/>
 														</div>
 
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
 																name="slaPenalties"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem className="w-full">
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			SLA Penalties
 																		</FormLabel>
 																		<FormControl>
 																			<Textarea
-																				rows={2}
+																				rows={3}
 																				placeholder="Describe penalties or service credits"
 																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="serviceCreditTerms"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Service Credit Terms
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Reference how credits are calculated"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
 																			/>
 																		</FormControl>
 																		<FormMessage />
@@ -4288,42 +5212,67 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															/>
 														</div>
 
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
-																name="escalationProcedures"
+																name="serviceCreditTerms"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem className="w-full">
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Escalation Procedures
+																			Service Credit Terms
 																		</FormLabel>
 																		<FormControl>
 																			<Textarea
-																				rows={2}
-																				placeholder="Detail escalation flow or SLAs"
+																				rows={3}
+																				placeholder="Reference how credits are calculated"
 																				{...field}
-																				className="bg-white border-slate-300 resize-none"
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
 																			/>
 																		</FormControl>
 																		<FormMessage />
 																	</FormItem>
 																)}
 															/>
+														</div>
 
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<FormField
+																control={form.control}
+																name="escalationProcedures"
+																render={({ field }) => (
+																	<FormItem className="w-full">
+																		<FormLabel className="text-sm text-slate-700 mb-1 block">
+																			Escalation Procedures
+																		</FormLabel>
+																		<FormControl>
+																			<Textarea
+																				rows={3}
+																				placeholder="Detail escalation flow or SLAs"
+																				{...field}
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																			/>
+																		</FormControl>
+																		<FormMessage />
+																	</FormItem>
+																)}
+															/>
+														</div>
+
+														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
 																name="obligationOwners"
 																render={({ field }) => (
-																	<FormItem>
+																	<FormItem className="w-full">
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Obligation Owners
 																		</FormLabel>
 																		<FormControl>
 																			<Textarea
-																				rows={2}
+																				rows={3}
 																				placeholder="List owners separated by newline"
 																				{...field}
-																				className="bg-white border-slate-300 resize-none"
+																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
 																			/>
 																		</FormControl>
 																		<FormMessage />
@@ -4645,62 +5594,161 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															<FormField
 																control={form.control}
 																name="alertRecipientIds"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Alert Recipients
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Enter IDs or emails separated by comma/newline"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
+																render={({ field }) => {
+																	const contacts =
+																		filteredManagers.length > 0
+																			? filteredManagers
+																			: availableManagers;
+																	const selected = (field.value || "")
+																		.split(/[,\n]/)
+																		.map((s: string) => s.trim())
+																		.filter(Boolean);
+																	return (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Alert Recipients
+																			</FormLabel>
+																			<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
+																				{contacts.length === 0 ? (
+																					<p className="text-xs text-slate-500">
+																						No department managers available
+																					</p>
+																				) : (
+																					contacts.map((user) => {
+																						const checked = selected.includes(
+																							user.$id,
+																						);
+																						return (
+																							<label
+																								key={user.$id}
+																								className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+																							>
+																								<input
+																									type="checkbox"
+																									className="rounded border-slate-300"
+																									checked={checked}
+																									onChange={() => {
+																										const next = checked
+																											? selected.filter(
+																													(id) => id !== user.$id,
+																												)
+																											: [
+																													...selected,
+																													user.$id,
+																												];
+																										field.onChange(
+																											next.join(","),
+																										);
+																									}}
+																								/>
+																								<span>
+																									{user.fullName}
+																									{user.email
+																										? ` (${user.email})`
+																										: ""}
+																								</span>
+																							</label>
+																						);
+																					})
+																				)}
+																			</div>
+																			<FormMessage />
+																		</FormItem>
+																	);
+																}}
 															/>
 
 															<FormField
 																control={form.control}
 																name="alertEscalationContactIds"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Escalation Contacts
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Escalate to these contacts"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
+																render={({ field }) => {
+																	const contacts =
+																		filteredManagers.length > 0
+																			? filteredManagers
+																			: availableManagers;
+																	const selected = (field.value || "")
+																		.split(/[,\n]/)
+																		.map((s: string) => s.trim())
+																		.filter(Boolean);
+																	return (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Escalation Contacts
+																			</FormLabel>
+																			<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
+																				{contacts.length === 0 ? (
+																					<p className="text-xs text-slate-500">
+																						No department managers available
+																					</p>
+																				) : (
+																					contacts.map((user) => {
+																						const checked = selected.includes(
+																							user.$id,
+																						);
+																						return (
+																							<label
+																								key={user.$id}
+																								className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+																							>
+																								<input
+																									type="checkbox"
+																									className="rounded border-slate-300"
+																									checked={checked}
+																									onChange={() => {
+																										const next = checked
+																											? selected.filter(
+																													(id) => id !== user.$id,
+																												)
+																											: [
+																													...selected,
+																													user.$id,
+																												];
+																										field.onChange(
+																											next.join(","),
+																										);
+																									}}
+																								/>
+																								<span>
+																									{user.fullName}
+																									{user.email
+																										? ` (${user.email})`
+																										: ""}
+																								</span>
+																							</label>
+																						);
+																					})
+																				)}
+																			</div>
+																			<FormMessage />
+																		</FormItem>
+																	);
+																}}
 															/>
 														</div>
 
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
 																name="alertLeadTimes"
-																render={({ field }) => (
+																render={() => (
 																	<FormItem>
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Alert Lead Times (days)
 																		</FormLabel>
 																		<FormControl>
 																			<Input
-																				placeholder="e.g., 30,60, or 90"
-																				{...field}
-																				className="bg-white border-slate-300"
+																				readOnly
+																				value={formatAlertLeadTimesLabel(
+																					watchedRenewalNoticeDays,
+																				)}
+																				className="bg-slate-100 border-slate-300 text-slate-700 cursor-default"
 																			/>
 																		</FormControl>
+																		<p className="text-xs text-slate-500 mt-1">
+																			Auto-set from Renewal Notice (Days) on
+																			Step 2, plus urgent reminders at 15, 10,
+																			5, and 1 days.
+																		</p>
 																		<FormMessage />
 																	</FormItem>
 																)}
@@ -4714,39 +5762,68 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Alert Channels
 																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="email,sms,teams"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
+																		<Select
+																			onValueChange={field.onChange}
+																			value={field.value || undefined}
+																		>
+																			<FormControl>
+																				<SelectTrigger className="bg-white border-slate-300">
+																					<SelectValue placeholder="Select channels" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				{ALERT_CHANNEL_OPTIONS.map((opt) => (
+																					<SelectItem
+																						key={opt.value}
+																						value={opt.value}
+																					>
+																						{opt.label}
+																					</SelectItem>
+																				))}
+																			</SelectContent>
+																		</Select>
 																		<FormMessage />
 																	</FormItem>
 																)}
 															/>
 
-															<FormField
-																control={form.control}
-																name="alertStrategy"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Alert Strategy
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Standard, executive, custom..."
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
+															{/* Alert Strategy — hidden until strategies are wired; default remains "standard" */}
+															{false && (
+																<FormField
+																	control={form.control}
+																	name="alertStrategy"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Alert Strategy
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select strategy" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{ALERT_STRATEGY_OPTIONS.map((opt) => (
+																						<SelectItem
+																							key={opt.value}
+																							value={opt.value}
+																						>
+																							{opt.label}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															)}
 														</div>
-														<div className="grid grid-cols-2 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+														<div className="grid grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 															<FormField
 																control={form.control}
 																name="alertNotes"
@@ -4759,27 +5836,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																			<Textarea
 																				rows={2}
 																				placeholder="Include context for who needs to know what and when"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="alertRecipientIds"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Alert Recipients
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="List recipient IDs or emails"
 																				{...field}
 																				className="bg-white border-slate-300 resize-none"
 																			/>
@@ -4977,13 +6033,23 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Governing Law
 																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="State or country of jurisdiction"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
+																		<Select
+																			onValueChange={field.onChange}
+																			value={field.value || undefined}
+																		>
+																			<FormControl>
+																				<SelectTrigger className="bg-white border-slate-300">
+																					<SelectValue placeholder="Select governing law" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				{GOVERNING_LAW_OPTIONS.map((law) => (
+																					<SelectItem key={law} value={law}>
+																						{law}
+																					</SelectItem>
+																				))}
+																			</SelectContent>
+																		</Select>
 																		<FormMessage />
 																	</FormItem>
 																)}
@@ -4997,13 +6063,23 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Venue / Jurisdiction
 																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., Miami-Dade County, FL"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
+																		<Select
+																			onValueChange={field.onChange}
+																			value={field.value || undefined}
+																		>
+																			<FormControl>
+																				<SelectTrigger className="bg-white border-slate-300">
+																					<SelectValue placeholder="Select venue" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				{JURISDICTION_OPTIONS.map((venue) => (
+																					<SelectItem key={venue} value={venue}>
+																						{venue}
+																					</SelectItem>
+																				))}
+																			</SelectContent>
+																		</Select>
 																		<FormMessage />
 																	</FormItem>
 																)}
@@ -5021,7 +6097,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -5056,7 +6132,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -5089,13 +6165,26 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Records Retention (Months)
 																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., 84"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
+																		<Select
+																			onValueChange={field.onChange}
+																			value={field.value || undefined}
+																		>
+																			<FormControl>
+																				<SelectTrigger className="bg-white border-slate-300">
+																					<SelectValue placeholder="Select retention period" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				{RETENTION_MONTH_OPTIONS.map((opt) => (
+																					<SelectItem
+																						key={opt.value}
+																						value={opt.value}
+																					>
+																						{opt.label}
+																					</SelectItem>
+																				))}
+																			</SelectContent>
+																		</Select>
 																		<FormMessage />
 																	</FormItem>
 																)}
@@ -5137,7 +6226,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -5170,13 +6259,28 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		<FormLabel className="text-sm text-slate-700 mb-1 block">
 																			Signature Platform
 																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="DocuSign, Adobe Sign, etc."
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
+																		<Select
+																			onValueChange={field.onChange}
+																			value={field.value || undefined}
+																		>
+																			<FormControl>
+																				<SelectTrigger className="bg-white border-slate-300">
+																					<SelectValue placeholder="Select platform" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				{SIGNATURE_PLATFORM_OPTIONS.map(
+																					(opt) => (
+																						<SelectItem
+																							key={opt.value}
+																							value={opt.value}
+																						>
+																							{opt.label}
+																						</SelectItem>
+																					),
+																				)}
+																			</SelectContent>
+																		</Select>
 																		<FormMessage />
 																	</FormItem>
 																)}
@@ -5238,7 +6342,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormLabel>
 																		<Select
 																			onValueChange={field.onChange}
-																			defaultValue={field.value}
+																			value={field.value}
 																		>
 																			<FormControl>
 																				<SelectTrigger className="bg-white border-slate-300">
@@ -5263,43 +6367,117 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															<FormField
 																control={form.control}
 																name="signatureRecipientIds"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Signature Recipients
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="List recipients or email addresses"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
+																render={({ field }) => {
+																	const contacts =
+																		filteredManagers.length > 0
+																			? filteredManagers
+																			: availableManagers;
+																	const selected = (field.value || "")
+																		.split(/[,\n]/)
+																		.map((s: string) => s.trim())
+																		.filter(Boolean);
+																	return (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Signature Recipients
+																			</FormLabel>
+																			<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
+																				{contacts.length === 0 ? (
+																					<p className="text-xs text-slate-500">
+																						No department managers available
+																					</p>
+																				) : (
+																					contacts.map((user) => {
+																						const checked = selected.includes(
+																							user.$id,
+																						);
+																						return (
+																							<label
+																								key={user.$id}
+																								className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+																							>
+																								<input
+																									type="checkbox"
+																									className="rounded border-slate-300"
+																									checked={checked}
+																									onChange={() => {
+																										const next = checked
+																											? selected.filter(
+																													(id) =>
+																														id !== user.$id,
+																												)
+																											: [
+																													...selected,
+																													user.$id,
+																												];
+																										field.onChange(
+																											next.join(","),
+																										);
+																									}}
+																								/>
+																								<span>
+																									{user.fullName}
+																									{user.email
+																										? ` (${user.email})`
+																										: ""}
+																								</span>
+																							</label>
+																						);
+																					})
+																				)}
+																			</div>
+																			<FormMessage />
+																		</FormItem>
+																	);
+																}}
 															/>
 
 															<FormField
 																control={form.control}
 																name="visibilityRoles"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Visibility Roles
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Comma separated role keys"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
+																render={({ field }) => {
+																	const selected = (field.value || "")
+																		.split(/[,\n]/)
+																		.map((s: string) => s.trim())
+																		.filter(Boolean);
+																	return (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Visibility Roles
+																			</FormLabel>
+																			<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
+																				{VISIBILITY_ROLE_OPTIONS.map((role) => {
+																					const checked =
+																						selected.includes(role);
+																					return (
+																						<label
+																							key={role}
+																							className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+																						>
+																							<input
+																								type="checkbox"
+																								className="rounded border-slate-300"
+																								checked={checked}
+																								onChange={() => {
+																									const next = checked
+																										? selected.filter(
+																												(r) => r !== role,
+																											)
+																										: [...selected, role];
+																									field.onChange(
+																										next.join(","),
+																									);
+																								}}
+																							/>
+																							<span>{role}</span>
+																						</label>
+																					);
+																				})}
+																			</div>
+																			<FormMessage />
+																		</FormItem>
+																	);
+																}}
 															/>
 														</div>
 													</div>
@@ -5307,8 +6485,43 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											</div>
 										</div>
 									)}
+
+									{/* Final step: Review before upload */}
+									{isReviewStep && (
+										<div className="">
+											<div className="mb-4">
+												<h3 className="text-lg font-semibold text-slate-700">
+													{currentStep}. Review
+												</h3>
+											</div>
+											<ContractReviewStep
+												values={form.watch() as Record<string, unknown>}
+												fileName={processedFileData?.name}
+												contentStepTitles={contentStepTitles}
+												lowConfidenceFields={lowConfidenceFields}
+												onEditStep={goToStep}
+												canPreviewFile={Boolean(
+													processedFileData &&
+														(processedFileData.type === "application/pdf" ||
+															processedFileData.name
+																.toLowerCase()
+																.endsWith(".pdf")) &&
+														(Boolean(fileBytesRef.current?.byteLength) ||
+															Boolean(
+																toArrayBuffer(processedFileData.arrayBuffer),
+															) ||
+															Boolean(processedFileData.base64Content) ||
+															Boolean(processedFileData.bucketFileId)),
+												)}
+												onPreviewFile={() => {
+													void openPdfPreview();
+												}}
+											/>
+										</div>
+									)}
+
 									{/* Save and Resume Later */}
-									{processedFileData && (
+									{processedFileData && currentStep > 1 && !isReviewStep && (
 										<SaveProgressCard
 											onSave={handleManualSave}
 											isSaving={isSaving}
@@ -5352,8 +6565,15 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											onClick={() => {
 												setSelectedContractType(null);
 												setShowTypeSelection(true);
+												fileBytesRef.current = null;
 												setProcessedFileData(null);
 												setExtractedData(null);
+												setFileIngestUi("hidden");
+												setFileIngestProgress(0);
+												if (fileIngestSuccessTimeoutRef.current) {
+													clearTimeout(fileIngestSuccessTimeoutRef.current);
+													fileIngestSuccessTimeoutRef.current = null;
+												}
 											}}
 											variant="outline"
 											disabled={isUploading}
@@ -5448,11 +6668,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
 				<AlertDialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
 					<AlertDialogTitle className="sr-only">Delete Draft</AlertDialogTitle>
-					{/* Cap */}
-					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
+					{/* Professional Cap */}
+					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Header */}
-					<div className="px-6 py-4 bg-white border-b border-slate-200">
+					<div className="px-6 py-4 mt-4 bg-white border-b border-slate-200">
 						<div className="flex gap-2">
 							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
 							<h2 className="text-base font-semibold sidebar-gradient-text">
@@ -5473,37 +6693,35 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							Your decision to delete is irreversible, so please make sure you
 							want to continue.
 						</p>
+						<p className="text-xs font-medium text-slate-500">
+							This action is permanent.
+						</p>
 					</div>
 
-					{/* Footer */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-						<div className="text-xs text-slate-500">
-							This action is permanent.
-						</div>
-						<div className="flex items-center gap-3">
-							<AlertDialogCancel
-								onClick={() => {
-									setDeleteDialogOpen(false);
+					{/* Footer — centered actions */}
+					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
+						<AlertDialogCancel
+							onClick={() => {
+								setDeleteDialogOpen(false);
+								setDraftToDelete(null);
+							}}
+							className="primary-btn px-3 sm:px-4"
+						>
+							<Ban className="h-4 w-4" />
+							Cancel
+						</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={() => {
+								if (draftToDelete) {
+									deleteDraft(draftToDelete);
 									setDraftToDelete(null);
-								}}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Ban className="h-4 w-4" />
-								Cancel
-							</AlertDialogCancel>
-							<AlertDialogAction
-								onClick={() => {
-									if (draftToDelete) {
-										deleteDraft(draftToDelete);
-										setDraftToDelete(null);
-									}
-								}}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Trash2 className="h-4 w-4" />
-								Delete Draft
-							</AlertDialogAction>
-						</div>
+								}
+							}}
+							className="primary-btn px-3 sm:px-4"
+						>
+							<Trash2 className="h-4 w-4" />
+							Delete Draft
+						</AlertDialogAction>
 					</div>
 				</AlertDialogContent>
 			</AlertDialog>
@@ -5560,6 +6778,17 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				</AlertDialogContent>
 			</AlertDialog>
 		</Dialog>
+
+		<LocalPdfPreviewDialog
+			open={pdfPreviewOpen}
+			onOpenChange={(open) => {
+				if (!open) closePdfPreview();
+				else setPdfPreviewOpen(true);
+			}}
+			fileName={processedFileData?.name || "Contract PDF"}
+			pdfUrl={pdfPreviewUrl}
+		/>
+		</>
 	);
 };
 

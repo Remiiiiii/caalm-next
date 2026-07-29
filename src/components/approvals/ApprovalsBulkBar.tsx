@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import type { ApprovalQueueItem } from "@/lib/approvals/approvalsListUtils";
 
 interface ApprovalsBulkBarProps {
@@ -20,13 +19,10 @@ export default function ApprovalsBulkBar({
 	items,
 	canDecide,
 }: ApprovalsBulkBarProps) {
-	const { selectedIds, clearSelection, entity } = useApprovalsView();
+	const { selectedIds, clearSelection } = useApprovalsView();
 	const router = useRouter();
 	const pathname = usePathname();
 	const { toast } = useToast();
-	const { updateStatus } = useUpdateContractStatus({
-		onStatusChange: () => router.refresh(),
-	});
 	const [denyOpen, setDenyOpen] = useState(false);
 	const [denyNotes, setDenyNotes] = useState("");
 	const [busy, setBusy] = useState(false);
@@ -79,6 +75,29 @@ export default function ApprovalsBulkBar({
 		if (!res.ok) throw new Error("Failed");
 	};
 
+	const decideContract = async (
+		contractId: string,
+		decision: "approved" | "rejected" | "changes_requested",
+		notes?: string,
+	) => {
+		const res = await fetch(
+			`/api/contracts/${contractId}/approval-workflow/decide`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					decision,
+					notes,
+					path: pathname || "/contracts/approvals",
+				}),
+			},
+		);
+		const json = await res.json();
+		if (!res.ok || !json.success) {
+			throw new Error(json.error || "Failed");
+		}
+	};
+
 	const bulkSetStatus = async (status: string) => {
 		setBusy(true);
 		let ok = 0;
@@ -91,12 +110,18 @@ export default function ApprovalsBulkBar({
 					continue;
 				}
 				if (item.entity === "contract") {
-					const success = await updateStatus({
-						fileId: item.decisionId,
-						status,
-						path: pathname || "/contracts/approvals",
-					});
-					if (success) ok++;
+					const decision =
+						status === "active"
+							? "approved"
+							: status === "action-required"
+								? "changes_requested"
+								: "rejected";
+					await decideContract(
+						item.decisionId,
+						decision,
+						decision === "approved" ? undefined : denyNotes || "Bulk decision",
+					);
+					ok++;
 				} else {
 					await decideLicense(item.decisionId, status);
 					ok++;
@@ -106,14 +131,17 @@ export default function ApprovalsBulkBar({
 				title: "Bulk update complete",
 				description: `Updated ${ok} item${ok === 1 ? "" : "s"}.`,
 			});
-			if (entity === "license") router.refresh();
+			router.refresh();
 			clearSelection();
 			setDenyOpen(false);
 			setDenyNotes("");
-		} catch {
+		} catch (err) {
 			toast({
 				title: "Error",
-				description: "Some items could not be updated.",
+				description:
+					err instanceof Error
+						? err.message
+						: "Some items could not be updated.",
 				variant: "destructive",
 			});
 		} finally {

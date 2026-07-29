@@ -17,14 +17,15 @@ export interface ProcessedFileData {
 	base64Content: string;
 	arrayBuffer: ArrayBuffer;
 	lastModified: number;
+	bucketFileId?: string | null;
 }
 
 export interface Draft {
 	$id: string;
-	formData: string;
+	formData: string | Record<string, unknown>;
 	currentStep: number;
-	processedFileData: string | null;
-	extractedData: string | null;
+	processedFileData: string | Record<string, unknown> | null;
+	extractedData: string | Record<string, unknown> | null;
 	progressPercentage: number;
 	lastSavedAt: string;
 	isCompleted: boolean;

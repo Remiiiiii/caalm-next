@@ -99,6 +99,12 @@ function getFallbackTriggers(): Record<string, NotificationTrigger> {
 			defaultTitle: "File Uploaded",
 			defaultMessage: "A new file has been uploaded to the system.",
 		},
+		"contract-pending-review": {
+			type: "contract-pending-review",
+			priority: "high" as const,
+			defaultTitle: "Contract Pending Review",
+			defaultMessage: "A contract is waiting for your approval.",
+		},
 		"user-invited": {
 			type: "user-invited",
 			priority: "medium" as const,

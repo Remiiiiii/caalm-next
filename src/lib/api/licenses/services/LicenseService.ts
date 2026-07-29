@@ -206,17 +206,31 @@ export class LicenseService {
 				? parseFloat(String(mappedData.availableQuantity))
 				: quantity;
 
-		const licenseDocument = LicenseService.sanitizePayload({
-			// Required fields (ensure all are provided)
-			licenseName: mappedData.licenseName,
-			licenseNumber: mappedData.licenseNumber || "",
-			licenseType: mappedData.licenseType || "",
-			licenseExpiryDate: licenseExpiryDate || "",
-			issuingAuthority: mappedData.issuingAuthority || "",
-			issueDate: issueDate || "",
-			status: status || "active",
+		const trimOrUndefined = (value: unknown): string | undefined => {
+			if (typeof value !== "string") return undefined;
+			const trimmed = value.trim();
+			return trimmed.length > 0 ? trimmed : undefined;
+		};
 
-			// Optional - Core
+		// Required DB attrs must stay non-empty; sanitizePayload drops "".
+		const requiredFields = {
+			licenseName:
+				trimOrUndefined(mappedData.licenseName) || "Untitled License",
+			licenseNumber:
+				trimOrUndefined(mappedData.licenseNumber) || `LIC-${Date.now()}`,
+			licenseType: trimOrUndefined(mappedData.licenseType) || "other",
+			licenseExpiryDate:
+				licenseExpiryDate || new Date().toISOString().split("T")[0],
+			issuingAuthority:
+				trimOrUndefined(mappedData.issuingAuthority) ||
+				trimOrUndefined(mappedData.vendor) ||
+				"Unknown",
+			issueDate: issueDate || new Date().toISOString(),
+			status: status || "active",
+			orgId: defaultOrg.orgId,
+		};
+
+		const optionalFields = LicenseService.sanitizePayload({
 			description: mappedData.description,
 			renewalDate,
 			daysUntilExpiry,
@@ -228,8 +242,6 @@ export class LicenseService {
 			fileSize: mappedData.fileSize
 				? parseInt(String(mappedData.fileSize), 10)
 				: undefined,
-
-			// Optional - Software licenses
 			vendor: mappedData.vendor,
 			product: mappedData.product,
 			category: mappedData.category,
@@ -241,29 +253,25 @@ export class LicenseService {
 			renewalNoticeDays: mappedData.renewalNoticeDays
 				? parseInt(String(mappedData.renewalNoticeDays), 10)
 				: undefined,
-
-			// Optional - Organization
 			assignedDepartments: mappedData.assignedDepartments || [],
 			licenseOwnerId: mappedData.licenseOwnerId || ownerId,
 			subDepartment: mappedData.subDepartment,
 			businessUnit: mappedData.businessUnit,
-
-			// Optional - Metadata
 			tags: mappedData.tags || [],
 			notes: mappedData.notes,
 			relatedContractId: mappedData.relatedContractId,
 			attachmentReferences: mappedData.attachmentReferences || [],
-
-			// Optional - License permissions
 			allowsReproduction: mappedData.allowsReproduction,
 			allowsDistribution: mappedData.allowsDistribution,
 			allowsCommercialUse: mappedData.allowsCommercialUse,
 			requiresAttribution: mappedData.requiresAttribution,
-
-			// Audit
-			orgId: defaultOrg.orgId,
 			createdBy: ownerId,
 		});
+
+		const licenseDocument = {
+			...optionalFields,
+			...requiredFields,
+		};
 
 		const license = await tablesDB.createRow({
 			databaseId: appwriteConfig.databaseId,

@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
 import { licenseCreateSchema } from "@/lib/api/licenses/schemas/license.schema";
@@ -115,6 +116,9 @@ export async function DELETE(
 		const user = await getCurrentUser();
 
 		await LicenseService.deleteLicense(id);
+
+		revalidateTag("licenses-list");
+		revalidatePath("/licenses");
 
 		if (user) {
 			await logAuditEvent({

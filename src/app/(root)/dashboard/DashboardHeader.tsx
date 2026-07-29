@@ -70,11 +70,15 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 								<Button
 									variant="ghost"
 									onClick={() => setNotifOpen(true)}
-									className="relative"
+									className="relative h-10 w-10"
 									data-testid="notification-bell"
 									aria-label="Open notifications"
 								>
-									<Bell className="w-6 h-6" />
+									<Bell
+										className={`h-7 w-7 text-[#00C1CB] ${
+											unreadCount >= 1 ? "notification-bell-shake" : ""
+										}`}
+									/>
 									<NotificationBadge
 										count={unreadCount}
 										size="sm"
@@ -85,18 +89,18 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 								<Button
 									variant="ghost"
 									size="icon"
-									className="hover:bg-coral/10"
+									className="h-10 w-10 hover:bg-coral/10"
 								>
-									<Mail className="h-5 w-5 text-slate-dark" />
+									<Mail className="h-6 w-6 text-slate-dark" />
 								</Button>
 
 								<Button
 									variant="ghost"
 									size="icon"
 									onClick={handleLogout}
-									className="hover:bg-coral/10"
+									className="h-10 w-10 hover:bg-coral/10"
 								>
-									<LogOut className="h-5 w-5 text-slate-dark" />
+									<LogOut className="h-6 w-6 text-slate-dark" />
 								</Button>
 							</>
 						) : (

@@ -57,6 +57,11 @@ export const RATE_LIMIT_CONFIG: Record<string, EndpointRateLimit> = {
 		authenticated: { requests: 30, window: 60, burst: 50 },
 		premium: { requests: 150, window: 60, burst: 200 },
 	},
+	"^/api/licenses/extract-data$": {
+		anonymous: { requests: 0, window: 60 },
+		authenticated: { requests: 30, window: 60, burst: 50 },
+		premium: { requests: 150, window: 60, burst: 200 },
+	},
 
 	// Read-heavy endpoints - dashboard, analytics
 	"^/api/dashboard/(unified|stats)$": {

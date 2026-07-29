@@ -12,6 +12,10 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import {
+	AiExtractionReviewPanel,
+	AiExtractionStatusBadge,
+} from "@/components/contract-upload/AiExtractionReview";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -23,6 +27,11 @@ import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { getContractDepartmentEnums } from "@/lib/actions/database.actions";
 import { uploadFile } from "@/lib/actions/file.actions";
+import {
+	buildFormPatchFromLicenseExtraction,
+	isRealLicenseExtractionMethod,
+	parseLicenseExtractionJson,
+} from "@/lib/ai/licenseExtractionSchema";
 import { TOTAL_STEPS } from "./license-upload/constants";
 import { useDraftManagement } from "./license-upload/hooks/useDraftManagement";
 import { useLicenseForm } from "./license-upload/hooks/useLicenseForm";
@@ -101,6 +110,18 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 		unknown
 	> | null>(null);
 	const [isExtracting, setIsExtracting] = useState(false);
+	const [extractionMethod, setExtractionMethod] = useState<string | null>(
+		null,
+	);
+	const [aiFilledFields, setAiFilledFields] = useState<string[]>([]);
+	const [lowConfidenceFields, setLowConfidenceFields] = useState<string[]>(
+		[],
+	);
+	const [fieldConfidence, setFieldConfidence] = useState<
+		Record<string, number>
+	>({});
+	const [overallExtractionConfidence, setOverallExtractionConfidence] =
+		useState<number | null>(null);
 	const [currentStep, setCurrentStep] = useState(1);
 	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 	const [_deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -126,6 +147,11 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 		setProcessedFileData(null);
 		setExtractedData(null);
 		setIsExtracting(false);
+		setExtractionMethod(null);
+		setAiFilledFields([]);
+		setLowConfidenceFields([]);
+		setFieldConfidence({});
+		setOverallExtractionConfidence(null);
 		setSelectedManagers([]);
 		setIsUploading(false);
 		setUploadProgress(0);
@@ -153,11 +179,13 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 		form,
 		processedFileData,
 		extractedData,
+		isExtracting,
 		setProcessedFileData,
 		setExtractedData,
 		setCurrentStep,
 		setIsOpen,
 		resetForm,
+		onRestoreManagers: setSelectedManagers,
 	});
 
 	// Step navigation
@@ -193,35 +221,54 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 					const processedData = await processFileSynchronously(file);
 					setProcessedFileData(processedData);
 
-					// Auto-extract data from license using cached data
 					setIsExtracting(true);
 					try {
 						const extracted = await extractLicenseData(processedData);
 						setExtractedData(extracted);
 
-						// Pre-fill form with extracted data
 						if (extracted) {
-							form.reset({
-								...form.getValues(),
-								licenseName:
-									(extracted.licenseName as string) ||
-									file.name.replace(/\.[^/.]+$/, ""),
-								licenseNumber: (extracted.licenseNumber as string) || "",
-								licenseType:
-									(extracted.licenseType as string) || "subscription",
-								category: (extracted.category as string) || "saas",
-								vendor: (extracted.vendor as string) || "",
-								product: (extracted.product as string) || "",
-								licenseExpiryDate: extracted.licenseExpiryDate
-									? new Date(extracted.licenseExpiryDate as string)
-									: undefined,
-								issueDate: extracted.issueDate
-									? new Date(extracted.issueDate as string)
-									: undefined,
-								cost: (extracted.cost as string) || "",
-								quantity: (extracted.quantity as string) || "",
-								description: (extracted.description as string) || "",
-							});
+							const method = String(extracted.method || "");
+							setExtractionMethod(method);
+
+							const parsed = parseLicenseExtractionJson(
+								JSON.stringify(extracted),
+							);
+							const patch = buildFormPatchFromLicenseExtraction(
+								parsed,
+								file.name,
+							);
+
+							const filledFromApi = Array.isArray(extracted.filledFieldNames)
+								? (extracted.filledFieldNames as string[])
+								: parsed.filledFieldNames;
+							const lowFromApi = Array.isArray(extracted.lowConfidenceFields)
+								? (extracted.lowConfidenceFields as string[])
+								: parsed.lowConfidenceFields;
+							const confMap =
+								(extracted.fieldConfidence as Record<string, number>) ||
+								parsed.fieldConfidence;
+
+							if (isRealLicenseExtractionMethod(method)) {
+								setAiFilledFields(filledFromApi);
+								setLowConfidenceFields(lowFromApi);
+								setFieldConfidence(confMap);
+								setOverallExtractionConfidence(
+									typeof extracted.overallConfidence === "number"
+										? (extracted.overallConfidence as number)
+										: parsed.overallConfidence,
+								);
+								form.reset({
+									...form.getValues(),
+									...patch,
+								});
+							} else {
+								setExtractedData(null);
+								setExtractionMethod(null);
+								setAiFilledFields([]);
+								setLowConfidenceFields([]);
+								setFieldConfidence({});
+								setOverallExtractionConfidence(null);
+							}
 						}
 					} catch (error) {
 						console.error("Failed to extract license data:", error);
@@ -301,15 +348,23 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 					status: values.status || "active",
 					licenseExpiryDate: values.licenseExpiryDate?.toISOString(),
 					issueDate: values.issueDate?.toISOString(),
-					issuingAuthority: sanitizeString(values.issuingAuthority),
+					renewalDate: values.renewalDate?.toISOString(),
+					issuingAuthority:
+						sanitizeString(values.issuingAuthority) ||
+						sanitizeString(values.vendor) ||
+						"Unknown",
 					vendor: sanitizeString(values.vendor),
 					product: sanitizeString(values.product),
 					description: sanitizeString(values.description),
+					notes: sanitizeString(values.notes),
 					quantity: quantityAsNumber,
 					cost: costAsNumber,
 					currencyCode: values.currencyCode || "USD",
 					division: sanitizeString(values.division),
 					department: sanitizeString(values.department || values.division),
+					subDepartment: sanitizeString(values.subDepartment),
+					businessUnit: sanitizeString(values.businessUnit),
+					compliance: values.compliance,
 					assignedManagers: selectedManagers,
 					autoRenew: values.autoRenew || false,
 					renewalNoticeDays: parseIntegerInput(values.renewalNoticeDays),
@@ -376,13 +431,14 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 
 	// Auto-save on step change
 	useEffect(() => {
+		if (isExtracting) return;
 		if (currentStep > 1 || processedFileData) {
 			const timeout = setTimeout(() => {
 				autoSaveDraft();
 			}, 2000);
 			return () => clearTimeout(timeout);
 		}
-	}, [currentStep, autoSaveDraft, processedFileData]);
+	}, [currentStep, autoSaveDraft, processedFileData, isExtracting]);
 
 	// Auto-save on dialog close
 	useEffect(() => {
@@ -470,12 +526,23 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 								{/* Step 2: License Details */}
 								{currentStep === 2 && (
 									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-										<div className="mb-4">
+										<div className="mb-4 flex items-center justify-between gap-2">
 											<h3 className="text-lg font-semibold text-slate-700">
 												2. License Details
 											</h3>
+											<AiExtractionStatusBadge
+												method={extractionMethod}
+												overallConfidence={overallExtractionConfidence}
+												filledCount={aiFilledFields.length}
+											/>
 										</div>
 										<div className="space-y-6">
+											<AiExtractionReviewPanel
+												method={extractionMethod}
+												overallConfidence={overallExtractionConfidence}
+												filledCount={aiFilledFields.length}
+												lowConfidenceFields={lowConfidenceFields}
+											/>
 											<Step2LicenseDetails
 												form={form}
 												departments={departments}
@@ -483,8 +550,9 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 												selectedManagers={selectedManagers}
 												setSelectedManagers={setSelectedManagers}
 												fetchDepartmentManagers={fetchDepartmentManagers}
+												aiFilledFields={aiFilledFields}
+												fieldConfidence={fieldConfidence}
 											/>
-											{/* Save Progress Card */}
 											{processedFileData && (
 												<SaveProgressCard
 													onSave={handleManualSave}

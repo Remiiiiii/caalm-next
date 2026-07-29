@@ -6,6 +6,7 @@ import { useContractsView } from "@/components/ContractsViewContext";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	isExpiringWithinDays,
+	matchesStatusTab,
 	parseExpiryDate,
 } from "@/lib/contracts/contractsListUtils";
 import { cn } from "@/lib/utils";
@@ -15,10 +16,25 @@ interface ContractsMetricsBarProps {
 	files: UIFileDoc[];
 }
 
+function formatTotalValue(amount: number): string {
+	if (amount >= 1_000_000_000) {
+		return `${(amount / 1_000_000_000).toFixed(1)}B`;
+	}
+	if (amount >= 1_000_000) {
+		return `${(amount / 1_000_000).toFixed(1)}M`;
+	}
+	return new Intl.NumberFormat("en-US", {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+		useGrouping: true,
+	}).format(amount);
+}
+
 export default function ContractsMetricsBar({
 	files,
 }: ContractsMetricsBarProps) {
-	const { setStatusTab, clearFilters, scrollToList } = useContractsView();
+	const { statusTab, setStatusTab, clearFilters, scrollToList } =
+		useContractsView();
 
 	const expiringContracts = useMemo(() => {
 		return {
@@ -37,16 +53,24 @@ export default function ContractsMetricsBar({
 	const metrics = useMemo(() => {
 		let totalValue = 0;
 		let activeCount = 0;
+		const sumActiveOnly = statusTab === "active";
 		files.forEach((file) => {
-			totalValue += Number(file.amount) || 0;
-			if (file.status === "active") activeCount++;
+			const isActive = matchesStatusTab(file, "active");
+			if (isActive) activeCount++;
+			// Active tab: Total Value = $ sum of active contract amounts only
+			if (sumActiveOnly) {
+				if (isActive) totalValue += Number(file.amount) || 0;
+			} else if (statusTab === "all" || matchesStatusTab(file, statusTab)) {
+				totalValue += Number(file.amount) || 0;
+			}
 		});
 		return {
 			totalValue,
 			activeCount,
 			totalContracts: files.length,
+			sumActiveOnly,
 		};
-	}, [files]);
+	}, [files, statusTab]);
 
 	const hasContractsWithExpiryDates = useMemo(
 		() =>
@@ -57,49 +81,43 @@ export default function ContractsMetricsBar({
 	const interactiveCard =
 		"glass-card interactive-glass-card cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 transition-all duration-200";
 
-	const formattedTotalValue = new Intl.NumberFormat("en-US", {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-		useGrouping: true,
-	}).format(metrics.totalValue);
+	const formattedTotalValue = formatTotalValue(metrics.totalValue);
+	const usesAbbreviation = metrics.totalValue >= 1_000_000;
 
-	const totalValueFontClass =
-		metrics.totalValue >= 10_000_000
-			? "text-base sm:text-lg lg:text-xl"
-			: metrics.totalValue >= 1_000_000
-				? "text-lg sm:text-xl lg:text-2xl"
-				: metrics.totalValue >= 100_000
-					? "text-xl sm:text-2xl"
-					: "text-2xl sm:text-3xl";
+	const totalValueFontClass = usesAbbreviation
+		? "text-2xl sm:text-3xl"
+		: metrics.totalValue >= 100_000
+			? "text-xl sm:text-2xl"
+			: "text-2xl sm:text-3xl";
 
 	return (
 		<section className="mb-6 w-full">
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-				{metrics.totalValue > 0 && (
-					<Card className="glass-card min-w-0">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<div className="min-w-0 w-full">
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Total Value
-								</p>
-								<div className="flex items-end gap-1.5 sm:gap-2 pt-2 min-w-0 w-full">
-									<span
-										className={cn(
-											"min-w-0 font-bold text-slate-700 tabular-nums leading-tight warp-break-words",
-											totalValueFontClass,
-										)}
-									>
-										${formattedTotalValue}
-									</span>
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									Sum of contract amounts
-								</p>
+				<Card className="glass-card min-w-0">
+					<div className="glass-card-cap" />
+					<CardContent className="p-4 sm:p-6">
+						<div className="min-w-0 w-full">
+							<p className="text-sm font-medium sidebar-gradient-text">
+								Total Value
+							</p>
+							<div className="flex items-end gap-1.5 sm:gap-2 pt-2 min-w-0 w-full">
+								<span
+									className={cn(
+										"min-w-0 font-bold text-slate-700 tabular-nums leading-tight warp-break-words",
+										totalValueFontClass,
+									)}
+								>
+									${formattedTotalValue}
+								</span>
 							</div>
-						</CardContent>
-					</Card>
-				)}
+							<p className="text-xs text-slate-600 mt-1">
+								{metrics.sumActiveOnly
+									? "Sum of active contract amounts"
+									: "Sum of contract amounts"}
+							</p>
+						</div>
+					</CardContent>
+				</Card>
 
 				<button
 					type="button"
@@ -154,7 +172,7 @@ export default function ContractsMetricsBar({
 											expiringContracts.in90}
 									</span>
 									<span className="inline-block pb-1">
-										<AlertTriangle className="h-8 w-8 text-slate-600" />
+										<AlertTriangle className="h-8 w-8 text-orange" />
 									</span>
 								</div>
 								<div className="flex items-center justify-between gap-2 mt-2 text-xs text-slate-600">
@@ -186,7 +204,7 @@ export default function ContractsMetricsBar({
 									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 										<span>{metrics.activeCount}</span>
 										<span className="inline-block ml-2 pb-1">
-											<CheckCircle className="h-8 w-8 text-slate-600" />
+											<CheckCircle className="h-8 w-8 text-green" />
 										</span>
 									</div>
 									<p className="text-xs text-slate-600 mt-1">

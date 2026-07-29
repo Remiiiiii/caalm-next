@@ -656,6 +656,40 @@ export function getContractTypeConfig(
 }
 
 /**
+ * Resolve a contract type ID from a draft payload / formData.
+ * Prefers explicit type id, then falls back to the human-readable label.
+ */
+export function resolveDraftContractTypeId(input: {
+	selectedContractType?: string | null;
+	formData?: Record<string, unknown> | null;
+}): string | null {
+	const fromTop =
+		typeof input.selectedContractType === "string"
+			? input.selectedContractType.trim()
+			: "";
+	if (fromTop && getContractTypeConfig(fromTop)) return fromTop;
+
+	const formData = input.formData;
+	if (!formData || typeof formData !== "object") return null;
+
+	const fromFormId = formData.selectedContractType;
+	if (typeof fromFormId === "string" && fromFormId.trim()) {
+		const id = fromFormId.trim();
+		if (getContractTypeConfig(id)) return id;
+	}
+
+	const label = formData.contractType;
+	if (typeof label === "string" && label.trim()) {
+		const byLabel = CONTRACT_TYPE_CONFIGS.find(
+			(config) => config.label.toLowerCase() === label.trim().toLowerCase(),
+		);
+		if (byLabel) return byLabel.id;
+	}
+
+	return null;
+}
+
+/**
  * Get fields for a specific step of a contract type
  */
 export function getFieldsForStep(

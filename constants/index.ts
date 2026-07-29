@@ -69,7 +69,7 @@ export const actionsDropdownItems = [
 		value: "share",
 	},
 	{
-		label: "Status",
+		label: "Approval workflow",
 		icon: "/assets/icons/contract-status.svg",
 		value: "status",
 	},

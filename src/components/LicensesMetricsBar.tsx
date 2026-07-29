@@ -5,7 +5,6 @@ import {
 	ChartColumnIncreasing,
 	CheckCircle,
 	ClipboardList,
-	DollarSign,
 	FileText,
 	RefreshCw,
 	ShieldAlert,
@@ -18,6 +17,7 @@ import {
 	computeLicenseMetrics,
 	getLicenseExpiryRaw,
 	type LicenseStatusTab,
+	matchesStatusTab,
 	parseLicenseExpiryDate,
 } from "@/lib/licenses/licensesListUtils";
 import { cn } from "@/lib/utils";
@@ -33,10 +33,26 @@ const interactiveCard =
 export default function LicensesMetricsBar({
 	licenses,
 }: LicensesMetricsBarProps) {
-	const { setStatusTab, clearFilters, scrollToList, setFilters } =
+	const { statusTab, setStatusTab, clearFilters, scrollToList, setFilters } =
 		useLicensesView();
 
 	const metrics = useMemo(() => computeLicenseMetrics(licenses), [licenses]);
+
+	const totalCostForTab = useMemo(() => {
+		let totalCost = 0;
+		const sumActiveOnly = statusTab === "active";
+		licenses.forEach((license) => {
+			const cost = Number(license.cost) || 0;
+			if (!cost) return;
+			const isActive = matchesStatusTab(license, "active");
+			if (sumActiveOnly) {
+				if (isActive) totalCost += cost;
+			} else if (statusTab === "all" || matchesStatusTab(license, statusTab)) {
+				totalCost += cost;
+			}
+		});
+		return { totalCost, sumActiveOnly };
+	}, [licenses, statusTab]);
 
 	const hasExpiryDates = useMemo(
 		() =>
@@ -72,15 +88,16 @@ export default function LicensesMetricsBar({
 								<span className="text-2xl sm:text-3xl font-bold text-slate-700 tabular-nums">
 									$
 									<CountUp
-										end={metrics.totalCost}
+										end={totalCostForTab.totalCost}
 										duration={1.2}
 										separator=","
 									/>
 								</span>
-								<DollarSign className="h-8 w-8 text-[#0f5384] shrink-0" />
 							</div>
 							<p className="text-xs text-slate-600 mt-1">
-								Sum of license costs
+								{totalCostForTab.sumActiveOnly
+									? "Sum of active license costs"
+									: "Sum of license costs"}
 							</p>
 						</CardContent>
 					</Card>

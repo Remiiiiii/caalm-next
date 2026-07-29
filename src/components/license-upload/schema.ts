@@ -24,15 +24,25 @@ export const licenseUploadSchema = z.object({
 		.default("active"),
 	licenseExpiryDate: z.date({ message: "Expiry date is required" }),
 	issueDate: z.date().optional(),
-	issuingAuthority: z.string().optional(),
+	renewalDate: z.date().optional(),
+	issuingAuthority: z
+		.string()
+		.min(1, "Issuing authority is required")
+		.max(255, "Keep the issuing authority under 255 characters"),
 	vendor: z.string().optional(),
 	product: z.string().optional(),
 	description: z.string().optional(),
+	notes: z.string().optional(),
 	quantity: z.string().optional(),
 	cost: z.string().optional(),
 	currencyCode: z.string().default("USD"),
 	division: z.string().optional(),
 	department: z.string().optional(),
+	subDepartment: z.string().optional(),
+	businessUnit: z.string().optional(),
+	compliance: z
+		.enum(["compliant", "non-compliant", "at-risk", "action-required"])
+		.optional(),
 	assignedManagers: z.array(z.string()).optional(),
 	autoRenew: z.boolean().default(false),
 	renewalNoticeDays: z.string().optional(),
