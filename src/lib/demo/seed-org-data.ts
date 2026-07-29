@@ -245,10 +245,88 @@ export async function seedDemoOrgData({
 			compliance: "action-required",
 			division: "residential",
 		},
+		{
+			licenseName: "Pending Review — Facility Occupancy Permit",
+			licenseNumber: "FOP-7781",
+			licenseType: "Business",
+			licenseExpiryDate: isoDateOffset(120),
+			issuingAuthority: "City Planning",
+			issueDate: isoDateOffset(-30),
+			status: "pending-review",
+			compliance: "action-required",
+			division: "administration",
+			cost: 1850,
+		},
+		{
+			licenseName: "Pending Review — Nonprofit Counseling License",
+			licenseNumber: "NCL-4420",
+			licenseType: "Healthcare",
+			licenseExpiryDate: isoDateOffset(240),
+			issuingAuthority: "Dept. of Health",
+			issueDate: isoDateOffset(-15),
+			status: "pending-review",
+			compliance: "at-risk",
+			division: "behavioralhealth",
+			cost: 4200,
+		},
 	];
+
+	function buildPendingLicenseWorkflow(ownerId: string): {
+		approvalWorkflowState: string;
+		currentApprovalStage: string;
+	} {
+		const derivedAt = new Date().toISOString();
+		const state = {
+			version: 1 as const,
+			currentStepIndex: 1,
+			derivedAt,
+			steps: [
+				{
+					id: "submitted",
+					kind: "submitted",
+					label: "Submitted",
+					assigneeUserIds: [ownerId],
+					status: "complete",
+					completedAt: derivedAt,
+					completedByUserId: ownerId,
+					decision: "approved",
+				},
+				{
+					id: "department_review",
+					kind: "department_review",
+					label: "Department review",
+					assigneeUserIds: [ownerId],
+					status: "current",
+				},
+				{
+					id: "executive_approval",
+					kind: "executive_approval",
+					label: "Executive approval",
+					assigneeUserIds: [ownerId],
+					status: "pending",
+				},
+				{
+					id: "activated",
+					kind: "activated",
+					label: "Activated",
+					assigneeUserIds: [],
+					status: "pending",
+				},
+			],
+			notifications: [],
+		};
+		return {
+			approvalWorkflowState: JSON.stringify(state),
+			currentApprovalStage: "Department review",
+		};
+	}
 
 	for (const lic of licenses) {
 		try {
+			const workflow =
+				lic.status === "pending-review"
+					? buildPendingLicenseWorkflow(userId)
+					: {};
 			await tablesDB.createRow({
 				databaseId: db,
 				tableId: appwriteConfig.licensesCollectionId || "licenses",
@@ -256,11 +334,12 @@ export async function seedDemoOrgData({
 				data: {
 					...lic,
 					licenseOwnerId: userId,
-					assignedManagers: [ownerName],
+					assignedManagers: [userId],
 					orgId,
 					createdBy: userId,
 					currencyCode: "USD",
 					autoRenew: false,
+					...workflow,
 				},
 			});
 		} catch (error) {
@@ -482,6 +561,11 @@ export async function seedDemoOrgData({
 				message: "Transportation Permit is past expiry.",
 				type: "license",
 			},
+			{
+				title: "Task assigned to you",
+				message: "Review pending Facility Occupancy Permit workflow.",
+				type: "task",
+			},
 		];
 		for (const n of notifications) {
 			try {
@@ -499,6 +583,110 @@ export async function seedDemoOrgData({
 				});
 			} catch (error) {
 				console.error("[seedDemoOrgData] notification seed failed:", error);
+			}
+		}
+	}
+
+	const tasksTableId = appwriteConfig.tasksCollectionId || "tasks";
+	const tasks = [
+		{
+			title: "Review Facility Occupancy Permit",
+			description: "Complete department review for the pending occupancy permit.",
+			status: "in_progress",
+			priority: "high",
+			dueDate: isoDateTimeOffset(5, 17),
+			department: "administration",
+			linkedEntityType: "license",
+		},
+		{
+			title: "Prepare CloudMail renewal packet",
+			description: "Gather pricing and SLA notes before executive approval.",
+			status: "not_started",
+			priority: "urgent",
+			dueDate: isoDateTimeOffset(2, 12),
+			department: "administration",
+			linkedEntityType: "contract",
+		},
+		{
+			title: "Audit transportation permit gap",
+			description: "Document remediation steps for the expired DOT permit.",
+			status: "blocked",
+			priority: "medium",
+			dueDate: isoDateTimeOffset(8, 15),
+			department: "administration",
+			linkedEntityType: "license",
+		},
+		{
+			title: "Update board license summary",
+			description: "Draft the license status slide for next board packet.",
+			status: "done",
+			priority: "low",
+			dueDate: isoDateTimeOffset(-1, 16),
+			department: "administration",
+			linkedEntityType: "none",
+			completedAt: isoDateTimeOffset(-1, 15),
+		},
+	];
+	for (const task of tasks) {
+		try {
+			await tablesDB.createRow({
+				databaseId: db,
+				tableId: tasksTableId,
+				rowId: ID.unique(),
+				data: {
+					...task,
+					orgId,
+					assigneeId: userId,
+					createdById: userId,
+				},
+			});
+		} catch (error) {
+			console.error("[seedDemoOrgData] task seed failed:", error);
+		}
+	}
+
+	if (appwriteConfig.filesCollectionId) {
+		const sampleFiles = [
+			{
+				name: "demo-welcome.pdf",
+				type: "document",
+				extension: "pdf",
+				size: 245760,
+				url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+			},
+			{
+				name: "demo-facility.jpg",
+				type: "image",
+				extension: "jpg",
+				size: 512000,
+				url: "https://picsum.photos/seed/caalm-demo/800/600.jpg",
+			},
+			{
+				name: "demo-overview.mp4",
+				type: "video",
+				extension: "mp4",
+				size: 1048576,
+				url: "https://www.w3schools.com/html/mov_bbb.mp4",
+			},
+		];
+		for (const file of sampleFiles) {
+			try {
+				await tablesDB.createRow({
+					databaseId: db,
+					tableId: appwriteConfig.filesCollectionId,
+					rowId: ID.unique(),
+					data: {
+						...file,
+						bucketFileId: `demo-${file.extension}-${ID.unique().slice(0, 8)}`,
+						accountId: userId,
+						orgId,
+						users: [userId],
+						isContract: false,
+						status: "active",
+					},
+				});
+			} catch (error) {
+				console.error("[seedDemoOrgData] file seed failed:", error);
 			}
 		}
 	}
