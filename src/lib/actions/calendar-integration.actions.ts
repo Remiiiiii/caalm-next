@@ -57,12 +57,12 @@ export const createCalendarIntegration = async (
 			sync_enabled: data.sync_enabled ?? true,
 		};
 
-		const response = await adminClient.tablesDB.createRow(
-			appwriteConfig.databaseId!,
-			appwriteConfig.calendarIntegrationsCollectionId!,
-			ID.unique(),
-			integrationData,
-		);
+		const response = await adminClient.tablesDB.createRow({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: appwriteConfig.calendarIntegrationsCollectionId!,
+			rowId: ID.unique(),
+			data: integrationData,
+		});
 
 		// Tokens are now stored as JSON in the main record
 
@@ -83,15 +83,15 @@ export const getCalendarIntegration = async (
 	try {
 		const adminClient = await createAdminClient();
 
-		const response = await adminClient.tablesDB.listRows(
-			appwriteConfig.databaseId!,
-			appwriteConfig.calendarIntegrationsCollectionId!,
-			[
+		const response = await adminClient.tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: appwriteConfig.calendarIntegrationsCollectionId!,
+			queries: [
 				Query.equal("user_id", userId),
 				Query.equal("provider", provider),
 				Query.limit(1),
 			],
-		);
+		});
 
 		if (response.rows.length === 0) {
 			return null;
@@ -127,11 +127,11 @@ export const getUserCalendarIntegrations = async (
 	try {
 		const adminClient = await createAdminClient();
 
-		const response = await adminClient.tablesDB.listRows(
-			appwriteConfig.databaseId!,
-			appwriteConfig.calendarIntegrationsCollectionId!,
-			[Query.equal("user_id", userId)],
-		);
+		const response = await adminClient.tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: appwriteConfig.calendarIntegrationsCollectionId!,
+			queries: [Query.equal("user_id", userId)],
+		});
 
 		const integrations = response.rows as unknown as CalendarIntegration[];
 
@@ -257,11 +257,11 @@ export const deleteCalendarIntegration = async (
 	try {
 		const adminClient = await createAdminClient();
 
-		await adminClient.tablesDB.deleteRow(
-			appwriteConfig.databaseId!,
-			appwriteConfig.calendarIntegrationsCollectionId!,
-			integrationId,
-		);
+		await adminClient.tablesDB.deleteRow({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: appwriteConfig.calendarIntegrationsCollectionId!,
+			rowId: integrationId,
+		});
 	} catch (error) {
 		console.error("Error deleting calendar integration:", error);
 		throw error;
@@ -404,21 +404,25 @@ export const updateCalendarIntegration = async (
 		const adminClient = await createAdminClient();
 
 		// Find the existing integration
-		const response = await adminClient.databases.listDocuments(
-			appwriteConfig.databaseId!,
-			appwriteConfig.calendarIntegrationsCollectionId!,
-			[Query.equal("user_id", userId), Query.equal("provider", "microsoft")],
-		);
+		const response = await adminClient.tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: appwriteConfig.calendarIntegrationsCollectionId!,
+			queries: [
+				Query.equal("user_id", userId),
+				Query.equal("provider", "microsoft"),
+				Query.limit(1),
+			],
+		});
 
-		if (response.documents.length === 0) {
+		if (response.rows.length === 0) {
 			console.error("No Microsoft integration found to update");
 			return null;
 		}
 
-		const integration = response.documents[0];
+		const integration = response.rows[0];
 
 		// Prepare update data
-		const updateData: any = {};
+		const updateData: Record<string, unknown> = {};
 		if (updates.sync_enabled !== undefined) {
 			updateData.sync_enabled = updates.sync_enabled;
 		}
@@ -427,26 +431,32 @@ export const updateCalendarIntegration = async (
 		}
 
 		// Update the integration
-		const updatedIntegration = await adminClient.databases.updateDocument(
-			appwriteConfig.databaseId!,
-			appwriteConfig.calendarIntegrationsCollectionId!,
-			integration.$id,
-			updateData,
-		);
+		const updatedIntegration = await adminClient.tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: appwriteConfig.calendarIntegrationsCollectionId!,
+			rowId: integration.$id,
+			data: updateData,
+		});
 
 		// Parse tokens from stored JSON
-		const tokens = JSON.parse(updatedIntegration.tokens || "{}");
+		const tokens = JSON.parse(
+			(updatedIntegration as { tokens_json?: string }).tokens_json || "{}",
+		);
 
 		return {
 			$id: updatedIntegration.$id,
-			user_id: updatedIntegration.user_id,
-			provider: updatedIntegration.provider,
+			user_id: (updatedIntegration as { user_id: string }).user_id,
+			provider: (updatedIntegration as { provider: "microsoft" | "google" })
+				.provider,
 			access_token: tokens.access_token || "",
 			refresh_token: tokens.refresh_token || "",
-			token_expiry: updatedIntegration.token_expiry,
-			connected_at: updatedIntegration.connected_at,
-			last_sync: updatedIntegration.last_sync,
-			sync_enabled: updatedIntegration.sync_enabled,
+			token_expiry: (updatedIntegration as { token_expiry: string })
+				.token_expiry,
+			connected_at: (updatedIntegration as { connected_at: string })
+				.connected_at,
+			last_sync: (updatedIntegration as { last_sync?: string }).last_sync,
+			sync_enabled: (updatedIntegration as { sync_enabled: boolean })
+				.sync_enabled,
 			$createdAt: updatedIntegration.$createdAt,
 			$updatedAt: updatedIntegration.$updatedAt,
 		};
