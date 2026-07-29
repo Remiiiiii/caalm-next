@@ -32,6 +32,6 @@ export const COMPLIANCE_STATUSES = [
 	{ value: "action-required", label: "Action required" },
 ] as const;
 
-export const STEP_TITLES = ["Upload File", "License Details"];
+export const STEP_TITLES = ["Upload File", "License Details", "Review"];
 
-export const TOTAL_STEPS = 2;
+export const TOTAL_STEPS = 3;

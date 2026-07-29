@@ -16,13 +16,15 @@ interface LicensesHeaderActionsProps {
 export default function LicensesHeaderActions({
 	licenses,
 }: LicensesHeaderActionsProps) {
-	const { filters, statusTab } = useLicensesView();
+	const { filters, statusTab, selectedIds } = useLicensesView();
 
 	const filteredForExport = useMemo(() => {
-		return applyLicenseFilters(licenses, filters).filter((l) =>
+		const filtered = applyLicenseFilters(licenses, filters).filter((l) =>
 			matchesStatusTab(l, statusTab),
 		);
-	}, [licenses, filters, statusTab]);
+		if (selectedIds.length === 0) return filtered;
+		return filtered.filter((l) => selectedIds.includes(l.$id));
+	}, [licenses, filters, statusTab, selectedIds]);
 
 	const handleExport = () => {
 		const headers = [
@@ -90,7 +92,11 @@ export default function LicensesHeaderActions({
 				className="primary-btn px-3 sm:px-4 cursor-pointer"
 			>
 				<Upload className="w-4 h-4" />
-				<span className="hidden sm:inline">Export</span>
+				<span className="hidden sm:inline">
+					{selectedIds.length > 0
+						? `Export (${selectedIds.length})`
+						: "Export"}
+				</span>
 			</Button>
 			<LicenseForm />
 		</div>

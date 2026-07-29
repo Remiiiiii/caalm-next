@@ -1,28 +1,142 @@
-/**
- * System Overview Page
- * High-level health status, real-time metrics, service status, and active alerts
- */
-
 "use client";
 
+import {
+	Activity,
+	AlertTriangle,
+	HardDrive,
+	Server,
+	Users,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
+import { Button } from "@/components/ui/button";
+import { CardContent, Card as GlassCard } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
+
+interface OverviewMetrics {
+	storageTotal?: string;
+	storageUnit?: string;
+	usersOnline?: number | null;
+	apiHealthy?: boolean;
+}
+
 export default function SystemOverviewPage() {
+	const [metrics, setMetrics] = useState<OverviewMetrics | null>(null);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			try {
+				const [storageRes, healthRes] = await Promise.all([
+					fetch("/api/it/storage-metrics"),
+					fetch("/api/storage/usage"),
+				]);
+				const storage = storageRes.ok ? await storageRes.json() : null;
+				const usageOk = healthRes.ok;
+				if (!cancelled) {
+					setMetrics({
+						storageTotal: storage?.total?.size?.toString(),
+						storageUnit: storage?.total?.unit,
+						apiHealthy: usageOk,
+						usersOnline: null,
+					});
+				}
+			} catch {
+				if (!cancelled) {
+					setMetrics({ apiHealthy: false });
+				}
+			} finally {
+				if (!cancelled) setLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	const cards = [
+		{
+			title: "Storage footprint",
+			value: metrics?.storageTotal
+				? `${metrics.storageTotal} ${metrics.storageUnit || ""}`
+				: "—",
+			icon: HardDrive,
+			href: "/dashboard/it/storage",
+		},
+		{
+			title: "API health",
+			value: metrics?.apiHealthy ? "Healthy" : "Check required",
+			icon: Server,
+			href: "/dashboard/it/monitoring/system-health",
+		},
+		{
+			title: "Rate limits",
+			value: "Monitor",
+			icon: Activity,
+			href: "/dashboard/it/rate-limits",
+		},
+		{
+			title: "Errors",
+			value: "Review logs",
+			icon: AlertTriangle,
+			href: "/dashboard/it/monitoring/errors",
+		},
+	];
+
 	return (
-		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
-			<div className="glass-card w-full overflow-hidden">
-				<div className="glass-card-cap" />
-				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<h2 className="text-xl font-semibold sidebar-gradient-text">
-							System Overview
-						</h2>
-					</div>
+		<ITPageShell
+			title="System Overview"
+			subtitle="Operational snapshot across storage, API health, and limits"
+			icon={Users}
+		>
+			{loading ? (
+				<div className="py-12 flex justify-center">
+					<LoadingSpinner size="sm" label="Loading overview…" />
 				</div>
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-					<p className="text-slate-600">
-						System overview content coming soon...
-					</p>
+			) : (
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+					{cards.map((card) => (
+						<Link
+							key={card.title}
+							href={card.href}
+							className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 rounded-lg"
+						>
+							<GlassCard className="glass-card interactive-glass-card h-full transition-all duration-200 hover:border-blue-300">
+								<div className="glass-card-cap" />
+								<CardContent className="p-4 sm:p-6">
+									<p className="text-sm font-medium sidebar-gradient-text">
+										{card.title}
+									</p>
+									<div className="flex items-center text-2xl font-bold text-slate-700 pt-2">
+										<span>{card.value}</span>
+										<span className="inline-block ml-2 pb-1">
+											<card.icon className="h-7 w-7 text-slate-600" />
+										</span>
+									</div>
+								</CardContent>
+							</GlassCard>
+						</Link>
+					))}
 				</div>
-			</div>
-		</div>
+			)}
+			<ITGlassPanel>
+				<p className="text-sm text-slate-600 mb-3">
+					Jump to live IT tooling already wired in CAALM.
+				</p>
+				<div className="flex flex-wrap gap-3">
+					<Button asChild className="primary-btn px-3 sm:px-4 cursor-pointer">
+						<Link href="/dashboard/it/rate-limits">Rate limits</Link>
+					</Button>
+					<Button asChild variant="outline" className="cursor-pointer">
+						<Link href="/dashboard/it/storage">Storage metrics</Link>
+					</Button>
+					<Button asChild variant="outline" className="cursor-pointer">
+						<Link href="/audits/audit">Audit logs</Link>
+					</Button>
+				</div>
+			</ITGlassPanel>
+		</ITPageShell>
 	);
 }

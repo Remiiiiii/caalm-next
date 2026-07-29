@@ -28,8 +28,24 @@ const chartConfig = {
 	},
 } satisfies ChartConfig;
 
-export const Chart = ({ used = 0 }: { used: number }) => {
+export const Chart = ({
+	used = 0,
+	limitBytes,
+	limitGB,
+}: {
+	used: number;
+	limitBytes?: number;
+	limitGB?: number;
+}) => {
+	const resolvedLimitBytes =
+		limitBytes ?? (limitGB ? limitGB * 1024 * 1024 * 1024 : undefined);
+	const pct = calculatePercentage(used, resolvedLimitBytes);
 	const chartData = [{ storage: "used", 10: used, fill: "white" }];
+	const displayLimitGB =
+		limitGB ??
+		(resolvedLimitBytes
+			? resolvedLimitBytes / (1024 * 1024 * 1024)
+			: 2);
 
 	return (
 		<Card className="chart">
@@ -38,7 +54,7 @@ export const Chart = ({ used = 0 }: { used: number }) => {
 					<RadialBarChart
 						data={chartData}
 						startAngle={90}
-						endAngle={Number(calculatePercentage(used)) + 90}
+						endAngle={Number(pct) + 90}
 						innerRadius={80}
 						outerRadius={110}
 					>
@@ -66,10 +82,8 @@ export const Chart = ({ used = 0 }: { used: number }) => {
 													y={viewBox.cy}
 													className="chart-total-percentage"
 												>
-													{used && calculatePercentage(used)
-														? calculatePercentage(used)
-																.toString()
-																.replace(/^0+/, "")
+													{used && pct
+														? pct.toString().replace(/^0+/, "")
 														: "0"}
 													%
 												</tspan>
@@ -92,7 +106,11 @@ export const Chart = ({ used = 0 }: { used: number }) => {
 			<CardHeader className="chart-details">
 				<CardTitle className="chart-title">Available Storage</CardTitle>
 				<CardDescription className="chart-description">
-					{used ? convertFileSize({ sizeInBytes: used }) : "2GB"} / 2GB
+					{used ? convertFileSize({ sizeInBytes: used }) : "0 Bytes"} /{" "}
+					{Number.isInteger(displayLimitGB)
+						? displayLimitGB
+						: displayLimitGB.toFixed(1)}
+					GB
 				</CardDescription>
 			</CardHeader>
 		</Card>

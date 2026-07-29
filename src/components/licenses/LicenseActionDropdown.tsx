@@ -6,6 +6,7 @@ import {
 	Ban,
 	Download,
 	FileText,
+	GitBranch,
 	Info,
 	KeyRound,
 	Minimize2,
@@ -17,8 +18,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import type React from "react";
-import { Fragment, useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Fragment, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -35,6 +35,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import type { License } from "@/types/licenses";
 import LicenseAllocationDialog from "./LicenseAllocationDialog";
+import LicenseApprovalFlowDialog from "./LicenseApprovalFlowDialog";
 import LicenseDetailView from "./LicenseDetailView";
 import LicenseForm from "./LicenseForm";
 import LicenseRenewalDialog from "./LicenseRenewalDialog";
@@ -67,7 +68,7 @@ const licenseActionsDropdownItems = [
 		value: "assign",
 	},
 	{
-		label: "Status",
+		label: "Approval workflow",
 		icon: "/assets/icons/contract-status.svg",
 		value: "status",
 	},
@@ -120,16 +121,7 @@ const LicenseActionDropdown = ({
 	const [showStatus, setShowStatus] = useState(false);
 	const [showDelete, setShowDelete] = useState(false);
 	const [showShare, setShowShare] = useState(false);
-	const [selectedStatus, setSelectedStatus] = useState<string>(
-		license.status || "active",
-	);
 	const [_emails, _setEmails] = useState<string[]>([]);
-
-	useEffect(() => {
-		if (showStatus) {
-			setSelectedStatus(license.status || "active");
-		}
-	}, [showStatus, license.status]);
 
 	const { toast } = useToast();
 	const { permissions } = usePermissions();
@@ -188,42 +180,6 @@ const LicenseActionDropdown = ({
 				title: "Error",
 				description:
 					error instanceof Error ? error.message : "Failed to perform action",
-				variant: "destructive",
-			});
-		} finally {
-			setIsLoading(false);
-		}
-	};
-
-	const handleStatusChange = async () => {
-		setIsLoading(true);
-		try {
-			const res = await fetch(`/api/licenses/${license.$id}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ status: selectedStatus }),
-			});
-
-			if (!res.ok) {
-				const err = await res.json().catch(() => ({}));
-				throw new Error(err?.message || "Update failed");
-			}
-
-			toast({
-				title: "Success",
-				description: "License status updated successfully",
-			});
-			closeAllModals();
-			if (onRefresh) {
-				onRefresh();
-			}
-		} catch (error) {
-			toast({
-				title: "Error",
-				description:
-					error instanceof Error
-						? error.message
-						: "Failed to update license status",
 				variant: "destructive",
 			});
 		} finally {
@@ -319,50 +275,6 @@ const LicenseActionDropdown = ({
 		}
 	};
 
-	const getStatusOptions = () => {
-		return [
-			"active",
-			"inactive",
-			"expired",
-			"pending-review",
-			"suspended",
-			"action-required",
-		];
-	};
-
-	const getStatusBadgeClasses = (status: string): string => {
-		const normalized = status?.toLowerCase?.() ?? "";
-		switch (normalized) {
-			case "active":
-				return "!font-medium border-2 border-cyan-400 bg-[#B3EBF2] text-[#12477D]";
-			case "pending-review":
-			case "action-required":
-				return "!font-medium border-2 border-red-400 bg-destructive/10 text-destructive";
-			case "inactive":
-				return "!font-medium border-2 border-slate-500 bg-[#D3D3D3] text-[#878787]";
-			case "expired":
-				return "!font-medium border-2 border-purple-600 bg-purple-50 text-purple-900";
-			case "suspended":
-				return "!font-medium border-2 border-slate-400 bg-slate-300 text-slate-700";
-			default:
-				return "!font-medium border-2 border-slate-200 bg-slate-100 text-slate-800";
-		}
-	};
-
-	const getStatusLabel = (status: string): string => {
-		const normalized = status?.toLowerCase?.() ?? "";
-		switch (normalized) {
-			case "pending-review":
-				return "Pending Review";
-			case "action-required":
-				return "Action Required";
-			default:
-				return status
-					.replace(/-/g, " ")
-					.replace(/\b\w/g, (l) => l.toUpperCase());
-		}
-	};
-
 	if (!license) {
 		return null;
 	}
@@ -390,7 +302,7 @@ const LicenseActionDropdown = ({
 							allocate: KeyRound,
 							renew: RefreshCw,
 							assign: UserRoundCheck,
-							status: RefreshCw,
+							status: GitBranch,
 							delete: Trash2,
 							download: Download,
 							share: Share2,
@@ -561,88 +473,19 @@ const LicenseActionDropdown = ({
 				/>
 			)}
 
-			{/* Status Dialog */}
-			{showStatus && (
-				<Dialog open={showStatus} onOpenChange={setShowStatus}>
-					<DialogContent className="flex max-h-[90vh] max-w-[500px] flex-col overflow-hidden p-0 shadow-xl">
-						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-						<div className="sticky top-0 z-10 bg-white py-4 border-b border-slate-200 mt-4">
-							<div className="flex items-center gap-3 ml-6">
-								<RefreshCw className="w-5 h-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									Change Status
-								</DialogTitle>
-							</div>
-							<p className="text-sm text-slate-600 mt-1 ml-14">
-								Select a new status for this license
-							</p>
-						</div>
-						<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-							<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
-								<div className="space-y-2">
-									{getStatusOptions().map((option) => (
-										<label
-											key={option}
-											className="flex items-center gap-3 transition-all duration-200 p-3 rounded-lg border-2 bg-white group shadow-sm cursor-pointer hover:bg-blue-50 hover:border-blue-300 hover:shadow-md border-slate-200"
-											onClick={() => setSelectedStatus(option)}
-										>
-											<input
-												type="radio"
-												name="license-status"
-												value={option}
-												checked={selectedStatus === option}
-												onChange={() => setSelectedStatus(option)}
-												className="w-4 h-4 cursor-pointer text-blue-600"
-												disabled={isLoading}
-											/>
-											<Badge
-												variant="outline"
-												className={`${getStatusBadgeClasses(
-													option,
-												)} transition-all duration-200 shadow-sm`}
-											>
-												{getStatusLabel(option)}
-											</Badge>
-										</label>
-									))}
-								</div>
-							</div>
-						</div>
-						<div className="glass-dialog-alert-footer">
-							<div className="text-xs text-slate-500">
-								Status changes require review
-							</div>
-							<div className="flex items-center gap-3">
-								<Button
-									variant="outline"
-									onClick={(e) => closeAllModals(e)}
-									className="primary-btn px-3 sm:px-4"
-									disabled={isLoading}
-								>
-									<Ban className="w-4 h-4" />
-									Cancel
-								</Button>
-								<Button
-									onClick={(e) => {
-										e.stopPropagation();
-										e.preventDefault();
-										handleStatusChange();
-									}}
-									disabled={isLoading || !selectedStatus}
-									className="primary-btn px-3 sm:px-4"
-								>
-									{isLoading ? (
-										<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-									) : (
-										<RefreshCw className="w-4 h-4 mr-2" />
-									)}
-									Update Status
-								</Button>
-							</div>
-						</div>
-					</DialogContent>
-				</Dialog>
-			)}
+			<LicenseApprovalFlowDialog
+				open={showStatus}
+				onOpenChange={(open) => {
+					if (!open) {
+						closeAllModals();
+						onRefresh?.();
+					} else {
+						setShowStatus(true);
+					}
+				}}
+				licenseId={license.$id}
+				licenseName={license.licenseName}
+			/>
 
 			{/* Delete Dialog — matches Delete Draft design */}
 			{showDelete && (
@@ -761,13 +604,13 @@ const LicenseActionDropdown = ({
 										onClick={(e) => {
 											e.stopPropagation();
 											e.preventDefault();
-											handleAction();
 										}}
-										disabled={isLoading}
+										disabled
 										className="primary-btn px-3 sm:px-4"
+										title="Share is not available yet"
 									>
 										<Share2 className="w-4 h-4" />
-										Share
+										Share (unavailable)
 									</Button>
 								</div>
 							</div>
@@ -823,13 +666,13 @@ const LicenseActionDropdown = ({
 										onClick={(e) => {
 											e.stopPropagation();
 											e.preventDefault();
-											handleAction();
 										}}
-										disabled={isLoading}
+										disabled
 										className="primary-btn px-3 sm:px-4"
+										title="Re-assign is not available yet"
 									>
 										<UserRoundCheck className="w-4 h-4" />
-										Assign
+										Assign (unavailable)
 									</Button>
 								</div>
 							</div>

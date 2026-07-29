@@ -95,6 +95,7 @@ import {
 	getUsersByDepartment,
 } from "@/lib/actions/database.actions";
 import { uploadFile } from "@/lib/actions/file.actions";
+import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import {
 	AiExtractionReviewPanel,
 	AiExtractionStatusBadge,
@@ -2563,6 +2564,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					enterpriseMetadata,
 				},
 			});
+
+			await refreshStorageUsage(router);
 
 			clearInterval(progressInterval);
 			setUploadProgress(100);

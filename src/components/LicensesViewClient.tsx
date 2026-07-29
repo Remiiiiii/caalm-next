@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import LicensesBulkBar from "@/components/LicensesBulkBar";
 import { applyLicenseFilters } from "@/lib/licenses/applyLicenseFilters";
 import { matchesStatusTab } from "@/lib/licenses/licensesListUtils";
 import type { License } from "@/types/licenses";
@@ -41,11 +42,14 @@ export default function LicensesViewClient({
 	}, [localLicenses, filters, statusTab]);
 
 	return (
-		<LicensesView
-			licenses={filteredLicenses}
-			user={user}
-			onRefresh={handleRefresh}
-			onLicenseRemoved={handleLicenseRemoved}
-		/>
+		<>
+			<LicensesView
+				licenses={filteredLicenses}
+				user={user}
+				onRefresh={handleRefresh}
+				onLicenseRemoved={handleLicenseRemoved}
+			/>
+			<LicensesBulkBar licenses={filteredLicenses} />
+		</>
 	);
 }

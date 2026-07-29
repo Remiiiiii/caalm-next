@@ -5,6 +5,7 @@ import type React from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import InactivityDialog from "@/components/InactivityDialog";
 import MobileNavigation from "@/components/MobileNavigation";
+import NotificationSoundListener from "@/components/NotificationSoundListener";
 import Sidebar from "@/components/Sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { normalizeUserRole, type UserRole } from "@/constants/rbac";
@@ -45,6 +46,7 @@ const AuthenticatedLayout = ({
 	return (
 		<OrganizationProvider>
 			<SidebarProvider>
+				<NotificationSoundListener />
 				<main className="flex h-screen">
 					<Sidebar
 						name={user.name || "Unknown User"}

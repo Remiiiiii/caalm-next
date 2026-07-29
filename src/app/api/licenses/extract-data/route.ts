@@ -77,14 +77,27 @@ export async function POST(request: NextRequest) {
 		return successResponse(result.extractedData, { requestId });
 	} catch (error) {
 		console.error("License data extraction error:", error);
+		const message =
+			error instanceof Error ? error.message : "Failed to extract license data";
+		const status =
+			error && typeof error === "object" && "status" in error
+				? Number((error as { status?: unknown }).status)
+				: undefined;
+		const httpStatus =
+			status === 503 || status === 429
+				? 503
+				: /temporarily unavailable|try again/i.test(message)
+					? 503
+					: 500;
+
 		return errorResponse(
-			error instanceof Error
-				? error
-				: new Error("Failed to extract license data"),
-			500,
+			error instanceof Error ? error : new Error(message),
+			httpStatus,
 			{
 				requestId,
-				details: error instanceof Error ? error.message : "Unknown error",
+				details: message,
+				errorCode:
+					httpStatus === 503 ? "EXTRACTION_SERVICE_UNAVAILABLE" : undefined,
 			},
 		);
 	}

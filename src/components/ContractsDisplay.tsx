@@ -32,6 +32,7 @@ import {
 	type UseSAMOpportunitiesFilters,
 	useSAMOpportunities,
 } from "@/hooks/useSAMOpportunities";
+import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import {
 	formatContractAmount,
 	formatContractDate,
@@ -210,6 +211,7 @@ const ContractCard = React.memo(
 ContractCard.displayName = "ContractCard";
 
 export default function ContractsDisplay() {
+	const { isITUser } = useGroupedNavigation();
 	// Enhanced search parameters with new SAM.gov API features
 	const [searchFilters, setSearchFilters] =
 		useState<UseSAMOpportunitiesFilters>({
@@ -560,65 +562,67 @@ export default function ContractsDisplay() {
 								persists, contact support for assistance.
 							</p>
 
-							{/* Developer Details - Collapsible */}
-							<details className="mt-4">
-								<summary className="cursor-pointer text-sm text-red-600 hover:text-red-800 font-medium select-none">
-									Technical details (for developers)
-								</summary>
-								<div className="mt-3 bg-white p-4 rounded-lg border border-red-200">
-									<p className="text-sm text-red-700 mb-3 font-mono">
-										{error || "An unknown error occurred"}
-									</p>
+							{/* Developer Details - IT only */}
+							{isITUser && (
+								<details className="mt-4">
+									<summary className="cursor-pointer text-sm text-red-600 hover:text-red-800 font-medium select-none">
+										Technical details (for developers)
+									</summary>
+									<div className="mt-3 bg-white p-4 rounded-lg border border-red-200">
+										<p className="text-sm text-red-700 mb-3 font-mono">
+											{error || "An unknown error occurred"}
+										</p>
 
-									{/* Show setup instructions if API key is missing */}
-									{error?.includes("API key") && (
-										<div className="space-y-3">
-											<h4 className="font-medium text-red-800">
-												SAM.gov API Key Setup Required
-											</h4>
-											<p className="text-sm text-red-700">
-												To use SAM.gov contract search, you need an API key:
-											</p>
-											<ol className="text-sm text-red-700 space-y-1 list-decimal list-inside">
-												<li>
-													Visit{" "}
+										{/* Show setup instructions if API key is missing */}
+										{error?.includes("API key") && (
+											<div className="space-y-3">
+												<h4 className="font-medium text-red-800">
+													SAM.gov API Key Setup Required
+												</h4>
+												<p className="text-sm text-red-700">
+													To use SAM.gov contract search, you need an API key:
+												</p>
+												<ol className="text-sm text-red-700 space-y-1 list-decimal list-inside">
+													<li>
+														Visit{" "}
+														<a
+															href="https://sam.gov/"
+															target="_blank"
+															rel="noopener noreferrer"
+															className="underline"
+														>
+															sam.gov
+														</a>{" "}
+														and sign in
+													</li>
+													<li>Navigate to Account Details page</li>
+													<li>Request an API Key (40 characters)</li>
+													<li>
+														Set the{" "}
+														<code className="bg-red-100 px-1 rounded">
+															GOV_API_KEY
+														</code>{" "}
+														environment variable
+													</li>
+													<li>Restart the development server</li>
+												</ol>
+												<p className="text-xs text-red-600 mt-3">
+													Note: According to{" "}
 													<a
-														href="https://sam.gov/"
+														href="https://api.sam.gov/docs/api-key/"
 														target="_blank"
 														rel="noopener noreferrer"
 														className="underline"
 													>
-														sam.gov
-													</a>{" "}
-													and sign in
-												</li>
-												<li>Navigate to Account Details page</li>
-												<li>Request an API Key (40 characters)</li>
-												<li>
-													Set the{" "}
-													<code className="bg-red-100 px-1 rounded">
-														GOV_API_KEY
-													</code>{" "}
-													environment variable
-												</li>
-												<li>Restart the development server</li>
-											</ol>
-											<p className="text-xs text-red-600 mt-3">
-												Note: According to{" "}
-												<a
-													href="https://api.sam.gov/docs/api-key/"
-													target="_blank"
-													rel="noopener noreferrer"
-													className="underline"
-												>
-													SAM.gov API documentation
-												</a>
-												, request limits apply based on your role.
-											</p>
-										</div>
-									)}
-								</div>
-							</details>
+														SAM.gov API documentation
+													</a>
+													, request limits apply based on your role.
+												</p>
+											</div>
+										)}
+									</div>
+								</details>
+							)}
 						</CardContent>
 					</Card>
 				</div>

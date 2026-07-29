@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -25,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { LicenseAllocationInput } from "@/lib/api/licenses/schemas/license.schema";
 import { licenseAllocationSchema } from "@/lib/api/licenses/schemas/license.schema";
 import type { License } from "@/types/licenses";
+import { CONTRACT_DEPARTMENTS } from "../../../constants";
 
 interface LicenseAllocationDialogProps {
 	license: License;
@@ -187,24 +189,33 @@ export default function LicenseAllocationDialog({
 								name="departments"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>
-											Assign to Departments (comma-separated)
-										</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="Engineering, Sales"
-												{...field}
-												onChange={(e) =>
-													field.onChange(
-														e.target.value
-															? e.target.value
-																	.split(",")
-																	.map((dept) => dept.trim())
-															: [],
-													)
-												}
-											/>
-										</FormControl>
+										<FormLabel>Assign to departments</FormLabel>
+										<div className="max-h-44 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3">
+											{CONTRACT_DEPARTMENTS.map((dept) => {
+												const selected = field.value?.includes(dept) ?? false;
+												return (
+													<label
+														key={dept}
+														htmlFor={`allocate-dept-${dept}`}
+														className="flex cursor-pointer items-center gap-2 text-sm text-slate-900"
+													>
+														<Checkbox
+															id={`allocate-dept-${dept}`}
+															checked={selected}
+															onCheckedChange={(checked) => {
+																const current = field.value ?? [];
+																field.onChange(
+																	checked
+																		? [...current, dept]
+																		: current.filter((d) => d !== dept),
+																);
+															}}
+														/>
+														{dept}
+													</label>
+												);
+											})}
+										</div>
 										<FormMessage />
 									</FormItem>
 								)}

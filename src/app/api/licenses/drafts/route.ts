@@ -383,6 +383,17 @@ class LicenseDraftService {
 	}
 
 	/**
+	 * Flatten Tables API rows that may nest attributes under `data`.
+	 */
+	static flattenRow(raw: any): any {
+		if (!raw || typeof raw !== "object") return raw;
+		if (raw.data && typeof raw.data === "object") {
+			return { ...raw, ...raw.data };
+		}
+		return raw;
+	}
+
+	/**
 	 * Get draft by ID
 	 */
 	static async getDraftById(draftId: string) {
@@ -395,11 +406,13 @@ class LicenseDraftService {
 			throw new Error("Database configuration missing");
 		}
 
-		return await tablesDB.getRow({
+		const row = await tablesDB.getRow({
 			databaseId: appwriteConfig.databaseId,
 			tableId: appwriteConfig.licenseDraftsCollectionId,
 			rowId: draftId,
 		});
+
+		return LicenseDraftService.flattenRow(row);
 	}
 
 	/**
@@ -478,7 +491,7 @@ export async function POST(request: NextRequest) {
 			processedFileData,
 			extractedData,
 			isCompleted: false,
-			totalSteps: 2, // License upload has 2 steps
+			totalSteps: 3, // File → Details → Review
 		});
 
 		return successResponse(

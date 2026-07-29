@@ -413,7 +413,7 @@ const RolesManagement = () => {
 					className="min-h-[200px] !p-0 py-16"
 				/>
 			) : filteredRoles.length === 0 ? (
-				<div className="text-center py-12">
+				<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 					<Image
 						src="/assets/icons/no-data.svg"
 						alt="No contracts found"

@@ -35,6 +35,36 @@ async function getAppwriteMessagingService() {
 	return appwriteMessagingService;
 }
 
+/** Appwrite Tables may return attributes flat or nested under `data`. */
+function normalizeNotificationRow<T extends Record<string, unknown>>(
+	row: T,
+): T & Record<string, unknown> {
+	if (
+		row &&
+		typeof row === "object" &&
+		"data" in row &&
+		row.data &&
+		typeof row.data === "object" &&
+		!Array.isArray(row.data)
+	) {
+		const { data, ...rest } = row as T & { data: Record<string, unknown> };
+		return { ...rest, ...data } as T & Record<string, unknown>;
+	}
+	return row;
+}
+
+function rowUserId(row: Record<string, unknown> | null | undefined): string | null {
+	if (!row) return null;
+	const normalized = normalizeNotificationRow(row);
+	const id = normalized.userId;
+	return typeof id === "string" && id.length > 0 ? id : null;
+}
+
+function isNotificationRead(row: Record<string, unknown>): boolean {
+	const read = normalizeNotificationRow(row).read;
+	return read === true || read === "true";
+}
+
 class NotificationService {
 	private async getClient() {
 		return await createAdminClient();
@@ -383,13 +413,17 @@ class NotificationService {
 			});
 
 			// Merge with accountId notifications if any (for backward compatibility)
-			let allNotifications = [...(response.rows || [])];
+			let allNotifications = [
+				...(response.rows || []).map((row) =>
+					normalizeNotificationRow(row as Record<string, unknown>),
+				),
+			];
 			if (accountIdNotifications.length > 0) {
 				// Combine and deduplicate by $id
 				const existingIds = new Set(allNotifications.map((n: any) => n.$id));
-				const uniqueAccountIdNotifications = accountIdNotifications.filter(
-					(n: any) => !existingIds.has(n.$id),
-				);
+				const uniqueAccountIdNotifications = accountIdNotifications
+					.map((n: any) => normalizeNotificationRow(n as Record<string, unknown>))
+					.filter((n: any) => !existingIds.has(n.$id));
 				allNotifications = [
 					...allNotifications,
 					...uniqueAccountIdNotifications,
@@ -597,7 +631,7 @@ class NotificationService {
 
 			// Build notification data, excluding undefined values
 			const notificationData: Record<string, any> = {
-				userId: notification.userId, // Keep accountId for querying (matches auth context)
+				userId: userDocId,
 				title: notification.title,
 				message: notification.message,
 				type: notification.type,
@@ -714,12 +748,32 @@ class NotificationService {
 			// Invalidate cache to ensure notification appears immediately
 			// Do this in a separate try-catch so cache errors don't prevent notification creation from succeeding
 			try {
-				await CacheManager.invalidateNotifications(notification.userId);
+				await CacheManager.invalidateNotifications(userDocId);
+				if (notification.userId && notification.userId !== userDocId) {
+					await CacheManager.invalidateNotifications(notification.userId);
+				}
 				console.log(
-					`[SERVER] Invalidated notification cache for ${notification.userId}`,
+					`[SERVER] Invalidated notification cache for ${userDocId}`,
 				);
 			} catch (cacheError) {
 				console.warn(`[SERVER] Could not invalidate cache:`, cacheError);
+			}
+
+			try {
+				const { broadcastNotificationToUser } = await import(
+					"@/lib/notifications/broadcastNotification"
+				);
+				await broadcastNotificationToUser(userDocId, {
+					...(response as Record<string, unknown>),
+					$id: notificationId,
+					id: notificationId,
+					userId: userDocId,
+				});
+			} catch (broadcastError) {
+				console.warn(
+					"[SERVER] NotificationService.createNotification] SSE broadcast failed:",
+					broadcastError,
+				);
 			}
 
 			// Send SMS notification if user has SMS enabled and digest is instant
@@ -789,7 +843,20 @@ class NotificationService {
 				rowId: id,
 				data: { read: true },
 			});
-			return response as unknown as Notification;
+
+			const normalized = normalizeNotificationRow(
+				response as unknown as Record<string, unknown>,
+			);
+			const userId = rowUserId(normalized);
+			if (userId) {
+				await CacheManager.invalidateNotifications(userId);
+			} else {
+				console.warn(
+					`[SERVER] markAsRead: missing userId on notification ${id}; cache not invalidated`,
+				);
+			}
+
+			return normalized as unknown as Notification;
 		} catch (error) {
 			console.error("Failed to mark notification as read:", error);
 			throw new Error("Failed to mark notification as read");
@@ -805,7 +872,20 @@ class NotificationService {
 				rowId: id,
 				data: { read: false },
 			});
-			return response as unknown as Notification;
+
+			const normalized = normalizeNotificationRow(
+				response as unknown as Record<string, unknown>,
+			);
+			const userId = rowUserId(normalized);
+			if (userId) {
+				await CacheManager.invalidateNotifications(userId);
+			} else {
+				console.warn(
+					`[SERVER] markAsUnread: missing userId on notification ${id}; cache not invalidated`,
+				);
+			}
+
+			return normalized as unknown as Notification;
 		} catch (error) {
 			console.error("Failed to mark notification as unread:", error);
 			throw new Error("Failed to mark notification as unread");
@@ -1081,46 +1161,38 @@ class NotificationService {
 	async getUnreadCount(userId: string): Promise<number> {
 		try {
 			const tablesDB = await this.getTablesDB();
-
-			// Resolve both docId and accountId
 			const { docId, accountId } = await this.resolveUserIds(userId);
 
-			// Query for unread notifications with docId
-			const docIdResponse = await tablesDB.listRows({
-				databaseId: appwriteConfig.databaseId || "default-db",
-				tableId: appwriteConfig.notificationsCollectionId || "notifications",
-				queries: [Query.equal("userId", docId), Query.equal("read", false)],
-			});
-
-			let totalUnread = docIdResponse.total || 0;
-
-			// If we have an accountId that's different from docId, also query for it
+			const userIds = [docId];
 			if (accountId && accountId !== docId) {
-				try {
-					const accountIdResponse = await tablesDB.listRows({
-						databaseId: appwriteConfig.databaseId || "default-db",
-						tableId:
-							appwriteConfig.notificationsCollectionId || "notifications",
-						queries: [
-							Query.equal("userId", accountId),
-							Query.equal("read", false),
-						],
-					});
+				userIds.push(accountId);
+			}
 
-					// Deduplicate by $id
-					const docIdIds = new Set(
-						(docIdResponse.rows || []).map((n: any) => n.$id),
-					);
-					const uniqueAccountIdCount = (accountIdResponse.rows || []).filter(
-						(n: any) => !docIdIds.has(n.$id),
-					).length;
+			const seen = new Set<string>();
+			let totalUnread = 0;
 
-					totalUnread += uniqueAccountIdCount;
-				} catch (accountIdError) {
-					console.warn(
-						"[SERVER] Could not query unread count by accountId:",
-						accountIdError,
+			for (const uid of userIds) {
+				const response = await tablesDB.listRows({
+					databaseId: appwriteConfig.databaseId || "default-db",
+					tableId: appwriteConfig.notificationsCollectionId || "notifications",
+					queries: [
+						Query.equal("userId", uid),
+						Query.orderDesc("$createdAt"),
+						Query.limit(200),
+					],
+				});
+
+				for (const row of response.rows || []) {
+					const normalized = normalizeNotificationRow(
+						row as Record<string, unknown>,
 					);
+					const id = String(normalized.$id ?? "");
+					if (!id || seen.has(id)) continue;
+					seen.add(id);
+					// Match dialog logic: anything other than explicit true is unread
+					if (!isNotificationRead(normalized)) {
+						totalUnread += 1;
+					}
 				}
 			}
 
@@ -1132,7 +1204,6 @@ class NotificationService {
 		} catch (error: any) {
 			console.error("Failed to get unread count:", error);
 
-			// Return 0 in test/CI environments when Appwrite fails
 			if (
 				process.env.CI ||
 				process.env.NODE_ENV === "test" ||

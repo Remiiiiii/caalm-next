@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createSAMApiService } from "@/lib/sam-api";
 import {
+	formatDateForSAM,
 	getDefaultFromDate,
 	getDefaultToDate,
 	type SAMContractSearchParams,
@@ -179,13 +180,13 @@ function mapResponseDeadlineServer({
 function addDays({ date, days }: { date: Date; days: number }): string {
 	const result = new Date(date);
 	result.setDate(result.getDate() + days);
-	return result.toLocaleDateString("en-US");
+	return formatDateForSAM(result);
 }
 
 function addMonths({ date, months }: { date: Date; months: number }): string {
 	const result = new Date(date);
 	result.setMonth(result.getMonth() + months);
-	return result.toLocaleDateString("en-US");
+	return formatDateForSAM(result);
 }
 
 /**

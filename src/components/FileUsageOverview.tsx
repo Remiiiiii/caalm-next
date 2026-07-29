@@ -1,109 +1,96 @@
 "use client";
 
-import type { Models } from "appwrite";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Chart } from "@/components/Chart";
 import FormattedDateTime from "@/components/FormattedDateTime";
+import { StorageUsagePieChart } from "@/components/StorageUsagePieChart";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useStorageUsage } from "@/hooks/useStorageUsage";
 import { convertFileSize, getUsageSummary } from "@/lib/utils";
-import FileUploader from "./FileUploader";
 
-interface FileTypeSummary {
-	size: number;
-	latestDate: string;
-}
+const FileUsageOverview = () => {
+	const { totalSpace, limitBytes, limitGB, isLoading } = useStorageUsage();
 
-interface TotalSpace {
-	document: FileTypeSummary;
-	image: FileTypeSummary;
-	video: FileTypeSummary;
-	audio: FileTypeSummary;
-	other: FileTypeSummary;
-	used: number;
-	all: number;
-}
-
-interface FileUsageOverviewProps {
-	totalSpace: TotalSpace | null;
-	user?:
-		| (Models.User<Models.Preferences> & {
-				division?: string;
-		  })
-		| null;
-}
-
-const FileUsageOverview = ({ user, totalSpace }: FileUsageOverviewProps) => {
-	if (!totalSpace) {
+	if (isLoading && !totalSpace) {
 		return (
-			<section className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-xl p-6 flex flex-col">
-				<h2 className="flex left-0 text-lg font-bold text-center sidebar-gradient-text mb-6">
-					File Usage Overview
-				</h2>
-				<div className="flex justify-center items-center gap-2 py-8">
-					<Loader2 className="h-6 w-6 animate-spin text-[#0f5384]" />
-					<p className="text-gray-500">Loading usage data...</p>
-				</div>
-			</section>
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
+				<CardContent className="flex flex-col p-4 sm:p-6">
+					<h2 className="mb-6 text-lg font-bold sidebar-gradient-text">
+						File Usage Overview
+					</h2>
+					<div className="flex items-center justify-center gap-2 py-8">
+						<Loader2 className="h-6 w-6 animate-spin text-[#0f5384]" />
+						<p className="text-slate-500">Loading usage data...</p>
+					</div>
+				</CardContent>
+			</Card>
 		);
 	}
 
+	if (!totalSpace) {
+		return null;
+	}
+
+	const summaries = getUsageSummary(totalSpace);
+
 	return (
-		<section className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-xl p-6">
-			<div className="flex justify-between items-center mb-6">
-				<h2 className="text-lg font-bold sidebar-gradient-text">
-					File Usage Overview
-				</h2>
-				{user && (
-					<FileUploader
-						ownerId={user.$id}
-						accountId={user.$id}
-						className="primary-btn h-10 px-4 shadow-drop-1 text-sm"
-					/>
-				)}
-			</div>
-			<div className="flex flex-col lg:flex-row gap-6">
-				{/* Chart on the left */}
-				<div className="flex justify-center items-center lg:w-1/3">
-					<Chart used={totalSpace.used || 0} />
+		<Card className="glass-card">
+			<div className="glass-card-cap" />
+			<CardContent className="p-4 sm:p-6">
+				<div className="mb-6">
+					<h2 className="text-lg font-bold sidebar-gradient-text">
+						File Usage Overview
+					</h2>
 				</div>
 
-				{/* File type summaries on the right */}
-				<div className="lg:w-2/3">
-					<ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{getUsageSummary(totalSpace).map((summary) => (
+				<div className="mb-6 rounded-xl border border-slate-200/80 bg-white/50 p-4 sm:p-5">
+					<StorageUsagePieChart
+						categories={summaries.map((s) => ({
+							title: s.title,
+							size: s.size,
+						}))}
+						used={totalSpace.used || 0}
+						limitBytes={limitBytes ?? totalSpace.limitBytes}
+						limitGB={limitGB ?? totalSpace.limitGB}
+					/>
+				</div>
+
+				<ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+					{summaries.map((summary) => (
+						<li key={summary.title}>
 							<Link
 								href={summary.url}
-								key={summary.title}
-								className="flex flex-col bg-slate-50 rounded-lg p-4 hover:shadow transition border border-border"
+								className="glass-card-inner interactive-glass-card flex flex-col rounded-lg border border-slate-200/60 p-4 transition-all duration-200 hover:border-blue-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 							>
-								<div className="flex justify-between items-center mb-2">
+								<div className="mb-2 flex items-center justify-between">
 									<Image
 										src={summary.icon}
 										width={40}
 										height={40}
-										alt="uploaded image"
+										alt={summary.title}
 										className="rounded-full"
 									/>
-									<h4 className="text-lg font-semibold text-navy">
+									<h4 className="text-lg font-semibold text-slate-800">
 										{convertFileSize({ sizeInBytes: summary.size }) || 0}
 									</h4>
 								</div>
-								<h5 className="text-sm font-medium text-slate-dark mb-1">
+								<h5 className="mb-1 text-sm font-medium text-slate-700">
 									{summary.title}
 								</h5>
-								<Separator className="bg-light-400 my-2" />
+								<Separator className="my-2 bg-slate-200" />
 								<FormattedDateTime
 									date={summary.latestDate}
-									className="text-left text-xs text-slate-light"
+									className="text-left text-xs text-slate-500"
 								/>
 							</Link>
-						))}
-					</ul>
-				</div>
-			</div>
-		</section>
+						</li>
+					))}
+				</ul>
+			</CardContent>
+		</Card>
 	);
 };
 

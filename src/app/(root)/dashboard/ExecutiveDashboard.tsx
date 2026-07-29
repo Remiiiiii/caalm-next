@@ -43,13 +43,6 @@ import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
 	SelectItem,
 	SelectScrollable,
 } from "@/components/ui/select-scrollable";
@@ -1224,94 +1217,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</div>
 							</CardContent>
 						</Card>
-
-						{/* Edit User Modal */}
-						<Dialog open={false} onOpenChange={() => {}}>
-							<DialogContent>
-								<DialogHeader>
-									<DialogTitle>Edit User</DialogTitle>
-								</DialogHeader>
-								<form
-									onSubmit={(e) => e.preventDefault()}
-									className="space-y-4"
-								>
-									<div>
-										<label className="block text-sm font-medium">
-											Full Name
-										</label>
-										<Input
-											name="fullName"
-											value=""
-											onChange={() => {}}
-											required
-										/>
-									</div>
-									<div>
-										<label className="block text-sm font-medium">
-											Division
-										</label>
-										<select
-											name="division"
-											value=""
-											onChange={() => {}}
-											className="glass-form-control w-full rounded-md px-2 py-1"
-											required
-										>
-											<option value="">Select division</option>
-											<option value="child-welfare">Child Welfare</option>
-											<option value="behavioral-health">
-												Behavioral Health
-											</option>
-											<option value="clinic">Clinic</option>
-											<option value="residential">Residential</option>
-											<option value="cfs">CFS</option>
-											<option value="hr">Human Resources</option>
-											<option value="support">Support</option>
-											<option value="help-desk">Help Desk</option>
-											<option value="accounting">Accounting</option>
-											<option value="c-suite">C-Suite</option>
-										</select>
-									</div>
-									<div>
-										<label className="block text-sm font-medium">Role</label>
-										<select
-											name="role"
-											value=""
-											onChange={() => {}}
-											className="glass-form-control w-full rounded-md px-2 py-1"
-											required
-										>
-											<option value="executive">Executive</option>
-											<option value="manager">Manager</option>
-											<option value="admin">Admin</option>
-										</select>
-									</div>
-									{/* editError && (
-                  <div className="text-red-600 text-sm">{editError}</div>
-                ) */}
-									<div className="flex justify-end gap-2">
-										<Button
-											type="button"
-											variant="outline"
-											onClick={() => {}}
-											disabled={false}
-											className="primary-btn px-3 sm:px-4"
-										>
-											<Ban className="w-4 h-4" />
-											Cancel
-										</Button>
-										<Button type="submit" disabled={false}>
-											Save
-										</Button>
-									</div>
-									{false && (
-										<div className="text-center text-slate-500">
-											Saving changes...
-										</div>
-									)}
-								</form>
-							</DialogContent>
-						</Dialog>
 
 						{/* Enhanced Revoke Confirmation Dialog */}
 						<AlertDialog

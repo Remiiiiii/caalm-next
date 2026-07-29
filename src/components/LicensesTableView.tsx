@@ -2,8 +2,9 @@
 
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLicensesView } from "@/components/LicensesView";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Table,
 	TableBody,
@@ -16,59 +17,75 @@ import { useToast } from "@/hooks/use-toast";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import {
+	getLicenseExpiryUrgency,
+	isLicenseExpired,
+} from "@/lib/licenses/licensesListUtils";
+import {
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
-import { convertFileSize } from "@/lib/utils";
+import { cn, convertFileSize } from "@/lib/utils";
 import type { License } from "@/types/licenses";
 import FormattedDateTime, { FormattedDate } from "./FormattedDateTime";
 import LicenseActionDropdown from "./licenses/LicenseActionDropdown";
 import ManagerAvatars from "./ManagerAvatars";
 import Thumbnail from "./Thumbnail";
 
-// Map license status to badge color and label (aligned with contracts / style guide)
-const statusBadge = (status: string) => {
-	let color = "";
-	let label = status;
-	switch (status) {
-		case "pending-review":
-			color =
-				"border border-orange/20 bg-orange/10 text-orange text-xs rounded-md font-medium";
-			label = "Pending Review";
-			break;
-		case "action-required":
-			color =
-				"border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium";
-			label = "Action Required";
-			break;
-		case "active":
-			color =
-				"border border-green/20 bg-green/10 text-green text-xs rounded-md font-medium";
-			label = "Active";
-			break;
-		case "inactive":
-			color =
-				"border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-md font-medium";
-			label = "Inactive";
-			break;
-		case "expired":
-			color =
-				"border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium";
-			label = "Expired";
-			break;
-		case "suspended":
-			color =
-				"border border-slate-200 bg-slate-100 text-slate-700 text-xs rounded-md font-medium";
-			label = "Suspended";
-			break;
-		default:
-			color =
-				"border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-md font-medium";
-			label = status;
-	}
-	return <span className={`inline-block px-1.5 py-0.5 ${color}`}>{label}</span>;
+const statusBadge = (license: License) => {
+	const expired = isLicenseExpired(license);
+	const status = expired ? "expired" : license.status || "";
+	const labelMap: Record<string, string> = {
+		"pending-review": "Pending Review",
+		"action-required": "Action Required",
+		active: "Active",
+		inactive: "Inactive",
+		expired: "Expired",
+		suspended: "Suspended",
+	};
+	const classMap: Record<string, string> = {
+		active: "bg-green/10 text-green border-green/20",
+		"pending-review": "bg-orange/10 text-orange border-orange/20",
+		"action-required": "bg-red/10 text-red border-red/20",
+		inactive: "bg-slate-100 text-slate-600 border-slate-200",
+		expired: "bg-red/10 text-red border-red/20",
+		suspended: "bg-slate-100 text-slate-700 border-slate-200",
+	};
+	return (
+		<span
+			className={cn(
+				"inline-block px-2 py-0.5 text-xs rounded-md font-medium border",
+				classMap[status] || "bg-slate-100 text-slate-700 border-slate-200",
+			)}
+		>
+			{labelMap[status] || status || "—"}
+		</span>
+	);
 };
+
+function expiryCell(license: License) {
+	const expiryDate = license.licenseExpiryDate || license.expirationDate;
+	if (!expiryDate) {
+		return <span className="body-2 text-slate-400">-</span>;
+	}
+	const urgency = getLicenseExpiryUrgency(license);
+	return (
+		<span
+			className={cn(
+				"body-2",
+				urgency !== "none" && urgency !== "expired" && "text-orange",
+				urgency === "expired" && "text-red",
+			)}
+		>
+			<FormattedDate date={expiryDate} className="body-2" />
+			{urgency === "expired" && (
+				<span className="block text-[10px] font-medium uppercase tracking-wide opacity-80">
+					Expired
+				</span>
+			)}
+		</span>
+	);
+}
 
 interface LicensesTableViewProps {
 	licenses: License[];
@@ -85,8 +102,19 @@ export default function LicensesTableView({
 	onRefresh,
 	onLicenseRemoved,
 }: LicensesTableViewProps) {
+	const {
+		selectedIds,
+		toggleSelected,
+		selectAll,
+		clearSelection,
+		setPreviewLicense,
+	} = useLicensesView();
 	const { toast } = useToast();
 	const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
+	const visibleIds = useMemo(() => licenses.map((l) => l.$id), [licenses]);
+	const allSelected =
+		visibleIds.length > 0 &&
+		visibleIds.every((id) => selectedIds.includes(id));
 	const [loadingOwners, setLoadingOwners] = useState<Record<string, boolean>>(
 		{},
 	);
@@ -315,14 +343,6 @@ export default function LicensesTableView({
 		fetchAssignedManagers();
 	}, [licenses, toast]);
 
-	const _formatCurrency = (amount?: number, currency?: string) => {
-		if (!amount) return "N/A";
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: currency || "USD",
-		}).format(amount);
-	};
-
 	const getOwnerName = (license: License): string => {
 		if (ownerNames[license.$id]) return ownerNames[license.$id];
 		return "Unknown";
@@ -388,7 +408,7 @@ export default function LicensesTableView({
 
 	if (licenses.length === 0) {
 		return (
-			<div className="text-center py-12">
+			<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 				<Image
 					src="/assets/icons/no-data.svg"
 					alt="No licenses found"
@@ -402,135 +422,153 @@ export default function LicensesTableView({
 	}
 
 	return (
-		<Card className="bg-white/30 backdrop-blur border mt-6 border-white/40 shadow-lg w-[99.5%]">
-			<div className="glass-card-cap" />
-			<CardContent className="p-6">
-				<div className="w-full overflow-x-auto">
-					<Table className="border-separate border-spacing-0">
-						<TableHeader className="[&_tr]:border-b-0">
-							<TableRow className={DATA_TABLE_HEADER_ROW}>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}>
-									License
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Status
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Size
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Uploaded On
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Expires On
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Department
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Assigned To
-								</TableHead>
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Uploaded By
-								</TableHead>
-								<TableHead
-									className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-								>
-									Actions
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody className="[&_tr:last-child>td]:border-b-0">
-							{licenses.map((license: License) => (
-								<TableRow
-									key={license.$id}
-									className={DATA_TABLE_BODY_ROW_CLICKABLE}
-								>
-									<TableCell className="py-4">
-										<div className="flex items-center gap-3 min-w-0">
-											<Thumbnail
-												type="application/pdf"
-												extension="pdf"
-												url=""
-												className="size-10! shrink-0"
-												imageClassName="!size-8"
-											/>
-											<div className="min-w-0">
-												<p
-													className="subtitle-2 text-slate-700 whitespace-nowrap truncate"
-													title={license.licenseName}
-												>
-													{truncateLicenseName(license.licenseName)}
-												</p>
-												{license.licenseNumber && (
-													<p className="text-xs text-slate-500 mt-0.5">
-														#{license.licenseNumber}
-													</p>
-												)}
-											</div>
-										</div>
-									</TableCell>
-									<TableCell className="py-4 whitespace-nowrap">
-										{license.status && statusBadge(license.status)}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{convertFileSize({
-											sizeInBytes: license.fileSize ?? 0,
-										})}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										<FormattedDateTime
-											date={license.$createdAt}
-											className="body-2"
-										/>
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{license.licenseExpiryDate ? (
-											<FormattedDate
-												date={license.licenseExpiryDate}
-												className="body-2"
-											/>
-										) : (
-											<span className="body-2 text-slate-400">-</span>
+		<div className="w-full overflow-x-auto px-2 sm:px-4 pb-4">
+			<Table className="border-separate border-spacing-0">
+				<TableHeader className="[&_tr]:border-b-0">
+					<TableRow className={DATA_TABLE_HEADER_ROW}>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
+							<Checkbox
+								checked={allSelected}
+								onCheckedChange={(checked) => {
+									if (checked) selectAll(visibleIds);
+									else clearSelection();
+								}}
+								aria-label="Select all visible licenses"
+								className="cursor-pointer"
+							/>
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							License
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Status
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Size
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Uploaded On
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Expires On
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Department
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Assigned To
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							By
+						</TableHead>
+						<TableHead
+							className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+						>
+							Actions
+						</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody className="[&_tr:last-child>td]:border-b-0">
+					{licenses.map((license: License) => (
+						<TableRow
+							key={license.$id}
+							className={cn(
+								DATA_TABLE_BODY_ROW_CLICKABLE,
+								"group",
+								selectedIds.includes(license.$id) && "bg-blue-50/50",
+							)}
+							onClick={() => setPreviewLicense(license)}
+						>
+							<TableCell
+								className="py-4 pl-4 pr-2"
+								onClick={(e) => e.stopPropagation()}
+							>
+								<Checkbox
+									checked={selectedIds.includes(license.$id)}
+									onCheckedChange={() => toggleSelected(license.$id)}
+									aria-label={`Select ${license.licenseName || "license"}`}
+									className="cursor-pointer"
+								/>
+							</TableCell>
+							<TableCell className="py-4">
+								<div className="flex items-center gap-3 min-w-0">
+									<Thumbnail
+										type="application/pdf"
+										extension="pdf"
+										url=""
+										className="size-10! shrink-0"
+										imageClassName="!size-8"
+									/>
+									<div className="min-w-0">
+										<p
+											className="subtitle-2 text-slate-700 whitespace-nowrap truncate max-w-[180px]"
+											title={license.licenseName}
+										>
+											{truncateLicenseName(license.licenseName)}
+										</p>
+										{license.licenseNumber && (
+											<p className="text-xs text-slate-500 mt-0.5">
+												#{license.licenseNumber}
+											</p>
 										)}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{license.division || license.department || (
-											<span className="body-2 text-slate-400">-</span>
-										)}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{renderAssignedManagers(license)}
-									</TableCell>
-									<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-										{loadingOwners[license.$id] ? (
-											<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
-												<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-												Loading...
-											</span>
-										) : (
-											<span
-												className="body-2 truncate block"
-												title={getOwnerName(license)}
-											>
-												{getOwnerName(license)}
-											</span>
-										)}
-									</TableCell>
-									<TableCell className="py-4 text-right">
-										<LicenseActionDropdown
-											license={license}
-											onRefresh={onRefresh}
-											onLicenseRemoved={onLicenseRemoved}
-											userRole={user?.role as "executive" | "admin" | "manager"}
-										/>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</div>
-			</CardContent>
-		</Card>
+									</div>
+								</div>
+							</TableCell>
+							<TableCell className="py-4 whitespace-nowrap">
+								{statusBadge(license)}
+							</TableCell>
+							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+								{convertFileSize({
+									sizeInBytes: license.fileSize ?? 0,
+								})}
+							</TableCell>
+							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+								<FormattedDateTime
+									date={license.$createdAt}
+									className="body-2"
+								/>
+							</TableCell>
+							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+								{expiryCell(license)}
+							</TableCell>
+							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+								{license.division || license.department || (
+									<span className="body-2 text-slate-400">-</span>
+								)}
+							</TableCell>
+							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+								{renderAssignedManagers(license)}
+							</TableCell>
+							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+								{loadingOwners[license.$id] ? (
+									<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
+										<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+										Loading...
+									</span>
+								) : (
+									<span
+										className="body-2 truncate block"
+										title={getOwnerName(license)}
+									>
+										{getOwnerName(license)}
+									</span>
+								)}
+							</TableCell>
+							<TableCell
+								className="py-4 text-right"
+								onClick={(e) => e.stopPropagation()}
+							>
+								<LicenseActionDropdown
+									license={license}
+									onRefresh={onRefresh}
+									onLicenseRemoved={onLicenseRemoved}
+									userRole={user?.role as "executive" | "admin" | "manager"}
+								/>
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
+		</div>
 	);
 }

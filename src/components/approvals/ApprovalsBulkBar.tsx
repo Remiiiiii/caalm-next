@@ -66,13 +66,27 @@ export default function ApprovalsBulkBar({
 		link.click();
 	};
 
-	const decideLicense = async (id: string, status: string) => {
-		const res = await fetch(`/api/licenses/${id}`, {
-			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ status }),
-		});
-		if (!res.ok) throw new Error("Failed");
+	const decideLicense = async (
+		licenseId: string,
+		decision: "approved" | "rejected" | "changes_requested",
+		notes?: string,
+	) => {
+		const res = await fetch(
+			`/api/licenses/${licenseId}/approval-workflow/decide`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					decision,
+					notes,
+					path: pathname || "/licenses/approvals",
+				}),
+			},
+		);
+		const json = await res.json();
+		if (!res.ok || !json.success) {
+			throw new Error(json.error || "Failed");
+		}
 	};
 
 	const decideContract = async (
@@ -109,23 +123,20 @@ export default function ApprovalsBulkBar({
 				) {
 					continue;
 				}
+				const decision =
+					status === "active"
+						? "approved"
+						: status === "action-required"
+							? "changes_requested"
+							: "rejected";
+				const notes =
+					decision === "approved" ? undefined : denyNotes || "Bulk decision";
 				if (item.entity === "contract") {
-					const decision =
-						status === "active"
-							? "approved"
-							: status === "action-required"
-								? "changes_requested"
-								: "rejected";
-					await decideContract(
-						item.decisionId,
-						decision,
-						decision === "approved" ? undefined : denyNotes || "Bulk decision",
-					);
-					ok++;
+					await decideContract(item.decisionId, decision, notes);
 				} else {
-					await decideLicense(item.decisionId, status);
-					ok++;
+					await decideLicense(item.decisionId, decision, notes);
 				}
+				ok++;
 			}
 			toast({
 				title: "Bulk update complete",

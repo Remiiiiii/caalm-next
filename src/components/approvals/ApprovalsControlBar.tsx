@@ -50,7 +50,8 @@ export default function ApprovalsControlBar({
 						placeholder="Search approvals..."
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
-						className="pl-9 w-full bg-white border-slate-200"
+						data-with-leading-icon="true"
+						className="w-full bg-white border-slate-200"
 					/>
 				</div>
 				<div className="flex items-center gap-2 justify-end flex-wrap">

@@ -1,40 +1,40 @@
 "use client";
 
-interface TotalSpace {
-	document: { size: number; latestDate: string };
-	image: { size: number; latestDate: string };
-	video: { size: number; latestDate: string };
-	audio: { size: number; latestDate: string };
-	other: { size: number; latestDate: string };
-	used: number;
-	all: number;
-}
+import type { StorageUsagePayload } from "@/lib/storage/storageUsage.types";
 
 interface StorageProgressBarProps {
-	totalSpace: TotalSpace | null;
-	maxSizeGB?: number; // Optional override, defaults to 100GB (Growth Plan)
+	totalSpace: StorageUsagePayload | null;
+	maxSizeGB?: number;
+	limitBytes?: number;
 }
 
 export default function StorageProgressBar({
 	totalSpace,
-	maxSizeGB = 100, // Default to Growth Plan limit
+	maxSizeGB,
+	limitBytes,
 }: StorageProgressBarProps) {
 	if (!totalSpace) {
 		return null;
 	}
 
-	const totalSizeBytes = totalSpace.used || 0;
-	const totalSizeKB = totalSizeBytes / 1024;
-	const maxSizeKB = maxSizeGB * 1024 * 1024; // Convert GB to KB for calculation
-	const percentage = Math.min((totalSizeKB / maxSizeKB) * 100, 100);
+	const resolvedLimitBytes =
+		limitBytes ??
+		totalSpace.limitBytes ??
+		(maxSizeGB ?? 100) * 1024 * 1024 * 1024;
+	const resolvedMaxSizeGB =
+		maxSizeGB ??
+		totalSpace.limitGB ??
+		resolvedLimitBytes / (1024 * 1024 * 1024);
 
-	// Convert to GB if >= 1 GB (1024 * 1024 KB), otherwise keep in KB
-	const KB_PER_GB = 1024 * 1024; // 1,048,576 KB = 1 GB
+	const totalSizeBytes = totalSpace.used || 0;
+	const percentage = Math.min((totalSizeBytes / resolvedLimitBytes) * 100, 100);
+
+	const KB_PER_GB = 1024 * 1024;
+	const totalSizeKB = totalSizeBytes / 1024;
 	let formattedUsed: string;
 	let usedUnit: string;
 
 	if (totalSizeKB >= KB_PER_GB) {
-		// Convert to GB
 		const totalSizeGB = totalSizeKB / KB_PER_GB;
 		formattedUsed = totalSizeGB.toLocaleString(undefined, {
 			minimumFractionDigits: 2,
@@ -42,7 +42,6 @@ export default function StorageProgressBar({
 		});
 		usedUnit = "GB";
 	} else {
-		// Keep in KB
 		formattedUsed = totalSizeKB.toLocaleString(undefined, {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
@@ -50,13 +49,17 @@ export default function StorageProgressBar({
 		usedUnit = "KB";
 	}
 
-	// Color indicator based on usage percentage
-	let progressColor = "rgb(22, 163, 74)"; // green-600 - < 50% usage
+	let progressColor = "rgb(22, 163, 74)";
 	if (percentage >= 80) {
-		progressColor = "rgb(220, 38, 38)"; // red-600 - >= 80% usage (critical)
+		progressColor = "rgb(220, 38, 38)";
 	} else if (percentage >= 50) {
-		progressColor = "rgb(217, 119, 6)"; // amber-600 - 50-80% usage (warning)
+		progressColor = "rgb(217, 119, 6)";
 	}
+
+	const displayLimitGB =
+		Number.isInteger(resolvedMaxSizeGB) || resolvedMaxSizeGB >= 10
+			? Math.round(resolvedMaxSizeGB)
+			: Number(resolvedMaxSizeGB.toFixed(1));
 
 	return (
 		<div className="w-full">
@@ -70,8 +73,8 @@ export default function StorageProgressBar({
 						}}
 					/>
 				</div>
-				<p className="text-xs text-center text-slate-600">
-					{formattedUsed} {usedUnit} of {maxSizeGB} GB used
+				<p className="mb-6 text-xs text-center text-slate-600">
+					{formattedUsed} {usedUnit} of {displayLimitGB} GB used
 				</p>
 			</div>
 		</div>

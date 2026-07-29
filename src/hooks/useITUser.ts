@@ -2,7 +2,7 @@
  * Hook for fetching IT user data with role and department
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	getCurrentUser,
 	getCurrentUserFrom2FA,
@@ -35,7 +35,7 @@ export function useITUser(): UseITUserReturn {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	const fetchUser = async () => {
+	const fetchUser = useCallback(async () => {
 		try {
 			setLoading(true);
 			setError(null);
@@ -48,7 +48,6 @@ export function useITUser(): UseITUserReturn {
 
 			if (!currentUser) {
 				setUser(null);
-				setLoading(false);
 				return;
 			}
 
@@ -56,7 +55,6 @@ export function useITUser(): UseITUserReturn {
 			const defaultOrg = await getUserDefaultOrganization(currentUser.$id);
 			if (!defaultOrg) {
 				setUser(null);
-				setLoading(false);
 				return;
 			}
 
@@ -82,10 +80,10 @@ export function useITUser(): UseITUserReturn {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, []);
 
 	useEffect(() => {
-		fetchUser();
+		void fetchUser();
 	}, [fetchUser]);
 
 	return {

@@ -16,19 +16,18 @@ import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import DocumentViewer from "@/components/DocumentViewer";
 import FormattedDateTime from "@/components/FormattedDateTime";
+import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
+import {
+	previewSectionClass,
+	previewSectionHeaderClass,
+} from "@/components/preview/previewSheetParts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { useContractApprovalWorkflow } from "@/hooks/useContractApprovalWorkflow";
+import { useLicenseApprovalWorkflow } from "@/hooks/useLicenseApprovalWorkflow";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
 	type ApprovalQueueItem,
@@ -59,11 +58,28 @@ export default function ApprovalDecideSheet({
 	const { setPreviewItem } = useApprovalsView();
 	const contractIdForWorkflow =
 		open && item?.entity === "contract" ? item.decisionId : null;
+	const licenseIdForWorkflow =
+		open && item?.entity === "license" ? item.decisionId : null;
 	const {
-		workflow,
-		decide: decideWorkflow,
-		isLoading: workflowLoading,
+		workflow: contractWorkflow,
+		decide: decideContractWorkflow,
+		isLoading: contractWorkflowLoading,
 	} = useContractApprovalWorkflow(contractIdForWorkflow);
+	const {
+		workflow: licenseWorkflow,
+		decide: decideLicenseWorkflow,
+		isLoading: licenseWorkflowLoading,
+	} = useLicenseApprovalWorkflow(licenseIdForWorkflow);
+	const workflow =
+		item?.entity === "contract" ? contractWorkflow : licenseWorkflow;
+	const decideWorkflow =
+		item?.entity === "contract"
+			? decideContractWorkflow
+			: decideLicenseWorkflow;
+	const workflowLoading =
+		item?.entity === "contract"
+			? contractWorkflowLoading
+			: licenseWorkflowLoading;
 	const [notes, setNotes] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [viewerOpen, setViewerOpen] = useState(false);
@@ -80,15 +96,6 @@ export default function ApprovalDecideSheet({
 			? constructFileUrl(item.bucketFileId)
 			: item.documentUrl;
 
-	const decideLicense = async (status: string) => {
-		const res = await fetch(`/api/licenses/${item.decisionId}`, {
-			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ status }),
-		});
-		if (!res.ok) throw new Error("Failed to update license");
-	};
-
 	const handleDecision = async (decision: Decision) => {
 		if (!canDecide && !(workflow?.canDecide || workflow?.canOverride)) return;
 		if (
@@ -103,39 +110,27 @@ export default function ApprovalDecideSheet({
 			return;
 		}
 
-		const nextStatus =
-			decision === "approved"
-				? "active"
-				: decision === "changes_requested"
-					? "action-required"
-					: "inactive";
-
 		setBusy(true);
 		try {
-			if (item.entity === "contract") {
-				await decideWorkflow({
-					decision,
-					notes,
-					path: pathname || "/contracts/approvals",
-				});
-				toast({
-					title:
-						decision === "approved"
-							? "Step approved"
-							: decision === "changes_requested"
-								? "Changes requested"
-								: "Rejected",
-					description: "Approval workflow updated.",
-				});
-				router.refresh();
-			} else {
-				await decideLicense(nextStatus);
-				toast({
-					title: "Status Updated",
-					description: `License status changed to "${nextStatus}"`,
-				});
-				router.refresh();
-			}
+			await decideWorkflow({
+				decision,
+				notes,
+				path:
+					pathname ||
+					(item.entity === "contract"
+						? "/contracts/approvals"
+						: "/licenses/approvals"),
+			});
+			toast({
+				title:
+					decision === "approved"
+						? "Step approved"
+						: decision === "changes_requested"
+							? "Changes requested"
+							: "Rejected",
+				description: "Approval workflow updated.",
+			});
+			router.refresh();
 			if (notes.trim()) {
 				toast({
 					title: "Decision recorded",
@@ -161,177 +156,74 @@ export default function ApprovalDecideSheet({
 		item.status === "pending-review" || item.status === "action-required";
 
 	const canActOnWorkflow =
-		item.entity === "contract"
-			? !!(workflow?.canDecide || workflow?.canOverride) && isPending
-			: canDecide && isPending;
+		!!(workflow?.canDecide || workflow?.canOverride || canDecide) && isPending;
 
 	return (
 		<>
-			<Sheet open={open} onOpenChange={onOpenChange}>
-				<SheetContent
-					side="right"
-					className="w-full sm:max-w-md p-0 flex flex-col border-l border-slate-200"
-				>
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70" />
-					<SheetHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4 px-6 text-left space-y-1">
-						<div className="flex items-center gap-3">
-							<FileText className="w-5 h-5 text-[#0f5384]" />
-							<SheetTitle className="text-xl font-semibold sidebar-gradient-text truncate pr-6">
-								{item.title}
-							</SheetTitle>
-						</div>
-						<SheetDescription className="text-sm text-slate-600 ml-8">
-							{item.subtitle ||
-								(item.entity === "contract"
-									? "Contract review"
-									: "License review")}
-						</SheetDescription>
-					</SheetHeader>
-
-					<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">
-						<div className="flex flex-wrap items-center gap-2">
-							<Badge
-								variant="outline"
-								className={cn(
-									"border capitalize",
-									statusBadgeClasses(item.status),
-								)}
-							>
-								{statusLabel(item.status)}
-							</Badge>
-							<Badge
-								variant="outline"
-								className="border border-slate-200 bg-white text-slate-600"
-							>
-								Waiting {agingLabel(item)}
-							</Badge>
-						</div>
-
-						{item.entity === "contract" && (
-							<div className="-mx-2 overflow-hidden rounded-xl border border-slate-200 bg-white p-3">
-								<p className="mb-2 px-1 text-xs font-medium text-slate-600">
-									Approval workflow
-								</p>
-								{workflowLoading ? (
-									<div className="flex h-24 items-center justify-center text-xs text-slate-500">
-										<Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-										Loading workflow…
-									</div>
-								) : workflow ? (
-									<div className="overflow-x-auto">
-										<ContractApprovalFlowCanvas workflow={workflow} />
-									</div>
-								) : (
-									<p className="px-1 text-xs text-slate-500">
-										Workflow unavailable
-									</p>
-								)}
-							</div>
-						)}
-
-						<div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-							<div className="flex items-start gap-3">
-								<Users className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
-								<div className="min-w-0">
-									<p className="text-xs text-slate-500">
-										Department / Assignees
-									</p>
-									<p className="text-sm text-slate-900">
-										{item.department || "—"}
-										{item.assignees.length > 0
-											? ` · ${item.assignees.join(", ")}`
-											: ""}
-									</p>
-								</div>
-							</div>
-							<div className="flex items-start gap-3">
-								<CheckCircle2 className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
-								<div className="min-w-0">
-									<p className="text-xs text-slate-500">Type</p>
-									<p className="text-sm text-slate-900">
-										{item.itemType || "—"}
-									</p>
-								</div>
-							</div>
-							<div className="flex items-start gap-3">
-								<AlertTriangle className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
-								<div className="min-w-0">
-									<p className="text-xs text-slate-500">Submitted</p>
-									<p className="text-sm text-slate-900">
-										<FormattedDateTime
-											date={item.submittedAt}
-											className="body-2"
-										/>
-									</p>
-								</div>
-							</div>
-							{item.vendor && (
-								<div>
-									<p className="text-xs text-slate-500">Vendor</p>
-									<p className="text-sm text-slate-900">{item.vendor}</p>
-								</div>
+			<EntityPreviewSheetShell
+				open={open}
+				onOpenChange={onOpenChange}
+				title={item.title}
+				description={
+					item.subtitle ||
+					(item.entity === "contract" ? "Contract review" : "License review")
+				}
+				icon={FileText}
+				statusBanner={
+					<div className="flex flex-wrap items-center justify-center gap-2 border-b border-white/45 px-5 py-2.5">
+						<Badge
+							variant="outline"
+							className={cn(
+								"border capitalize",
+								statusBadgeClasses(item.status),
 							)}
-							{typeof item.amount === "number" && item.amount > 0 && (
-								<div>
-									<p className="text-xs text-slate-500">Amount</p>
-									<p className="text-sm text-slate-900">
-										$
-										{new Intl.NumberFormat("en-US", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										}).format(item.amount)}
-									</p>
-								</div>
-							)}
-						</div>
-
-						{canActOnWorkflow && (
-							<div className="space-y-2">
-								<label
-									htmlFor="approval-notes"
-									className="text-sm font-medium text-slate-700"
-								>
-									Decision notes
-								</label>
-								<Textarea
-									id="approval-notes"
-									value={notes}
-									onChange={(e) => setNotes(e.target.value)}
-									placeholder="Required for deny or request changes"
-									className="bg-white min-h-[88px]"
-								/>
-							</div>
-						)}
+						>
+							{statusLabel(item.status)}
+						</Badge>
+						<Badge
+							variant="outline"
+							className="border border-white/50 bg-white/60 text-slate-600"
+						>
+							Waiting {agingLabel(item)}
+						</Badge>
 					</div>
-
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 space-y-3">
-						<div className="flex items-center gap-2 flex-wrap">
-							{canReview &&
-								docUrl &&
-								item.entity === "contract" &&
-								item.bucketFileId && (
+				}
+				footer={
+					<div className="flex w-full flex-col gap-3">
+						{(canReview && docUrl && item.entity === "contract" && item.bucketFileId) ||
+						docUrl ? (
+							<div className="flex flex-wrap items-center gap-2">
+								{canReview &&
+									docUrl &&
+									item.entity === "contract" &&
+									item.bucketFileId && (
+										<Button
+											type="button"
+											variant="outline"
+											className="primary-btn cursor-pointer px-3 sm:px-4"
+											onClick={() => setViewerOpen(true)}
+										>
+											<FileText className="h-4 w-4" />
+											Open document
+										</Button>
+									)}
+								{docUrl ? (
 									<Button
-										type="button"
+										asChild
 										variant="outline"
-										className="primary-btn px-3 sm:px-4 cursor-pointer"
-										onClick={() => setViewerOpen(true)}
+										className="primary-btn cursor-pointer px-3 sm:px-4"
 									>
-										<FileText className="h-4 w-4" />
-										Open document
+										<a href={docUrl} target="_blank" rel="noopener noreferrer">
+											<ExternalLink className="h-4 w-4" />
+											Open link
+										</a>
 									</Button>
-								)}
-							{docUrl && (
-								<Button asChild variant="outline" className="cursor-pointer">
-									<a href={docUrl} target="_blank" rel="noopener noreferrer">
-										<ExternalLink className="h-4 w-4" />
-										Open link
-									</a>
-								</Button>
-							)}
-						</div>
+								) : null}
+							</div>
+						) : null}
 
 						{canActOnWorkflow ? (
-							<div className="flex items-center justify-between gap-2 flex-wrap">
+							<div className="flex flex-wrap items-center justify-between gap-2">
 								<Button
 									type="button"
 									variant="outline"
@@ -346,11 +238,11 @@ export default function ApprovalDecideSheet({
 									)}
 									Deny
 								</Button>
-								<div className="flex items-center gap-2">
+								<div className="flex flex-wrap items-center gap-2">
 									<Button
 										type="button"
 										variant="outline"
-										className="cursor-pointer"
+										className="primary-btn cursor-pointer px-3 sm:px-4"
 										disabled={busy}
 										onClick={() => handleDecision("changes_requested")}
 									>
@@ -358,7 +250,7 @@ export default function ApprovalDecideSheet({
 									</Button>
 									<Button
 										type="button"
-										className="primary-btn px-3 sm:px-4 cursor-pointer"
+										className="primary-btn cursor-pointer px-3 sm:px-4"
 										disabled={busy}
 										onClick={() => handleDecision("approved")}
 									>
@@ -375,16 +267,108 @@ export default function ApprovalDecideSheet({
 							<div className="flex justify-end">
 								<Button
 									variant="outline"
-									className="primary-btn px-3 sm:px-4 cursor-pointer"
+									className="primary-btn cursor-pointer px-3 sm:px-4"
 									onClick={() => onOpenChange(false)}
 								>
+									<X className="h-4 w-4" />
 									Close
 								</Button>
 							</div>
 						)}
 					</div>
-				</SheetContent>
-			</Sheet>
+				}
+			>
+				{(item.entity === "contract" || item.entity === "license") && (
+					<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
+						<div className={previewSectionHeaderClass}>
+							<p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+								Approval workflow
+							</p>
+						</div>
+						<div className="p-3">
+							{workflowLoading ? (
+								<div className="flex h-24 items-center justify-center text-xs text-slate-500">
+									<Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+									Loading workflow…
+								</div>
+							) : workflow ? (
+								<div className="overflow-x-auto">
+									<ContractApprovalFlowCanvas workflow={workflow} />
+								</div>
+							) : (
+								<p className="text-xs text-slate-500">Workflow unavailable</p>
+							)}
+						</div>
+					</section>
+				)}
+
+				<section className={cn(previewSectionClass, "space-y-3 p-4")}>
+					<div className="flex items-start gap-3">
+						<Users className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
+						<div className="min-w-0">
+							<p className="text-xs text-slate-500">Department / Assignees</p>
+							<p className="text-sm text-slate-900">
+								{item.department || "—"}
+								{item.assignees.length > 0
+									? ` · ${item.assignees.join(", ")}`
+									: ""}
+							</p>
+						</div>
+					</div>
+					<div className="flex items-start gap-3">
+						<CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
+						<div className="min-w-0">
+							<p className="text-xs text-slate-500">Type</p>
+							<p className="text-sm text-slate-900">{item.itemType || "—"}</p>
+						</div>
+					</div>
+					<div className="flex items-start gap-3">
+						<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
+						<div className="min-w-0">
+							<p className="text-xs text-slate-500">Submitted</p>
+							<p className="text-sm text-slate-900">
+								<FormattedDateTime date={item.submittedAt} className="body-2" />
+							</p>
+						</div>
+					</div>
+					{item.vendor ? (
+						<div>
+							<p className="text-xs text-slate-500">Vendor</p>
+							<p className="text-sm text-slate-900">{item.vendor}</p>
+						</div>
+					) : null}
+					{typeof item.amount === "number" && item.amount > 0 ? (
+						<div>
+							<p className="text-xs text-slate-500">Amount</p>
+							<p className="text-sm text-slate-900">
+								$
+								{new Intl.NumberFormat("en-US", {
+									minimumFractionDigits: 2,
+									maximumFractionDigits: 2,
+								}).format(item.amount)}
+							</p>
+						</div>
+					) : null}
+				</section>
+
+				{canActOnWorkflow ? (
+					<div className="space-y-2">
+						<label
+							htmlFor="approval-notes"
+							className="text-sm font-medium text-slate-700"
+						>
+							Decision notes
+						</label>
+						<Textarea
+							id="approval-notes"
+							value={notes}
+							onChange={(e) => setNotes(e.target.value)}
+							placeholder="Required for deny or request changes"
+							className="min-h-[88px] border-white/60 bg-white/80"
+						/>
+					</div>
+				) : null}
+			</EntityPreviewSheetShell>
 
 			{item.entity === "contract" && item.bucketFileId && (
 				<DocumentViewer

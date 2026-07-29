@@ -1,33 +1,35 @@
 /** Shared icon maps and colors for expanded + collapsed sidebar. */
 
 export const SUBITEM_TEXT_GREY = "#8E8E8E";
+/** Fill used by sidebar SVG icons (Uploads, Images, etc.) */
+export const NAV_ICON_FILL_GREY = "#BFBFBF";
 
 export const SECTION_ICONS: Record<
 	string,
 	{ src: string; width: number; height: number }
 > = {
-	Calendar: { src: "/assets/icons/calendar2.svg", width: 24, height: 24 },
-	Contracts: { src: "/assets/icons/contracts.svg", width: 30, height: 30 },
-	Licenses: { src: "/assets/icons/license.svg", width: 28, height: 28 },
-	Documents: { src: "/assets/icons/documents.svg", width: 24, height: 24 },
-	Audits: { src: "/assets/icons/audit.svg", width: 28, height: 28 },
-	Team: { src: "/assets/icons/team.svg", width: 28, height: 28 },
+	Calendar: { src: "/assets/icons/calendar2.svg", width: 22, height: 22 },
+	Contracts: { src: "/assets/icons/contracts.svg", width: 22, height: 22 },
+	Licenses: { src: "/assets/icons/license.svg", width: 22, height: 22 },
+	Files: { src: "/assets/icons/folder-section.svg", width: 22, height: 22 },
+	Audits: { src: "/assets/icons/audit.svg", width: 22, height: 22 },
+	Team: { src: "/assets/icons/team.svg", width: 22, height: 22 },
 	"Reports & Analytics": {
 		src: "/assets/icons/reports-analytics.svg",
-		width: 28,
-		height: 28,
+		width: 22,
+		height: 22,
 	},
-	Settings: { src: "/assets/icons/settings.svg", width: 28, height: 28 },
+	Settings: { src: "/assets/icons/settings.svg", width: 22, height: 22 },
 	"My Roles & Permissions": {
 		src: "/assets/icons/shield.svg",
-		width: 24,
-		height: 24,
+		width: 22,
+		height: 22,
 	},
 };
 
 export const ITEM_ICONS: Record<
 	string,
-	{ src: string; width: number; height: number; color: string }
+	{ src?: string; width: number; height: number; color: string }
 > = {
 	"All Contracts": {
 		src: "/assets/icons/all-contracts.svg",
@@ -69,6 +71,11 @@ export const ITEM_ICONS: Record<
 		src: "/assets/icons/uploads.svg",
 		width: 20,
 		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	Documents: {
+		width: 22,
+		height: 22,
 		color: SUBITEM_TEXT_GREY,
 	},
 	Images: {

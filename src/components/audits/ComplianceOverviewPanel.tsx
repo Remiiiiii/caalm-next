@@ -38,7 +38,7 @@ const RAG_STYLES = {
 const MODULE_LINKS = [
 	{ label: "Contracts", href: "/contracts", icon: FileText },
 	{ label: "Licenses", href: "/licenses", icon: Shield },
-	{ label: "Documents", href: "/uploads", icon: FileText },
+	{ label: "Documents", href: "/documents", icon: FileText },
 	{ label: "Reports", href: "/analytics", icon: ScrollText },
 ] as const;
 

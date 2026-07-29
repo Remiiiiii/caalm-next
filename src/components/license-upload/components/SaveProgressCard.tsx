@@ -32,7 +32,11 @@ export default function SaveProgressCard({
 					</div>
 					<Button
 						type="button"
-						onClick={onSave}
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							onSave();
+						}}
 						disabled={isSaving}
 						className="ml-4 primary-btn sm:px-4 px-3 shimmer-hover"
 					>

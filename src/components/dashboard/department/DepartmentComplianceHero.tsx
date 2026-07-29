@@ -93,7 +93,7 @@ export function DepartmentComplianceHero({
 					href: "/calendar",
 					icon: Shield,
 				},
-		{ label: "Documents", href: "/uploads", icon: FileText },
+		{ label: "Documents", href: "/documents", icon: FileText },
 	];
 	const reportsLink = {
 		label: "Reports",

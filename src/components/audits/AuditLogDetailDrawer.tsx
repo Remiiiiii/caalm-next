@@ -1,16 +1,22 @@
 "use client";
 
 import { format } from "date-fns";
-import { AlertTriangle, CheckCircle, Clock, XCircle } from "lucide-react";
+import {
+	AlertTriangle,
+	CheckCircle,
+	Clock,
+	X,
+	XCircle,
+} from "lucide-react";
 import type { AuditLog } from "@/components/audits/AuditLogTable";
+import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
+import {
+	previewSectionClass,
+	previewSectionHeaderClass,
+} from "@/components/preview/previewSheetParts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 interface AuditLogDetailDrawerProps {
 	log: AuditLog | null;
@@ -48,163 +54,153 @@ export function AuditLogDetailDrawer({
 	open,
 	onOpenChange,
 }: AuditLogDetailDrawerProps) {
+	if (!log) return null;
+
 	return (
-		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent
-				side="right"
-				className="w-full sm:max-w-lg overflow-y-auto bg-slate-50 border-l border-slate-200"
-			>
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70" />
-				<SheetHeader className="mt-4 text-left border-b border-slate-200 pb-4 bg-linear-to-r from-blue-50 to-indigo-50 -mx-6 px-6 py-4">
-					<div className="flex items-center gap-3">
-						<AlertTriangle className="w-5 h-5 text-[#0f5384]" />
-						<SheetTitle className="text-xl font-semibold sidebar-gradient-text">
-							Event details
-						</SheetTitle>
+		<EntityPreviewSheetShell
+			open={open}
+			onOpenChange={onOpenChange}
+			maxWidth="lg"
+			title="Event details"
+			description={log.summary || log.event_title || "Audit event"}
+			icon={AlertTriangle}
+			footer={
+				<div className="flex w-full justify-end">
+					<Button
+						variant="outline"
+						className="primary-btn cursor-pointer px-3 sm:px-4"
+						onClick={() => onOpenChange(false)}
+					>
+						<X className="h-4 w-4" />
+						Close
+					</Button>
+				</div>
+			}
+		>
+			<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
+				<div className={previewSectionHeaderClass}>
+					<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+						Event summary
+					</h3>
+				</div>
+				<div className="grid grid-cols-1 gap-4 p-4 text-sm sm:grid-cols-2">
+					<div>
+						<p className="mb-1 text-xs text-slate-500">Timestamp</p>
+						<p className="text-slate-900">
+							{log.created_at
+								? format(new Date(log.created_at), "MMM d, yyyy HH:mm:ss")
+								: "—"}
+						</p>
 					</div>
-					<p className="text-sm text-slate-600 mt-1 ml-8">
-						{log?.summary || log?.event_title || "Audit event"}
+					<div>
+						<p className="mb-1 text-xs text-slate-500">Status</p>
+						<StatusBadge status={log.status} />
+					</div>
+					<div>
+						<p className="mb-1 text-xs text-slate-500">Action</p>
+						<p className="text-slate-900 capitalize">{log.action}</p>
+					</div>
+					<div>
+						<p className="mb-1 text-xs text-slate-500">Module</p>
+						<p className="text-slate-900 capitalize">{log.module || "—"}</p>
+					</div>
+					<div className="sm:col-span-2">
+						<p className="mb-1 text-xs text-slate-500">Actor</p>
+						<p className="font-medium text-slate-900">{log.user_name}</p>
+						<p className="text-xs text-slate-600">{log.user_email}</p>
+					</div>
+					<div>
+						<p className="mb-1 text-xs text-slate-500">Target</p>
+						<p className="text-slate-900">
+							{log.target_label || log.event_title}
+						</p>
+						{log.target_type ? (
+							<p className="text-xs text-slate-600">{log.target_type}</p>
+						) : null}
+					</div>
+					<div>
+						<p className="mb-1 text-xs text-slate-500">Source</p>
+						<p className="uppercase text-slate-900">{log.source}</p>
+					</div>
+					<div>
+						<p className="mb-1 text-xs text-slate-500">IP address</p>
+						<p className="text-slate-900">{log.ip_address || "N/A"}</p>
+					</div>
+					<div>
+						<p className="mb-1 text-xs text-slate-500">Event ID</p>
+						<p className="break-all text-xs text-slate-900">{log.event_id}</p>
+					</div>
+				</div>
+			</section>
+
+			{log.reason ? (
+				<section className={cn(previewSectionClass, "p-4")}>
+					<p className="mb-1 text-xs text-slate-500">Reason</p>
+					<p className="text-sm text-slate-900">{log.reason}</p>
+				</section>
+			) : null}
+
+			{log.error_message ? (
+				<div className="rounded-lg border border-red/20 bg-red/10 p-3">
+					<p className="mb-1 text-xs font-medium text-red">Error</p>
+					<p className="text-sm text-red">{log.error_message}</p>
+				</div>
+			) : null}
+
+			{log.changes && log.changes.length > 0 ? (
+				<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
+					<div className={previewSectionHeaderClass}>
+						<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+							Field changes
+						</h3>
+					</div>
+					<div className="overflow-hidden">
+						<table className="w-full text-sm">
+							<thead className="bg-white/50 text-left text-xs text-slate-600">
+								<tr>
+									<th className="px-3 py-2">Field</th>
+									<th className="px-3 py-2">Before</th>
+									<th className="px-3 py-2">After</th>
+								</tr>
+							</thead>
+							<tbody>
+								{log.changes.map((change) => (
+									<tr
+										key={`${change.field}-${String(change.before)}-${String(change.after)}`}
+										className="border-t border-white/45"
+									>
+										<td className="px-3 py-2 text-slate-900">{change.field}</td>
+										<td className="px-3 py-2 text-slate-600">
+											{change.before == null ? "—" : String(change.before)}
+										</td>
+										<td className="px-3 py-2 text-slate-900">
+											{change.after == null ? "—" : String(change.after)}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</section>
+			) : null}
+
+			{log.metadata ? (
+				<section className={cn(previewSectionClass, "p-4")}>
+					<p className="mb-2 text-sm font-medium sidebar-gradient-text">
+						Metadata
 					</p>
-				</SheetHeader>
+					<pre className="overflow-x-auto rounded-lg border border-white/50 bg-white/70 p-3 text-xs text-slate-700">
+						{JSON.stringify(log.metadata, null, 2)}
+					</pre>
+				</section>
+			) : null}
 
-				{log ? (
-					<div className="space-y-6 py-6">
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-							<div>
-								<p className="text-xs text-slate-500 mb-1">Timestamp</p>
-								<p className="text-slate-900">
-									{log.created_at
-										? format(new Date(log.created_at), "MMM d, yyyy HH:mm:ss")
-										: "—"}
-								</p>
-							</div>
-							<div>
-								<p className="text-xs text-slate-500 mb-1">Status</p>
-								<StatusBadge status={log.status} />
-							</div>
-							<div>
-								<p className="text-xs text-slate-500 mb-1">Action</p>
-								<p className="text-slate-900 capitalize">{log.action}</p>
-							</div>
-							<div>
-								<p className="text-xs text-slate-500 mb-1">Module</p>
-								<p className="text-slate-900 capitalize">{log.module || "—"}</p>
-							</div>
-							<div className="col-span-2">
-								<p className="text-xs text-slate-500 mb-1">Actor</p>
-								<p className="text-slate-900 font-medium">{log.user_name}</p>
-								<p className="text-xs text-slate-600">{log.user_email}</p>
-							</div>
-							<div>
-								<p className="text-xs text-slate-500 mb-1">Target</p>
-								<p className="text-slate-900">
-									{log.target_label || log.event_title}
-								</p>
-								{log.target_type ? (
-									<p className="text-xs text-slate-600">{log.target_type}</p>
-								) : null}
-							</div>
-							<div>
-								<p className="text-xs text-slate-500 mb-1">Source</p>
-								<p className="text-slate-900 uppercase">{log.source}</p>
-							</div>
-							<div>
-								<p className="text-xs text-slate-500 mb-1">IP address</p>
-								<p className="text-slate-900">{log.ip_address || "N/A"}</p>
-							</div>
-							<div>
-								<p className="text-xs text-slate-500 mb-1">Event ID</p>
-								<p className="text-slate-900 break-all text-xs">
-									{log.event_id}
-								</p>
-							</div>
-						</div>
-
-						{log.reason ? (
-							<div>
-								<p className="text-xs text-slate-500 mb-1">Reason</p>
-								<p className="text-sm text-slate-900">{log.reason}</p>
-							</div>
-						) : null}
-
-						{log.error_message ? (
-							<div className="rounded-lg border border-red/20 bg-red/10 p-3">
-								<p className="text-xs font-medium text-red mb-1">Error</p>
-								<p className="text-sm text-red">{log.error_message}</p>
-							</div>
-						) : null}
-
-						{log.changes && log.changes.length > 0 ? (
-							<div>
-								<p className="text-sm font-medium sidebar-gradient-text mb-2">
-									Field changes
-								</p>
-								<div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-									<table className="w-full text-sm">
-										<thead className="bg-slate-50 text-left text-xs text-slate-600">
-											<tr>
-												<th className="px-3 py-2">Field</th>
-												<th className="px-3 py-2">Before</th>
-												<th className="px-3 py-2">After</th>
-											</tr>
-										</thead>
-										<tbody>
-											{log.changes.map((change) => (
-												<tr
-													key={`${change.field}-${String(change.before)}-${String(change.after)}`}
-													className="border-t border-slate-100"
-												>
-													<td className="px-3 py-2 text-slate-900">
-														{change.field}
-													</td>
-													<td className="px-3 py-2 text-slate-600">
-														{change.before == null
-															? "—"
-															: String(change.before)}
-													</td>
-													<td className="px-3 py-2 text-slate-900">
-														{change.after == null ? "—" : String(change.after)}
-													</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						) : null}
-
-						{log.metadata ? (
-							<div>
-								<p className="text-sm font-medium sidebar-gradient-text mb-2">
-									Metadata
-								</p>
-								<pre className="text-xs overflow-x-auto bg-white border border-slate-200 rounded-lg p-3 text-slate-700">
-									{JSON.stringify(log.metadata, null, 2)}
-								</pre>
-							</div>
-						) : null}
-
-						{log.user_agent ? (
-							<div>
-								<p className="text-xs text-slate-500 mb-1">User agent</p>
-								<p className="text-xs text-slate-600 break-all">
-									{log.user_agent}
-								</p>
-							</div>
-						) : null}
-
-						<div className="pt-2">
-							<Button
-								variant="outline"
-								className="primary-btn px-3 sm:px-4 w-full"
-								onClick={() => onOpenChange(false)}
-							>
-								Close
-							</Button>
-						</div>
-					</div>
-				) : null}
-			</SheetContent>
-		</Sheet>
+			{log.user_agent ? (
+				<section className={cn(previewSectionClass, "p-4")}>
+					<p className="mb-1 text-xs text-slate-500">User agent</p>
+					<p className="break-all text-xs text-slate-600">{log.user_agent}</p>
+				</section>
+			) : null}
+		</EntityPreviewSheetShell>
 	);
 }

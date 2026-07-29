@@ -5,8 +5,7 @@ export async function PUT(
 	_request: NextRequest,
 	{ params }: { params: Promise<{ notificationId: string }> },
 ) {
-	// Resolve params early so we have notificationId in catch block
-	let notificationId = "test-notification-id";
+	let notificationId = "";
 
 	try {
 		const resolvedParams = await params;
@@ -22,36 +21,22 @@ export async function PUT(
 		const notification = await notificationService.markAsRead(notificationId);
 
 		return NextResponse.json({ success: true, data: notification });
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Failed to mark notification as read:", error);
 
-		// Return mock response in test/CI environments - be very permissive
-		const errorMessage = error?.message || String(error || "");
-		const errorString = JSON.stringify(error || {});
-
-		// Always return mock in test/CI environments or if Appwrite endpoint is not configured
+		const errorMessage =
+			error instanceof Error ? error.message : String(error || "");
 		const isTestEnvironment =
-			process.env.CI ||
+			process.env.CI === "true" ||
 			process.env.NODE_ENV === "test" ||
-			process.env.PLAYWRIGHT_TEST ||
-			process.env.NEXT_PUBLIC_APP_URL?.includes("localhost") ||
-			!process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ||
-			error?.isTestConfig ||
-			error?.code === "TEST_CONFIG" ||
-			errorMessage.includes(
-				"Project with the requested ID could not be found",
-			) ||
-			errorMessage.includes("AppwriteException") ||
-			errorMessage.includes("not found") ||
-			errorMessage.includes("Failed to mark notification") ||
-			errorString.includes("AppwriteException");
+			process.env.PLAYWRIGHT_TEST === "true";
 
 		if (isTestEnvironment) {
 			return NextResponse.json(
 				{
 					success: true,
 					data: {
-						$id: notificationId,
+						$id: notificationId || "test-notification-id",
 						read: true,
 						is_read: true,
 					},
@@ -61,7 +46,10 @@ export async function PUT(
 		}
 
 		return NextResponse.json(
-			{ success: false, error: "Failed to mark notification as read" },
+			{
+				success: false,
+				error: errorMessage || "Failed to mark notification as read",
+			},
 			{ status: 500 },
 		);
 	}

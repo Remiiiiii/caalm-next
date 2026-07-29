@@ -135,6 +135,12 @@ function getFallbackTriggers(): Record<string, NotificationTrigger> {
 			defaultTitle: "Task Completed",
 			defaultMessage: "A task has been completed.",
 		},
+		"task-assigned": {
+			type: "task-assigned",
+			priority: "high" as const,
+			defaultTitle: "Task Assigned",
+			defaultMessage: "A task has been assigned to you.",
+		},
 		info: {
 			type: "info",
 			priority: "low" as const,
@@ -519,7 +525,7 @@ export async function triggerDeadlineApproachingNotification(
 			taskName,
 			deadline,
 			daysUntilDeadline,
-			actionUrl: "/tasks",
+			actionUrl: "/team/tasks",
 			actionText: "View Tasks",
 		},
 	});
@@ -540,9 +546,162 @@ export async function triggerTaskCompletedNotification(
 		metadata: {
 			taskName,
 			completedBy,
-			actionUrl: "/tasks",
+			actionUrl: "/team/tasks",
 			actionText: "View Tasks",
 		},
+	});
+}
+
+/**
+ * Notify the assigner when a task's status changes
+ */
+export async function triggerTaskStatusChangedNotification({
+	userId,
+	taskTitle,
+	taskId,
+	previousStatus,
+	newStatus,
+	changedBy,
+}: {
+	userId: string;
+	taskTitle: string;
+	taskId: string;
+	previousStatus: string;
+	newStatus: string;
+	changedBy: string;
+}): Promise<void> {
+	const formatStatus = (status: string) =>
+		status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+
+	const title = `Task status updated: ${taskTitle}`;
+	const message = `${changedBy} changed "${taskTitle}" from ${formatStatus(previousStatus)} to ${formatStatus(newStatus)}.`;
+	const metadata = {
+		taskTitle,
+		taskId,
+		previousStatus,
+		newStatus,
+		changedBy,
+		actionUrl: "/team/tasks",
+		actionText: "View Tasks",
+	};
+
+	const service = await getNotificationService();
+	const triggers = await getNotificationTriggers();
+	const type =
+		newStatus === "done" && triggers["task-completed"]
+			? "task-completed"
+			: triggers["task-assigned"]
+				? "task-assigned"
+				: "info";
+
+	try {
+		await service.createNotification({
+			userId,
+			title,
+			message,
+			type,
+			triggerType: "automatic",
+			triggeredBy: "system",
+			metadata,
+			actionUrl: "/team/tasks",
+			actionText: "View Tasks",
+			priority: newStatus === "done" || newStatus === "blocked" ? "high" : "medium",
+		});
+		return;
+	} catch (error) {
+		console.warn(
+			"[triggerTaskStatusChangedNotification] notificationService failed, falling back:",
+			error,
+		);
+	}
+
+	const { createNotification } = await import(
+		"@/lib/actions/notification.actions"
+	);
+	await createNotification({
+		userId,
+		title,
+		message,
+		type: "info",
+		priority:
+			newStatus === "done" || newStatus === "blocked" ? "high" : "medium",
+		triggerType: "automatic",
+		actionUrl: "/team/tasks",
+		actionText: "View Tasks",
+		metadata: JSON.stringify(metadata),
+	});
+}
+
+/**
+ * Task Assigned Notification Trigger
+ */
+export async function triggerTaskAssignedNotification({
+	userId,
+	taskTitle,
+	dueDate,
+	assignedBy,
+	taskId,
+	eventId,
+}: {
+	userId: string;
+	taskTitle: string;
+	dueDate: string;
+	assignedBy: string;
+	taskId: string;
+	eventId?: string;
+}): Promise<void> {
+	const dueLabel = formatDate(dueDate);
+	const title = `Task assigned: ${taskTitle}`;
+	const message = `${assignedBy} assigned you "${taskTitle}" due ${dueLabel}.`;
+	const metadata = {
+		taskTitle,
+		dueDate,
+		assignedBy,
+		taskId,
+		eventId,
+		actionUrl: "/team/tasks",
+		actionText: "View Tasks",
+		priority: "high",
+	};
+
+	const service = await getNotificationService();
+	const triggers = await getNotificationTriggers();
+	const type = triggers["task-assigned"] ? "task-assigned" : "info";
+
+	try {
+		await service.createNotification({
+			userId,
+			title,
+			message,
+			type,
+			triggerType: "automatic",
+			triggeredBy: "system",
+			metadata,
+			actionUrl: "/team/tasks",
+			actionText: "View Tasks",
+			priority: "high",
+		});
+		return;
+	} catch (error) {
+		console.warn(
+			"[triggerTaskAssignedNotification] notificationService failed, falling back:",
+			error,
+		);
+	}
+
+	const { createNotification } = await import(
+		"@/lib/actions/notification.actions"
+	);
+	await createNotification({
+		userId,
+		title,
+		message,
+		type: "info",
+		priority: "high",
+		triggerType: "automatic",
+		actionUrl: "/team/tasks",
+		actionText: "View Tasks",
+		metadata: JSON.stringify(metadata),
 	});
 }
 

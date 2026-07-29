@@ -368,7 +368,7 @@ export async function getDepartmentDashboardData(
 				needsAttention: 0,
 				ok: 0,
 				total: 0,
-				href: "/uploads",
+				href: "/documents",
 			},
 		},
 		recentActivity,

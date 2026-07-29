@@ -20,6 +20,47 @@ const extractionModel = new GoogleGenerativeAI(apiKey).getGenerativeModel({
 	},
 });
 
+const GEMINI_RETRY_ATTEMPTS = 3;
+const GEMINI_RETRY_BASE_MS = 600;
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+	if (error && typeof error === "object" && "status" in error) {
+		const status = (error as { status?: unknown }).status;
+		return typeof status === "number" ? status : undefined;
+	}
+	return undefined;
+}
+
+function isRetryableGeminiError(error: unknown): boolean {
+	const status = getErrorStatus(error);
+	if (status === 429 || status === 503 || status === 502 || status === 500) {
+		return true;
+	}
+	const message = error instanceof Error ? error.message : String(error ?? "");
+	return /503|429|unavailable|rate limit|overloaded/i.test(message);
+}
+
+async function generateJsonWithRetry(prompt: string): Promise<string> {
+	let lastError: unknown;
+	for (let attempt = 1; attempt <= GEMINI_RETRY_ATTEMPTS; attempt++) {
+		try {
+			const result = await extractionModel.generateContent(prompt);
+			return result.response.text() ?? "{}";
+		} catch (error) {
+			lastError = error;
+			if (!isRetryableGeminiError(error) || attempt === GEMINI_RETRY_ATTEMPTS) {
+				throw error;
+			}
+			await sleep(GEMINI_RETRY_BASE_MS * 2 ** (attempt - 1));
+		}
+	}
+	throw lastError;
+}
+
 export type LicenseDocumentExtractionResult = ParsedLicenseExtraction & {
 	method: LicenseExtractionMethod;
 	filename: string;
@@ -173,14 +214,38 @@ export async function extractLicenseFromDocument(options: {
 	}
 
 	const prompt = buildExtractionPrompt(text);
-	const result = await extractionModel.generateContent(prompt);
-	const raw = result.response.text() ?? "{}";
-	const geminiParsed = parseLicenseExtractionJson(raw);
-	const merged = mergeLicenseExtractions(kvFields, geminiParsed);
 
-	return toApiPayload(merged, {
-		method: LICENSE_EXTRACTION_METHOD.gemini,
-		filename: fileName,
-		textLength,
-	});
+	try {
+		const raw = await generateJsonWithRetry(prompt);
+		const geminiParsed = parseLicenseExtractionJson(raw);
+		const merged = mergeLicenseExtractions(kvFields, geminiParsed);
+		return toApiPayload(merged, {
+			method: LICENSE_EXTRACTION_METHOD.gemini,
+			filename: fileName,
+			textLength,
+		});
+	} catch (error) {
+		if (Object.keys(kvFields).length > 0) {
+			console.warn(
+				"Gemini license extraction failed; using labeled-field fallback:",
+				error instanceof Error ? error.message : error,
+			);
+			const merged = mergeLicenseExtractions(
+				kvFields,
+				parseLicenseExtractionJson("{}"),
+			);
+			return toApiPayload(merged, {
+				method: LICENSE_EXTRACTION_METHOD.kvParse,
+				filename: fileName,
+				textLength,
+			});
+		}
+		const status = getErrorStatus(error);
+		if (status === 503 || status === 429) {
+			throw new Error(
+				"The AI extraction service is temporarily unavailable. Try again in a minute, or fill in the form manually.",
+			);
+		}
+		throw error;
+	}
 }

@@ -40,7 +40,7 @@ export type AppUser = {
 	division?: UserDivision;
 	department?: string; // Direct department field (if available)
 	phone?: string;
-	status?: "active" | "inactive";
+	status?: "active" | "inactive" | "suspended";
 	profileImageId?: string | null;
 };
 
@@ -1657,12 +1657,14 @@ export const updateUserProfile = async ({
 	division,
 	role,
 	department,
+	status,
 }: {
 	accountId: string;
 	fullName?: string;
 	division?: UserDivision;
 	role?: string;
 	department?: string;
+	status?: "active" | "inactive" | "suspended";
 }) => {
 	try {
 		const { tablesDB } = await createAdminClient();
@@ -1681,6 +1683,7 @@ export const updateUserProfile = async ({
 		if (fullName !== undefined) updatePayload.fullName = fullName;
 		if (division !== undefined) updatePayload.division = division;
 		if (department !== undefined) updatePayload.department = department;
+		if (status !== undefined) updatePayload.status = status;
 
 		// Preserve required fields like orgId if they exist in the document
 		// This ensures we don't lose required attributes during partial updates

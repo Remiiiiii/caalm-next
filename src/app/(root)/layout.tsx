@@ -5,6 +5,7 @@ import type React from "react";
 import { Suspense, useEffect, useMemo } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import MobileNavigation from "@/components/MobileNavigation";
+import NotificationSoundListener from "@/components/NotificationSoundListener";
 import Sidebar from "@/components/Sidebar";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/toaster";
@@ -96,6 +97,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 				</div>
 			) : (
 				<SidebarProvider>
+					<NotificationSoundListener />
 					<main className="flex h-screen overflow-hidden">
 						<Sidebar {...sidebarProps} />
 						<section className="flex h-full flex-1 flex-col min-w-0 pt-4 sm:pt-5 md:pt-6 lg:pt-7">

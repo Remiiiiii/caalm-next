@@ -17,7 +17,7 @@ export function useLicenseForm() {
 			licenseNumber: "",
 			licenseType: "subscription",
 			category: "saas",
-			status: "active",
+			status: "pending-review",
 			licenseExpiryDate: undefined,
 			issueDate: undefined,
 			renewalDate: undefined,

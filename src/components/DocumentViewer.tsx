@@ -20,7 +20,6 @@ import { convertFileSize } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { ScrollArea } from "./ui/scroll-area";
 import { Textarea } from "./ui/textarea";
 
 interface DocumentViewerProps {
@@ -639,9 +638,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 		if (isImageFile(fileType)) {
 			return (
-				<div className="h-full flex items-center justify-center p-4">
+				<div className="relative h-full w-full p-4">
 					{isPreviewLoading && (
-						<div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+						<div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50">
 							<div className="text-center">
 								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
 								<p className="text-sm text-gray-500">Loading image...</p>
@@ -651,7 +650,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					<Image
 						src={file.url}
 						alt={file.name}
-						className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+						fill
+						sizes="72vw"
+						className="object-contain rounded-lg shadow-lg"
 						onLoad={() => setIsPreviewLoading(false)}
 						onError={() => {
 							setPreviewError("Failed to load image");
@@ -874,9 +875,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 				</div>
 
 				{/* Main Content */}
-				<div className="rounded-3xl flex-1 flex overflow-hidden">
+				<div className="flex min-h-0 flex-1 overflow-hidden rounded-3xl">
 					{/* Document Preview */}
-					<div className="w-[72%] border-r border-light-300 bg-light-400 relative pl-8">
+					<div className="relative w-[72%] border-r border-light-300 bg-light-400 pl-8">
 						{previewError ? (
 							<div className="h-full flex items-center justify-center">
 								<div className="text-center">
@@ -902,13 +903,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 					{/* AI Analysis Panel */}
 					<div
-						className="w-[28%] border-l border-light-300 bg-light-400/30 backdrop-blur flex flex-col"
+						className="flex w-[28%] min-h-0 flex-col border-l border-light-300 bg-light-400/30 text-left backdrop-blur"
+						dir="ltr"
 						onClick={(e) => e.stopPropagation()}
 					>
 						{/* Header */}
-						<div className="flex justify-center items-center flex-col p-4 border-b border-light-300 bg-white/80 backdrop-blur">
-							<div className="flex items-center justify-between mb-4">
-								<h3 className="font-bold sidebar-gradient-text flex items-center gap-2">
+						<div className="flex shrink-0 flex-col items-stretch border-b border-light-300 bg-white/80 p-4 text-left backdrop-blur">
+							<div className="mb-4 flex items-center justify-between">
+								<h3 className="flex items-center gap-2 font-bold sidebar-gradient-text">
 									<Image
 										src="/assets/images/assistant.svg"
 										alt="AI Assistant"
@@ -925,7 +927,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 											e.stopPropagation();
 											setShowAIAssistant(false);
 										}}
-										className="h-8 w-8 pl-6 rounded-lg shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center"
+										className="flex h-8 w-8 items-center justify-center rounded-lg pl-6 shadow-sm transition-colors hover:bg-gray-50"
 										title="Collapse AI Assistant"
 									>
 										<Minimize2 className="h-4 w-4 text-black" />
@@ -941,270 +943,264 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 										await generateSummary();
 										analyze();
 									}}
-									className="w-full rounded-full bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white font-semibold py-6 shadow-drop-1 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+									className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] py-6 font-semibold text-white shadow-drop-1 transition-opacity hover:opacity-90"
 								>
-									<Lightbulb className="w-5 h-5" />
+									<Lightbulb className="h-5 w-5" />
 									Analyze Document
 								</Button>
 							)}
 						</div>
 
-						{/* Scrollable Content */}
+						{/* Scrollable chat + docs; composer pinned to bottom */}
 						{showAIAssistant && (
-							<ScrollArea
-								className="flex-1"
-								onClick={(e) => e.stopPropagation()}
-							>
+							<>
 								<div
-									className="p-4 space-y-4"
+									className="min-h-0 flex-1 overflow-y-auto text-left"
 									onClick={(e) => e.stopPropagation()}
 								>
-									{/* Welcome Message - Display greeting from analyze function */}
-									{chatMessages.length > 0 &&
-										chatMessages[0].sender === "assistant" && (
-											<div className="flex justify-start">
-												<div className="flex items-start space-x-3 max-w-[95%]">
-													<div className="flex-shrink-0">
-														<Image
-															src="/assets/images/assistant.svg"
-															alt="AI Assistant"
-															width={40}
-															height={40}
-															className="w-10 h-10 rounded-full bg-blue-100 p-1"
-														/>
-													</div>
-													<div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
-														<p className="text-sm text-gray-700 whitespace-pre-line">
-															{chatMessages[0].text}
-														</p>
-														<p className="text-xs text-gray-400 mt-2">
-															{chatMessages[0].timestamp.toLocaleTimeString()}
-														</p>
+									<div
+										className="space-y-4 p-4 text-left"
+										onClick={(e) => e.stopPropagation()}
+									>
+										{/* Welcome Message */}
+										{chatMessages.length > 0 &&
+											chatMessages[0].sender === "assistant" && (
+												<div className="flex justify-start">
+													<div className="flex max-w-[95%] items-start space-x-3">
+														<div className="shrink-0">
+															<Image
+																src="/assets/images/assistant.svg"
+																alt="AI Assistant"
+																width={40}
+																height={40}
+																className="h-10 w-10 rounded-full bg-blue-100 p-1"
+															/>
+														</div>
+														<div className="rounded-2xl border border-light-300 bg-white px-4 py-3 text-left shadow-drop-1">
+															<p className="whitespace-pre-line text-left text-sm text-gray-700">
+																{chatMessages[0].text}
+															</p>
+															<p className="mt-2 text-left text-xs text-gray-400">
+																{chatMessages[0].timestamp.toLocaleTimeString()}
+															</p>
+														</div>
 													</div>
 												</div>
-											</div>
+											)}
+
+										{(documentSummary || file.description) && (
+											<Card className="rounded-lg border border-slate-200 bg-white text-left shadow-sm">
+												<CardHeader className="pb-2">
+													<CardTitle className="flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+														<FileText className="h-4 w-4 text-cyan-600" />
+														Summary
+													</CardTitle>
+												</CardHeader>
+												<CardContent>
+													{isGeneratingSummary ? (
+														<div className="flex items-center gap-2 text-left text-sm text-slate-500">
+															<Loader2 className="h-4 w-4 animate-spin" />
+															Generating summary...
+														</div>
+													) : (
+														<p
+															className="text-left text-sm leading-relaxed text-slate-700"
+															dir="ltr"
+														>
+															{documentSummary || file.description}
+														</p>
+													)}
+												</CardContent>
+											</Card>
 										)}
 
-									{/* Document Information Cards */}
-									{/* Summary */}
-									{(documentSummary || file.description) && (
-										<Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
+										<Card className="rounded-lg border border-slate-200 bg-white text-left shadow-sm">
 											<CardHeader className="pb-2">
-												<CardTitle className="text-sm flex items-center gap-2 font-semibold sidebar-gradient-text">
-													<FileText className="h-4 w-4 text-cyan-600" />
-													Summary
+												<CardTitle className="flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+													<Calendar className="h-4 w-4 text-cyan-600" />
+													Important Dates
 												</CardTitle>
 											</CardHeader>
 											<CardContent>
-												{isGeneratingSummary ? (
-													<div className="flex items-center gap-2 text-sm text-slate-500">
-														<Loader2 className="h-4 w-4 animate-spin" />
-														Generating summary...
-													</div>
-												) : (
-													<p className="text-sm text-slate-700 leading-relaxed">
-														{documentSummary || file.description}
-													</p>
-												)}
-											</CardContent>
-										</Card>
-									)}
-
-									{/* Important Dates */}
-									<Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
-										<CardHeader className="pb-2">
-											<CardTitle className="text-sm flex items-center gap-2 font-semibold sidebar-gradient-text">
-												<Calendar className="h-4 w-4 text-cyan-600" />
-												Important Dates
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<div className="space-y-2">
-												<div className="flex justify-between text-sm">
-													<span className="text-gray-600">Created:</span>
-													<span className="font-medium text-gray-900">
-														{formatDate(file.createdAt)}
-													</span>
-												</div>
-												{file.expiresAt && (
+												<div className="space-y-2 text-left">
 													<div className="flex justify-between text-sm">
-														<span className="text-gray-600">Expires:</span>
+														<span className="text-gray-600">Created:</span>
 														<span className="font-medium text-gray-900">
-															{formatDate(file.expiresAt)}
+															{formatDate(file.createdAt)}
 														</span>
 													</div>
-												)}
-											</div>
-										</CardContent>
-									</Card>
-
-									{/* Document Information */}
-									<Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
-										<CardHeader className="pb-2">
-											<CardTitle className="text-sm flex items-center gap-2 font-semibold sidebar-gradient-text">
-												<FileText className="h-4 w-4 text-cyan-600" />
-												Document Information
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<div className="space-y-2">
-												<div className="flex justify-between text-sm">
-													<span className="text-gray-600">File Type:</span>
-													<span className="font-medium text-gray-900">
-														{file.type.toUpperCase()}
-													</span>
-												</div>
-												<div className="flex justify-between text-sm">
-													<span className="text-gray-600">File Size:</span>
-													<span className="font-medium text-gray-900">
-														{convertFileSize({
-															sizeInBytes:
-																typeof file.size === "string"
-																	? Number.isNaN(Number(file.size))
-																		? null
-																		: Number(file.size)
-																	: file.size,
-														})}
-													</span>
-												</div>
-												{file.createdBy && (
-													<div className="flex justify-between text-sm">
-														<span className="text-gray-600">Created By:</span>
-														<span className="font-medium text-gray-900">
-															{creatorName || "Loading..."}
-														</span>
-													</div>
-												)}
-											</div>
-										</CardContent>
-									</Card>
-
-									{/* AI Chat */}
-									<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-										<CardHeader className="pb-2">
-											<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-												<Sparkles className="h-4 w-4 text-cyan-600" />
-												Ask AI
-											</CardTitle>
-										</CardHeader>
-										<CardContent className="space-y-3">
-											<div className="flex gap-2">
-												<Textarea
-													placeholder="Ask a question about this document..."
-													value={newMessage}
-													onChange={(e) => setNewMessage(e.target.value)}
-													onKeyPress={handleKeyPress}
-													onClick={(e) => e.stopPropagation()}
-													className="text-sm"
-													rows={2}
-												/>
-											</div>
-											<Button
-												onClick={(e) => {
-													e.stopPropagation();
-													handleSendMessage({ message: undefined });
-												}}
-												disabled={!newMessage.trim() || isLoading}
-												size="sm"
-												className="!w-full shadow-drop-1 primary-btn"
-											>
-												{isLoading ? (
-													<>
-														<Loader2 className="h-4 w-4 animate-spin" />
-														Thinking...
-													</>
-												) : (
-													<Send className="h-4 w-4" />
-												)}
-											</Button>
-
-											{/* Suggested Questions */}
-											<div className="mt-4">
-												<div className="mb-3">
-													<h4 className="text-sm font-semibold sidebar-gradient-text mb-2 flex items-center gap-2">
-														<FileText className="h-4 w-4 text-cyan-600" />
-														Quick Questions
-													</h4>
-												</div>
-
-												<div className="flex flex-wrap gap-2">
-													{[
-														"What is this document about?",
-														"When does this contract expire?",
-														"What are the key terms and conditions?",
-														"What actions do I need to take?",
-													].map((q, idx) => (
-														<Button
-															key={idx}
-															variant="outline"
-															size="sm"
-															className="text-xs rounded-full bg-white border-light-300 hover:bg-light-400 hover:border-[#00C1CB] focus:ring-2 focus:ring-[#078FAB] focus:outline-none transition-all duration-200 shadow-drop-1"
-															onClick={(e) => {
-																e.stopPropagation();
-																handleSendMessage({ message: q });
-															}}
-															disabled={isLoading}
-														>
-															{q}
-														</Button>
-													))}
-												</div>
-											</div>
-
-											{/* Chat Messages Display - Exclude greeting message shown at top */}
-											{chatMessages.length > 1 && (
-												<div className="mt-4 space-y-3 max-h-64 overflow-y-auto">
-													{chatMessages
-														.filter((message) => message.id !== "greeting")
-														.map((message) => (
-															<div
-																key={message.id}
-																className={`p-3 rounded-lg ${
-																	message.sender === "user"
-																		? "bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white"
-																		: "bg-slate-50 text-slate-700"
-																}`}
-															>
-																{message.sender === "assistant" ? (
-																	<div
-																		className="text-sm text-gray-700 prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1"
-																		dangerouslySetInnerHTML={{
-																			__html: formatAIResponseHTML(
-																				message.text,
-																			),
-																		}}
-																	/>
-																) : (
-																	<p className="text-sm whitespace-pre-line">
-																		{message.text}
-																	</p>
-																)}
-																<p
-																	className={`text-xs mt-2 ${
-																		message.sender === "user"
-																			? "text-blue-100"
-																			: "text-gray-400"
-																	}`}
-																>
-																	{message.timestamp.toLocaleTimeString()}
-																</p>
-															</div>
-														))}
-													{isLoading && (
-														<div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
-															<Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
-															<span className="text-sm text-gray-600">
-																Thinking...
+													{file.expiresAt && (
+														<div className="flex justify-between text-sm">
+															<span className="text-gray-600">Expires:</span>
+															<span className="font-medium text-gray-900">
+																{formatDate(file.expiresAt)}
 															</span>
 														</div>
 													)}
-													<div ref={chatEndRef} />
 												</div>
-											)}
-										</CardContent>
-									</Card>
+											</CardContent>
+										</Card>
+
+										<Card className="rounded-lg border border-slate-200 bg-white text-left shadow-sm">
+											<CardHeader className="pb-2">
+												<CardTitle className="flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+													<FileText className="h-4 w-4 text-cyan-600" />
+													Document Information
+												</CardTitle>
+											</CardHeader>
+											<CardContent>
+												<div className="space-y-2 text-left">
+													<div className="flex justify-between text-sm">
+														<span className="text-gray-600">File Type:</span>
+														<span className="font-medium text-gray-900">
+															{file.type.toUpperCase()}
+														</span>
+													</div>
+													<div className="flex justify-between text-sm">
+														<span className="text-gray-600">File Size:</span>
+														<span className="font-medium text-gray-900">
+															{convertFileSize({
+																sizeInBytes:
+																	typeof file.size === "string"
+																		? Number.isNaN(Number(file.size))
+																			? null
+																			: Number(file.size)
+																		: file.size,
+															})}
+														</span>
+													</div>
+													{file.createdBy && (
+														<div className="flex justify-between text-sm">
+															<span className="text-gray-600">Created By:</span>
+															<span className="font-medium text-gray-900">
+																{creatorName || "Loading..."}
+															</span>
+														</div>
+													)}
+												</div>
+											</CardContent>
+										</Card>
+
+										{/* Quick Questions */}
+										<div>
+											<h4 className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+												<FileText className="h-4 w-4 text-cyan-600" />
+												Quick Questions
+											</h4>
+											<div className="flex flex-wrap gap-2">
+												{[
+													"What is this document about?",
+													"When does this contract expire?",
+													"What are the key terms and conditions?",
+													"What actions do I need to take?",
+												].map((q) => (
+													<Button
+														key={q}
+														variant="outline"
+														size="sm"
+														className="rounded-full border-light-300 bg-white text-xs shadow-drop-1 transition-all duration-200 hover:border-[#00C1CB] hover:bg-light-400 focus:outline-none focus:ring-2 focus:ring-[#078FAB]"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleSendMessage({ message: q });
+														}}
+														disabled={isLoading}
+													>
+														{q}
+													</Button>
+												))}
+											</div>
+										</div>
+
+										{/* Chat Messages — exclude greeting shown at top */}
+										{chatMessages.length > 1 && (
+											<div className="space-y-3 text-left">
+												{chatMessages
+													.filter((message) => message.id !== "greeting")
+													.map((message) => (
+														<div
+															key={message.id}
+															className={`rounded-lg p-3 text-left ${
+																message.sender === "user"
+																	? "bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white"
+																	: "bg-slate-50 text-slate-700"
+															}`}
+														>
+															{message.sender === "assistant" ? (
+																<div
+																	className="prose prose-sm max-w-none text-left text-sm text-gray-700 prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1"
+																	dangerouslySetInnerHTML={{
+																		__html: formatAIResponseHTML(message.text),
+																	}}
+																/>
+															) : (
+																<p className="whitespace-pre-line text-left text-sm">
+																	{message.text}
+																</p>
+															)}
+															<p
+																className={`mt-2 text-left text-xs ${
+																	message.sender === "user"
+																		? "text-blue-100"
+																		: "text-gray-400"
+																}`}
+															>
+																{message.timestamp.toLocaleTimeString()}
+															</p>
+														</div>
+													))}
+												{isLoading && (
+													<div className="flex items-center gap-2 rounded-lg bg-slate-50 p-3">
+														<Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+														<span className="text-sm text-gray-600">
+															Thinking...
+														</span>
+													</div>
+												)}
+												<div ref={chatEndRef} />
+											</div>
+										)}
+									</div>
 								</div>
-							</ScrollArea>
+
+								{/* Composer — pinned to bottom */}
+								<div
+									className="shrink-0 border-t border-light-300 bg-white/95 p-4 text-left backdrop-blur"
+									onClick={(e) => e.stopPropagation()}
+								>
+									<div className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+										<Sparkles className="h-4 w-4 text-cyan-600" />
+										Ask CAALM
+									</div>
+									<div className="flex items-end gap-2">
+										<Textarea
+											placeholder="Ask a question about this document..."
+											value={newMessage}
+											onChange={(e) => setNewMessage(e.target.value)}
+											onKeyPress={handleKeyPress}
+											onClick={(e) => e.stopPropagation()}
+											className="min-h-[72px] flex-1 resize-none border! border-slate-300! bg-white text-left text-sm shadow-sm focus-visible:border-[#078FAB]! focus-visible:ring-1 focus-visible:ring-[#078FAB]"
+											rows={2}
+											aria-label="Ask CAALM"
+										/>
+										<Button
+											onClick={(e) => {
+												e.stopPropagation();
+												handleSendMessage({ message: undefined });
+											}}
+											disabled={!newMessage.trim() || isLoading}
+											size="icon"
+											className="primary-btn size-8! min-h-8! min-w-8! max-h-8! max-w-8! shrink-0 rounded-full! p-0! px-0! py-0! sm:w-8!"
+											aria-label="Send message"
+										>
+											{isLoading ? (
+												<Loader2 className="h-3.5 w-3.5 animate-spin" />
+											) : (
+												<Send className="h-3.5 w-3.5" />
+											)}
+										</Button>
+									</div>
+								</div>
+							</>
 						)}
 					</div>
 				</div>

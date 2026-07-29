@@ -9,6 +9,10 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
+import {
+	getFileShareNotificationTitle,
+	getFileShareViewActionText,
+} from "@/lib/files/fileShareNotification";
 import { constructFileUrl, getFileType, parseStringify } from "@/lib/utils";
 import {
 	triggerContractExpiryNotification,
@@ -1070,9 +1074,12 @@ export const uploadFile = async ({
 					return managerNames;
 				})();
 
-				// Create license using LicenseService
+				// Create license using LicenseService.
+				// Force pending-review on document upload — extracted/form status
+				// must not skip the review → active flow.
 				const licenseData = {
 					...licenseMetadata,
+					status: "pending-review",
 					orgId: resolvedOrgId,
 					assignedManagers,
 					fileId: newFile.$id,
@@ -1088,6 +1095,22 @@ export const uploadFile = async ({
 				);
 
 				console.log("✅ License created successfully:", license.$id);
+
+				// Initialize multi-step approval workflow (pending-review → exec → active)
+				try {
+					const { initializeLicenseOnUpload } = await import(
+						"@/lib/approvals/LicenseApprovalWorkflowService"
+					);
+					await initializeLicenseOnUpload({
+						licenseId: license.$id,
+						departmentManagerIds: licenseMetadata.assignedManagers || [],
+					});
+				} catch (workflowError) {
+					console.error(
+						"Failed to initialize license approval workflow:",
+						workflowError,
+					);
+				}
 
 				// Update file document with license reference
 				try {
@@ -1179,6 +1202,7 @@ export const uploadFile = async ({
 		}
 
 		revalidatePath(revalidatePathArg);
+		await CacheManager.invalidateStorage();
 		return parseStringify(newFile);
 	} catch (error) {
 		handleError(error, "Failed to upload file");
@@ -1238,7 +1262,7 @@ export const getFiles = async ({
 		if (!plain || typeof plain !== "object" || !Array.isArray(plain.rows)) {
 			return { documents: [] };
 		}
-		return plain;
+		return { documents: plain.rows, total: plain.total };
 	} catch (error: any) {
 		// Handle case where 'owner' attribute might not be available yet (e.g., still processing)
 		if (error?.message?.includes("Attribute not found in schema: owner")) {
@@ -1476,9 +1500,22 @@ export const updateFileUsers = async ({
 		// Find newly added users (emails that weren't in previousUsers)
 		const newUsers = emails.filter((email) => !previousUsers.includes(email));
 
-		// Send notifications and emails to newly added users (fire-and-forget)
+		const viewDocumentPath = `/shared/files/${actualFileDocumentId}`;
+		const shareFileMeta = {
+			name: fileName,
+			type: fileDoc?.type as string | undefined,
+			extension: fileDoc?.extension as string | undefined,
+		};
+		const shareNotificationTitle = getFileShareNotificationTitle(shareFileMeta);
+		const shareViewActionText = getFileShareViewActionText(shareFileMeta);
+		const viewDocumentAction = {
+			actionUrl: viewDocumentPath,
+			actionText: shareViewActionText,
+		};
+
+		// Send notifications and emails to newly added users
 		if (newUsers.length > 0) {
-			Promise.allSettled(
+			await Promise.allSettled(
 				newUsers.map(async (email) => {
 					try {
 						// Get recipient user info by email
@@ -1554,10 +1591,11 @@ export const updateFileUsers = async ({
 											const notification =
 												await notificationService.createNotification({
 													userId: recipientUser.$id, // Use document $id (matches auth context user.$id)
-													title: "Document Shared with You",
+													title: shareNotificationTitle,
 													message: `${sharerName} shared "${fileName}" with you.`,
 													type: "file_shared",
 													priority: "medium",
+													...viewDocumentAction,
 													metadata: {
 														fileId: actualFileDocumentId,
 														contractId: isContract ? fileId : undefined,
@@ -1609,7 +1647,7 @@ export const updateFileUsers = async ({
 														const now = Date.now();
 														if (
 															now - createdAt < 5000 &&
-															latest.title === "Document Shared with You"
+															latest.title === shareNotificationTitle
 														) {
 															notificationCreated = true;
 															console.log(
@@ -1662,7 +1700,7 @@ export const updateFileUsers = async ({
 												"notifications",
 											queries: [
 												Query.equal("userId", recipientUser.$id),
-												Query.equal("title", "Document Shared with You"),
+												Query.equal("type", "file_shared"),
 												Query.greaterThan("$createdAt", tenSecondsAgo),
 												Query.limit(1),
 											],
@@ -1704,11 +1742,20 @@ export const updateFileUsers = async ({
 											const { tablesDB } = await createAdminClient();
 											const notificationData: Record<string, any> = {
 												userId: recipientUser.$id, // Use document $id (matches auth context user.$id)
-												title: "Document Shared with You",
+												title: shareNotificationTitle,
 												message: `${sharerName} shared "${fileName}" with you.`,
-												type: "file-shared",
+												type: "file_shared",
 												read: false,
 												orgId: orgId, // REQUIRED field - must be included
+												actionUrl: viewDocumentAction.actionUrl,
+												actionText: viewDocumentAction.actionText,
+												metadata: JSON.stringify({
+													fileId: actualFileDocumentId,
+													contractId: isContract ? fileId : undefined,
+													fileName,
+													sharedBy: currentUser.$id,
+													sharedByName: sharerName,
+												}),
 											};
 
 											const notification = await tablesDB.createRow({
@@ -1808,6 +1855,21 @@ export const updateFileUsers = async ({
 													cacheError,
 												);
 											}
+
+											try {
+												const { broadcastNotificationToUser } = await import(
+													"@/lib/notifications/broadcastNotification"
+												);
+												await broadcastNotificationToUser(recipientUser.$id, {
+													...(notification as Record<string, unknown>),
+													id: notification.$id,
+												});
+											} catch (broadcastError) {
+												console.warn(
+													`[SERVER] SSE broadcast failed for ${email}:`,
+													broadcastError,
+												);
+											}
 										}
 									} catch (fallbackError) {
 										console.error(
@@ -1837,7 +1899,7 @@ export const updateFileUsers = async ({
 							const baseUrl =
 								process.env.NEXT_PUBLIC_APP_URL ||
 								"https://www.caalmsolutions.com";
-							const fileUrl = `${baseUrl}/contracts?fileId=${actualFileDocumentId}`;
+							const fileUrl = `${baseUrl}${viewDocumentPath}`;
 
 							const emailSubject = `[CAALM] Document Shared: ${fileName}`;
 							const emailText = `Hello ${recipientName},\n\n${sharerName} (${sharerEmail}) shared the document "${fileName}" with you.\n\nYou can now access this document in your CAALM account.\n\nView Document: ${fileUrl}\n\nBest regards,\nCAALM Solutions Team`;
@@ -1879,11 +1941,10 @@ export const updateFileUsers = async ({
 						);
 					}
 				}),
-			).then(() => {
-				console.log(
-					`[SERVER] Completed sending notifications for ${newUsers.length} new users`,
-				);
-			});
+			);
+			console.log(
+				`[SERVER] Completed sending notifications for ${newUsers.length} new users`,
+			);
 		}
 
 		revalidatePath(path);
@@ -2188,6 +2249,7 @@ export const deleteFile = async ({
 		}
 
 		revalidatePath(path);
+		await CacheManager.invalidateStorage();
 		return parseStringify({ status: "success" });
 	} catch (error) {
 		handleError(error, "Failed to delete file");
@@ -3459,5 +3521,67 @@ export const updateContractExpiryDate = async (
 			response: error?.response,
 		});
 		throw error;
+	}
+};
+
+/**
+ * Update contract ownership / classification fields from preview sheet
+ */
+export const updateContractPreviewFields = async (
+	documentId: string,
+	fields: {
+		department?: string;
+		contractType?: string;
+		status?: string;
+	},
+) => {
+	const { tablesDB } = await createAdminClient();
+
+	const data = Object.fromEntries(
+		Object.entries(fields).filter(
+			([, value]) => value !== undefined && value !== null && value !== "",
+		),
+	);
+
+	if (Object.keys(data).length === 0) {
+		return { success: true };
+	}
+
+	try {
+		await tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: appwriteConfig.contractsCollectionId!,
+			rowId: documentId,
+			data,
+		});
+		return { success: true };
+	} catch (contractError: unknown) {
+		try {
+			const fileDoc = await tablesDB.getRow({
+				databaseId: appwriteConfig.databaseId!,
+				tableId: appwriteConfig.filesCollectionId!,
+				rowId: documentId,
+			});
+
+			const contractId = (fileDoc as { contractId?: string }).contractId;
+			if (!contractId) {
+				throw contractError;
+			}
+
+			await tablesDB.updateRow({
+				databaseId: appwriteConfig.databaseId!,
+				tableId: appwriteConfig.contractsCollectionId!,
+				rowId: contractId,
+				data,
+			});
+
+			return { success: true };
+		} catch {
+			const message =
+				contractError instanceof Error
+					? contractError.message
+					: "Failed to update contract fields";
+			throw new Error(message);
+		}
 	}
 };

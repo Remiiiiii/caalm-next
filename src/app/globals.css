@@ -330,12 +330,19 @@
 		@apply outline-hidden! ring-offset-transparent! focus:ring-transparent! focus:ring-offset-0! focus-visible:outline-hidden! focus-visible:ring-0! focus-visible:ring-transparent! focus-visible:ring-offset-0!;
 	}
 	.shad-input {
-		@apply border-none! w-full! shadow-none! p-0! h-12! rounded-md placeholder:text-light-200 text-[14px] leading-[20px] font-normal text-slate-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0;
+		@apply border-none! w-full! shadow-none! py-0! px-0! h-12! rounded-md placeholder:text-light-200 text-[14px] leading-[20px] font-normal text-slate-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0;
+	}
+
+	/* Leading-icon search fields need left padding that shad-input would otherwise zero out */
+	.shad-input.pl-10,
+	input.shad-input.pl-10 {
+		padding-left: 2.5rem !important;
+		padding-right: 0.75rem !important;
 	}
 
 	/* More specific override for input elements with shad-input class */
 	input.shad-input {
-		@apply border-none! w-full! shadow-none! p-0! h-12! rounded-md bg-transparent! focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0;
+		@apply border-none! w-full! shadow-none! py-0! px-0! h-12! rounded-md bg-transparent! focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0;
 	}
 
 	.shad-form-item {
@@ -349,17 +356,20 @@
 	}
 
 	/* Form fields on frosted surfaces */
+	/* Beat preflight input { padding: 0 } so text never hugs the border */
 	.glass-form-control {
 		background: rgba(255, 255, 255, 0.3);
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
-		/* Beat preflight input { padding: 0 } so text never hugs the border */
 		padding-left: 0.75rem;
 		padding-right: 0.75rem;
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
 		box-sizing: border-box;
+	}
+	.glass-form-control[data-with-leading-icon="true"] {
+		padding-left: 2.5rem !important;
 	}
 	.glass-form-control:focus,
 	.glass-form-control:focus-visible {

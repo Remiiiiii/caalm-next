@@ -4,6 +4,7 @@ import { Building, Building2, Crown, Eye, Lock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NavItemIcon } from "@/components/sidebar/NavItemIcon";
 import {
 	DASHBOARD_ITEM_COLORS,
 	ITEM_ICONS,
@@ -55,15 +56,25 @@ function ItemIcon({
 	}
 
 	const mapped = ITEM_ICONS[item.name];
-	const src = mapped?.src || item.icon;
+	if (item.name === "Documents" || mapped?.src) {
+		return (
+			<NavItemIcon
+				name={item.name}
+				width={mapped?.width ?? 18}
+				height={mapped?.height ?? 18}
+			/>
+		);
+	}
+
+	const src = item.icon;
 	if (!src) return null;
 
 	return (
 		<Image
 			src={src}
 			alt=""
-			width={mapped?.width ?? 18}
-			height={mapped?.height ?? 18}
+			width={18}
+			height={18}
 			className="shrink-0 max-w-none"
 			style={{ width: "auto", height: "18px" }}
 		/>

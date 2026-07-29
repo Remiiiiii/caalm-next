@@ -13,6 +13,7 @@ import {
 } from "react";
 import EqualHeightGrid from "@/components/EqualHeightGrid";
 import LicenseCard from "@/components/licenses/LicenseCard";
+import LicensePreviewSheet from "@/components/licenses/LicensePreviewSheet";
 import {
 	deserializeLicenseFilters,
 	LICENSE_SAVED_VIEWS_STORAGE_KEY,
@@ -38,12 +39,25 @@ interface LicensesViewContextType {
 	clearFilters: () => void;
 	statusTab: LicenseStatusTab;
 	setStatusTab: (tab: LicenseStatusTab) => void;
+	selectedIds: string[];
+	toggleSelected: (id: string) => void;
+	selectAll: (ids: string[]) => void;
+	clearSelection: () => void;
+	previewLicense: License | null;
+	setPreviewLicense: (license: License | null) => void;
 	savedViews: SavedLicenseView[];
 	saveCurrentView: (name: string) => void;
 	applySavedView: (view: SavedLicenseView) => void;
 	deleteSavedView: (id: string) => void;
 	listAnchorRef: React.RefObject<HTMLDivElement | null>;
 	scrollToList: () => void;
+	lockDepartmentFilter: boolean;
+}
+
+interface LicensesViewProviderProps {
+	children: ReactNode;
+	initialDepartmentFilter?: string;
+	lockDepartmentFilter?: boolean;
 }
 
 const LicensesViewContext = createContext<LicensesViewContextType | undefined>(
@@ -52,10 +66,20 @@ const LicensesViewContext = createContext<LicensesViewContextType | undefined>(
 
 const emptyFilters = (): LicenseFilters => ({});
 
-export function LicensesViewProvider({ children }: { children: ReactNode }) {
+export function LicensesViewProvider({
+	children,
+	initialDepartmentFilter,
+	lockDepartmentFilter = false,
+}: LicensesViewProviderProps) {
 	const [view, setView] = useState<ViewType>("table");
-	const [filters, setFilters] = useState<LicenseFilters>({});
+	const [filters, setFilters] = useState<LicenseFilters>(() =>
+		initialDepartmentFilter
+			? { department: initialDepartmentFilter }
+			: emptyFilters(),
+	);
 	const [statusTab, setStatusTabState] = useState<LicenseStatusTab>("all");
+	const [selectedIds, setSelectedIds] = useState<string[]>([]);
+	const [previewLicense, setPreviewLicense] = useState<License | null>(null);
 	const [savedViews, setSavedViews] = useState<SavedLicenseView[]>([]);
 	const listAnchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -87,11 +111,31 @@ export function LicensesViewProvider({ children }: { children: ReactNode }) {
 
 	const setStatusTab = useCallback((tab: LicenseStatusTab) => {
 		setStatusTabState(tab);
+		setSelectedIds([]);
 	}, []);
 
 	const clearFilters = useCallback(() => {
-		setFilters(emptyFilters());
+		setFilters(
+			lockDepartmentFilter && initialDepartmentFilter
+				? { department: initialDepartmentFilter }
+				: emptyFilters(),
+		);
 		setStatusTabState("all");
+		setSelectedIds([]);
+	}, [lockDepartmentFilter, initialDepartmentFilter]);
+
+	const toggleSelected = useCallback((id: string) => {
+		setSelectedIds((prev) =>
+			prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+		);
+	}, []);
+
+	const selectAll = useCallback((ids: string[]) => {
+		setSelectedIds(ids);
+	}, []);
+
+	const clearSelection = useCallback(() => {
+		setSelectedIds([]);
 	}, []);
 
 	const persistSavedViews = useCallback((views: SavedLicenseView[]) => {
@@ -121,6 +165,7 @@ export function LicensesViewProvider({ children }: { children: ReactNode }) {
 		setFilters(deserializeLicenseFilters(saved.filters));
 		setView(saved.view);
 		localStorage.setItem(LICENSE_VIEW_STORAGE_KEY, saved.view);
+		setSelectedIds([]);
 	}, []);
 
 	const deleteSavedView = useCallback(
@@ -146,12 +191,19 @@ export function LicensesViewProvider({ children }: { children: ReactNode }) {
 			clearFilters,
 			statusTab,
 			setStatusTab,
+			selectedIds,
+			toggleSelected,
+			selectAll,
+			clearSelection,
+			previewLicense,
+			setPreviewLicense,
 			savedViews,
 			saveCurrentView,
 			applySavedView,
 			deleteSavedView,
 			listAnchorRef,
 			scrollToList,
+			lockDepartmentFilter,
 		}),
 		[
 			view,
@@ -160,11 +212,17 @@ export function LicensesViewProvider({ children }: { children: ReactNode }) {
 			clearFilters,
 			statusTab,
 			setStatusTab,
+			selectedIds,
+			toggleSelected,
+			selectAll,
+			clearSelection,
+			previewLicense,
 			savedViews,
 			saveCurrentView,
 			applySavedView,
 			deleteSavedView,
 			scrollToList,
+			lockDepartmentFilter,
 		],
 	);
 
@@ -209,7 +267,7 @@ export default function LicensesView({
 	onRefresh,
 	onLicenseRemoved,
 }: LicensesViewProps) {
-	const { view } = useLicensesView();
+	const { view, previewLicense, setPreviewLicense } = useLicensesView();
 	const [currentPage, setCurrentPage] = useState(1);
 	const itemsPerPage = 12;
 
@@ -243,7 +301,7 @@ export default function LicensesView({
 
 	if (licenses.length === 0) {
 		return (
-			<div className="text-center py-12 px-4">
+			<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 				<Image
 					src="/assets/icons/no-data.svg"
 					alt="No licenses found"
@@ -281,6 +339,7 @@ export default function LicensesView({
 							<div key={license.$id} className="min-w-0 h-full">
 								<LicenseCard
 									license={license}
+									onClick={() => setPreviewLicense(license)}
 									onRefresh={onRefresh}
 									onLicenseRemoved={onLicenseRemoved}
 								/>
@@ -296,6 +355,14 @@ export default function LicensesView({
 					)}
 				</>
 			)}
+			<LicensePreviewSheet
+				license={previewLicense}
+				open={Boolean(previewLicense)}
+				onOpenChange={(open) => {
+					if (!open) setPreviewLicense(null);
+				}}
+				onUpdated={onRefresh}
+			/>
 		</>
 	);
 }

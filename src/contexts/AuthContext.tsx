@@ -10,6 +10,7 @@ import {
 	useState,
 } from "react";
 import { normalizeUserRole } from "@/constants/rbac";
+import { isAuthRoute, isProtectedAppRoute } from "@/lib/auth/protectedRoutes";
 import { getSessionUser } from "@/lib/actions/auth.actions";
 import { getCurrentUserFrom2FA } from "@/lib/actions/user.actions";
 
@@ -113,27 +114,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				} else {
 					// Check for 2FA-based authentication only if we're on a dashboard route
 					// This prevents automatic authentication on sign-in page
-					const isDashboardRoute =
-						pathname &&
-						(pathname.startsWith("/dashboard") ||
-							pathname.startsWith("/analytics") ||
-							pathname.startsWith("/contracts") ||
-							pathname.startsWith("/my-contracts") ||
-							pathname.startsWith("/settings") ||
-							pathname.startsWith("/search") ||
-							pathname.startsWith("/licenses") ||
-							pathname.startsWith("/uploads") ||
-							pathname.startsWith("/images") ||
-							pathname.startsWith("/media") ||
-							pathname.startsWith("/others") ||
-							pathname.startsWith("/audits") ||
-							pathname.startsWith("/team") ||
-							pathname.startsWith("/calendar") ||
-							pathname.startsWith("/company-news"));
-					const isAuthRoute =
-						pathname &&
-						(pathname.startsWith("/sign-in") ||
-							pathname.startsWith("/sign-up"));
+					const isDashboardRoute = isProtectedAppRoute(pathname);
+					const onAuthRoute = isAuthRoute(pathname);
 
 					if (process.env.NODE_ENV === "development") {
 						console.log(
@@ -142,11 +124,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 							"isDashboardRoute:",
 							isDashboardRoute,
 							"isAuthRoute:",
-							isAuthRoute,
+							onAuthRoute,
 						);
 					}
 
-					if (isAuthRoute) {
+					if (onAuthRoute) {
 						// Explicitly set to null on auth routes to prevent any 2FA interference
 						if (process.env.NODE_ENV === "development") {
 							console.log(
@@ -273,10 +255,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 	const refreshUser = async () => {
 		try {
 			// Check if on dashboard route (2FA-based user)
-			const isDashboardRoute =
-				pathname?.startsWith("/dashboard") ||
-				pathname?.startsWith("/file") ||
-				pathname === "/";
+			const isDashboardRoute = isProtectedAppRoute(pathname);
 
 			if (isDashboardRoute) {
 				const twoFAUser = await getCurrentUserFrom2FA();

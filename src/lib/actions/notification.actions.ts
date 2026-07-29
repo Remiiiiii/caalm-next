@@ -85,6 +85,18 @@ export const createNotification = async ({
 			rowId: ID.unique(),
 			data,
 		});
+
+		try {
+			const CacheManager = (await import("@/lib/services/cache-manager"))
+				.default;
+			await CacheManager.invalidateNotifications(userId);
+		} catch (cacheError) {
+			console.warn(
+				"[createNotification] Could not invalidate notification cache:",
+				cacheError,
+			);
+		}
+
 		return notification;
 	} catch (error) {
 		handleError(error, "Failed to create notification");

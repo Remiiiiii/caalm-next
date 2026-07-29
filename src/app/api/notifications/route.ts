@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
+import { broadcastNotificationToUser } from "@/lib/notifications/broadcastNotification";
 import { notificationService } from "@/lib/services/notificationService";
 import type {
 	CreateNotificationRequest,
@@ -32,67 +32,52 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		// Build cache key from filters
-		const cacheKey = `${CACHE_KEYS.notifications.user(
+		// Build filters
+		const filters: NotificationFilters = {};
+		if (search) filters.search = search;
+		if (type && type !== "all") filters.type = type;
+		if (status && status !== "all")
+			filters.status = status as "read" | "unread";
+		if (priority && priority !== "all")
+			filters.priority = priority as "low" | "medium" | "high" | "urgent";
+		if (isRead !== null && isRead !== undefined) {
+			filters.status = isRead === "true" ? "read" : "unread";
+		}
+
+		// Build sort
+		const sort: NotificationSort = {
+			field: sortField as "date" | "priority" | "type" | "title",
+			direction: sortDirection as "asc" | "desc",
+		};
+
+		// Always read from DB — Redis list cache caused stale UI for up to 2 minutes
+		const result = await notificationService.getNotifications(
 			userId,
-		)}:${page}:${limit}:${JSON.stringify({
-			search,
-			type,
-			status,
-			priority,
-			sortField,
-			sortDirection,
-			isRead,
-		})}`;
-
-		// For notifications, use shorter TTL since we have SSE for real-time updates
-		const result = await CacheManager.withCache(
-			"notifications",
-			cacheKey,
-			async () => {
-				// Build filters
-				const filters: NotificationFilters = {};
-				if (search) filters.search = search;
-				if (type && type !== "all") filters.type = type;
-				if (status && status !== "all")
-					filters.status = status as "read" | "unread";
-				if (priority && priority !== "all")
-					filters.priority = priority as "low" | "medium" | "high" | "urgent";
-				if (isRead !== null && isRead !== undefined) {
-					filters.status = isRead === "true" ? "read" : "unread";
-				}
-
-				// Build sort
-				const sort: NotificationSort = {
-					field: sortField as "date" | "priority" | "type" | "title",
-					direction: sortDirection as "asc" | "desc",
-				};
-
-				const notifications = await notificationService.getNotifications(
-					userId,
-					Object.keys(filters).length > 0 ? filters : undefined,
-					sort,
-					page,
-					limit,
-				);
-
-				console.log(
-					`[SERVER] /api/notifications GET - userId: ${userId}, total: ${notifications.total}, data length: ${notifications.data?.length || 0}`,
-				);
-
-				return notifications;
-			},
-			CACHE_TTLS.short, // 2 minutes for notifications
+			Object.keys(filters).length > 0 ? filters : undefined,
+			sort,
+			page,
+			limit,
 		);
 
-		return NextResponse.json({
-			success: true,
-			data: result.data,
-			notifications: result.data,
-			total: result.total,
-			page: result.page,
-			limit: result.limit,
-		});
+		console.log(
+			`[SERVER] /api/notifications GET - userId: ${userId}, total: ${result.total}, data length: ${result.data?.length || 0}`,
+		);
+
+		return NextResponse.json(
+			{
+				success: true,
+				data: result.data,
+				notifications: result.data,
+				total: result.total,
+				page: result.page,
+				limit: result.limit,
+			},
+			{
+				headers: {
+					"Cache-Control": "no-store, max-age=0",
+				},
+			},
+		);
 	} catch (error: any) {
 		console.error("Failed to fetch notifications:", error);
 
@@ -160,8 +145,10 @@ export async function POST(request: NextRequest) {
 
 		// Broadcast new notification via SSE (non-blocking)
 		try {
-			const { broadcastToUser } = await import("./sse/route");
-			await broadcastToUser(body.userId, notification);
+			await broadcastNotificationToUser(body.userId, notification as Record<
+				string,
+				unknown
+			>);
 		} catch (sseError) {
 			console.warn("Failed to broadcast notification via SSE:", sseError);
 			// Don't fail the request if SSE fails

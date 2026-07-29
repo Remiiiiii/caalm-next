@@ -42,44 +42,57 @@ export const convertFileSize = ({
 	}
 };
 
-export const calculatePercentage = (sizeInBytes: number) => {
-	const totalSizeInBytes = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+export const calculatePercentage = (
+	sizeInBytes: number,
+	limitBytes?: number,
+) => {
+	const totalSizeInBytes =
+		limitBytes && limitBytes > 0 ? limitBytes : 2 * 1024 * 1024 * 1024;
 	const percentage = (sizeInBytes / totalSizeInBytes) * 100;
-	return Number(percentage.toFixed(2));
+	return Number(Math.min(percentage, 100).toFixed(2));
 };
+
+/** Extensions stored as Appwrite file type `document` (shown on /documents). */
+export const DOCUMENT_FILE_EXTENSIONS = [
+	"pdf",
+	"doc",
+	"docx",
+	"txt",
+	"xls",
+	"xlsx",
+	"csv",
+	"rtf",
+	"ods",
+	"ppt",
+	"odp",
+	"md",
+	"html",
+	"htm",
+	"epub",
+	"pages",
+	"fig",
+	"psd",
+	"ai",
+	"indd",
+	"xd",
+	"sketch",
+	"afdesign",
+	"afphoto",
+] as const;
+
+export function isDocumentFileExtension(extension: string | null | undefined): boolean {
+	if (!extension) return false;
+	return DOCUMENT_FILE_EXTENSIONS.includes(
+		extension.toLowerCase() as (typeof DOCUMENT_FILE_EXTENSIONS)[number],
+	);
+}
 
 export const getFileType = (fileName: string) => {
 	const extension = fileName.split(".").pop()?.toLowerCase();
 
 	if (!extension) return { type: "other", extension: "" };
 
-	const documentExtensions = [
-		"pdf",
-		"doc",
-		"docx",
-		"txt",
-		"xls",
-		"xlsx",
-		"csv",
-		"rtf",
-		"ods",
-		"ppt",
-		"odp",
-		"md",
-		"html",
-		"htm",
-		"epub",
-		"pages",
-		"fig",
-		"psd",
-		"ai",
-		"indd",
-		"xd",
-		"sketch",
-		"afdesign",
-		"afphoto",
-		"afphoto",
-	];
+	const documentExtensions = DOCUMENT_FILE_EXTENSIONS;
 	const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"];
 	const videoExtensions = ["mp4", "avi", "mov", "mkv", "webm"];
 	const audioExtensions = ["mp3", "wav", "ogg", "flac"];
@@ -336,11 +349,11 @@ export const getUsageSummary = (totalSpace: TotalSpace) => {
 
 export function getFileTypesParams(type: string): FileType[] {
 	if (!type || type.toLowerCase() === "uploads") {
-		return ["image", "video", "audio", "document", "other"];
+		// All non-document library files; documents live on /documents
+		return ["image", "video", "audio", "other"];
 	}
 	switch (type.toLowerCase()) {
 		case "images":
-			// Only allow 'image' type, filter extensions in the page
 			return ["image"];
 		case "documents":
 			return ["document"];
@@ -351,6 +364,12 @@ export function getFileTypesParams(type: string): FileType[] {
 		default:
 			return ["document"];
 	}
+}
+
+export function getFileLibraryPageTitle(type: string): string {
+	const normalized = (type || "uploads").toLowerCase();
+	if (normalized === "uploads") return "Files";
+	return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 // ROLE UTILS

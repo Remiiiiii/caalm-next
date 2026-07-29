@@ -1,8 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { deleteUser } from "@/lib/actions/user.actions";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function DELETE(req: NextRequest) {
 	try {
+		const permissionCheck = await requirePermission(req, {
+			permission: PERMISSIONS.USERS.EDIT,
+		});
+		if (permissionCheck) return permissionCheck;
+
 		const body = await req.json();
 		const { userId } = body;
 		if (!userId) {

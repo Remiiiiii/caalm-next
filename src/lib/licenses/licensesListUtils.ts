@@ -100,6 +100,25 @@ export function isLicenseExpiringWithinDays(
 	return expiry >= now && expiry <= end;
 }
 
+export function getLicenseExpiryUrgency(
+	license: License,
+): "none" | "expired" | "30" | "60" | "90" {
+	if (isLicenseExpired(license)) return "expired";
+	if (isLicenseExpiringWithinDays(license, 30)) return "30";
+	if (isLicenseExpiringWithinDays(license, 60)) return "60";
+	if (isLicenseExpiringWithinDays(license, 90)) return "90";
+	return "none";
+}
+
+export function getLicenseDocumentUrl(license: License): string | null {
+	if (license.licenseUrl?.trim()) return license.licenseUrl.trim();
+	const fileId = license.fileId || license.certificateFileId;
+	if (fileId?.trim()) {
+		return `/api/files/download?fileId=${encodeURIComponent(fileId.trim())}`;
+	}
+	return null;
+}
+
 export function isComplianceAtRisk(license: License): boolean {
 	const c = license.compliance;
 	return (

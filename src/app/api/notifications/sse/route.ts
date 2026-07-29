@@ -4,7 +4,7 @@
  */
 
 import type { NextRequest } from "next/server";
-import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
+import { getCurrentUser, getCurrentUserFrom2FA } from "@/lib/actions/user.actions";
 
 /**
  * Create a text encoder for SSE
@@ -77,11 +77,15 @@ export async function broadcastToAll(notification: any) {
 
 export async function GET(request: NextRequest) {
 	try {
-		// Authenticate user
-		const userId = await getCurrentUserId();
-		if (!userId) {
+		// Match notification queries: users collection document $id (not Appwrite account id)
+		let user = await getCurrentUser();
+		if (!user) {
+			user = await getCurrentUserFrom2FA();
+		}
+		if (!user) {
 			return new Response("Unauthorized", { status: 401 });
 		}
+		const userId = user.$id;
 
 		// Create a unique connection ID
 		const connectionId = `${userId}-${Date.now()}`;

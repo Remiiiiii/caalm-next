@@ -289,26 +289,36 @@ export const RESPONSE_DEADLINE_OPTIONS = {
 } as const;
 
 // Helper functions for SAM.gov API integration
+/**
+ * Format date for SAM.gov API (strict MM/dd/yyyy)
+ */
+export function formatDateForSAM(date: Date): string {
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	const year = date.getFullYear();
+	return `${month}/${day}/${year}`;
+}
+
 export const addDays = (date: Date, days: number): string => {
 	const result = new Date(date);
 	result.setDate(result.getDate() + days);
-	return result.toLocaleDateString("en-US");
+	return formatDateForSAM(result);
 };
 
 export const addMonths = (date: Date, months: number): string => {
 	const result = new Date(date);
 	result.setMonth(result.getMonth() + months);
-	return result.toLocaleDateString("en-US");
+	return formatDateForSAM(result);
 };
 
 export const getDefaultFromDate = (): string => {
 	const date = new Date();
 	date.setMonth(date.getMonth() - 3); // 3 months ago
-	return date.toLocaleDateString("en-US");
+	return formatDateForSAM(date);
 };
 
 export const getDefaultToDate = (): string => {
-	return new Date().toLocaleDateString("en-US");
+	return formatDateForSAM(new Date());
 };
 
 // Map Response/Date Offers Due options to API format

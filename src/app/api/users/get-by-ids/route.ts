@@ -82,11 +82,11 @@ async function fetchUserByIdentifier(
 
 		// If not found by $id, try accountId using listRows
 		try {
-			const accountIdResponse = await adminClient.tablesDB.listRows(
-				appwriteConfig.databaseId,
-				appwriteConfig.usersCollectionId,
-				[Query.equal("accountId", identifier), Query.limit(1)],
-			);
+			const accountIdResponse = await adminClient.tablesDB.listRows({
+				databaseId: appwriteConfig.databaseId,
+				tableId: appwriteConfig.usersCollectionId,
+				queries: [Query.equal("accountId", identifier), Query.limit(1)],
+			});
 
 			if (accountIdResponse.rows && accountIdResponse.rows.length > 0) {
 				const user = accountIdResponse.rows[0];
@@ -124,11 +124,11 @@ async function fetchUserByIdentifier(
 
 		// If not found by $id or accountId, try fullName (assignedManagers might be stored as names)
 		try {
-			const nameResponse = await adminClient.tablesDB.listRows(
-				appwriteConfig.databaseId,
-				appwriteConfig.usersCollectionId,
-				[Query.equal("fullName", identifier), Query.limit(1)],
-			);
+			const nameResponse = await adminClient.tablesDB.listRows({
+				databaseId: appwriteConfig.databaseId,
+				tableId: appwriteConfig.usersCollectionId,
+				queries: [Query.equal("fullName", identifier), Query.limit(1)],
+			});
 
 			if (nameResponse.rows && nameResponse.rows.length > 0) {
 				const user = nameResponse.rows[0];
@@ -172,9 +172,30 @@ async function fetchUserByIdentifier(
 
 export async function POST(request: NextRequest) {
 	try {
-		const { userIds } = await request.json();
+		let body: unknown;
+		try {
+			body = await request.json();
+		} catch {
+			return NextResponse.json(
+				{ error: "Invalid JSON body" },
+				{ status: 400 },
+			);
+		}
+
+		const userIds = (body as { userIds?: unknown })?.userIds;
 
 		if (!Array.isArray(userIds) || userIds.length === 0) {
+			return NextResponse.json(
+				{ error: "Invalid or empty userIds array" },
+				{ status: 400 },
+			);
+		}
+
+		const normalizedIds = userIds
+			.map((id) => String(id ?? "").trim())
+			.filter(Boolean);
+
+		if (normalizedIds.length === 0) {
 			return NextResponse.json(
 				{ error: "Invalid or empty userIds array" },
 				{ status: 400 },
@@ -194,7 +215,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Check cache for the entire batch first
-		const cacheKey = CACHE_KEYS.users.byIds(userIds);
+		const cacheKey = CACHE_KEYS.users.byIds(normalizedIds);
 		const cachedResult = await cache.get<any[]>(cacheKey);
 		if (cachedResult) {
 			return NextResponse.json(cachedResult);
@@ -202,7 +223,7 @@ export async function POST(request: NextRequest) {
 
 		// Fetch users in parallel for better performance
 		const adminClient = await createAdminClient();
-		const uniqueUserIds = Array.from(new Set(userIds)); // Remove duplicates
+		const uniqueUserIds = Array.from(new Set(normalizedIds));
 
 		// Fetch all users in parallel instead of sequentially
 		const userPromises = uniqueUserIds.map((userId) =>
@@ -232,7 +253,10 @@ export async function POST(request: NextRequest) {
 	} catch (error) {
 		console.error("Error fetching users by IDs:", error);
 		return NextResponse.json(
-			{ error: "Failed to fetch users" },
+			{
+				error:
+					error instanceof Error ? error.message : "Failed to fetch users",
+			},
 			{ status: 500 },
 		);
 	}

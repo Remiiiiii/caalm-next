@@ -7,6 +7,7 @@ import {
 } from "@/lib/appwrite/api-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import CacheManager from "@/lib/services/cache-manager";
 import { constructFileUrl, getFileType } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
@@ -219,6 +220,8 @@ export async function POST(request: NextRequest) {
 					extension: getFileType(bucketFile.name).extension,
 				},
 			});
+
+			await CacheManager.invalidateStorage();
 
 			return NextResponse.json({
 				data: newFile,

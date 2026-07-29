@@ -115,8 +115,14 @@ import {
 } from "@/lib/actions/file.actions";
 import { assignContractToDepartment } from "@/lib/actions/notification.actions";
 import type { AppUser } from "@/lib/actions/user.actions";
+import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
+import {
+	getFilePreviewKind,
+	usesMediaPreview,
+} from "@/lib/files/filePreviewKind";
 import { FileDetails } from "./ActionsModalContent";
 import DocumentViewer from "./DocumentViewer";
+import FilePreviewDialog from "./files/FilePreviewDialog";
 import { Button } from "./ui/button";
 import { CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -179,6 +185,17 @@ const ActionDropdown = ({
 	const path = usePathname() || "";
 	const [isViewerOpen, setIsViewerOpen] = useState(false);
 	const { permissions } = usePermissions();
+
+	const filePreviewKind = React.useMemo(
+		() =>
+			getFilePreviewKind({
+				name: file.name || file.contractName || "",
+				type: file.type,
+				extension: file.extension,
+			}),
+		[file.name, file.contractName, file.type, file.extension],
+	);
+	const useSimpleFilePreview = usesMediaPreview(filePreviewKind);
 
 	// SWR automatically fetches data when hook is used, no need for manual fetch
 
@@ -273,6 +290,9 @@ const ActionDropdown = ({
 
 		if (success) {
 			closeAllModals();
+			if (action.value === "delete") {
+				await refreshStorageUsage();
+			}
 			// Refresh the contracts list after successful actions
 			if (onRefresh) {
 				onRefresh();
@@ -283,9 +303,19 @@ const ActionDropdown = ({
 	};
 
 	const handleRemoveUser = async (email: string) => {
-		// Use file.users as the source of truth, fallback to emails state
-		const currentUsers = file.users || emails;
-		const updateEmails = currentUsers.filter((e: string) => e !== email);
+		const key = email.trim().toLowerCase();
+		const updateEmails = emails.filter(
+			(e: string) => e.trim().toLowerCase() !== key,
+		);
+		const wasPersisted = (file.users || []).some(
+			(e: string) => e.trim().toLowerCase() === key,
+		);
+
+		// Pending picks (not saved yet) only update local selection
+		if (!wasPersisted) {
+			setEmails(updateEmails);
+			return;
+		}
 
 		const success = await updateFileUsers({
 			fileId: file.$id,
@@ -295,10 +325,7 @@ const ActionDropdown = ({
 
 		if (success) {
 			setEmails(updateEmails);
-			// Update the file object to reflect the change immediately
 			file.users = updateEmails;
-			// Don't close the dialog - just update the list
-			// The dialog will show "No users shared yet" if updateEmails is empty
 		}
 	};
 
@@ -669,7 +696,7 @@ const ActionDropdown = ({
 										</h2>
 									</div>
 									<p className="text-sm text-slate-600 mt-1 ml-7">
-										View contract and file information
+										View uploaded file information
 									</p>
 								</div>
 							</div>
@@ -689,7 +716,7 @@ const ActionDropdown = ({
 					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-between">
 							<div className="text-sm text-slate-500">
-								Contract details and metadata
+								File details and metadata
 							</div>
 							<div className="flex items-center gap-3">
 								<Button
@@ -727,7 +754,7 @@ const ActionDropdown = ({
 							</div>
 						</div>
 						<p className="text-sm text-slate-600 mt-1 ml-14">
-							Share this file or contract with other users
+							Share this file within and/or outside the organization
 						</p>
 					</div>
 
@@ -738,7 +765,7 @@ const ActionDropdown = ({
 								file={file}
 								onInputChange={setEmails}
 								onRemove={handleRemoveUser}
-								currentUsers={emails.length > 0 ? emails : file.users}
+								currentUsers={emails}
 							/>
 						</div>
 					</div>
@@ -748,10 +775,10 @@ const ActionDropdown = ({
 						<div className="flex items-center justify-between">
 							<div className="text-sm text-slate-500">
 								{emails.length > 0
-									? `${emails.length} email${
+									? `${emails.length} recipient${
 											emails.length === 1 ? "" : "s"
-										} to share`
-									: "Enter email addresses to share"}
+										} selected`
+									: "Select users or enter an email to share"}
 							</div>
 							<div className="flex items-center gap-3">
 								<Button
@@ -790,29 +817,27 @@ const ActionDropdown = ({
 				</DialogContent>
 			);
 		}
-		// Delete dialog
+		// Delete dialog — matches Delete License / Delete Draft
 		if (value === "delete") {
 			return (
-				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
+				<DialogContent className="overflow-hidden p-0 gap-0 shadow-xl sm:max-w-md border border-slate-200">
 					<DialogTitle className="sr-only">Delete File</DialogTitle>
-					{/* Cap */}
-					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
+					{/* Professional Cap */}
+					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
 					{/* Header */}
-					<div className="glass-dialog-alert-section">
-						<div className="flex gap-2">
-							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+					<div className="px-6 py-4 mt-4 bg-white border-b border-slate-200">
+						<div className="flex items-center gap-2">
+							<AlertTriangle className="w-5 h-5 shrink-0 text-[#f7d333]" />
 							<h2 className="text-base font-semibold sidebar-gradient-text">
 								Delete File
 							</h2>
 						</div>
-						<div>
-							<DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
-								Are you sure you want to delete &quot;
-								{file.name || file.contractName}&quot;? This action cannot be
-								undone.
-							</DialogDescription>
-						</div>
+						<DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
+							Are you sure you want to delete &quot;
+							{file.name || file.contractName}&quot;? This action cannot be
+							undone.
+						</DialogDescription>
 					</div>
 
 					{/* Body */}
@@ -820,44 +845,44 @@ const ActionDropdown = ({
 						<p className="text-sm text-slate-600">
 							This will permanently remove the file from the system.
 						</p>
+						<p className="text-xs font-medium text-slate-500">
+							This action is permanent.
+						</p>
 					</div>
 
-					{/* Footer */}
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500 w-20">
-							This action is permanent.
-						</div>
-						<div className="flex items-center gap-3">
-							<Button
-								variant="ghost"
-								onClick={(e) => closeAllModals(e)}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
-							<Button
-								onClick={(e) => {
-									e.stopPropagation();
-									e.preventDefault();
-									handleAction();
-								}}
-								disabled={isLoading}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Trash2 className="w-4 h-4" />
-								{isLoading ? "Deleting..." : "Delete File"}
-								{isLoading && (
-									<Image
-										src="/assets/icons/loader.svg"
-										alt="loader"
-										width={16}
-										height={16}
-										className="animate-spin ml-2"
-									/>
-								)}
-							</Button>
-						</div>
+					{/* Footer — centered actions */}
+					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={(e) => closeAllModals(e)}
+							className="primary-btn gap-2 px-3 sm:px-4"
+						>
+							<Ban className="h-4 w-4 shrink-0" />
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								handleAction();
+							}}
+							disabled={isLoading}
+							className="primary-btn gap-2 px-3 sm:px-4"
+						>
+							<Trash2 className="h-4 w-4 shrink-0" />
+							{isLoading ? "Deleting..." : "Delete File"}
+							{isLoading && (
+								<Image
+									src="/assets/icons/loader.svg"
+									alt="loader"
+									width={16}
+									height={16}
+									className="animate-spin ml-2"
+								/>
+							)}
+						</Button>
 					</div>
 				</DialogContent>
 			);
@@ -934,6 +959,14 @@ const ActionDropdown = ({
 		);
 	}
 
+	// Review is for documents only — hide for images and videos
+	const fileType = (file.type || "").toLowerCase();
+	if (fileType === "image" || fileType === "video") {
+		filteredActions = filteredActions.filter(
+			(action) => action.value !== "review",
+		);
+	}
+
 	// If contract is expired, only show: Delete, Details, Download, Status
 	if (isContractExpired) {
 		filteredActions = filteredActions.filter((action) =>
@@ -962,174 +995,186 @@ const ActionDropdown = ({
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
 						{filteredActions.map((actionItem) => {
-						const actionIconMap = {
-							assign: UserRoundCheck,
-							rename: Pencil,
-							share: Share2,
-							delete: Trash2,
-							details: Info,
-							status: RefreshCw,
-							download: Download,
-							review: ScanEye,
-						} as const;
+							const actionIconMap = {
+								assign: UserRoundCheck,
+								rename: Pencil,
+								share: Share2,
+								delete: Trash2,
+								details: Info,
+								status: RefreshCw,
+								download: Download,
+								review: ScanEye,
+							} as const;
 
-						const Icon =
-							actionIconMap[actionItem.value as keyof typeof actionIconMap] ||
-							FileText;
-						const tone = actionItem.value === "delete" ? "danger" : "default";
+							const Icon =
+								actionIconMap[actionItem.value as keyof typeof actionIconMap] ||
+								FileText;
+							const tone = actionItem.value === "delete" ? "danger" : "default";
 
-						// Handle download action separately
-						if (actionItem.value === "download") {
-							const handleDownload = async () => {
-								if (downloading) return;
+							// Handle download action separately
+							if (actionItem.value === "download") {
+								const handleDownload = async () => {
+									if (downloading) return;
 
-								setDownloading(true);
-								setIsDropdownOpen(false);
+									setDownloading(true);
+									setIsDropdownOpen(false);
 
-								try {
-									const params = new URLSearchParams();
+									try {
+										const params = new URLSearchParams();
 
-									if (isValidBucketFileId(file.bucketFileId)) {
-										params.append("bucketFileId", file.bucketFileId!);
-									} else if (file.contractId) {
-										params.append("contractId", file.contractId);
-									} else if (file.$id) {
-										params.append("fileId", file.$id);
-									} else {
-										throw new Error("No file identifier available");
-									}
-
-									const response = await fetch(
-										`/api/files/download?${params.toString()}`,
-									);
-
-									if (!response.ok) {
-										throw new Error("Download failed");
-									}
-
-									const blob = await response.blob();
-
-									const contentDisposition = response.headers.get(
-										"Content-Disposition",
-									);
-									let filename = file.name || file.contractName || "download";
-
-									if (contentDisposition) {
-										const match = contentDisposition.match(
-											/filename\*?=['"]?([^'";\n]+)/,
-										);
-										if (match?.[1]) {
-											filename = decodeURIComponent(
-												match[1].replace(/^UTF-8''/, ""),
-											);
+										if (isValidBucketFileId(file.bucketFileId)) {
+											params.append("bucketFileId", file.bucketFileId!);
+										} else if (file.contractId) {
+											params.append("contractId", file.contractId);
+										} else if (file.$id) {
+											params.append("fileId", file.$id);
+										} else {
+											throw new Error("No file identifier available");
 										}
+
+										const response = await fetch(
+											`/api/files/download?${params.toString()}`,
+										);
+
+										if (!response.ok) {
+											throw new Error("Download failed");
+										}
+
+										const blob = await response.blob();
+
+										const contentDisposition = response.headers.get(
+											"Content-Disposition",
+										);
+										let filename = file.name || file.contractName || "download";
+
+										if (contentDisposition) {
+											const match = contentDisposition.match(
+												/filename\*?=['"]?([^'";\n]+)/,
+											);
+											if (match?.[1]) {
+												filename = decodeURIComponent(
+													match[1].replace(/^UTF-8''/, ""),
+												);
+											}
+										}
+
+										if (
+											file.extension &&
+											!filename
+												.toLowerCase()
+												.endsWith(`.${file.extension.toLowerCase()}`)
+										) {
+											filename = `${filename}.${file.extension}`;
+										}
+
+										const url = URL.createObjectURL(blob);
+										const link = document.createElement("a");
+										link.href = url;
+										link.download = filename;
+										link.style.display = "none";
+										link.setAttribute("download", filename);
+										document.body.appendChild(link);
+										link.click();
+
+										setTimeout(() => {
+											document.body.removeChild(link);
+											URL.revokeObjectURL(url);
+										}, 100);
+									} catch (error) {
+										console.error("Download failed:", error);
+										alert("Failed to download file");
+									} finally {
+										setDownloading(false);
 									}
+								};
 
-									if (
-										file.extension &&
-										!filename
-											.toLowerCase()
-											.endsWith(`.${file.extension.toLowerCase()}`)
-									) {
-										filename = `${filename}.${file.extension}`;
-									}
+								return (
+									<AppDropdownMenuItem
+										key={actionItem.value}
+										icon={Icon}
+										tone={tone}
+										onSelect={(e) => {
+											e.preventDefault();
+											handleDownload();
+										}}
+									>
+										{downloading ? "Downloading..." : actionItem.label}
+									</AppDropdownMenuItem>
+								);
+							}
 
-									const url = URL.createObjectURL(blob);
-									const link = document.createElement("a");
-									link.href = url;
-									link.download = filename;
-									link.style.display = "none";
-									link.setAttribute("download", filename);
-									document.body.appendChild(link);
-									link.click();
-
-									setTimeout(() => {
-										document.body.removeChild(link);
-										URL.revokeObjectURL(url);
-									}, 100);
-								} catch (error) {
-									console.error("Download failed:", error);
-									alert("Failed to download file");
-								} finally {
-									setDownloading(false);
-								}
-							};
-
-							return (
+							const menuItem = (
 								<AppDropdownMenuItem
-									key={actionItem.value}
 									icon={Icon}
 									tone={tone}
-									onSelect={(e) => {
-										e.preventDefault();
-										handleDownload();
+									onClick={() => {
+										setAction(actionItem);
+										if (actionItem.value === "review") {
+											setIsViewerOpen(true);
+										} else if (
+											[
+												"assign",
+												"rename",
+												"delete",
+												"share",
+												"details",
+												"status",
+											].includes(actionItem.value)
+										) {
+											setIsModalOpen(true);
+										}
 									}}
 								>
-									{downloading ? "Downloading..." : actionItem.label}
+									{actionItem.label}
 								</AppDropdownMenuItem>
 							);
-						}
 
-						const menuItem = (
-							<AppDropdownMenuItem
-								icon={Icon}
-								tone={tone}
-								onClick={() => {
-									setAction(actionItem);
-									if (actionItem.value === "review") {
-										setIsViewerOpen(true);
-									} else if (
-										[
-											"assign",
-											"rename",
-											"delete",
-											"share",
-											"details",
-											"status",
-										].includes(actionItem.value)
-									) {
-										setIsModalOpen(true);
-									}
-								}}
-							>
-								{actionItem.label}
-							</AppDropdownMenuItem>
-						);
+							if (actionItem.value === "delete") {
+								return (
+									<Fragment key={actionItem.value}>
+										<DropdownMenuSeparator />
+										{menuItem}
+									</Fragment>
+								);
+							}
 
-						if (actionItem.value === "delete") {
-							return (
-								<Fragment key={actionItem.value}>
-									<DropdownMenuSeparator />
-									{menuItem}
-								</Fragment>
-							);
-						}
-
-						return <Fragment key={actionItem.value}>{menuItem}</Fragment>;
-					})}
-				</AppDropdownMenuContent>
-			</DropdownMenu>
-			{renderDialogContent()}
-			{file?.$id && file.bucketFileId && (
-				<DocumentViewer
-					isOpen={isViewerOpen}
-					onClose={() => setIsViewerOpen(false)}
-					file={{
-						id: file.$id,
-						name: file.name || file.contractName || "",
-						type: file.extension || "pdf",
-						size: String(file.size ?? "Unknown"),
-						url: constructFileUrl(file.bucketFileId),
-						createdAt: file.$createdAt,
-						expiresAt: file.contractExpiryDate,
-						createdBy:
-							typeof file.owner === "string"
-								? file.owner
-								: file.owner?.fullName || "Unknown",
-						description: file.description || "",
-					}}
-				/>
-			)}
+							return <Fragment key={actionItem.value}>{menuItem}</Fragment>;
+						})}
+					</AppDropdownMenuContent>
+				</DropdownMenu>
+				{renderDialogContent()}
+				{file?.$id && file.bucketFileId && useSimpleFilePreview ? (
+					<FilePreviewDialog
+						open={isViewerOpen}
+						onOpenChange={setIsViewerOpen}
+						file={{
+							name: file.name || file.contractName || "",
+							url: constructFileUrl(file.bucketFileId),
+							type: file.type,
+							extension: file.extension,
+						}}
+					/>
+				) : null}
+				{file?.$id && file.bucketFileId && !useSimpleFilePreview ? (
+					<DocumentViewer
+						isOpen={isViewerOpen}
+						onClose={() => setIsViewerOpen(false)}
+						file={{
+							id: file.$id,
+							name: file.name || file.contractName || "",
+							type: file.extension || "pdf",
+							size: String(file.size ?? "Unknown"),
+							url: constructFileUrl(file.bucketFileId),
+							createdAt: file.$createdAt,
+							expiresAt: file.contractExpiryDate,
+							createdBy:
+								typeof file.owner === "string"
+									? file.owner
+									: file.owner?.fullName || "Unknown",
+							description: file.description || "",
+						}}
+					/>
+				) : null}
 			</Dialog>
 			<ContractApprovalFlowDialog
 				open={isModalOpen && action?.value === "status"}

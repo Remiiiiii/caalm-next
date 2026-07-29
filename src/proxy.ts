@@ -180,6 +180,7 @@ export async function proxy(request: NextRequest) {
 		"/images",
 		"/media",
 		"/others",
+		"/documents",
 		"/audits",
 		"/team",
 	];

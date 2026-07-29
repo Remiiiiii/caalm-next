@@ -103,19 +103,48 @@ export class CacheManager {
 	 * Invalidates all notification-related cache keys for a user, including all filter/page variations
 	 */
 	static async invalidateNotifications(userId: string): Promise<void> {
+		// Bump generation so existing list/filter cache keys miss (Vercel KV has no pattern delete)
+		const genKey = `notifications:gen:${userId}`;
+		const currentGen = (await cache.get<number>(genKey)) ?? 0;
+		await cache.set(genKey, currentGen + 1, 60 * 60 * 24);
+
 		// Invalidate base keys
 		await cache.del(CACHE_KEYS.notifications.user(userId));
 		await cache.del(CACHE_KEYS.notifications.stats(userId));
 		await cache.del(CACHE_KEYS.notifications.unreadCount(userId));
 
-		// Also invalidate all variations with filters/pages using pattern matching
-		// The cache key format is: notifications:user:${userId}:${page}:${limit}:${filters}
+		// Explicitly delete the default list key used by the notifications UI
+		const defaultListKey = `${CACHE_KEYS.notifications.user(userId)}:v${currentGen}:1:20:${JSON.stringify(
+			{
+				sortField: "date",
+				sortDirection: "desc",
+				isRead: null,
+			},
+		)}`;
+		await cache.del(defaultListKey);
+		// Legacy key shape (pre-generation) — clear so old entries expire from use
+		await cache.del(
+			`${CACHE_KEYS.notifications.user(userId)}:1:20:${JSON.stringify({
+				sortField: "date",
+				sortDirection: "desc",
+				isRead: null,
+			})}`,
+		);
+
+		// Also invalidate all variations with filters/pages using pattern matching (ioredis only)
 		const pattern = `notifications:user:${userId}:*`;
 		await cache.clear(pattern);
 
 		console.log(
-			`[SERVER] Invalidated notification cache for userId: ${userId} (including pattern: ${pattern})`,
+			`[SERVER] Invalidated notification cache for userId: ${userId} (gen ${currentGen + 1}, pattern: ${pattern})`,
 		);
+	}
+
+	/** Cache generation for notification list keys (bumped on write). */
+	static async getNotificationsCacheGeneration(
+		userId: string,
+	): Promise<number> {
+		return (await cache.get<number>(`notifications:gen:${userId}`)) ?? 0;
 	}
 
 	/**
@@ -232,7 +261,7 @@ export class CacheManager {
 	 * Invalidate storage cache
 	 */
 	static async invalidateStorage(): Promise<void> {
-		await cache.del(CACHE_KEYS.storage.usage());
+		await cache.clear("^storage:usage");
 		await cache.del(CACHE_KEYS.it.storageMetrics());
 	}
 

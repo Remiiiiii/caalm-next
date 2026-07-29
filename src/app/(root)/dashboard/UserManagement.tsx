@@ -1,7 +1,7 @@
 "use client";
 
 import {
-	Ban,
+	Building2,
 	CalendarClock,
 	ChevronDown,
 	ChevronsUpDown,
@@ -17,11 +17,14 @@ import {
 	UserX,
 } from "lucide-react";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+	type UserActionKind,
+	UserManagementActionDialogs,
+} from "@/components/users/UserManagementActionDialogs";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	AppDropdownMenuCheckboxItem,
 	AppDropdownMenuContent,
@@ -44,7 +47,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useUsers } from "@/hooks/useUsers";
+import { type UserManagementUser, useUsers } from "@/hooks/useUsers";
 import {
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
@@ -125,6 +128,7 @@ const UserManagement = () => {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 	const [selectedAssignedBy, setSelectedAssignedBy] = useState<string[]>([]);
+	const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
 	const [dateRangeFilter, setDateRangeFilter] =
 		useState<DateRangeFilter>("all");
 	const [sortConfig, setSortConfig] = useState<{
@@ -135,30 +139,66 @@ const UserManagement = () => {
 		direction: "asc",
 	});
 
-	const [actionUserName, setActionUserName] = useState<string | null>(null);
-	const [actionLabel, setActionLabel] = useState<string | null>(null);
+	const [actionUser, setActionUser] = useState<UserManagementUser | null>(null);
+	const [actionKind, setActionKind] = useState<UserActionKind>(null);
+	const [actionBusy, setActionBusy] = useState(false);
+	const [orgRoleNames, setOrgRoleNames] = useState<string[]>([]);
 
 	const { orgId, loading: orgLoading } = useOrganization();
-	const { users, isLoading, error } = useUsers({
+	const { users, isLoading, error, refresh } = useUsers({
 		orgId,
 		enableRealTime: true,
 		pollingInterval: 15000,
 	});
 	const listLoading = orgLoading || !orgId || isLoading;
 
-	const allRoles = useMemo(
-		() =>
-			[...new Set(users.map((user) => user.roleName || "Unassigned"))].sort(
-				(a, b) => a.localeCompare(b),
-			),
-		[users],
-	);
+	useEffect(() => {
+		let cancelled = false;
+		const loadRoles = async () => {
+			try {
+				const res = await fetch("/api/admin/roles");
+				if (!res.ok) return;
+				const json = await res.json();
+				const names = Array.isArray(json?.data)
+					? json.data
+							.map((r: { name?: string }) => String(r.name || "").trim())
+							.filter(Boolean)
+					: [];
+				if (!cancelled) setOrgRoleNames(names);
+			} catch {
+				// Keep filter based on loaded users if roles API is unavailable
+			}
+		};
+		void loadRoles();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	const allRoles = useMemo(() => {
+		const fromUsers = users.map((user) => user.roleName || "Unassigned");
+		return [...new Set([...orgRoleNames, ...fromUsers])].sort((a, b) =>
+			a.localeCompare(b),
+		);
+	}, [users, orgRoleNames]);
 
 	const allAssigners = useMemo(
 		() =>
 			[...new Set(users.map((user) => user.assignedByName || "System"))].sort(
 				(a, b) => a.localeCompare(b),
 			),
+		[users],
+	);
+
+	const allDepartments = useMemo(
+		() =>
+			[
+				...new Set(
+					users
+						.map((user) => user.department?.trim() || "Unassigned")
+						.filter(Boolean),
+				),
+			].sort((a, b) => a.localeCompare(b)),
 		[users],
 	);
 
@@ -208,6 +248,12 @@ const UserManagement = () => {
 			);
 		}
 
+		if (selectedDepartments.length > 0) {
+			next = next.filter((user) =>
+				selectedDepartments.includes(user.department?.trim() || "Unassigned"),
+			);
+		}
+
 		next = next.filter((user) =>
 			isWithinDateRange(user.assignedDate || user.$createdAt, dateRangeFilter),
 		);
@@ -233,6 +279,7 @@ const UserManagement = () => {
 		searchTerm,
 		selectedRoles,
 		selectedAssignedBy,
+		selectedDepartments,
 		dateRangeFilter,
 		sortConfig,
 	]);
@@ -240,11 +287,13 @@ const UserManagement = () => {
 	const activeFilterCount =
 		selectedRoles.length +
 		selectedAssignedBy.length +
+		selectedDepartments.length +
 		(dateRangeFilter === "all" ? 0 : 1);
 
 	const clearAllFilters = () => {
 		setSelectedRoles([]);
 		setSelectedAssignedBy([]);
+		setSelectedDepartments([]);
 		setDateRangeFilter("all");
 	};
 
@@ -260,13 +309,40 @@ const UserManagement = () => {
 		setSortConfig({ key, direction });
 	};
 
-	const handleAction = (userName: string, label: string) => {
-		setActionUserName(userName);
-		setActionLabel(label);
-		toast({
-			title: "Action selected",
-			description: `${label} for ${userName}`,
-		});
+	const openAction = (user: UserManagementUser, kind: UserActionKind) => {
+		setActionUser(user);
+		setActionKind(kind);
+	};
+
+	const closeAction = () => {
+		setActionUser(null);
+		setActionKind(null);
+	};
+
+	const runAction = async (
+		fn: () => Promise<void>,
+		successTitle: string,
+		successDescription?: string,
+	) => {
+		setActionBusy(true);
+		try {
+			await fn();
+			toast({
+				title: successTitle,
+				description: successDescription,
+			});
+			setActionUser(null);
+			setActionKind(null);
+			refresh();
+		} catch (err) {
+			toast({
+				title: "Action failed",
+				description: (err as Error).message || "Something went wrong",
+				variant: "destructive",
+			});
+		} finally {
+			setActionBusy(false);
+		}
 	};
 
 	const renderSortableHead = (label: string, key: SortKey, className = "") => {
@@ -353,6 +429,27 @@ const UserManagement = () => {
 										}
 									>
 										{role}
+									</AppDropdownMenuCheckboxItem>
+								))}
+
+								<DropdownMenuSeparator />
+								<DropdownMenuLabel className="sidebar-gradient-text">
+									Filter by department
+								</DropdownMenuLabel>
+								{allDepartments.map((department) => (
+									<AppDropdownMenuCheckboxItem
+										icon={Building2}
+										key={department}
+										checked={selectedDepartments.includes(department)}
+										onCheckedChange={(checked) =>
+											setSelectedDepartments((prev) =>
+												checked
+													? [...prev, department]
+													: prev.filter((d) => d !== department),
+											)
+										}
+									>
+										{department}
 									</AppDropdownMenuCheckboxItem>
 								))}
 
@@ -612,30 +709,21 @@ const UserManagement = () => {
 													>
 														<AppDropdownMenuItem
 															icon={UserRound}
-															onSelect={() =>
-																handleAction(user.fullName, "View profile")
-															}
+															onSelect={() => openAction(user, "view")}
 														>
 															View profile
 														</AppDropdownMenuItem>
 														<AppDropdownMenuItem
 															icon={PencilIcon}
 															disabled={!canManageUsers}
-															onSelect={() =>
-																handleAction(user.fullName, "Edit user details")
-															}
+															onSelect={() => openAction(user, "edit")}
 														>
 															Edit user details
 														</AppDropdownMenuItem>
 														<AppDropdownMenuItem
 															icon={ShieldCheck}
 															disabled={!canAssignRoles}
-															onSelect={() =>
-																handleAction(
-																	user.fullName,
-																	"Change role or permissions",
-																)
-															}
+															onSelect={() => openAction(user, "role")}
 														>
 															Change role / permissions
 														</AppDropdownMenuItem>
@@ -643,33 +731,21 @@ const UserManagement = () => {
 														<AppDropdownMenuItem
 															icon={KeyRound}
 															disabled={!canManageUsers}
-															onSelect={() =>
-																handleAction(user.fullName, "Reset password")
-															}
+															onSelect={() => openAction(user, "reset")}
 														>
 															Reset password
 														</AppDropdownMenuItem>
 														<AppDropdownMenuItem
 															icon={LogOut}
 															disabled={!canManageUsers}
-															onSelect={() =>
-																handleAction(
-																	user.fullName,
-																	"Revoke active sessions",
-																)
-															}
+															onSelect={() => openAction(user, "revoke")}
 														>
 															Revoke active sessions
 														</AppDropdownMenuItem>
 														<AppDropdownMenuItem
 															icon={Power}
 															disabled={!canManageUsers}
-															onSelect={() =>
-																handleAction(
-																	user.fullName,
-																	"Suspend or reactivate account",
-																)
-															}
+															onSelect={() => openAction(user, "suspend")}
 														>
 															Suspend / reactivate account
 														</AppDropdownMenuItem>
@@ -678,9 +754,7 @@ const UserManagement = () => {
 															icon={UserX}
 															tone="danger"
 															disabled={!canManageUsers}
-															onSelect={() =>
-																handleAction(user.fullName, "Delete user")
-															}
+															onSelect={() => openAction(user, "delete")}
 														>
 															Delete user
 														</AppDropdownMenuItem>
@@ -714,36 +788,108 @@ const UserManagement = () => {
 				</CardContent>
 			</Card>
 
-			<Dialog
-				open={!!actionUserName}
-				onOpenChange={() => setActionUserName(null)}
-			>
-				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
-					<DialogTitle className="sr-only">User action selected</DialogTitle>
-					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
-					<div className="px-6 py-5 space-y-2 bg-white">
-						<p className="text-base font-semibold sidebar-gradient-text">
-							Action selected
-						</p>
-						<p className="text-sm text-slate-600">
-							{actionLabel} for {actionUserName}
-						</p>
-					</div>
-					<div className="px-6 py-4 border-t border-slate-200 bg-white flex justify-end">
-						<Button
-							type="button"
-							variant="ghost"
-							className="primary-btn px-3 sm:px-4"
-							onClick={() => setActionUserName(null)}
-						>
-							<Ban className="h-4 w-4" />
-							Close
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+			<UserManagementActionDialogs
+				user={actionUser}
+				action={actionKind}
+				roleOptions={allRoles.filter((r) => r !== "Unassigned")}
+				busy={actionBusy}
+				onClose={closeAction}
+				onSaveEdit={async ({ fullName, department }) => {
+					if (!actionUser) return;
+					await runAction(async () => {
+						const res = await fetch("/api/user/update", {
+							method: "PATCH",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								accountId: actionUser.accountId,
+								fullName,
+								department: department || undefined,
+							}),
+						});
+						const data = await res.json().catch(() => ({}));
+						if (!res.ok) throw new Error(data.error || "Failed to update user");
+					}, "User updated", `${fullName} was saved`);
+				}}
+				onSaveRole={async (roleName) => {
+					if (!actionUser) return;
+					await runAction(async () => {
+						const res = await fetch("/api/admin/set-user-role", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								email: actionUser.email,
+								roleName,
+								orgId,
+							}),
+						});
+						const data = await res.json().catch(() => ({}));
+						if (!res.ok) throw new Error(data.error || "Failed to change role");
+					}, "Role updated", `${actionUser.fullName} is now ${roleName}`);
+				}}
+				onConfirmReset={async () => {
+					if (!actionUser) return;
+					await runAction(async () => {
+						const res = await fetch(
+							`/api/admin/users/${actionUser.$id}/reset-password`,
+							{ method: "POST" },
+						);
+						const data = await res.json().catch(() => ({}));
+						if (!res.ok)
+							throw new Error(data.error || "Failed to send reset email");
+					}, "Password reset sent", dataMessage(actionUser.email));
+				}}
+				onConfirmRevoke={async () => {
+					if (!actionUser) return;
+					await runAction(async () => {
+						const res = await fetch(
+							`/api/admin/users/${actionUser.$id}/revoke-sessions`,
+							{ method: "POST" },
+						);
+						const data = await res.json().catch(() => ({}));
+						if (!res.ok)
+							throw new Error(data.error || "Failed to revoke sessions");
+					}, "Sessions revoked", `${actionUser.fullName} was signed out everywhere`);
+				}}
+				onConfirmSuspend={async () => {
+					if (!actionUser) return;
+					const nextStatus =
+						actionUser.status === "suspended" ||
+						actionUser.status === "inactive"
+							? "active"
+							: "suspended";
+					await runAction(async () => {
+						const res = await fetch("/api/user/update", {
+							method: "PATCH",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								accountId: actionUser.accountId,
+								status: nextStatus,
+							}),
+						});
+						const data = await res.json().catch(() => ({}));
+						if (!res.ok)
+							throw new Error(data.error || "Failed to update status");
+					}, nextStatus === "active" ? "Account reactivated" : "Account suspended");
+				}}
+				onConfirmDelete={async () => {
+					if (!actionUser) return;
+					await runAction(async () => {
+						const res = await fetch("/api/user/delete", {
+							method: "DELETE",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ userId: actionUser.$id }),
+						});
+						const data = await res.json().catch(() => ({}));
+						if (!res.ok) throw new Error(data.error || "Failed to delete user");
+					}, "User deleted", `${actionUser.fullName} was removed`);
+				}}
+			/>
 		</div>
 	);
 };
+
+function dataMessage(email: string) {
+	return `Check ${email} for the reset link`;
+}
 
 export default UserManagement;

@@ -17,20 +17,15 @@ export async function PUT(
 		const notification = await notificationService.markAsUnread(notificationId);
 
 		return NextResponse.json({ success: true, data: notification });
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Failed to mark notification as unread:", error);
 
-		// Return mock response in test/CI environments
-		if (
-			process.env.CI ||
+		const isTestEnvironment =
+			process.env.CI === "true" ||
 			process.env.NODE_ENV === "test" ||
-			error?.isTestConfig ||
-			error?.code === "TEST_CONFIG" ||
-			error?.message?.includes(
-				"Project with the requested ID could not be found",
-			) ||
-			error?.message?.includes("AppwriteException")
-		) {
+			process.env.PLAYWRIGHT_TEST === "true";
+
+		if (isTestEnvironment) {
 			return NextResponse.json(
 				{
 					success: true,
@@ -44,8 +39,11 @@ export async function PUT(
 			);
 		}
 
+		const errorMessage =
+			error instanceof Error ? error.message : "Failed to mark notification as unread";
+
 		return NextResponse.json(
-			{ success: false, error: "Failed to mark notification as unread" },
+			{ success: false, error: errorMessage },
 			{ status: 500 },
 		);
 	}

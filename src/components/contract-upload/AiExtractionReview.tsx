@@ -67,7 +67,7 @@ export function AiExtractionReviewPanel({
 				)}
 				<div className="min-w-0 space-y-1">
 					<p className="font-medium">
-						AI extraction review
+						CAALM extraction review
 						{pct !== null ? ` (${pct}% overall)` : ""}
 					</p>
 					<p className="text-xs">

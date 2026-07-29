@@ -362,10 +362,10 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 				});
 			}
 		} else {
-			// For legacy shared calendars, use existing endpoint
 			toast({
-				title: "Info",
-				description: "Permission updates for legacy calendars coming soon",
+				title: "Unavailable",
+				description:
+					"Permission updates aren't available for legacy shared calendars. Use a primary calendar share instead.",
 			});
 		}
 	};

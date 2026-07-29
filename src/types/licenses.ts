@@ -79,6 +79,8 @@ export interface License {
 	orgId: string;
 	createdBy?: string;
 	renewalHistory?: RenewalRecord[];
+	approvalWorkflowState?: string;
+	currentApprovalStage?: string;
 
 	// Legacy field aliases (for backward compatibility - will be mapped)
 	expirationDate?: string; // Maps to licenseExpiryDate

@@ -10,7 +10,10 @@ import NotificationCenter from "@/components/NotificationCenter";
 import { UserRoleDisplay } from "@/components/UserRoleDisplay";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUnreadCount } from "@/hooks/useNotifications";
+import {
+	useNotifications,
+	useUnreadCount,
+} from "@/hooks/useNotifications";
 import { signOutUser } from "@/lib/actions/user.actions";
 
 interface DashboardHeaderProps {
@@ -23,15 +26,19 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 	const user = userProp || authUser;
 	const [notifOpen, setNotifOpen] = useState(false);
 
-	// Use SWR hook for unread count (handles both $id and accountId)
 	const { unreadCount } = useUnreadCount(user?.$id);
+	const { mutate: revalidateNotifications } = useNotifications(user?.$id);
 
 	const fetchUnread = useCallback(async () => {
-		// Force revalidation of unread count
+		await revalidateNotifications();
 		if (user?.$id) {
-			await mutate(`/api/notifications/unread-count?userId=${user.$id}`);
+			await mutate(
+				`/api/notifications/unread-count?userId=${user.$id}`,
+				undefined,
+				{ revalidate: true },
+			);
 		}
-	}, [user]);
+	}, [user?.$id, revalidateNotifications]);
 
 	const handleLogout = async () => {
 		try {
@@ -69,7 +76,10 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 
 								<Button
 									variant="ghost"
-									onClick={() => setNotifOpen(true)}
+									onClick={() => {
+										setNotifOpen(true);
+										void revalidateNotifications();
+									}}
 									className="relative h-10 w-10"
 									data-testid="notification-bell"
 									aria-label="Open notifications"

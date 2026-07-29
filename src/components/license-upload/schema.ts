@@ -21,7 +21,7 @@ export const licenseUploadSchema = z.object({
 			"suspended",
 			"action-required",
 		])
-		.default("active"),
+		.default("pending-review"),
 	licenseExpiryDate: z.date({ message: "Expiry date is required" }),
 	issueDate: z.date().optional(),
 	renewalDate: z.date().optional(),

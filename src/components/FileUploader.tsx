@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
+import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { cn, convertFileToUrl, getFileType } from "@/lib/utils";
 import { MAX_FILE_SIZE } from "../../constants";
 import Thumbnail from "./Thumbnail";
@@ -20,6 +21,7 @@ interface Props {
 
 const FileUploader = ({ ownerId, accountId, className }: Props) => {
 	const path = usePathname();
+	const router = useRouter();
 	const { toast } = useToast();
 	const [files, setFiles] = useState<File[]>([]);
 
@@ -56,8 +58,9 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
 			});
 
 			await Promise.all(uploadPromises);
+			await refreshStorageUsage(router);
 		},
-		[ownerId, accountId, path, toast],
+		[ownerId, accountId, path, router, toast],
 	);
 
 	const { getRootProps, getInputProps } = useDropzone({ onDrop });

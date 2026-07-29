@@ -4,16 +4,17 @@ import { Building, Building2, Cloud, Crown, Eye, Lock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Fragment, memo, useEffect, useState } from "react";
+import { Fragment, memo, useEffect } from "react";
 import ITSidebar from "@/components/ITSidebar";
-import StorageProgressBar from "@/components/StorageProgressBar";
+import StorageUsageBar from "@/components/StorageUsageBar";
 import SidebarCollapsedRail from "@/components/sidebar/SidebarCollapsedRail";
 import SidebarCollapseToggle from "@/components/sidebar/SidebarCollapseToggle";
+import { NavItemIcon } from "@/components/sidebar/NavItemIcon";
+import { SectionNavIcon } from "@/components/sidebar/SectionNavIcon";
 import {
 	DASHBOARD_ITEM_COLORS,
 	ITEM_ICONS,
 	isNavItemActive,
-	SECTION_ICONS,
 } from "@/components/sidebar/sidebar-icons";
 import {
 	Tooltip,
@@ -26,16 +27,6 @@ import { useAnalyticsPrefetch } from "@/hooks/useAnalyticsPrefetch";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import { cn } from "@/lib/utils";
 
-interface TotalSpace {
-	document: { size: number; latestDate: string };
-	image: { size: number; latestDate: string };
-	video: { size: number; latestDate: string };
-	audio: { size: number; latestDate: string };
-	other: { size: number; latestDate: string };
-	used: number;
-	all: number;
-}
-
 interface Props {
 	name?: string;
 	avatar?: string;
@@ -44,38 +35,8 @@ interface Props {
 	division?: string;
 }
 
-const SidebarIcon = memo(
-	({
-		src,
-		alt,
-		width,
-		height,
-		priority = false,
-	}: {
-		src: string;
-		alt: string;
-		width: number;
-		height: number;
-		priority?: boolean;
-	}) => (
-		<Image
-			src={src}
-			alt={alt}
-			width={width}
-			height={height}
-			priority={priority}
-			fetchPriority={priority ? "high" : "auto"}
-			loading={priority ? undefined : "lazy"}
-			className="shrink-0 max-w-none"
-			style={{ width: "auto", height: `${height}px` }}
-		/>
-	),
-);
-SidebarIcon.displayName = "SidebarIcon";
-
 const Sidebar = memo(
 	({ name, avatar, email, role: _role, division: _division }: Props) => {
-		const [totalSpace, setTotalSpace] = useState<TotalSpace | null>(null);
 		const router = useRouter();
 		const pathname = usePathname();
 		const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
@@ -92,37 +53,9 @@ const Sidebar = memo(
 		} = useGroupedNavigation();
 
 		useEffect(() => {
-			async function fetchTotalSpace() {
-				try {
-					const response = await fetch("/api/storage/usage");
-					if (!response.ok) {
-						throw new Error(`HTTP error! status: ${response.status}`);
-					}
-					const space = await response.json();
-					setTotalSpace(space);
-				} catch (error) {
-					console.error("Failed to fetch total space:", error);
-					setTotalSpace({
-						document: { size: 0, latestDate: "" },
-						image: { size: 0, latestDate: "" },
-						video: { size: 0, latestDate: "" },
-						audio: { size: 0, latestDate: "" },
-						other: { size: 0, latestDate: "" },
-						used: 0,
-						all: 2 * 1024 * 1024 * 1024,
-					});
-				}
-			}
-			fetchTotalSpace();
-			const interval = setInterval(fetchTotalSpace, 30000);
-			return () => clearInterval(interval);
-		}, []);
-
-		useEffect(() => {
 			const criticalIcons = [
 				"/assets/icons/calendar2.svg",
 				"/assets/icons/contracts.svg",
-				"/assets/icons/documents.svg",
 				"/assets/icons/settings.svg",
 			];
 
@@ -236,21 +169,7 @@ const Sidebar = memo(
 													<span className="flex items-center gap-2">
 														{section.header === "Dashboard" ? (
 															<span className="flex items-center gap-2">
-																<span className="text-[#03AFBF]">
-																	<svg
-																		width="22"
-																		height="22"
-																		viewBox="0 0 26 26"
-																		fill="none"
-																		xmlns="http://www.w3.org/2000/svg"
-																		aria-hidden
-																	>
-																		<path
-																			d="M10.5167 2.16602H3.74582C2.87467 2.16602 2.16602 2.87467 2.16602 3.74582V7.80832C2.16602 8.67964 2.87467 9.38829 3.74582 9.38829H10.5167C11.388 9.38829 12.0966 8.67964 12.0966 7.80832V3.74582C12.0966 2.87467 11.388 2.16602 10.5167 2.16602ZM10.5167 11.1937H3.74582C2.87467 11.1937 2.16602 11.9024 2.16602 12.7737V22.2529C2.16602 23.124 2.87467 23.8327 3.74582 23.8327H10.5167C11.388 23.8327 12.0966 23.124 12.0966 22.2529V12.7737C12.0966 11.9024 11.388 11.1937 10.5167 11.1937ZM22.2529 16.6104H15.482C14.6107 16.6104 13.9021 17.3191 13.9021 18.1904V22.2529C13.9021 23.124 14.6107 23.8327 15.482 23.8327H22.2529C23.124 23.8327 23.8327 23.124 23.8327 22.2529V18.1904C23.8327 17.3191 23.124 16.6104 22.2529 16.6104ZM22.2529 2.16602H15.482C14.6107 2.16602 13.9021 2.87467 13.9021 3.74582V13.225C13.9021 14.0963 14.6107 14.805 15.482 14.805H22.2529C23.124 14.805 23.8327 14.0963 23.8327 13.225V3.74582C23.8327 2.87467 23.124 2.16602 22.2529 2.16602Z"
-																			fill="currentColor"
-																		/>
-																	</svg>
-																</span>
+																<SectionNavIcon header="Dashboard" priority />
 																{primaryRole && (
 																	<TooltipProvider>
 																		<Tooltip>
@@ -271,25 +190,10 @@ const Sidebar = memo(
 																)}
 															</span>
 														) : (
-															(() => {
-																const iconConfig =
-																	SECTION_ICONS[section.header];
-																if (!iconConfig) return null;
-																return (
-																	<span className="text-[#03AFBF]">
-																		<SidebarIcon
-																			src={iconConfig.src}
-																			alt={section.header.toLowerCase()}
-																			width={Math.min(iconConfig.width, 22)}
-																			height={Math.min(iconConfig.height, 22)}
-																			priority={
-																				section.header === "Dashboard" ||
-																				section.header === "Calendar"
-																			}
-																		/>
-																	</span>
-																);
-															})()
+															<SectionNavIcon
+																header={section.header}
+																priority={section.header === "Calendar"}
+															/>
 														)}
 														<span className="font-semibold text-sm sidebar-gradient-text relative z-10">
 															{section.header}
@@ -360,15 +264,16 @@ const Sidebar = memo(
 																		)}
 																		{(() => {
 																			const iconConfig = ITEM_ICONS[item.name];
-																			if (!iconConfig) return null;
+																			if (!iconConfig && item.name !== "Documents") {
+																				return null;
+																			}
 																			const isPriority = index < 3;
 																			return (
 																				<span>
-																					<SidebarIcon
-																						src={iconConfig.src}
-																						alt={item.name.toLowerCase()}
-																						width={iconConfig.width}
-																						height={iconConfig.height}
+																					<NavItemIcon
+																						name={item.name}
+																						width={iconConfig?.width ?? 20}
+																						height={iconConfig?.height ?? 20}
 																						priority={isPriority}
 																					/>
 																				</span>
@@ -447,13 +352,7 @@ const Sidebar = memo(
 						{!groupedNav.some((s) => s.header === "Settings") && (
 							<Link href="/settings" className="cursor-pointer">
 								<div className="flex items-center gap-2 mt-6">
-									<SidebarIcon
-										src="/assets/icons/settings.svg"
-										alt="settings"
-										width={22}
-										height={22}
-										priority
-									/>
+									<SectionNavIcon header="Settings" priority />
 									<span className="font-semibold text-sm sidebar-gradient-text">
 										Settings
 									</span>
@@ -462,15 +361,13 @@ const Sidebar = memo(
 						)}
 
 						<div className="sidebar-storage-info">
-							{totalSpace && (
-								<div className="w-full">
-									<div className="flex items-center gap-2 mb-2">
-										<Cloud className="h-4 w-4 text-slate-700" />
-										<p className="caption text-slate-700">Storage</p>
-									</div>
-									<StorageProgressBar totalSpace={totalSpace} />
+							<div className="w-full">
+								<div className="flex items-center gap-2 mb-2">
+									<Cloud className="h-4 w-4 text-slate-700" />
+									<p className="caption text-slate-700">Storage</p>
 								</div>
-							)}
+								<StorageUsageBar />
+							</div>
 						</div>
 					</>
 				)}

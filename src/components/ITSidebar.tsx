@@ -59,7 +59,7 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, avatar, email }) => {
 	}, []);
 
 	const filteredNav = useMemo(() => {
-		if (permissionsLoading || !permissions.length) {
+		if (permissionsLoading) {
 			return [];
 		}
 		return filterITNavigationByPermissions(IT_NAVIGATION, permissions);
@@ -222,7 +222,7 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, avatar, email }) => {
 					<div className="mb-2 flex justify-center">
 						{getConnectionIndicator()}
 					</div>
-					{permissionsLoading || userLoading ? (
+					{permissionsLoading ? (
 						<div className="flex flex-1 items-center justify-center py-8">
 							<div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
 						</div>
@@ -236,7 +236,7 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, avatar, email }) => {
 			) : (
 				<nav className="sidebar-nav">
 					<ul className="flex flex-1 flex-col">
-						{permissionsLoading || userLoading ? (
+						{permissionsLoading ? (
 							<li className="text-center py-8 text-muted-foreground">
 								<div className="flex flex-col items-center gap-2">
 									<div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />

@@ -64,13 +64,23 @@ export default function ApprovalsTable({
 			? permissions.includes(PERMISSIONS.CONTRACTS.REVIEW) || canDecide
 			: canDecide;
 
-	const decideLicense = async (id: string, status: string) => {
-		const res = await fetch(`/api/licenses/${id}`, {
-			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ status }),
-		});
-		if (!res.ok) throw new Error("Failed to update license");
+	const decideLicenseStep = async (licenseId: string) => {
+		const res = await fetch(
+			`/api/licenses/${licenseId}/approval-workflow/decide`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					decision: "approved",
+					path: pathname || "/licenses/approvals",
+				}),
+			},
+		);
+		const json = await res.json();
+		if (!res.ok || !json.success) {
+			throw new Error(json.error || "Failed to approve step");
+		}
+		return json.data;
 	};
 
 	const decideContractStep = async (contractId: string) => {
@@ -107,10 +117,13 @@ export default function ApprovalsTable({
 				});
 				router.refresh();
 			} else {
-				await decideLicense(item.decisionId, "active");
+				const result = await decideLicenseStep(item.decisionId);
 				toast({
-					title: "Status Updated",
-					description: 'License status changed to "active"',
+					title: "Step approved",
+					description:
+						result?.contractStatus === "active"
+							? "License is now active."
+							: "Approval workflow advanced.",
 				});
 				router.refresh();
 			}
@@ -128,7 +141,7 @@ export default function ApprovalsTable({
 
 	if (items.length === 0) {
 		return (
-			<div className="text-center py-12 px-4">
+			<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 				<Image
 					src="/assets/icons/no-data.svg"
 					alt="No approvals found"

@@ -132,11 +132,12 @@ const CountdownTimer = ({
 		switch (size) {
 			case "sm":
 				return {
-					container: "p-3",
+					container: "p-2.5",
 					title: "text-sm font-medium",
-					time: "text-lg font-bold",
-					label: "text-xs",
+					time: "text-base font-bold",
+					label: "text-[10px]",
 					icon: "h-4 w-4",
+					grid: "grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-1",
 				};
 			case "lg":
 				return {
@@ -145,6 +146,7 @@ const CountdownTimer = ({
 					time: "text-3xl font-bold",
 					label: "text-sm",
 					icon: "h-6 w-6",
+					grid: "grid-cols-4 gap-2",
 				};
 			default:
 				return {
@@ -153,6 +155,7 @@ const CountdownTimer = ({
 					time: "text-2xl font-bold",
 					label: "text-sm",
 					icon: "h-5 w-5",
+					grid: "grid-cols-4 gap-2",
 				};
 		}
 	};
@@ -161,15 +164,9 @@ const CountdownTimer = ({
 	const sizeClasses = getSizeClasses();
 	const urgency = getUrgencyLevel();
 
-	// Truncate contract name to 40 characters
-	const truncatedContractName =
-		contractName.length > 40
-			? `${contractName.substring(0, 40)}...`
-			: contractName;
-
 	const formatTimeUnit = (value: number, unit: string) => {
 		return (
-			<div className="text-center">
+			<div className="min-w-0 text-center">
 				<div className={`${sizeClasses.time} ${colors.accent}`}>
 					{value.toString().padStart(2, "0")}
 				</div>
@@ -184,21 +181,30 @@ const CountdownTimer = ({
 
 	return (
 		<div
-			className={`rounded-lg border ${colors.bg} ${sizeClasses.container} ${className}`}
+			className={`min-w-0 max-w-full overflow-hidden rounded-lg border ${colors.bg} ${sizeClasses.container} ${className}`}
 		>
-			<div className="flex items-center justify-between mb-3">
-				<div className="flex items-center space-x-2">
+			<div className="mb-3 flex min-w-0 items-center justify-between gap-2">
+				<div className="flex min-w-0 flex-1 items-center gap-2">
 					{showIcon &&
 						(timeRemaining.isExpired ? (
-							<AlertTriangle className={`${sizeClasses.icon} ${colors.icon}`} />
+							<AlertTriangle
+								className={`${sizeClasses.icon} ${colors.icon} shrink-0`}
+							/>
 						) : (
-							<AlarmClock className={`${sizeClasses.icon} ${colors.icon}`} />
+							<AlarmClock
+								className={`${sizeClasses.icon} ${colors.icon} shrink-0`}
+							/>
 						))}
-					<h3 className={`${sizeClasses.title} ${colors.text} truncate`}>
-						{truncatedContractName}
+					<h3
+						className={`${sizeClasses.title} ${colors.text} min-w-0 truncate`}
+						title={contractName}
+					>
+						{contractName}
 					</h3>
 				</div>
-				<Calendar className={`${sizeClasses.icon} ${colors.icon} opacity-60`} />
+				<Calendar
+					className={`${sizeClasses.icon} ${colors.icon} shrink-0 opacity-60`}
+				/>
 			</div>
 
 			{timeRemaining.isExpired ? (
@@ -212,7 +218,9 @@ const CountdownTimer = ({
 				</div>
 			) : (
 				<>
-					<div className="grid grid-cols-4 gap-2 mb-3 text-slate-700">
+					<div
+						className={`mb-3 grid text-slate-700 ${sizeClasses.grid}`}
+					>
 						{formatTimeUnit(timeRemaining.days, "Days")}
 						{formatTimeUnit(timeRemaining.hours, "Hours")}
 						{formatTimeUnit(timeRemaining.minutes, "Min")}

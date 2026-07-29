@@ -520,74 +520,75 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
 			{/* Create Note Dialog */}
 			<Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-				<DialogContent className="mx-4 max-w-md overflow-hidden rounded-lg p-0 shadow-2xl">
+				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
 					<VisuallyHidden>
 						<DialogTitle>Create New Note</DialogTitle>
 					</VisuallyHidden>
-					{/* Header Bar */}
-					<div className="bg-yellow-100/80 border-b border-yellow-200 px-4 py-3 flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<Plus className="h-4 w-4 text-slate-600" />
-							<span className="text-sm font-medium text-slate-700">
-								New Note
-							</span>
+					<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
+					<div className="glass-dialog-wizard-header mt-4">
+						<div className="flex items-center gap-3 px-6">
+							<div className="flex items-center gap-3">
+								<Plus className="h-5 w-5 text-[#0f5384]" />
+								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+									New Note
+								</DialogTitle>
+							</div>
 						</div>
-						<div className="flex items-center gap-2">
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => setIsCreateDialogOpen(false)}
-								className="h-6 w-6 p-0 hover:bg-yellow-200/60"
-							></Button>
-						</div>
+						<p className="ml-14 mt-1 text-sm text-slate-600">
+							Capture a quick note for your dashboard
+						</p>
 					</div>
-
-					{/* Main Content Area */}
-					<div className="bg-yellow-50/80 p-4 min-h-[200px]">
-						<div className="space-y-3">
+					<div className="glass-dialog-body-padded flex-1 space-y-4 overflow-y-auto">
+						<div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
 							<Input
 								value={newNote.title}
 								onChange={(e) =>
 									setNewNote((prev) => ({ ...prev, title: e.target.value }))
 								}
 								placeholder="Title"
-								className="bg-transparent border-b border-slate-300 shadow-none text-base font-medium placeholder:text-slate-400 focus-visible:ring-0 p-0"
+								className="border-b border-slate-200 bg-transparent p-0 text-base font-medium shadow-none placeholder:text-slate-400 focus-visible:ring-0"
 							/>
 							<div className="min-h-[120px]">
 								{isClient && <EditorContent editor={newNoteEditor} />}
 								{!isClient && (
-									<div className="min-h-[120px] p-2 text-slate-400 flex flex-col items-center justify-center gap-2">
+									<div className="flex min-h-[120px] flex-col items-center justify-center gap-2 p-2 text-slate-400">
 										<Loader2 className="h-5 w-5 animate-spin text-slate-400" />
 										Loading editor...
 									</div>
 								)}
 							</div>
 						</div>
+						{isClient && (
+							<div className="rounded-lg border border-slate-200 bg-white p-3">
+								<EditorToolbar editor={newNoteEditor} />
+							</div>
+						)}
 					</div>
-
-					{/* Footer */}
-					<div className="bg-slate-50/80 border-t border-slate-200 px-4 py-2 flex items-center justify-between gap-2">
-						<div className="flex items-center gap-4">
-							{isClient && <EditorToolbar editor={newNoteEditor} />}
-						</div>
-						<div className="flex items-center gap-4">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setIsEditDialogOpen(false)}
-								className="primary-btn px-3 sm:px-4 text-xs py-1 h-7"
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
-							<Button
-								onClick={handleCreateNote}
-								disabled={!stripHtml(newNote.content).trim()}
-								className="primary-btn text-xs px-3 -ml-2 py-1 h-7"
-							>
-								<Save className="h-3 w-3 mr-1" />
-								Save
-							</Button>
+					<div className="glass-dialog-footer-wrap">
+						<div className="flex items-center justify-between">
+							<div className="text-xs text-slate-500">
+								{stripHtml(newNote.content).trim()
+									? "Ready to save"
+									: "Add note content to save"}
+							</div>
+							<div className="flex items-center gap-3">
+								<Button
+									variant="outline"
+									onClick={() => setIsCreateDialogOpen(false)}
+									className="primary-btn px-3 sm:px-4"
+								>
+									<Ban className="h-4 w-4" />
+									Cancel
+								</Button>
+								<Button
+									onClick={handleCreateNote}
+									disabled={!stripHtml(newNote.content).trim()}
+									className="primary-btn px-3 sm:px-4"
+								>
+									<Save className="mr-1 h-4 w-4" />
+									Save
+								</Button>
+							</div>
 						</div>
 					</div>
 				</DialogContent>
@@ -595,28 +596,28 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
 			{/* Edit Note Dialog */}
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-				<DialogContent className="mx-4 max-w-md overflow-hidden rounded-lg p-0 shadow-2xl">
+				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
 					<VisuallyHidden>
 						<DialogTitle>Edit Note</DialogTitle>
 					</VisuallyHidden>
-					{/* Header Bar */}
-					<div className="bg-yellow-100/80 border-b border-yellow-200 px-4 py-3 flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<Edit className="h-4 w-4 text-slate-600" />
-							<span className="text-sm font-medium text-slate-700">
-								Edit Note
-							</span>
-						</div>
-						<div className="flex items-center gap-2">
+					<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
+					<div className="glass-dialog-wizard-header mt-4">
+						<div className="flex items-center justify-between px-6">
+							<div className="flex items-center gap-3">
+								<Edit className="h-5 w-5 text-[#0f5384]" />
+								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+									Edit Note
+								</DialogTitle>
+							</div>
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button
 										variant="ghost"
 										size="sm"
-										className="h-6 w-6 rounded-full p-0 hover:bg-yellow-200/60"
+										className="h-8 w-8 p-0"
 										title="More Options"
 									>
-										<MoreVertical className="h-3 w-3 rotate-90" />
+										<MoreVertical className="h-4 w-4 text-[#0f5384]" />
 									</Button>
 								</DropdownMenuTrigger>
 								<AppDropdownMenuContent align="end">
@@ -629,64 +630,62 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 									</AppDropdownMenuItem>
 								</AppDropdownMenuContent>
 							</DropdownMenu>
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => setIsEditDialogOpen(false)}
-								className="h-6 w-6 p-0 hover:bg-yellow-200/60"
-							>
-								{/* <X className="h-4 w-4 text-slate-600" /> */}
-							</Button>
 						</div>
+						<p className="ml-14 mt-1 text-sm text-slate-600">
+							Update your note details
+						</p>
 					</div>
-
-					{/* Main Content Area */}
-					<div className="bg-yellow-50/80 p-4 min-h-[200px]">
-						<div className="space-y-3">
+					<div className="glass-dialog-body-padded flex-1 space-y-4 overflow-y-auto">
+						<div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
 							<Input
 								value={editNote.title}
 								onChange={(e) =>
 									setEditNote((prev) => ({ ...prev, title: e.target.value }))
 								}
 								placeholder="Title"
-								className="bg-transparent border-b border-slate-300 shadow-none text-base font-medium placeholder:text-slate-400 focus-visible:ring-0 p-0"
+								className="border-b border-slate-200 bg-transparent p-0 text-base font-medium shadow-none placeholder:text-slate-400 focus-visible:ring-0"
 							/>
 							<div className="min-h-[120px]">
 								{isClient && <EditorContent editor={editNoteEditor} />}
 								{!isClient && (
-									<div className="min-h-[120px] p-2 text-slate-400 flex flex-col items-center justify-center gap-2">
+									<div className="flex min-h-[120px] flex-col items-center justify-center gap-2 p-2 text-slate-400">
 										<Loader2 className="h-5 w-5 animate-spin text-slate-400" />
 										Loading editor...
 									</div>
 								)}
 							</div>
 						</div>
+						{isClient && (
+							<div className="rounded-lg border border-slate-200 bg-white p-3">
+								<EditorToolbar editor={editNoteEditor} />
+							</div>
+						)}
 					</div>
-
-					{/* Footer */}
-					<div className="bg-slate-50/80 border-t border-slate-200 px-4 py-2 flex items-center justify-between gap-2">
-						<div className="flex items-center gap-4">
-							{isClient && <EditorToolbar editor={editNoteEditor} />}
-						</div>
-						<div className="flex items-center gap-4">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setIsEditDialogOpen(false)}
-								className="primary-btn px-3 sm:px-4 text-xs py-1 h-7"
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
-
-							<Button
-								onClick={handleEditNote}
-								disabled={!stripHtml(editNote.content).trim()}
-								className="primary-btn text-xs px-3 -ml-2 py-1 h-7 !w-26 "
-							>
-								<Save className="h-3 w-3" />
-								Update
-							</Button>
+					<div className="glass-dialog-footer-wrap">
+						<div className="flex items-center justify-between">
+							<div className="text-xs text-slate-500">
+								{stripHtml(editNote.content).trim()
+									? "Ready to update"
+									: "Add note content to update"}
+							</div>
+							<div className="flex items-center gap-3">
+								<Button
+									variant="outline"
+									onClick={() => setIsEditDialogOpen(false)}
+									className="primary-btn px-3 sm:px-4"
+								>
+									<Ban className="h-4 w-4" />
+									Cancel
+								</Button>
+								<Button
+									onClick={handleEditNote}
+									disabled={!stripHtml(editNote.content).trim()}
+									className="primary-btn px-3 sm:px-4"
+								>
+									<Save className="mr-1 h-4 w-4" />
+									Update
+								</Button>
+							</div>
 						</div>
 					</div>
 				</DialogContent>

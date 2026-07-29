@@ -193,15 +193,21 @@ export const FullContractExpiryWidget: React.FC<
 					{filteredContracts.length === 0 ? (
 						<ContractEmptyState filterDays={filterDays} variant="full" />
 					) : (
-						<div className="space-y-4 h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+						<div className="h-[300px] space-y-4 overflow-x-hidden overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
 							{filteredContracts.map((contract: Contract) => (
-								<CountdownTimer
+								<div
 									key={contract.$id}
-									targetDate={contract.contractExpiryDate || ""}
-									contractName={contract.contractName ?? contract.name ?? ""}
-									size="sm"
-									className="transition-all duration-200 hover:shadow-md"
-								/>
+									className="min-w-0 overflow-hidden"
+								>
+									<CountdownTimer
+										targetDate={contract.contractExpiryDate || ""}
+										contractName={
+											contract.contractName ?? contract.name ?? ""
+										}
+										size="sm"
+										className="transition-all duration-200 hover:shadow-md"
+									/>
+								</div>
 							))}
 						</div>
 					)}

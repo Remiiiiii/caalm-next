@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import useSWR, { mutate } from "swr";
 import { useAuth } from "@/contexts/AuthContext";
 import type {
@@ -11,7 +11,7 @@ import type {
 
 // Enhanced fetcher functions
 const fetcher = async (url: string) => {
-	const response = await fetch(url);
+	const response = await fetch(url, { cache: "no-store" });
 	if (!response.ok) {
 		const errorText = await response.text();
 		console.error(`[CLIENT] Failed to fetch notifications from ${url}:`, {
@@ -64,12 +64,13 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
 		currentUserId ? `/api/notifications?userId=${currentUserId}` : null,
 		fetcher,
 		{
-			refreshInterval: 0, // Disable auto-refresh, we'll manually revalidate on mutations
+			refreshInterval: 15000,
 			revalidateOnFocus: true,
 			revalidateOnReconnect: true,
-			revalidateOnMount: true, // Force revalidation on mount
-			dedupingInterval: 0, // Disable deduping to ensure fresh data
-			revalidateIfStale: true, // Always revalidate if data is stale
+			revalidateOnMount: true,
+			dedupingInterval: 3000,
+			revalidateIfStale: true,
+			keepPreviousData: true,
 		},
 	);
 
@@ -79,117 +80,133 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
 	);
 
 	const markAsRead = async (notificationId: string) => {
-		try {
-			// Optimistic update first for instant UI feedback
-			await mutateNotifications(
-				(current: Notification[]) =>
-					current?.map((notification) =>
-						notification.$id === notificationId
-							? { ...notification, read: true }
-							: notification,
-					),
+		const previousNotifications = notifications;
+		const previousUnreadKey = currentUserId
+			? `/api/notifications/unread-count?userId=${currentUserId}`
+			: null;
+
+		void mutateNotifications(
+			(current: Notification[] | undefined) =>
+				(current || []).map((notification) =>
+					notification.$id === notificationId
+						? { ...notification, read: true }
+						: notification,
+				),
+			{ revalidate: false },
+		);
+
+		if (currentUserId) {
+			void mutate(
+				previousUnreadKey!,
+				(current: { count?: number } | undefined) => ({
+					count: Math.max(0, (current?.count ?? 1) - 1),
+				}),
 				{ revalidate: false },
 			);
-
-			// Then update on server
-			await fetch(`/api/notifications/${notificationId}/read`, {
-				method: "PUT",
-			});
-
-			// Revalidate to ensure consistency
-			await mutateNotifications(undefined, { revalidate: true });
-
-			// Revalidate stats and unread count
-			await Promise.all([
-				mutate(`/api/notifications/stats?userId=${currentUserId}`, undefined, {
-					revalidate: true,
-				}),
-				mutate(
-					`/api/notifications/unread-count?userId=${currentUserId}`,
-					undefined,
-					{ revalidate: true },
-				),
-			]);
-		} catch (error) {
-			console.error("Failed to mark notification as read:", error);
-			// Revert optimistic update on error
-			await mutateNotifications(undefined, { revalidate: true });
-			throw error;
 		}
+
+		void fetch(`/api/notifications/${notificationId}/read`, { method: "PUT" })
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error("Failed to mark notification as read");
+				}
+				if (currentUserId) {
+					void mutate(`/api/notifications/stats?userId=${currentUserId}`);
+					void mutateNotifications();
+				}
+			})
+			.catch((error) => {
+				console.error("Failed to mark notification as read:", error);
+				void mutateNotifications(previousNotifications, { revalidate: false });
+				if (previousUnreadKey) {
+					void mutate(previousUnreadKey);
+				}
+			});
 	};
 
 	const markAsUnread = async (notificationId: string) => {
-		try {
-			// Optimistic update first for instant UI feedback
-			await mutateNotifications(
-				(current: Notification[]) =>
-					current?.map((notification) =>
-						notification.$id === notificationId
-							? { ...notification, read: false }
-							: notification,
-					),
+		const previousNotifications = notifications;
+		const previousUnreadKey = currentUserId
+			? `/api/notifications/unread-count?userId=${currentUserId}`
+			: null;
+
+		void mutateNotifications(
+			(current: Notification[] | undefined) =>
+				(current || []).map((notification) =>
+					notification.$id === notificationId
+						? { ...notification, read: false }
+						: notification,
+				),
+			{ revalidate: false },
+		);
+
+		if (currentUserId) {
+			void mutate(
+				previousUnreadKey!,
+				(current: { count?: number } | undefined) => ({
+					count: (current?.count ?? 0) + 1,
+				}),
 				{ revalidate: false },
 			);
-
-			// Then update on server
-			await fetch(`/api/notifications/${notificationId}/unread`, {
-				method: "PUT",
-			});
-
-			// Revalidate to ensure consistency
-			await mutateNotifications(undefined, { revalidate: true });
-
-			// Revalidate stats and unread count
-			await Promise.all([
-				mutate(`/api/notifications/stats?userId=${currentUserId}`, undefined, {
-					revalidate: true,
-				}),
-				mutate(
-					`/api/notifications/unread-count?userId=${currentUserId}`,
-					undefined,
-					{ revalidate: true },
-				),
-			]);
-		} catch (error) {
-			console.error("Failed to mark notification as unread:", error);
-			// Revert optimistic update on error
-			await mutateNotifications(undefined, { revalidate: true });
-			throw error;
 		}
+
+		void fetch(`/api/notifications/${notificationId}/unread`, {
+			method: "PUT",
+		})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error("Failed to mark notification as unread");
+				}
+				if (currentUserId) {
+					void mutate(`/api/notifications/stats?userId=${currentUserId}`);
+					void mutateNotifications();
+				}
+			})
+			.catch((error) => {
+				console.error("Failed to mark notification as unread:", error);
+				void mutateNotifications(previousNotifications, { revalidate: false });
+				if (previousUnreadKey) {
+					void mutate(previousUnreadKey);
+				}
+			});
 	};
 
 	const markAllAsRead = async () => {
+		const previousNotifications = notifications;
+		const previousUnreadKey = currentUserId
+			? `/api/notifications/unread-count?userId=${currentUserId}`
+			: null;
+
+		void mutateNotifications(
+			(current: Notification[] | undefined) =>
+				(current || []).map((notification) => ({
+					...notification,
+					read: true,
+				})),
+			{ revalidate: false },
+		);
+
+		if (currentUserId) {
+			void mutate(previousUnreadKey!, { count: 0 }, { revalidate: false });
+		}
+
 		try {
-			// Optimistic update first for instant UI feedback
-			await mutateNotifications(
-				(current: Notification[]) =>
-					current?.map((notification) => ({ ...notification, read: true })),
-				{ revalidate: false },
+			const response = await fetch(
+				`/api/notifications/read-all?userId=${currentUserId}`,
+				{ method: "PUT" },
 			);
-
-			// Then update on server
-			await fetch(`/api/notifications/read-all?userId=${currentUserId}`, {
-				method: "PUT",
-			});
-
-			// Revalidate to ensure consistency
-			await mutateNotifications(undefined, { revalidate: true });
-
-			// Revalidate stats and unread count
-			await Promise.all([
-				mutate(`/api/notifications/stats?userId=${currentUserId}`, undefined, {
-					revalidate: true,
-				}),
-				mutate(
-					`/api/notifications/unread-count?userId=${currentUserId}`,
-					undefined,
-					{ revalidate: true },
-				),
-			]);
+			if (!response.ok) {
+				throw new Error("Failed to mark all as read");
+			}
+			if (currentUserId) {
+				void mutate(`/api/notifications/stats?userId=${currentUserId}`);
+			}
 		} catch (error) {
 			console.error("Failed to mark all notifications as read:", error);
-			// Revert optimistic update on error
-			await mutateNotifications(undefined, { revalidate: true });
+			void mutateNotifications(previousNotifications, { revalidate: false });
+			if (previousUnreadKey) {
+				void mutate(previousUnreadKey);
+			}
 			throw error;
 		}
 	};
@@ -265,45 +282,31 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
 	};
 
 	// Handle different response formats from the API
-	let notificationsArray: Notification[] = [];
-	if (notifications) {
-		if (Array.isArray(notifications)) {
-			notificationsArray = notifications;
-		} else if (notifications.data && Array.isArray(notifications.data)) {
-			notificationsArray = notifications.data;
-		} else if (notifications.rows && Array.isArray(notifications.rows)) {
-			notificationsArray = notifications.rows;
+	const notificationsArray: Notification[] = React.useMemo(() => {
+		if (!notifications) return [];
+		if (Array.isArray(notifications)) return notifications;
+		if (
+			notifications &&
+			typeof notifications === "object" &&
+			"data" in notifications &&
+			Array.isArray((notifications as { data: Notification[] }).data)
+		) {
+			return (notifications as { data: Notification[] }).data;
 		}
-	}
-
-	// Debug logging for notifications
-	React.useEffect(() => {
-		console.log("[CLIENT] useNotifications - Notification data:", {
-			rawData: notifications,
-			rawDataType: typeof notifications,
-			isRawArray: Array.isArray(notifications),
-			hasDataProperty: !!(notifications as any)?.data,
-			hasRowsProperty: !!(notifications as any)?.rows,
-			dataPropertyType: (notifications as any)?.data
-				? typeof (notifications as any).data
-				: "N/A",
-			dataPropertyIsArray: Array.isArray((notifications as any)?.data),
-			parsedArray: notificationsArray,
-			arrayLength: notificationsArray.length,
-			userId: currentUserId,
-			hasData: !!notifications,
-		});
-
-		// Log first notification if available
-		if (notificationsArray.length > 0) {
-			console.log("[CLIENT] First notification:", notificationsArray[0]);
+		if (
+			notifications &&
+			typeof notifications === "object" &&
+			"rows" in notifications &&
+			Array.isArray((notifications as { rows: Notification[] }).rows)
+		) {
+			return (notifications as { rows: Notification[] }).rows;
 		}
-	}, [
-		notifications,
-		notificationsArray.length,
-		currentUserId,
-		notificationsArray[0],
-	]);
+		return [];
+	}, [notifications]);
+
+	const revalidateNotifications = useCallback(() => {
+		return mutateNotifications(undefined, { revalidate: true });
+	}, [mutateNotifications]);
 
 	return {
 		notifications: notificationsArray,
@@ -314,14 +317,14 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
 			byPriority: { urgent: 0, high: 0, medium: 0, low: 0 },
 			byType: {},
 		},
-		isLoading,
+		isLoading: isLoading && notificationsArray.length === 0,
 		error,
 		markAsRead,
 		markAsUnread,
 		markAllAsRead,
 		deleteNotification,
 		createNotification,
-		mutate: () => mutateNotifications(),
+		mutate: revalidateNotifications,
 	};
 };
 
@@ -418,7 +421,7 @@ export const useNotificationTypeConfig = (typeKey: string) => {
 const unreadCountFetcher = async (url: string) => {
 	let response: Response;
 	try {
-		response = await fetch(url);
+		response = await fetch(url, { cache: "no-store" });
 	} catch (networkError) {
 		const message =
 			networkError instanceof Error
@@ -473,12 +476,12 @@ export const useUnreadCount = (userId?: string) => {
 			: null,
 		unreadCountFetcher,
 		{
-			refreshInterval: 0, // Disable auto-refresh, we'll manually revalidate on mutations
+			refreshInterval: 5000,
 			revalidateOnFocus: true,
 			revalidateOnReconnect: true,
 			revalidateOnMount: true,
-			dedupingInterval: 0, // Disable deduping to ensure fresh data
-			revalidateIfStale: true, // Always revalidate if data is stale
+			dedupingInterval: 2000,
+			revalidateIfStale: true,
 		},
 	);
 

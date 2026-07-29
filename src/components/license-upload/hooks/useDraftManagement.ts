@@ -444,31 +444,49 @@ export function useDraftManagement({
 	// Delete a draft
 	const deleteDraft = useCallback(
 		async (draftId: string) => {
+			// Remove from UI immediately (optimistic)
+			setSavedDrafts((prev) => prev.filter((d) => d.$id !== draftId));
+			if (currentDraftId === draftId) {
+				setCurrentDraftId(null);
+			}
+
 			try {
 				const response = await fetch(
-					`/api/licenses/drafts?draftId=${draftId}&ownerId=${ownerId}`,
+					`/api/licenses/drafts?draftId=${encodeURIComponent(draftId)}&ownerId=${encodeURIComponent(ownerId)}`,
 					{
 						method: "DELETE",
 					},
 				);
-				if (response.ok) {
-					setSavedDrafts((prev) => prev.filter((d) => d.$id !== draftId));
-					if (currentDraftId === draftId) {
-						setCurrentDraftId(null);
-					}
-					await loadSavedDrafts();
+				if (!response.ok) {
+					const errorText = await response.text();
+					console.error("Failed to delete draft:", response.status, errorText);
+					await loadSavedDrafts(true);
 					toast({
-						title: "Draft deleted",
-						description: "The draft has been deleted",
+						title: "Error",
+						description: "Failed to delete draft",
+						variant: "destructive",
 					});
+					return false;
 				}
+
+				// Refresh from server, but keep this id out if listing is briefly stale
+				await loadSavedDrafts(true);
+				setSavedDrafts((prev) => prev.filter((d) => d.$id !== draftId));
+
+				toast({
+					title: "Draft deleted",
+					description: "The draft has been deleted",
+				});
+				return true;
 			} catch (error) {
 				console.error("Error deleting draft:", error);
+				await loadSavedDrafts(true);
 				toast({
 					title: "Error",
 					description: "Failed to delete draft",
 					variant: "destructive",
 				});
+				return false;
 			}
 		},
 		[toast, currentDraftId, ownerId, loadSavedDrafts],

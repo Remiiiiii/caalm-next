@@ -22,7 +22,7 @@ export const licenseCreateSchema = z.object({
 			"action-required",
 		])
 		.optional()
-		.default("active"),
+		.default("pending-review"),
 
 	// Optional - Core fields
 	description: z.string().optional(),

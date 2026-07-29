@@ -8,6 +8,7 @@ import {
 	useSensors,
 } from "@dnd-kit/core";
 import {
+	arrayMove,
 	SortableContext,
 	sortableKeyboardCoordinates,
 	useSortable,
@@ -33,9 +34,11 @@ import {
 	Users,
 	Zap,
 } from "lucide-react";
-import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
+import { isFileShareNotification } from "@/lib/files/fileShareNotification";
 import NotificationSettings from "./NotificationSettings";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -140,6 +143,13 @@ const NOTIFICATION_TYPES = {
 		bgColor: "bg-teal-50/30 border-teal-400",
 		priority: "low" as const,
 	},
+	"task-assigned": {
+		label: "Task Assigned",
+		icon: <CheckCircle className="w-4 h-4" />,
+		color: "bg-indigo-100 text-indigo-800",
+		bgColor: "bg-indigo-50/30 border-indigo-400",
+		priority: "high" as const,
+	},
 	info: {
 		label: "Information",
 		icon: <Info className="w-4 h-4" />,
@@ -179,9 +189,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 	const [statusFilter, setStatusFilter] = useState<string>("all");
 	const [priorityFilter, setPriorityFilter] = useState<string>("all");
 	const [sortBy, setSortBy] = useState<string>("date");
+	const [manualOrderIds, setManualOrderIds] = useState<string[] | null>(null);
 	const [showSettings, setShowSettings] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const { toast } = useToast();
+	const router = useRouter();
 
 	// Use SWR hook for notifications
 	const {
@@ -195,6 +207,16 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 		mutate,
 	} = useNotifications(userId);
 
+	// Refresh once when the dialog opens (not on every re-render while open)
+	const prevOpenRef = React.useRef(false);
+	React.useEffect(() => {
+		if (open && !prevOpenRef.current) {
+			void mutate();
+			onRefresh?.();
+		}
+		prevOpenRef.current = open;
+	}, [open, mutate, onRefresh]);
+
 	// Set error state from SWR error
 	React.useEffect(() => {
 		if (swrError) {
@@ -205,48 +227,74 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 	}, [swrError]);
 
 	// Filter and sort notifications
-	const filtered = notifications.filter((notification: Notification) => {
-		const matchesSearch =
-			notification.title.toLowerCase().includes(search.toLowerCase()) ||
-			notification.message.toLowerCase().includes(search.toLowerCase());
-		const matchesType =
-			typeFilter === "all" || notification.type === typeFilter;
+	const filtered = useMemo(
+		() =>
+			notifications.filter((notification: Notification) => {
+				const matchesSearch =
+					notification.title.toLowerCase().includes(search.toLowerCase()) ||
+					notification.message.toLowerCase().includes(search.toLowerCase());
+				const matchesType =
+					typeFilter === "all" || notification.type === typeFilter;
 		const matchesStatus =
 			statusFilter === "all" ||
-			(statusFilter === "read" && notification.read) ||
-			(statusFilter === "unread" && !notification.read);
-		const matchesPriority =
-			priorityFilter === "all" || notification.priority === priorityFilter;
+			(statusFilter === "read" && notification.read === true) ||
+			(statusFilter === "unread" && notification.read !== true);
+				const matchesPriority =
+					priorityFilter === "all" || notification.priority === priorityFilter;
 
-		return matchesSearch && matchesType && matchesStatus && matchesPriority;
-	});
+				return (
+					matchesSearch && matchesType && matchesStatus && matchesPriority
+				);
+			}),
+		[notifications, search, typeFilter, statusFilter, priorityFilter],
+	);
 
 	// Sort notifications
-	const sorted = [...filtered].sort((a, b) => {
-		switch (sortBy) {
-			case "date":
-				return (
-					new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime()
-				);
-			case "priority": {
-				const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-				const aPriority =
-					priorityOrder[(a.priority || "low") as keyof typeof priorityOrder] ||
-					1;
-				const bPriority =
-					priorityOrder[(b.priority || "low") as keyof typeof priorityOrder] ||
-					1;
-				return bPriority - aPriority;
+	const sorted = useMemo(() => {
+		const next = [...filtered].sort((a, b) => {
+			switch (sortBy) {
+				case "date":
+					return (
+						new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime()
+					);
+				case "priority": {
+					const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+					const aPriority =
+						priorityOrder[
+							(a.priority || "low") as keyof typeof priorityOrder
+						] || 1;
+					const bPriority =
+						priorityOrder[
+							(b.priority || "low") as keyof typeof priorityOrder
+						] || 1;
+					return bPriority - aPriority;
+				}
+				case "type":
+					return a.type.localeCompare(b.type);
+				default:
+					return 0;
 			}
-			case "type":
-				return a.type.localeCompare(b.type);
-			default:
-				return 0;
-		}
-	});
+		});
+		return next;
+	}, [filtered, sortBy]);
+
+	const displayList = useMemo(() => {
+		if (!manualOrderIds?.length) return sorted;
+		const byId = new Map(sorted.map((n) => [n.$id, n]));
+		const ordered = manualOrderIds
+			.map((id) => byId.get(id))
+			.filter((n): n is Notification => Boolean(n));
+		const remaining = sorted.filter((n) => !manualOrderIds.includes(n.$id));
+		return [...ordered, ...remaining];
+	}, [sorted, manualOrderIds]);
+
+	// Clear manual order when filters/sort change so Sort by works again
+	useEffect(() => {
+		setManualOrderIds(null);
+	}, [sortBy, search, typeFilter, statusFilter, priorityFilter]);
 
 	// Pagination
-	const paginated = sorted.slice((page - 1) * perPage, page * perPage);
+	const paginated = displayList.slice((page - 1) * perPage, page * perPage);
 
 	const handleSelect = (id: string) => {
 		setSelected((prev) =>
@@ -256,15 +304,17 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
 	const handleMarkAsRead = async (ids: string[]) => {
 		try {
-			await Promise.all(ids.map((id) => markAsRead(id)));
+			const unreadIds = ids.filter(
+				(id) => notifications.find((n) => n.$id === id)?.read !== true,
+			);
+			await Promise.all(unreadIds.map((id) => markAsRead(id)));
 			setSelected([]);
 			toast({
 				title: "Success",
-				description: `Marked ${ids.length} notification${
-					ids.length > 1 ? "s" : ""
+				description: `Marked ${unreadIds.length || ids.length} notification${
+					(unreadIds.length || ids.length) > 1 ? "s" : ""
 				} as read`,
 			});
-			onRefresh?.();
 		} catch {
 			toast({
 				title: "Error",
@@ -276,15 +326,17 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
 	const handleMarkAsUnread = async (ids: string[]) => {
 		try {
-			await Promise.all(ids.map((id) => markAsUnread(id)));
+			const readIds = ids.filter(
+				(id) => notifications.find((n) => n.$id === id)?.read === true,
+			);
+			await Promise.all(readIds.map((id) => markAsUnread(id)));
 			setSelected([]);
 			toast({
 				title: "Success",
-				description: `Marked ${ids.length} notification${
-					ids.length > 1 ? "s" : ""
+				description: `Marked ${readIds.length || ids.length} notification${
+					(readIds.length || ids.length) > 1 ? "s" : ""
 				} as unread`,
 			});
-			onRefresh?.();
 		} catch {
 			toast({
 				title: "Error",
@@ -377,7 +429,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 	};
 
 	const sensors = useSensors(
-		useSensor(PointerSensor),
+		useSensor(PointerSensor, {
+			activationConstraint: { distance: 8 },
+		}),
 		useSensor(KeyboardSensor, {
 			coordinateGetter: sortableKeyboardCoordinates,
 		}),
@@ -385,21 +439,29 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
 	const handleDragEnd = (event: DragEndEvent) => {
 		const { active, over } = event;
+		if (!over || active.id === over.id) return;
 
-		if (active.id !== over?.id) {
-			// Update the notifications order optimistically
-			// Note: We can't do optimistic updates with the bound mutate function
-			// from useNotifications, so we'll just revalidate
-			mutate();
+		const oldIndex = displayList.findIndex((n) => n.$id === active.id);
+		const newIndex = displayList.findIndex((n) => n.$id === over.id);
+		if (oldIndex < 0 || newIndex < 0) return;
 
-			toast({
-				title: "Reordered",
-				description: "Notification order updated",
-			});
-		}
+		const reordered = arrayMove(displayList, oldIndex, newIndex);
+		setManualOrderIds(reordered.map((n) => n.$id));
+
+		toast({
+			title: "Reordered",
+			description: "Notification order updated",
+		});
 	};
 
-	const unreadCount = notifications.filter((n: Notification) => !n.read).length;
+	const handleActionNavigate = (url: string) => {
+		onClose();
+		router.push(url);
+	};
+
+	const unreadCount = notifications.filter(
+		(n: Notification) => n.read !== true,
+	).length;
 
 	return (
 		<Dialog open={open} onOpenChange={onClose}>
@@ -454,17 +516,49 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 				{/* Scrollable Content */}
 				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
 					<div className="space-y-4">
-						{/* Enhanced Search and Filter Bar */}
-						<div className="flex gap-2" data-testid="notification-filters">
-							<div className="relative flex-1">
-								<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+						{/* Search + Sort */}
+						<div
+							className="flex items-center justify-between gap-4"
+							data-testid="notification-search-sort"
+						>
+							<div className="relative min-w-0 flex-1">
+								<Search
+									className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400"
+									aria-hidden
+								/>
 								<Input
 									placeholder="Search notifications..."
 									value={search}
 									onChange={(e) => setSearch(e.target.value)}
-									className="pl-10 bg-white border border-slate-200 text-slate-700 placeholder:text-slate-400"
+									data-with-leading-icon="true"
+									className="border border-slate-200 bg-white text-slate-700 placeholder:text-slate-400"
 								/>
 							</div>
+							<div
+								className="flex shrink-0 items-center gap-2"
+								data-testid="sort-controls"
+							>
+								<span className="text-sm text-slate-600 whitespace-nowrap">
+									Sort by:
+								</span>
+								<Select value={sortBy} onValueChange={setSortBy}>
+									<SelectTrigger className="h-10 w-32 text-xs">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="date">Date</SelectItem>
+										<SelectItem value="priority">Priority</SelectItem>
+										<SelectItem value="type">Type</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+
+						{/* Type / status / priority filters */}
+						<div
+							className="flex flex-wrap justify-center gap-2"
+							data-testid="notification-filters"
+						>
 							<Select value={typeFilter} onValueChange={setTypeFilter}>
 								<SelectTrigger
 									className="sort-select"
@@ -533,27 +627,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 							</Select>
 						</div>
 
-						{/* Sort Options */}
-						<div
-							className="flex items-center gap-2"
-							data-testid="sort-controls"
-						>
-							<span className="text-sm text-gray-600">Sort by:</span>
-							<Select value={sortBy} onValueChange={setSortBy}>
-								<SelectTrigger className="w-32 h-8 text-xs">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="date">Date</SelectItem>
-									<SelectItem value="priority">Priority</SelectItem>
-									<SelectItem value="type">Type</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
 						{/* Bulk Actions */}
 						{selected.length > 0 && (
-							<div className="flex gap-2 p-3 rounded-lg border-2 border-blue-300 bg-white">
+							<div className="flex flex-wrap items-center justify-center gap-2 p-3 rounded-lg border-2 border-blue-300 bg-white">
 								<Button
 									size="sm"
 									onClick={() => handleMarkAsRead(selected)}
@@ -645,6 +721,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 													onSelect={handleSelect}
 													onMarkAsRead={(id) => handleMarkAsRead([id])}
 													onMarkAsUnread={(id) => handleMarkAsUnread([id])}
+													onActionNavigate={handleActionNavigate}
 													typeConfig={typeConfig}
 													getPriorityColor={getPriorityColor}
 													formatNotificationTime={formatNotificationTime}
@@ -742,6 +819,7 @@ interface SortableNotificationItemProps {
 	onSelect: (id: string) => void;
 	onMarkAsRead: (id: string) => void;
 	onMarkAsUnread: (id: string) => void;
+	onActionNavigate: (url: string) => void;
 	typeConfig: (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
 	getPriorityColor: (priority?: string) => string;
 	formatNotificationTime: (dateString: string) => string;
@@ -753,6 +831,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 	onSelect,
 	onMarkAsRead,
 	onMarkAsUnread,
+	onActionNavigate,
 	typeConfig,
 	getPriorityColor,
 	formatNotificationTime,
@@ -770,6 +849,31 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 		transform: CSS.Transform.toString(transform),
 		transition,
 	};
+
+	const resolvedAction = (() => {
+		if (notification.actionUrl && notification.actionText) {
+			return {
+				url: notification.actionUrl,
+				text: notification.actionText,
+			};
+		}
+		const isFileShare = isFileShareNotification(notification);
+		if (!isFileShare) return null;
+		try {
+			const meta =
+				typeof notification.metadata === "string"
+					? JSON.parse(notification.metadata)
+					: notification.metadata;
+			const fileId =
+				meta && typeof meta === "object" && "fileId" in meta
+					? String((meta as { fileId?: string }).fileId || "")
+					: "";
+			if (!fileId) return null;
+			return { url: `/shared/files/${fileId}`, text: "View Document" };
+		} catch {
+			return null;
+		}
+	})();
 
 	return (
 		<div
@@ -843,7 +947,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 						</div>
 
 						<div className="flex items-center gap-2">
-							{!notification.read && (
+							{notification.read !== true && (
 								<Button
 									variant="ghost"
 									size="sm"
@@ -853,7 +957,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 									Mark read
 								</Button>
 							)}
-							{notification.read && (
+							{notification.read === true && (
 								<Button
 									variant="ghost"
 									size="sm"
@@ -883,15 +987,15 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 						</div>
 					</div>
 
-					{notification.actionUrl && notification.actionText && (
-						<div className="mt-3 pt-3 border-t border-slate-200">
+					{resolvedAction && (
+						<div className="mt-3 border-t border-slate-200 pt-3">
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => window.open(notification.actionUrl, "_blank")}
-								className="primary-btn px-3 sm:px-4 text-xs"
+								onClick={() => onActionNavigate(resolvedAction.url)}
+								className="primary-btn cursor-pointer px-3 text-xs sm:px-4"
 							>
-								{notification.actionText}
+								{resolvedAction.text}
 							</Button>
 						</div>
 					)}

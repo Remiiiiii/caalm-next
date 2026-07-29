@@ -60,11 +60,15 @@ const groupedNav = [
 		],
 	},
 	{
-		header: "Documents",
+		header: "Files",
 		items: [
 			{
 				name: "Uploads",
 				icon: "/assets/icons/uploads.svg",
+			},
+			{
+				name: "Documents",
+				icon: "/assets/icons/documents.svg",
 			},
 			{
 				name: "Images",
@@ -192,11 +196,11 @@ const NavigationSidebar = () => {
 											height={24}
 										/>
 									</span>
-								) : section.header === "Documents" ? (
+								) : section.header === "Files" ? (
 									<span className="text-[#03AFBF]">
 										<Image
-											src="/assets/icons/documents.svg"
-											alt="documents"
+											src="/assets/icons/uploads.svg"
+											alt="files"
 											width={20}
 											height={20}
 										/>

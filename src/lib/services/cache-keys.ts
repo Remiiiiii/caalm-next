@@ -142,7 +142,8 @@ export const CACHE_KEYS = {
 
 	// Storage
 	storage: {
-		usage: () => `storage:usage`,
+		usage: (userId?: string) =>
+			userId ? `storage:usage:${userId}` : `storage:usage`,
 	},
 
 	// IT Metrics

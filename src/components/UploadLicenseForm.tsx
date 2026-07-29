@@ -27,6 +27,7 @@ import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { getContractDepartmentEnums } from "@/lib/actions/database.actions";
 import { uploadFile } from "@/lib/actions/file.actions";
+import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import {
 	buildFormPatchFromLicenseExtraction,
 	isRealLicenseExtractionMethod,
@@ -88,6 +89,18 @@ const SaveProgressCard = dynamic(
 const CancelDialog = dynamic(
 	() => import("./license-upload/components/CancelDialog"),
 	{
+		ssr: false,
+	},
+);
+
+const LicenseReviewStep = dynamic(
+	() => import("./license-upload/steps/LicenseReviewStep"),
+	{
+		loading: () => (
+			<div className="flex justify-center p-8">
+				<Loader2 className="animate-spin" />
+			</div>
+		),
 		ssr: false,
 	},
 );
@@ -191,6 +204,9 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 	// Step navigation
 	const nextStep = () => {
 		if (currentStep < TOTAL_STEPS) {
+			if (currentStep === 2) {
+				form.setValue("status", "pending-review");
+			}
 			setCurrentStep((prev) => prev + 1);
 		}
 	};
@@ -345,7 +361,8 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 					licenseNumber: values.licenseNumber || `LIC-${Date.now()}`,
 					licenseType: values.licenseType,
 					category: values.category,
-					status: values.status || "active",
+					// Document uploads always start in review (same as contracts)
+					status: "pending-review",
 					licenseExpiryDate: values.licenseExpiryDate?.toISOString(),
 					issueDate: values.issueDate?.toISOString(),
 					renewalDate: values.renewalDate?.toISOString(),
@@ -372,12 +389,14 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 				draftId: currentDraftId || undefined,
 			});
 
+			await refreshStorageUsage();
+
 			clearInterval(progressInterval);
 			setUploadProgress(100);
 
 			toast({
-				title: "License Uploaded Successfully",
-				description: `${values.licenseName} has been uploaded and processed.`,
+				title: "Submitted for Review",
+				description: `${values.licenseName} was submitted as Pending Review. Approve it on Licenses → Approvals to activate.`,
 			});
 
 			// Draft deletion is now handled automatically in uploadFile function
@@ -508,7 +527,17 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 						<Form {...form}>
 							<form
 								id="license-upload-form"
-								onSubmit={form.handleSubmit(handleSubmit)}
+								onSubmit={(e) => {
+									e.preventDefault();
+								}}
+								onKeyDown={(e) => {
+									if (
+										e.key === "Enter" &&
+										(e.target as HTMLElement).tagName !== "TEXTAREA"
+									) {
+										e.preventDefault();
+									}
+								}}
 								className="space-y-6"
 							>
 								{/* Step 1: File Upload */}
@@ -562,6 +591,15 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 										</div>
 									</div>
 								)}
+
+								{currentStep === 3 && (
+									<LicenseReviewStep
+										values={form.watch() as Record<string, unknown>}
+										fileName={processedFileData?.name}
+										lowConfidenceFields={lowConfidenceFields}
+										onEditStep={goToStep}
+									/>
+								)}
 							</form>
 						</Form>
 					</div>
@@ -612,20 +650,20 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 								</Button>
 							) : (
 								<Button
-									type="submit"
-									form="license-upload-form"
+									type="button"
+									onClick={() => void form.handleSubmit(handleSubmit)()}
 									disabled={isUploading || !processedFileData}
 									className="primary-btn min-w-[120px]"
 								>
 									{isUploading ? (
 										<>
 											<Loader2 className="h-4 w-4 animate-spin" />
-											Uploading...
+											Submitting...
 										</>
 									) : (
 										<>
 											<Upload className="h-4 w-4" />
-											Upload License
+											Submit for Review
 										</>
 									)}
 								</Button>

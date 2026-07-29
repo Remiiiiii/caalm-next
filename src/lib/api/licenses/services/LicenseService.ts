@@ -142,22 +142,21 @@ export class LicenseService {
 		}
 
 		if (!expirationDate) {
-			return "active";
+			return "pending-review";
 		}
 
 		const daysUntilExpiry =
 			LicenseService.calculateDaysUntilExpiry(expirationDate);
 		if (daysUntilExpiry === undefined) {
-			return "active";
+			return "pending-review";
 		}
 
 		if (daysUntilExpiry < 0) {
 			return "expired";
-		} else if (daysUntilExpiry <= 30) {
-			return "pending-review"; // Use database value
-		} else {
-			return "active";
 		}
+
+		// New licenses require review before activation
+		return "pending-review";
 	}
 
 	/**
@@ -193,7 +192,7 @@ export class LicenseService {
 
 		const status =
 			LicenseService.determineStatus(licenseExpiryDate, mappedData.status) ||
-			"active";
+			"pending-review";
 		const daysUntilExpiry = licenseExpiryDate
 			? LicenseService.calculateDaysUntilExpiry(licenseExpiryDate)
 			: undefined;
@@ -226,7 +225,7 @@ export class LicenseService {
 				trimOrUndefined(mappedData.vendor) ||
 				"Unknown",
 			issueDate: issueDate || new Date().toISOString(),
-			status: status || "active",
+			status: status || "pending-review",
 			orgId: defaultOrg.orgId,
 		};
 

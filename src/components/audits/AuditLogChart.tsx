@@ -2,15 +2,19 @@
 
 import { format } from "date-fns";
 import {
-	Bar,
-	BarChart,
+	Area,
+	AreaChart,
 	CartesianGrid,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
 	YAxis,
 } from "recharts";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+	CAALM_CHART_COLORS,
+	CaalmAnalyticsChartShell,
+	darkChartTooltipStyle,
+} from "@/components/charts/CaalmAnalyticsChartShell";
 
 interface AuditLogChartProps {
 	data?: Array<{ date: string; count: number }>;
@@ -23,51 +27,87 @@ export function AuditLogChart({ data, isLoading }: AuditLogChartProps) {
 		label: format(new Date(`${point.date}T00:00:00`), "MMM d"),
 	}));
 
+	const total = chartData.reduce((sum, point) => sum + (point.count || 0), 0);
+
 	return (
-		<Card className="glass-card mb-6">
-			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6">
-				<p className="text-sm font-medium sidebar-gradient-text mb-4">
-					Event volume (last 30 days)
-				</p>
-				{isLoading ? (
-					<div className="h-40 w-full rounded-lg bg-slate-200/60 animate-pulse" />
-				) : chartData.length === 0 ? (
-					<div className="h-40 flex items-center justify-center text-sm text-slate-500">
-						No event volume data for this period.
-					</div>
-				) : (
-					<div className="h-40 w-full">
-						<ResponsiveContainer width="100%" height="100%">
-							<BarChart data={chartData}>
-								<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-								<XAxis
-									dataKey="label"
-									tick={{ fill: "#64748b", fontSize: 11 }}
-									axisLine={false}
-									tickLine={false}
-								/>
-								<YAxis
-									allowDecimals={false}
-									tick={{ fill: "#64748b", fontSize: 11 }}
-									axisLine={false}
-									tickLine={false}
-									width={28}
-								/>
-								<Tooltip
-									contentStyle={{
-										borderRadius: 8,
-										border: "1px solid #e2e8f0",
-										fontSize: 12,
-									}}
-									labelStyle={{ color: "#0f172a" }}
-								/>
-								<Bar dataKey="count" fill="#0f5384" radius={[4, 4, 0, 0]} />
-							</BarChart>
-						</ResponsiveContainer>
-					</div>
-				)}
-			</CardContent>
-		</Card>
+		<CaalmAnalyticsChartShell
+			className="mb-6"
+			title="Event volume (last 30 days)"
+			subtitle={
+				chartData.length > 0
+					? `${total.toLocaleString()} audit events across the selected window`
+					: "Daily audit event counts for your organization"
+			}
+		>
+			{isLoading ? (
+				<div className="h-48 w-full animate-pulse rounded-lg bg-slate-800/60" />
+			) : chartData.length === 0 ? (
+				<div className="flex h-48 items-center justify-center text-sm text-slate-400">
+					No event volume data for this period.
+				</div>
+			) : (
+				<div className="h-48 w-full">
+					<ResponsiveContainer width="100%" height="100%">
+						<AreaChart data={chartData} margin={{ left: 4, right: 8, top: 8 }}>
+							<defs>
+								<linearGradient id="auditVolumeFill" x1="0" y1="0" x2="0" y2="1">
+									<stop
+										offset="0%"
+										stopColor={CAALM_CHART_COLORS.primary}
+										stopOpacity={0.45}
+									/>
+									<stop
+										offset="100%"
+										stopColor={CAALM_CHART_COLORS.primary}
+										stopOpacity={0}
+									/>
+								</linearGradient>
+							</defs>
+							<CartesianGrid
+								strokeDasharray="3 3"
+								stroke={CAALM_CHART_COLORS.grid}
+								vertical={false}
+							/>
+							<XAxis
+								dataKey="label"
+								tick={{ fill: CAALM_CHART_COLORS.axis, fontSize: 11 }}
+								axisLine={false}
+								tickLine={false}
+							/>
+							<YAxis
+								allowDecimals={false}
+								tick={{ fill: CAALM_CHART_COLORS.axis, fontSize: 11 }}
+								axisLine={false}
+								tickLine={false}
+								width={28}
+							/>
+							<Tooltip
+								contentStyle={darkChartTooltipStyle}
+								labelStyle={{ color: "#f8fafc" }}
+								itemStyle={{ color: CAALM_CHART_COLORS.primary }}
+								formatter={(value) => [
+									`${Number(value || 0).toLocaleString()} events`,
+									"Volume",
+								]}
+							/>
+							<Area
+								type="monotone"
+								dataKey="count"
+								stroke={CAALM_CHART_COLORS.primary}
+								strokeWidth={2.5}
+								fill="url(#auditVolumeFill)"
+								dot={false}
+								activeDot={{
+									r: 5,
+									fill: CAALM_CHART_COLORS.primary,
+									stroke: "#0f172a",
+									strokeWidth: 2,
+								}}
+							/>
+						</AreaChart>
+					</ResponsiveContainer>
+				</div>
+			)}
+		</CaalmAnalyticsChartShell>
 	);
 }

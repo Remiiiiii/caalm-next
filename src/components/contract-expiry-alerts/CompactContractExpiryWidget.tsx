@@ -138,11 +138,11 @@ export const CompactContractExpiryWidget: React.FC<
 				{filteredContracts.length === 0 ? (
 					<ContractEmptyState filterDays={filterDays} variant="compact" />
 				) : (
-					<div className="space-y-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent min-h-0">
+					<div className="min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
 						{filteredContracts.map((contract: Contract) => (
 							<div
 								key={contract.$id}
-								className="bg-white/20 rounded-lg p-2 backdrop-blur-sm border border-white/20 hover:bg-white/30 transition-colors duration-200"
+								className="min-w-0 overflow-hidden rounded-lg border border-white/20 bg-white/20 p-2 backdrop-blur-sm transition-colors duration-200 hover:bg-white/30"
 							>
 								<CountdownTimer
 									targetDate={contract.contractExpiryDate || ""}

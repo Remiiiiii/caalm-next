@@ -37,7 +37,8 @@ export default function LicensesTopControls(_props: LicensesTopControlsProps) {
 					placeholder="Search licenses..."
 					value={searchQuery}
 					onChange={(e) => setSearchQuery(e.target.value)}
-					className="pl-9! w-full bg-white border-slate-200"
+					data-with-leading-icon="true"
+					className="w-full bg-white border-slate-200"
 				/>
 			</div>
 		</div>

@@ -152,7 +152,7 @@ export function useGroupedNavigation() {
 			"Calendar",
 			"Contracts",
 			"Licenses",
-			"Documents",
+			"Files",
 			"Audits",
 			"Team",
 			"Reports & Analytics",

@@ -5,7 +5,9 @@ import {
 	Clock,
 	FileText,
 	Loader2,
+	Plus,
 	Save,
+	Search,
 	SquarePen,
 	Users,
 	X,
@@ -19,15 +21,20 @@ import {
 } from "@/components/ui/accordion";
 import { Button as ShadButton } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { updateContractExpiryDate } from "@/lib/actions/file.actions";
 import type { AppUser } from "@/lib/actions/user.actions";
-import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
+import {
+	fetchUserNamesByIds,
+	getUserByEmail,
+} from "@/lib/actions/user.actions";
 import {
 	convertFileSize,
 	formatDateTime,
@@ -1394,18 +1401,57 @@ interface Props {
 	currentUsers?: string[]; // Optional prop to override file.users for real-time updates
 }
 
+type DirectoryUser = {
+	$id: string;
+	fullName: string;
+	email: string;
+	department: string;
+};
+
+function formatDeptLabel(department: string): string {
+	return department
+		.replace(/[-_]/g, " ")
+		.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function normalizeEmail(email: string): string {
+	return email.trim().toLowerCase();
+}
+
+function isValidEmail(email: string): boolean {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
 export const ShareInput = ({
 	file,
 	onInputChange,
 	onRemove,
 	currentUsers,
 }: Props) => {
-	// Use currentUsers if provided, otherwise fall back to file.users
+	const { orgId } = useOrganization();
+	const { toast } = useToast();
+
 	const displayUsers =
 		currentUsers !== undefined ? currentUsers : file.users || [];
-	const [ownerFullName, setOwnerFullName] = React.useState<string | null>(null);
+	const selectedSet = React.useMemo(
+		() => new Set(displayUsers.map(normalizeEmail).filter(Boolean)),
+		[displayUsers],
+	);
 
-	// Fetch owner's full name if owner is a string (user ID)
+	const [ownerFullName, setOwnerFullName] = React.useState<string | null>(null);
+	const [emailDisplayNames, setEmailDisplayNames] = React.useState<
+		Record<string, string>
+	>({});
+	const [directoryUsers, setDirectoryUsers] = React.useState<DirectoryUser[]>(
+		[],
+	);
+	const [directoryLoading, setDirectoryLoading] = React.useState(true);
+	const [directoryError, setDirectoryError] = React.useState<string | null>(
+		null,
+	);
+	const [userSearch, setUserSearch] = React.useState("");
+	const [emailDraft, setEmailDraft] = React.useState("");
+
 	React.useEffect(() => {
 		const fetchOwnerName = async () => {
 			if (typeof file.owner === "string") {
@@ -1414,12 +1460,9 @@ export const ShareInput = ({
 					if (users.length > 0 && users[0].fullName) {
 						setOwnerFullName(users[0].fullName);
 					} else {
-						// Fallback to ID if name not found
 						setOwnerFullName(file.owner);
 					}
-				} catch (error) {
-					console.error("Failed to fetch owner name:", error);
-					// Fallback to ID on error
+				} catch {
 					setOwnerFullName(file.owner);
 				}
 			} else if (file.owner?.fullName) {
@@ -1428,6 +1471,170 @@ export const ShareInput = ({
 		};
 		fetchOwnerName();
 	}, [file.owner]);
+
+	React.useEffect(() => {
+		let cancelled = false;
+		const loadDirectory = async () => {
+			setDirectoryLoading(true);
+			setDirectoryError(null);
+			try {
+				const qs = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
+				const res = await fetch(`/api/users/directory${qs}`);
+				if (!res.ok) {
+					throw new Error("Failed to load users");
+				}
+				const data = (await res.json()) as DirectoryUser[];
+				if (!cancelled) {
+					setDirectoryUsers(Array.isArray(data) ? data : []);
+				}
+			} catch {
+				if (!cancelled) {
+					setDirectoryUsers([]);
+					setDirectoryError("Could not load CAALM users");
+				}
+			} finally {
+				if (!cancelled) setDirectoryLoading(false);
+			}
+		};
+		void loadDirectory();
+		return () => {
+			cancelled = true;
+		};
+	}, [orgId]);
+
+	React.useEffect(() => {
+		let cancelled = false;
+		const emails = displayUsers
+			.map((email) => email.trim())
+			.filter((email) => email.length > 0);
+
+		if (emails.length === 0) {
+			setEmailDisplayNames({});
+			return;
+		}
+
+		const fromDirectory: Record<string, string> = {};
+		for (const user of directoryUsers) {
+			fromDirectory[normalizeEmail(user.email)] = user.fullName;
+		}
+
+		const resolveNames = async () => {
+			const next: Record<string, string> = {};
+			await Promise.all(
+				emails.map(async (email) => {
+					const key = normalizeEmail(email);
+					if (fromDirectory[key]) {
+						next[email] = fromDirectory[key];
+						return;
+					}
+					try {
+						let user = await getUserByEmail(email);
+						if (!user && email !== email.toLowerCase()) {
+							user = await getUserByEmail(email.toLowerCase());
+						}
+						const fullName =
+							user &&
+							typeof user === "object" &&
+							"fullName" in user &&
+							typeof user.fullName === "string"
+								? user.fullName.trim()
+								: "";
+						next[email] = fullName || email;
+					} catch {
+						next[email] = email;
+					}
+				}),
+			);
+			if (!cancelled) setEmailDisplayNames(next);
+		};
+
+		void resolveNames();
+		return () => {
+			cancelled = true;
+		};
+	}, [displayUsers.join("|"), directoryUsers]);
+
+	const addEmails = React.useCallback(
+		(incoming: string[]) => {
+			const cleaned = incoming
+				.map((e) => e.trim())
+				.filter((e) => e.length > 0 && isValidEmail(e));
+			if (cleaned.length === 0) return;
+
+			onInputChange((prev) => {
+				const existing = new Set(prev.map(normalizeEmail));
+				const next = [...prev];
+				for (const email of cleaned) {
+					const key = normalizeEmail(email);
+					if (!existing.has(key)) {
+						existing.add(key);
+						next.push(email.trim());
+					}
+				}
+				return next;
+			});
+		},
+		[onInputChange],
+	);
+
+	const toggleDirectoryUser = React.useCallback(
+		(user: DirectoryUser, checked: boolean) => {
+			const key = normalizeEmail(user.email);
+			if (checked) {
+				addEmails([user.email]);
+				setEmailDisplayNames((prev) => ({
+					...prev,
+					[user.email.trim()]: user.fullName,
+					[key]: user.fullName,
+				}));
+			} else {
+				const match = displayUsers.find((e) => normalizeEmail(e) === key);
+				if (match) onRemove(match);
+			}
+		},
+		[addEmails, displayUsers, onRemove],
+	);
+
+	const handleAddEmail = React.useCallback(() => {
+		const value = emailDraft.trim();
+		if (!value) return;
+		if (!isValidEmail(value)) {
+			toast({
+				variant: "destructive",
+				description: "Enter a valid email address.",
+			});
+			return;
+		}
+		if (selectedSet.has(normalizeEmail(value))) {
+			toast({ description: "That recipient is already selected." });
+			setEmailDraft("");
+			return;
+		}
+		addEmails([value]);
+		setEmailDraft("");
+	}, [addEmails, emailDraft, selectedSet, toast]);
+
+	const filteredUsers = React.useMemo(() => {
+		const q = userSearch.trim().toLowerCase();
+		if (!q) return directoryUsers;
+		return directoryUsers.filter(
+			(u) =>
+				u.fullName.toLowerCase().includes(q) ||
+				u.email.toLowerCase().includes(q) ||
+				u.department.toLowerCase().includes(q),
+		);
+	}, [directoryUsers, userSearch]);
+
+	const usersByDepartment = React.useMemo(() => {
+		const groups = new Map<string, DirectoryUser[]>();
+		for (const user of filteredUsers) {
+			const dept = user.department || "Other";
+			const list = groups.get(dept) || [];
+			list.push(user);
+			groups.set(dept, list);
+		}
+		return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+	}, [filteredUsers]);
 
 	const ownerName =
 		ownerFullName ||
@@ -1438,70 +1645,200 @@ export const ShareInput = ({
 			<ImageThumbnail file={file} />
 
 			<div className="space-y-4" style={{ pointerEvents: "none" }}>
-				{/* Share file with other users Section */}
-				<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-					<Label
-						className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-						htmlFor="share-email"
-						style={{ pointerEvents: "none" }}
-					>
-						<Users className="w-4 h-4 text-blue-600" />
-						Share file with other users
+				{/* CAALM users by department */}
+				<div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+					<Label className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+						<Users className="h-4 w-4 text-blue-600" />
+						Select CAALM users
 					</Label>
-					<Input
-						id="share-email"
-						type="email"
-						placeholder="Enter email addresses"
-						onChange={(e) => onInputChange(e.target.value.trim().split(","))}
-						onClick={(e) => {
-							e.stopPropagation();
-							e.preventDefault();
-						}}
-						onFocus={(e) => {
-							e.stopPropagation();
-						}}
-						onBlur={(e) => {
-							e.stopPropagation();
-						}}
+
+					<div className="relative mb-3" style={{ pointerEvents: "auto" }}>
+						<Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<Input
+							value={userSearch}
+							onChange={(e) => setUserSearch(e.target.value)}
+							placeholder="Search by name, email, or department"
+							data-with-leading-icon="true"
+							className="h-10 border-slate-300 bg-white pl-10"
+							onClick={(e) => e.stopPropagation()}
+						/>
+					</div>
+
+					<div
+						className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white"
 						style={{ pointerEvents: "auto" }}
-						className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11 text-base"
-					/>
+					>
+						{directoryLoading ? (
+							<div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
+								<Loader2 className="h-4 w-4 animate-spin" />
+								Loading users...
+							</div>
+						) : directoryError ? (
+							<p className="px-4 py-6 text-center text-sm text-slate-500">
+								{directoryError}. You can still share by email below.
+							</p>
+						) : usersByDepartment.length === 0 ? (
+							<p className="px-4 py-6 text-center text-sm text-slate-500">
+								No users match your search.
+							</p>
+						) : (
+							<Accordion
+								key={usersByDepartment.map(([dept]) => dept).join("|")}
+								type="multiple"
+								defaultValue={usersByDepartment.map(([dept]) => dept)}
+								className="w-full"
+							>
+								{usersByDepartment.map(([department, users]) => (
+									<AccordionItem
+										key={department}
+										value={department}
+										className="border-b border-slate-100 px-2 last:border-b-0"
+									>
+										<AccordionTrigger className="py-2.5 text-sm font-semibold text-slate-800 hover:no-underline">
+											<span className="flex items-center gap-2">
+												{formatDeptLabel(department)}
+												<span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+													{users.length}
+												</span>
+											</span>
+										</AccordionTrigger>
+										<AccordionContent className="pb-2">
+											<ul className="space-y-1">
+												{users.map((user) => {
+													const checked = selectedSet.has(
+														normalizeEmail(user.email),
+													);
+													return (
+														<li key={user.$id}>
+															<label
+																className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-blue-50"
+																onClick={(e) => e.stopPropagation()}
+															>
+																<Checkbox
+																	checked={checked}
+																	onCheckedChange={(value) =>
+																		toggleDirectoryUser(user, value === true)
+																	}
+																	aria-label={`Share with ${user.fullName}`}
+																	className="cursor-pointer"
+																/>
+																<span className="min-w-0 flex-1">
+																	<span className="block truncate text-sm font-medium text-slate-800">
+																		{user.fullName}
+																	</span>
+																	<span className="block truncate text-xs text-slate-500">
+																		{user.email}
+																	</span>
+																</span>
+															</label>
+														</li>
+													);
+												})}
+											</ul>
+										</AccordionContent>
+									</AccordionItem>
+								))}
+							</Accordion>
+						)}
+					</div>
+				</div>
+
+				{/* Email entry for external / unknown recipients */}
+				<div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+					<Label
+						className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700"
+						htmlFor="share-email"
+					>
+						<Users className="h-4 w-4 text-blue-600" />
+						Or share by email
+					</Label>
+					<div
+						className="flex items-center gap-2"
+						style={{ pointerEvents: "auto" }}
+					>
+						<Input
+							id="share-email"
+							type="email"
+							value={emailDraft}
+							placeholder="name@example.com"
+							onChange={(e) => setEmailDraft(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									e.preventDefault();
+									e.stopPropagation();
+									handleAddEmail();
+								}
+							}}
+							onClick={(e) => e.stopPropagation()}
+							className="h-9 flex-1 border-slate-300 bg-white text-sm focus:border-blue-500 focus:ring-blue-500"
+						/>
+						<Button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								handleAddEmail();
+							}}
+							className="primary-btn h-9! min-h-9! w-auto! shrink-0 rounded-full! px-3! py-1.5! text-sm sm:w-auto!"
+						>
+							<Plus className="h-3.5 w-3.5" />
+							Add
+						</Button>
+					</div>
+					<p className="mt-2 text-xs text-slate-500">
+						Use this for people who are not in CAALM yet.
+					</p>
 				</div>
 
 				{/* Shared with Section */}
-				<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-					<div className="flex items-center justify-between mb-3">
+				<div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+					<div className="mb-3 flex items-center justify-between">
 						<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-							<Users className="w-4 h-4 text-blue-600" />
+							<Users className="h-4 w-4 text-blue-600" />
 							Shared with
 						</Label>
-						<span className="text-sm text-slate-600 font-medium">
+						<span className="text-sm font-medium text-slate-600">
 							{displayUsers.length}{" "}
 							{displayUsers.length === 1 ? "user" : "users"}
 						</span>
 					</div>
 					{displayUsers.length > 0 ? (
 						<div className="space-y-2">
-							{displayUsers.map((email: string) => (
-								<div
-									key={email}
-									className="flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-2 border border-slate-200"
-									style={{ pointerEvents: "auto" }}
-								>
-									<span className="text-sm text-slate-700">{email}</span>
-									<Button
-										onClick={(e) => {
-											e.stopPropagation();
-											onRemove(email);
-										}}
-										variant="ghost"
-										size="sm"
-										className="h-6 w-6 p-0 hover:bg-red-50 rounded-full"
+							{displayUsers.map((email: string) => {
+								const trimmed = email.trim();
+								const displayName =
+									emailDisplayNames[trimmed] ||
+									emailDisplayNames[normalizeEmail(trimmed)] ||
+									trimmed;
+								return (
+									<div
+										key={email}
+										className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+										style={{ pointerEvents: "auto" }}
 									>
-										<X className="h-4 w-4 text-red-600" />
-									</Button>
-								</div>
-							))}
+										<span
+											className="truncate text-sm text-slate-700"
+											title={
+												displayName !== trimmed
+													? `${displayName} (${trimmed})`
+													: trimmed
+											}
+										>
+											{displayName}
+										</span>
+										<Button
+											onClick={(e) => {
+												e.stopPropagation();
+												onRemove(email);
+											}}
+											variant="ghost"
+											size="sm"
+											className="h-6 w-6 rounded-full p-0 hover:bg-red-50"
+										>
+											<X className="h-4 w-4 text-red-600" />
+										</Button>
+									</div>
+								);
+							})}
 						</div>
 					) : (
 						<p className="text-sm text-slate-500 italic">No users shared yet</p>
@@ -1509,55 +1846,51 @@ export const ShareInput = ({
 				</div>
 
 				{/* File Information Section */}
-				<div className="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
+				<div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
 					<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-						<FileText className="w-4 h-4 text-blue-600" />
+						<FileText className="h-4 w-4 text-blue-600" />
 						File Information
 					</Label>
 
-					{/* Format */}
-					<div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
-						<div className="flex items-center justify-between min-w-0">
-							<span className="text-sm text-slate-600 font-medium break-words min-w-0">
+					<div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4">
+						<div className="flex min-w-0 items-center justify-between">
+							<span className="min-w-0 text-sm font-medium wrap-break-word text-slate-600">
 								Format
 							</span>
-							<span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
+							<span className="overflow-wrap-anywhere min-w-0 text-sm font-semibold wrap-break-word text-slate-800">
 								{file.extension}
 							</span>
 						</div>
 					</div>
 
-					{/* Size */}
-					<div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
-						<div className="flex items-center justify-between min-w-0">
-							<span className="text-sm text-slate-600 font-medium break-words min-w-0">
+					<div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4">
+						<div className="flex min-w-0 items-center justify-between">
+							<span className="min-w-0 text-sm font-medium wrap-break-word text-slate-600">
 								Size
 							</span>
-							<span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
+							<span className="overflow-wrap-anywhere min-w-0 text-sm font-semibold wrap-break-word text-slate-800">
 								{convertFileSize({ sizeInBytes: file.size })}
 							</span>
 						</div>
 					</div>
 
-					{/* Owner */}
-					<div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
-						<div className="flex items-center justify-between min-w-0">
-							<span className="text-sm text-slate-600 font-medium break-words min-w-0">
+					<div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4">
+						<div className="flex min-w-0 items-center justify-between">
+							<span className="min-w-0 text-sm font-medium wrap-break-word text-slate-600">
 								Owner
 							</span>
-							<span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
+							<span className="overflow-wrap-anywhere min-w-0 text-sm font-semibold wrap-break-word text-slate-800">
 								{ownerName}
 							</span>
 						</div>
 					</div>
 
-					{/* Last Modified */}
-					<div className="bg-white rounded-lg p-4 border border-slate-200 overflow-hidden">
-						<div className="flex items-center justify-between min-w-0">
-							<span className="text-sm text-slate-600 font-medium break-words min-w-0">
+					<div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-4">
+						<div className="flex min-w-0 items-center justify-between">
+							<span className="min-w-0 text-sm font-medium wrap-break-word text-slate-600">
 								Last Modified
 							</span>
-							<span className="text-sm text-slate-800 font-semibold break-words overflow-wrap-anywhere min-w-0">
+							<span className="overflow-wrap-anywhere min-w-0 text-sm font-semibold wrap-break-word text-slate-800">
 								{formatDateTime(file.$updatedAt)}
 							</span>
 						</div>

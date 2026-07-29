@@ -101,7 +101,7 @@ const Page = async () => {
 						{licenses.length > 0 ? (
 							<LicensesViewClient licenses={licenses} user={user} />
 						) : (
-							<div className="text-center py-12 px-4">
+							<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 								<Image
 									src="/assets/icons/no-data.svg"
 									alt="No licenses found"

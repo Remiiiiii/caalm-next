@@ -2,7 +2,6 @@
 
 import type { Models } from "appwrite";
 import { Bell, LogOut, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { mutate } from "swr";
 import NotificationBadge from "@/components/NotificationBadge";
@@ -11,7 +10,10 @@ import ProfilePicture from "@/components/ProfilePicture";
 import QuickActions from "@/components/QuickActions";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUnreadCount } from "@/hooks/useNotifications";
+import {
+	useNotifications,
+	useUnreadCount,
+} from "@/hooks/useNotifications";
 
 interface DashboardHeaderProps {
 	user?:
@@ -24,31 +26,32 @@ interface DashboardHeaderProps {
 }
 
 const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
-	const _router = useRouter();
 	const { logout, user: userFromContext } = useAuth();
 	const [notifOpen, setNotifOpen] = useState(false);
 
 	// Use user from context if prop is not provided (avoids serialization issues)
 	const user = userProp || userFromContext;
 
-	// Use SWR hook for instant updates
 	const { unreadCount } = useUnreadCount(user?.$id);
+	const { mutate: revalidateNotifications } = useNotifications(user?.$id);
 
 	const fetchUnread = useCallback(async () => {
-		// Force revalidation of unread count
+		await revalidateNotifications();
 		if (user?.$id) {
-			await mutate(`/api/notifications/unread-count?userId=${user.$id}`);
+			await mutate(
+				`/api/notifications/unread-count?userId=${user.$id}`,
+				undefined,
+				{ revalidate: true },
+			);
 		}
-	}, [user]);
+	}, [user?.$id, revalidateNotifications]);
 
-	// Refresh count when notification center is closed
 	const handleNotificationClose = () => {
 		setNotifOpen(false);
-		fetchUnread(); // Refresh count after any actions
+		fetchUnread();
 	};
 
 	const handleLogout = () => {
-		// Use AuthContext logout for instant response
 		logout("manual");
 	};
 
@@ -67,7 +70,10 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 							<Button
 								variant="ghost"
 								size="icon"
-								onClick={() => setNotifOpen(true)}
+								onClick={() => {
+									setNotifOpen(true);
+									void revalidateNotifications();
+								}}
 								className="relative h-8 w-8 shrink-0 text-slate-700 hover:bg-white/40"
 								data-testid="notification-bell"
 								aria-label="Open notifications"

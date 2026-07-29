@@ -152,12 +152,6 @@ export default function ContractsTableView({
 		visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 	const rowPad = density === "compact" ? "py-2" : "py-4";
 
-	const stickyContractCell = (selected: boolean) =>
-		cn(
-			"sticky left-10 z-10 backdrop-blur-md border-r border-white/30 transition-colors duration-200",
-			selected ? "bg-blue-50/50" : "bg-white/10 group-hover:bg-white/25",
-		);
-
 	// Fetch owner names for all contracts
 	useEffect(() => {
 		const fetchAllOwnerNames = async () => {
@@ -495,7 +489,7 @@ export default function ContractsTableView({
 
 	if (files.length === 0) {
 		return (
-			<div className="text-center py-12">
+			<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 				<Image
 					src="/assets/icons/no-data.svg"
 					alt="No contracts found"
@@ -525,9 +519,7 @@ export default function ContractsTableView({
 								className="cursor-pointer"
 							/>
 						</TableHead>
-						<TableHead
-							className={`${DATA_TABLE_HEADER_CELL} px-3 sticky left-10 z-10 backdrop-blur-md bg-transparent border-r border-white/30`}
-						>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 							Contract
 						</TableHead>
 						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
@@ -583,12 +575,7 @@ export default function ContractsTableView({
 									className="cursor-pointer"
 								/>
 							</TableCell>
-							<TableCell
-								className={cn(
-									rowPad,
-									stickyContractCell(selectedIds.includes(file.$id)),
-								)}
-							>
+							<TableCell className={cn(rowPad)}>
 								<div className="flex items-center gap-3 min-w-0">
 									<Thumbnail
 										type={file.type}

@@ -161,6 +161,7 @@ export async function updateOrganization(
 			maxUsers: number;
 			maxDepartments: number;
 			features: string[];
+			[key: string]: unknown;
 		};
 	},
 ): Promise<Organization | null> {

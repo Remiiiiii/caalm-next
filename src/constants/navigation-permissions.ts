@@ -123,7 +123,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		],
 	},
 	{
-		header: "Documents",
+		header: "Files",
 		items: [
 			{
 				name: "Uploads",
@@ -132,6 +132,13 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				permissions: [PERMISSIONS.CONTRACTS.VIEW],
 				// Hidden for Viewer (prevents contamination)
 				hiddenForRoles: ["Viewer"],
+			},
+			{
+				name: "Documents",
+				icon: "/assets/icons/documents.svg",
+				url: "/documents",
+				permissions: [PERMISSIONS.CONTRACTS.VIEW],
+				viewerReadOnly: true,
 			},
 			{
 				name: "Images",

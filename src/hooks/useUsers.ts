@@ -61,7 +61,10 @@ export const useUsers = ({
 				accountId: u.accountId,
 				role: u.role,
 				department: u.department,
-				status: u.status === "inactive" ? "inactive" : "active",
+				status:
+					u.status === "inactive" || u.status === "suspended"
+						? u.status
+						: "active",
 				roleName: u.roleName,
 				assignedByName: u.assignedByName,
 				assignedDate: u.assignedDate,

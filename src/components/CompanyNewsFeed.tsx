@@ -299,7 +299,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 									Search
 								</Label>
 								<div className="relative">
-									<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-light-200" />
+									<Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 transform text-light-200" />
 									<Input
 										id="search"
 										placeholder="Search news..."
@@ -309,6 +309,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 											setCurrentPage(1);
 										}}
 										className="shad-input pl-10"
+										data-with-leading-icon="true"
 									/>
 								</div>
 							</div>

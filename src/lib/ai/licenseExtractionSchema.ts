@@ -8,6 +8,8 @@ import { extractJsonObjectFromModelText } from "./contractTypeSuggestionSchema";
 
 export const LICENSE_EXTRACTION_METHOD = {
 	gemini: "gemini-structured",
+	/** Labeled fieldName: value blocks when Gemini is unavailable */
+	kvParse: "kv-parse",
 	test: "test-extraction",
 } as const;
 
@@ -491,6 +493,8 @@ export function buildFormPatchFromLicenseExtraction(
 
 	for (const [key, value] of Object.entries(fields)) {
 		if (value === undefined || value === "") continue;
+		// Uploads always start as pending-review; ignore document status labels
+		if (key === "status") continue;
 		if (
 			key === "issueDate" ||
 			key === "licenseExpiryDate" ||
@@ -513,7 +517,10 @@ export function buildFormPatchFromLicenseExtraction(
 export function isRealLicenseExtractionMethod(
 	method: string | undefined | null,
 ): boolean {
-	return method === LICENSE_EXTRACTION_METHOD.gemini;
+	return (
+		method === LICENSE_EXTRACTION_METHOD.gemini ||
+		method === LICENSE_EXTRACTION_METHOD.kvParse
+	);
 }
 
 export const LOW_LICENSE_EXTRACTION_CONFIDENCE = LOW_CONFIDENCE_THRESHOLD;

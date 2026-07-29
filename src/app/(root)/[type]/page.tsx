@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Card from "@/components/Card";
 import ContractsAttentionStrip from "@/components/ContractsAttentionStrip";
 import ContractsControlBar from "@/components/ContractsControlBar";
 import ContractsHeaderActions from "@/components/ContractsHeaderActions";
@@ -7,12 +6,14 @@ import ContractsMetricsBar from "@/components/ContractsMetricsBar";
 import { ContractsViewProvider } from "@/components/ContractsView";
 import ContractsViewClient from "@/components/ContractsViewClient";
 import FileUsageOverview from "@/components/FileUsageOverview";
-import Sort from "@/components/Sort";
-import StorageProgressBar from "@/components/StorageProgressBar";
+import FileUploader from "@/components/FileUploader";
+import FilesLibraryClient from "@/components/FilesLibraryClient";
+import StorageUsageBar from "@/components/StorageUsageBar";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
-import { getFiles, getTotalSpaceUsed } from "@/lib/actions/file.actions";
+import { getFiles } from "@/lib/actions/file.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { getFileTypesParams } from "@/lib/utils";
+import { getFileLibraryEmptyState } from "@/lib/storage/fileLibraryEmptyState";
+import { getFileLibraryPageTitle, getFileTypesParams, isDocumentFileExtension } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 
 type FileType = "image" | "video" | "audio" | "document" | "other";
@@ -29,7 +30,8 @@ interface SearchParamProps {
 const Page = async ({ searchParams, params }: SearchParamProps) => {
 	const type = ((await params)?.type as string) || "";
 	const searchText = ((await searchParams)?.query as string) || "";
-	const sort = ((await searchParams)?.sort as string) || "";
+	const sort =
+		((await searchParams)?.sort as string) || "$createdAt-desc";
 
 	let files: { documents: UIFileDoc[] } = { documents: [] };
 	let filteredDocuments: UIFileDoc[] = [];
@@ -208,13 +210,18 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 				return ext === "png" || ext === "jpg" || ext === "jpeg";
 			});
 		}
+		if (type.toLowerCase() === "documents") {
+			filteredDocuments = files.documents.filter((file: UIFileDoc) => {
+				const ext = (file.extension || "").toLowerCase();
+				return file.type === "document" || isDocumentFileExtension(ext);
+			});
+		}
 	}
 
 	// Fetch total space data for File Usage Overview
-	const totalSpace = await getTotalSpaceUsed();
-
 	// Get current user
 	const user = await getCurrentUser();
+	const emptyState = getFileLibraryEmptyState(type);
 
 	// Ensure filteredDocuments is always defined
 	if (!filteredDocuments) {
@@ -234,12 +241,14 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 	const _contractCount =
 		type.toLowerCase() === "contracts" ? contractDocuments.length : 0;
 
+	const pageTitle = getFileLibraryPageTitle(type);
+
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 			{type.toLowerCase() === "contracts" ? (
 				<ContractsViewProvider>
 					<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
-						<h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
+						<h1 className="h1 capitalize sidebar-gradient-text">{pageTitle}</h1>
 					</div>
 					<div className="mb-6 flex items-center justify-end">
 						<ContractsHeaderActions files={contractDocuments} />
@@ -258,7 +267,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 							{filteredDocuments.length > 0 ? (
 								<ContractsViewClient files={filteredDocuments} user={user} />
 							) : (
-								<div className="text-center py-12 px-4">
+								<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 									<Image
 										src="/assets/icons/no-data.svg"
 										alt="No contracts uploaded yet"
@@ -277,57 +286,38 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 			) : (
 				<>
 					<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
-						<h1 className="h1 capitalize sidebar-gradient-text">{type}</h1>
+						<h1 className="h1 capitalize sidebar-gradient-text">{pageTitle}</h1>
 					</div>
-					{/* File Usage Overview Section - Only show on uploads page */}
+					{/* Storage Progress Bar - account-wide usage from org tier limit */}
+					{(!type || type.toLowerCase() === "uploads") && (
+						<section className="mb-6 w-full">
+							<StorageUsageBar showLabel />
+						</section>
+					)}
+					{(!type ||
+						type.toLowerCase() === "uploads" ||
+						type.toLowerCase() === "documents") &&
+						user && (
+							<div className="mb-6 flex w-full items-center justify-end">
+								<FileUploader
+									ownerId={user.$id}
+									accountId={user.$id}
+									className="primary-btn h-10 px-4 shadow-drop-1 text-sm"
+								/>
+							</div>
+						)}
 					{(!type || type.toLowerCase() === "uploads") && (
 						<section className="mb-8 w-full">
-							<FileUsageOverview totalSpace={totalSpace} user={user} />
+							<FileUsageOverview />
 						</section>
 					)}
-					<section className="w-full">
-						<div className="total-size-section">
-							<p className="body-1">
-								Total: <span className="h5">{totalSizeFormatted}</span>
-							</p>
-
-							<div className="sort-container">
-								<p className="body-1 hidden text-light-200 sm:block">
-									Sort by:
-								</p>
-								<Sort />
-							</div>
-						</div>
-
-						{/* Storage Progress Bar - Shows total usage across all file types */}
-						<StorageProgressBar totalSpace={totalSpace} />
-					</section>
-
-					{/* Render the files */}
-					{filteredDocuments.length > 0 ? (
-						<section className="file-list">
-							{filteredDocuments.map((file: UIFileDoc) => (
-								<Card
-									key={file.$id}
-									file={file}
-									status={file.status}
-									expirationDate={file.contractExpiryDate}
-									userRole={user?.role as "executive" | "admin" | "manager"}
-								/>
-							))}
-						</section>
-					) : (
-						<div className="text-center py-12">
-							<Image
-								src="/assets/icons/no-data.svg"
-								alt="No contracts uploaded yet"
-								width={250}
-								height={250}
-								className="mb-4 opacity-60"
-							/>
-							<p className="body-1 text-slate-700">No contracts uploaded yet</p>
-						</div>
-					)}
+					<FilesLibraryClient
+						files={filteredDocuments}
+						totalSizeFormatted={totalSizeFormatted}
+						emptyMessage={emptyState.message}
+						emptyAlt={emptyState.alt}
+						user={user}
+					/>
 				</>
 			)}
 		</div>

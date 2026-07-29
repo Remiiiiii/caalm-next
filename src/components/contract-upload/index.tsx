@@ -8,7 +8,7 @@
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { Ban, ChevronLeft, ChevronRight, Loader2, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
+import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { TOTAL_STEPS } from "./constants";
 import { useContractForm } from "./hooks/useContractForm";
 import { useDraftManagement } from "./hooks/useDraftManagement";
@@ -68,6 +69,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	onSuccess,
 }) => {
 	const path = usePathname();
+	const router = useRouter();
 	const { toast } = useToast();
 	const [isOpen, setIsOpen] = useState(false);
 	const [isUploading, setIsUploading] = useState(false);
@@ -435,6 +437,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				},
 				draftId: currentDraftId || undefined,
 			});
+
+			await refreshStorageUsage(router);
 
 			clearInterval(progressInterval);
 			setUploadProgress(100);

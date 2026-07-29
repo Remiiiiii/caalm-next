@@ -40,15 +40,6 @@ import { CATEGORIES, COMPLIANCE_STATUSES, LICENSE_TYPES } from "../constants";
 import type { LicenseUploadFormData } from "../schema";
 import type { Manager } from "../types";
 
-const LICENSE_STATUS_OPTIONS = [
-	{ value: "active", label: "Active" },
-	{ value: "inactive", label: "Inactive" },
-	{ value: "expired", label: "Expired" },
-	{ value: "pending-review", label: "Pending Review" },
-	{ value: "suspended", label: "Suspended" },
-	{ value: "action-required", label: "Action Required" },
-];
-
 const CURRENCY_CODES = ["USD", "EUR", "GBP", "CAD", "MXN", "JPY", "AUD"];
 
 const DIVISIONS = [
@@ -179,26 +170,14 @@ export default function Step2LicenseDetails({
 					<FormField
 						control={form.control}
 						name="status"
-						render={({ field }) => (
-							<FormItem className={cn(aiClass("status"))}>
+						render={() => (
+							<FormItem>
 								<FormLabel className="text-sm text-slate-700 mb-1 block">
-									Status <span className="text-red">*</span>
-									<AiHint name="status" />
+									Status after submit
 								</FormLabel>
-								<Select onValueChange={field.onChange} value={field.value}>
-									<FormControl>
-										<SelectTrigger className="bg-white border-slate-300">
-											<SelectValue placeholder="Select status" />
-										</SelectTrigger>
-									</FormControl>
-									<SelectContent>
-										{LICENSE_STATUS_OPTIONS.map((status) => (
-											<SelectItem key={status.value} value={status.value}>
-												{status.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+								<div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-slate-700">
+									Pending Review — becomes Active only after approval
+								</div>
 								<FormMessage />
 							</FormItem>
 						)}

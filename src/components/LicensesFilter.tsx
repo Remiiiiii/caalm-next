@@ -33,7 +33,7 @@ import {
 	countActiveAdvancedLicenseFilters,
 	type LicenseFilters,
 } from "@/lib/licenses/licensesListUtils";
-import { useLicensesFilter } from "./LicensesView";
+import { useLicensesView } from "./LicensesView";
 
 const LICENSE_TYPES = [
 	"perpetual",
@@ -93,7 +93,8 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 	departments = [],
 	assignedManagers = [],
 }) => {
-	const { filters, setFilters, clearFilters } = useLicensesFilter();
+	const { filters, setFilters, clearFilters, lockDepartmentFilter } =
+		useLicensesView();
 	const [open, setOpen] = useState(false);
 
 	const allDepartments = useMemo(() => {
@@ -397,6 +398,7 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 							<Label className="text-slate-700 font-medium">Department</Label>
 							<Select
 								value={filters.department || "all"}
+								disabled={lockDepartmentFilter}
 								onValueChange={(value) =>
 									updateFilter(
 										"department",
@@ -404,11 +406,20 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 									)
 								}
 							>
-								<SelectTrigger className="bg-white">
+								<SelectTrigger
+									className="bg-white"
+									aria-label={
+										lockDepartmentFilter
+											? "Department filter locked to your department"
+											: "Filter by department"
+									}
+								>
 									<SelectValue placeholder="All departments" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="all">All departments</SelectItem>
+									{!lockDepartmentFilter && (
+										<SelectItem value="all">All departments</SelectItem>
+									)}
 									{allDepartments.map((dept) => (
 										<SelectItem key={dept} value={dept}>
 											{dept}
