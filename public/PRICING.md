@@ -23,7 +23,7 @@ All prices shown are Monthly and Yearly (Yearly saves 20%).
   - Up to **10 staff users**
   - Up to **100 active contracts** tracked
   - **Analytics** for Admin + 2 departments
-  - **Reports** (basic) via `ReportsPage`
+  - **Reports** (basic) via `Reports & Analytics Page`
   - **Email support**
   - **Analytical data retention**: 90 days
   - **Storage**: 10GB

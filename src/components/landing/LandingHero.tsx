@@ -255,13 +255,17 @@ export default function LandingHero() {
 						<motion.div variants={fadeUp}>
 							{/* Gradient only on text spans — wrapper owns the entrance motion */}
 							<h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] text-center lg:text-left leading-[1.35] landing-section-title">
-								<span className="sidebar-gradient-text">
-									Simplify compliance with
+								<span className="sidebar-gradient-text font-medium">
+									Simplify compliance and stay{" "}
+								</span>
+								<span className="sidebar-gradient-text font-bold">
+									audit-ready
 								</span>{" "}
-								<PillSwing3D className="text-[0.85em]">
-									AI-powered
-								</PillSwing3D>{" "}
-								<span className="sidebar-gradient-text">contract control</span>
+								<span className="sidebar-gradient-text font-medium">with</span>{" "}
+								<PillSwing3D className="text-[0.85em]">AI-powered</PillSwing3D>{" "}
+								<span className="sidebar-gradient-text font-medium">
+									document control
+								</span>
 							</h1>
 						</motion.div>
 

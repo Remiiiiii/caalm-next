@@ -196,7 +196,7 @@ export const FAQ_ITEMS = [
 	{
 		question: "How does permission-based access work?",
 		answer:
-			"Users inherit permissions through roles stored in the database. Features, navigation, and data access check those permissions — there are no role-based bypasses.",
+			"Users inherit permissions through roles stored in the database. Features, navigation, and data access check those permissions. There are no role-based bypasses.",
 	},
 	{
 		question: "Can CAALM integrate with tools we already use?",

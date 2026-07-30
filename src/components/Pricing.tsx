@@ -131,18 +131,28 @@ export default function Pricing({ plans }: Props) {
 					</div>
 				</motion.div>
 
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 md:items-stretch">
 					{formattedPlans.map((plan, idx) => (
-						<motion.div key={plan.key} variants={scaleIn}>
+						<motion.div
+							key={plan.key}
+							variants={scaleIn}
+							className={cn(
+								"h-full rounded-xl",
+								idx === 1 &&
+									"relative z-10 ring-2 ring-[#05A1B7]/70 shadow-[0_12px_40px_rgba(5,161,183,0.22)] md:scale-[1.03]",
+							)}
+						>
 							<LandingFrostedCard
-								className={cn(
-									"flex flex-col transition-all duration-200 h-full",
-									idx === 1 ? "ring-2 ring-[#05A1B7]/70" : "",
-								)}
+								className="flex flex-col transition-all duration-200 h-full"
 								contentClassName="p-6 flex flex-col h-full"
 							>
-								<h3 className="text-lg font-semibold text-slate-900 mb-2 mt-2">
+								<h3 className="mb-2 mt-2 flex flex-wrap items-center gap-2 text-lg font-semibold text-slate-900">
 									{plan.name}
+									{idx === 1 ? (
+										<span className="inline-flex items-center rounded-full border border-[#05A1B7]/30 bg-[#E8F8FA] px-2.5 py-0.5 text-xs font-medium text-[#057A8A]">
+											Most Popular
+										</span>
+									) : null}
 								</h3>
 								<div className="flex items-baseline gap-1 mb-4">
 									<span className="text-4xl font-bold text-slate-700">
@@ -166,10 +176,10 @@ export default function Pricing({ plans }: Props) {
 										<button
 											type="button"
 											className={cn(
-												"w-full rounded-full py-3 cursor-pointer font-semibold shadow-sm transition-all duration-200",
+												"w-full rounded-full py-3 cursor-pointer font-semibold shadow-sm transition-all duration-200 text-white hover:opacity-90",
 												idx === 1
-													? "primary-btn"
-													: "bg-gradient-to-r from-slate-500 to-slate-700 text-white hover:opacity-90",
+													? "bg-gradient-to-r from-[#00C1CB] via-[#078FAB] to-[#162768]"
+													: "bg-gradient-to-r from-slate-500 to-slate-700",
 											)}
 										>
 											Get started

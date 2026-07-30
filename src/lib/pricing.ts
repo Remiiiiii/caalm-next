@@ -127,6 +127,7 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 	const proMonthly = 299;
 	const enterpriseMonthly = 999;
 
+	// Keep in sync with public/PRICING.md (source of truth when markdown loads)
 	const defaults: PricingPlan[] = [
 		{
 			key: "starter",
@@ -138,10 +139,10 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 				"Up to **10 staff users**",
 				"Up to **100 active contracts** tracked",
 				"**Analytics** for Admin + 2 departments",
-				"**Reports** (basic) via `ReportsPage`",
+				"**Reports** (basic) via `Reports & Analytics Page`",
 				"**Email support**",
 				"**Analytical data retention**: 90 days",
-				"**Storage**: 5GB",
+				"**Storage**: 10GB",
 			],
 		},
 		{
@@ -150,7 +151,6 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 			monthly: proMonthly,
 			yearly: Math.round(proMonthly * 12 * 0.8 * 100) / 100,
 			features: [
-				"Includes everything in Starter, plus:",
 				"Up to **6 departments**",
 				"Up to **100 staff users**",
 				"Up to **2,500 active contracts**",
@@ -167,7 +167,7 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 			monthly: enterpriseMonthly,
 			yearly: Math.round(enterpriseMonthly * 12 * 0.8 * 100) / 100,
 			features: [
-				"Includes everything in Growth, plus:",
+				"**Dedicated account manager**",
 				"**Unlimited departments**",
 				"**Up to 1,000 staff users** (higher limits upon request)",
 				"**25,000 active contracts** (higher upon request)",
