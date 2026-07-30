@@ -13,10 +13,8 @@ export const fetcher = async (url: string) => {
 		const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
 		const res = await fetch(url, {
-			cache: "no-store",
-			headers: {
-				"x-no-cache": "1",
-			},
+			// Prefer browser HTTP cache when the API sends Cache-Control;
+			// still revalidates via SWR when keys go stale.
 			signal: controller.signal,
 		});
 
@@ -122,12 +120,12 @@ export const swrKeys = {
  */
 export const swrConfig: SWRConfiguration = {
 	fetcher,
-	revalidateOnFocus: true, // Revalidate when window gets focused
+	revalidateOnFocus: false, // Avoid refetch storms when switching tabs
 	revalidateOnReconnect: true, // Revalidate when network recovers
-	dedupingInterval: 2000, // Dedupe requests within 2 seconds
-	focusThrottleInterval: 5000, // Throttle revalidation on focus (5 seconds)
-	errorRetryCount: 3, // Retry failed requests 3 times
-	errorRetryInterval: 5000, // Wait 5 seconds between retries
+	dedupingInterval: 10000, // Dedupe identical requests for 10 seconds
+	focusThrottleInterval: 30000,
+	errorRetryCount: 2,
+	errorRetryInterval: 5000,
 	shouldRetryOnError: (error: any) => {
 		// Don't retry on 4xx errors (client errors)
 		if (error?.status >= 400 && error?.status < 500) {

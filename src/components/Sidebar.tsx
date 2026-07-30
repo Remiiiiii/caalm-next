@@ -25,6 +25,7 @@ import {
 import { useSidebarCollapse } from "@/contexts/SidebarContext";
 import { useAnalyticsPrefetch } from "@/hooks/useAnalyticsPrefetch";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
+import { sectionTourId } from "@/lib/demo/tour/sectionTourId";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -165,7 +166,10 @@ const Sidebar = memo(
 
 										return (
 											<div key={section.header} className="mb-3">
-												<li className="sidebar-section-header mb-0 lg:mb-1">
+												<li
+													className="sidebar-section-header mb-0 lg:mb-1"
+													data-tour={sectionTourId(section.header)}
+												>
 													<span className="flex items-center gap-2">
 														{section.header === "Dashboard" ? (
 															<span className="flex items-center gap-2">

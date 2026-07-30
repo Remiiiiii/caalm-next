@@ -9,6 +9,7 @@ import { AuditStatCardRow } from "@/components/audits/AuditStatCardRow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useComplianceStatus } from "@/hooks/useComplianceStatus";
+import { dedupeEvidenceRows } from "@/lib/audits/evidence-utils";
 import { mergeDomainWithLiveData } from "@/lib/audits/merge-live-data";
 import { getTimeSeriesForPeriod } from "@/lib/audits/mock-data";
 import type { AuditControlDomain, AuditPeriod } from "@/lib/audits/types";
@@ -65,13 +66,15 @@ export function AuditDomainTabContent({
 
 	const filteredEvidence = useMemo(() => {
 		const q = search.trim().toLowerCase();
-		if (!q) return data.evidence;
-		return data.evidence.filter(
-			(row) =>
-				row.title.toLowerCase().includes(q) ||
-				row.owner.toLowerCase().includes(q) ||
-				row.id.toLowerCase().includes(q),
-		);
+		const rows = !q
+			? data.evidence
+			: data.evidence.filter(
+					(row) =>
+						row.title.toLowerCase().includes(q) ||
+						row.owner.toLowerCase().includes(q) ||
+						row.id.toLowerCase().includes(q),
+				);
+		return dedupeEvidenceRows(rows);
 	}, [data.evidence, search]);
 
 	return (

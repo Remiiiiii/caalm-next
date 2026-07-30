@@ -81,7 +81,13 @@ export function AuditDomainCharts({
 				>
 					<AreaChart data={timeSeries} margin={{ left: 8, right: 8, top: 8 }}>
 						<defs>
-							<linearGradient id="auditDomainPrimary" x1="0" y1="0" x2="0" y2="1">
+							<linearGradient
+								id="auditDomainPrimary"
+								x1="0"
+								y1="0"
+								x2="0"
+								y2="1"
+							>
 								<stop
 									offset="0%"
 									stopColor={CAALM_CHART_COLORS.primary}
@@ -123,10 +129,17 @@ export function AuditDomainCharts({
 							tick={{ fill: CAALM_CHART_COLORS.axis, fontSize: 11 }}
 						/>
 						<ChartTooltip
-							cursor={{ stroke: CAALM_CHART_COLORS.primary, strokeOpacity: 0.35 }}
+							cursor={{
+								stroke: CAALM_CHART_COLORS.primary,
+								strokeOpacity: 0.35,
+							}}
 							content={<ChartTooltipContent indicator="line" />}
 						/>
-						{hasSecondary && <ChartLegend content={<ChartLegendContent />} />}
+						{hasSecondary && (
+							<ChartLegend
+								content={<ChartLegendContent className="text-slate-400" />}
+							/>
+						)}
 						<Area
 							type="monotone"
 							dataKey="value"
@@ -228,7 +241,9 @@ export function AuditDomainCharts({
 									/>
 								))}
 							</Pie>
-							<ChartLegend content={<ChartLegendContent />} />
+							<ChartLegend
+								content={<ChartLegendContent className="text-slate-400" />}
+							/>
 						</PieChart>
 					</ChartContainer>
 				</CaalmAnalyticsChartShell>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { Suspense, useEffect, useMemo } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
+import DemoTourLayer from "@/components/demo/tour/DemoTourLayer";
 import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";
 import Sidebar from "@/components/Sidebar";
@@ -118,6 +119,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 							</div>
 						</section>
 						<Toaster />
+						<DemoTourLayer />
 					</main>
 				</SidebarProvider>
 			)}

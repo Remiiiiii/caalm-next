@@ -3,6 +3,8 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { getUserById } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
+import { isDemoMode } from "@/lib/config/demo-mode";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { getProfilePictureUrl } from "@/lib/utils";
 import {
@@ -81,7 +83,8 @@ export function assertDecisionAllowed({
 	if (
 		current.kind === "executive_approval" &&
 		viewerUserId === uploaderUserId &&
-		!adminOverride
+		!adminOverride &&
+		!isDemoMode()
 	) {
 		throw new Error("Uploader cannot approve their own contract at executive step");
 	}
@@ -225,7 +228,9 @@ async function updateContract(
 	data: Record<string, unknown>,
 ): Promise<void> {
 	const { tablesDB } = await createAdminClient();
-	await tablesDB.updateRow({
+	await writeRowWithSchemaDriftRecovery({
+		tablesDB,
+		mode: "update",
 		databaseId: appwriteConfig.databaseId!,
 		tableId: appwriteConfig.contractsCollectionId!,
 		rowId: contractId,
@@ -262,7 +267,12 @@ export async function resolveExecutiveApproverIds(
 
 	// Fallback: if permission lookup yields none, still use executives/admins excluding uploader
 	if (withPermission.length === 0) {
-		return ids.filter((id) => id !== uploaderUserId);
+		const others = ids.filter((id) => id !== uploaderUserId);
+		// Solo demo orgs: allow the uploader to complete executive approval.
+		if (others.length === 0 && isDemoMode() && uploaderUserId) {
+			return [uploaderUserId];
+		}
+		return others;
 	}
 	return withPermission;
 }

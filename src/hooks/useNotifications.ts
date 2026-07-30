@@ -64,11 +64,11 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
 		currentUserId ? `/api/notifications?userId=${currentUserId}` : null,
 		fetcher,
 		{
-			refreshInterval: 15000,
-			revalidateOnFocus: true,
+			refreshInterval: 60000,
+			revalidateOnFocus: false,
 			revalidateOnReconnect: true,
 			revalidateOnMount: true,
-			dedupingInterval: 3000,
+			dedupingInterval: 10000,
 			revalidateIfStale: true,
 			keepPreviousData: true,
 		},
@@ -334,8 +334,8 @@ export const useNotificationTypes = (): UseNotificationTypesReturn => {
 		error,
 		isLoading,
 	} = useSWR("/api/notification-types", fetcher, {
-		refreshInterval: 60000, // Refresh every minute
-		revalidateOnFocus: true,
+		refreshInterval: 300000,
+		revalidateOnFocus: false,
 	});
 
 	const createNotificationType = async (
@@ -476,11 +476,11 @@ export const useUnreadCount = (userId?: string) => {
 			: null,
 		unreadCountFetcher,
 		{
-			refreshInterval: 5000,
-			revalidateOnFocus: true,
+			refreshInterval: 30000,
+			revalidateOnFocus: false,
 			revalidateOnReconnect: true,
 			revalidateOnMount: true,
-			dedupingInterval: 2000,
+			dedupingInterval: 10000,
 			revalidateIfStale: true,
 		},
 	);

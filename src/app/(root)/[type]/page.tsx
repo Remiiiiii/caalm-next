@@ -41,9 +41,6 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
 	// Special handling for contracts - get ALL contracts from contracts collection
 	if (type.toLowerCase() === "contracts") {
-		const { databases } = await createAdminClient();
-
-		// Build queries for all contracts from the contracts collection
 		const queries = [];
 
 		if (searchText) {
@@ -52,7 +49,6 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
 		if (sort) {
 			const [sortBy, orderBy] = sort.split("-");
-			// Map file collection sort fields to contract collection fields
 			const contractSortField =
 				sortBy === "$createdAt"
 					? "$createdAt"
@@ -68,116 +64,105 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 				queries.push(Query.orderDesc(contractSortField));
 			}
 		} else {
-			// Default sort by creation date descending
 			queries.push(Query.orderDesc("$createdAt"));
 		}
 
-		// Get admin client for database operations
 		const { tablesDB } = await createAdminClient();
 
-		// Get all contracts from the contracts collection (not filtered by owner)
 		const contractsResult = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
 			queries: queries,
 		});
 
-		// Helper function to validate Appwrite document ID format
 		const isValidDocumentId = (id: string | null | undefined): boolean => {
 			if (!id || typeof id !== "string") return false;
-			// Appwrite document IDs must be at most 36 chars, contain only a-z, A-Z, 0-9, underscore
-			// and cannot start with a leading underscore
 			if (id.length > 36) return false;
 			if (id.startsWith("_")) return false;
 			return /^[a-zA-Z0-9_]+$/.test(id);
 		};
 
-		// Convert contract documents to UIFileDoc format for compatibility with existing components
-		contractDocuments = await Promise.all(
-			contractsResult.rows.map(async (contract: any) => {
-				// Try to get the associated file document for file-specific data
-				let fileData = null;
-				if (contract.fileId && isValidDocumentId(contract.fileId)) {
-					try {
-						fileData = await databases.getDocument({
-							databaseId: appwriteConfig.databaseId!,
-							collectionId: appwriteConfig.filesCollectionId!,
-							documentId: contract.fileId,
-						});
-					} catch (error: any) {
-						// Handle missing file documents gracefully (404 errors)
-						if (error?.code === 404 || error?.type === "document_not_found") {
-							// Only log if it's a valid ID format - invalid IDs are expected to fail
-							console.warn(
-								`File document not found for contract ${contract.$id} (fileId: ${contract.fileId}). Contract will be displayed without file metadata.`,
-							);
-							// Set fileData to null to continue processing without file data
-							fileData = null;
-						} else {
-							// Log other errors but don't break the page
-							// Suppress "Invalid documentId param" errors as they're expected for invalid IDs
-							const errorMessage = error?.message || String(error);
-							if (!errorMessage.includes("Invalid `documentId` param")) {
-								console.warn(
-									"Could not fetch file data for contract:",
-									contract.$id,
-									errorMessage,
-								);
-							}
-							fileData = null;
-						}
-					}
-				} else if (contract.fileId) {
-					// Log invalid fileId format (but don't break the page)
-					console.warn(
-						`Invalid fileId format for contract ${contract.$id} (fileId: ${contract.fileId}). Skipping file document fetch.`,
-					);
-				}
-
-				// Create a UIFileDoc-compatible object using contract data as primary source
-				const contractAsFile: UIFileDoc = {
-					$id: contract.$id,
-					$createdAt: contract.$createdAt,
-					$updatedAt: contract.$updatedAt,
-					$permissions: contract.$permissions,
-					$collectionId: contract.$collectionId,
-					$databaseId: contract.$databaseId,
-					$sequence: contract.$sequence || 0,
-
-					// Use contract data as primary source
-					name: contract.contractName || contract.name || "Untitled Contract",
-					type: "document",
-					extension: fileData?.extension || "pdf", // Default to pdf if not available
-					url: fileData?.url || "",
-					size: fileData?.size || 0,
-					owner:
-						contract.contractOwnerId || contract.owner || fileData?.owner || "",
-					users: contract.users || fileData?.users || [],
-
-					// Contract-specific data from contracts collection
-					contractId: contract.$id,
-					contractName: contract.contractName,
-					contractOwnerId: contract.contractOwnerId,
-					contractExpiryDate: contract.contractExpiryDate,
-					status: contract.status,
-					contractType: contract.contractType,
-					amount: contract.amount,
-					vendor: contract.vendor,
-					contractNumber: contract.contractNumber,
-					priority: contract.priority,
-					compliance: contract.compliance,
-					department: contract.department,
-					assignedManagers: contract.assignedManagers,
-					description: contract.description,
-					riskLevel: contract.riskLevel,
-
-					// File-specific data (fallback to file collection if available)
-					bucketFileId: fileData?.bucketFileId || contract.bucketFileId,
-				};
-
-				return contractAsFile;
-			}),
+		// Batch-fetch file metadata (one round-trip per ~80 IDs) instead of N+1 getDocument calls
+		const fileIds = Array.from(
+			new Set(
+				contractsResult.rows
+					.map((c: any) => c.fileId as string | undefined)
+					.filter((id): id is string => !!id && isValidDocumentId(id)),
+			),
 		);
+
+		const filesById = new Map<string, any>();
+		const FILE_ID_BATCH = 80;
+		if (fileIds.length > 0 && appwriteConfig.filesCollectionId) {
+			const batches: string[][] = [];
+			for (let i = 0; i < fileIds.length; i += FILE_ID_BATCH) {
+				batches.push(fileIds.slice(i, i + FILE_ID_BATCH));
+			}
+			const batchResults = await Promise.all(
+				batches.map((batch) => {
+					const fileQueries =
+						batch.length === 1
+							? [Query.equal("$id", batch[0]), Query.limit(batch.length)]
+							: [
+									Query.or(batch.map((id) => Query.equal("$id", id))),
+									Query.limit(batch.length),
+								];
+					return tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId!,
+						tableId: appwriteConfig.filesCollectionId!,
+						queries: fileQueries,
+					});
+				}),
+			);
+			for (const result of batchResults) {
+				for (const file of result.rows) {
+					filesById.set(file.$id, file);
+				}
+			}
+		}
+
+		contractDocuments = contractsResult.rows.map((contract: any) => {
+			const fileData =
+				contract.fileId && isValidDocumentId(contract.fileId)
+					? filesById.get(contract.fileId)
+					: undefined;
+
+			const contractAsFile: UIFileDoc = {
+				$id: contract.$id,
+				$createdAt: contract.$createdAt,
+				$updatedAt: contract.$updatedAt,
+				$permissions: contract.$permissions,
+				$collectionId: contract.$collectionId,
+				$databaseId: contract.$databaseId,
+				$sequence: contract.$sequence || 0,
+				name: contract.contractName || contract.name || "Untitled Contract",
+				type: "document",
+				extension: fileData?.extension || "pdf",
+				url: fileData?.url || "",
+				size: fileData?.size || 0,
+				owner:
+					contract.contractOwnerId || contract.owner || fileData?.owner || "",
+				users: contract.users || fileData?.users || [],
+				contractId: contract.$id,
+				contractName: contract.contractName,
+				contractOwnerId: contract.contractOwnerId,
+				contractExpiryDate: contract.contractExpiryDate,
+				status: contract.status,
+				contractType: contract.contractType,
+				amount: contract.amount,
+				vendor: contract.vendor,
+				contractNumber: contract.contractNumber,
+				priority: contract.priority,
+				compliance: contract.compliance,
+				department: contract.department,
+				assignedManagers: contract.assignedManagers,
+				description: contract.description,
+				riskLevel: contract.riskLevel,
+				bucketFileId: fileData?.bucketFileId || contract.bucketFileId,
+			};
+
+			return contractAsFile;
+		});
 
 		files = { documents: contractDocuments };
 		filteredDocuments = contractDocuments;

@@ -15,6 +15,15 @@ import {
 	Upload,
 } from "lucide-react";
 import { type DropzoneOptions, useDropzone } from "react-dropzone";
+import type { DragEvent } from "react";
+import {
+	DEMO_LICENSE_SAMPLE,
+	DemoSampleDocumentDrop,
+} from "@/components/demo/DemoSampleDocumentDrop";
+import {
+	handleDemoSampleDragOverCapture,
+	handleDemoSampleDropCapture,
+} from "@/components/demo/demoSampleDrag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +65,26 @@ export default function Step1FileUpload({
 		},
 		multiple: false,
 	} as DropzoneOptions);
+
+	// Demo sample drags lack native "Files" in dataTransfer; react-dropzone
+	// ignores them. Override drop handlers so we ingest before dropzone skips.
+	const {
+		onDragOver: dropzoneDragOver,
+		onDrop: dropzoneDrop,
+		...dropzoneRootRest
+	} = getRootProps();
+
+	const rootProps = {
+		...dropzoneRootRest,
+		onDragOver: (event: DragEvent) => {
+			if (handleDemoSampleDragOverCapture(event)) return;
+			dropzoneDragOver?.(event);
+		},
+		onDrop: (event: DragEvent) => {
+			if (handleDemoSampleDropCapture(event, onDrop)) return;
+			dropzoneDrop?.(event);
+		},
+	};
 
 	return (
 		<>
@@ -116,7 +145,7 @@ export default function Step1FileUpload({
 				</CardHeader>
 				<CardContent>
 					<div
-						{...getRootProps()}
+						{...rootProps}
 						className={cn(
 							"border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200",
 							isDragActive
@@ -161,6 +190,15 @@ export default function Step1FileUpload({
 							</div>
 						)}
 					</div>
+
+					{!processedFileData ? (
+						<DemoSampleDocumentDrop
+							sample={DEMO_LICENSE_SAMPLE}
+							disabled={isExtracting}
+							onUseSample={(file) => onDrop([file])}
+							className="mt-4"
+						/>
+					) : null}
 				</CardContent>
 			</Card>
 

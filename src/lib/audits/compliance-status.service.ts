@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import {
+	dedupeEvidenceRows,
+} from "@/lib/audits/evidence-utils";
 import type {
 	AuditEvidenceRow,
 	AuditEvidenceStatus,
@@ -117,7 +120,7 @@ async function fetchContractCompliance(
 			contract.compliance === "action-required"
 		) {
 			evidence.push({
-				id: contract.$id.slice(0, 8).toUpperCase(),
+				id: contract.$id,
 				title: contract.contractName || contract.name || "Unnamed contract",
 				owner: contract.assignedManager || contract.department || "Unassigned",
 				status: mapContractComplianceToStatus(contract.compliance),
@@ -141,7 +144,7 @@ async function fetchContractCompliance(
 		complianceRate,
 		buckets,
 		expiringSoon,
-		evidence: evidence.slice(0, 10),
+		evidence: dedupeEvidenceRows(evidence).slice(0, 10),
 	};
 }
 
@@ -182,7 +185,7 @@ async function fetchLicenseCompliance(
 		) {
 			atRisk += 1;
 			evidence.push({
-				id: license.$id.slice(0, 8).toUpperCase(),
+				id: license.$id,
 				title: license.licenseName,
 				owner: license.issuingAuthority || license.division || "Unassigned",
 				status: mapLicenseComplianceToStatus(
@@ -199,13 +202,11 @@ async function fetchLicenseCompliance(
 	}
 
 	for (const license of expiring) {
-		if (
-			evidence.some((row) => row.id === license.$id.slice(0, 8).toUpperCase())
-		) {
+		if (evidence.some((row) => row.id === license.$id)) {
 			continue;
 		}
 		evidence.push({
-			id: license.$id.slice(0, 8).toUpperCase(),
+			id: license.$id,
 			title: license.licenseName,
 			owner: license.issuingAuthority || license.division || "Unassigned",
 			status: "at_risk",
@@ -225,7 +226,7 @@ async function fetchLicenseCompliance(
 		expiringSoon: expiring.length,
 		atRisk,
 		complianceBuckets,
-		evidence: evidence.slice(0, 10),
+		evidence: dedupeEvidenceRows(evidence).slice(0, 10),
 	};
 }
 

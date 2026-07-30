@@ -23,6 +23,8 @@ import type {
 } from "@/lib/approvals/contractApprovalWorkflow.types";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
+import { isDemoMode } from "@/lib/config/demo-mode";
 import { hasPermission } from "@/lib/rbac/permissions";
 import {
 	getAllAdmins,
@@ -78,7 +80,9 @@ async function updateLicense(
 	data: Record<string, unknown>,
 ): Promise<void> {
 	const { tablesDB } = await createAdminClient();
-	await tablesDB.updateRow({
+	await writeRowWithSchemaDriftRecovery({
+		tablesDB,
+		mode: "update",
 		databaseId: appwriteConfig.databaseId!,
 		tableId: appwriteConfig.licensesCollectionId!,
 		rowId: licenseId,
@@ -111,7 +115,12 @@ async function resolveExecutiveApproverIds(
 	}
 
 	if (withPermission.length === 0) {
-		return ids.filter((id) => id !== uploaderUserId);
+		const others = ids.filter((id) => id !== uploaderUserId);
+		// Solo demo orgs: allow the uploader to complete executive approval.
+		if (others.length === 0 && isDemoMode() && uploaderUserId) {
+			return [uploaderUserId];
+		}
+		return others;
 	}
 	return withPermission;
 }

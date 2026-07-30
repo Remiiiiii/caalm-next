@@ -20,6 +20,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	evidenceRowKey,
+	formatEvidenceDisplayId,
+} from "@/lib/audits/evidence-utils";
 import type { AuditEvidenceRow, AuditEvidenceStatus } from "@/lib/audits/types";
 
 const STATUS_BADGE_BASE =
@@ -146,13 +150,13 @@ export function AuditEvidenceTable({
 									</TableCell>
 								</TableRow>
 							) : (
-								rows.map((row) => (
+								rows.map((row, index) => (
 									<TableRow
-										key={row.id}
+										key={evidenceRowKey(row, index)}
 										className="hover:bg-slate-50 transition-colors duration-200"
 									>
 										<TableCell className="font-mono text-sm text-slate-700">
-											{row.id}
+											{formatEvidenceDisplayId(row.id)}
 										</TableCell>
 										<TableCell className="font-medium text-slate-900">
 											{row.title}

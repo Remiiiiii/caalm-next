@@ -39,8 +39,33 @@ export class ContractTypeMapper {
 	 */
 	static map(contractType: string | undefined): string {
 		if (!contractType) return "Other";
-		return ContractTypeMapper.TYPE_MAP[contractType] || "Other";
+		const trimmed = contractType.trim();
+		if (ContractTypeMapper.DB_ENUM_VALUES.has(trimmed)) {
+			return trimmed;
+		}
+		return ContractTypeMapper.TYPE_MAP[trimmed] || "Other";
 	}
+
+	/** Values accepted by the Contracts.contractType Appwrite enum. */
+	private static readonly DB_ENUM_VALUES = new Set([
+		"Service_Agreement",
+		"Purchase_Order",
+		"License_Agreement",
+		"NDA_",
+		"Employment_Contract",
+		"Vendor_Contract",
+		"Lease_Agreement",
+		"Consulting_Agreement",
+		"Government_Grant",
+		"Government_Contract",
+		"Grant_Agreement",
+		"Vendor_Service_Agreement",
+		"MOU",
+		"Donation_Agreement",
+		"Independent_Contractor",
+		"Fiscal_Sponsorship",
+		"Other",
+	]);
 
 	/**
 	 * Get all valid contract types

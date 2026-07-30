@@ -12,6 +12,7 @@ import {
 	HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import type { NavigationItem } from "@/constants/navigation-permissions";
+import { sectionTourId } from "@/lib/demo/tour/sectionTourId";
 import { cn } from "@/lib/utils";
 
 export type CollapsedSection = {
@@ -51,6 +52,7 @@ export default function SidebarCollapsedRail({
 								type="button"
 								aria-label={section.header}
 								tabIndex={0}
+								data-tour={sectionTourId(section.header)}
 								className={cn(
 									"sidebar-rail-icon flex h-10 w-10 items-center justify-center rounded-xl cursor-pointer",
 									"transition-all duration-200 border border-transparent",

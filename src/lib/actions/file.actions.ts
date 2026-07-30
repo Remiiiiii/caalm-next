@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { ID, type Models, Query } from "node-appwrite";
 import { InputFile } from "node-appwrite/file";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
+import { ContractTypeMapper } from "@/lib/api/contracts/services/ContractTypeMapper";
 import { createAdminClient } from "@/lib/appwrite";
+import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
@@ -42,7 +44,15 @@ const sanitizePayload = <T extends Record<string, unknown>>(payload: T) =>
 		}),
 	);
 
-/** Appwrite string attributes reject oversize / non-string values. */
+
+/** Map code compliance values onto the active database enum when needed. */
+const normalizeComplianceForDb = (value?: string): string | undefined => {
+	if (!value) return undefined;
+	if (value === "compliant") return "up-to-date";
+	if (value === "at-risk") return "action-required";
+	return value;
+};
+
 const clampAppwriteString = (
 	value: unknown,
 	maxChars: number,
@@ -85,7 +95,7 @@ const CONTRACT_STRING_LIMITS = {
 	counterpartyAddress: 1000,
 	counterpartyTaxId: 100,
 	counterpartyDunsNumber: 100,
-	keyObligations: 1000,
+	keyObligations: 100,
 	serviceLevelAgreements: 500,
 	performanceMetrics: 500,
 	reportingRequirements: 500,
@@ -203,20 +213,20 @@ export const uploadFile = async ({
 			orgId: defaultOrg.orgId,
 		};
 
-		const newFile = await tablesDB
-			.createRow({
-				databaseId: appwriteConfig.databaseId!,
-				tableId: appwriteConfig.filesCollectionId!,
-				rowId: ID.unique(),
-				data: fileDocument,
-			})
-			.catch(async (error: unknown) => {
-				await storage.deleteFile({
-					bucketId: appwriteConfig.bucketId!,
-					fileId: bucketFile.$id,
-				});
-				handleError(error, "Failed to create file document");
+		const newFile = await writeRowWithSchemaDriftRecovery({
+			tablesDB,
+			mode: "create",
+			databaseId: appwriteConfig.databaseId!,
+			tableId: appwriteConfig.filesCollectionId!,
+			rowId: ID.unique(),
+			data: fileDocument,
+		}).catch(async (error: unknown) => {
+			await storage.deleteFile({
+				bucketId: appwriteConfig.bucketId!,
+				fileId: bucketFile.$id,
 			});
+			handleError(error, "Failed to create file document");
+		});
 
 		if (!newFile) {
 			throw new Error("File document creation failed");
@@ -299,26 +309,6 @@ export const uploadFile = async ({
 			}
 
 			const assignedManagerIds = metadata?.assignedManagers || [];
-			const assignedManagers = await (async () => {
-				const managerIds = assignedManagerIds;
-				if (managerIds.length === 0) return [];
-
-				const managerNames: string[] = [];
-				for (const managerId of managerIds) {
-					try {
-						const user = await getUserById(managerId);
-						if (user?.fullName) {
-							managerNames.push(user.fullName);
-						} else {
-							managerNames.push(managerId);
-						}
-					} catch (error) {
-						console.error(`Failed to fetch manager ${managerId}:`, error);
-						managerNames.push(managerId);
-					}
-				}
-				return managerNames;
-			})();
 
 			// Build contract document, explicitly excluding contractId (not in Contracts collection schema)
 			const contractDocumentRaw: any = {
@@ -366,10 +356,11 @@ export const uploadFile = async ({
 					}
 					return undefined;
 				})(),
-				compliance:
+				compliance: normalizeComplianceForDb(
 					metadata?.compliance ?? mapRiskToCompliance(metadata?.riskLevel),
+				),
 				assignedManagers: clampAppwriteStringArray(
-					assignedManagers,
+					assignedManagerIds,
 					CONTRACT_STRING_LIMITS.assignedManagers,
 				),
 				department: metadata?.assignToDepartment,
@@ -385,39 +376,7 @@ export const uploadFile = async ({
 					metadata?.departmentOwner,
 					CONTRACT_STRING_LIMITS.departmentOwner,
 				),
-				contractType: (() => {
-					const contractType = metadata?.contractType;
-					if (typeof contractType === "string") {
-						const typeMapping: Record<string, string> = {
-							"Service Agreement": "Service_Agreement",
-							"Professional Services": "Consulting_Agreement",
-							"Purchase Agreement": "Purchase_Order",
-							"Purchase Order": "Purchase_Order",
-							"License Agreement": "License_Agreement",
-							"Confidentiality/NDA": "NDA_",
-							NDA: "NDA_",
-							"Employment Contract": "Employment_Contract",
-							"Vendor Contract": "Vendor_Contract",
-							"Lease Agreement": "Lease_Agreement",
-							"Consulting Agreement": "Consulting_Agreement",
-							"Statement of Work (SOW)": "Consulting_Agreement",
-							"Statement of Work": "Consulting_Agreement",
-							"Master Agreement": "Service_Agreement",
-							"Government Grant": "Government_Grant",
-							"Government Contract": "Government_Contract",
-							"Grant Agreement": "Grant_Agreement",
-							"Vendor/Service Agreement": "Vendor_Service_Agreement",
-							"Memorandum of Understanding": "MOU",
-							"Donation/Gift Agreement": "Donation_Agreement",
-							"Independent Contractor Agreement": "Independent_Contractor",
-							"Fiscal Sponsorship Agreement": "Fiscal_Sponsorship",
-							Amendment: "Other",
-							Other: "Other",
-						};
-						return typeMapping[contractType] || "Other";
-					}
-					return "Other";
-				})(),
+				contractType: ContractTypeMapper.map(metadata?.contractType),
 				contractCategory: metadata?.contractCategory,
 				vendor: clampAppwriteString(
 					metadata?.vendor ?? metadata?.counterpartyLegalName,
@@ -546,6 +505,17 @@ export const uploadFile = async ({
 					resolvedOrgId,
 					CONTRACT_STRING_LIMITS.orgId,
 				),
+				selectedContractType: metadata?.selectedContractType,
+				grantTerms: clampAppwriteString(metadata?.grantTerms, 1000),
+				donorRestrictions: clampAppwriteString(metadata?.donorRestrictions, 1000),
+				projectDescription: clampAppwriteString(
+					metadata?.projectDescription,
+					1000,
+				),
+				propertyDescription: clampAppwriteString(
+					metadata?.propertyDescription,
+					1000,
+				),
 			};
 
 			// Explicitly remove contractId if it exists (not in Contracts collection schema)
@@ -572,11 +542,13 @@ export const uploadFile = async ({
 				throw new Error("Contracts collection ID is not configured");
 			}
 
-			const contract = await tablesDB.createRow({
+			const contract = await writeRowWithSchemaDriftRecovery({
+				tablesDB,
+				mode: "create",
 				databaseId: appwriteConfig.databaseId!,
 				tableId: appwriteConfig.contractsCollectionId,
 				rowId: ID.unique(),
-				data: contractDocument,
+				data: contractDocument as Record<string, unknown>,
 			});
 
 			// Initialize multi-step approval workflow (pending-review → exec → active)
@@ -932,15 +904,30 @@ export const uploadFile = async ({
 				: null;
 
 			if (enterprisePayload && Object.keys(enterprisePayload).length > 2) {
-				await tablesDB.createRow({
-					databaseId: appwriteConfig.databaseId!,
-					tableId:
-						appwriteConfig.contractsEnterpriseMetadataCollectionId ||
-						appwriteConfig.contractExtensionsCollectionId ||
-						"contractsEnterpriseMetadata",
-					rowId: ID.unique(),
-					data: enterprisePayload,
-				});
+				const enterpriseTableId =
+					appwriteConfig.contractsEnterpriseMetadataCollectionId ||
+					appwriteConfig.contractExtensionsCollectionId;
+
+				if (enterpriseTableId) {
+					try {
+						await writeRowWithSchemaDriftRecovery({
+							tablesDB,
+							mode: "create",
+							databaseId: appwriteConfig.databaseId!,
+							tableId: enterpriseTableId,
+							rowId: ID.unique(),
+							data: enterprisePayload as Record<string, unknown>,
+						});
+					} catch (enterpriseError) {
+						// Optional table — missing in caalm-demo; contract upload must still succeed.
+						console.warn(
+							"Skipping enterprise metadata write (table unavailable or write failed):",
+							enterpriseError instanceof Error
+								? enterpriseError.message
+								: enterpriseError,
+						);
+					}
+				}
 			}
 
 			// Save contract metadata in the file document for easy access
@@ -979,34 +966,14 @@ export const uploadFile = async ({
 				updateData: fileUpdateData,
 			});
 
-			try {
-				await tablesDB.updateRow({
-					databaseId: appwriteConfig.databaseId!,
-					tableId: appwriteConfig.filesCollectionId!,
-					rowId: newFile.$id,
-					data: fileUpdateData,
-				});
-			} catch (updateError: any) {
-				// If the error is about unknown attributes (like contractId), try again without it
-				if (
-					updateError?.message?.includes("Unknown attribute") &&
-					fileUpdateData.contractId
-				) {
-					console.warn(
-						"Files collection does not have contractId attribute, retrying without it",
-					);
-					const fileUpdateDataWithoutContractId = { ...fileUpdateData };
-					delete fileUpdateDataWithoutContractId.contractId;
-					await tablesDB.updateRow({
-						databaseId: appwriteConfig.databaseId!,
-						tableId: appwriteConfig.filesCollectionId!,
-						rowId: newFile.$id,
-						data: fileUpdateDataWithoutContractId,
-					});
-				} else {
-					throw updateError;
-				}
-			}
+			await writeRowWithSchemaDriftRecovery({
+				tablesDB,
+				mode: "update",
+				databaseId: appwriteConfig.databaseId!,
+				tableId: appwriteConfig.filesCollectionId!,
+				rowId: newFile.$id,
+				data: fileUpdateData as Record<string, unknown>,
+			});
 
 			console.log(
 				"✅ File document updated successfully with contract metadata",

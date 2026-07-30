@@ -36,32 +36,31 @@ export async function GET(_request: NextRequest) {
 			async () => {
 				const { tablesDB } = await createAdminClient();
 
-				// Get all contracts from the database - only select needed fields for performance
-				const allContracts = await tablesDB.listRows({
-					databaseId: appwriteConfig.databaseId,
-					tableId: appwriteConfig.contractsCollectionId,
-					queries: [
-						Query.limit(2000),
-						Query.select([
-							"department",
-							"division",
-							"amount",
-							"status",
-							"compliance",
-						]),
-					],
-				});
-
-				// Get all users to calculate staff counts - only select needed fields
-				const allUsers = await tablesDB.listRows({
-					databaseId: appwriteConfig.databaseId,
-					tableId: appwriteConfig.usersCollectionId,
-					queries: [
-						Query.limit(2000),
-						Query.equal("status", "active"),
-						Query.select(["division"]),
-					],
-				});
+				const [allContracts, allUsers] = await Promise.all([
+					tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId,
+						tableId: appwriteConfig.contractsCollectionId,
+						queries: [
+							Query.limit(2000),
+							Query.select([
+								"department",
+								"division",
+								"amount",
+								"status",
+								"compliance",
+							]),
+						],
+					}),
+					tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId,
+						tableId: appwriteConfig.usersCollectionId,
+						queries: [
+							Query.limit(2000),
+							Query.equal("status", "active"),
+							Query.select(["division"]),
+						],
+					}),
+				]);
 
 				// Group contracts by department and division
 				const contractsByDepartment: Record<string, any[]> = {};

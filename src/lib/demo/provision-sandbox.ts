@@ -11,7 +11,13 @@ import {
 	getDemoOrgExpiresAt,
 	isDemoMode,
 } from "@/lib/config/demo-mode";
-import { seedDemoOrgData } from "@/lib/demo/seed-org-data";
+import {
+	countUsersByOrg,
+	DEMO_SEED_VERSION,
+	getOrgSeedVersion,
+	MIN_TEAM_USERS,
+	seedDemoOrgData,
+} from "@/lib/demo/seed-org-data";
 import {
 	addUserToOrganization,
 	createOrganization,
@@ -22,6 +28,7 @@ export interface ProvisionSandboxResult {
 	orgId: string;
 	dashboardPath: string;
 	reused: boolean;
+	seeded: boolean;
 }
 
 function parseOrgSettings(raw: unknown): Record<string, unknown> {
@@ -76,9 +83,8 @@ async function getOrganizationAdminRoleId(): Promise<string> {
 	});
 
 	if (rolesResult.total === 0 || !rolesResult.rows[0]) {
-		throw new Error(
-			"Organization Admin role not found. Seed roles in the demo Appwrite project first.",
-		);
+		// Fallback to known demo role id
+		return "role_org_admin";
 	}
 	return rolesResult.rows[0].$id;
 }
@@ -117,6 +123,13 @@ async function assignOrgAdminRole(
 	});
 }
 
+async function shouldSeedOrg(orgId: string): Promise<boolean> {
+	const version = await getOrgSeedVersion(orgId);
+	if (version < DEMO_SEED_VERSION) return true;
+	const teamCount = await countUsersByOrg(orgId);
+	return teamCount < MIN_TEAM_USERS;
+}
+
 /**
  * Create (or reuse) a per-visitor demo org, link the user, assign Org Admin, seed data.
  */
@@ -144,10 +157,24 @@ export async function provisionDemoSandbox({
 		});
 		const roleId = await getOrganizationAdminRoleId();
 		await assignOrgAdminRole(userId, existing.orgId, roleId);
+
+		let seeded = false;
+		if (await shouldSeedOrg(existing.orgId)) {
+			await seedDemoOrgData({
+				orgId: existing.orgId,
+				userId,
+				ownerEmail: email,
+				ownerName: fullName,
+				force: true,
+			});
+			seeded = true;
+		}
+
 		return {
 			orgId: existing.orgId,
 			dashboardPath: "/dashboard/organizationadmin",
 			reused: true,
+			seeded,
 		};
 	}
 
@@ -163,6 +190,7 @@ export async function provisionDemoSandbox({
 			isDemo: true,
 			expiresAt: getDemoOrgExpiresAt(),
 			ownerEmail: email.toLowerCase(),
+			seedVersion: 0,
 		},
 		createdBy: userId,
 	});
@@ -189,11 +217,13 @@ export async function provisionDemoSandbox({
 		userId,
 		ownerEmail: email,
 		ownerName: fullName,
+		force: true,
 	});
 
 	return {
 		orgId: org.$id,
 		dashboardPath: "/dashboard/organizationadmin",
 		reused: false,
+		seeded: true,
 	};
 }

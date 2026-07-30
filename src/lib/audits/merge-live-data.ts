@@ -1,3 +1,4 @@
+import { dedupeEvidenceRows } from "@/lib/audits/evidence-utils";
 import { getAuditDomainData } from "@/lib/audits/mock-data";
 import type {
 	AuditDomainData,
@@ -173,10 +174,11 @@ export function mergeDomainWithLiveData(
 			...base,
 			kpis: buildContractKpis(snapshot),
 			donut: buildContractDonut(snapshot),
-			evidence:
+			evidence: dedupeEvidenceRows(
 				snapshot.contracts.evidence.length > 0
 					? snapshot.contracts.evidence
 					: base.evidence,
+			),
 		};
 	}
 
@@ -185,10 +187,11 @@ export function mergeDomainWithLiveData(
 			...base,
 			kpis: buildLicenseKpis(snapshot),
 			donut: buildLicenseDonut(snapshot),
-			evidence:
+			evidence: dedupeEvidenceRows(
 				snapshot.licenses.evidence.length > 0
 					? snapshot.licenses.evidence
 					: base.evidence,
+			),
 		};
 	}
 

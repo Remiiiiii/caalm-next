@@ -1,6 +1,7 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import type { RenewalRecord } from "@/types/licenses";
 
@@ -272,7 +273,9 @@ export class LicenseService {
 			...requiredFields,
 		};
 
-		const license = await tablesDB.createRow({
+		const license = await writeRowWithSchemaDriftRecovery({
+			tablesDB,
+			mode: "create",
 			databaseId: appwriteConfig.databaseId,
 			tableId: appwriteConfig.licensesCollectionId,
 			rowId: ID.unique(),
@@ -394,7 +397,9 @@ export class LicenseService {
 			requiresAttribution: mappedData.requiresAttribution,
 		});
 
-		const license = await tablesDB.updateRow({
+		const license = await writeRowWithSchemaDriftRecovery({
+			tablesDB,
+			mode: "update",
 			databaseId: appwriteConfig.databaseId,
 			tableId: appwriteConfig.licensesCollectionId,
 			rowId: licenseId,

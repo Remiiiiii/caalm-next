@@ -28,6 +28,14 @@ import React, {
 } from "react";
 import DatePicker from "react-datepicker";
 import { useDropzone } from "react-dropzone";
+import {
+	DEMO_CONTRACT_SAMPLE,
+	DemoSampleDocumentDrop,
+} from "@/components/demo/DemoSampleDocumentDrop";
+import {
+	handleDemoSampleDragOverCapture,
+	handleDemoSampleDropCapture,
+} from "@/components/demo/demoSampleDrag";
 import { SaveProgressCard } from "@/components/SaveProgressCard";
 import {
 	AlertDialog,
@@ -119,6 +127,7 @@ import {
 	getRequiredFields,
 	resolveDraftContractTypeId,
 } from "@/lib/contracts/contractTypeConfigs";
+import { isDemoMode } from "@/lib/config/demo-mode";
 import { getNoticeThresholds } from "@/lib/renewals/expiryNotice";
 import { fireConfetti } from "@/lib/ui/confetti";
 import {
@@ -128,6 +137,14 @@ import {
 	type UserDivision,
 	USER_DIVISIONS,
 } from "../../constants";
+
+/** Demo mode: only these contract type cards are selectable (plus Drafts). */
+const DEMO_ALLOWED_CONTRACT_TYPE_IDS = new Set(["grant", "government"]);
+
+function isDemoContractTypeAllowed(typeId: string): boolean {
+	if (!isDemoMode()) return true;
+	return DEMO_ALLOWED_CONTRACT_TYPE_IDS.has(typeId);
+}
 
 const LocalPdfPreviewDialog = dynamic(
 	() => import("@/components/contract-upload/LocalPdfPreviewDialog"),
@@ -1277,6 +1294,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	// Handle contract type selection
 	const handleContractTypeSelect = useCallback(
 		(typeId: string) => {
+			if (!isDemoContractTypeAllowed(typeId)) return;
+
 			setSelectedContractType(typeId);
 			setShowTypeSelection(false);
 			setCurrentStep(1);
@@ -1675,6 +1694,26 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		},
 		multiple: false,
 	});
+
+	// Demo sample drags lack native "Files" in dataTransfer; react-dropzone
+	// ignores them. Override drop handlers so we ingest before dropzone skips.
+	const {
+		onDragOver: dropzoneDragOver,
+		onDrop: dropzoneDrop,
+		...dropzoneRootRest
+	} = getRootProps();
+
+	const dropzoneRootProps = {
+		...dropzoneRootRest,
+		onDragOver: (event: React.DragEvent) => {
+			if (handleDemoSampleDragOverCapture(event)) return;
+			dropzoneDragOver?.(event);
+		},
+		onDrop: (event: React.DragEvent) => {
+			if (handleDemoSampleDropCapture(event, onDrop)) return;
+			dropzoneDrop?.(event);
+		},
+	};
 
 	const parseCurrencyInput = (value?: string) => {
 		if (!value) return undefined;
@@ -2717,9 +2756,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 									</h2>
 								</div>
 								<p className="mt-1 text-sm text-slate-600 sm:ml-8">
-									Choose the type of contract you want to upload. This will
-									customize the form fields to match your specific contract
-									requirements.
+									{isDemoMode()
+										? "Demo mode: choose Drafts, Grant Agreement, or Government Contract. Other types are disabled for testing."
+										: "Choose the type of contract you want to upload. This will customize the form fields to match your specific contract requirements."}
 								</p>
 							</div>
 						</div>
@@ -2775,17 +2814,25 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 								{CONTRACT_TYPE_CONFIGS.map((type) => {
 									const IconComponent = getIconComponent(type.icon);
+									const muted = !isDemoContractTypeAllowed(type.id);
 									return (
 										<div
 											key={type.id}
 											role="button"
-											tabIndex={0}
+											tabIndex={muted ? -1 : 0}
+											aria-disabled={muted}
 											className={cn(
-												"glass-card-frosted group cursor-pointer text-card-foreground",
-												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
+												"glass-card-frosted group text-card-foreground",
+												muted
+													? "cursor-not-allowed opacity-40 grayscale"
+													: "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
 											)}
-											onClick={() => handleContractTypeSelect(type.id)}
+											onClick={() => {
+												if (muted) return;
+												handleContractTypeSelect(type.id);
+											}}
 											onKeyDown={(e) => {
+												if (muted) return;
 												if (e.key === "Enter" || e.key === " ") {
 													e.preventDefault();
 													handleContractTypeSelect(type.id);
@@ -2799,16 +2846,22 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													{type.label}
 												</h3>
 												<div className="mb-4 rounded-xl border border-white/40 bg-white/40 p-3 text-sm leading-relaxed text-slate-600 backdrop-blur-md">
-													{type.description}
+													{muted
+														? "Unavailable in demo — use Grant Agreement or Government Contract."
+														: type.description}
 												</div>
 												<div className="flex items-center justify-between rounded-full border border-white/45 bg-white/38 px-4 py-2.5 text-xs text-slate-500 backdrop-blur-md">
-													<span>{type.steps} steps</span>
-													<span
-														className="text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5"
-														aria-hidden
-													>
-														→
+													<span>
+														{muted ? "Demo locked" : `${type.steps} steps`}
 													</span>
+													{!muted ? (
+														<span
+															className="text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5"
+															aria-hidden
+														>
+															→
+														</span>
+													) : null}
 												</div>
 											</div>
 										</div>
@@ -3200,7 +3253,21 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													if (!orderedIds.includes(a.typeId))
 														orderedIds.push(a.typeId);
 												}
-												return orderedIds.map((typeId, idx) => {
+												const visibleIds = isDemoMode()
+													? orderedIds.filter((id) =>
+															isDemoContractTypeAllowed(id),
+														)
+													: orderedIds;
+												if (visibleIds.length === 0 && isDemoMode()) {
+													return (
+														<p className="text-sm text-slate-600">
+															Demo mode only supports Grant Agreement and
+															Government Contract. Go back and browse those
+															types.
+														</p>
+													);
+												}
+												return visibleIds.map((typeId, idx) => {
 													const config = getContractTypeConfig(typeId);
 													if (!config) return null;
 													const IconComponent = getIconComponent(config.icon);
@@ -3499,7 +3566,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											</CardHeader>
 											<CardContent>
 												<div
-													{...getRootProps()}
+													{...dropzoneRootProps}
 													className={cn(
 														"border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200",
 														isDragActive
@@ -3547,6 +3614,15 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 														</div>
 													)}
 												</div>
+
+												{!processedFileData ? (
+													<DemoSampleDocumentDrop
+														sample={DEMO_CONTRACT_SAMPLE}
+														disabled={isExtracting || isUploading}
+														onUseSample={(file) => onDrop([file])}
+														className="mt-4"
+													/>
+												) : null}
 											</CardContent>
 										</Card>
 									)}
