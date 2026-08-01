@@ -114,7 +114,7 @@ const OrbitingBlocks = () => {
 						}}
 						className="transition-transform duration-500 ease-in-out"
 					>
-						<div className="w-14 h-14 rounded-xl bg-white/90 backdrop-blur-sm border border-white/20 shadow-lg flex items-center justify-center">
+						<div className="w-14 h-14 rounded-xl bg-white/90 backdrop-blur-md border border-white/40 shadow-lg flex items-center justify-center">
 							<Icon className="w-10 h-10" style={{ color: feature.color }} />
 						</div>
 					</div>

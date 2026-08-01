@@ -1758,6 +1758,22 @@ a[href*="spline"] {
 	background-size: 40px 40px;
 }
 
+/* Hard on/off caret — classic terminal blink (~1Hz) */
+@keyframes terminal-caret-blink {
+	0%,
+	49% {
+		opacity: 1;
+	}
+	50%,
+	100% {
+		opacity: 0;
+	}
+}
+
+.animate-terminal-caret {
+	animation: terminal-caret-blink 1s steps(1, end) infinite;
+}
+
 /* Landing glass cards (caps) — same translucent glass as Integrations */
 .landing-frosted-card,
 .landing-integration-card {

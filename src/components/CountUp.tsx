@@ -1,14 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useCountUp } from "react-countup";
 
-function CountUpActive() {
-	useCountUp({ ref: "counter", end: 5000, delay: 3, duration: 3 });
-	return <span id="counter" />;
+type CountUpProps = {
+	end?: number;
+	delay?: number;
+	duration?: number;
+	/** Unique DOM id when multiple counters are on the page */
+	id?: string;
+};
+
+function CountUpActive({
+	end,
+	delay,
+	duration,
+	id,
+}: Required<CountUpProps>) {
+	useCountUp({ ref: id, end, delay, duration });
+	return <span id={id} className="tabular-nums" />;
 }
 
-const CountUp = () => {
+const CountUp = ({
+	end = 5000,
+	delay = 3,
+	duration = 3,
+	id,
+}: CountUpProps) => {
+	const reactId = useId().replace(/:/g, "");
+	const counterId = id ?? `counter-${reactId}`;
 	const [mounted, setMounted] = useState(false);
 
 	useEffect(() => {
@@ -19,7 +39,14 @@ const CountUp = () => {
 		return <span className="tabular-nums">0</span>;
 	}
 
-	return <CountUpActive />;
+	return (
+		<CountUpActive
+			id={counterId}
+			end={end}
+			delay={delay}
+			duration={duration}
+		/>
+	);
 };
 
 export default CountUp;
