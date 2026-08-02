@@ -9,6 +9,7 @@ import {
 	SquarePen,
 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import AssistantHistoryList from "@/components/assistant/AssistantHistoryList";
 import AssistantInPanelOverlay, {
@@ -35,7 +36,6 @@ import { useToast } from "@/hooks/use-toast";
 import { downloadAssistantChatTxt } from "@/lib/assistant/exportAssistantChatTxt";
 import { formatAssistantMarkdown } from "@/lib/assistant/formatMarkdown";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 
 function getFirstName(
 	user: {
