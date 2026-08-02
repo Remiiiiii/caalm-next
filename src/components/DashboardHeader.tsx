@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { mutate } from "swr";
 import NotificationBadge from "@/components/NotificationBadge";
 import NotificationCenter from "@/components/NotificationCenter";
+import CaalmAssistantLauncher from "@/components/assistant/CaalmAssistantLauncher";
 import ProfilePicture from "@/components/ProfilePicture";
 import QuickActions from "@/components/QuickActions";
 import { Button } from "@/components/ui/button";
@@ -60,7 +61,9 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 			<div className="min-w-0 flex-1 overflow-x-auto">
 				<QuickActions user={user} />
 			</div>
-			<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-full w-full sm:w-fit px-2.5 sm:px-3 shrink-0 self-end sm:self-auto">
+			<div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+				<CaalmAssistantLauncher />
+				<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-full w-full sm:w-fit px-2.5 sm:px-3 shrink-0">
 				<div className="flex h-10 items-center">
 					{user && (
 						<div className="flex items-center gap-1.5">
@@ -115,7 +118,8 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 					onRefresh={fetchUnread}
 					userId={user?.$id}
 				/>
-			</header>
+				</header>
+			</div>
 		</div>
 	);
 };

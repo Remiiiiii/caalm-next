@@ -1,11 +1,28 @@
 "use client";
 
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+	type ButtonHTMLAttributes,
+	type ReactNode,
+	useEffect,
+	useId,
+	useRef,
+	useState,
+} from "react";
 import { cn } from "@/lib/utils";
+
+type BadgeElement = HTMLDivElement | HTMLButtonElement;
 
 interface ShimmerBadgeProps {
 	children: ReactNode;
 	className?: string;
+	innerClassName?: string;
+	/** `always` matches the landing badge; `hover` runs the sweep only while hovered. */
+	animateOn?: "always" | "hover";
+	as?: "div" | "button";
+	type?: ButtonHTMLAttributes<HTMLButtonElement>["type"];
+	onClick?: ButtonHTMLAttributes<HTMLButtonElement>["onClick"];
+	"aria-label"?: string;
+	disabled?: boolean;
 }
 
 interface BadgeSize {
@@ -34,12 +51,21 @@ const SWEEP_FULL = SWEEP_TRAVEL_S / SWEEP_TOTAL_S;
 export default function ShimmerBadge({
 	children,
 	className,
+	innerClassName,
+	animateOn = "always",
+	as = "div",
+	type = "button",
+	onClick,
+	"aria-label": ariaLabel,
+	disabled,
 }: ShimmerBadgeProps) {
-	const ref = useRef<HTMLDivElement | null>(null);
+	const ref = useRef<BadgeElement | null>(null);
 	const rawId = useId().replace(/:/g, "");
 	const glowId = `badge-sweep-glow-${rawId}`;
 	const blurId = `badge-sweep-blur-${rawId}`;
 	const [size, setSize] = useState<BadgeSize>({ w: 0, h: 0 });
+	const [hovered, setHovered] = useState(false);
+	const showSweep = animateOn === "always" || hovered;
 
 	useEffect(() => {
 		const el = ref.current;
@@ -58,17 +84,24 @@ export default function ShimmerBadge({
 
 	const paths = size.w > 0 && size.h > 0 ? borderPaths(size.w, size.h) : null;
 
-	return (
-		<div
-			ref={ref}
-			className={cn(
-				"badge-border-light relative inline-flex rounded-full p-px shadow-md",
-				className,
-			)}
-		>
-			{paths ? (
+	const sharedClassName = cn(
+		"relative inline-flex rounded-full shadow-md",
+		animateOn === "always" && "badge-border-light p-px",
+		animateOn === "hover" &&
+			cn(
+				"border border-white/40 bg-transparent p-0 shadow-sm backdrop-blur-md transition-colors duration-200",
+				hovered && "badge-border-light border-0 p-px shadow-md",
+			),
+		as === "button" &&
+			"cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50",
+		className,
+	);
+
+	const content = (
+		<>
+			{showSweep && paths ? (
 				<svg
-					key={`${size.w}-${size.h}`}
+					key={`${size.w}-${size.h}-${hovered ? "on" : "off"}`}
 					className="badge-sweep-layer pointer-events-none absolute inset-0 z-0 overflow-visible"
 					width={size.w}
 					height={size.h}
@@ -145,9 +178,53 @@ export default function ShimmerBadge({
 				</svg>
 			) : null}
 
-			<span className="badge-border-light-inner relative z-[1] inline-flex items-center gap-2 rounded-full bg-[#F1F9FF]/95 px-3 py-1.5 backdrop-blur-sm">
+			<span
+				className={cn(
+					"relative z-[1] inline-flex items-center gap-2 rounded-full px-3 py-1.5",
+					animateOn === "always" &&
+						"badge-border-light-inner bg-[#F1F9FF]/95 backdrop-blur-sm",
+					animateOn === "hover" && "bg-white",
+					innerClassName,
+				)}
+			>
 				{children}
 			</span>
+		</>
+	);
+
+	const hoverHandlers =
+		animateOn === "hover"
+			? {
+					onMouseEnter: () => setHovered(true),
+					onMouseLeave: () => setHovered(false),
+					onFocus: () => setHovered(true),
+					onBlur: () => setHovered(false),
+				}
+			: {};
+
+	if (as === "button") {
+		return (
+			<button
+				ref={ref as React.RefObject<HTMLButtonElement | null>}
+				type={type}
+				onClick={onClick}
+				aria-label={ariaLabel}
+				disabled={disabled}
+				className={sharedClassName}
+				{...hoverHandlers}
+			>
+				{content}
+			</button>
+		);
+	}
+
+	return (
+		<div
+			ref={ref as React.RefObject<HTMLDivElement | null>}
+			className={sharedClassName}
+			{...hoverHandlers}
+		>
+			{content}
 		</div>
 	);
 }

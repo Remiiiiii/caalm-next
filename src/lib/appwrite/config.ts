@@ -143,6 +143,16 @@ export const appwriteConfig = {
 		"test-notes",
 	),
 
+	assistantConversationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ASSISTANT_CONVERSATIONS_COLLECTION",
+		"assistant_conversations",
+	),
+
+	assistantMessagesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ASSISTANT_MESSAGES_COLLECTION",
+		"assistant_messages",
+	),
+
 	calendarApprovalRequestsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CALENDAR_APPROVALS_COLLECTION",
 		"test-calendar-approvals",
