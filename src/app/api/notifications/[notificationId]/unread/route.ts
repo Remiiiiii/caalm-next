@@ -40,7 +40,9 @@ export async function PUT(
 		}
 
 		const errorMessage =
-			error instanceof Error ? error.message : "Failed to mark notification as unread";
+			error instanceof Error
+				? error.message
+				: "Failed to mark notification as unread";
 
 		return NextResponse.json(
 			{ success: false, error: errorMessage },

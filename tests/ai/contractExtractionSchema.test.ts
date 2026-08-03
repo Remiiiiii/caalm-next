@@ -69,9 +69,7 @@ describe("isRealExtractionMethod", () => {
 		expect(isRealExtractionMethod(CONTRACT_EXTRACTION_METHOD.gemini)).toBe(
 			true,
 		);
-		expect(isRealExtractionMethod(CONTRACT_EXTRACTION_METHOD.test)).toBe(
-			false,
-		);
+		expect(isRealExtractionMethod(CONTRACT_EXTRACTION_METHOD.test)).toBe(false);
 		expect(isRealExtractionMethod(undefined)).toBe(false);
 	});
 });

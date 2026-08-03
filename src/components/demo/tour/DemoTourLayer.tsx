@@ -5,20 +5,20 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { DemoTipCard } from "@/components/demo/tour/DemoTipCard";
 import {
-	useAnchoredPosition,
 	CARD_HEIGHT_DEFAULT,
 	CARD_HEIGHT_WITH_IMAGE,
 	CENTERED_POSITION,
+	useAnchoredPosition,
 } from "@/hooks/useAnchoredPosition";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import { getSeenTipIds, markTipSeen } from "@/lib/demo/tour/storage";
 import {
+	type DemoTip,
 	getNextTip,
 	getPreviousTip,
 	getTipForPathname,
 	getTipNavHref,
 	getTipStep,
-	type DemoTip,
 } from "@/lib/demo/tour/tips";
 
 const SHOW_DELAY_MS = 500;

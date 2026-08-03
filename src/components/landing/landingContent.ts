@@ -179,7 +179,7 @@ export const ABOUT_TRUST_BULLETS = [
 
 export const FAQ_ITEMS = [
 	{
-		question: "What is Caalm?",
+		question: "What is CAALM?",
 		answer:
 			"A contract, license, and audit management system for organizations to track compliance standards and important expiration dates in one place.",
 	},

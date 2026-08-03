@@ -1,15 +1,13 @@
-import { chromium } from "@playwright/test";
-import { access } from "node:fs/promises";
-import { mkdir } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { chromium } from "@playwright/test";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.resolve("public/assets/icons/demo-video/generated");
 const BASE = process.env.DEMO_BASE_URL || "http://localhost:3000";
 const AUTH =
-	process.env.DEMO_STORAGE_STATE ||
-	path.resolve("tests/.auth/user.json");
+	process.env.DEMO_STORAGE_STATE || path.resolve("tests/.auth/user.json");
 const STATIC_HTML = path.join(
 	__dirname,
 	"demo-assets",
@@ -32,7 +30,9 @@ async function injectReferenceCharts(page) {
 				el.textContent?.includes(title),
 			);
 			if (!heading) return;
-			const card = heading.closest(".glass-card") || heading.parentElement?.closest(".glass-card");
+			const card =
+				heading.closest(".glass-card") ||
+				heading.parentElement?.closest(".glass-card");
 			if (!card) return;
 			const container =
 				card.querySelector('[class*="h-[240px]"]') ||

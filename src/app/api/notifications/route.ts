@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import CacheManager from "@/lib/services/cache-manager";
 import { broadcastNotificationToUser } from "@/lib/notifications/broadcastNotification";
+import CacheManager from "@/lib/services/cache-manager";
 import { notificationService } from "@/lib/services/notificationService";
 import type {
 	CreateNotificationRequest,
@@ -145,10 +145,10 @@ export async function POST(request: NextRequest) {
 
 		// Broadcast new notification via SSE (non-blocking)
 		try {
-			await broadcastNotificationToUser(body.userId, notification as Record<
-				string,
-				unknown
-			>);
+			await broadcastNotificationToUser(
+				body.userId,
+				notification as Record<string, unknown>,
+			);
 		} catch (sseError) {
 			console.warn("Failed to broadcast notification via SSE:", sseError);
 			// Don't fail the request if SSE fails

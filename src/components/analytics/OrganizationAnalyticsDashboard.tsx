@@ -44,6 +44,7 @@ import {
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DepartmentComplianceCard } from "./AnalyticsReadinessOverview";
+
 interface ContractStats {
 	totalContracts: number;
 	totalBudget: number;

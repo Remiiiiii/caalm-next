@@ -383,7 +383,7 @@ export default function CaalmAssistantSheet({
 								<Textarea
 									value={input}
 									onChange={(e) => setInput(e.target.value)}
-									placeholder="Ask Caalm anything…"
+									placeholder="Ask CAALM anything…"
 									rows={4}
 									className={cn(
 										"min-h-[7.5rem] w-full resize-none rounded-3xl bg-white text-slate-900 shadow-sm",
@@ -424,7 +424,7 @@ export default function CaalmAssistantSheet({
 							</div>
 
 							<p className="w-full text-center text-xs text-slate-500">
-								Caalm can make mistakes. Double-check replies.
+								CAALM can make mistakes. Double-check replies.
 							</p>
 						</div>
 					)

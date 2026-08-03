@@ -48,7 +48,10 @@ export function StorageUsagePieChart({
 	limitBytes,
 	limitGB,
 }: StorageUsagePieChartProps) {
-	const totalCategoryBytes = categories.reduce((sum, c) => sum + (c.size || 0), 0);
+	const totalCategoryBytes = categories.reduce(
+		(sum, c) => sum + (c.size || 0),
+		0,
+	);
 	const chartData = categories.map((category) => ({
 		name: category.title,
 		value: Math.max(category.size || 0, 0),
@@ -148,7 +151,9 @@ export function StorageUsagePieChart({
 
 			<div className="min-w-0 flex-1 space-y-3">
 				<div className="rounded-lg border border-slate-200 bg-white/70 px-4 py-3">
-					<p className="text-xs font-medium text-slate-500">Available storage</p>
+					<p className="text-xs font-medium text-slate-500">
+						Available storage
+					</p>
 					<p className="text-sm font-semibold text-slate-800">
 						{usedLabel} / {limitLabel}
 					</p>

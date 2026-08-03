@@ -1,8 +1,8 @@
 import { ID, Query } from "node-appwrite";
-import { avatarPlaceholderUrl } from "../../../../constants";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { addUserToOrganization } from "@/lib/rbac/organizations";
+import { avatarPlaceholderUrl } from "../../../../constants";
 import { DEMO_TEAM_PERSONAS, demoRowId } from "./constants";
 import { createRowIfMissing, getDbId } from "./helpers";
 

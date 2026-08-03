@@ -846,9 +846,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 											<textarea
 												id="description"
 												value={newEvent.description}
-												onChange={(
-													e: React.ChangeEvent<HTMLTextAreaElement>,
-												) =>
+												onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
 													setNewEvent({
 														...newEvent,
 														description: e.target.value,

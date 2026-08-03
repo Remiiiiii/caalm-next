@@ -6,12 +6,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import LandingSection from "./landing/LandingSection";
 import { FAQ_ITEMS } from "./landing/landingContent";
-import {
-	fadeUp,
-	softRise,
-	staggerFast,
-	viewportOnce,
-} from "./landing/motion";
+import { fadeUp, softRise, staggerFast, viewportOnce } from "./landing/motion";
 
 export default function QA() {
 	const [openIndex, setOpenIndex] = useState<number | null>(null);

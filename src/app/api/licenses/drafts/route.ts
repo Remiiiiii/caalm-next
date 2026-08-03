@@ -263,8 +263,7 @@ class LicenseDraftService {
 				const message =
 					error instanceof Error ? error.message : String(error ?? "");
 				const missing =
-					code === 404 ||
-					/could not be found|not found/i.test(message);
+					code === 404 || /could not be found|not found/i.test(message);
 
 				if (!missing) throw error;
 

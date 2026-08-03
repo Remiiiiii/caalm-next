@@ -60,10 +60,7 @@ export function handleDemoSampleDropCapture(
 }
 
 export function handleDemoSampleDragOverCapture(
-	event: Pick<
-		DragEvent,
-		"preventDefault" | "stopPropagation" | "dataTransfer"
-	>,
+	event: Pick<DragEvent, "preventDefault" | "stopPropagation" | "dataTransfer">,
 ): boolean {
 	if (!peekDemoSampleDragFile() && !isDemoSampleDrag(event.dataTransfer)) {
 		return false;

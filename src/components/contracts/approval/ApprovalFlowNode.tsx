@@ -65,7 +65,11 @@ function statusMeta(status: string) {
 	}
 }
 
-function ParticipantAvatar({ participant }: { participant: ApprovalParticipant }) {
+function ParticipantAvatar({
+	participant,
+}: {
+	participant: ApprovalParticipant;
+}) {
 	const initials = (participant.fullName || "U")
 		.split(" ")
 		.map((n) => n.charAt(0))

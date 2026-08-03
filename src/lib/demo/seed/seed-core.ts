@@ -628,7 +628,8 @@ export async function seedDemoCoreData({
 		{
 			suffix: "tsk1",
 			title: "Review Facility Occupancy Permit",
-			description: "Complete department review for the pending occupancy permit.",
+			description:
+				"Complete department review for the pending occupancy permit.",
 			status: "in_progress",
 			priority: "high",
 			dueDate: isoDateTimeOffset(5, 17),

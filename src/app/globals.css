@@ -336,8 +336,7 @@
 	/* Leading-icon search fields need left padding that shad-input would otherwise zero out */
 	.shad-input.pl-10,
 	input.shad-input.pl-10 {
-		padding-left: 2.5rem !important;
-		padding-right: 0.75rem !important;
+		@apply pl-10! pr-3!;
 	}
 
 	/* More specific override for input elements with shad-input class */
@@ -369,7 +368,7 @@
 		box-sizing: border-box;
 	}
 	.glass-form-control[data-with-leading-icon="true"] {
-		padding-left: 2.5rem !important;
+		padding-left: 2.5rem;
 	}
 	.glass-form-control:focus,
 	.glass-form-control:focus-visible {
@@ -393,8 +392,16 @@
 	}
 
 	/* Native bordered controls (upload forms, etc.) — teal focus, not black */
-	input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus,
-	input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus-visible,
+	input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+			[type="file"]
+		):not([type="hidden"]):not([type="button"]):not([type="submit"]):not(
+			[type="reset"]
+		):focus,
+	input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+			[type="file"]
+		):not([type="hidden"]):not([type="button"]):not([type="submit"]):not(
+			[type="reset"]
+		):focus-visible,
 	textarea:focus,
 	textarea:focus-visible,
 	select:focus,
@@ -991,6 +998,11 @@
 		position: relative;
 	}
 
+	.sidebar-storage-info {
+		@apply mt-4 flex items-center justify-center gap-2 rounded-md p-1 text-light-100 lg:justify-start lg:p-3;
+		background-color: #e3f2fd;
+	}
+
 	.sidebar.sidebar-collapsed .sidebar-storage-info {
 		display: none;
 	}
@@ -1008,10 +1020,6 @@
 		white-space: nowrap;
 		overflow: visible;
 		text-overflow: clip;
-	}
-	.sidebar-storage-info {
-		@apply mt-4 flex items-center justify-center gap-2 rounded-md p-1 text-light-100 lg:justify-start lg:p-3;
-		background-color: #e3f2fd;
 	}
 	.sidebar-user-avatar {
 		@apply aspect-square w-10 rounded-full object-cover;

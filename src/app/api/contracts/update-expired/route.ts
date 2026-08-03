@@ -90,10 +90,7 @@ export async function GET(request: NextRequest) {
 		try {
 			const { tablesDB } = await createAdminClient();
 
-			if (
-				!appwriteConfig.databaseId ||
-				!appwriteConfig.contractsCollectionId
-			) {
+			if (!appwriteConfig.databaseId || !appwriteConfig.contractsCollectionId) {
 				return NextResponse.json(
 					{ error: "Database or collection ID not configured" },
 					{ status: 500 },
@@ -109,10 +106,7 @@ export async function GET(request: NextRequest) {
 			const totalContracts = await tablesDB.listRows({
 				databaseId: appwriteConfig.databaseId,
 				tableId: appwriteConfig.contractsCollectionId,
-				queries: [
-					Query.isNotNull("contractExpiryDate"),
-					Query.limit(1),
-				],
+				queries: [Query.isNotNull("contractExpiryDate"), Query.limit(1)],
 			});
 
 			return NextResponse.json({

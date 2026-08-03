@@ -3,7 +3,11 @@ import {
 	isAssistantAuthError,
 	requireAssistantAccess,
 } from "@/lib/assistant/auth";
-import { appendMessage, truncatePreview, updateConversationMeta } from "@/lib/assistant/conversationStore";
+import {
+	appendMessage,
+	truncatePreview,
+	updateConversationMeta,
+} from "@/lib/assistant/conversationStore";
 import { runToolByName } from "@/lib/assistant/tools/registry";
 import { consumePendingAction } from "@/lib/assistant/tools/types";
 

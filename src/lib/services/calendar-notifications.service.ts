@@ -571,7 +571,7 @@ export const sendCalendarSharedNotification = async (
         <h2 style="color: #078FAB; text-align: center;">CAALM Solutions</h2>
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #333; margin-top: 0;">I'd like to share my calendar with you</h3>
-          <p style="color: #666; font-size: 16px;">${ownerName} <span style="color: #888;">(${ownerEmail})</span> shared the <strong>"${calendarName}"</strong> calendar with you in Caalm.</p>
+          <p style="color: #666; font-size: 16px;">${ownerName} <span style="color: #888;">(${ownerEmail})</span> shared the <strong>"${calendarName}"</strong> calendar with you in CAALM.</p>
           <p style="color: #666; font-size: 16px;">You can now view events and their details in this calendar.</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${calendarUrl}" style="background-color: #078FAB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">View Calendar</a>

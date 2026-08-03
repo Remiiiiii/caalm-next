@@ -1,10 +1,6 @@
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { demoRowId } from "./constants";
-import {
-	createRowIfMissing,
-	isoDateOffset,
-	tableHasColumns,
-} from "./helpers";
+import { createRowIfMissing, isoDateOffset, tableHasColumns } from "./helpers";
 import type { SeededTeamUser } from "./seed-team-users";
 
 /**
@@ -195,7 +191,10 @@ export async function seedDemoAnalytics({
 					status: "success",
 					module: ev.module,
 					summary: ev.summary,
-					metadata: JSON.stringify({ demo: true, seededAt: new Date().toISOString() }),
+					metadata: JSON.stringify({
+						demo: true,
+						seededAt: new Date().toISOString(),
+					}),
 				},
 				`audit:${ev.suffix}`,
 			);

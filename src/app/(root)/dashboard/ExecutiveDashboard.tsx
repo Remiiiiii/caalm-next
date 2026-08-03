@@ -949,7 +949,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							<div className="glass-card-cap" />
 							<CardHeader>
 								<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-									Send Invite Link to New Caalm User
+									Send Invite Link to New CAALM User
 								</CardTitle>
 							</CardHeader>
 							<CardContent>

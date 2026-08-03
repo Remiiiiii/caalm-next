@@ -125,7 +125,7 @@ const ProblemSolution = () => {
 									}}
 								>
 									<CheckCircle className="mr-3 h-6 w-6" />
-									Caalm
+									CAALM
 								</h3>
 							</div>
 						</div>
@@ -138,7 +138,7 @@ const ProblemSolution = () => {
 						</h3>
 						<h3 className="text-2xl font-semibold text-cyan-300 flex items-center">
 							<CheckCircle className="mr-3 h-6 w-6" />
-							Caalm
+							CAALM
 						</h3>
 					</div>
 					{/* Timeline */}

@@ -270,62 +270,62 @@ export const getSharedCalendarsForUser = async (
 			queries: [Query.equal("organizationId", organizationId)],
 		});
 
-	// Filter calendars client-side for better performance
-	const _ownedCalendars = {
-		rows: allOrgCalendars.rows.filter((cal: any) => cal.ownerId === userId),
-	};
+		// Filter calendars client-side for better performance
+		const _ownedCalendars = {
+			rows: allOrgCalendars.rows.filter((cal: any) => cal.ownerId === userId),
+		};
 
-	// CRITICAL: Only include calendars that are EXPLICITLY shared with this user
-	// Do NOT include public/team calendars unless they're also explicitly shared
-	// This ensures users only see events from calendars they have explicit access to
-	// IMPORTANT: Exclude calendars owned by the user - "Shared Calendars" should only
-	// show calendars that OTHER users have shared WITH the current user (recipient perspective)
-	const sharedCalendars = allOrgCalendars.rows.filter((cal: any) => {
-		// Exclude calendars owned by the user - they should not appear in "Shared Calendars" list
-		if (cal.ownerId === userId) return false;
+		// CRITICAL: Only include calendars that are EXPLICITLY shared with this user
+		// Do NOT include public/team calendars unless they're also explicitly shared
+		// This ensures users only see events from calendars they have explicit access to
+		// IMPORTANT: Exclude calendars owned by the user - "Shared Calendars" should only
+		// show calendars that OTHER users have shared WITH the current user (recipient perspective)
+		const sharedCalendars = allOrgCalendars.rows.filter((cal: any) => {
+			// Exclude calendars owned by the user - they should not appear in "Shared Calendars" list
+			if (cal.ownerId === userId) return false;
 
-		// Check new permission-based sharing first
-		let sharePermissions: CalendarSharePermission[] = [];
-		if (cal.sharePermissions) {
-			if (Array.isArray(cal.sharePermissions)) {
-				sharePermissions = cal.sharePermissions;
-			} else if (typeof cal.sharePermissions === "string") {
-				try {
-					sharePermissions = JSON.parse(cal.sharePermissions);
-				} catch {
-					sharePermissions = [];
+			// Check new permission-based sharing first
+			let sharePermissions: CalendarSharePermission[] = [];
+			if (cal.sharePermissions) {
+				if (Array.isArray(cal.sharePermissions)) {
+					sharePermissions = cal.sharePermissions;
+				} else if (typeof cal.sharePermissions === "string") {
+					try {
+						sharePermissions = JSON.parse(cal.sharePermissions);
+					} catch {
+						sharePermissions = [];
+					}
 				}
 			}
-		}
 
-		// Check if user has a permission entry (new model)
-		const hasPermission = sharePermissions.some(
-			(p: CalendarSharePermission) => p.userId === userId,
-		);
-		if (hasPermission) return true;
+			// Check if user has a permission entry (new model)
+			const hasPermission = sharePermissions.some(
+				(p: CalendarSharePermission) => p.userId === userId,
+			);
+			if (hasPermission) return true;
 
-		// Fall back to legacy sharedWith array for backward compatibility
-		let sharedWith: string[] = [];
-		if (cal.sharedWith) {
-			if (Array.isArray(cal.sharedWith)) {
-				sharedWith = cal.sharedWith;
-			} else if (typeof cal.sharedWith === "string") {
-				try {
-					sharedWith = JSON.parse(cal.sharedWith);
-				} catch {
-					sharedWith = [];
+			// Fall back to legacy sharedWith array for backward compatibility
+			let sharedWith: string[] = [];
+			if (cal.sharedWith) {
+				if (Array.isArray(cal.sharedWith)) {
+					sharedWith = cal.sharedWith;
+				} else if (typeof cal.sharedWith === "string") {
+					try {
+						sharedWith = JSON.parse(cal.sharedWith);
+					} catch {
+						sharedWith = [];
+					}
 				}
 			}
-		}
 
-		// Only include if explicitly shared (via permission or sharedWith)
-		// Do NOT include public/team calendars just because they're public/team
-		return Array.isArray(sharedWith) && sharedWith.includes(userId);
-	});
+			// Only include if explicitly shared (via permission or sharedWith)
+			// Do NOT include public/team calendars just because they're public/team
+			return Array.isArray(sharedWith) && sharedWith.includes(userId);
+		});
 
-	// Return ONLY calendars shared WITH the user (recipient perspective)
-	// Do NOT include calendars owned by the user - those belong in "My Calendars", not "Shared Calendars"
-	// Normalize all calendars (handle both array and JSON string formats for both fields)
+		// Return ONLY calendars shared WITH the user (recipient perspective)
+		// Do NOT include calendars owned by the user - those belong in "My Calendars", not "Shared Calendars"
+		// Normalize all calendars (handle both array and JSON string formats for both fields)
 		return sharedCalendars.map((cal: any) => normalizeCalendar(cal));
 	} catch (error) {
 		// Demo / incomplete schemas may lack organizationId; don't fail the calendar page

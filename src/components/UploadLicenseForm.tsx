@@ -27,12 +27,12 @@ import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { getContractDepartmentEnums } from "@/lib/actions/database.actions";
 import { uploadFile } from "@/lib/actions/file.actions";
-import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import {
 	buildFormPatchFromLicenseExtraction,
 	isRealLicenseExtractionMethod,
 	parseLicenseExtractionJson,
 } from "@/lib/ai/licenseExtractionSchema";
+import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { TOTAL_STEPS } from "./license-upload/constants";
 import { useDraftManagement } from "./license-upload/hooks/useDraftManagement";
 import { useLicenseForm } from "./license-upload/hooks/useLicenseForm";
@@ -123,13 +123,9 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 		unknown
 	> | null>(null);
 	const [isExtracting, setIsExtracting] = useState(false);
-	const [extractionMethod, setExtractionMethod] = useState<string | null>(
-		null,
-	);
+	const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
 	const [aiFilledFields, setAiFilledFields] = useState<string[]>([]);
-	const [lowConfidenceFields, setLowConfidenceFields] = useState<string[]>(
-		[],
-	);
+	const [lowConfidenceFields, setLowConfidenceFields] = useState<string[]>([]);
 	const [fieldConfidence, setFieldConfidence] = useState<
 		Record<string, number>
 	>({});

@@ -66,7 +66,10 @@ export async function sendOnboardingSMS(recipients: any[], message: string) {
 	try {
 		const { isDemoMode } = await import("@/lib/config/demo-mode");
 		if (isDemoMode()) {
-			console.log("[demo] SMS no-op:", { recipients: recipients.length, message });
+			console.log("[demo] SMS no-op:", {
+				recipients: recipients.length,
+				message,
+			});
 			return;
 		}
 

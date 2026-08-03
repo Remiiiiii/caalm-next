@@ -36,11 +36,7 @@ export async function POST(request: NextRequest) {
 				);
 			}
 
-			const {
-				fileName: name,
-				fileType: type,
-				fileContent,
-			} = body;
+			const { fileName: name, fileType: type, fileContent } = body;
 
 			if (!fileContent) {
 				return validationErrorResponse("No file content provided", requestId);

@@ -113,8 +113,7 @@ export default function LicensesTableView({
 	const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
 	const visibleIds = useMemo(() => licenses.map((l) => l.$id), [licenses]);
 	const allSelected =
-		visibleIds.length > 0 &&
-		visibleIds.every((id) => selectedIds.includes(id));
+		visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 	const [loadingOwners, setLoadingOwners] = useState<Record<string, boolean>>(
 		{},
 	);

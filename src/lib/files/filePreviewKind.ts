@@ -37,7 +37,9 @@ export function getFilePreviewKind(input: {
 }
 
 export function usesMediaPreview(kind: FilePreviewKind): boolean {
-	return kind === "image" || kind === "video" || kind === "audio" || kind === "pdf";
+	return (
+		kind === "image" || kind === "video" || kind === "audio" || kind === "pdf"
+	);
 }
 
 export function getVideoMimeType(extension: string): string {

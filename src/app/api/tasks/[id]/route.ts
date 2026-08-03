@@ -16,7 +16,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const permissionCheck = await requirePermission(request, {
@@ -26,7 +29,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		if (!defaultOrg) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const { id } = await context.params;
@@ -39,7 +45,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	} catch (error) {
 		console.error("Task GET error:", error);
 		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : "Failed to fetch task" },
+			{
+				error: error instanceof Error ? error.message : "Failed to fetch task",
+			},
 			{ status: 500 },
 		);
 	}
@@ -49,7 +57,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const permissionCheck = await requirePermission(request, {
@@ -59,7 +70,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		if (!defaultOrg) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const { id } = await context.params;
@@ -90,11 +104,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 		const changedByName =
 			(user as { fullName?: string }).fullName || user.email || "Someone";
 
-		if (
-			statusChanged &&
-			assignerId &&
-			assignerId !== user.$id
-		) {
+		if (statusChanged && assignerId && assignerId !== user.$id) {
 			const { triggerTaskStatusChangedNotification } = await import(
 				"@/lib/utils/notificationTriggers"
 			);
@@ -148,7 +158,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const permissionCheck = await requirePermission(request, {
@@ -158,7 +171,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		if (!defaultOrg) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const { id } = await context.params;

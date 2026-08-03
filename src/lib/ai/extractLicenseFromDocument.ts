@@ -4,9 +4,9 @@ import {
 	LICENSE_EXTRACTION_METHOD,
 	type LicenseExtractionMethod,
 	mergeLicenseExtractions,
+	type ParsedLicenseExtraction,
 	parseLicenseExtractionJson,
 	parseLicenseKeyValueText,
-	type ParsedLicenseExtraction,
 } from "./licenseExtractionSchema";
 
 const apiKey = process.env.GOOGLE_API_KEY || "";
@@ -177,11 +177,7 @@ export async function extractLicenseFromDocument(options: {
 	fileName: string;
 	fileType?: string;
 }): Promise<LicenseDocumentExtractionResult> {
-	const {
-		buffer,
-		fileName,
-		fileType = "application/octet-stream",
-	} = options;
+	const { buffer, fileName, fileType = "application/octet-stream" } = options;
 
 	const text = await extractTextFromBuffer(buffer, fileType, fileName);
 	const textLength = text.length;

@@ -190,7 +190,10 @@ export default function ApprovalDecideSheet({
 				}
 				footer={
 					<div className="flex w-full flex-col gap-3">
-						{(canReview && docUrl && item.entity === "contract" && item.bucketFileId) ||
+						{(canReview &&
+							docUrl &&
+							item.entity === "contract" &&
+							item.bucketFileId) ||
 						docUrl ? (
 							<div className="flex flex-wrap items-center gap-2">
 								{canReview &&

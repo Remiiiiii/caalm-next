@@ -4,9 +4,7 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import {
-	dedupeEvidenceRows,
-} from "@/lib/audits/evidence-utils";
+import { dedupeEvidenceRows } from "@/lib/audits/evidence-utils";
 import type {
 	AuditEvidenceRow,
 	AuditEvidenceStatus,

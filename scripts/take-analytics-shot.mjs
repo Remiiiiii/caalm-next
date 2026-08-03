@@ -1,7 +1,7 @@
-import { chromium } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { chromium } from "@playwright/test";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.resolve("public/assets/icons/demo-video/generated");

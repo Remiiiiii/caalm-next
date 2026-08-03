@@ -92,8 +92,7 @@ export default function LicensesFilterChips() {
 			label: `Dept: ${filters.department}`,
 			onRemove: lockDepartmentFilter
 				? undefined
-				: () =>
-						setFilters((prev) => ({ ...prev, department: undefined })),
+				: () => setFilters((prev) => ({ ...prev, department: undefined })),
 		});
 	}
 	if (filters.assignedTo) {

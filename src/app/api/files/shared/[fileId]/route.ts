@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { constructFileUrl } from "@/lib/utils";
 
 /**
@@ -14,12 +14,18 @@ export async function GET(
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const { fileId } = await context.params;
 		if (!fileId) {
-			return NextResponse.json({ error: "fileId is required" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "fileId is required" },
+				{ status: 400 },
+			);
 		}
 
 		const { tablesDB } = await createAdminClient();
@@ -36,7 +42,9 @@ export async function GET(
 		const sharedEmails = Array.isArray(fileDoc.users)
 			? (fileDoc.users as string[]).map((e) => String(e).trim().toLowerCase())
 			: [];
-		const userEmail = String(user.email || "").trim().toLowerCase();
+		const userEmail = String(user.email || "")
+			.trim()
+			.toLowerCase();
 		const isOwner = ownerId === user.$id || ownerId === user.accountId;
 		const isShared = userEmail.length > 0 && sharedEmails.includes(userEmail);
 

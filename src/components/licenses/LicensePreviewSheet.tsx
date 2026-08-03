@@ -21,7 +21,6 @@ import {
 	previewSectionClass,
 	previewSectionHeaderClass,
 } from "@/components/preview/previewSheetParts";
-import FormattedDateTime, { FormattedDate } from "../FormattedDateTime";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -30,14 +29,15 @@ import {
 	isLicenseExpired,
 } from "@/lib/licenses/licensesListUtils";
 import {
+	ensureSelectOption,
+	formatEnumLabel,
 	LICENSE_DIVISIONS,
 	LICENSE_STATUSES,
 	LICENSE_TYPES,
-	ensureSelectOption,
-	formatEnumLabel,
 } from "@/lib/preview/dbFieldOptions";
 import { cn } from "@/lib/utils";
 import type { License } from "@/types/licenses";
+import FormattedDateTime, { FormattedDate } from "../FormattedDateTime";
 
 interface LicensePreviewSheetProps {
 	license: License | null;
@@ -143,8 +143,7 @@ export default function LicensePreviewSheet({
 
 	const originalDivision = license.division || license.department || "";
 	const canEditStatus =
-		license.status !== "pending-review" &&
-		license.status !== "action-required";
+		license.status !== "pending-review" && license.status !== "action-required";
 
 	const isDirty =
 		draft.division !== originalDivision ||
@@ -342,7 +341,10 @@ export default function LicensePreviewSheet({
 								isLicenseExpired(license) ? (
 									<AlertTriangle className="h-3.5 w-3.5 shrink-0" />
 								) : null}
-								<FormattedDate date={expiryDate} className="body-2 font-medium" />
+								<FormattedDate
+									date={expiryDate}
+									className="body-2 font-medium"
+								/>
 							</span>
 						) : (
 							"—"

@@ -174,9 +174,7 @@ export default function FilePreviewDialog({
 								size="icon"
 								className="h-8 w-8 cursor-pointer"
 								disabled={numPages === 0 || pageNumber >= numPages}
-								onClick={() =>
-									setPageNumber((p) => Math.min(numPages, p + 1))
-								}
+								onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
 								aria-label="Next page"
 							>
 								<ChevronRight className="h-4 w-4" />
@@ -246,10 +244,7 @@ export default function FilePreviewDialog({
 								playsInline
 								className="max-h-[min(70vh,720px)] w-full max-w-5xl rounded-lg bg-black shadow-sm"
 							>
-								<source
-									src={file.url}
-									type={getVideoMimeType(extension)}
-								/>
+								<source src={file.url} type={getVideoMimeType(extension)} />
 								Your browser does not support video playback.
 							</video>
 						</div>
@@ -260,10 +255,7 @@ export default function FilePreviewDialog({
 							<p className="text-sm text-slate-600">{file.name}</p>
 							{/* biome-ignore lint/a11y/useMediaCaption: audio playback only */}
 							<audio key={file.url} controls className="w-full max-w-xl">
-								<source
-									src={file.url}
-									type={getAudioMimeType(extension)}
-								/>
+								<source src={file.url} type={getAudioMimeType(extension)} />
 								Your browser does not support audio playback.
 							</audio>
 						</div>

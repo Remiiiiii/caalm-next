@@ -9,7 +9,9 @@ export function getFileShareNotificationTitle(input: {
 	const fromName = input.name
 		? getFileType(input.name)
 		: { type: "other" as const, extension: "" };
-	const fileKind = ["image", "video", "audio", "document"].includes(appwriteType)
+	const fileKind = ["image", "video", "audio", "document"].includes(
+		appwriteType,
+	)
 		? appwriteType
 		: fromName.type;
 
@@ -48,7 +50,9 @@ export function getFileShareViewActionText(input: {
 	const fromName = input.name
 		? getFileType(input.name)
 		: { type: "other" as const, extension: "" };
-	const fileKind = ["image", "video", "audio", "document"].includes(appwriteType)
+	const fileKind = ["image", "video", "audio", "document"].includes(
+		appwriteType,
+	)
 		? appwriteType
 		: fromName.type;
 

@@ -74,7 +74,7 @@ function undoCaalmRecentEdit(args) {
 	return JSON.stringify(report, null, 2);
 }
 
-(function () {
+(() => {
 	var isBridge =
 		typeof logToPanel === "function" || typeof getResultFilePath === "function";
 	if (isBridge) return;

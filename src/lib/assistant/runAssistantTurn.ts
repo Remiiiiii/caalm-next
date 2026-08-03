@@ -1,8 +1,8 @@
 import {
 	FunctionCallingMode,
+	type FunctionDeclaration,
 	GoogleGenerativeAI,
 	SchemaType,
-	type FunctionDeclaration,
 } from "@google/generative-ai";
 import type { AssistantAuthContext } from "@/lib/assistant/auth";
 import {
@@ -14,8 +14,8 @@ import { detectDataIntent, isLiveDataIntent } from "@/lib/assistant/intent";
 import type { RetrievedSource } from "@/lib/assistant/knowledge/retrieve";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import {
-	suggestionsForTurn,
 	type AssistantSuggestion,
+	suggestionsForTurn,
 } from "@/lib/assistant/suggestions";
 import {
 	getToolsForPermissions,
@@ -128,7 +128,9 @@ function formatListItems(
 	if (!items.length) return "I did not find any matching items.";
 	return items
 		.map((item, i) => {
-			const name = String(item[nameKey] ?? item.title ?? item.name ?? "Untitled");
+			const name = String(
+				item[nameKey] ?? item.title ?? item.name ?? "Untitled",
+			);
 			const extras = extraKeys
 				.map(({ key, label }) => label(item[key]))
 				.filter(Boolean);
@@ -156,10 +158,20 @@ function formatGenericDataAnswer(toolName: string, output: unknown): string {
 			Record<string, unknown>
 		>;
 		if (!items.length) return "I did not find any matching contracts.";
-		return `Here are the contracts I found:\n\n${formatListItems(items, "name", [
-			{ key: "status", label: (v) => (v ? formatTaskStatus(String(v)) : null) },
-			{ key: "expiryDate", label: (v) => formatDueDate(v ? String(v) : null) },
-		])}`;
+		return `Here are the contracts I found:\n\n${formatListItems(
+			items,
+			"name",
+			[
+				{
+					key: "status",
+					label: (v) => (v ? formatTaskStatus(String(v)) : null),
+				},
+				{
+					key: "expiryDate",
+					label: (v) => formatDueDate(v ? String(v) : null),
+				},
+			],
+		)}`;
 	}
 
 	if (toolName === "search_licenses") {
@@ -168,7 +180,10 @@ function formatGenericDataAnswer(toolName: string, output: unknown): string {
 		>;
 		if (!items.length) return "I did not find any matching licenses.";
 		return `Here are the licenses I found:\n\n${formatListItems(items, "name", [
-			{ key: "status", label: (v) => (v ? String(v).replace(/_/g, " ") : null) },
+			{
+				key: "status",
+				label: (v) => (v ? String(v).replace(/_/g, " ") : null),
+			},
 			{
 				key: "expirationDate",
 				label: (v) => formatDueDate(v ? String(v) : null),
@@ -181,9 +196,16 @@ function formatGenericDataAnswer(toolName: string, output: unknown): string {
 			Record<string, unknown>
 		>;
 		if (!items.length) return "You have no pending approvals right now.";
-		return `Here are your pending approvals:\n\n${formatListItems(items, "title", [
-			{ key: "status", label: (v) => (v ? String(v).replace(/_/g, " ") : null) },
-		])}`;
+		return `Here are your pending approvals:\n\n${formatListItems(
+			items,
+			"title",
+			[
+				{
+					key: "status",
+					label: (v) => (v ? String(v).replace(/_/g, " ") : null),
+				},
+			],
+		)}`;
 	}
 
 	return "I finished that request. Use a suggestion below if you want to dig in further.";
@@ -239,11 +261,10 @@ export async function runAssistantTurn(params: {
 
 	// Deterministic path: pending tasks → call list_tasks (don't rely on the model).
 	if (dataIntent === "list_tasks" && canListTasks) {
-		const toolResult = await runToolByName(
-			{ ...ctx, pathname },
-			"list_tasks",
-			{ pendingOnly: "true", limit: 15 },
-		);
+		const toolResult = await runToolByName({ ...ctx, pathname }, "list_tasks", {
+			pendingOnly: "true",
+			limit: 15,
+		});
 		const answer =
 			formatTaskAnswer(toolResult.result) ??
 			formatGenericDataAnswer("list_tasks", toolResult.result);
@@ -292,9 +313,7 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 			: undefined,
 		toolConfig: {
 			functionCallingConfig: {
-				mode: forceTool
-					? FunctionCallingMode.ANY
-					: FunctionCallingMode.AUTO,
+				mode: forceTool ? FunctionCallingMode.ANY : FunctionCallingMode.AUTO,
 			},
 		},
 	});
@@ -396,11 +415,10 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 
 	// Model skipped tools on a live-data question — retry with forced list_tasks if possible.
 	if (dataIntent === "list_tasks" && canListTasks) {
-		const toolResult = await runToolByName(
-			{ ...ctx, pathname },
-			"list_tasks",
-			{ pendingOnly: "true", limit: 15 },
-		);
+		const toolResult = await runToolByName({ ...ctx, pathname }, "list_tasks", {
+			pendingOnly: "true",
+			limit: 15,
+		});
 		return {
 			answer:
 				formatTaskAnswer(toolResult.result) ??

@@ -8,7 +8,7 @@ const line1 = [
 const line2 = [
 	"Seamless Integrations",
 	"Client Retention",
-	"Defragmented Document Storage",
+	"Unified Document Storage",
 	"Real-Time Reports",
 ];
 

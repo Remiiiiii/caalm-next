@@ -1,6 +1,4 @@
-import {
-	createCalendarEvent,
-} from "@/lib/actions/calendar.actions";
+import { createCalendarEvent } from "@/lib/actions/calendar.actions";
 import { getUserById } from "@/lib/actions/user.actions";
 import { TaskService } from "@/lib/api/tasks/services/TaskService";
 import CacheManager from "@/lib/services/cache-manager";

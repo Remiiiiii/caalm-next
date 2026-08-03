@@ -83,7 +83,7 @@ export default function SplineCanvas({
 						</svg>
 					</div>
 					<h3 className="text-lg font-semibold text-gray-800 mb-2">
-						Welcome to Caalm
+						Welcome to CAALM
 					</h3>
 					<p className="text-sm text-gray-600">
 						Streamline your contract management

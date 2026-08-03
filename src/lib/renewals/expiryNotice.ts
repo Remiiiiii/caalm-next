@@ -17,7 +17,9 @@ export function getNoticeThresholds(
 				: renewalNoticeDays;
 
 	const notice =
-		Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : DEFAULT_NOTICE_DAYS;
+		Number.isFinite(parsed) && parsed > 0
+			? Math.floor(parsed)
+			: DEFAULT_NOTICE_DAYS;
 
 	const set = new Set<number>([notice, ...DEFAULT_URGENT_THRESHOLDS]);
 	return Array.from(set).sort((a, b) => b - a);
@@ -37,9 +39,7 @@ export type ExpiryNoticeMetadata = {
 	daysUntil: number;
 };
 
-export function buildExpiryNoticeMetadata(
-	meta: ExpiryNoticeMetadata,
-): string {
+export function buildExpiryNoticeMetadata(meta: ExpiryNoticeMetadata): string {
 	return JSON.stringify(meta);
 }
 

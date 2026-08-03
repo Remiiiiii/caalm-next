@@ -1,7 +1,7 @@
 /**
  * Discover where Text 01– are nested and which sibling layers look like sparkle/logo animation.
  */
-(function () {
+(() => {
 	var report = {
 		status: "success",
 		textComps: [],

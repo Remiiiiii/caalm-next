@@ -19,8 +19,7 @@ export default function ContractApprovalFlowCanvas({
 				{steps.map((step, index) => {
 					const filled = index < currentStepIndex;
 					const isCurrent = index === currentStepIndex;
-					const connectorCurrent =
-						index === currentStepIndex - 1 || isCurrent;
+					const connectorCurrent = index === currentStepIndex - 1 || isCurrent;
 					return (
 						<div key={step.id} className="flex items-center">
 							<ApprovalFlowNode

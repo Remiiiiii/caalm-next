@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 
 export default function Page() {
 	return (
-		<ITPageShell title="Access Control" subtitle="Roles and permission assignments" icon={KeyRound}>
+		<ITPageShell
+			title="Access Control"
+			subtitle="Roles and permission assignments"
+			icon={KeyRound}
+		>
 			<ITGlassPanel>
 				<p className="text-sm text-slate-600 mb-4">
 					Manage roles and permissions in the admin roles console.

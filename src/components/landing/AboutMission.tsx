@@ -6,7 +6,13 @@ import Link from "next/link";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
 import { ABOUT_TRUST_BULLETS } from "./landingContent";
-import { blurIn, fadeLeft, softRise, staggerContainer, viewportOnce } from "./motion";
+import {
+	blurIn,
+	fadeLeft,
+	softRise,
+	staggerContainer,
+	viewportOnce,
+} from "./motion";
 
 export default function AboutMission() {
 	return (

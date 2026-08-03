@@ -1,12 +1,7 @@
-import type { NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
+import type { NextRequest } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import {
-	decide,
-	getWorkflowForViewer,
-} from "@/lib/approvals/ContractApprovalWorkflowService";
-import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.types";
 import {
 	errorResponse,
 	forbiddenResponse,
@@ -15,6 +10,11 @@ import {
 	unauthorizedResponse,
 	validationErrorResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import {
+	decide,
+	getWorkflowForViewer,
+} from "@/lib/approvals/ContractApprovalWorkflowService";
+import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.types";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,
@@ -34,7 +34,8 @@ export async function POST(
 	const requestId = generateRequestId();
 	try {
 		const user = await getCurrentUser();
-		if (!user) return unauthorizedResponse("Authentication required", requestId);
+		if (!user)
+			return unauthorizedResponse("Authentication required", requestId);
 
 		const { id: contractId } = await context.params;
 		if (!contractId) {

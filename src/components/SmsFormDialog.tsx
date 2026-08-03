@@ -211,10 +211,10 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 						<div>
 							<AlertDialogTitle className="flex items-center gap-2 text-xl font-semibold sidebar-gradient-text py-2">
 								<Smartphone className="w-5 h-5 text-[#0f5384]" />
-								Receive Notifications From Caalm
+								Receive Notifications From CAALM
 							</AlertDialogTitle>
 							<AlertDialogDescription className="text-sm ml-7 text-slate-600">
-								Sign up here to receive SMS notifications from Caalm
+								Sign up here to receive SMS notifications from CAALM
 							</AlertDialogDescription>
 						</div>
 					</div>
@@ -338,7 +338,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 									</Label>
 									<p className="text-xs text-slate-600 leading-relaxed pb-1">
 										By clicking the checkbox above, you agree to receive SMS
-										notifications from Caalm. Message & Data Rates May Apply.
+										notifications from CAALM. Message & Data Rates May Apply.
 										Message frequency varies. Text STOP to stop. For help,
 										contact support@caalmsolutions.com or visit{" "}
 										<a

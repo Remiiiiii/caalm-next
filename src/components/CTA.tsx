@@ -13,7 +13,7 @@ const CTA = () => {
 				</h2>
 				<p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 max-w-xl sm:max-w-2xl mx-auto">
 					Join leading organizations who have transformed their contract
-					management with Caalm.
+					management with CAALM.
 				</p>
 				<Button
 					size="lg"

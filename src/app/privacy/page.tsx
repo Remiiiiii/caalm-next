@@ -2,9 +2,9 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 
 export const metadata = {
-	title: "Privacy Policy - Caalm",
+	title: "Privacy Policy - CAALM",
 	description:
-		"Privacy Policy for Caalm — compliance, agreement, and document management platform.",
+		"Privacy Policy for CAALM — compliance, agreement, and document management platform.",
 };
 
 export default function PrivacyPage() {
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
 								1. Introduction
 							</h2>
 							<p>
-								Caalm (&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;,
+								CAALM (&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;,
 								&quot;us&quot;) is committed to protecting your privacy. This
 								Privacy Policy explains how we collect, use, disclose, and
 								safeguard information when you use our Service. By using the
@@ -91,7 +91,7 @@ export default function PrivacyPage() {
 									<span className="font-semibold">Legal Requirements:</span> We
 									may disclose information if required by law or valid legal
 									process, or to protect the rights, property, or safety of
-									Caalm, our users, or the public.
+									CAALM, our users, or the public.
 								</li>
 							</ul>
 						</section>

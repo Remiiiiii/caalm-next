@@ -14,12 +14,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CONTRACT_DEPARTMENTS } from "../../../constants";
 import type {
 	CreateTaskInput,
 	TaskLinkedEntityType,
 	TaskPriority,
 } from "@/types/tasks";
+import { CONTRACT_DEPARTMENTS } from "../../../constants";
 
 interface TaskCreateSheetProps {
 	open: boolean;
@@ -183,10 +183,7 @@ export function TaskCreateSheet({
 				</div>
 				<div className="space-y-2">
 					<Label>Department</Label>
-					<Select
-						value={department || undefined}
-						onValueChange={setDepartment}
-					>
+					<Select value={department || undefined} onValueChange={setDepartment}>
 						<SelectTrigger className="border-white/60 bg-white/80">
 							<SelectValue placeholder="Select department" />
 						</SelectTrigger>

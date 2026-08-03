@@ -10,7 +10,9 @@ function formatTimestamp(iso?: string): string {
 	return `${mm}/${dd}/${yyyy} ${hh}:${min}`;
 }
 
-export function buildAssistantChatTxt(messages: AssistantChatMessage[]): string {
+export function buildAssistantChatTxt(
+	messages: AssistantChatMessage[],
+): string {
 	return messages
 		.map((m) => {
 			const label = m.role === "user" ? "User" : "CAALM";

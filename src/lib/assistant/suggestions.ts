@@ -1,9 +1,7 @@
 export type AssistantSuggestion = {
 	id: string;
 	label: string;
-	action:
-		| { type: "prompt"; text: string }
-		| { type: "navigate"; href: string };
+	action: { type: "prompt"; text: string } | { type: "navigate"; href: string };
 };
 
 export function suggestionsForTurn(params: {

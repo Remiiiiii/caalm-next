@@ -7,7 +7,16 @@
 		"defaultBranch": "main"
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": [
+			"**",
+			"!.agents",
+			"!.agents",
+			"!brew-bros",
+			"!brew-bros",
+			"!public/assets/demo/ae-mcp-setup",
+			"!public/assets/demo/ae-mcp-setup"
+		]
 	},
 	"formatter": {
 		"enabled": true,

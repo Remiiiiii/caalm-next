@@ -14,8 +14,8 @@ import {
 	Trash2,
 	Upload,
 } from "lucide-react";
-import { type DropzoneOptions, useDropzone } from "react-dropzone";
 import type { DragEvent } from "react";
+import { type DropzoneOptions, useDropzone } from "react-dropzone";
 import {
 	DEMO_LICENSE_SAMPLE,
 	DemoSampleDocumentDrop,

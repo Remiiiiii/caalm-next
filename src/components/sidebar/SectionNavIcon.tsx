@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { SECTION_ICONS } from "@/components/sidebar/sidebar-icons";
 
 /** Source of truth for expanded + collapsed sidebar section title icons */

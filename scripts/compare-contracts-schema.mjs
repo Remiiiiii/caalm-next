@@ -5,7 +5,9 @@ const agentTools =
 	"C:/Users/victo/.cursor/projects/c-Users-victo-Development-caalm-next/agent-tools";
 
 function parseCollection(text) {
-	const parsed = JSON.parse(JSON.parse(text).find((x) => x.type === "text").text);
+	const parsed = JSON.parse(
+		JSON.parse(text).find((x) => x.type === "text").text,
+	);
 	const attrs = parsed.attributes || parsed.columns || [];
 	return attrs.map((a) => ({
 		key: a.key,
@@ -25,7 +27,8 @@ for (const f of files) {
 	const t = fs.readFileSync(path.join(agentTools, f), "utf8");
 	if (!t.includes('"name": "Contracts"')) continue;
 	if (t.includes('"databaseId": "caalm-demo"')) demo = parseCollection(t);
-	if (t.includes('"databaseId": "685ed87c0009d8189fc7"')) prod = parseCollection(t);
+	if (t.includes('"databaseId": "685ed87c0009d8189fc7"'))
+		prod = parseCollection(t);
 }
 
 if (!demo || !prod) {

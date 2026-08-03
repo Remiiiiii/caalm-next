@@ -26,12 +26,9 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import { hasPermission } from "@/lib/rbac/permissions";
-import {
-	getAllAdmins,
-	getAllExecutives,
-} from "@/lib/utils/get-users-by-role";
-import { triggerNotification } from "@/lib/utils/notificationTriggers";
 import { getProfilePictureUrl } from "@/lib/utils";
+import { getAllAdmins, getAllExecutives } from "@/lib/utils/get-users-by-role";
+import { triggerNotification } from "@/lib/utils/notificationTriggers";
 
 type LicenseRow = Record<string, unknown> & {
 	$id: string;
@@ -159,9 +156,7 @@ async function buildStateForLicense(
 		preserveNotifications?: ApprovalWorkflowNotification[];
 	},
 ): Promise<ApprovalWorkflowState> {
-	const uploader = String(
-		license.licenseOwnerId || license.createdBy || "",
-	);
+	const uploader = String(license.licenseOwnerId || license.createdBy || "");
 	const orgId = license.orgId as string | undefined;
 	const managerIds =
 		options?.departmentManagerIds ||
@@ -360,7 +355,7 @@ export async function initializeLicenseOnUpload({
 	const uploader = String(license.licenseOwnerId || license.createdBy || "");
 	const recipients = uniqueIds([
 		...(current?.assigneeUserIds || []),
-		...((departmentManagerIds || []).filter((id) => id !== uploader)),
+		...(departmentManagerIds || []).filter((id) => id !== uploader),
 	]);
 
 	if (recipients.length > 0) {

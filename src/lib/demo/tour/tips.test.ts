@@ -26,9 +26,7 @@ describe("getTipForPathname", () => {
 	});
 
 	it("respects seen tip ids", () => {
-		expect(
-			getTipForPathname("/contracts", ["demo-contracts"]),
-		).toBeNull();
+		expect(getTipForPathname("/contracts", ["demo-contracts"])).toBeNull();
 	});
 
 	it("returns step position and next tip in tour order", () => {

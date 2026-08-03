@@ -5,12 +5,7 @@ import { Plug } from "lucide-react";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
 import { INTEGRATIONS } from "./landingContent";
-import {
-	fadeLeft,
-	fadeRight,
-	staggerContainer,
-	viewportOnce,
-} from "./motion";
+import { fadeLeft, fadeRight, staggerContainer, viewportOnce } from "./motion";
 
 export default function IntegrationsSection() {
 	return (

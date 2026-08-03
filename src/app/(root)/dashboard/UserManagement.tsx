@@ -18,10 +18,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import {
-	type UserActionKind,
-	UserManagementActionDialogs,
-} from "@/components/users/UserManagementActionDialogs";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +39,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	type UserActionKind,
+	UserManagementActionDialogs,
+} from "@/components/users/UserManagementActionDialogs";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -796,59 +796,77 @@ const UserManagement = () => {
 				onClose={closeAction}
 				onSaveEdit={async ({ fullName, department }) => {
 					if (!actionUser) return;
-					await runAction(async () => {
-						const res = await fetch("/api/user/update", {
-							method: "PATCH",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								accountId: actionUser.accountId,
-								fullName,
-								department: department || undefined,
-							}),
-						});
-						const data = await res.json().catch(() => ({}));
-						if (!res.ok) throw new Error(data.error || "Failed to update user");
-					}, "User updated", `${fullName} was saved`);
+					await runAction(
+						async () => {
+							const res = await fetch("/api/user/update", {
+								method: "PATCH",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({
+									accountId: actionUser.accountId,
+									fullName,
+									department: department || undefined,
+								}),
+							});
+							const data = await res.json().catch(() => ({}));
+							if (!res.ok)
+								throw new Error(data.error || "Failed to update user");
+						},
+						"User updated",
+						`${fullName} was saved`,
+					);
 				}}
 				onSaveRole={async (roleName) => {
 					if (!actionUser) return;
-					await runAction(async () => {
-						const res = await fetch("/api/admin/set-user-role", {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								email: actionUser.email,
-								roleName,
-								orgId,
-							}),
-						});
-						const data = await res.json().catch(() => ({}));
-						if (!res.ok) throw new Error(data.error || "Failed to change role");
-					}, "Role updated", `${actionUser.fullName} is now ${roleName}`);
+					await runAction(
+						async () => {
+							const res = await fetch("/api/admin/set-user-role", {
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({
+									email: actionUser.email,
+									roleName,
+									orgId,
+								}),
+							});
+							const data = await res.json().catch(() => ({}));
+							if (!res.ok)
+								throw new Error(data.error || "Failed to change role");
+						},
+						"Role updated",
+						`${actionUser.fullName} is now ${roleName}`,
+					);
 				}}
 				onConfirmReset={async () => {
 					if (!actionUser) return;
-					await runAction(async () => {
-						const res = await fetch(
-							`/api/admin/users/${actionUser.$id}/reset-password`,
-							{ method: "POST" },
-						);
-						const data = await res.json().catch(() => ({}));
-						if (!res.ok)
-							throw new Error(data.error || "Failed to send reset email");
-					}, "Password reset sent", dataMessage(actionUser.email));
+					await runAction(
+						async () => {
+							const res = await fetch(
+								`/api/admin/users/${actionUser.$id}/reset-password`,
+								{ method: "POST" },
+							);
+							const data = await res.json().catch(() => ({}));
+							if (!res.ok)
+								throw new Error(data.error || "Failed to send reset email");
+						},
+						"Password reset sent",
+						dataMessage(actionUser.email),
+					);
 				}}
 				onConfirmRevoke={async () => {
 					if (!actionUser) return;
-					await runAction(async () => {
-						const res = await fetch(
-							`/api/admin/users/${actionUser.$id}/revoke-sessions`,
-							{ method: "POST" },
-						);
-						const data = await res.json().catch(() => ({}));
-						if (!res.ok)
-							throw new Error(data.error || "Failed to revoke sessions");
-					}, "Sessions revoked", `${actionUser.fullName} was signed out everywhere`);
+					await runAction(
+						async () => {
+							const res = await fetch(
+								`/api/admin/users/${actionUser.$id}/revoke-sessions`,
+								{ method: "POST" },
+							);
+							const data = await res.json().catch(() => ({}));
+							if (!res.ok)
+								throw new Error(data.error || "Failed to revoke sessions");
+						},
+						"Sessions revoked",
+						`${actionUser.fullName} was signed out everywhere`,
+					);
 				}}
 				onConfirmSuspend={async () => {
 					if (!actionUser) return;
@@ -857,31 +875,41 @@ const UserManagement = () => {
 						actionUser.status === "inactive"
 							? "active"
 							: "suspended";
-					await runAction(async () => {
-						const res = await fetch("/api/user/update", {
-							method: "PATCH",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								accountId: actionUser.accountId,
-								status: nextStatus,
-							}),
-						});
-						const data = await res.json().catch(() => ({}));
-						if (!res.ok)
-							throw new Error(data.error || "Failed to update status");
-					}, nextStatus === "active" ? "Account reactivated" : "Account suspended");
+					await runAction(
+						async () => {
+							const res = await fetch("/api/user/update", {
+								method: "PATCH",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({
+									accountId: actionUser.accountId,
+									status: nextStatus,
+								}),
+							});
+							const data = await res.json().catch(() => ({}));
+							if (!res.ok)
+								throw new Error(data.error || "Failed to update status");
+						},
+						nextStatus === "active"
+							? "Account reactivated"
+							: "Account suspended",
+					);
 				}}
 				onConfirmDelete={async () => {
 					if (!actionUser) return;
-					await runAction(async () => {
-						const res = await fetch("/api/user/delete", {
-							method: "DELETE",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({ userId: actionUser.$id }),
-						});
-						const data = await res.json().catch(() => ({}));
-						if (!res.ok) throw new Error(data.error || "Failed to delete user");
-					}, "User deleted", `${actionUser.fullName} was removed`);
+					await runAction(
+						async () => {
+							const res = await fetch("/api/user/delete", {
+								method: "DELETE",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({ userId: actionUser.$id }),
+							});
+							const data = await res.json().catch(() => ({}));
+							if (!res.ok)
+								throw new Error(data.error || "Failed to delete user");
+						},
+						"User deleted",
+						`${actionUser.fullName} was removed`,
+					);
 				}}
 			/>
 		</div>

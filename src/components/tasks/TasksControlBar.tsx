@@ -48,7 +48,10 @@ export function TasksControlBar({
 					onChange({ ...filters, status: value as TaskListFilters["status"] })
 				}
 			>
-				<SelectTrigger className="w-[160px] bg-white" aria-label="Filter by status">
+				<SelectTrigger
+					className="w-[160px] bg-white"
+					aria-label="Filter by status"
+				>
 					<SelectValue placeholder="Status" />
 				</SelectTrigger>
 				<SelectContent>

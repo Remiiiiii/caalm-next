@@ -176,10 +176,7 @@ export async function POST(request: NextRequest) {
 		try {
 			body = await request.json();
 		} catch {
-			return NextResponse.json(
-				{ error: "Invalid JSON body" },
-				{ status: 400 },
-			);
+			return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
 		}
 
 		const userIds = (body as { userIds?: unknown })?.userIds;
@@ -254,8 +251,7 @@ export async function POST(request: NextRequest) {
 		console.error("Error fetching users by IDs:", error);
 		return NextResponse.json(
 			{
-				error:
-					error instanceof Error ? error.message : "Failed to fetch users",
+				error: error instanceof Error ? error.message : "Failed to fetch users",
 			},
 			{ status: 500 },
 		);

@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { getLicenseWorkflowForViewer } from "@/lib/approvals/LicenseApprovalWorkflowService";
 import {
 	errorResponse,
 	forbiddenResponse,
@@ -9,6 +8,7 @@ import {
 	successResponse,
 	unauthorizedResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import { getLicenseWorkflowForViewer } from "@/lib/approvals/LicenseApprovalWorkflowService";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,
@@ -22,7 +22,8 @@ export async function GET(
 	const requestId = generateRequestId();
 	try {
 		const user = await getCurrentUser();
-		if (!user) return unauthorizedResponse("Authentication required", requestId);
+		if (!user)
+			return unauthorizedResponse("Authentication required", requestId);
 
 		const { id: licenseId } = await context.params;
 		if (!licenseId) {

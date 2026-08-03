@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { type RefObject, Suspense, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Logo from "../Logo";
 import SectionDivider from "../SectionDivider";
@@ -15,18 +15,433 @@ import PillSwing3D from "./PillSwing3D";
 import ShimmerBadge from "./ShimmerBadge";
 
 const VIDEO_SRC = "/assets/video/wave.mp4";
+const DEMO_VIDEO_SRC = "/assets/video/demo-landing.mp4";
 
 /** Crossfade lines under the hero H1 — previous copy + current block */
 const HERO_CROSSFADE_LINES = [
 	"Centralize contracts, audits, and licenses. Automate renewals, prevent missed deadlines, and protect your organization from compliance risk.",
 	"Streamline your compliance and agreement processes with CAALM Solutions.",
-	"Caalm eliminates fragmented document storage and manual tracking.",
+	"CAALM eliminates fragmented document storage and manual tracking.",
 	"Streamline your entire contract lifecycle with our end-to-end solutions.",
 	"Secure your compliance, prevent missed deadlines, and protect your organization from financial and reputational risks.",
 ] as const;
 
 const CROSSFADE_MS = 5500;
 const CROSSFADE_EASE_MS = 1800;
+/** Soft end→start blend for the hero demo loop */
+const DEMO_LOOP_FADE_MS = 700;
+const DEMO_LOOP_FADE_S = DEMO_LOOP_FADE_MS / 1000;
+
+const CAALM = {
+	teal: "#00C1CB",
+	blue: "#0f5384",
+	mid: "#0E638F",
+	navy: "#162768",
+} as const;
+
+function IntegrateVisual({ animate }: { animate: boolean }) {
+	return (
+		<svg viewBox="0 0 200 120" className="h-full w-full" aria-hidden>
+			<defs>
+				<linearGradient id="hero-int-grad" x1="0" y1="0" x2="1" y2="1">
+					<stop offset="0%" stopColor={CAALM.teal} stopOpacity="0.35" />
+					<stop offset="100%" stopColor={CAALM.blue} stopOpacity="0.15" />
+				</linearGradient>
+			</defs>
+			<rect
+				x="78"
+				y="18"
+				width="44"
+				height="52"
+				rx="8"
+				fill="url(#hero-int-grad)"
+				stroke={CAALM.blue}
+				strokeWidth="1.5"
+			/>
+			<rect
+				x="88"
+				y="28"
+				width="24"
+				height="8"
+				rx="2"
+				fill={CAALM.teal}
+				opacity="0.5"
+			/>
+			<rect
+				x="88"
+				y="42"
+				width="24"
+				height="8"
+				rx="2"
+				fill={CAALM.mid}
+				opacity="0.35"
+			/>
+			{[
+				{ x: 22, y: 34, label: "HR" },
+				{ x: 158, y: 34, label: "IT" },
+				{ x: 22, y: 78, label: "Legal" },
+				{ x: 158, y: 78, label: "Ops" },
+			].map((node, i) => (
+				<motion.g
+					key={node.label}
+					animate={animate ? { y: [0, i % 2 === 0 ? -3 : 3, 0] } : undefined}
+					transition={{
+						duration: 3.4,
+						repeat: Infinity,
+						ease: "easeInOut",
+						delay: i * 0.25,
+					}}
+				>
+					<rect
+						x={node.x}
+						y={node.y}
+						width="36"
+						height="28"
+						rx="7"
+						fill="white"
+						stroke={CAALM.teal}
+						strokeWidth="1.25"
+					/>
+					<circle
+						cx={node.x + 12}
+						cy={node.y + 14}
+						r="4"
+						fill={CAALM.teal}
+						opacity="0.85"
+					/>
+					<rect
+						x={node.x + 19}
+						y={node.y + 10}
+						width="12"
+						height="3"
+						rx="1"
+						fill={CAALM.blue}
+						opacity="0.45"
+					/>
+					<rect
+						x={node.x + 19}
+						y={node.y + 16}
+						width="9"
+						height="3"
+						rx="1"
+						fill={CAALM.mid}
+						opacity="0.3"
+					/>
+				</motion.g>
+			))}
+			{[
+				"M58 48 C68 48 70 44 78 44",
+				"M122 44 C132 44 134 48 158 48",
+				"M58 92 C70 92 74 70 78 62",
+				"M122 62 C126 70 130 92 158 92",
+			].map((d, i) => (
+				<motion.path
+					key={d}
+					d={d}
+					fill="none"
+					stroke={i % 2 === 0 ? CAALM.teal : CAALM.blue}
+					strokeWidth="1.25"
+					strokeDasharray="4 5"
+					animate={animate ? { strokeDashoffset: [0, -18] } : undefined}
+					transition={{
+						duration: 2.2,
+						repeat: Infinity,
+						ease: "linear",
+						delay: i * 0.2,
+					}}
+				/>
+			))}
+			<motion.circle
+				cx="100"
+				cy="44"
+				r="3.5"
+				fill={CAALM.navy}
+				animate={
+					animate ? { scale: [1, 1.35, 1], opacity: [0.7, 1, 0.7] } : undefined
+				}
+				transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+			/>
+		</svg>
+	);
+}
+
+function SecurityVisual({ animate }: { animate: boolean }) {
+	return (
+		<svg viewBox="0 0 200 120" className="h-full w-full" aria-hidden>
+			<defs>
+				<linearGradient id="hero-sec-grad" x1="0.5" y1="0" x2="0.5" y2="1">
+					<stop offset="0%" stopColor={CAALM.teal} stopOpacity="0.25" />
+					<stop offset="100%" stopColor={CAALM.navy} stopOpacity="0.12" />
+				</linearGradient>
+			</defs>
+			{[38, 28, 18].map((r, i) => (
+				<motion.circle
+					key={r}
+					cx="100"
+					cy="58"
+					r={r}
+					fill="none"
+					stroke={i === 0 ? CAALM.teal : CAALM.blue}
+					strokeWidth="1"
+					strokeOpacity={0.35 - i * 0.08}
+					strokeDasharray={i === 1 ? "3 7" : undefined}
+					animate={animate ? { rotate: i % 2 === 0 ? 360 : -360 } : undefined}
+					transition={{
+						duration: 14 + i * 4,
+						repeat: Infinity,
+						ease: "linear",
+					}}
+					style={{ transformOrigin: "100px 58px" }}
+				/>
+			))}
+			<path
+				d="M100 28 L128 40 V62 C128 80 116 90 100 96 C84 90 72 80 72 62 V40 Z"
+				fill="url(#hero-sec-grad)"
+				stroke={CAALM.blue}
+				strokeWidth="1.75"
+			/>
+			<path
+				d="M100 36 L120 44 V60 C120 74 112 82 100 86 C88 82 80 74 80 60 V44 Z"
+				fill="white"
+				fillOpacity="0.55"
+				stroke={CAALM.teal}
+				strokeWidth="1.25"
+			/>
+			<rect
+				x="92"
+				y="54"
+				width="16"
+				height="14"
+				rx="3"
+				fill={CAALM.blue}
+				opacity="0.9"
+			/>
+			<path
+				d="M95 54 V50 C95 47 97 45 100 45 C103 45 105 47 105 50 V54"
+				fill="none"
+				stroke={CAALM.navy}
+				strokeWidth="1.5"
+				strokeLinecap="round"
+			/>
+			<circle cx="100" cy="60" r="1.75" fill="white" />
+			{[
+				{ x: 34, y: 40, t: "SOC" },
+				{ x: 148, y: 40, t: "RBAC" },
+				{ x: 34, y: 78, t: "AES" },
+				{ x: 148, y: 78, t: "SSO" },
+			].map((badge, i) => (
+				<motion.g
+					key={badge.t}
+					animate={
+						animate
+							? { y: [0, i % 2 ? 3 : -3, 0], opacity: [0.75, 1, 0.75] }
+							: undefined
+					}
+					transition={{
+						duration: 3,
+						repeat: Infinity,
+						ease: "easeInOut",
+						delay: i * 0.3,
+					}}
+				>
+					<rect
+						x={badge.x}
+						y={badge.y}
+						width="28"
+						height="16"
+						rx="8"
+						fill="white"
+						stroke={CAALM.mid}
+						strokeWidth="1"
+					/>
+					<text
+						x={badge.x + 14}
+						y={badge.y + 11}
+						textAnchor="middle"
+						fontSize="7"
+						fontWeight="700"
+						fill={CAALM.blue}
+					>
+						{badge.t}
+					</text>
+				</motion.g>
+			))}
+			<motion.line
+				x1="78"
+				x2="122"
+				y1="50"
+				y2="50"
+				stroke={CAALM.teal}
+				strokeWidth="1.5"
+				strokeLinecap="round"
+				animate={
+					animate
+						? { y1: [42, 78, 42], y2: [42, 78, 42], opacity: [0.2, 0.9, 0.2] }
+						: undefined
+				}
+				transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+			/>
+		</svg>
+	);
+}
+
+function OnboardingVisual({ animate }: { animate: boolean }) {
+	return (
+		<svg viewBox="0 0 200 120" className="h-full w-full" aria-hidden>
+			<defs>
+				<linearGradient id="hero-onb-grad" x1="0" y1="0" x2="1" y2="1">
+					<stop offset="0%" stopColor={CAALM.teal} stopOpacity="0.3" />
+					<stop offset="100%" stopColor={CAALM.blue} stopOpacity="0.1" />
+				</linearGradient>
+			</defs>
+			<motion.path
+				d="M28 88 A72 72 0 0 1 172 88"
+				fill="none"
+				stroke={CAALM.blue}
+				strokeWidth="3"
+				strokeOpacity="0.15"
+				strokeLinecap="round"
+			/>
+			<motion.path
+				d="M28 88 A72 72 0 0 1 172 88"
+				fill="none"
+				stroke={CAALM.teal}
+				strokeWidth="3"
+				strokeLinecap="round"
+				strokeDasharray="180"
+				animate={
+					animate
+						? { strokeDashoffset: [180, 40, 180] }
+						: { strokeDashoffset: 40 }
+				}
+				transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+			/>
+			{[
+				{ x: 56, fill: CAALM.blue, y: 12 },
+				{ x: 100, fill: CAALM.teal, y: 0 },
+				{ x: 144, fill: CAALM.mid, y: 12 },
+			].map((p, i) => (
+				<motion.g
+					key={p.x}
+					animate={animate ? { y: [p.y, p.y - 5, p.y] } : { y: p.y }}
+					transition={{
+						duration: 2.6,
+						repeat: Infinity,
+						ease: "easeInOut",
+						delay: i * 0.35,
+					}}
+				>
+					<circle
+						cx={p.x}
+						cy="46"
+						r="11"
+						fill="url(#hero-onb-grad)"
+						stroke={p.fill}
+						strokeWidth="1.5"
+					/>
+					<circle cx={p.x} cy="43" r="4" fill={p.fill} />
+					<path
+						d={`M${p.x - 8} 58 C${p.x - 8} 52 ${p.x - 4} 50 ${p.x} 50 C${p.x + 4} 50 ${p.x + 8} 52 ${p.x + 8} 58`}
+						fill={p.fill}
+						opacity="0.85"
+					/>
+				</motion.g>
+			))}
+			{[
+				{ x: 24, y: 18, w: 52 },
+				{ x: 124, y: 14, w: 56 },
+			].map((card, i) => (
+				<motion.g
+					key={card.x}
+					animate={
+						animate
+							? {
+									y: [0, i === 0 ? 4 : -4, 0],
+									rotate: [0, i === 0 ? -2 : 2, 0],
+								}
+							: undefined
+					}
+					transition={{
+						duration: 3.8,
+						repeat: Infinity,
+						ease: "easeInOut",
+						delay: i * 0.4,
+					}}
+					style={{
+						transformOrigin: `${card.x + card.w / 2}px ${card.y + 14}px`,
+					}}
+				>
+					<rect
+						x={card.x}
+						y={card.y}
+						width={card.w}
+						height="28"
+						rx="8"
+						fill="white"
+						stroke={CAALM.blue}
+						strokeWidth="1.1"
+					/>
+					<circle
+						cx={card.x + 12}
+						cy={card.y + 14}
+						r="5"
+						fill={CAALM.teal}
+						opacity="0.25"
+					/>
+					<path
+						d={`M${card.x + 9.5} ${card.y + 14} L${card.x + 11.5} ${card.y + 16} L${card.x + 15.5} ${card.y + 11.5}`}
+						fill="none"
+						stroke={CAALM.blue}
+						strokeWidth="1.4"
+						strokeLinecap="round"
+					/>
+					<rect
+						x={card.x + 22}
+						y={card.y + 9}
+						width={card.w - 30}
+						height="3.5"
+						rx="1"
+						fill={CAALM.blue}
+						opacity="0.35"
+					/>
+					<rect
+						x={card.x + 22}
+						y={card.y + 16}
+						width={card.w - 36}
+						height="3.5"
+						rx="1"
+						fill={CAALM.teal}
+						opacity="0.45"
+					/>
+				</motion.g>
+			))}
+		</svg>
+	);
+}
+
+const HERO_TRUST_PILLARS = [
+	{
+		id: "integrate",
+		title: "Integrate seamlessly into your organization",
+		description:
+			"Roll CAALM into your existing teams, roles, and workflows without ripping out the tools you already trust.",
+		Visual: IntegrateVisual,
+	},
+	{
+		id: "security",
+		title: "Enterprise-grade security",
+		description:
+			"HIPAA, SOC 2, and GDPR compliance safeguard sensitive data with industry-leading security practices.",
+		Visual: SecurityVisual,
+	},
+	{
+		id: "onboarding",
+		title: "Onboarding support and training included",
+		description:
+			"Guided setup, live training, and clear ownership so your team is productive from day one.",
+		Visual: OnboardingVisual,
+	},
+] as const;
 
 function safePlay(video: HTMLVideoElement | null) {
 	if (!video) return;
@@ -34,6 +449,147 @@ function safePlay(video: HTMLVideoElement | null) {
 	if (result !== undefined) {
 		result.catch(() => {});
 	}
+}
+
+function useAutoplayLoopVideo(
+	videoRef: RefObject<HTMLVideoElement | null>,
+	reduceMotion: boolean | null,
+	enabled = true,
+) {
+	useEffect(() => {
+		const video = videoRef.current;
+		if (!video) return;
+
+		if (reduceMotion || !enabled) {
+			video.pause();
+			return;
+		}
+
+		// Force muted before play — required for autoplay policies
+		video.muted = true;
+		video.defaultMuted = true;
+		video.playsInline = true;
+		// Native loop is unreliable on large MP4s in Chromium; also set in JS
+		video.loop = true;
+
+		safePlay(video);
+
+		const restartLoop = () => {
+			try {
+				video.currentTime = 0;
+			} catch {
+				/* seek can fail mid-decode on large files */
+			}
+			safePlay(video);
+		};
+
+		const onEnded = () => restartLoop();
+
+		const onVisibility = () => {
+			if (document.visibilityState === "visible") safePlay(video);
+		};
+
+		// If the browser pauses without ending (decode stall), nudge playback
+		const onPause = () => {
+			if (
+				document.visibilityState !== "visible" ||
+				video.seeking ||
+				reduceMotion
+			) {
+				return;
+			}
+			// Near EOF without firing ended — restart; otherwise resume
+			if (video.duration && video.currentTime >= video.duration - 0.35) {
+				restartLoop();
+			} else if (video.paused) {
+				safePlay(video);
+			}
+		};
+
+		video.addEventListener("ended", onEnded);
+		video.addEventListener("pause", onPause);
+		document.addEventListener("visibilitychange", onVisibility);
+
+		return () => {
+			video.removeEventListener("ended", onEnded);
+			video.removeEventListener("pause", onPause);
+			document.removeEventListener("visibilitychange", onVisibility);
+		};
+	}, [enabled, reduceMotion, videoRef]);
+}
+
+/** Crossfade between two synced muted players so the loop seam is soft. */
+function useSoftLoopCrossfade(
+	primaryRef: RefObject<HTMLVideoElement | null>,
+	secondaryRef: RefObject<HTMLVideoElement | null>,
+	activeIndex: 0 | 1,
+	setActiveIndex: (index: 0 | 1) => void,
+	reduceMotion: boolean | null,
+	enabled: boolean,
+) {
+	const crossfadingRef = useRef(false);
+
+	useEffect(() => {
+		const primary = primaryRef.current;
+		const secondary = secondaryRef.current;
+		if (!primary || !secondary) return;
+
+		const active = activeIndex === 0 ? primary : secondary;
+		const standby = activeIndex === 0 ? secondary : primary;
+
+		if (reduceMotion || !enabled) {
+			primary.pause();
+			secondary.pause();
+			return;
+		}
+
+		for (const video of [primary, secondary]) {
+			video.muted = true;
+			video.defaultMuted = true;
+			video.playsInline = true;
+			video.loop = false;
+		}
+
+		safePlay(active);
+
+		const onTimeUpdate = () => {
+			if (crossfadingRef.current || !active.duration) return;
+			if (active.currentTime < active.duration - DEMO_LOOP_FADE_S) return;
+
+			crossfadingRef.current = true;
+			try {
+				standby.currentTime = 0;
+			} catch {
+				/* ignore */
+			}
+			safePlay(standby);
+			setActiveIndex(activeIndex === 0 ? 1 : 0);
+
+			window.setTimeout(() => {
+				active.pause();
+				crossfadingRef.current = false;
+			}, DEMO_LOOP_FADE_MS);
+		};
+
+		const onVisibility = () => {
+			if (document.visibilityState === "visible") safePlay(active);
+		};
+
+		active.addEventListener("timeupdate", onTimeUpdate);
+		document.addEventListener("visibilitychange", onVisibility);
+
+		return () => {
+			active.removeEventListener("timeupdate", onTimeUpdate);
+			document.removeEventListener("visibilitychange", onVisibility);
+		};
+	}, [
+		activeIndex,
+		enabled,
+		primaryRef,
+		reduceMotion,
+		secondaryRef,
+		setActiveIndex,
+	]);
 }
 
 function LogoMarquee() {
@@ -86,7 +642,14 @@ function LogoMarquee() {
 export default function LandingHero() {
 	const reduceMotion = useReducedMotion();
 	const videoRef = useRef<HTMLVideoElement | null>(null);
+	const demoVideoPrimaryRef = useRef<HTMLVideoElement | null>(null);
+	const demoVideoSecondaryRef = useRef<HTMLVideoElement | null>(null);
+	const demoFrameRef = useRef<HTMLDivElement | null>(null);
 	const [crossfadeIndex, setCrossfadeIndex] = useState(0);
+	const [demoInView, setDemoInView] = useState(false);
+	const [demoShouldLoad, setDemoShouldLoad] = useState(false);
+	const [demoLoaded, setDemoLoaded] = useState(false);
+	const [demoActiveLayer, setDemoActiveLayer] = useState<0 | 1>(0);
 
 	useEffect(() => {
 		if (reduceMotion) return;
@@ -97,60 +660,46 @@ export default function LandingHero() {
 	}, [reduceMotion]);
 
 	useEffect(() => {
-		if (reduceMotion) return;
-		const video = videoRef.current;
-		if (!video) return;
+		const frame = demoFrameRef.current;
+		if (!frame) return;
 
-		// Force muted before play — required for autoplay policies
-		video.muted = true;
-		video.defaultMuted = true;
-		video.playsInline = true;
-		// Native loop is unreliable on large MP4s in Chromium; also set in JS
-		video.loop = true;
+		const observer = new IntersectionObserver(
+			([entry]) => {
+				const visible = Boolean(entry?.isIntersecting);
+				setDemoInView(visible);
+				if (visible) setDemoShouldLoad(true);
+			},
+			{ rootMargin: "120px 0px", threshold: 0.2 },
+		);
 
-		safePlay(video);
+		observer.observe(frame);
+		return () => observer.disconnect();
+	}, []);
 
-		const restartLoop = () => {
+	useAutoplayLoopVideo(videoRef, reduceMotion);
+	useSoftLoopCrossfade(
+		demoVideoPrimaryRef,
+		demoVideoSecondaryRef,
+		demoActiveLayer,
+		setDemoActiveLayer,
+		reduceMotion,
+		demoInView && demoShouldLoad && demoLoaded,
+	);
+
+	useEffect(() => {
+		if (!reduceMotion) return;
+		for (const demo of [
+			demoVideoPrimaryRef.current,
+			demoVideoSecondaryRef.current,
+		]) {
+			if (!demo) continue;
+			demo.pause();
 			try {
-				video.currentTime = 0;
+				demo.currentTime = 0;
 			} catch {
-				/* seek can fail mid-decode on large files */
+				/* ignore */
 			}
-			safePlay(video);
-		};
-
-		const onEnded = () => restartLoop();
-
-		const onVisibility = () => {
-			if (document.visibilityState === "visible") safePlay(video);
-		};
-
-		// If the browser pauses without ending (decode stall), nudge playback
-		const onPause = () => {
-			if (
-				document.visibilityState !== "visible" ||
-				video.seeking ||
-				reduceMotion
-			) {
-				return;
-			}
-			// Near EOF without firing ended — restart; otherwise resume
-			if (video.duration && video.currentTime >= video.duration - 0.35) {
-				restartLoop();
-			} else if (video.paused) {
-				safePlay(video);
-			}
-		};
-
-		video.addEventListener("ended", onEnded);
-		video.addEventListener("pause", onPause);
-		document.addEventListener("visibilitychange", onVisibility);
-
-		return () => {
-			video.removeEventListener("ended", onEnded);
-			video.removeEventListener("pause", onPause);
-			document.removeEventListener("visibilitychange", onVisibility);
-		};
+		}
 	}, [reduceMotion]);
 
 	return (
@@ -224,7 +773,7 @@ export default function LandingHero() {
 			</div>
 
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 relative z-20">
-				<div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
+				<div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-start">
 					<motion.div
 						className="flex flex-col gap-4"
 						variants={staggerContainer}
@@ -330,7 +879,7 @@ export default function LandingHero() {
 							className="mt-4 max-w-md mx-auto lg:mx-0 rounded-xl bg-white/80 p-4 shadow-[0_1px_2px_0_rgba(15,23,42,0.06)]"
 						>
 							<p className="text-slate-800 text-base italic">
-								&ldquo;I use Caalm every day to keep all our contracts and
+								&ldquo;I use CAALM every day to keep all our contracts and
 								compliance documents organized. It&rsquo;s so helpful, our team
 								never misses a deadline or audit anymore!&rdquo;
 							</p>
@@ -357,25 +906,72 @@ export default function LandingHero() {
 					</motion.div>
 
 					<motion.div
-						className="relative flex items-center justify-center"
+						className="relative w-full flex flex-col gap-5 lg:gap-6"
 						initial={reduceMotion ? false : { opacity: 0, y: 32 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
 					>
-						<motion.div
-							animate={reduceMotion ? undefined : { y: [0, -10, 0] }}
-							transition={
-								reduceMotion
-									? undefined
-									: { duration: 4, repeat: Infinity, ease: "easeInOut" }
-							}
-							className="relative w-full max-w-[440px]"
+						<div
+							ref={demoFrameRef}
+							className="relative w-full aspect-video overflow-hidden rounded-lg border border-white/70 bg-white/60 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md"
 						>
-							<div
-								className="relative rounded-2xl shadow-xl border border-white/60 w-full aspect-square bg-transparent"
-								aria-hidden
-							/>
-						</motion.div>
+							{!demoLoaded && (
+								<div
+									aria-hidden
+									className="absolute inset-0 z-10 animate-pulse bg-linear-to-br from-slate-200/80 via-slate-100/70 to-slate-200/80"
+								/>
+							)}
+							{demoShouldLoad && (
+								<>
+									<video
+										ref={demoVideoPrimaryRef}
+										src={DEMO_VIDEO_SRC}
+										muted
+										playsInline
+										preload="auto"
+										autoPlay={!reduceMotion && demoInView}
+										onLoadedData={() => setDemoLoaded(true)}
+										className={`absolute inset-0 h-full w-full object-contain object-center brightness-[1.09] contrast-[1.04] transition-opacity ease-in-out ${
+											demoLoaded && demoActiveLayer === 0
+												? "opacity-100"
+												: "opacity-0"
+										}`}
+										style={{ transitionDuration: `${DEMO_LOOP_FADE_MS}ms` }}
+										aria-label="CAALM product demo"
+									/>
+									<video
+										ref={demoVideoSecondaryRef}
+										src={DEMO_VIDEO_SRC}
+										muted
+										playsInline
+										preload="auto"
+										className={`absolute inset-0 h-full w-full object-contain object-center brightness-[1.09] contrast-[1.04] transition-opacity ease-in-out ${
+											demoLoaded && demoActiveLayer === 1
+												? "opacity-100"
+												: "opacity-0"
+										}`}
+										style={{ transitionDuration: `${DEMO_LOOP_FADE_MS}ms` }}
+										aria-hidden
+									/>
+								</>
+							)}
+						</div>
+
+						<div className="grid grid-cols-3 gap-3 sm:gap-4 w-full">
+							{HERO_TRUST_PILLARS.map((pillar) => (
+								<article key={pillar.id} className="flex min-w-0 flex-col">
+									<div className="mb-3 h-24 sm:h-28 md:h-32 w-full">
+										<pillar.Visual animate={!reduceMotion} />
+									</div>
+									<h3 className="text-xs sm:text-sm font-semibold leading-snug sidebar-gradient-text">
+										{pillar.title}
+									</h3>
+									<p className="mt-1 text-[11px] sm:text-xs leading-snug text-slate-600 line-clamp-3">
+										{pillar.description}
+									</p>
+								</article>
+							))}
+						</div>
 					</motion.div>
 				</div>
 			</div>

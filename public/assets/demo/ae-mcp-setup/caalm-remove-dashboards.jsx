@@ -1,4 +1,4 @@
-(function () {
+(() => {
 	var report = {
 		status: "success",
 		removed: 0,

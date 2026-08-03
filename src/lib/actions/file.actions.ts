@@ -3,18 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { ID, type Models, Query } from "node-appwrite";
 import { InputFile } from "node-appwrite/file";
-import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { ContractTypeMapper } from "@/lib/api/contracts/services/ContractTypeMapper";
+import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createAdminClient } from "@/lib/appwrite";
-import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
-import { CACHE_KEYS } from "@/lib/services/cache-keys";
-import CacheManager from "@/lib/services/cache-manager";
+import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import {
 	getFileShareNotificationTitle,
 	getFileShareViewActionText,
 } from "@/lib/files/fileShareNotification";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 import { constructFileUrl, getFileType, parseStringify } from "@/lib/utils";
 import {
 	triggerContractExpiryNotification,
@@ -43,7 +43,6 @@ const sanitizePayload = <T extends Record<string, unknown>>(payload: T) =>
 			return value !== undefined && value !== null && value !== "";
 		}),
 	);
-
 
 /** Map code compliance values onto the active database enum when needed. */
 const normalizeComplianceForDb = (value?: string): string | undefined => {
@@ -495,19 +494,16 @@ export const uploadFile = async ({
 					metadata?.reviewerComments,
 					CONTRACT_STRING_LIMITS.reviewerComments,
 				),
-				fileId: clampAppwriteString(
-					newFile.$id,
-					CONTRACT_STRING_LIMITS.fileId,
-				),
+				fileId: clampAppwriteString(newFile.$id, CONTRACT_STRING_LIMITS.fileId),
 				// fileRef is a relationship attribute - Appwrite will handle it automatically
 				// Setting it as a string causes validation errors
-				orgId: clampAppwriteString(
-					resolvedOrgId,
-					CONTRACT_STRING_LIMITS.orgId,
-				),
+				orgId: clampAppwriteString(resolvedOrgId, CONTRACT_STRING_LIMITS.orgId),
 				selectedContractType: metadata?.selectedContractType,
 				grantTerms: clampAppwriteString(metadata?.grantTerms, 1000),
-				donorRestrictions: clampAppwriteString(metadata?.donorRestrictions, 1000),
+				donorRestrictions: clampAppwriteString(
+					metadata?.donorRestrictions,
+					1000,
+				),
 				projectDescription: clampAppwriteString(
 					metadata?.projectDescription,
 					1000,

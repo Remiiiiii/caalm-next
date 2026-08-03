@@ -2,7 +2,7 @@
  * Fix: move CAALM Dashboard layers below text so motion graphics stay readable.
  * Also try replacing footage inside Design* comps with cycled dashboards.
  */
-(function () {
+(() => {
 	var DASHBOARD_FILES = [
 		"demo-05-audit-charts.png",
 		"demo-06-analytics.png",
@@ -57,10 +57,9 @@
 						if (sw > 0) {
 							var scale = ((item.width * 0.62) / sw) * 100;
 							layer.property("Scale").setValue([scale, scale]);
-							layer.property("Position").setValue([
-								item.width * 0.62,
-								item.height * 0.55,
-							]);
+							layer
+								.property("Position")
+								.setValue([item.width * 0.62, item.height * 0.55]);
 						}
 					} catch (e1) {}
 					break;

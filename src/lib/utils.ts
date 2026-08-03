@@ -80,7 +80,9 @@ export const DOCUMENT_FILE_EXTENSIONS = [
 	"afphoto",
 ] as const;
 
-export function isDocumentFileExtension(extension: string | null | undefined): boolean {
+export function isDocumentFileExtension(
+	extension: string | null | undefined,
+): boolean {
 	if (!extension) return false;
 	return DOCUMENT_FILE_EXTENSIONS.includes(
 		extension.toLowerCase() as (typeof DOCUMENT_FILE_EXTENSIONS)[number],

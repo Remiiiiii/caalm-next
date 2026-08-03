@@ -15,15 +15,16 @@ async function fetchStorageUsage(): Promise<StorageUsagePayload> {
 }
 
 export function useStorageUsage() {
-	const { data, error, isLoading, mutate: localMutate } = useSWR(
-		STORAGE_USAGE_SWR_KEY,
-		fetchStorageUsage,
-		{
-			refreshInterval: 15000,
-			revalidateOnFocus: true,
-			dedupingInterval: 5000,
-		},
-	);
+	const {
+		data,
+		error,
+		isLoading,
+		mutate: localMutate,
+	} = useSWR(STORAGE_USAGE_SWR_KEY, fetchStorageUsage, {
+		refreshInterval: 15000,
+		revalidateOnFocus: true,
+		dedupingInterval: 5000,
+	});
 
 	return {
 		totalSpace: data ?? null,

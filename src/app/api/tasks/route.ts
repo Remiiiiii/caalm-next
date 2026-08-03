@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const permissionCheck = await requirePermission(request, {
@@ -25,7 +28,10 @@ export async function GET(request: NextRequest) {
 
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		if (!defaultOrg) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const { searchParams } = new URL(request.url);
@@ -59,14 +65,17 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json({
 			success: true,
 			data: { tasks: result.tasks },
-			meta: { total: result.total, limit: validated.limit, offset: validated.offset },
+			meta: {
+				total: result.total,
+				limit: validated.limit,
+				offset: validated.offset,
+			},
 		});
 	} catch (error) {
 		console.error("Tasks GET error:", error);
 		return NextResponse.json(
 			{
-				error:
-					error instanceof Error ? error.message : "Failed to fetch tasks",
+				error: error instanceof Error ? error.message : "Failed to fetch tasks",
 			},
 			{ status: 500 },
 		);
@@ -77,7 +86,10 @@ export async function POST(request: NextRequest) {
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const permissionCheck = await requirePermission(request, {
@@ -87,7 +99,10 @@ export async function POST(request: NextRequest) {
 
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		if (!defaultOrg) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const body = await request.json();
@@ -141,7 +156,10 @@ export async function POST(request: NextRequest) {
 			metadata: { assigneeId: task.assigneeId },
 		}).catch(() => undefined);
 
-		return NextResponse.json({ success: true, data: { task } }, { status: 201 });
+		return NextResponse.json(
+			{ success: true, data: { task } },
+			{ status: 201 },
+		);
 	} catch (error) {
 		console.error("Tasks POST error:", error);
 		const message =

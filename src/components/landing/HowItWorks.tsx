@@ -69,7 +69,11 @@ export default function HowItWorks() {
 						aria-hidden
 					/>
 					{HOW_IT_WORKS_STEPS.map((item) => (
-						<motion.div key={item.step} variants={fadeLeft} className="relative">
+						<motion.div
+							key={item.step}
+							variants={fadeLeft}
+							className="relative"
+						>
 							<div className="absolute -left-6 top-5 h-3 w-3 rounded-full bg-[#0f5384] ring-4 ring-white" />
 							<LandingFrostedCard contentClassName="p-4">
 								<p className="text-xs font-semibold uppercase tracking-wider text-[#0f5384]">

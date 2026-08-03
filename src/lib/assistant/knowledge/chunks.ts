@@ -76,7 +76,10 @@ function tourChunks(): KnowledgeChunk[] {
 		keywords: [
 			tip.id.replace("demo-", ""),
 			tip.title.toLowerCase(),
-			...tip.body.toLowerCase().split(/\W+/).filter((w) => w.length > 4),
+			...tip.body
+				.toLowerCase()
+				.split(/\W+/)
+				.filter((w) => w.length > 4),
 		],
 	}));
 }

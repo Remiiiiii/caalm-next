@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 
 export default function Page() {
 	return (
-		<ITPageShell title="Security Compliance" subtitle="Compliance posture and control status" icon={ShieldCheck}>
+		<ITPageShell
+			title="Security Compliance"
+			subtitle="Compliance posture and control status"
+			icon={ShieldCheck}
+		>
 			<ITGlassPanel>
 				<p className="text-sm text-slate-600 mb-4">
 					Compliance status and controls live in the Audits module.

@@ -58,8 +58,7 @@ export async function POST(request: NextRequest) {
 		if (existing.status === "closed") {
 			return NextResponse.json(
 				{
-					error:
-						"This conversation is closed. Start a new chat to continue.",
+					error: "This conversation is closed. Start a new chat to continue.",
 				},
 				{ status: 409 },
 			);
@@ -75,8 +74,7 @@ export async function POST(request: NextRequest) {
 		(Array.isArray(body.history) &&
 			body.history
 				.filter(
-					(m: { role?: string; content?: string }) =>
-						m?.role && m?.content,
+					(m: { role?: string; content?: string }) => m?.role && m?.content,
 				)
 				.map((m: { role: string; content: string }) => ({
 					role: m.role === "assistant" ? "assistant" : "user",
@@ -107,9 +105,7 @@ export async function POST(request: NextRequest) {
 		content: turn.answer,
 		sourcesJson: JSON.stringify(turn.sources),
 		metadataJson: JSON.stringify({
-			...(turn.pendingAction
-				? { pendingActionId: turn.pendingAction.id }
-				: {}),
+			...(turn.pendingAction ? { pendingActionId: turn.pendingAction.id } : {}),
 			...(turn.suggestions?.length ? { suggestions: turn.suggestions } : {}),
 		}),
 	});
@@ -117,10 +113,7 @@ export async function POST(request: NextRequest) {
 	const now = new Date().toISOString();
 	await updateConversationMeta(convId, {
 		lastMessageAt: now,
-		lastMessagePreview: truncatePreview(
-			turn.answer.replace(/[#*`]/g, ""),
-			120,
-		),
+		lastMessagePreview: truncatePreview(turn.answer.replace(/[#*`]/g, ""), 120),
 		title: truncatePreview(message, 80),
 	});
 

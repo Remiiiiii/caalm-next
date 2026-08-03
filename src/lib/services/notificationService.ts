@@ -53,7 +53,9 @@ function normalizeNotificationRow<T extends Record<string, unknown>>(
 	return row;
 }
 
-function rowUserId(row: Record<string, unknown> | null | undefined): string | null {
+function rowUserId(
+	row: Record<string, unknown> | null | undefined,
+): string | null {
 	if (!row) return null;
 	const normalized = normalizeNotificationRow(row);
 	const id = normalized.userId;
@@ -422,7 +424,9 @@ class NotificationService {
 				// Combine and deduplicate by $id
 				const existingIds = new Set(allNotifications.map((n: any) => n.$id));
 				const uniqueAccountIdNotifications = accountIdNotifications
-					.map((n: any) => normalizeNotificationRow(n as Record<string, unknown>))
+					.map((n: any) =>
+						normalizeNotificationRow(n as Record<string, unknown>),
+					)
 					.filter((n: any) => !existingIds.has(n.$id));
 				allNotifications = [
 					...allNotifications,
@@ -752,9 +756,7 @@ class NotificationService {
 				if (notification.userId && notification.userId !== userDocId) {
 					await CacheManager.invalidateNotifications(notification.userId);
 				}
-				console.log(
-					`[SERVER] Invalidated notification cache for ${userDocId}`,
-				);
+				console.log(`[SERVER] Invalidated notification cache for ${userDocId}`);
 			} catch (cacheError) {
 				console.warn(`[SERVER] Could not invalidate cache:`, cacheError);
 			}

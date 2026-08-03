@@ -10,9 +10,9 @@ import {
 	useState,
 } from "react";
 import { normalizeUserRole } from "@/constants/rbac";
-import { isAuthRoute, isProtectedAppRoute } from "@/lib/auth/protectedRoutes";
 import { getSessionUser } from "@/lib/actions/auth.actions";
 import { getCurrentUserFrom2FA } from "@/lib/actions/user.actions";
+import { isAuthRoute, isProtectedAppRoute } from "@/lib/auth/protectedRoutes";
 
 type AuthenticatedUser = Models.User<Models.Preferences> & {
 	role?: string;

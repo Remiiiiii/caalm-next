@@ -1,6 +1,11 @@
 "use client";
 
-import { ArrowRight, CalendarRange, ClipboardCheck, Download } from "lucide-react";
+import {
+	ArrowRight,
+	CalendarRange,
+	ClipboardCheck,
+	Download,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -99,7 +104,8 @@ export function AuditReadinessHero({
 					<div
 						className={cn(
 							"flex flex-col gap-6 min-w-0 flex-1",
-							!hasPeriodControl && "xl:flex-row xl:items-center xl:justify-between",
+							!hasPeriodControl &&
+								"xl:flex-row xl:items-center xl:justify-between",
 						)}
 					>
 						<div className="flex items-start gap-4 min-w-0 flex-1">

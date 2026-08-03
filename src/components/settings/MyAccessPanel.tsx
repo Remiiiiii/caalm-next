@@ -7,10 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
-import {
-	PERMISSION_DEFINITIONS,
-	PERMISSIONS,
-} from "@/constants/permissions";
+import { PERMISSION_DEFINITIONS, PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -38,7 +35,12 @@ export default function MyAccessPanel() {
 		const permissionSet = new Set(permissions);
 		const byCategory: Record<
 			string,
-			Array<{ key: string; name: string; granted: boolean; description?: string }>
+			Array<{
+				key: string;
+				name: string;
+				granted: boolean;
+				description?: string;
+			}>
 		> = {};
 
 		for (const def of PERMISSION_DEFINITIONS) {
@@ -75,7 +77,9 @@ export default function MyAccessPanel() {
 							</p>
 							<div className="flex flex-wrap gap-2 mt-2">
 								{roles.length === 0 ? (
-									<span className="text-sm text-slate-600">No roles assigned</span>
+									<span className="text-sm text-slate-600">
+										No roles assigned
+									</span>
 								) : (
 									roles.map((r) => (
 										<Badge

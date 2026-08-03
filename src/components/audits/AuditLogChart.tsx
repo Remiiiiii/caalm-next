@@ -50,7 +50,13 @@ export function AuditLogChart({ data, isLoading }: AuditLogChartProps) {
 					<ResponsiveContainer width="100%" height="100%">
 						<AreaChart data={chartData} margin={{ left: 4, right: 8, top: 8 }}>
 							<defs>
-								<linearGradient id="auditVolumeFill" x1="0" y1="0" x2="0" y2="1">
+								<linearGradient
+									id="auditVolumeFill"
+									x1="0"
+									y1="0"
+									x2="0"
+									y2="1"
+								>
 									<stop
 										offset="0%"
 										stopColor={CAALM_CHART_COLORS.primary}

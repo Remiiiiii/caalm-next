@@ -14,10 +14,7 @@ export type ApprovalStepStatus =
 	| "rejected"
 	| "skipped";
 
-export type ApprovalDecision =
-	| "approved"
-	| "changes_requested"
-	| "rejected";
+export type ApprovalDecision = "approved" | "changes_requested" | "rejected";
 
 export type ApprovalNotificationType =
 	| "upload_submitted"

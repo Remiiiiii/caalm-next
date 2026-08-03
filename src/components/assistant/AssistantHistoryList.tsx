@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import type { AssistantConversationSummary } from "@/components/assistant/assistantTypes";
 import { formatRelativeTime } from "@/lib/assistant/formatMarkdown";
 import { cn } from "@/lib/utils";
-import type { AssistantConversationSummary } from "@/components/assistant/assistantTypes";
 
 type Props = {
 	conversations: AssistantConversationSummary[];
@@ -20,7 +20,9 @@ export default function AssistantHistoryList({
 }: Props) {
 	if (loading) {
 		return (
-			<p className="text-sm text-slate-600 py-8 text-center">Loading history…</p>
+			<p className="text-sm text-slate-600 py-8 text-center">
+				Loading history…
+			</p>
 		);
 	}
 
@@ -76,7 +78,9 @@ export default function AssistantHistoryList({
 								)}
 							</div>
 							<span className="shrink-0 text-xs text-slate-500 pt-0.5">
-								{formatRelativeTime(c.lastMessageAt || c.$createdAt || new Date().toISOString())}
+								{formatRelativeTime(
+									c.lastMessageAt || c.$createdAt || new Date().toISOString(),
+								)}
 							</span>
 						</button>
 					</li>

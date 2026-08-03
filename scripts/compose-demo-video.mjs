@@ -3,7 +3,7 @@
  * Magnific AI generation was skipped by the user; this produces H.264 1920x1080 @ 30fps.
  */
 import { spawn } from "node:child_process";
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 
@@ -220,12 +220,7 @@ async function main() {
 	);
 
 	// Keep end-card PNG in screenshots folder for reuse
-	await run("ffmpeg", [
-		"-y",
-		"-i",
-		endCard,
-		path.join(SHOTS, "end-card.png"),
-	]);
+	await run("ffmpeg", ["-y", "-i", endCard, path.join(SHOTS, "end-card.png")]);
 
 	console.log("wrote", OUT);
 	await rm(TMP, { recursive: true, force: true }).catch(() => {});

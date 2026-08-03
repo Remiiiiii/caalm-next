@@ -1,6 +1,13 @@
 "use client";
 
-import { Ban, Loader2, Save, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import {
+	Ban,
+	Loader2,
+	Save,
+	ShieldCheck,
+	Trash2,
+	UserRound,
+} from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import Avatar from "@/components/ui/avatar";
@@ -266,7 +273,10 @@ export function UserManagementActionDialogs({
 					</div>
 					<div>
 						<Label className="mb-1 text-sm text-slate-700">Department</Label>
-						<Select value={department || "__none"} onValueChange={(v) => setDepartment(v === "__none" ? "" : v)}>
+						<Select
+							value={department || "__none"}
+							onValueChange={(v) => setDepartment(v === "__none" ? "" : v)}
+						>
 							<SelectTrigger className="bg-white">
 								<SelectValue placeholder="Select department" />
 							</SelectTrigger>

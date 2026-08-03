@@ -122,7 +122,7 @@ export const Header = () => {
 								scrolled ? "text-lg" : "text-xl sm:text-2xl",
 							)}
 						>
-							Caalm
+							CAALM
 						</span>
 					</Link>
 				</div>

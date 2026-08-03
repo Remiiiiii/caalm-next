@@ -7,10 +7,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { Fragment, memo, useEffect } from "react";
 import ITSidebar from "@/components/ITSidebar";
 import StorageUsageBar from "@/components/StorageUsageBar";
-import SidebarCollapsedRail from "@/components/sidebar/SidebarCollapsedRail";
-import SidebarCollapseToggle from "@/components/sidebar/SidebarCollapseToggle";
 import { NavItemIcon } from "@/components/sidebar/NavItemIcon";
 import { SectionNavIcon } from "@/components/sidebar/SectionNavIcon";
+import SidebarCollapsedRail from "@/components/sidebar/SidebarCollapsedRail";
+import SidebarCollapseToggle from "@/components/sidebar/SidebarCollapseToggle";
 import {
 	DASHBOARD_ITEM_COLORS,
 	ITEM_ICONS,
@@ -268,7 +268,10 @@ const Sidebar = memo(
 																		)}
 																		{(() => {
 																			const iconConfig = ITEM_ICONS[item.name];
-																			if (!iconConfig && item.name !== "Documents") {
+																			if (
+																				!iconConfig &&
+																				item.name !== "Documents"
+																			) {
 																				return null;
 																			}
 																			const isPriority = index < 3;

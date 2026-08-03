@@ -33,7 +33,11 @@ function toneFor(percent: number): "green" | "amber" | "red" {
 }
 
 function fillFor(tone: "green" | "amber" | "red"): string {
-	return tone === "green" ? "bg-green" : tone === "amber" ? "bg-orange" : "bg-red";
+	return tone === "green"
+		? "bg-green"
+		: tone === "amber"
+			? "bg-orange"
+			: "bg-red";
 }
 
 function AnimatedPercentBar({
@@ -51,7 +55,10 @@ function AnimatedPercentBar({
 }) {
 	return (
 		<div
-			className={cn("rounded-full bg-slate-200 overflow-hidden", trackClassName)}
+			className={cn(
+				"rounded-full bg-slate-200 overflow-hidden",
+				trackClassName,
+			)}
 		>
 			<motion.div
 				className={cn("h-full rounded-full", fillClassName)}

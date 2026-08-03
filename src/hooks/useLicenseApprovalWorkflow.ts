@@ -19,9 +19,7 @@ async function fetchWorkflow(
 }
 
 export function useLicenseApprovalWorkflow(licenseId: string | null) {
-	const key = licenseId
-		? `/api/licenses/${licenseId}/approval-workflow`
-		: null;
+	const key = licenseId ? `/api/licenses/${licenseId}/approval-workflow` : null;
 
 	const { data, error, isLoading, mutate } = useSWR(key, fetchWorkflow, {
 		revalidateOnFocus: false,

@@ -1,4 +1,4 @@
-(function () {
+(() => {
 	var report = {
 		status: "ok",
 		activeComp: null,
@@ -81,7 +81,9 @@
 				if (ac.time < ly.inPoint || ac.time > ly.outPoint) continue;
 				var brief = layerBrief(ac, ly);
 				// Flag large light rectangles
-				var isDash = ly.name === "CAALM Dashboard" || /demo-0\d/.test(String(brief.sourceName || ""));
+				var isDash =
+					ly.name === "CAALM Dashboard" ||
+					/demo-0\d/.test(String(brief.sourceName || ""));
 				var isWhiteSolid =
 					brief.sourceType === "Solid" &&
 					brief.solidColor &&
@@ -92,7 +94,11 @@
 					brief.scale &&
 					(brief.scale[0] > 40 ||
 						(brief.sourceWidth && brief.sourceWidth > ac.width * 0.3));
-				if (isDash || isWhiteSolid || (isLarge && brief.sourceType === "File")) {
+				if (
+					isDash ||
+					isWhiteSolid ||
+					(isLarge && brief.sourceType === "File")
+				) {
 					report.suspiciousLayersInActive.push(brief);
 				}
 			}
@@ -147,7 +153,9 @@
 	delete report.caalmDashboardLayers;
 	delete report.whiteSolidLayers;
 
-	var f = new File(Folder.myDocuments.fsName + "/ae-mcp-bridge/ae_mcp_result.json");
+	var f = new File(
+		Folder.myDocuments.fsName + "/ae-mcp-bridge/ae_mcp_result.json",
+	);
 	f.encoding = "UTF-8";
 	f.open("w");
 	f.write(JSON.stringify(report, null, 2));

@@ -21,12 +21,12 @@ const Footer = () => {
 							<div className="relative h-7 w-7 shrink-0 sm:h-8 sm:w-8">
 								<Image
 									src="/assets/images/logo.svg"
-									alt="Caalm Logo"
+									alt="CAALM Logo"
 									fill
 									className="object-contain"
 								/>
 							</div>
-							<span className="ml-2 text-lg sm:text-xl font-bold">Caalm</span>
+							<span className="ml-2 text-lg sm:text-xl font-bold">CAALM</span>
 						</div>
 						<p className="mt-3 sm:mt-4 text-slate-light text-sm sm:text-base">
 							Automated data & document management for modern compliance teams.
@@ -147,7 +147,7 @@ const Footer = () => {
 				</div>
 
 				<div className="mt-8 border-t border-navy-dark pt-6 sm:pt-8 text-center text-slate-dark text-xs sm:text-sm">
-					<p>© 2026 Caalm. All rights reserved.</p>
+					<p>© 2026 CAALM. All rights reserved.</p>
 				</div>
 			</div>
 		</footer>

@@ -101,12 +101,12 @@ export default function SplineExpiryScene({
       >
         <Image
           src="/assets/icons/sparkles.svg"
-          alt="Caalm AI"
+          alt="CAALM AI"
           width={24}
           height={24}
         />
         <span className="text-slate-800 text-md sidebar-gradient-text">
-          Caalm AI
+          CAALM AI
         </span>
       </div>  */}
 		</div>

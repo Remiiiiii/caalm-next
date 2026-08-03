@@ -218,9 +218,7 @@ const CountdownTimer = ({
 				</div>
 			) : (
 				<>
-					<div
-						className={`mb-3 grid text-slate-700 ${sizeClasses.grid}`}
-					>
+					<div className={`mb-3 grid text-slate-700 ${sizeClasses.grid}`}>
 						{formatTimeUnit(timeRemaining.days, "Days")}
 						{formatTimeUnit(timeRemaining.hours, "Hours")}
 						{formatTimeUnit(timeRemaining.minutes, "Min")}

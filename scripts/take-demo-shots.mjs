@@ -1,7 +1,7 @@
-import { chromium } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { chromium } from "@playwright/test";
 import { DEMOS, renderDemoPage } from "./demo-assets/demo-templates.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

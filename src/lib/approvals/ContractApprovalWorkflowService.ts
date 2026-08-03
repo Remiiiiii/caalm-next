@@ -7,10 +7,7 @@ import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecov
 import { isDemoMode } from "@/lib/config/demo-mode";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { getProfilePictureUrl } from "@/lib/utils";
-import {
-	getAllAdmins,
-	getAllExecutives,
-} from "@/lib/utils/get-users-by-role";
+import { getAllAdmins, getAllExecutives } from "@/lib/utils/get-users-by-role";
 import { triggerNotification } from "@/lib/utils/notificationTriggers";
 import type {
 	ApprovalDecision,
@@ -47,7 +44,9 @@ export type BuildDerivedStepsInput = {
 };
 
 function uniqueIds(ids: Array<string | undefined | null>): string[] {
-	return [...new Set(ids.filter((id): id is string => !!id && id.trim().length > 0))];
+	return [
+		...new Set(ids.filter((id): id is string => !!id && id.trim().length > 0)),
+	];
 }
 
 function stepId(kind: string, index: number): string {
@@ -86,7 +85,9 @@ export function assertDecisionAllowed({
 		!adminOverride &&
 		!isDemoMode()
 	) {
-		throw new Error("Uploader cannot approve their own contract at executive step");
+		throw new Error(
+			"Uploader cannot approve their own contract at executive step",
+		);
 	}
 }
 
@@ -137,7 +138,8 @@ export function buildDerivedSteps(
 		id: stepId("department_review", i++),
 		kind: "department_review",
 		label: "Department review",
-		assigneeUserIds: managers.length > 0 ? managers : uploader ? [uploader] : [],
+		assigneeUserIds:
+			managers.length > 0 ? managers : uploader ? [uploader] : [],
 		status: "pending",
 	});
 
@@ -361,7 +363,9 @@ function resolveParticipantImageUrl(user: {
 	return getProfilePictureUrl(imageId);
 }
 
-async function lookupUserRow(identifier: string): Promise<Record<string, any> | null> {
+async function lookupUserRow(
+	identifier: string,
+): Promise<Record<string, any> | null> {
 	const byId = await getUserById(identifier);
 	if (byId) return byId as Record<string, any>;
 
@@ -576,7 +580,7 @@ export async function initializeOnUpload({
 	const uploader = String(contract.contractOwnerId || contract.owner || "");
 	const recipients = uniqueIds([
 		...(current?.assigneeUserIds || []),
-		...((departmentManagerIds || []).filter((id) => id !== uploader)),
+		...(departmentManagerIds || []).filter((id) => id !== uploader),
 	]);
 
 	if (recipients.length > 0) {
@@ -609,7 +613,10 @@ export async function initializeOnUpload({
 	await updateContract(contractId, {
 		approvalWorkflowState: serializeWorkflowState(state),
 		currentApprovalStage: current?.label || "Department review",
-		status: contract.status === "action-required" ? "action-required" : "pending-review",
+		status:
+			contract.status === "action-required"
+				? "action-required"
+				: "pending-review",
 	});
 
 	return state;

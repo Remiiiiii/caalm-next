@@ -7,16 +7,16 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { daysUntilExpiry } from "@/lib/renewals/autoRenew";
 import {
+	type AlertChannel,
 	buildExpirySmsMessage,
 	parseAlertChannels,
 	parseAlertRecipientIds,
-	type AlertChannel,
 } from "@/lib/renewals/expiryAlertChannels";
 import {
 	buildExpiryNoticeMetadata,
+	type ExpiryNoticeMetadata,
 	matchesExpiryNoticeMetadata,
 	shouldSendExpiryNotice,
-	type ExpiryNoticeMetadata,
 } from "@/lib/renewals/expiryNotice";
 import {
 	type ContractDepartment,
@@ -137,8 +137,7 @@ async function expiryNoticeAlreadySent(
 	meta: ExpiryNoticeMetadata,
 ): Promise<boolean> {
 	const { tablesDB } = await createAdminClient();
-	const tableId =
-		appwriteConfig.notificationsCollectionId || "notifications";
+	const tableId = appwriteConfig.notificationsCollectionId || "notifications";
 
 	const existing = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId,
@@ -355,9 +354,7 @@ async function notifyEligibleUsers(params: {
 			// Always write an in-app notification for dedupe + bell UI when any
 			// channel is active (email/sms selections still create the record).
 			const wantsInApp =
-				channels.has("in_app") ||
-				channels.has("email") ||
-				channels.has("sms");
+				channels.has("in_app") || channels.has("email") || channels.has("sms");
 
 			if (wantsInApp) {
 				const notification = await createNotification({
@@ -409,10 +406,7 @@ export const checkDocumentExpirations = async () => {
 			const contracts = await tablesDB.listRows({
 				databaseId: appwriteConfig.databaseId,
 				tableId: appwriteConfig.contractsCollectionId,
-				queries: [
-					Query.isNotNull("contractExpiryDate"),
-					Query.limit(1000),
-				],
+				queries: [Query.isNotNull("contractExpiryDate"), Query.limit(1000)],
 			});
 
 			for (const contract of contracts.rows) {
@@ -421,9 +415,7 @@ export const checkDocumentExpirations = async () => {
 				if (contract.isExpired === true) continue;
 
 				const daysUntil = daysUntilExpiry(contract.contractExpiryDate);
-				if (
-					!shouldSendExpiryNotice(daysUntil, contract.renewalNoticeDays)
-				) {
+				if (!shouldSendExpiryNotice(daysUntil, contract.renewalNoticeDays)) {
 					continue;
 				}
 
@@ -444,8 +436,7 @@ export const checkDocumentExpirations = async () => {
 				const actionPhrase = autoRenew
 					? "is scheduled to auto-renew"
 					: "is set to expire";
-				const contractName =
-					(contract.contractName as string) || "Untitled";
+				const contractName = (contract.contractName as string) || "Untitled";
 				const title = autoRenew
 					? "Contract Renewal Notice"
 					: "Contract Expiry Reminder";
@@ -482,10 +473,7 @@ export const checkDocumentExpirations = async () => {
 			const licenses = await tablesDB.listRows({
 				databaseId: appwriteConfig.databaseId,
 				tableId: appwriteConfig.licensesCollectionId,
-				queries: [
-					Query.isNotNull("licenseExpiryDate"),
-					Query.limit(1000),
-				],
+				queries: [Query.isNotNull("licenseExpiryDate"), Query.limit(1000)],
 			});
 
 			for (const license of licenses.rows) {
@@ -493,9 +481,7 @@ export const checkDocumentExpirations = async () => {
 				if (license.status?.toLowerCase() === "expired") continue;
 
 				const daysUntil = daysUntilExpiry(license.licenseExpiryDate);
-				if (
-					!shouldSendExpiryNotice(daysUntil, license.renewalNoticeDays)
-				) {
+				if (!shouldSendExpiryNotice(daysUntil, license.renewalNoticeDays)) {
 					continue;
 				}
 
@@ -513,8 +499,7 @@ export const checkDocumentExpirations = async () => {
 				const actionPhrase = autoRenew
 					? "is scheduled to auto-renew"
 					: "is set to expire";
-				const licenseName =
-					(license.licenseName as string) || "Untitled";
+				const licenseName = (license.licenseName as string) || "Untitled";
 				const title = autoRenew
 					? "License Renewal Notice"
 					: "License Expiry Reminder";

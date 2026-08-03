@@ -2,8 +2,10 @@
 
 import { useCallback } from "react";
 import useSWR from "swr";
-import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.types";
-import type { ApprovalWorkflowViewerPayload } from "@/lib/approvals/contractApprovalWorkflow.types";
+import type {
+	ApprovalDecision,
+	ApprovalWorkflowViewerPayload,
+} from "@/lib/approvals/contractApprovalWorkflow.types";
 
 async function fetchWorkflow(
 	url: string,

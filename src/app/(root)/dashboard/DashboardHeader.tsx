@@ -10,10 +10,7 @@ import NotificationCenter from "@/components/NotificationCenter";
 import { UserRoleDisplay } from "@/components/UserRoleDisplay";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-	useNotifications,
-	useUnreadCount,
-} from "@/hooks/useNotifications";
+import { useNotifications, useUnreadCount } from "@/hooks/useNotifications";
 import { signOutUser } from "@/lib/actions/user.actions";
 
 interface DashboardHeaderProps {

@@ -67,7 +67,8 @@ export class DraftService {
 		return Object.fromEntries(
 			Object.entries(formData)
 				.filter(([_, value]) => {
-					if (value === null || value === undefined || value === "") return false;
+					if (value === null || value === undefined || value === "")
+						return false;
 					if (Array.isArray(value) && value.length === 0) return false;
 					if (
 						typeof value === "object" &&

@@ -14,8 +14,8 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import { fetcher } from "@/lib/swr-config";
 import type { Organization } from "@/lib/rbac/organizations";
+import { fetcher } from "@/lib/swr-config";
 import { CONTRACT_DEPARTMENTS } from "../../../constants";
 
 interface OrgResponse {
@@ -127,9 +127,7 @@ export default function OrganizationSettingsPage() {
 	}
 
 	if (!org) {
-		return (
-			<p className="text-slate-600">Organization could not be loaded.</p>
-		);
+		return <p className="text-slate-600">Organization could not be loaded.</p>;
 	}
 
 	return (

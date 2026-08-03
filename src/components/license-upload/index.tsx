@@ -36,12 +36,12 @@ import {
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
-import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import {
 	buildFormPatchFromLicenseExtraction,
 	isRealLicenseExtractionMethod,
 	parseLicenseExtractionJson,
 } from "@/lib/ai/licenseExtractionSchema";
+import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { STEP_TITLES, TOTAL_STEPS } from "./constants";
 import { useDraftManagement } from "./hooks/useDraftManagement";
 import { useLicenseForm } from "./hooks/useLicenseForm";
@@ -86,17 +86,14 @@ const CancelDialog = dynamic(() => import("./components/CancelDialog"), {
 	ssr: false,
 });
 
-const LicenseReviewStep = dynamic(
-	() => import("./steps/LicenseReviewStep"),
-	{
-		loading: () => (
-			<div className="flex justify-center p-8">
-				<Loader2 className="animate-spin" />
-			</div>
-		),
-		ssr: false,
-	},
-);
+const LicenseReviewStep = dynamic(() => import("./steps/LicenseReviewStep"), {
+	loading: () => (
+		<div className="flex justify-center p-8">
+			<Loader2 className="animate-spin" />
+		</div>
+	),
+	ssr: false,
+});
 
 const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	ownerId,
@@ -126,13 +123,9 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	const fileIngestSuccessTimeoutRef = useRef<ReturnType<
 		typeof setTimeout
 	> | null>(null);
-	const [extractionMethod, setExtractionMethod] = useState<string | null>(
-		null,
-	);
+	const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
 	const [aiFilledFields, setAiFilledFields] = useState<string[]>([]);
-	const [lowConfidenceFields, setLowConfidenceFields] = useState<string[]>(
-		[],
-	);
+	const [lowConfidenceFields, setLowConfidenceFields] = useState<string[]>([]);
 	const [fieldConfidence, setFieldConfidence] = useState<
 		Record<string, number>
 	>({});

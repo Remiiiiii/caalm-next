@@ -864,11 +864,11 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 				</div>
 			</div>
 
-			{/* Invite New User to Caalm */}
+			{/* Invite New User to CAALM */}
 			<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
 				<CardHeader>
 					<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-						Invite New User to Caalm
+						Invite New User to CAALM
 					</CardTitle>
 				</CardHeader>
 				<CardContent>

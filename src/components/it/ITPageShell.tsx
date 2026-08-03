@@ -23,12 +23,7 @@ export function ITPageShell({
 	className,
 }: ITPageShellProps) {
 	return (
-		<div
-			className={cn(
-				"w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6",
-				className,
-			)}
-		>
+		<div className={cn("w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6", className)}>
 			<div className="flex items-center gap-4 mb-4 justify-between flex-wrap w-full">
 				<div>
 					<div className="flex items-center gap-3">
@@ -38,7 +33,9 @@ export function ITPageShell({
 						</h1>
 					</div>
 					{subtitle ? (
-						<p className="text-sm text-slate-600 mt-1 ml-0 sm:ml-8">{subtitle}</p>
+						<p className="text-sm text-slate-600 mt-1 ml-0 sm:ml-8">
+							{subtitle}
+						</p>
 					) : null}
 				</div>
 				{actions}

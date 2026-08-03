@@ -3,11 +3,11 @@ export function formatAssistantMarkdown(text: string): string {
 	let formatted = text;
 	formatted = formatted.replace(
 		/\*\*([^*]+)\*\*/g,
-		"<strong class=\"font-semibold text-slate-900\">$1</strong>",
+		'<strong class="font-semibold text-slate-900">$1</strong>',
 	);
 	formatted = formatted.replace(
 		/`([^`]+)`/g,
-		"<code class=\"rounded bg-slate-200/80 px-1 py-0.5 text-xs\">$1</code>",
+		'<code class="rounded bg-slate-200/80 px-1 py-0.5 text-xs">$1</code>',
 	);
 	formatted = formatted.replace(/\n/g, "<br />");
 	return formatted;

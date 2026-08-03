@@ -1,5 +1,5 @@
-import type { NextRequest } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
+import type { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
 import { licenseCreateSchema } from "@/lib/api/licenses/schemas/license.schema";

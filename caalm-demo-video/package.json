@@ -1,11 +1,11 @@
 {
-  "name": "caalm-demo-video",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "npx --yes hyperframes@0.7.78 preview",
-    "check": "npx --yes hyperframes@0.7.78 check",
-    "render": "npx --yes hyperframes@0.7.78 render --output ../public/assets/video/caalm-demo-15s.mp4",
-    "publish": "npx --yes hyperframes@0.7.78 publish"
-  }
+	"name": "caalm-demo-video",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "npx --yes hyperframes@0.7.78 preview",
+		"check": "npx --yes hyperframes@0.7.78 check",
+		"render": "npx --yes hyperframes@0.7.78 render --output ../public/assets/video/caalm-demo-15s.mp4",
+		"publish": "npx --yes hyperframes@0.7.78 publish"
+	}
 }

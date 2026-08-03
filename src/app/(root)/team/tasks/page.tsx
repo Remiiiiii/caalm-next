@@ -63,13 +63,22 @@ export default function TeamTasksPage() {
 		if (!orgId || !permissions.includes(PERMISSIONS.USERS.VIEW)) return;
 		fetch(`/api/users?orgId=${encodeURIComponent(orgId)}`)
 			.then((r) => (r.ok ? r.json() : []))
-			.then((users: Array<{ $id?: string; id?: string; fullName?: string; email?: string }>) => {
-				const list = (Array.isArray(users) ? users : []).map((u) => ({
-					id: u.$id || u.id || "",
-					name: u.fullName || u.email || "User",
-				}));
-				setAssignees(list.filter((a) => a.id));
-			})
+			.then(
+				(
+					users: Array<{
+						$id?: string;
+						id?: string;
+						fullName?: string;
+						email?: string;
+					}>,
+				) => {
+					const list = (Array.isArray(users) ? users : []).map((u) => ({
+						id: u.$id || u.id || "",
+						name: u.fullName || u.email || "User",
+					}));
+					setAssignees(list.filter((a) => a.id));
+				},
+			)
 			.catch(() => setAssignees([]));
 	}, [orgId, permissions]);
 
@@ -189,10 +198,7 @@ export default function TeamTasksPage() {
 	}
 
 	return (
-		<TasksPageShell
-			canCreate={canCreate}
-			onCreate={() => setCreateOpen(true)}
-		>
+		<TasksPageShell canCreate={canCreate} onCreate={() => setCreateOpen(true)}>
 			<GlassCard className="glass-card mb-6">
 				<div className="glass-card-cap" />
 				<CardContent className="p-0">

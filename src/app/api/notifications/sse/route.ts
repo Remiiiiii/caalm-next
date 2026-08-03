@@ -4,7 +4,10 @@
  */
 
 import type { NextRequest } from "next/server";
-import { getCurrentUser, getCurrentUserFrom2FA } from "@/lib/actions/user.actions";
+import {
+	getCurrentUser,
+	getCurrentUserFrom2FA,
+} from "@/lib/actions/user.actions";
 
 /**
  * Create a text encoder for SSE

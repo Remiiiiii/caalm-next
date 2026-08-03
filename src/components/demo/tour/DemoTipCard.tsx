@@ -3,9 +3,9 @@
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useId, useRef } from "react";
+import type { AnchoredPlacement } from "@/hooks/useAnchoredPosition";
 import type { DemoTip } from "@/lib/demo/tour/tips";
 import { cn } from "@/lib/utils";
-import type { AnchoredPlacement } from "@/hooks/useAnchoredPosition";
 
 type DemoTipCardProps = {
 	tip: DemoTip;

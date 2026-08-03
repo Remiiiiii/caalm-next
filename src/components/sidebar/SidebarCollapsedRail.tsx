@@ -1,10 +1,10 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { SectionNavIcon } from "@/components/sidebar/SectionNavIcon";
 import SidebarSectionFlyout, {
 	type FlyoutNavItem,
 } from "@/components/sidebar/SidebarSectionFlyout";
-import { SectionNavIcon } from "@/components/sidebar/SectionNavIcon";
 import { isSectionActive } from "@/components/sidebar/sidebar-icons";
 import {
 	HoverCard,

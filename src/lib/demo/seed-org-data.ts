@@ -14,8 +14,13 @@ import { seedDemoDocuments } from "./seed/seed-documents";
 import { seedDemoSecondary } from "./seed/seed-secondary";
 import { seedDemoTeamUsers } from "./seed/seed-team-users";
 
-export { DEMO_SEED_VERSION, MIN_TEAM_USERS };
-export { bumpOrgSeedVersion, getOrgSeedVersion, countUsersByOrg };
+export {
+	bumpOrgSeedVersion,
+	countUsersByOrg,
+	DEMO_SEED_VERSION,
+	getOrgSeedVersion,
+	MIN_TEAM_USERS,
+};
 
 export async function seedDemoOrgData({
 	orgId,
@@ -33,9 +38,7 @@ export async function seedDemoOrgData({
 	const currentVersion = await getOrgSeedVersion(orgId);
 	const teamCount = await countUsersByOrg(orgId);
 	const needsSeed =
-		force ||
-		currentVersion < DEMO_SEED_VERSION ||
-		teamCount < MIN_TEAM_USERS;
+		force || currentVersion < DEMO_SEED_VERSION || teamCount < MIN_TEAM_USERS;
 
 	if (!needsSeed && currentVersion >= DEMO_SEED_VERSION) {
 		return;

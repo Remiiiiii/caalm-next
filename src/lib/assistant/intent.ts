@@ -19,10 +19,16 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 	) {
 		return "list_tasks";
 	}
-	if (/\b(pending|open)\s+tasks?\b/.test(q) || /\btasks?\s+(pending|open)\b/.test(q)) {
+	if (
+		/\b(pending|open)\s+tasks?\b/.test(q) ||
+		/\btasks?\s+(pending|open)\b/.test(q)
+	) {
 		return "list_tasks";
 	}
-	if (/\b(approvals?|approve)\b/.test(q) && /\b(pending|list|show|my)\b/.test(q)) {
+	if (
+		/\b(approvals?|approve)\b/.test(q) &&
+		/\b(pending|list|show|my)\b/.test(q)
+	) {
 		return "list_pending_approvals";
 	}
 	if (
@@ -31,10 +37,16 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 	) {
 		return "expiring";
 	}
-	if (/\b(contract|contracts)\b/.test(q) && /\b(search|find|show|list)\b/.test(q)) {
+	if (
+		/\b(contract|contracts)\b/.test(q) &&
+		/\b(search|find|show|list)\b/.test(q)
+	) {
 		return "search_contracts";
 	}
-	if (/\b(license|licenses|licences?)\b/.test(q) && /\b(search|find|show|list)\b/.test(q)) {
+	if (
+		/\b(license|licenses|licences?)\b/.test(q) &&
+		/\b(search|find|show|list)\b/.test(q)
+	) {
 		return "search_licenses";
 	}
 	return null;

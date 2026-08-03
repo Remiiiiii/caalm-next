@@ -1,7 +1,7 @@
 /**
  * Analyze Scene 01 motion: keyframes, effects, parents, nesting.
  */
-(function () {
+(() => {
 	var report = {
 		status: "success",
 		scene01: null,
@@ -57,8 +57,7 @@
 			else if (layer.adjustmentLayer) info.sourceType = "Adjustment";
 			else if (layer.source) {
 				info.sourceName = layer.source.name;
-				info.sourceType =
-					layer.source instanceof CompItem ? "Comp" : "Footage";
+				info.sourceType = layer.source instanceof CompItem ? "Comp" : "Footage";
 			}
 		} catch (e) {}
 

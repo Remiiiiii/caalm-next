@@ -23,5 +23,5 @@ function Label({ className, ...props }: LabelProps) {
 	);
 }
 
-export { Label };
 export type { LabelProps };
+export { Label };

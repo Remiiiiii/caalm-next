@@ -90,6 +90,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import {
+	AiExtractionReviewPanel,
+	AiExtractionStatusBadge,
+	AiFilledLabelHint,
+	aiFieldItemClassName,
+} from "@/components/contract-upload/AiExtractionReview";
+import ContractReviewStep from "@/components/contract-upload/ContractReviewStep";
+import {
 	Form,
 	FormControl,
 	FormField,
@@ -103,14 +110,6 @@ import {
 	getUsersByDepartment,
 } from "@/lib/actions/database.actions";
 import { uploadFile } from "@/lib/actions/file.actions";
-import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
-import {
-	AiExtractionReviewPanel,
-	AiExtractionStatusBadge,
-	AiFilledLabelHint,
-	aiFieldItemClassName,
-} from "@/components/contract-upload/AiExtractionReview";
-import ContractReviewStep from "@/components/contract-upload/ContractReviewStep";
 import {
 	buildFormPatchFromExtraction,
 	isRealExtractionMethod,
@@ -120,6 +119,7 @@ import {
 	buildContractTypeFallbackResult,
 	type ContractTypeSuggestionResult,
 } from "@/lib/ai/contractTypeSuggestionSchema";
+import { isDemoMode } from "@/lib/config/demo-mode";
 import {
 	CONTRACT_TYPE_CONFIGS,
 	getContractTypeConfig,
@@ -127,15 +127,15 @@ import {
 	getRequiredFields,
 	resolveDraftContractTypeId,
 } from "@/lib/contracts/contractTypeConfigs";
-import { isDemoMode } from "@/lib/config/demo-mode";
 import { getNoticeThresholds } from "@/lib/renewals/expiryNotice";
+import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { fireConfetti } from "@/lib/ui/confetti";
 import {
 	CONTRACT_DEPARTMENTS,
 	DIVISION_TO_DEPARTMENT,
 	formatDivisionName,
-	type UserDivision,
 	USER_DIVISIONS,
+	type UserDivision,
 } from "../../constants";
 
 /** Demo mode: only these contract type cards are selectable (plus Drafts). */
@@ -1597,10 +1597,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							const parsed = parseContractExtractionJson(
 								JSON.stringify(extracted),
 							);
-							const patch = buildFormPatchFromExtraction(
-								parsed,
-								file.name,
-							);
+							const patch = buildFormPatchFromExtraction(parsed, file.name);
 
 							// Prefer API-provided confidence lists when present
 							const filledFromApi = Array.isArray(extracted.filledFieldNames)
@@ -1619,9 +1616,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							setLowConfidenceFields(
 								isRealExtractionMethod(method) ? lowFromApi : [],
 							);
-							setFieldConfidence(
-								isRealExtractionMethod(method) ? confMap : {},
-							);
+							setFieldConfidence(isRealExtractionMethod(method) ? confMap : {});
 							setOverallExtractionConfidence(
 								isRealExtractionMethod(method)
 									? typeof extracted.overallConfidence === "number"
@@ -1785,9 +1780,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						accountId,
 						formData: {
 							...formValues,
-							...(selectedContractType
-								? { selectedContractType }
-								: {}),
+							...(selectedContractType ? { selectedContractType } : {}),
 						},
 						currentStep,
 						processedFileData: filePayload,
@@ -2110,16 +2103,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					// Drafts store metadata only — pull bytes from storage when needed
 					if (!fileBytesRef.current && parsed?.bucketFileId) {
 						try {
-							const fileRes = await fetch(
-								"/api/contracts/drafts/fetch-file",
-								{
-									method: "POST",
-									headers: { "Content-Type": "application/json" },
-									body: JSON.stringify({
-										bucketFileId: parsed.bucketFileId,
-									}),
-								},
-							);
+							const fileRes = await fetch("/api/contracts/drafts/fetch-file", {
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({
+									bucketFileId: parsed.bucketFileId,
+								}),
+							});
 							if (fileRes.ok) {
 								const fileJson = await fileRes.json();
 								const file = fileJson.data?.file || fileJson.file;
@@ -2134,10 +2124,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 								}
 							}
 						} catch (fileError) {
-							console.error(
-								"Failed to restore draft file bytes:",
-								fileError,
-							);
+							console.error("Failed to restore draft file bytes:", fileError);
 						}
 					}
 				}
@@ -2276,9 +2263,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							accountId,
 							formData: {
 								...formValues,
-								...(selectedContractType
-									? { selectedContractType }
-									: {}),
+								...(selectedContractType ? { selectedContractType } : {}),
 							},
 							currentStep,
 							processedFileData: filePayload,
@@ -2365,13 +2350,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				departmentOwner: (() => {
 					const raw = sanitizeString(values.departmentOwner);
 					if (!raw) return undefined;
-					const owners = [
-						...filteredManagers,
-						...availableManagers,
-					];
-					const match = owners.find(
-						(m) => m.$id === raw || m.fullName === raw,
-					);
+					const owners = [...filteredManagers, ...availableManagers];
+					const match = owners.find((m) => m.$id === raw || m.fullName === raw);
 					return match?.fullName || raw;
 				})(),
 				contractOwnerId: values.contractOwnerId || ownerId,
@@ -2662,1443 +2642,2161 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 	return (
 		<>
-		<Dialog
-			open={isOpen}
-			onOpenChange={(open) => {
-				setIsOpen(open);
-				if (!open) {
-					closePdfPreview();
-					// Reset form when dialog closes
-					resetForm();
-					isResumingDraftRef.current = false;
-				} else {
-					// Reset form when dialog opens (unless resuming a draft)
-					if (!isResumingDraftRef.current) {
-						resetForm();
-					}
-				}
-			}}
-		>
-			<DialogTrigger asChild>
-				<Button
-					className={cn(
-						"primary-btn h-10 px-4 shadow-drop-1 text-sm gap-2",
-						className,
-					)}
-				>
-					<Upload className="h-4 w-4" />
-					{triggerLabel}
-				</Button>
-			</DialogTrigger>
-
-			<DialogContent
-				className={cn(
-					"glass-dialog",
-					// Override .glass-dialog sm:max-w-4xl when viewing drafts
-					showDraftsList &&
-						(savedDrafts.length > 0 ? "sm:max-w-2xl!" : "sm:max-w-md!"),
-				)}
-				onPointerDownOutside={(e) => {
-					// PDF preview is portaled outside this dialog — don't dismiss on those clicks
-					if (
-						pdfPreviewOpen ||
-						(e.target as HTMLElement | null)?.closest?.("[data-pdf-preview]")
-					) {
-						e.preventDefault();
-					}
-				}}
-				onInteractOutside={(e) => {
-					if (
-						pdfPreviewOpen ||
-						(e.target as HTMLElement | null)?.closest?.("[data-pdf-preview]")
-					) {
-						e.preventDefault();
-					}
-				}}
-				onFocusOutside={(e) => {
-					if (
-						pdfPreviewOpen ||
-						(e.target as HTMLElement | null)?.closest?.("[data-pdf-preview]")
-					) {
-						e.preventDefault();
-					}
-				}}
-				onEscapeKeyDown={(e) => {
-					if (pdfPreviewOpen) {
-						e.preventDefault();
+			<Dialog
+				open={isOpen}
+				onOpenChange={(open) => {
+					setIsOpen(open);
+					if (!open) {
 						closePdfPreview();
+						// Reset form when dialog closes
+						resetForm();
+						isResumingDraftRef.current = false;
+					} else {
+						// Reset form when dialog opens (unless resuming a draft)
+						if (!isResumingDraftRef.current) {
+							resetForm();
+						}
 					}
 				}}
 			>
-				<VisuallyHiddenPrimitive.Root>
-					<DialogTitle>Upload Contract</DialogTitle>
-				</VisuallyHiddenPrimitive.Root>
+				<DialogTrigger asChild>
+					<Button
+						className={cn(
+							"primary-btn h-10 px-4 shadow-drop-1 text-sm gap-2",
+							className,
+						)}
+					>
+						<Upload className="h-4 w-4" />
+						{triggerLabel}
+					</Button>
+				</DialogTrigger>
 
-				{/* Professional Cap */}
-				<div className="h-4 w-full shrink-0 rounded-t-[26px] bg-[#d6d7d8]/75" />
+				<DialogContent
+					className={cn(
+						"glass-dialog",
+						// Override .glass-dialog sm:max-w-4xl when viewing drafts
+						showDraftsList &&
+							(savedDrafts.length > 0 ? "sm:max-w-2xl!" : "sm:max-w-md!"),
+					)}
+					onPointerDownOutside={(e) => {
+						// PDF preview is portaled outside this dialog — don't dismiss on those clicks
+						if (
+							pdfPreviewOpen ||
+							(e.target as HTMLElement | null)?.closest?.("[data-pdf-preview]")
+						) {
+							e.preventDefault();
+						}
+					}}
+					onInteractOutside={(e) => {
+						if (
+							pdfPreviewOpen ||
+							(e.target as HTMLElement | null)?.closest?.("[data-pdf-preview]")
+						) {
+							e.preventDefault();
+						}
+					}}
+					onFocusOutside={(e) => {
+						if (
+							pdfPreviewOpen ||
+							(e.target as HTMLElement | null)?.closest?.("[data-pdf-preview]")
+						) {
+							e.preventDefault();
+						}
+					}}
+					onEscapeKeyDown={(e) => {
+						if (pdfPreviewOpen) {
+							e.preventDefault();
+							closePdfPreview();
+						}
+					}}
+				>
+					<VisuallyHiddenPrimitive.Root>
+						<DialogTitle>Upload Contract</DialogTitle>
+					</VisuallyHiddenPrimitive.Root>
 
-				{/* Contract Type Selection Screen */}
-				{showTypeSelection &&
-				!selectedContractType &&
-				!showAiQuiz &&
-				!showDraftsList ? (
-					<div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
-						{/* Header — frosted strip (matches contract cards) */}
-						<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-4 backdrop-blur-xl">
-							<div className="px-6">
-								<div className="flex items-center gap-3">
-									<FileText
-										className="h-5 w-5 shrink-0 text-[#0f5384]"
-										aria-hidden
-									/>
-									<h2 className="text-xl font-semibold sidebar-gradient-text">
-										Select Contract Type
-									</h2>
+					{/* Professional Cap */}
+					<div className="h-4 w-full shrink-0 rounded-t-[26px] bg-[#d6d7d8]/75" />
+
+					{/* Contract Type Selection Screen */}
+					{showTypeSelection &&
+					!selectedContractType &&
+					!showAiQuiz &&
+					!showDraftsList ? (
+						<div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
+							{/* Header — frosted strip (matches contract cards) */}
+							<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-4 backdrop-blur-xl">
+								<div className="px-6">
+									<div className="flex items-center gap-3">
+										<FileText
+											className="h-5 w-5 shrink-0 text-[#0f5384]"
+											aria-hidden
+										/>
+										<h2 className="text-xl font-semibold sidebar-gradient-text">
+											Select Contract Type
+										</h2>
+									</div>
+									<p className="mt-1 text-sm text-slate-600 sm:ml-8">
+										{isDemoMode()
+											? "Demo mode: choose Drafts, Grant Agreement, or Government Contract. Other types are disabled for testing."
+											: "Choose the type of contract you want to upload. This will customize the form fields to match your specific contract requirements."}
+									</p>
 								</div>
-								<p className="mt-1 text-sm text-slate-600 sm:ml-8">
-									{isDemoMode()
-										? "Demo mode: choose Drafts, Grant Agreement, or Government Contract. Other types are disabled for testing."
-										: "Choose the type of contract you want to upload. This will customize the form fields to match your specific contract requirements."}
-								</p>
 							</div>
-						</div>
 
-						{/* Contract Type Cards Grid */}
-						<div className="min-h-0 flex-1 overflow-y-auto p-6">
-							<div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-								{/* Drafts card — first */}
-								<div
-									role="button"
-									tabIndex={0}
-									className={cn(
-										"glass-card-frosted group cursor-pointer text-card-foreground",
-										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
-									)}
-									onClick={() => {
-										void loadSavedDrafts();
-										setShowDraftsList(true);
-									}}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.preventDefault();
+							{/* Contract Type Cards Grid */}
+							<div className="min-h-0 flex-1 overflow-y-auto p-6">
+								<div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+									{/* Drafts card — first */}
+									<div
+										role="button"
+										tabIndex={0}
+										className={cn(
+											"glass-card-frosted group cursor-pointer text-card-foreground",
+											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
+										)}
+										onClick={() => {
 											void loadSavedDrafts();
 											setShowDraftsList(true);
-										}
-									}}
-								>
-									<div className="glass-card-cap rounded-t-3xl!" />
-									<div className="relative bg-transparent p-4 pt-5 sm:p-6 sm:pt-6">
-										<FolderOpen className="mb-3 h-8 w-8 text-[#0f5384]" />
-										<h3 className="mb-3 text-lg font-semibold sidebar-gradient-text">
-											Drafts
-										</h3>
-										<div className="mb-4 rounded-xl border border-white/40 bg-white/40 p-3 text-sm leading-relaxed text-slate-600 backdrop-blur-md">
-											Resume a contract you started earlier. Pick up where you
-											left off without re-entering details.
-										</div>
-										<div className="flex items-center justify-between rounded-full border border-white/45 bg-white/38 px-4 py-2.5 text-xs text-slate-500 backdrop-blur-md">
-											<span>
-												{savedDrafts.length === 0
-													? "No drafts saved"
-													: `${savedDrafts.length} draft${savedDrafts.length === 1 ? "" : "s"}`}
-											</span>
-											<span
-												className="text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5"
-												aria-hidden
-											>
-												→
-											</span>
-										</div>
-									</div>
-								</div>
-
-								{CONTRACT_TYPE_CONFIGS.map((type) => {
-									const IconComponent = getIconComponent(type.icon);
-									const muted = !isDemoContractTypeAllowed(type.id);
-									return (
-										<div
-											key={type.id}
-											role="button"
-											tabIndex={muted ? -1 : 0}
-											aria-disabled={muted}
-											className={cn(
-												"glass-card-frosted group text-card-foreground",
-												muted
-													? "cursor-not-allowed opacity-40 grayscale"
-													: "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
-											)}
-											onClick={() => {
-												if (muted) return;
-												handleContractTypeSelect(type.id);
-											}}
-											onKeyDown={(e) => {
-												if (muted) return;
-												if (e.key === "Enter" || e.key === " ") {
-													e.preventDefault();
-													handleContractTypeSelect(type.id);
-												}
-											}}
-										>
-											<div className="glass-card-cap rounded-t-3xl!" />
-											<div className="relative bg-transparent p-4 pt-5 sm:p-6 sm:pt-6">
-												<IconComponent className="mb-3 h-8 w-8 text-[#0f5384]" />
-												<h3 className="mb-3 text-lg font-semibold sidebar-gradient-text">
-													{type.label}
-												</h3>
-												<div className="mb-4 rounded-xl border border-white/40 bg-white/40 p-3 text-sm leading-relaxed text-slate-600 backdrop-blur-md">
-													{muted
-														? "Unavailable in demo — use Grant Agreement or Government Contract."
-														: type.description}
-												</div>
-												<div className="flex items-center justify-between rounded-full border border-white/45 bg-white/38 px-4 py-2.5 text-xs text-slate-500 backdrop-blur-md">
-													<span>
-														{muted ? "Demo locked" : `${type.steps} steps`}
-													</span>
-													{!muted ? (
-														<span
-															className="text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5"
-															aria-hidden
-														>
-															→
-														</span>
-													) : null}
-												</div>
+										}}
+										onKeyDown={(e) => {
+											if (e.key === "Enter" || e.key === " ") {
+												e.preventDefault();
+												void loadSavedDrafts();
+												setShowDraftsList(true);
+											}
+										}}
+									>
+										<div className="glass-card-cap rounded-t-3xl!" />
+										<div className="relative bg-transparent p-4 pt-5 sm:p-6 sm:pt-6">
+											<FolderOpen className="mb-3 h-8 w-8 text-[#0f5384]" />
+											<h3 className="mb-3 text-lg font-semibold sidebar-gradient-text">
+												Drafts
+											</h3>
+											<div className="mb-4 rounded-xl border border-white/40 bg-white/40 p-3 text-sm leading-relaxed text-slate-600 backdrop-blur-md">
+												Resume a contract you started earlier. Pick up where you
+												left off without re-entering details.
+											</div>
+											<div className="flex items-center justify-between rounded-full border border-white/45 bg-white/38 px-4 py-2.5 text-xs text-slate-500 backdrop-blur-md">
+												<span>
+													{savedDrafts.length === 0
+														? "No drafts saved"
+														: `${savedDrafts.length} draft${savedDrafts.length === 1 ? "" : "s"}`}
+												</span>
+												<span
+													className="text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5"
+													aria-hidden
+												>
+													→
+												</span>
 											</div>
 										</div>
-									);
-								})}
-							</div>
-						</div>
+									</div>
 
-						{/* Footer */}
-						<div className="sticky bottom-0 shrink-0 border-t border-white/35 bg-white/30 px-6 py-4 backdrop-blur-xl">
-							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-								<p className="flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:text-sm">
-									<span>
-										Need help? Use CAALM AI Assistant to pick the best contract
-										type.
-									</span>
-									<span aria-hidden className="text-slate-400">
-										→
-									</span>
-									<button
-										type="button"
-										onClick={() => setShowAiQuiz(true)}
-										className={cn(
-											AI_ASSISTANT_OPEN_CHIP_CLASS,
-											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/30",
-										)}
-									>
-										<Image
-											src="/assets/icons/ai-icon.svg"
-											alt=""
-											width={22}
-											height={22}
-										/>
-										<span className="text-xs font-semibold text-[#0f5384]">
-											Open assistant
-										</span>
-									</button>
-								</p>
-								<Button
-									variant="outline"
-									onClick={() => setIsOpen(false)}
-									className="primary-btn w-full shrink-0 px-3 sm:w-auto sm:px-4"
-								>
-									<Ban className="w-4 h-4" />
-									Cancel
-								</Button>
-							</div>
-						</div>
-					</div>
-				) : showDraftsList ? (
-					/* Drafts list view — content-sized (not stretched to type-picker height) */
-					<div className="flex flex-col overflow-hidden bg-transparent">
-						<div className="shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-3 backdrop-blur-xl">
-							<div className="px-5">
-								<div className="flex items-center gap-3">
-									<FolderOpen
-										className="h-5 w-5 shrink-0 text-[#0f5384]"
-										aria-hidden
-									/>
-									<h2 className="text-xl font-semibold sidebar-gradient-text">
-										Drafts
-									</h2>
-								</div>
-								<p className="mt-1 text-sm text-slate-600 sm:ml-8">
-									Resume a saved upload or delete drafts you no longer need.
-								</p>
-							</div>
-						</div>
-
-						<div className="overflow-y-auto px-5 py-4">
-							{savedDrafts.length === 0 ? (
-								<div className="mx-auto flex max-w-md flex-col items-center rounded-xl border border-white/40 bg-white/40 px-5 py-6 text-center backdrop-blur-md">
-									<FolderOpen className="mb-2 h-8 w-8 text-slate-400" />
-									<p className="text-sm font-medium text-slate-700">
-										No drafts yet
-									</p>
-									<p className="mt-1 text-xs text-slate-500">
-										Progress saves after you move past step 1 of a contract
-										upload.
-									</p>
-								</div>
-							) : (
-								<div className="mx-auto max-w-none space-y-3">
-									{savedDrafts.map((draft) => {
-										const restoredTypeId = resolveDraftContractTypeId({
-											selectedContractType: draft.selectedContractType,
-											formData:
-												draft.formData && typeof draft.formData === "object"
-													? draft.formData
-													: null,
-										});
-										const typeConfig = restoredTypeId
-											? getContractTypeConfig(restoredTypeId)
-											: null;
-										const draftStepTitles = typeConfig
-											? [...typeConfig.stepTitles, "Review"]
-											: [];
-										const stepLabel =
-											draftStepTitles[draft.currentStep - 1] ||
-											`Step ${draft.currentStep}`;
+									{CONTRACT_TYPE_CONFIGS.map((type) => {
+										const IconComponent = getIconComponent(type.icon);
+										const muted = !isDemoContractTypeAllowed(type.id);
 										return (
 											<div
-												key={draft.$id}
-												className="flex flex-col gap-3 rounded-xl border border-white/40 bg-white/50 p-4 shadow-sm backdrop-blur-md sm:flex-row sm:items-center sm:justify-between"
+												key={type.id}
+												role="button"
+												tabIndex={muted ? -1 : 0}
+												aria-disabled={muted}
+												className={cn(
+													"glass-card-frosted group text-card-foreground",
+													muted
+														? "cursor-not-allowed opacity-40 grayscale"
+														: "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
+												)}
+												onClick={() => {
+													if (muted) return;
+													handleContractTypeSelect(type.id);
+												}}
+												onKeyDown={(e) => {
+													if (muted) return;
+													if (e.key === "Enter" || e.key === " ") {
+														e.preventDefault();
+														handleContractTypeSelect(type.id);
+													}
+												}}
 											>
-												<div className="min-w-0 flex-1">
-													<h3 className="mb-1 truncate text-sm font-medium text-slate-700">
-														{draft.formData?.contractName ||
-															"Untitled Contract"}
+												<div className="glass-card-cap rounded-t-3xl!" />
+												<div className="relative bg-transparent p-4 pt-5 sm:p-6 sm:pt-6">
+													<IconComponent className="mb-3 h-8 w-8 text-[#0f5384]" />
+													<h3 className="mb-3 text-lg font-semibold sidebar-gradient-text">
+														{type.label}
 													</h3>
-													<div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-														{typeConfig?.label && (
-															<>
-																<span>{typeConfig.label}</span>
-																<span aria-hidden>•</span>
-															</>
-														)}
-														<span>
-															Step {draft.currentStep}: {stepLabel}
-														</span>
-														<span aria-hidden>•</span>
-														<span>
-															Saved{" "}
-															{new Date(
-																draft.lastSavedAt,
-															).toLocaleDateString()}
-														</span>
+													<div className="mb-4 rounded-xl border border-white/40 bg-white/40 p-3 text-sm leading-relaxed text-slate-600 backdrop-blur-md">
+														{muted
+															? "Unavailable in demo — use Grant Agreement or Government Contract."
+															: type.description}
 													</div>
-													<Badge
-														variant="outline"
-														className="w-fit border-green/20 bg-green/10 px-2.5 py-0.5 text-xs text-green"
-													>
-														{draft.progressPercentage}% Complete
-													</Badge>
-												</div>
-												<div className="flex shrink-0 items-center gap-2">
-													<Button
-														type="button"
-														variant="outline"
-														size="sm"
-														onClick={() => {
-															void resumeDraft(draft);
-														}}
-														className="primary-btn px-3 sm:px-4 shimmer-hover"
-													>
-														<StepForward className="h-3 w-3" />
-														Resume
-													</Button>
-													<Button
-														type="button"
-														variant="ghost"
-														size="sm"
-														onClick={() => handleDeleteClick(draft.$id)}
-														className="primary-btn h-8 px-3"
-													>
-														<Trash2 className="h-3 w-3" />
-														Delete
-													</Button>
+													<div className="flex items-center justify-between rounded-full border border-white/45 bg-white/38 px-4 py-2.5 text-xs text-slate-500 backdrop-blur-md">
+														<span>
+															{muted ? "Demo locked" : `${type.steps} steps`}
+														</span>
+														{!muted ? (
+															<span
+																className="text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5"
+																aria-hidden
+															>
+																→
+															</span>
+														) : null}
+													</div>
 												</div>
 											</div>
 										);
 									})}
 								</div>
-							)}
-						</div>
-
-						<div className="shrink-0 border-t border-white/35 bg-white/30 px-5 py-3 backdrop-blur-xl">
-							<div className="flex items-center justify-between gap-3">
-								<Button
-									type="button"
-									variant="outline"
-									onClick={() => setShowDraftsList(false)}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<ChevronLeft className="h-4 w-4" />
-									Back
-								</Button>
-								<Button
-									variant="outline"
-									onClick={() => setIsOpen(false)}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Ban className="w-4 h-4" />
-									Cancel
-								</Button>
 							</div>
-						</div>
-					</div>
-				) : showAiQuiz ? (
-					/* AI Quiz View */
-					<div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
-						{/* Header */}
-						<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-6 backdrop-blur-xl">
-							<div className="px-6">
-								<button
-									type="button"
-									onClick={() => {
-										setShowAiQuiz(false);
-										setAiQuizStep(0);
-										setAiQuizAnswers({});
-										setAiSuggestion(null);
-										setAiQuizFreeTextDraft("");
-										setAiQuizPhase("questions");
-										setAiQuizDirection("forward");
-									}}
-									className={cn(
-										AI_ASSISTANT_BTN_PRIMARY_CLASS,
-										"mb-2 h-9 max-w-xs px-4 text-sm",
-									)}
-								>
-									<ChevronLeft className="h-4 w-4 shrink-0" />
-									Back
-								</button>
-								<h2 className="text-2xl font-semibold sidebar-gradient-text mb-2">
-									CAALM AI Assistant
-								</h2>
-								<p className="text-sm text-slate-600">
-									Answer a few questions to find the best contract type for your
-									needs.
-								</p>
-							</div>
-						</div>
 
-						{/* Quiz Content */}
-						<div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto bg-transparent p-6">
-							<AnimatePresence mode="wait">
-								{aiQuizPhase === "questions" &&
-									visibleAiQuizQuestions.length > 0 && (
-										<motion.div
-											key={`question-${visibleAiQuizQuestions[aiQuizStep]?.id ?? aiQuizStep}`}
-											initial={{
-												opacity: 0,
-												x: aiQuizDirection === "forward" ? 100 : -100,
-											}}
-											animate={{ opacity: 1, x: 0 }}
-											exit={{
-												opacity: 0,
-												x: aiQuizDirection === "forward" ? -100 : 100,
-											}}
-											transition={{ duration: 0.3 }}
-											className="max-w-xl w-full"
+							{/* Footer */}
+							<div className="sticky bottom-0 shrink-0 border-t border-white/35 bg-white/30 px-6 py-4 backdrop-blur-xl">
+								<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+									<p className="flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:text-sm">
+										<span>
+											Need help? Use CAALM AI Assistant to pick the best
+											contract type.
+										</span>
+										<span aria-hidden className="text-slate-400">
+											→
+										</span>
+										<button
+											type="button"
+											onClick={() => setShowAiQuiz(true)}
+											className={cn(
+												AI_ASSISTANT_OPEN_CHIP_CLASS,
+												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/30",
+											)}
 										>
-											{aiQuizStep < visibleAiQuizQuestions.length ? (
-												<>
-													<p className="text-sm text-slate-500 mb-2">
-														Question {aiQuizStep + 1} of{" "}
-														{visibleAiQuizQuestions.length}
-													</p>
-													<div className="mb-4 h-1 w-full rounded-full bg-white/50">
-														<div
-															className="h-1 rounded-full bg-linear-to-r from-blue-500 to-cyan-500 transition-all duration-300"
-															style={{
-																width: `${((aiQuizStep + 1) / visibleAiQuizQuestions.length) * 100}%`,
-															}}
-														/>
-													</div>
-													<h3 className="text-lg font-semibold sidebar-gradient-text mb-4">
-														{visibleAiQuizQuestions[aiQuizStep].text}
-													</h3>
-													{visibleAiQuizQuestions[aiQuizStep].kind ===
-													"freeText" ? (
-														<div className="space-y-4">
-															<Textarea
-																value={aiQuizFreeTextDraft}
-																onChange={(e) =>
-																	setAiQuizFreeTextDraft(e.target.value)
-																}
-																placeholder="e.g. Annual lease for our program office…"
-																className="min-h-[100px] glass-form-control resize-y"
-															/>
-															<div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-																<Button
-																	type="button"
-																	variant="ghost"
-																	className={AI_ASSISTANT_BTN_PRIMARY_CLASS}
-																	onClick={() =>
-																		handleAiQuizFreeTextContinue(true)
-																	}
-																>
-																	Skip
-																</Button>
-																<Button
-																	type="button"
-																	variant="ghost"
-																	className={AI_ASSISTANT_BTN_PRIMARY_CLASS}
-																	onClick={() =>
-																		handleAiQuizFreeTextContinue(false)
-																	}
-																>
-																	Get suggestions
-																</Button>
-															</div>
-														</div>
-													) : (
-														<div className="space-y-3">
-															{visibleAiQuizQuestions[aiQuizStep].options.map(
-																(opt) => (
-																	<button
-																		key={opt.value}
-																		type="button"
-																		onClick={() =>
-																			handleAiQuizChoice(opt.value)
-																		}
-																		className={AI_ASSISTANT_OPTION_CLASS}
-																	>
-																		<span className="flex w-full items-center justify-between gap-3">
-																			<span>{opt.label}</span>
-																			<span
-																				className="shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#0f5384]"
-																				aria-hidden
-																			>
-																				→
-																			</span>
-																		</span>
-																	</button>
-																),
+											<Image
+												src="/assets/icons/ai-icon.svg"
+												alt=""
+												width={22}
+												height={22}
+											/>
+											<span className="text-xs font-semibold text-[#0f5384]">
+												Open assistant
+											</span>
+										</button>
+									</p>
+									<Button
+										variant="outline"
+										onClick={() => setIsOpen(false)}
+										className="primary-btn w-full shrink-0 px-3 sm:w-auto sm:px-4"
+									>
+										<Ban className="w-4 h-4" />
+										Cancel
+									</Button>
+								</div>
+							</div>
+						</div>
+					) : showDraftsList ? (
+						/* Drafts list view — content-sized (not stretched to type-picker height) */
+						<div className="flex flex-col overflow-hidden bg-transparent">
+							<div className="shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-3 backdrop-blur-xl">
+								<div className="px-5">
+									<div className="flex items-center gap-3">
+										<FolderOpen
+											className="h-5 w-5 shrink-0 text-[#0f5384]"
+											aria-hidden
+										/>
+										<h2 className="text-xl font-semibold sidebar-gradient-text">
+											Drafts
+										</h2>
+									</div>
+									<p className="mt-1 text-sm text-slate-600 sm:ml-8">
+										Resume a saved upload or delete drafts you no longer need.
+									</p>
+								</div>
+							</div>
+
+							<div className="overflow-y-auto px-5 py-4">
+								{savedDrafts.length === 0 ? (
+									<div className="mx-auto flex max-w-md flex-col items-center rounded-xl border border-white/40 bg-white/40 px-5 py-6 text-center backdrop-blur-md">
+										<FolderOpen className="mb-2 h-8 w-8 text-slate-400" />
+										<p className="text-sm font-medium text-slate-700">
+											No drafts yet
+										</p>
+										<p className="mt-1 text-xs text-slate-500">
+											Progress saves after you move past step 1 of a contract
+											upload.
+										</p>
+									</div>
+								) : (
+									<div className="mx-auto max-w-none space-y-3">
+										{savedDrafts.map((draft) => {
+											const restoredTypeId = resolveDraftContractTypeId({
+												selectedContractType: draft.selectedContractType,
+												formData:
+													draft.formData && typeof draft.formData === "object"
+														? draft.formData
+														: null,
+											});
+											const typeConfig = restoredTypeId
+												? getContractTypeConfig(restoredTypeId)
+												: null;
+											const draftStepTitles = typeConfig
+												? [...typeConfig.stepTitles, "Review"]
+												: [];
+											const stepLabel =
+												draftStepTitles[draft.currentStep - 1] ||
+												`Step ${draft.currentStep}`;
+											return (
+												<div
+													key={draft.$id}
+													className="flex flex-col gap-3 rounded-xl border border-white/40 bg-white/50 p-4 shadow-sm backdrop-blur-md sm:flex-row sm:items-center sm:justify-between"
+												>
+													<div className="min-w-0 flex-1">
+														<h3 className="mb-1 truncate text-sm font-medium text-slate-700">
+															{draft.formData?.contractName ||
+																"Untitled Contract"}
+														</h3>
+														<div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+															{typeConfig?.label && (
+																<>
+																	<span>{typeConfig.label}</span>
+																	<span aria-hidden>•</span>
+																</>
 															)}
+															<span>
+																Step {draft.currentStep}: {stepLabel}
+															</span>
+															<span aria-hidden>•</span>
+															<span>
+																Saved{" "}
+																{new Date(
+																	draft.lastSavedAt,
+																).toLocaleDateString()}
+															</span>
 														</div>
-													)}
-												</>
-											) : null}
+														<Badge
+															variant="outline"
+															className="w-fit border-green/20 bg-green/10 px-2.5 py-0.5 text-xs text-green"
+														>
+															{draft.progressPercentage}% Complete
+														</Badge>
+													</div>
+													<div className="flex shrink-0 items-center gap-2">
+														<Button
+															type="button"
+															variant="outline"
+															size="sm"
+															onClick={() => {
+																void resumeDraft(draft);
+															}}
+															className="primary-btn px-3 sm:px-4 shimmer-hover"
+														>
+															<StepForward className="h-3 w-3" />
+															Resume
+														</Button>
+														<Button
+															type="button"
+															variant="ghost"
+															size="sm"
+															onClick={() => handleDeleteClick(draft.$id)}
+															className="primary-btn h-8 px-3"
+														>
+															<Trash2 className="h-3 w-3" />
+															Delete
+														</Button>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								)}
+							</div>
+
+							<div className="shrink-0 border-t border-white/35 bg-white/30 px-5 py-3 backdrop-blur-xl">
+								<div className="flex items-center justify-between gap-3">
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => setShowDraftsList(false)}
+										className="primary-btn px-3 sm:px-4"
+									>
+										<ChevronLeft className="h-4 w-4" />
+										Back
+									</Button>
+									<Button
+										variant="outline"
+										onClick={() => setIsOpen(false)}
+										className="primary-btn px-3 sm:px-4"
+									>
+										<Ban className="w-4 h-4" />
+										Cancel
+									</Button>
+								</div>
+							</div>
+						</div>
+					) : showAiQuiz ? (
+						/* AI Quiz View */
+						<div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
+							{/* Header */}
+							<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/60 to-indigo-50/60 py-6 backdrop-blur-xl">
+								<div className="px-6">
+									<button
+										type="button"
+										onClick={() => {
+											setShowAiQuiz(false);
+											setAiQuizStep(0);
+											setAiQuizAnswers({});
+											setAiSuggestion(null);
+											setAiQuizFreeTextDraft("");
+											setAiQuizPhase("questions");
+											setAiQuizDirection("forward");
+										}}
+										className={cn(
+											AI_ASSISTANT_BTN_PRIMARY_CLASS,
+											"mb-2 h-9 max-w-xs px-4 text-sm",
+										)}
+									>
+										<ChevronLeft className="h-4 w-4 shrink-0" />
+										Back
+									</button>
+									<h2 className="text-2xl font-semibold sidebar-gradient-text mb-2">
+										CAALM AI Assistant
+									</h2>
+									<p className="text-sm text-slate-600">
+										Answer a few questions to find the best contract type for
+										your needs.
+									</p>
+								</div>
+							</div>
+
+							{/* Quiz Content */}
+							<div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto bg-transparent p-6">
+								<AnimatePresence mode="wait">
+									{aiQuizPhase === "questions" &&
+										visibleAiQuizQuestions.length > 0 && (
+											<motion.div
+												key={`question-${visibleAiQuizQuestions[aiQuizStep]?.id ?? aiQuizStep}`}
+												initial={{
+													opacity: 0,
+													x: aiQuizDirection === "forward" ? 100 : -100,
+												}}
+												animate={{ opacity: 1, x: 0 }}
+												exit={{
+													opacity: 0,
+													x: aiQuizDirection === "forward" ? -100 : 100,
+												}}
+												transition={{ duration: 0.3 }}
+												className="max-w-xl w-full"
+											>
+												{aiQuizStep < visibleAiQuizQuestions.length ? (
+													<>
+														<p className="text-sm text-slate-500 mb-2">
+															Question {aiQuizStep + 1} of{" "}
+															{visibleAiQuizQuestions.length}
+														</p>
+														<div className="mb-4 h-1 w-full rounded-full bg-white/50">
+															<div
+																className="h-1 rounded-full bg-linear-to-r from-blue-500 to-cyan-500 transition-all duration-300"
+																style={{
+																	width: `${((aiQuizStep + 1) / visibleAiQuizQuestions.length) * 100}%`,
+																}}
+															/>
+														</div>
+														<h3 className="text-lg font-semibold sidebar-gradient-text mb-4">
+															{visibleAiQuizQuestions[aiQuizStep].text}
+														</h3>
+														{visibleAiQuizQuestions[aiQuizStep].kind ===
+														"freeText" ? (
+															<div className="space-y-4">
+																<Textarea
+																	value={aiQuizFreeTextDraft}
+																	onChange={(e) =>
+																		setAiQuizFreeTextDraft(e.target.value)
+																	}
+																	placeholder="e.g. Annual lease for our program office…"
+																	className="min-h-[100px] glass-form-control resize-y"
+																/>
+																<div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		className={AI_ASSISTANT_BTN_PRIMARY_CLASS}
+																		onClick={() =>
+																			handleAiQuizFreeTextContinue(true)
+																		}
+																	>
+																		Skip
+																	</Button>
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		className={AI_ASSISTANT_BTN_PRIMARY_CLASS}
+																		onClick={() =>
+																			handleAiQuizFreeTextContinue(false)
+																		}
+																	>
+																		Get suggestions
+																	</Button>
+																</div>
+															</div>
+														) : (
+															<div className="space-y-3">
+																{visibleAiQuizQuestions[aiQuizStep].options.map(
+																	(opt) => (
+																		<button
+																			key={opt.value}
+																			type="button"
+																			onClick={() =>
+																				handleAiQuizChoice(opt.value)
+																			}
+																			className={AI_ASSISTANT_OPTION_CLASS}
+																		>
+																			<span className="flex w-full items-center justify-between gap-3">
+																				<span>{opt.label}</span>
+																				<span
+																					className="shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#0f5384]"
+																					aria-hidden
+																				>
+																					→
+																				</span>
+																			</span>
+																		</button>
+																	),
+																)}
+															</div>
+														)}
+													</>
+												) : null}
+											</motion.div>
+										)}
+
+									{aiQuizPhase === "loading" && (
+										<motion.div
+											key="loading"
+											initial={{ opacity: 0 }}
+											animate={{ opacity: 1 }}
+											exit={{ opacity: 0 }}
+											className="flex flex-col items-center justify-center py-12"
+										>
+											<div className="orbit-animated-border h-[150px] w-[200px] shrink-0">
+												<video
+													autoPlay
+													loop
+													muted
+													playsInline
+													preload="auto"
+													className="h-full w-full rounded-2xl bg-white object-contain"
+												>
+													<source
+														src="/assets/video/doc-upload.mp4"
+														type="video/mp4"
+													/>
+												</video>
+											</div>
+											<p className="text-sm text-slate-600 mt-4">
+												Finding the best contract type...
+											</p>
 										</motion.div>
 									)}
 
-								{aiQuizPhase === "loading" && (
-									<motion.div
-										key="loading"
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										exit={{ opacity: 0 }}
-										className="flex flex-col items-center justify-center py-12"
-									>
-										<div className="orbit-animated-border h-[150px] w-[200px] shrink-0">
-											<video
-												autoPlay
-												loop
-												muted
-												playsInline
-												preload="auto"
-												className="h-full w-full rounded-2xl bg-white object-contain"
-											>
-												<source
-													src="/assets/video/doc-upload.mp4"
-													type="video/mp4"
-												/>
-											</video>
-										</div>
-										<p className="text-sm text-slate-600 mt-4">
-											Finding the best contract type...
-										</p>
-									</motion.div>
-								)}
-
-								{aiQuizPhase === "result" && aiSuggestion && (
-									<motion.div
-										key="result"
-										initial={{ opacity: 0, x: 100 }}
-										animate={{ opacity: 1, x: 0 }}
-										className="max-w-xl w-full"
-									>
-										<h3 className="text-lg font-semibold sidebar-gradient-text mb-2">
-											Suggested contract types
-										</h3>
-										{aiSuggestion.rationale ? (
-											<p className="text-sm text-slate-600 mb-3">
-												{aiSuggestion.rationale}
-											</p>
-										) : null}
-										{aiSuggestion.confidence === 0 && (
-											<p className="mb-3 rounded-xl border border-amber-200/90 bg-amber-50/95 px-3 py-2 text-xs text-amber-950">
-												This is a default suggestion (AI unavailable or the
-												response could not be applied). Prefer another card or
-												browse all types.
-											</p>
-										)}
-										{aiSuggestion.confidence > 0 &&
-											aiSuggestion.confidence < 0.35 && (
-												<p className="mb-3 text-xs text-amber-800">
-													Low confidence — review alternates or browse all types
-													below.
+									{aiQuizPhase === "result" && aiSuggestion && (
+										<motion.div
+											key="result"
+											initial={{ opacity: 0, x: 100 }}
+											animate={{ opacity: 1, x: 0 }}
+											className="max-w-xl w-full"
+										>
+											<h3 className="text-lg font-semibold sidebar-gradient-text mb-2">
+												Suggested contract types
+											</h3>
+											{aiSuggestion.rationale ? (
+												<p className="text-sm text-slate-600 mb-3">
+													{aiSuggestion.rationale}
+												</p>
+											) : null}
+											{aiSuggestion.confidence === 0 && (
+												<p className="mb-3 rounded-xl border border-amber-200/90 bg-amber-50/95 px-3 py-2 text-xs text-amber-950">
+													This is a default suggestion (AI unavailable or the
+													response could not be applied). Prefer another card or
+													browse all types.
 												</p>
 											)}
-										<div className="space-y-4">
-											{(() => {
-												const orderedIds: string[] = [
-													aiSuggestion.primaryTypeId,
-												];
-												for (const a of aiSuggestion.alternates) {
-													if (!orderedIds.includes(a.typeId))
-														orderedIds.push(a.typeId);
-												}
-												const visibleIds = isDemoMode()
-													? orderedIds.filter((id) =>
-															isDemoContractTypeAllowed(id),
-														)
-													: orderedIds;
-												if (visibleIds.length === 0 && isDemoMode()) {
-													return (
-														<p className="text-sm text-slate-600">
-															Demo mode only supports Grant Agreement and
-															Government Contract. Go back and browse those
-															types.
-														</p>
-													);
-												}
-												return visibleIds.map((typeId, idx) => {
-													const config = getContractTypeConfig(typeId);
-													if (!config) return null;
-													const IconComponent = getIconComponent(config.icon);
-													const badge =
-														idx === 0
-															? aiSuggestion.confidence === 0
-																? "Default"
-																: "Best match"
-															: "Also consider";
-													return (
-														<Card
-															key={typeId}
-															className="glass-card cursor-pointer transition-all duration-200 hover:border-blue-300 hover:bg-blue-50"
-															onClick={() => {
-																handleContractTypeSelect(config.id);
-																setShowAiQuiz(false);
-																setAiQuizStep(0);
-																setAiQuizAnswers({});
-																setAiSuggestion(null);
-																setAiQuizFreeTextDraft("");
-																setAiQuizPhase("questions");
-																setAiQuizDirection("forward");
-															}}
-														>
-															<div className="glass-card-cap" />
-															<CardContent className="p-4 sm:p-6">
-																<div className="mb-2 flex items-center justify-between gap-2">
-																	<Badge
-																		variant="outline"
-																		className="text-xs font-normal text-slate-600"
-																	>
-																		{badge}
-																	</Badge>
-																	{idx === 0 && aiSuggestion.confidence > 0 && (
-																		<span className="text-xs text-slate-500">
-																			{Math.round(
-																				aiSuggestion.confidence * 100,
+											{aiSuggestion.confidence > 0 &&
+												aiSuggestion.confidence < 0.35 && (
+													<p className="mb-3 text-xs text-amber-800">
+														Low confidence — review alternates or browse all
+														types below.
+													</p>
+												)}
+											<div className="space-y-4">
+												{(() => {
+													const orderedIds: string[] = [
+														aiSuggestion.primaryTypeId,
+													];
+													for (const a of aiSuggestion.alternates) {
+														if (!orderedIds.includes(a.typeId))
+															orderedIds.push(a.typeId);
+													}
+													const visibleIds = isDemoMode()
+														? orderedIds.filter((id) =>
+																isDemoContractTypeAllowed(id),
+															)
+														: orderedIds;
+													if (visibleIds.length === 0 && isDemoMode()) {
+														return (
+															<p className="text-sm text-slate-600">
+																Demo mode only supports Grant Agreement and
+																Government Contract. Go back and browse those
+																types.
+															</p>
+														);
+													}
+													return visibleIds.map((typeId, idx) => {
+														const config = getContractTypeConfig(typeId);
+														if (!config) return null;
+														const IconComponent = getIconComponent(config.icon);
+														const badge =
+															idx === 0
+																? aiSuggestion.confidence === 0
+																	? "Default"
+																	: "Best match"
+																: "Also consider";
+														return (
+															<Card
+																key={typeId}
+																className="glass-card cursor-pointer transition-all duration-200 hover:border-blue-300 hover:bg-blue-50"
+																onClick={() => {
+																	handleContractTypeSelect(config.id);
+																	setShowAiQuiz(false);
+																	setAiQuizStep(0);
+																	setAiQuizAnswers({});
+																	setAiSuggestion(null);
+																	setAiQuizFreeTextDraft("");
+																	setAiQuizPhase("questions");
+																	setAiQuizDirection("forward");
+																}}
+															>
+																<div className="glass-card-cap" />
+																<CardContent className="p-4 sm:p-6">
+																	<div className="mb-2 flex items-center justify-between gap-2">
+																		<Badge
+																			variant="outline"
+																			className="text-xs font-normal text-slate-600"
+																		>
+																			{badge}
+																		</Badge>
+																		{idx === 0 &&
+																			aiSuggestion.confidence > 0 && (
+																				<span className="text-xs text-slate-500">
+																					{Math.round(
+																						aiSuggestion.confidence * 100,
+																					)}
+																					% match
+																				</span>
 																			)}
-																			% match
-																		</span>
-																	)}
-																</div>
-																<IconComponent className="mb-3 h-8 w-8 text-[#0f5384]" />
-																<h3 className="mb-2 text-lg font-semibold sidebar-gradient-text">
-																	{config.label}
-																</h3>
-																<p className="mb-3 text-sm text-slate-600">
-																	{config.description}
-																</p>
-																<div className="flex items-center justify-between text-xs text-slate-500">
-																	<span>{config.steps} steps</span>
-																	<span aria-hidden>→</span>
-																</div>
-															</CardContent>
-														</Card>
-													);
-												});
-											})()}
-										</div>
-									</motion.div>
-								)}
-							</AnimatePresence>
-						</div>
+																	</div>
+																	<IconComponent className="mb-3 h-8 w-8 text-[#0f5384]" />
+																	<h3 className="mb-2 text-lg font-semibold sidebar-gradient-text">
+																		{config.label}
+																	</h3>
+																	<p className="mb-3 text-sm text-slate-600">
+																		{config.description}
+																	</p>
+																	<div className="flex items-center justify-between text-xs text-slate-500">
+																		<span>{config.steps} steps</span>
+																		<span aria-hidden>→</span>
+																	</div>
+																</CardContent>
+															</Card>
+														);
+													});
+												})()}
+											</div>
+										</motion.div>
+									)}
+								</AnimatePresence>
+							</div>
 
-						{/* Footer */}
-						<div className="sticky bottom-0 shrink-0 border-t border-white/35 bg-white/30 px-6 py-4 backdrop-blur-xl">
-							<div className="flex items-center justify-between gap-2">
-								<div className="flex flex-wrap items-center gap-2">
-									{aiQuizPhase === "questions" && aiQuizStep > 0 && (
-										<Button
-											type="button"
-											variant="ghost"
-											onClick={() => {
-												setAiQuizDirection("back");
-												setAiQuizStep((s) => s - 1);
-											}}
-											className={cn(AI_ASSISTANT_BTN_PRIMARY_CLASS, "px-4")}
-										>
-											<ChevronLeft className="h-4 w-4" />
-											Previous
-										</Button>
-									)}
+							{/* Footer */}
+							<div className="sticky bottom-0 shrink-0 border-t border-white/35 bg-white/30 px-6 py-4 backdrop-blur-xl">
+								<div className="flex items-center justify-between gap-2">
+									<div className="flex flex-wrap items-center gap-2">
+										{aiQuizPhase === "questions" && aiQuizStep > 0 && (
+											<Button
+												type="button"
+												variant="ghost"
+												onClick={() => {
+													setAiQuizDirection("back");
+													setAiQuizStep((s) => s - 1);
+												}}
+												className={cn(AI_ASSISTANT_BTN_PRIMARY_CLASS, "px-4")}
+											>
+												<ChevronLeft className="h-4 w-4" />
+												Previous
+											</Button>
+										)}
+									</div>
+									<Button
+										variant="outline"
+										onClick={() => setIsOpen(false)}
+										className={cn(
+											AI_ASSISTANT_BTN_PRIMARY_CLASS,
+											"shrink-0 px-4 sm:px-6",
+										)}
+									>
+										<Ban className="w-4 h-4" />
+										Cancel
+									</Button>
 								</div>
-								<Button
-									variant="outline"
-									onClick={() => setIsOpen(false)}
-									className={cn(
-										AI_ASSISTANT_BTN_PRIMARY_CLASS,
-										"shrink-0 px-4 sm:px-6",
-									)}
-								>
-									<Ban className="w-4 h-4" />
-									Cancel
-								</Button>
 							</div>
 						</div>
-					</div>
-				) : (
-					<>
-						{/* Sticky Header — frosted strip */}
-						<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/55 to-sky-50/45 py-4 backdrop-blur-xl">
-							<div className="px-6">
-								<div className="flex items-center gap-3 mb-3">
-									<div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/45 bg-white/45 backdrop-blur-sm">
-										<Upload className="h-5 w-5 text-[#0f5384]" />
-									</div>
-									{/* Title */}
-									<div className="flex-1">
-										<div className="flex items-center gap-2">
-											<h2 className="text-xl font-semibold sidebar-gradient-text">
-												Upload Contract
-											</h2>
-											{selectedContractType && currentTypeConfig && (
-												<Badge
-													variant="outline"
-													className="text-xs sidebar-gradient-text"
-												>
-													{currentTypeConfig.label}
-												</Badge>
-											)}
+					) : (
+						<>
+							{/* Sticky Header — frosted strip */}
+							<div className="sticky top-0 z-10 shrink-0 border-b border-white/35 bg-linear-to-r from-blue-50/55 to-sky-50/45 py-4 backdrop-blur-xl">
+								<div className="px-6">
+									<div className="flex items-center gap-3 mb-3">
+										<div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/45 bg-white/45 backdrop-blur-sm">
+											<Upload className="h-5 w-5 text-[#0f5384]" />
 										</div>
-										<div className="flex items-center justify-between">
-											<p className="text-sm text-slate-600 mt-0.5">
-												Step {currentStep} of {totalSteps}:{" "}
-												{stepTitles[currentStep - 1]}
-											</p>
+										{/* Title */}
+										<div className="flex-1">
 											<div className="flex items-center gap-2">
-												<AiExtractionStatusBadge
-													method={extractionMethod}
-													overallConfidence={overallExtractionConfidence}
-													filledCount={aiFilledFields.length}
-												/>
-												{isSaving && (
+												<h2 className="text-xl font-semibold sidebar-gradient-text">
+													Upload Contract
+												</h2>
+												{selectedContractType && currentTypeConfig && (
 													<Badge
 														variant="outline"
 														className="text-xs sidebar-gradient-text"
 													>
-														<Loader2 className="h-3 w-3 mr-1 animate-spin" />
-														Saving...
+														{currentTypeConfig.label}
 													</Badge>
 												)}
-												{lastSavedAt && !isSaving && (
-													<Badge
-														variant="outline"
-														className="text-xs text-slate-600 border-slate-300"
-													>
-														<FileCheck className="h-3 w-3 mr-1 text-green" />
-														Saved {(() => {
-															const seconds = Math.round(
-																(Date.now() - lastSavedAt.getTime()) / 1000,
-															);
-															if (seconds >= 60) {
-																const minutes = Math.round(seconds / 60);
-																return `${minutes} min ago`;
-															}
-															return `${seconds} s ago`;
-														})()}
-													</Badge>
-												)}
+											</div>
+											<div className="flex items-center justify-between">
+												<p className="text-sm text-slate-600 mt-0.5">
+													Step {currentStep} of {totalSteps}:{" "}
+													{stepTitles[currentStep - 1]}
+												</p>
+												<div className="flex items-center gap-2">
+													<AiExtractionStatusBadge
+														method={extractionMethod}
+														overallConfidence={overallExtractionConfidence}
+														filledCount={aiFilledFields.length}
+													/>
+													{isSaving && (
+														<Badge
+															variant="outline"
+															className="text-xs sidebar-gradient-text"
+														>
+															<Loader2 className="h-3 w-3 mr-1 animate-spin" />
+															Saving...
+														</Badge>
+													)}
+													{lastSavedAt && !isSaving && (
+														<Badge
+															variant="outline"
+															className="text-xs text-slate-600 border-slate-300"
+														>
+															<FileCheck className="h-3 w-3 mr-1 text-green" />
+															Saved {(() => {
+																const seconds = Math.round(
+																	(Date.now() - lastSavedAt.getTime()) / 1000,
+																);
+																if (seconds >= 60) {
+																	const minutes = Math.round(seconds / 60);
+																	return `${minutes} min ago`;
+																}
+																return `${seconds} s ago`;
+															})()}
+														</Badge>
+													)}
+												</div>
 											</div>
 										</div>
 									</div>
-								</div>
 
-								{/* Progress Bar */}
-								<div className="h-2 w-full rounded-full bg-white/40 backdrop-blur-sm">
-									<div
-										className="bg-linear-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
-										style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-									/>
-								</div>
+									{/* Progress Bar */}
+									<div className="h-2 w-full rounded-full bg-white/40 backdrop-blur-sm">
+										<div
+											className="bg-linear-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+											style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+										/>
+									</div>
 
-								{/* Step Indicators */}
-								<div className="flex items-center justify-between mt-3 gap-1">
-									{stepTitles.map((title, index) => {
-										const stepNum = index + 1;
-										const isActive = stepNum === currentStep;
-										const isCompleted = stepNum < currentStep;
-										const isAccessible =
-											stepNum === 1 ||
-											processedFileData ||
-											stepNum <= currentStep;
-										const nextStepNum = index + 2;
-										const isNextStepCompleted = nextStepNum < currentStep;
-										const hasNextStep = index < stepTitles.length - 1;
-										const showLine =
-											isCompleted && hasNextStep && isNextStepCompleted;
+									{/* Step Indicators */}
+									<div className="flex items-center justify-between mt-3 gap-1">
+										{stepTitles.map((title, index) => {
+											const stepNum = index + 1;
+											const isActive = stepNum === currentStep;
+											const isCompleted = stepNum < currentStep;
+											const isAccessible =
+												stepNum === 1 ||
+												processedFileData ||
+												stepNum <= currentStep;
+											const nextStepNum = index + 2;
+											const isNextStepCompleted = nextStepNum < currentStep;
+											const hasNextStep = index < stepTitles.length - 1;
+											const showLine =
+												isCompleted && hasNextStep && isNextStepCompleted;
 
-										return (
-											<React.Fragment key={stepNum}>
-												<button
-													type="button"
-													onClick={() => isAccessible && goToStep(stepNum)}
-													disabled={!isAccessible}
-													className={cn(
-														"flex-1 text-xs px-2 py-1 rounded-md transition-all flex items-center justify-center",
-														isActive
-															? "bg-[#e1f3ff] hover:bg-green/10 border border-[#a0c4db] text-[#6c8ba1] font-semibold"
-															: isCompleted
-																? "bg-green/10 text-green border-green/20"
-																: isAccessible
-																	? "border border-white/35 bg-white/35 text-slate-600 backdrop-blur-sm hover:bg-white/50"
-																	: "cursor-not-allowed border border-white/20 bg-white/15 text-slate-400",
+											return (
+												<React.Fragment key={stepNum}>
+													<button
+														type="button"
+														onClick={() => isAccessible && goToStep(stepNum)}
+														disabled={!isAccessible}
+														className={cn(
+															"flex-1 text-xs px-2 py-1 rounded-md transition-all flex items-center justify-center",
+															isActive
+																? "bg-[#e1f3ff] hover:bg-green/10 border border-[#a0c4db] text-[#6c8ba1] font-semibold"
+																: isCompleted
+																	? "bg-green/10 text-green border-green/20"
+																	: isAccessible
+																		? "border border-white/35 bg-white/35 text-slate-600 backdrop-blur-sm hover:bg-white/50"
+																		: "cursor-not-allowed border border-white/20 bg-white/15 text-slate-400",
+														)}
+														title={title}
+													>
+														{isCompleted ? (
+															<FileCheck className="h-6 w-6 text-green" />
+														) : (
+															<div className="truncate">{stepNum}</div>
+														)}
+													</button>
+													{showLine && (
+														<div
+															className="shrink-0 rounded-full"
+															style={{
+																backgroundColor: "#3DD9B3",
+																height: "0.5px",
+																width: "40px",
+																marginLeft: "-4px",
+																marginRight: "-4px",
+															}}
+															aria-hidden="true"
+														/>
 													)}
-													title={title}
-												>
-													{isCompleted ? (
-														<FileCheck className="h-6 w-6 text-green" />
-													) : (
-														<div className="truncate">{stepNum}</div>
-													)}
-												</button>
-												{showLine && (
-													<div
-														className="shrink-0 rounded-full"
-														style={{
-															backgroundColor: "#3DD9B3",
-															height: "0.5px",
-															width: "40px",
-															marginLeft: "-4px",
-															marginRight: "-4px",
-														}}
-														aria-hidden="true"
-													/>
-												)}
-											</React.Fragment>
-										);
-									})}
+												</React.Fragment>
+											);
+										})}
+									</div>
 								</div>
 							</div>
-						</div>
 
-						{/* Scrollable Content */}
-						<div className="min-h-0 flex-1 overflow-y-auto bg-transparent p-4">
-							<Form {...form}>
-								<form
-									id="contract-upload-form"
-									onSubmit={form.handleSubmit(handleSubmit)}
-									className="space-y-6"
-								>
-									{/* Step 1: File Upload Section */}
-									{currentStep === 1 && (
-										<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
-											<CardHeader className="pb-4">
-												<div className="flex items-center gap-3">
-													<CardTitle className="text-lg font-semibold sidebar-gradient-text">
-														1. Upload Contract File
-													</CardTitle>
-													<AnimatePresence mode="wait">
-														{fileIngestUi === "progress" ? (
-															<motion.div
-																key="file-ingest-progress"
-																initial={{ opacity: 0, x: -6 }}
-																animate={{ opacity: 1, x: 0 }}
-																exit={{ opacity: 0, scale: 0.9 }}
-																transition={{ duration: 0.2 }}
-																className="flex min-w-0 items-center gap-2"
-																aria-live="polite"
-																aria-label={`Upload ${fileIngestProgress}% complete`}
-															>
-																<div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200 sm:w-28">
-																	<div
-																		className="h-full rounded-full bg-[#078FAB] transition-[width] duration-200 ease-out"
-																		style={{
-																			width: `${fileIngestProgress}%`,
-																		}}
+							{/* Scrollable Content */}
+							<div className="min-h-0 flex-1 overflow-y-auto bg-transparent p-4">
+								<Form {...form}>
+									<form
+										id="contract-upload-form"
+										onSubmit={form.handleSubmit(handleSubmit)}
+										className="space-y-6"
+									>
+										{/* Step 1: File Upload Section */}
+										{currentStep === 1 && (
+											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
+												<CardHeader className="pb-4">
+													<div className="flex items-center gap-3">
+														<CardTitle className="text-lg font-semibold sidebar-gradient-text">
+															1. Upload Contract File
+														</CardTitle>
+														<AnimatePresence mode="wait">
+															{fileIngestUi === "progress" ? (
+																<motion.div
+																	key="file-ingest-progress"
+																	initial={{ opacity: 0, x: -6 }}
+																	animate={{ opacity: 1, x: 0 }}
+																	exit={{ opacity: 0, scale: 0.9 }}
+																	transition={{ duration: 0.2 }}
+																	className="flex min-w-0 items-center gap-2"
+																	aria-live="polite"
+																	aria-label={`Upload ${fileIngestProgress}% complete`}
+																>
+																	<div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200 sm:w-28">
+																		<div
+																			className="h-full rounded-full bg-[#078FAB] transition-[width] duration-200 ease-out"
+																			style={{
+																				width: `${fileIngestProgress}%`,
+																			}}
+																		/>
+																	</div>
+																	<span className="tabular-nums text-xs font-medium text-slate-600">
+																		{fileIngestProgress}%
+																	</span>
+																</motion.div>
+															) : null}
+															{fileIngestUi === "success" ? (
+																<motion.div
+																	key="file-ingest-success"
+																	initial={{ opacity: 0, scale: 0.5 }}
+																	animate={{ opacity: 1, scale: 1 }}
+																	exit={{ opacity: 0, scale: 0.8 }}
+																	transition={{
+																		type: "spring",
+																		stiffness: 420,
+																		damping: 18,
+																	}}
+																	className="flex items-center"
+																	aria-label="Upload complete"
+																>
+																	<CheckCircle2
+																		className="h-5 w-5 text-green"
+																		strokeWidth={2.25}
 																	/>
-																</div>
-																<span className="tabular-nums text-xs font-medium text-slate-600">
-																	{fileIngestProgress}%
-																</span>
-															</motion.div>
-														) : null}
-														{fileIngestUi === "success" ? (
-															<motion.div
-																key="file-ingest-success"
-																initial={{ opacity: 0, scale: 0.5 }}
-																animate={{ opacity: 1, scale: 1 }}
-																exit={{ opacity: 0, scale: 0.8 }}
-																transition={{
-																	type: "spring",
-																	stiffness: 420,
-																	damping: 18,
-																}}
-																className="flex items-center"
-																aria-label="Upload complete"
-															>
-																<CheckCircle2
-																	className="h-5 w-5 text-green"
-																	strokeWidth={2.25}
-																/>
-															</motion.div>
-														) : null}
-													</AnimatePresence>
-												</div>
-											</CardHeader>
-											<CardContent>
-												<div
-													{...dropzoneRootProps}
-													className={cn(
-														"border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200",
-														isDragActive
-															? "border-brand bg-brand/5"
-															: "border-light-200 hover:border-[#03B1C1] hover:bg-light-400",
-													)}
-												>
-													<input {...getInputProps()} />
-													<Upload className="mx-auto h-12 w-12 text-light-200 mb-4" />
+																</motion.div>
+															) : null}
+														</AnimatePresence>
+													</div>
+												</CardHeader>
+												<CardContent>
+													<div
+														{...dropzoneRootProps}
+														className={cn(
+															"border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200",
+															isDragActive
+																? "border-brand bg-brand/5"
+																: "border-light-200 hover:border-[#03B1C1] hover:bg-light-400",
+														)}
+													>
+														<input {...getInputProps()} />
+														<Upload className="mx-auto h-12 w-12 text-light-200 mb-4" />
 
-													{processedFileData ? (
-														<div className="space-y-2">
-															<div className="flex items-center justify-center space-x-2">
-																<FileText className="h-5 w-5 text-green" />
-																<span className="font-medium text-navy">
-																	{processedFileData.name}
+														{processedFileData ? (
+															<div className="space-y-2">
+																<div className="flex items-center justify-center space-x-2">
+																	<FileText className="h-5 w-5 text-green" />
+																	<span className="font-medium text-navy">
+																		{processedFileData.name}
+																	</span>
+																</div>
+																<p className="text-sm text-light-200">
+																	{(
+																		processedFileData.size /
+																		1024 /
+																		1024
+																	).toFixed(2)}{" "}
+																	MB
+																</p>
+															</div>
+														) : (
+															<div>
+																<p className="text-lg font-medium text-navy">
+																	{isDragActive
+																		? "Drop the contract here"
+																		: "Drag & drop contract file here"}
+																</p>
+																<p className="text-sm text-light-200 mt-2">
+																	Supports PDF, DOC, DOCX, TXT (Max 50MB)
+																</p>
+															</div>
+														)}
+
+														{isExtracting && (
+															<div className="mt-4 flex items-center justify-center space-x-2">
+																<Loader2 className="h-4 w-4 animate-spin text-brand" />
+																<span className="text-sm text-light-200">
+																	Extracting contract data...
 																</span>
 															</div>
-															<p className="text-sm text-light-200">
-																{(processedFileData.size / 1024 / 1024).toFixed(
-																	2,
-																)}{" "}
-																MB
-															</p>
-														</div>
-													) : (
-														<div>
-															<p className="text-lg font-medium text-navy">
-																{isDragActive
-																	? "Drop the contract here"
-																	: "Drag & drop contract file here"}
-															</p>
-															<p className="text-sm text-light-200 mt-2">
-																Supports PDF, DOC, DOCX, TXT (Max 50MB)
-															</p>
-														</div>
-													)}
+														)}
+													</div>
 
-													{isExtracting && (
-														<div className="mt-4 flex items-center justify-center space-x-2">
-															<Loader2 className="h-4 w-4 animate-spin text-brand" />
-															<span className="text-sm text-light-200">
-																Extracting contract data...
-															</span>
-														</div>
-													)}
+													{!processedFileData ? (
+														<DemoSampleDocumentDrop
+															sample={DEMO_CONTRACT_SAMPLE}
+															disabled={isExtracting || isUploading}
+															onUseSample={(file) => onDrop([file])}
+															className="mt-4"
+														/>
+													) : null}
+												</CardContent>
+											</Card>
+										)}
+
+										{/* Steps 2–N: Contract Details Sections */}
+										{currentStep >= 2 && currentStep <= contentSteps && (
+											<div className="">
+												<AiExtractionReviewPanel
+													method={extractionMethod}
+													overallConfidence={overallExtractionConfidence}
+													filledCount={aiFilledFields.length}
+													lowConfidenceFields={lowConfidenceFields}
+												/>
+												<div className="mb-4">
+													<h3 className="text-lg font-semibold text-slate-700">
+														{currentStep}. {stepTitles[currentStep - 1]}
+													</h3>
 												</div>
-
-												{!processedFileData ? (
-													<DemoSampleDocumentDrop
-														sample={DEMO_CONTRACT_SAMPLE}
-														disabled={isExtracting || isUploading}
-														onUseSample={(file) => onDrop([file])}
-														className="mt-4"
-													/>
-												) : null}
-											</CardContent>
-										</Card>
-									)}
-
-									{/* Steps 2–N: Contract Details Sections */}
-									{currentStep >= 2 && currentStep <= contentSteps && (
-										<div className="">
-											<AiExtractionReviewPanel
-												method={extractionMethod}
-												overallConfidence={overallExtractionConfidence}
-												filledCount={aiFilledFields.length}
-												lowConfidenceFields={lowConfidenceFields}
-											/>
-											<div className="mb-4">
-												<h3 className="text-lg font-semibold text-slate-700">
-													{currentStep}. {stepTitles[currentStep - 1]}
-												</h3>
-											</div>
-											<div className="space-y-6">
-												{/* Step 2: Contract Basics & Timeline */}
-												{currentStep === 2 && (
-													<div className="space-y-4">
-														<div className="grid grid-cols-1 md:grid-cols-1  gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="contractName"
-																render={({ field }) => (
-																	<FormItem
-																		className={aiFieldItemClassName(
-																			"contractName",
-																			aiFilledFields,
-																			fieldConfidence,
-																		)}
-																	>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Contract Title / Description{" "}
-																			<span className="text-red">*</span>
-																			<AiFilledLabelHint
-																				fieldName="contractName"
-																				aiFilledFields={aiFilledFields}
-																				fieldConfidence={fieldConfidence}
-																			/>
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="CFCE Provider Services Agreement"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="contractNumber"
-																render={({ field }) => (
-																	<FormItem
-																		className={aiFieldItemClassName(
-																			"contractNumber",
-																			aiFilledFields,
-																			fieldConfidence,
-																		)}
-																	>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Contract Number{" "}
-																			<span className="text-red">*</span>
-																			<AiFilledLabelHint
-																				fieldName="contractNumber"
-																				aiFilledFields={aiFilledFields}
-																				fieldConfidence={fieldConfidence}
-																			/>
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., KHME2-01-47"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-															<FormField
-																control={form.control}
-																name="contractType"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Contract Type{" "}
-																			<span className="text-red">*</span>
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select contract type" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{CONTRACT_TYPES.map((type) => (
-																					<SelectItem key={type} value={type}>
-																						{type}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="lifecycleStatus"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Lifecycle Status{" "}
-																			<span className="text-red">*</span>
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select status" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{LIFECYCLE_STATUSES.map((status) => (
-																					<SelectItem
-																						key={status.value}
-																						value={status.value}
-																					>
-																						{status.label}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-															<FormField
-																control={form.control}
-																name="attachmentReferences"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Attachment References
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Exhibit A, Attachment B..."
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="assignToDepartment"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Business Unit / Department{" "}
-																			<span className="text-red">*</span>
-																		</FormLabel>
-																		<Select
-																			onValueChange={(value) => {
-																				field.onChange(value);
-																				if (!form.getValues("businessUnit")) {
-																					form.setValue("businessUnit", value);
-																				}
-																			}}
-																			value={field.value}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select department" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{CONTRACT_DEPARTMENTS.map((dept) => (
-																					<SelectItem key={dept} value={dept}>
-																						{dept}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="businessUnit"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Business Unit
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value || undefined}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select business unit" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{CONTRACT_DEPARTMENTS.map((dept) => (
-																					<SelectItem key={dept} value={dept}>
-																						{dept}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="subDepartment"
-																render={({ field }) => {
-																	const dept =
-																		watchedAssignToDepartment ||
-																		form.watch("businessUnit");
-																	const options = dept
-																		? divisionsForDepartment(dept)
-																		: USER_DIVISIONS;
-																	return (
-																		<FormItem>
-																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Sub-Department
-																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
-																				value={field.value || undefined}
-																				disabled={options.length === 0}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue
-																							placeholder={
-																								options.length === 0
-																									? "Select department first"
-																									: "Select sub-department"
-																							}
-																						/>
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{options.map((div) => (
-																						<SelectItem key={div} value={div}>
-																							{formatDivisionName(div)}
-																						</SelectItem>
-																					))}
-																				</SelectContent>
-																			</Select>
-																			<FormMessage />
-																		</FormItem>
-																	);
-																}}
-															/>
-
-															<FormField
-																control={form.control}
-																name="departmentOwner"
-																render={({ field }) => {
-																	const owners =
-																		filteredManagers.length > 0
-																			? filteredManagers
-																			: availableManagers;
-																	return (
-																		<FormItem>
-																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Department Owner
-																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
-																				value={field.value || undefined}
-																				disabled={owners.length === 0}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue
-																							placeholder={
-																								owners.length === 0
-																									? "No department managers found"
-																									: "Select department manager"
-																							}
-																						/>
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{owners.map((user) => (
-																						<SelectItem
-																							key={user.$id}
-																							value={user.$id}
-																						>
-																							{user.fullName}
-																							{user.email
-																								? ` (${user.email})`
-																								: ""}
-																						</SelectItem>
-																					))}
-																				</SelectContent>
-																			</Select>
-																			<FormMessage />
-																		</FormItem>
-																	);
-																}}
-															/>
-														</div>
-
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="startDate"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Start Date
-																		</FormLabel>
-																		<FormControl>
-																			<DatePicker
-																				selected={field.value}
-																				onChange={(date: Date | null) => {
-																					// Normalize the date to midnight local time to avoid timezone issues
-																					if (date) {
-																						const normalized = new Date(
-																							date.getFullYear(),
-																							date.getMonth(),
-																							date.getDate(),
-																						);
-																						field.onChange(normalized);
-																					} else {
-																						field.onChange(undefined);
-																					}
-																				}}
-																				dateFormat="MM/dd/yyyy"
-																				className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-																				placeholderText="Select start date"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="executionDate"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Execution Date
-																		</FormLabel>
-																		<FormControl>
-																			<DatePicker
-																				selected={field.value}
-																				onChange={(date: Date | null) => {
-																					// Normalize the date to midnight local time to avoid timezone issues
-																					if (date) {
-																						const normalized = new Date(
-																							date.getFullYear(),
-																							date.getMonth(),
-																							date.getDate(),
-																						);
-																						field.onChange(normalized);
-																					} else {
-																						field.onChange(undefined);
-																					}
-																				}}
-																				dateFormat="MM/dd/yyyy"
-																				className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-																				placeholderText="Select execution date"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="expiryDate"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Expiry Date{" "}
-																			<span className="text-red">*</span>
-																		</FormLabel>
-																		<FormControl>
-																			<Popover>
-																				<PopoverTrigger asChild>
-																					<Button
-																						variant="outline"
-																						className="w-full justify-start text-left font-normal bg-white border-slate-300"
-																					>
-																						<CalendarIcon className="mr-2 h-4 w-4" />
-																						{field.value ? (
-																							format(field.value, "PPP")
-																						) : (
-																							<span className="text-slate-500">
-																								Select expiry date
-																							</span>
-																						)}
-																					</Button>
-																				</PopoverTrigger>
-																				<PopoverContent
-																					className="w-auto p-0"
-																					align="start"
-																				>
-																					<Calendar
-																						mode="single"
-																						selected={field.value}
-																						onSelect={(date) => {
-																							// Normalize the date to midnight local time to avoid timezone issues
-																							if (date) {
-																								const normalized = new Date(
-																									date.getFullYear(),
-																									date.getMonth(),
-																									date.getDate(),
-																								);
-																								field.onChange(normalized);
-																							} else {
-																								field.onChange(undefined);
-																							}
-																						}}
-																						disabled={(date) => {
-																							const today = new Date();
-																							today.setHours(0, 0, 0, 0);
-																							return date < today;
-																						}}
-																						initialFocus
-																					/>
-																				</PopoverContent>
-																			</Popover>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="space-y-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<div className="flex flex-wrap items-end justify-between gap-4">
+												<div className="space-y-6">
+													{/* Step 2: Contract Basics & Timeline */}
+													{currentStep === 2 && (
+														<div className="space-y-4">
+															<div className="grid grid-cols-1 md:grid-cols-1  gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
-																	name="autoRenew"
+																	name="contractName"
 																	render={({ field }) => (
-																		<FormItem className="space-y-2 shrink-0">
+																		<FormItem
+																			className={aiFieldItemClassName(
+																				"contractName",
+																				aiFilledFields,
+																				fieldConfidence,
+																			)}
+																		>
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Auto-Renew
+																				Contract Title / Description{" "}
+																				<span className="text-red">*</span>
+																				<AiFilledLabelHint
+																					fieldName="contractName"
+																					aiFilledFields={aiFilledFields}
+																					fieldConfidence={fieldConfidence}
+																				/>
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="CFCE Provider Services Agreement"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="contractNumber"
+																	render={({ field }) => (
+																		<FormItem
+																			className={aiFieldItemClassName(
+																				"contractNumber",
+																				aiFilledFields,
+																				fieldConfidence,
+																			)}
+																		>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Contract Number{" "}
+																				<span className="text-red">*</span>
+																				<AiFilledLabelHint
+																					fieldName="contractNumber"
+																					aiFilledFields={aiFilledFields}
+																					fieldConfidence={fieldConfidence}
+																				/>
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="e.g., KHME2-01-47"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+																<FormField
+																	control={form.control}
+																	name="contractType"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Contract Type{" "}
+																				<span className="text-red">*</span>
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select contract type" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{CONTRACT_TYPES.map((type) => (
+																						<SelectItem key={type} value={type}>
+																							{type}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="lifecycleStatus"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Lifecycle Status{" "}
+																				<span className="text-red">*</span>
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select status" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{LIFECYCLE_STATUSES.map((status) => (
+																						<SelectItem
+																							key={status.value}
+																							value={status.value}
+																						>
+																							{status.label}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+																<FormField
+																	control={form.control}
+																	name="attachmentReferences"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Attachment References
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={2}
+																					placeholder="Exhibit A, Attachment B..."
+																					{...field}
+																					className="bg-white border-slate-300 resize-none"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="assignToDepartment"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Business Unit / Department{" "}
+																				<span className="text-red">*</span>
+																			</FormLabel>
+																			<Select
+																				onValueChange={(value) => {
+																					field.onChange(value);
+																					if (!form.getValues("businessUnit")) {
+																						form.setValue(
+																							"businessUnit",
+																							value,
+																						);
+																					}
+																				}}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select department" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{CONTRACT_DEPARTMENTS.map((dept) => (
+																						<SelectItem key={dept} value={dept}>
+																							{dept}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="businessUnit"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Business Unit
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select business unit" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{CONTRACT_DEPARTMENTS.map((dept) => (
+																						<SelectItem key={dept} value={dept}>
+																							{dept}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="subDepartment"
+																	render={({ field }) => {
+																		const dept =
+																			watchedAssignToDepartment ||
+																			form.watch("businessUnit");
+																		const options = dept
+																			? divisionsForDepartment(dept)
+																			: USER_DIVISIONS;
+																		return (
+																			<FormItem>
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Sub-Department
+																				</FormLabel>
+																				<Select
+																					onValueChange={field.onChange}
+																					value={field.value || undefined}
+																					disabled={options.length === 0}
+																				>
+																					<FormControl>
+																						<SelectTrigger className="bg-white border-slate-300">
+																							<SelectValue
+																								placeholder={
+																									options.length === 0
+																										? "Select department first"
+																										: "Select sub-department"
+																								}
+																							/>
+																						</SelectTrigger>
+																					</FormControl>
+																					<SelectContent>
+																						{options.map((div) => (
+																							<SelectItem key={div} value={div}>
+																								{formatDivisionName(div)}
+																							</SelectItem>
+																						))}
+																					</SelectContent>
+																				</Select>
+																				<FormMessage />
+																			</FormItem>
+																		);
+																	}}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="departmentOwner"
+																	render={({ field }) => {
+																		const owners =
+																			filteredManagers.length > 0
+																				? filteredManagers
+																				: availableManagers;
+																		return (
+																			<FormItem>
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Department Owner
+																				</FormLabel>
+																				<Select
+																					onValueChange={field.onChange}
+																					value={field.value || undefined}
+																					disabled={owners.length === 0}
+																				>
+																					<FormControl>
+																						<SelectTrigger className="bg-white border-slate-300">
+																							<SelectValue
+																								placeholder={
+																									owners.length === 0
+																										? "No department managers found"
+																										: "Select department manager"
+																								}
+																							/>
+																						</SelectTrigger>
+																					</FormControl>
+																					<SelectContent>
+																						{owners.map((user) => (
+																							<SelectItem
+																								key={user.$id}
+																								value={user.$id}
+																							>
+																								{user.fullName}
+																								{user.email
+																									? ` (${user.email})`
+																									: ""}
+																							</SelectItem>
+																						))}
+																					</SelectContent>
+																				</Select>
+																				<FormMessage />
+																			</FormItem>
+																		);
+																	}}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="startDate"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Start Date
+																			</FormLabel>
+																			<FormControl>
+																				<DatePicker
+																					selected={field.value}
+																					onChange={(date: Date | null) => {
+																						// Normalize the date to midnight local time to avoid timezone issues
+																						if (date) {
+																							const normalized = new Date(
+																								date.getFullYear(),
+																								date.getMonth(),
+																								date.getDate(),
+																							);
+																							field.onChange(normalized);
+																						} else {
+																							field.onChange(undefined);
+																						}
+																					}}
+																					dateFormat="MM/dd/yyyy"
+																					className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
+																					placeholderText="Select start date"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="executionDate"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Execution Date
+																			</FormLabel>
+																			<FormControl>
+																				<DatePicker
+																					selected={field.value}
+																					onChange={(date: Date | null) => {
+																						// Normalize the date to midnight local time to avoid timezone issues
+																						if (date) {
+																							const normalized = new Date(
+																								date.getFullYear(),
+																								date.getMonth(),
+																								date.getDate(),
+																							);
+																							field.onChange(normalized);
+																						} else {
+																							field.onChange(undefined);
+																						}
+																					}}
+																					dateFormat="MM/dd/yyyy"
+																					className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
+																					placeholderText="Select execution date"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="expiryDate"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Expiry Date{" "}
+																				<span className="text-red">*</span>
+																			</FormLabel>
+																			<FormControl>
+																				<Popover>
+																					<PopoverTrigger asChild>
+																						<Button
+																							variant="outline"
+																							className="w-full justify-start text-left font-normal bg-white border-slate-300"
+																						>
+																							<CalendarIcon className="mr-2 h-4 w-4" />
+																							{field.value ? (
+																								format(field.value, "PPP")
+																							) : (
+																								<span className="text-slate-500">
+																									Select expiry date
+																								</span>
+																							)}
+																						</Button>
+																					</PopoverTrigger>
+																					<PopoverContent
+																						className="w-auto p-0"
+																						align="start"
+																					>
+																						<Calendar
+																							mode="single"
+																							selected={field.value}
+																							onSelect={(date) => {
+																								// Normalize the date to midnight local time to avoid timezone issues
+																								if (date) {
+																									const normalized = new Date(
+																										date.getFullYear(),
+																										date.getMonth(),
+																										date.getDate(),
+																									);
+																									field.onChange(normalized);
+																								} else {
+																									field.onChange(undefined);
+																								}
+																							}}
+																							disabled={(date) => {
+																								const today = new Date();
+																								today.setHours(0, 0, 0, 0);
+																								return date < today;
+																							}}
+																							initialFocus
+																						/>
+																					</PopoverContent>
+																				</Popover>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="space-y-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<div className="flex flex-wrap items-end justify-between gap-4">
+																	<FormField
+																		control={form.control}
+																		name="autoRenew"
+																		render={({ field }) => (
+																			<FormItem className="space-y-2 shrink-0">
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Auto-Renew
+																				</FormLabel>
+																				<FormControl>
+																					<Switch
+																						checked={field.value}
+																						onCheckedChange={field.onChange}
+																					/>
+																				</FormControl>
+																				<FormMessage />
+																			</FormItem>
+																		)}
+																	/>
+
+																	<FormField
+																		control={form.control}
+																		name="renewalNoticeDays"
+																		render={({ field }) => (
+																			<FormItem className="w-[140px] shrink-0">
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Renewal Notice (Days)
+																				</FormLabel>
+																				<Select
+																					onValueChange={field.onChange}
+																					value={field.value || undefined}
+																				>
+																					<FormControl>
+																						<SelectTrigger className="bg-white border-slate-300 w-[140px]">
+																							<SelectValue placeholder="Days" />
+																						</SelectTrigger>
+																					</FormControl>
+																					<SelectContent>
+																						{NOTICE_DAY_OPTIONS.map((days) => (
+																							<SelectItem
+																								key={days}
+																								value={days}
+																							>
+																								{days} days
+																							</SelectItem>
+																						))}
+																					</SelectContent>
+																				</Select>
+																				<FormMessage />
+																			</FormItem>
+																		)}
+																	/>
+																</div>
+
+																<div className="border-t border-slate-200" />
+
+																<FormField
+																	control={form.control}
+																	name="description"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="shad-form-label">
+																				Summary / Scope
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					placeholder="Summarize the work, deliverables, or obligations captured in this agreement"
+																					rows={6}
+																					maxLength={1000}
+																					{...field}
+																					className="min-h-[140px] w-full bg-white border-slate-300 resize-y"
+																				/>
+																			</FormControl>
+																			<p className="mt-1 text-xs text-slate-500">
+																				{field.value?.length ?? 0}/1000
+																				characters
+																			</p>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+														</div>
+													)}
+
+													{/* Step 3: Parties & Key Contacts */}
+													{currentStep === 3 && (
+														<div className="space-y-4">
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="counterpartyLegalName"
+																	render={({ field }) => (
+																		<FormItem
+																			className={aiFieldItemClassName(
+																				"counterpartyLegalName",
+																				aiFilledFields,
+																				fieldConfidence,
+																			)}
+																		>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Counterparty Legal Name{" "}
+																				<span className="text-red">*</span>
+																				<AiFilledLabelHint
+																					fieldName="counterpartyLegalName"
+																					aiFilledFields={aiFilledFields}
+																					fieldConfidence={fieldConfidence}
+																				/>
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="Center for Family & Child Enrichment"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="counterpartyContactName"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Counterparty Contact Name
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="Primary point of contact"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="counterpartyContactTitle"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Contact Title
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="e.g., Clinical Director"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="counterpartyContactEmail"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Contact Email
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="contact@example.com"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="counterpartyContactPhone"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Contact Phone
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="+1 (305) 555-0123"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="counterpartyType"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Counterparty Type
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select type" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{COUNTERPARTY_TYPES.map((type) => (
+																						<SelectItem
+																							key={type.value}
+																							value={type.value}
+																						>
+																							{type.label}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="counterpartyTaxId"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Tax ID / EIN
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="12-3456789"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="counterpartyDunsNumber"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				DUNS Number
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="123456789"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="counterpartyAddress"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="shad-form-label">
+																				Mailing Address
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={2}
+																					placeholder="Street, City, State, Zip"
+																					{...field}
+																					className="bg-white border-slate-300 resize-none"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="primaryInternalContactId"
+																	render={({ field }) => {
+																		const contacts =
+																			filteredManagers.length > 0
+																				? filteredManagers
+																				: availableManagers;
+																		return (
+																			<FormItem>
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Primary Internal Contact
+																				</FormLabel>
+																				<Select
+																					onValueChange={field.onChange}
+																					value={field.value || undefined}
+																					disabled={contacts.length === 0}
+																				>
+																					<FormControl>
+																						<SelectTrigger className="bg-white border-slate-300">
+																							<SelectValue placeholder="Select contact" />
+																						</SelectTrigger>
+																					</FormControl>
+																					<SelectContent>
+																						{contacts.map((user) => (
+																							<SelectItem
+																								key={user.$id}
+																								value={user.$id}
+																							>
+																								{user.fullName}
+																								{user.email
+																									? ` (${user.email})`
+																									: ""}
+																							</SelectItem>
+																						))}
+																					</SelectContent>
+																				</Select>
+																				<FormMessage />
+																			</FormItem>
+																		);
+																	}}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="secondaryInternalContactId"
+																	render={({ field }) => {
+																		const contacts =
+																			filteredManagers.length > 0
+																				? filteredManagers
+																				: availableManagers;
+																		return (
+																			<FormItem>
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Secondary Internal Contact
+																				</FormLabel>
+																				<Select
+																					onValueChange={field.onChange}
+																					value={field.value || undefined}
+																					disabled={contacts.length === 0}
+																				>
+																					<FormControl>
+																						<SelectTrigger className="bg-white border-slate-300">
+																							<SelectValue placeholder="Select contact" />
+																						</SelectTrigger>
+																					</FormControl>
+																					<SelectContent>
+																						{contacts.map((user) => (
+																							<SelectItem
+																								key={user.$id}
+																								value={user.$id}
+																							>
+																								{user.fullName}
+																								{user.email
+																									? ` (${user.email})`
+																									: ""}
+																							</SelectItem>
+																						))}
+																					</SelectContent>
+																				</Select>
+																				<FormMessage />
+																			</FormItem>
+																		);
+																	}}
+																/>
+															</div>
+														</div>
+													)}
+
+													{/* Step 4: Financials & Payment Terms */}
+													{currentStep === 4 && (
+														<div className="space-y-4">
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="amount"
+																	render={({ field }) => (
+																		<FormItem
+																			className={aiFieldItemClassName(
+																				"amount",
+																				aiFilledFields,
+																				fieldConfidence,
+																			)}
+																		>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Contract Amount{" "}
+																				<span className="text-red">*</span>
+																				<AiFilledLabelHint
+																					fieldName="amount"
+																					aiFilledFields={aiFilledFields}
+																					fieldConfidence={fieldConfidence}
+																				/>
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="Enter amount (e.g., $50,000)"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="currencyCode"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Currency{" "}
+																				<span className="text-red">*</span>
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select currency" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{CURRENCY_CODES.map((code) => (
+																						<SelectItem key={code} value={code}>
+																							{code}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="notToExceedAmount"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Not-to-Exceed Amount
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="$100,000 cap"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="paymentTerms"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Payment Terms
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select terms" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{PAYMENT_TERM_OPTIONS.map(
+																						(option) => (
+																							<SelectItem
+																								key={option.value}
+																								value={option.value}
+																							>
+																								{option.label}
+																							</SelectItem>
+																						),
+																					)}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="paymentSchedule"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Payment Schedule
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="How often is payment due?" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{PAYMENT_SCHEDULE_OPTIONS.map(
+																						(option) => (
+																							<SelectItem
+																								key={option.value}
+																								value={option.value}
+																							>
+																								{option.label}
+																							</SelectItem>
+																						),
+																					)}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="budgetCode"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Budget Code
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="GL or project code"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="costCenter"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Cost Center
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="Cost center reference"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="projectMatterId"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Project / Matter ID
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="Optional reference"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="erpReference"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				ERP Reference
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="SAP / NetSuite ID"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="crmReference"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				CRM Reference
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="HubSpot / Salesforce ID"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+														</div>
+													)}
+
+													{/* Step 5: Risk & Compliance */}
+													{currentStep === 5 && (
+														<div className="space-y-4">
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="riskLevel"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Risk Level{" "}
+																				<span className="text-red">*</span>
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select risk level" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{RISK_LEVELS.map((level) => (
+																						<SelectItem
+																							key={level.value}
+																							value={level.value}
+																						>
+																							{level.label}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="riskMitigationPlan"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Risk Mitigation Plan
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={2}
+																					placeholder="Outline monitoring or mitigation steps"
+																					{...field}
+																					className="bg-white border-slate-300 resize-none"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="insuranceRequired"
+																	render={({ field }) => (
+																		<FormItem className="space-y-2">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Insurance Required
 																			</FormLabel>
 																			<FormControl>
 																				<Switch
@@ -4113,27 +4811,395 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 																<FormField
 																	control={form.control}
-																	name="renewalNoticeDays"
+																	name="insuranceCoveragePerIncident"
 																	render={({ field }) => (
-																		<FormItem className="w-[140px] shrink-0">
+																		<FormItem>
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Renewal Notice (Days)
+																				Coverage / Incident
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="$1,000,000"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="insuranceCoverageAggregate"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Coverage Aggregate
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="$3,000,000"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="insuranceVerifiedDate"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Insurance Verified On
+																			</FormLabel>
+																			<FormControl>
+																				<DatePicker
+																					selected={field.value}
+																					onChange={(date: Date | null) =>
+																						field.onChange(date)
+																					}
+																					dateFormat="MM/dd/yyyy"
+																					className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
+																					placeholderText="Verification date"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="insuranceExpiryDate"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Insurance Expiration
+																			</FormLabel>
+																			<FormControl>
+																				<DatePicker
+																					selected={field.value}
+																					onChange={(date: Date | null) =>
+																						field.onChange(date)
+																					}
+																					dateFormat="MM/dd/yyyy"
+																					className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
+																					placeholderText="Expiration date"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="indemnificationIncluded"
+																	render={({ field }) => (
+																		<FormItem className="space-y-2">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Indemnification Included
+																			</FormLabel>
+																			<FormControl>
+																				<Switch
+																					checked={field.value}
+																					onCheckedChange={field.onChange}
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="hipaaRequired"
+																	render={({ field }) => (
+																		<FormItem className="space-y-2">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				HIPAA / Data Privacy Required
+																			</FormLabel>
+																			<FormControl>
+																				<Switch
+																					checked={field.value}
+																					onCheckedChange={field.onChange}
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="backgroundCheckRequired"
+																	render={({ field }) => (
+																		<FormItem className="space-y-2">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Background Check Required
+																			</FormLabel>
+																			<FormControl>
+																				<Switch
+																					checked={field.value}
+																					onCheckedChange={field.onChange}
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="auditRightsGranted"
+																	render={({ field }) => (
+																		<FormItem className="space-y-2">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Audit Rights Granted
+																			</FormLabel>
+																			<FormControl>
+																				<Switch
+																					checked={field.value}
+																					onCheckedChange={field.onChange}
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="dataPrivacyRequirements"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="shad-form-label">
+																				Data Privacy Requirements
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={3}
+																					placeholder="List HIPAA, PHI, GDPR or other data clauses"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="regulatoryRequirements"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="shad-form-label">
+																				Regulatory Requirements
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={3}
+																					placeholder="DCF, Thriving Mind, CMS or other regulators"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="keyObligations"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Key Obligations (one per line)
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={4}
+																					placeholder="Enter obligations separated by newline or comma"
+																					{...field}
+																					className="min-h-[100px] w-full bg-white border-slate-300 resize-y"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="serviceLevelAgreements"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Service Level Agreements
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={4}
+																					placeholder="Document uptime, response or care metrics"
+																					{...field}
+																					className="min-h-[100px] w-full bg-white border-slate-300 resize-y"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="performanceMetrics"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Performance Metrics
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={3}
+																					placeholder="KPIs or benchmarks"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="reportingRequirements"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Reporting Requirements
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={3}
+																					placeholder="Monthly metrics, fiscal or progress reports"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="terminationNoticeDays"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Termination Notice (Days)
 																			</FormLabel>
 																			<Select
 																				onValueChange={field.onChange}
 																				value={field.value || undefined}
 																			>
 																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300 w-[140px]">
-																						<SelectValue placeholder="Days" />
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select days" />
 																					</SelectTrigger>
 																				</FormControl>
 																				<SelectContent>
 																					{NOTICE_DAY_OPTIONS.map((days) => (
-																						<SelectItem
-																							key={days}
-																							value={days}
-																						>
+																						<SelectItem key={days} value={days}>
+																							{days} days
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="terminationRights"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Termination Rights
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select rights" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{TERMINATION_RIGHTS_OPTIONS.map(
+																						(opt) => (
+																							<SelectItem
+																								key={opt.value}
+																								value={opt.value}
+																							>
+																								{opt.label}
+																							</SelectItem>
+																						),
+																					)}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="curePeriodDays"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Cure Period (Days)
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select days" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{CURE_PERIOD_OPTIONS.map((days) => (
+																						<SelectItem key={days} value={days}>
 																							{days} days
 																						</SelectItem>
 																					))}
@@ -4145,1264 +5211,165 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="border-t border-slate-200" />
-
-															<FormField
-																control={form.control}
-																name="description"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="shad-form-label">
-																			Summary / Scope
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				placeholder="Summarize the work, deliverables, or obligations captured in this agreement"
-																				rows={6}
-																				maxLength={1000}
-																				{...field}
-																				className="min-h-[140px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<p className="mt-1 text-xs text-slate-500">
-																			{(field.value?.length ?? 0)}/1000 characters
-																		</p>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-													</div>
-												)}
-
-												{/* Step 3: Parties & Key Contacts */}
-												{currentStep === 3 && (
-													<div className="space-y-4">
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="counterpartyLegalName"
-																render={({ field }) => (
-																	<FormItem
-																		className={aiFieldItemClassName(
-																			"counterpartyLegalName",
-																			aiFilledFields,
-																			fieldConfidence,
-																		)}
-																	>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Counterparty Legal Name{" "}
-																			<span className="text-red">*</span>
-																			<AiFilledLabelHint
-																				fieldName="counterpartyLegalName"
-																				aiFilledFields={aiFilledFields}
-																				fieldConfidence={fieldConfidence}
-																			/>
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Center for Family & Child Enrichment"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="counterpartyContactName"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Counterparty Contact Name
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Primary point of contact"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="counterpartyContactTitle"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Contact Title
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., Clinical Director"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="counterpartyContactEmail"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Contact Email
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="contact@example.com"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="counterpartyContactPhone"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Contact Phone
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="+1 (305) 555-0123"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="counterpartyType"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Counterparty Type
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select type" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{COUNTERPARTY_TYPES.map((type) => (
-																					<SelectItem
-																						key={type.value}
-																						value={type.value}
-																					>
-																						{type.label}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="counterpartyTaxId"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Tax ID / EIN
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="12-3456789"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="counterpartyDunsNumber"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			DUNS Number
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="123456789"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="counterpartyAddress"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="shad-form-label">
-																			Mailing Address
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Street, City, State, Zip"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="primaryInternalContactId"
-																render={({ field }) => {
-																	const contacts =
-																		filteredManagers.length > 0
-																			? filteredManagers
-																			: availableManagers;
-																	return (
-																		<FormItem>
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="milestones"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Primary Internal Contact
+																				Key Milestones
 																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
-																				value={field.value || undefined}
-																				disabled={contacts.length === 0}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Select contact" />
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{contacts.map((user) => (
-																						<SelectItem
-																							key={user.$id}
-																							value={user.$id}
-																						>
-																							{user.fullName}
-																							{user.email
-																								? ` (${user.email})`
-																								: ""}
-																						</SelectItem>
-																					))}
-																				</SelectContent>
-																			</Select>
+																			<FormControl>
+																				<Textarea
+																					rows={3}
+																					placeholder="Add one milestone per line"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
+																			</FormControl>
 																			<FormMessage />
 																		</FormItem>
-																	);
-																}}
-															/>
+																	)}
+																/>
+															</div>
 
-															<FormField
-																control={form.control}
-																name="secondaryInternalContactId"
-																render={({ field }) => {
-																	const contacts =
-																		filteredManagers.length > 0
-																			? filteredManagers
-																			: availableManagers;
-																	return (
-																		<FormItem>
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="deliverables"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Secondary Internal Contact
+																				Deliverables
 																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
-																				value={field.value || undefined}
-																				disabled={contacts.length === 0}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Select contact" />
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{contacts.map((user) => (
-																						<SelectItem
-																							key={user.$id}
-																							value={user.$id}
-																						>
-																							{user.fullName}
-																							{user.email
-																								? ` (${user.email})`
-																								: ""}
-																						</SelectItem>
-																					))}
-																				</SelectContent>
-																			</Select>
+																			<FormControl>
+																				<Textarea
+																					rows={3}
+																					placeholder="List deliverables per line"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
+																			</FormControl>
 																			<FormMessage />
 																		</FormItem>
-																	);
-																}}
-															/>
-														</div>
-													</div>
-												)}
+																	)}
+																/>
+															</div>
 
-												{/* Step 4: Financials & Payment Terms */}
-												{currentStep === 4 && (
-													<div className="space-y-4">
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="amount"
-																render={({ field }) => (
-																	<FormItem
-																		className={aiFieldItemClassName(
-																			"amount",
-																			aiFilledFields,
-																			fieldConfidence,
-																		)}
-																	>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Contract Amount{" "}
-																			<span className="text-red">*</span>
-																			<AiFilledLabelHint
-																				fieldName="amount"
-																				aiFilledFields={aiFilledFields}
-																				fieldConfidence={fieldConfidence}
-																			/>
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Enter amount (e.g., $50,000)"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="currencyCode"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Currency{" "}
-																			<span className="text-red">*</span>
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="slaPenalties"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				SLA Penalties
+																			</FormLabel>
 																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select currency" />
-																				</SelectTrigger>
+																				<Textarea
+																					rows={3}
+																					placeholder="Describe penalties or service credits"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
 																			</FormControl>
-																			<SelectContent>
-																				{CURRENCY_CODES.map((code) => (
-																					<SelectItem key={code} value={code}>
-																						{code}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
 
-															<FormField
-																control={form.control}
-																name="notToExceedAmount"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Not-to-Exceed Amount
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="$100,000 cap"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="paymentTerms"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Payment Terms
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="serviceCreditTerms"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Service Credit Terms
+																			</FormLabel>
 																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select terms" />
-																				</SelectTrigger>
+																				<Textarea
+																					rows={3}
+																					placeholder="Reference how credits are calculated"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
 																			</FormControl>
-																			<SelectContent>
-																				{PAYMENT_TERM_OPTIONS.map((option) => (
-																					<SelectItem
-																						key={option.value}
-																						value={option.value}
-																					>
-																						{option.label}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
 
-															<FormField
-																control={form.control}
-																name="paymentSchedule"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Payment Schedule
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="escalationProcedures"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Escalation Procedures
+																			</FormLabel>
 																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="How often is payment due?" />
-																				</SelectTrigger>
+																				<Textarea
+																					rows={3}
+																					placeholder="Detail escalation flow or SLAs"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
 																			</FormControl>
-																			<SelectContent>
-																				{PAYMENT_SCHEDULE_OPTIONS.map(
-																					(option) => (
-																						<SelectItem
-																							key={option.value}
-																							value={option.value}
-																						>
-																							{option.label}
-																						</SelectItem>
-																					),
-																				)}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
 
-															<FormField
-																control={form.control}
-																name="budgetCode"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Budget Code
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="GL or project code"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="costCenter"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Cost Center
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Cost center reference"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="projectMatterId"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Project / Matter ID
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Optional reference"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="erpReference"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			ERP Reference
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="SAP / NetSuite ID"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="crmReference"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			CRM Reference
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="HubSpot / Salesforce ID"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-													</div>
-												)}
-
-												{/* Step 5: Risk & Compliance */}
-												{currentStep === 5 && (
-													<div className="space-y-4">
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="riskLevel"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Risk Level{" "}
-																			<span className="text-red">*</span>
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
+															<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="obligationOwners"
+																	render={({ field }) => (
+																		<FormItem className="w-full">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Obligation Owners
+																			</FormLabel>
 																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select risk level" />
-																				</SelectTrigger>
+																				<Textarea
+																					rows={3}
+																					placeholder="List owners separated by newline"
+																					{...field}
+																					className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
+																				/>
 																			</FormControl>
-																			<SelectContent>
-																				{RISK_LEVELS.map((level) => (
-																					<SelectItem
-																						key={level.value}
-																						value={level.value}
-																					>
-																						{level.label}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="riskMitigationPlan"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Risk Mitigation Plan
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Outline monitoring or mitigation steps"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
 														</div>
+													)}
 
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+													{/* Step 6: Workflow, Ownership & Approvals */}
+													{currentStep === 6 && (
+														<div className="space-y-4">
 															<FormField
 																control={form.control}
-																name="insuranceRequired"
-																render={({ field }) => (
-																	<FormItem className="space-y-2">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Insurance Required
-																		</FormLabel>
-																		<FormControl>
-																			<Switch
-																				checked={field.value}
-																				onCheckedChange={field.onChange}
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="insuranceCoveragePerIncident"
+																name="assignedManagers"
 																render={({ field }) => (
 																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Coverage / Incident
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="$1,000,000"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="insuranceCoverageAggregate"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Coverage Aggregate
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="$3,000,000"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="insuranceVerifiedDate"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Insurance Verified On
-																		</FormLabel>
-																		<FormControl>
-																			<DatePicker
-																				selected={field.value}
-																				onChange={(date: Date | null) =>
-																					field.onChange(date)
-																				}
-																				dateFormat="MM/dd/yyyy"
-																				className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-																				placeholderText="Verification date"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="insuranceExpiryDate"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Insurance Expiration
-																		</FormLabel>
-																		<FormControl>
-																			<DatePicker
-																				selected={field.value}
-																				onChange={(date: Date | null) =>
-																					field.onChange(date)
-																				}
-																				dateFormat="MM/dd/yyyy"
-																				className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-																				placeholderText="Expiration date"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="indemnificationIncluded"
-																render={({ field }) => (
-																	<FormItem className="space-y-2">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Indemnification Included
-																		</FormLabel>
-																		<FormControl>
-																			<Switch
-																				checked={field.value}
-																				onCheckedChange={field.onChange}
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="hipaaRequired"
-																render={({ field }) => (
-																	<FormItem className="space-y-2">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			HIPAA / Data Privacy Required
-																		</FormLabel>
-																		<FormControl>
-																			<Switch
-																				checked={field.value}
-																				onCheckedChange={field.onChange}
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="backgroundCheckRequired"
-																render={({ field }) => (
-																	<FormItem className="space-y-2">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Background Check Required
-																		</FormLabel>
-																		<FormControl>
-																			<Switch
-																				checked={field.value}
-																				onCheckedChange={field.onChange}
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="auditRightsGranted"
-																render={({ field }) => (
-																	<FormItem className="space-y-2">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Audit Rights Granted
-																		</FormLabel>
-																		<FormControl>
-																			<Switch
-																				checked={field.value}
-																				onCheckedChange={field.onChange}
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="dataPrivacyRequirements"
-																render={({ field }) => (
-																	<FormItem className="w-full">
 																		<FormLabel className="shad-form-label">
-																			Data Privacy Requirements
+																			Assign To Manager(s)
 																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="List HIPAA, PHI, GDPR or other data clauses"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="regulatoryRequirements"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="shad-form-label">
-																			Regulatory Requirements
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="DCF, Thriving Mind, CMS or other regulators"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="keyObligations"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Key Obligations (one per line)
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={4}
-																				placeholder="Enter obligations separated by newline or comma"
-																				{...field}
-																				className="min-h-[100px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="serviceLevelAgreements"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Service Level Agreements
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={4}
-																				placeholder="Document uptime, response or care metrics"
-																				{...field}
-																				className="min-h-[100px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="performanceMetrics"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Performance Metrics
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="KPIs or benchmarks"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="reportingRequirements"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Reporting Requirements
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="Monthly metrics, fiscal or progress reports"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="terminationNoticeDays"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Termination Notice (Days)
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value || undefined}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select days" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{NOTICE_DAY_OPTIONS.map((days) => (
-																					<SelectItem key={days} value={days}>
-																						{days} days
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="terminationRights"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Termination Rights
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value || undefined}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select rights" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{TERMINATION_RIGHTS_OPTIONS.map(
-																					(opt) => (
-																						<SelectItem
-																							key={opt.value}
-																							value={opt.value}
-																						>
-																							{opt.label}
-																						</SelectItem>
-																					),
-																				)}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="curePeriodDays"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Cure Period (Days)
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value || undefined}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select days" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{CURE_PERIOD_OPTIONS.map((days) => (
-																					<SelectItem key={days} value={days}>
-																						{days} days
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="milestones"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Key Milestones
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="Add one milestone per line"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="deliverables"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Deliverables
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="List deliverables per line"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="slaPenalties"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			SLA Penalties
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="Describe penalties or service credits"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="serviceCreditTerms"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Service Credit Terms
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="Reference how credits are calculated"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="escalationProcedures"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Escalation Procedures
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="Detail escalation flow or SLAs"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="w-full bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="obligationOwners"
-																render={({ field }) => (
-																	<FormItem className="w-full">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Obligation Owners
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={3}
-																				placeholder="List owners separated by newline"
-																				{...field}
-																				className="min-h-[80px] w-full bg-white border-slate-300 resize-y"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-													</div>
-												)}
-
-												{/* Step 6: Workflow, Ownership & Approvals */}
-												{currentStep === 6 && (
-													<div className="space-y-4">
-														<FormField
-															control={form.control}
-															name="assignedManagers"
-															render={({ field }) => (
-																<FormItem>
-																	<FormLabel className="shad-form-label">
-																		Assign To Manager(s)
-																	</FormLabel>
-																	<div className="space-y-2">
-																		<div className="max-h-40 overflow-y-auto border border-slate-300 rounded-md bg-white p-2">
-																			{filteredManagers.length > 0 ? (
-																				filteredManagers.map((manager) => (
-																					<div
-																						key={manager.$id}
-																						className="flex items-center space-x-2 p-2 hover:bg-white/20 rounded cursor-pointer"
-																						onClick={() => {
-																							const newSelection =
-																								selectedManagers.includes(
-																									manager.$id,
-																								)
-																									? selectedManagers.filter(
-																											(id) =>
-																												id !== manager.$id,
-																										)
-																									: [
-																											...selectedManagers,
-																											manager.$id,
-																										];
-																							setSelectedManagers(newSelection);
-																							field.onChange(newSelection);
-																						}}
-																					>
-																						<input
-																							type="checkbox"
-																							checked={selectedManagers.includes(
-																								manager.$id,
-																							)}
-																							onChange={() => {
+																		<div className="space-y-2">
+																			<div className="max-h-40 overflow-y-auto border border-slate-300 rounded-md bg-white p-2">
+																				{filteredManagers.length > 0 ? (
+																					filteredManagers.map((manager) => (
+																						<div
+																							key={manager.$id}
+																							className="flex items-center space-x-2 p-2 hover:bg-white/20 rounded cursor-pointer"
+																							onClick={() => {
 																								const newSelection =
 																									selectedManagers.includes(
 																										manager.$id,
@@ -5420,76 +5387,76 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																								);
 																								field.onChange(newSelection);
 																							}}
-																							className="cursor-pointer"
-																						/>
-																						<span className="text-sm text-slate-700">
-																							{manager.fullName} (
-																							{manager.email})
-																						</span>
-																					</div>
-																				))
-																			) : watchedAssignToDepartment ? (
-																				<p className="text-sm text-slate-500 p-2">
-																					No managers in this department
-																				</p>
-																			) : (
-																				<p className="text-sm text-slate-500 p-2">
-																					Select a department to load managers
-																				</p>
+																						>
+																							<input
+																								type="checkbox"
+																								checked={selectedManagers.includes(
+																									manager.$id,
+																								)}
+																								onChange={() => {
+																									const newSelection =
+																										selectedManagers.includes(
+																											manager.$id,
+																										)
+																											? selectedManagers.filter(
+																													(id) =>
+																														id !== manager.$id,
+																												)
+																											: [
+																													...selectedManagers,
+																													manager.$id,
+																												];
+																									setSelectedManagers(
+																										newSelection,
+																									);
+																									field.onChange(newSelection);
+																								}}
+																								className="cursor-pointer"
+																							/>
+																							<span className="text-sm text-slate-700">
+																								{manager.fullName} (
+																								{manager.email})
+																							</span>
+																						</div>
+																					))
+																				) : watchedAssignToDepartment ? (
+																					<p className="text-sm text-slate-500 p-2">
+																						No managers in this department
+																					</p>
+																				) : (
+																					<p className="text-sm text-slate-500 p-2">
+																						Select a department to load managers
+																					</p>
+																				)}
+																			</div>
+																			{selectedManagers.length > 0 && (
+																				<div className="text-xs text-slate-600">
+																					Selected: {selectedManagers.length}{" "}
+																					manager(s)
+																				</div>
 																			)}
 																		</div>
-																		{selectedManagers.length > 0 && (
-																			<div className="text-xs text-slate-600">
-																				Selected: {selectedManagers.length}{" "}
-																				manager(s)
-																			</div>
-																		)}
-																	</div>
-																	<FormMessage />
-																</FormItem>
-															)}
-														/>
+																		<FormMessage />
+																	</FormItem>
+																)}
+															/>
 
-														<FormField
-															control={form.control}
-															name="internalApproverIds"
-															render={({ field }) => (
-																<FormItem>
-																	<FormLabel className="shad-form-label">
-																		Internal Approvers
-																	</FormLabel>
-																	<div className="space-y-2">
-																		<div className="max-h-40 overflow-y-auto border border-slate-300 rounded-md bg-white p-2">
-																			{availableManagers.length > 0 ? (
-																				availableManagers.map((manager) => (
-																					<div
-																						key={manager.$id}
-																						className="flex items-center space-x-2 p-2 hover:bg-white/20 rounded cursor-pointer"
-																						onClick={() => {
-																							const newSelection =
-																								selectedApprovers.includes(
-																									manager.$id,
-																								)
-																									? selectedApprovers.filter(
-																											(id) =>
-																												id !== manager.$id,
-																										)
-																									: [
-																											...selectedApprovers,
-																											manager.$id,
-																										];
-																							setSelectedApprovers(
-																								newSelection,
-																							);
-																							field.onChange(newSelection);
-																						}}
-																					>
-																						<input
-																							type="checkbox"
-																							checked={selectedApprovers.includes(
-																								manager.$id,
-																							)}
-																							onChange={() => {
+															<FormField
+																control={form.control}
+																name="internalApproverIds"
+																render={({ field }) => (
+																	<FormItem>
+																		<FormLabel className="shad-form-label">
+																			Internal Approvers
+																		</FormLabel>
+																		<div className="space-y-2">
+																			<div className="max-h-40 overflow-y-auto border border-slate-300 rounded-md bg-white p-2">
+																				{availableManagers.length > 0 ? (
+																					availableManagers.map((manager) => (
+																						<div
+																							key={manager.$id}
+																							className="flex items-center space-x-2 p-2 hover:bg-white/20 rounded cursor-pointer"
+																							onClick={() => {
 																								const newSelection =
 																									selectedApprovers.includes(
 																										manager.$id,
@@ -5507,374 +5474,365 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																								);
 																								field.onChange(newSelection);
 																							}}
-																							className="cursor-pointer"
-																						/>
-																						<span className="text-sm text-slate-700">
-																							{manager.fullName} (
-																							{manager.email})
-																						</span>
-																					</div>
-																				))
-																			) : (
-																				<p className="text-sm text-slate-500 p-2">
-																					Managers will load once available
-																				</p>
-																			)}
-																		</div>
-																		{selectedApprovers.length > 0 && (
-																			<div className="text-xs text-slate-600">
-																				Selected: {selectedApprovers.length}{" "}
-																				approver(s)
-																			</div>
-																		)}
-																	</div>
-																	<FormMessage />
-																</FormItem>
-															)}
-														/>
-
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="approvalWorkflowTemplate"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Approval Workflow Template
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Standard, expedited, executive..."
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="currentApprovalStage"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Current Approval Stage
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="e.g., Legal review"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="approvalDueDate"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Approval Due Date
-																		</FormLabel>
-																		<FormControl>
-																			<DatePicker
-																				selected={field.value}
-																				onChange={(date: Date | null) =>
-																					field.onChange(date)
-																				}
-																				dateFormat="MM/dd/yyyy"
-																				className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-																				placeholderText="Select due date"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<FormField
-															control={form.control}
-															name="reviewerComments"
-															render={({ field }) => (
-																<FormItem>
-																	<FormLabel className="shad-form-label">
-																		Reviewer Comments
-																	</FormLabel>
-																	<FormControl>
-																		<Textarea
-																			rows={2}
-																			placeholder="Notes from legal, compliance or leadership"
-																			{...field}
-																			className="bg-white border-slate-300 resize-none"
-																		/>
-																	</FormControl>
-																	<FormMessage />
-																</FormItem>
-															)}
-														/>
-
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="approvalEscalationContactIds"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Escalation Contacts
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="IDs or emails separated by comma/newline"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="workflowNotes"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Workflow Notes
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Routing instructions, hold reasons, etc."
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-													</div>
-												)}
-
-												{/* Step 7: Notifications & Renewal Alerts */}
-												{currentStep === 7 && (
-													<div className="space-y-4">
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="alertRecipientIds"
-																render={({ field }) => {
-																	const contacts =
-																		filteredManagers.length > 0
-																			? filteredManagers
-																			: availableManagers;
-																	const selected = (field.value || "")
-																		.split(/[,\n]/)
-																		.map((s: string) => s.trim())
-																		.filter(Boolean);
-																	return (
-																		<FormItem>
-																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Alert Recipients
-																			</FormLabel>
-																			<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
-																				{contacts.length === 0 ? (
-																					<p className="text-xs text-slate-500">
-																						No department managers available
-																					</p>
-																				) : (
-																					contacts.map((user) => {
-																						const checked = selected.includes(
-																							user.$id,
-																						);
-																						return (
-																							<label
-																								key={user.$id}
-																								className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
-																							>
-																								<input
-																									type="checkbox"
-																									className="rounded border-slate-300"
-																									checked={checked}
-																									onChange={() => {
-																										const next = checked
-																											? selected.filter(
-																													(id) => id !== user.$id,
+																						>
+																							<input
+																								type="checkbox"
+																								checked={selectedApprovers.includes(
+																									manager.$id,
+																								)}
+																								onChange={() => {
+																									const newSelection =
+																										selectedApprovers.includes(
+																											manager.$id,
+																										)
+																											? selectedApprovers.filter(
+																													(id) =>
+																														id !== manager.$id,
 																												)
 																											: [
-																													...selected,
-																													user.$id,
+																													...selectedApprovers,
+																													manager.$id,
 																												];
-																										field.onChange(
-																											next.join(","),
-																										);
-																									}}
-																								/>
-																								<span>
-																									{user.fullName}
-																									{user.email
-																										? ` (${user.email})`
-																										: ""}
-																								</span>
-																							</label>
-																						);
-																					})
+																									setSelectedApprovers(
+																										newSelection,
+																									);
+																									field.onChange(newSelection);
+																								}}
+																								className="cursor-pointer"
+																							/>
+																							<span className="text-sm text-slate-700">
+																								{manager.fullName} (
+																								{manager.email})
+																							</span>
+																						</div>
+																					))
+																				) : (
+																					<p className="text-sm text-slate-500 p-2">
+																						Managers will load once available
+																					</p>
 																				)}
 																			</div>
+																			{selectedApprovers.length > 0 && (
+																				<div className="text-xs text-slate-600">
+																					Selected: {selectedApprovers.length}{" "}
+																					approver(s)
+																				</div>
+																			)}
+																		</div>
+																		<FormMessage />
+																	</FormItem>
+																)}
+															/>
+
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="approvalWorkflowTemplate"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Approval Workflow Template
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="Standard, expedited, executive..."
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
 																			<FormMessage />
 																		</FormItem>
-																	);
-																}}
-															/>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="currentApprovalStage"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Current Approval Stage
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="e.g., Legal review"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="approvalDueDate"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Approval Due Date
+																			</FormLabel>
+																			<FormControl>
+																				<DatePicker
+																					selected={field.value}
+																					onChange={(date: Date | null) =>
+																						field.onChange(date)
+																					}
+																					dateFormat="MM/dd/yyyy"
+																					className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
+																					placeholderText="Select due date"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
 
 															<FormField
 																control={form.control}
-																name="alertEscalationContactIds"
-																render={({ field }) => {
-																	const contacts =
-																		filteredManagers.length > 0
-																			? filteredManagers
-																			: availableManagers;
-																	const selected = (field.value || "")
-																		.split(/[,\n]/)
-																		.map((s: string) => s.trim())
-																		.filter(Boolean);
-																	return (
+																name="reviewerComments"
+																render={({ field }) => (
+																	<FormItem>
+																		<FormLabel className="shad-form-label">
+																			Reviewer Comments
+																		</FormLabel>
+																		<FormControl>
+																			<Textarea
+																				rows={2}
+																				placeholder="Notes from legal, compliance or leadership"
+																				{...field}
+																				className="bg-white border-slate-300 resize-none"
+																			/>
+																		</FormControl>
+																		<FormMessage />
+																	</FormItem>
+																)}
+															/>
+
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="approvalEscalationContactIds"
+																	render={({ field }) => (
 																		<FormItem>
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
 																				Escalation Contacts
 																			</FormLabel>
-																			<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
-																				{contacts.length === 0 ? (
-																					<p className="text-xs text-slate-500">
-																						No department managers available
-																					</p>
-																				) : (
-																					contacts.map((user) => {
-																						const checked = selected.includes(
-																							user.$id,
-																						);
-																						return (
-																							<label
-																								key={user.$id}
-																								className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
-																							>
-																								<input
-																									type="checkbox"
-																									className="rounded border-slate-300"
-																									checked={checked}
-																									onChange={() => {
-																										const next = checked
-																											? selected.filter(
-																													(id) => id !== user.$id,
-																												)
-																											: [
-																													...selected,
-																													user.$id,
-																												];
-																										field.onChange(
-																											next.join(","),
-																										);
-																									}}
-																								/>
-																								<span>
-																									{user.fullName}
-																									{user.email
-																										? ` (${user.email})`
-																										: ""}
-																								</span>
-																							</label>
-																						);
-																					})
-																				)}
-																			</div>
+																			<FormControl>
+																				<Textarea
+																					rows={2}
+																					placeholder="IDs or emails separated by comma/newline"
+																					{...field}
+																					className="bg-white border-slate-300 resize-none"
+																				/>
+																			</FormControl>
 																			<FormMessage />
 																		</FormItem>
-																	);
-																}}
-															/>
-														</div>
+																	)}
+																/>
 
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="alertLeadTimes"
-																render={() => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Alert Lead Times (days)
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				readOnly
-																				value={formatAlertLeadTimesLabel(
-																					watchedRenewalNoticeDays,
-																				)}
-																				className="bg-slate-100 border-slate-300 text-slate-700 cursor-default"
-																			/>
-																		</FormControl>
-																		<p className="text-xs text-slate-500 mt-1">
-																			Auto-set from Renewal Notice (Days) on
-																			Step 2, plus urgent reminders at 15, 10,
-																			5, and 1 days.
-																		</p>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="alertChannels"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Alert Channels
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value || undefined}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select channels" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{ALERT_CHANNEL_OPTIONS.map((opt) => (
-																					<SelectItem
-																						key={opt.value}
-																						value={opt.value}
-																					>
-																						{opt.label}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															{/* Alert Strategy — hidden until strategies are wired; default remains "standard" */}
-															{false && (
 																<FormField
 																	control={form.control}
-																	name="alertStrategy"
+																	name="workflowNotes"
 																	render={({ field }) => (
 																		<FormItem>
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Alert Strategy
+																				Workflow Notes
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={2}
+																					placeholder="Routing instructions, hold reasons, etc."
+																					{...field}
+																					className="bg-white border-slate-300 resize-none"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+														</div>
+													)}
+
+													{/* Step 7: Notifications & Renewal Alerts */}
+													{currentStep === 7 && (
+														<div className="space-y-4">
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="alertRecipientIds"
+																	render={({ field }) => {
+																		const contacts =
+																			filteredManagers.length > 0
+																				? filteredManagers
+																				: availableManagers;
+																		const selected = (field.value || "")
+																			.split(/[,\n]/)
+																			.map((s: string) => s.trim())
+																			.filter(Boolean);
+																		return (
+																			<FormItem>
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Alert Recipients
+																				</FormLabel>
+																				<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
+																					{contacts.length === 0 ? (
+																						<p className="text-xs text-slate-500">
+																							No department managers available
+																						</p>
+																					) : (
+																						contacts.map((user) => {
+																							const checked = selected.includes(
+																								user.$id,
+																							);
+																							return (
+																								<label
+																									key={user.$id}
+																									className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+																								>
+																									<input
+																										type="checkbox"
+																										className="rounded border-slate-300"
+																										checked={checked}
+																										onChange={() => {
+																											const next = checked
+																												? selected.filter(
+																														(id) =>
+																															id !== user.$id,
+																													)
+																												: [
+																														...selected,
+																														user.$id,
+																													];
+																											field.onChange(
+																												next.join(","),
+																											);
+																										}}
+																									/>
+																									<span>
+																										{user.fullName}
+																										{user.email
+																											? ` (${user.email})`
+																											: ""}
+																									</span>
+																								</label>
+																							);
+																						})
+																					)}
+																				</div>
+																				<FormMessage />
+																			</FormItem>
+																		);
+																	}}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="alertEscalationContactIds"
+																	render={({ field }) => {
+																		const contacts =
+																			filteredManagers.length > 0
+																				? filteredManagers
+																				: availableManagers;
+																		const selected = (field.value || "")
+																			.split(/[,\n]/)
+																			.map((s: string) => s.trim())
+																			.filter(Boolean);
+																		return (
+																			<FormItem>
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Escalation Contacts
+																				</FormLabel>
+																				<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
+																					{contacts.length === 0 ? (
+																						<p className="text-xs text-slate-500">
+																							No department managers available
+																						</p>
+																					) : (
+																						contacts.map((user) => {
+																							const checked = selected.includes(
+																								user.$id,
+																							);
+																							return (
+																								<label
+																									key={user.$id}
+																									className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+																								>
+																									<input
+																										type="checkbox"
+																										className="rounded border-slate-300"
+																										checked={checked}
+																										onChange={() => {
+																											const next = checked
+																												? selected.filter(
+																														(id) =>
+																															id !== user.$id,
+																													)
+																												: [
+																														...selected,
+																														user.$id,
+																													];
+																											field.onChange(
+																												next.join(","),
+																											);
+																										}}
+																									/>
+																									<span>
+																										{user.fullName}
+																										{user.email
+																											? ` (${user.email})`
+																											: ""}
+																									</span>
+																								</label>
+																							);
+																						})
+																					)}
+																				</div>
+																				<FormMessage />
+																			</FormItem>
+																		);
+																	}}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="alertLeadTimes"
+																	render={() => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Alert Lead Times (days)
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					readOnly
+																					value={formatAlertLeadTimesLabel(
+																						watchedRenewalNoticeDays,
+																					)}
+																					className="bg-slate-100 border-slate-300 text-slate-700 cursor-default"
+																				/>
+																			</FormControl>
+																			<p className="text-xs text-slate-500 mt-1">
+																				Auto-set from Renewal Notice (Days) on
+																				Step 2, plus urgent reminders at 15, 10,
+																				5, and 1 days.
+																			</p>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="alertChannels"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Alert Channels
 																			</FormLabel>
 																			<Select
 																				onValueChange={field.onChange}
@@ -5882,11 +5840,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																			>
 																				<FormControl>
 																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Select strategy" />
+																						<SelectValue placeholder="Select channels" />
 																					</SelectTrigger>
 																				</FormControl>
 																				<SelectContent>
-																					{ALERT_STRATEGY_OPTIONS.map((opt) => (
+																					{ALERT_CHANNEL_OPTIONS.map((opt) => (
 																						<SelectItem
 																							key={opt.value}
 																							value={opt.value}
@@ -5900,973 +5858,1023 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		</FormItem>
 																	)}
 																/>
-															)}
-														</div>
-														<div className="grid grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="alertNotes"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="shad-form-label">
-																			Alert Notes
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Include context for who needs to know what and when"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-													</div>
-												)}
 
-												{/* Step 8: Documents, Attachments & Metadata */}
-												{currentStep === 8 && (
-													<div className="space-y-4">
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="versionNumber"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Version
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="v1.0"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
+																{/* Alert Strategy — hidden until strategies are wired; default remains "standard" */}
+																{false && (
+																	<FormField
+																		control={form.control}
+																		name="alertStrategy"
+																		render={({ field }) => (
+																			<FormItem>
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Alert Strategy
+																				</FormLabel>
+																				<Select
+																					onValueChange={field.onChange}
+																					value={field.value || undefined}
+																				>
+																					<FormControl>
+																						<SelectTrigger className="bg-white border-slate-300">
+																							<SelectValue placeholder="Select strategy" />
+																						</SelectTrigger>
+																					</FormControl>
+																					<SelectContent>
+																						{ALERT_STRATEGY_OPTIONS.map(
+																							(opt) => (
+																								<SelectItem
+																									key={opt.value}
+																									value={opt.value}
+																								>
+																									{opt.label}
+																								</SelectItem>
+																							),
+																						)}
+																					</SelectContent>
+																				</Select>
+																				<FormMessage />
+																			</FormItem>
+																		)}
+																	/>
 																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="templateUsed"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Template Used
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Enterprise-MSA-v3"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="parentContractId"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Parent Contract ID
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="If this is an amendment"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="relatedDocumentIds"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Related Document IDs
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="List attachment or exhibit IDs"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="attachmentReferences"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Attachment References
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Exhibit A, Attachment B..."
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="businessPurpose"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="shad-form-label">
-																			Business Purpose
-																		</FormLabel>
-																		<FormControl>
-																			<Textarea
-																				rows={2}
-																				placeholder="Explain why this contract exists and the value delivered"
-																				{...field}
-																				className="bg-white border-slate-300 resize-none"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="tags"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Tags / Keywords
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="compliance,behavioral-health"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-															<FormField
-																control={form.control}
-																name="searchKeywords"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Search Keywords
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="Add metadata to improve discovery"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-													</div>
-												)}
-
-												{/* Step 9: Legal & Governance */}
-												{currentStep === 9 && (
-													<div className="space-y-4">
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="governingLaw"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Governing Law
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value || undefined}
-																		>
+															</div>
+															<div className="grid grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="alertNotes"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="shad-form-label">
+																				Alert Notes
+																			</FormLabel>
 																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select governing law" />
-																				</SelectTrigger>
+																				<Textarea
+																					rows={2}
+																					placeholder="Include context for who needs to know what and when"
+																					{...field}
+																					className="bg-white border-slate-300 resize-none"
+																				/>
 																			</FormControl>
-																			<SelectContent>
-																				{GOVERNING_LAW_OPTIONS.map((law) => (
-																					<SelectItem key={law} value={law}>
-																						{law}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="jurisdiction"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Venue / Jurisdiction
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value || undefined}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select venue" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{JURISDICTION_OPTIONS.map((venue) => (
-																					<SelectItem key={venue} value={venue}>
-																						{venue}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
 														</div>
+													)}
 
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="disputeResolutionMethod"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Dispute Resolution
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select method" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{DISPUTE_METHOD_OPTIONS.map(
-																					(method) => (
-																						<SelectItem
-																							key={method}
-																							value={method}
-																						>
-																							{method.replace("_", " ")}
-																						</SelectItem>
-																					),
-																				)}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="confidentialityClassification"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Confidentiality Classification
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select level" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{CONFIDENTIALITY_CLASSES.map(
-																					(level) => (
-																						<SelectItem
-																							key={level}
-																							value={level}
-																						>
-																							{level}
-																						</SelectItem>
-																					),
-																				)}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="recordsRetentionPeriodMonths"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Records Retention (Months)
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value || undefined}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select retention period" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{RETENTION_MONTH_OPTIONS.map((opt) => (
-																					<SelectItem
-																						key={opt.value}
-																						value={opt.value}
-																					>
-																						{opt.label}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-													</div>
-												)}
-
-												{/* Step 10: Digital Signatures & Access Controls */}
-												{currentStep === 10 && (
-													<div className="space-y-4">
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="digitalSignatureRequired"
-																render={({ field }) => (
-																	<FormItem className="space-y-2">
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Digital Signature Required
-																		</FormLabel>
-																		<FormControl>
-																			<Switch
-																				checked={field.value}
-																				onCheckedChange={field.onChange}
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="digitalSignatureStatus"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Signature Status
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Status" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{SIGNATURE_STATUS_OPTIONS.map(
-																					(status) => (
-																						<SelectItem
-																							key={status}
-																							value={status}
-																						>
-																							{status.replace("_", " ")}
-																						</SelectItem>
-																					),
-																				)}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="digitalSignaturePlatform"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Signature Platform
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value || undefined}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Select platform" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{SIGNATURE_PLATFORM_OPTIONS.map(
-																					(opt) => (
-																						<SelectItem
-																							key={opt.value}
-																							value={opt.value}
-																						>
-																							{opt.label}
-																						</SelectItem>
-																					),
-																				)}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="digitalSignatureCompletedAt"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Signature Completed At
-																		</FormLabel>
-																		<FormControl>
-																			<DatePicker
-																				selected={field.value}
-																				onChange={(date: Date | null) =>
-																					field.onChange(date)
-																				}
-																				dateFormat="MM/dd/yyyy"
-																				className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-																				placeholderText="Completion date"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="digitalSignatureEnvelopeId"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Envelope / Packet ID
-																		</FormLabel>
-																		<FormControl>
-																			<Input
-																				placeholder="DocuSign envelope ID"
-																				{...field}
-																				className="bg-white border-slate-300"
-																			/>
-																		</FormControl>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-
-															<FormField
-																control={form.control}
-																name="accessScope"
-																render={({ field }) => (
-																	<FormItem>
-																		<FormLabel className="text-sm text-slate-700 mb-1 block">
-																			Access Scope
-																		</FormLabel>
-																		<Select
-																			onValueChange={field.onChange}
-																			value={field.value}
-																		>
-																			<FormControl>
-																				<SelectTrigger className="bg-white border-slate-300">
-																					<SelectValue placeholder="Who can view this?" />
-																				</SelectTrigger>
-																			</FormControl>
-																			<SelectContent>
-																				{ACCESS_SCOPE_OPTIONS.map((scope) => (
-																					<SelectItem key={scope} value={scope}>
-																						{scope}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																		<FormMessage />
-																	</FormItem>
-																)}
-															/>
-														</div>
-
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-															<FormField
-																control={form.control}
-																name="signatureRecipientIds"
-																render={({ field }) => {
-																	const contacts =
-																		filteredManagers.length > 0
-																			? filteredManagers
-																			: availableManagers;
-																	const selected = (field.value || "")
-																		.split(/[,\n]/)
-																		.map((s: string) => s.trim())
-																		.filter(Boolean);
-																	return (
+													{/* Step 8: Documents, Attachments & Metadata */}
+													{currentStep === 8 && (
+														<div className="space-y-4">
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="versionNumber"
+																	render={({ field }) => (
 																		<FormItem>
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Signature Recipients
+																				Version
 																			</FormLabel>
-																			<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
-																				{contacts.length === 0 ? (
-																					<p className="text-xs text-slate-500">
-																						No department managers available
-																					</p>
-																				) : (
-																					contacts.map((user) => {
-																						const checked = selected.includes(
-																							user.$id,
-																						);
-																						return (
-																							<label
-																								key={user.$id}
-																								className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+																			<FormControl>
+																				<Input
+																					placeholder="v1.0"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="templateUsed"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Template Used
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="Enterprise-MSA-v3"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="parentContractId"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Parent Contract ID
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="If this is an amendment"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="relatedDocumentIds"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Related Document IDs
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={2}
+																					placeholder="List attachment or exhibit IDs"
+																					{...field}
+																					className="bg-white border-slate-300 resize-none"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="attachmentReferences"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Attachment References
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={2}
+																					placeholder="Exhibit A, Attachment B..."
+																					{...field}
+																					className="bg-white border-slate-300 resize-none"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="businessPurpose"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="shad-form-label">
+																				Business Purpose
+																			</FormLabel>
+																			<FormControl>
+																				<Textarea
+																					rows={2}
+																					placeholder="Explain why this contract exists and the value delivered"
+																					{...field}
+																					className="bg-white border-slate-300 resize-none"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="tags"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Tags / Keywords
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="compliance,behavioral-health"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+																<FormField
+																	control={form.control}
+																	name="searchKeywords"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Search Keywords
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="Add metadata to improve discovery"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+														</div>
+													)}
+
+													{/* Step 9: Legal & Governance */}
+													{currentStep === 9 && (
+														<div className="space-y-4">
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="governingLaw"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Governing Law
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select governing law" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{GOVERNING_LAW_OPTIONS.map((law) => (
+																						<SelectItem key={law} value={law}>
+																							{law}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="jurisdiction"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Venue / Jurisdiction
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select venue" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{JURISDICTION_OPTIONS.map((venue) => (
+																						<SelectItem
+																							key={venue}
+																							value={venue}
+																						>
+																							{venue}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="disputeResolutionMethod"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Dispute Resolution
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select method" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{DISPUTE_METHOD_OPTIONS.map(
+																						(method) => (
+																							<SelectItem
+																								key={method}
+																								value={method}
 																							>
-																								<input
-																									type="checkbox"
-																									className="rounded border-slate-300"
-																									checked={checked}
-																									onChange={() => {
-																										const next = checked
-																											? selected.filter(
-																													(id) =>
-																														id !== user.$id,
-																												)
-																											: [
-																													...selected,
-																													user.$id,
-																												];
-																										field.onChange(
-																											next.join(","),
-																										);
-																									}}
-																								/>
-																								<span>
-																									{user.fullName}
-																									{user.email
-																										? ` (${user.email})`
-																										: ""}
-																								</span>
-																							</label>
-																						);
-																					})
-																				)}
-																			</div>
+																								{method.replace("_", " ")}
+																							</SelectItem>
+																						),
+																					)}
+																				</SelectContent>
+																			</Select>
 																			<FormMessage />
 																		</FormItem>
-																	);
-																}}
-															/>
+																	)}
+																/>
 
-															<FormField
-																control={form.control}
-																name="visibilityRoles"
-																render={({ field }) => {
-																	const selected = (field.value || "")
-																		.split(/[,\n]/)
-																		.map((s: string) => s.trim())
-																		.filter(Boolean);
-																	return (
+																<FormField
+																	control={form.control}
+																	name="confidentialityClassification"
+																	render={({ field }) => (
 																		<FormItem>
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Visibility Roles
+																				Confidentiality Classification
 																			</FormLabel>
-																			<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
-																				{VISIBILITY_ROLE_OPTIONS.map((role) => {
-																					const checked =
-																						selected.includes(role);
-																					return (
-																						<label
-																							key={role}
-																							className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
-																						>
-																							<input
-																								type="checkbox"
-																								className="rounded border-slate-300"
-																								checked={checked}
-																								onChange={() => {
-																									const next = checked
-																										? selected.filter(
-																												(r) => r !== role,
-																											)
-																										: [...selected, role];
-																									field.onChange(
-																										next.join(","),
-																									);
-																								}}
-																							/>
-																							<span>{role}</span>
-																						</label>
-																					);
-																				})}
-																			</div>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select level" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{CONFIDENTIALITY_CLASSES.map(
+																						(level) => (
+																							<SelectItem
+																								key={level}
+																								value={level}
+																							>
+																								{level}
+																							</SelectItem>
+																						),
+																					)}
+																				</SelectContent>
+																			</Select>
 																			<FormMessage />
 																		</FormItem>
-																	);
-																}}
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="recordsRetentionPeriodMonths"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Records Retention (Months)
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select retention period" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{RETENTION_MONTH_OPTIONS.map(
+																						(opt) => (
+																							<SelectItem
+																								key={opt.value}
+																								value={opt.value}
+																							>
+																								{opt.label}
+																							</SelectItem>
+																						),
+																					)}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+														</div>
+													)}
+
+													{/* Step 10: Digital Signatures & Access Controls */}
+													{currentStep === 10 && (
+														<div className="space-y-4">
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="digitalSignatureRequired"
+																	render={({ field }) => (
+																		<FormItem className="space-y-2">
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Digital Signature Required
+																			</FormLabel>
+																			<FormControl>
+																				<Switch
+																					checked={field.value}
+																					onCheckedChange={field.onChange}
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="digitalSignatureStatus"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Signature Status
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Status" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{SIGNATURE_STATUS_OPTIONS.map(
+																						(status) => (
+																							<SelectItem
+																								key={status}
+																								value={status}
+																							>
+																								{status.replace("_", " ")}
+																							</SelectItem>
+																						),
+																					)}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="digitalSignaturePlatform"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Signature Platform
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value || undefined}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Select platform" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{SIGNATURE_PLATFORM_OPTIONS.map(
+																						(opt) => (
+																							<SelectItem
+																								key={opt.value}
+																								value={opt.value}
+																							>
+																								{opt.label}
+																							</SelectItem>
+																						),
+																					)}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="digitalSignatureCompletedAt"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Signature Completed At
+																			</FormLabel>
+																			<FormControl>
+																				<DatePicker
+																					selected={field.value}
+																					onChange={(date: Date | null) =>
+																						field.onChange(date)
+																					}
+																					dateFormat="MM/dd/yyyy"
+																					className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
+																					placeholderText="Completion date"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="digitalSignatureEnvelopeId"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Envelope / Packet ID
+																			</FormLabel>
+																			<FormControl>
+																				<Input
+																					placeholder="DocuSign envelope ID"
+																					{...field}
+																					className="bg-white border-slate-300"
+																				/>
+																			</FormControl>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="accessScope"
+																	render={({ field }) => (
+																		<FormItem>
+																			<FormLabel className="text-sm text-slate-700 mb-1 block">
+																				Access Scope
+																			</FormLabel>
+																			<Select
+																				onValueChange={field.onChange}
+																				value={field.value}
+																			>
+																				<FormControl>
+																					<SelectTrigger className="bg-white border-slate-300">
+																						<SelectValue placeholder="Who can view this?" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					{ACCESS_SCOPE_OPTIONS.map((scope) => (
+																						<SelectItem
+																							key={scope}
+																							value={scope}
+																						>
+																							{scope}
+																						</SelectItem>
+																					))}
+																				</SelectContent>
+																			</Select>
+																			<FormMessage />
+																		</FormItem>
+																	)}
+																/>
+															</div>
+
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+																<FormField
+																	control={form.control}
+																	name="signatureRecipientIds"
+																	render={({ field }) => {
+																		const contacts =
+																			filteredManagers.length > 0
+																				? filteredManagers
+																				: availableManagers;
+																		const selected = (field.value || "")
+																			.split(/[,\n]/)
+																			.map((s: string) => s.trim())
+																			.filter(Boolean);
+																		return (
+																			<FormItem>
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Signature Recipients
+																				</FormLabel>
+																				<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
+																					{contacts.length === 0 ? (
+																						<p className="text-xs text-slate-500">
+																							No department managers available
+																						</p>
+																					) : (
+																						contacts.map((user) => {
+																							const checked = selected.includes(
+																								user.$id,
+																							);
+																							return (
+																								<label
+																									key={user.$id}
+																									className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+																								>
+																									<input
+																										type="checkbox"
+																										className="rounded border-slate-300"
+																										checked={checked}
+																										onChange={() => {
+																											const next = checked
+																												? selected.filter(
+																														(id) =>
+																															id !== user.$id,
+																													)
+																												: [
+																														...selected,
+																														user.$id,
+																													];
+																											field.onChange(
+																												next.join(","),
+																											);
+																										}}
+																									/>
+																									<span>
+																										{user.fullName}
+																										{user.email
+																											? ` (${user.email})`
+																											: ""}
+																									</span>
+																								</label>
+																							);
+																						})
+																					)}
+																				</div>
+																				<FormMessage />
+																			</FormItem>
+																		);
+																	}}
+																/>
+
+																<FormField
+																	control={form.control}
+																	name="visibilityRoles"
+																	render={({ field }) => {
+																		const selected = (field.value || "")
+																			.split(/[,\n]/)
+																			.map((s: string) => s.trim())
+																			.filter(Boolean);
+																		return (
+																			<FormItem>
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
+																					Visibility Roles
+																				</FormLabel>
+																				<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
+																					{VISIBILITY_ROLE_OPTIONS.map(
+																						(role) => {
+																							const checked =
+																								selected.includes(role);
+																							return (
+																								<label
+																									key={role}
+																									className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+																								>
+																									<input
+																										type="checkbox"
+																										className="rounded border-slate-300"
+																										checked={checked}
+																										onChange={() => {
+																											const next = checked
+																												? selected.filter(
+																														(r) => r !== role,
+																													)
+																												: [...selected, role];
+																											field.onChange(
+																												next.join(","),
+																											);
+																										}}
+																									/>
+																									<span>{role}</span>
+																								</label>
+																							);
+																						},
+																					)}
+																				</div>
+																				<FormMessage />
+																			</FormItem>
+																		);
+																	}}
+																/>
+															</div>
+														</div>
+													)}
+												</div>
+											</div>
+										)}
+
+										{/* Final step: Review before upload */}
+										{isReviewStep && (
+											<div className="">
+												<div className="mb-4">
+													<h3 className="text-lg font-semibold text-slate-700">
+														{currentStep}. Review
+													</h3>
+												</div>
+												<ContractReviewStep
+													values={form.watch() as Record<string, unknown>}
+													fileName={processedFileData?.name}
+													contentStepTitles={contentStepTitles}
+													lowConfidenceFields={lowConfidenceFields}
+													onEditStep={goToStep}
+													canPreviewFile={Boolean(
+														processedFileData &&
+															(processedFileData.type === "application/pdf" ||
+																processedFileData.name
+																	.toLowerCase()
+																	.endsWith(".pdf")) &&
+															(Boolean(fileBytesRef.current?.byteLength) ||
+																Boolean(
+																	toArrayBuffer(processedFileData.arrayBuffer),
+																) ||
+																Boolean(processedFileData.base64Content) ||
+																Boolean(processedFileData.bucketFileId)),
+													)}
+													onPreviewFile={() => {
+														void openPdfPreview();
+													}}
+												/>
+											</div>
+										)}
+
+										{/* Save and Resume Later */}
+										{processedFileData && currentStep > 1 && !isReviewStep && (
+											<SaveProgressCard
+												onSave={handleManualSave}
+												isSaving={isSaving}
+											/>
+										)}
+										{/* Upload Progress */}
+										{isUploading && (
+											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
+												<CardContent className="pt-6">
+													<div className="space-y-2">
+														<div className="flex justify-between text-sm">
+															<span className="text-navy">
+																Uploading contract...
+															</span>
+															<span className="text-brand font-medium">
+																{uploadProgress}%
+															</span>
+														</div>
+														<div className="w-full bg-light-300 rounded-full h-2">
+															<div
+																className="bg-linear-to-r from-brand to-brand-100 h-2 rounded-full transition-all duration-300"
+																style={{ width: `${uploadProgress}%` }}
 															/>
 														</div>
 													</div>
-												)}
-											</div>
-										</div>
-									)}
+												</CardContent>
+											</Card>
+										)}
+									</form>
+								</Form>
+							</div>
 
-									{/* Final step: Review before upload */}
-									{isReviewStep && (
-										<div className="">
-											<div className="mb-4">
-												<h3 className="text-lg font-semibold text-slate-700">
-													{currentStep}. Review
-												</h3>
-											</div>
-											<ContractReviewStep
-												values={form.watch() as Record<string, unknown>}
-												fileName={processedFileData?.name}
-												contentStepTitles={contentStepTitles}
-												lowConfidenceFields={lowConfidenceFields}
-												onEditStep={goToStep}
-												canPreviewFile={Boolean(
-													processedFileData &&
-														(processedFileData.type === "application/pdf" ||
-															processedFileData.name
-																.toLowerCase()
-																.endsWith(".pdf")) &&
-														(Boolean(fileBytesRef.current?.byteLength) ||
-															Boolean(
-																toArrayBuffer(processedFileData.arrayBuffer),
-															) ||
-															Boolean(processedFileData.base64Content) ||
-															Boolean(processedFileData.bucketFileId)),
-												)}
-												onPreviewFile={() => {
-													void openPdfPreview();
+							{/* Sticky Footer with Navigation and Action Buttons */}
+							<div className="sticky bottom-0 z-10 bg-white border-t border-slate-200 px-6 py-4">
+								<div className="flex items-center justify-between">
+									{/* Previous/Back Button */}
+									<div className="flex items-center space-x-3">
+										{currentStep === 1 && selectedContractType ? (
+											<Button
+												type="button"
+												onClick={() => {
+													setSelectedContractType(null);
+													setShowTypeSelection(true);
+													fileBytesRef.current = null;
+													setProcessedFileData(null);
+													setExtractedData(null);
+													setFileIngestUi("hidden");
+													setFileIngestProgress(0);
+													if (fileIngestSuccessTimeoutRef.current) {
+														clearTimeout(fileIngestSuccessTimeoutRef.current);
+														fileIngestSuccessTimeoutRef.current = null;
+													}
 												}}
-											/>
-										</div>
-									)}
-
-									{/* Save and Resume Later */}
-									{processedFileData && currentStep > 1 && !isReviewStep && (
-										<SaveProgressCard
-											onSave={handleManualSave}
-											isSaving={isSaving}
-										/>
-									)}
-									{/* Upload Progress */}
-									{isUploading && (
-										<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-light-400/50">
-											<CardContent className="pt-6">
-												<div className="space-y-2">
-													<div className="flex justify-between text-sm">
-														<span className="text-navy">
-															Uploading contract...
-														</span>
-														<span className="text-brand font-medium">
-															{uploadProgress}%
-														</span>
-													</div>
-													<div className="w-full bg-light-300 rounded-full h-2">
-														<div
-															className="bg-linear-to-r from-brand to-brand-100 h-2 rounded-full transition-all duration-300"
-															style={{ width: `${uploadProgress}%` }}
-														/>
-													</div>
-												</div>
-											</CardContent>
-										</Card>
-									)}
-								</form>
-							</Form>
-						</div>
-
-						{/* Sticky Footer with Navigation and Action Buttons */}
-						<div className="sticky bottom-0 z-10 bg-white border-t border-slate-200 px-6 py-4">
-							<div className="flex items-center justify-between">
-								{/* Previous/Back Button */}
-								<div className="flex items-center space-x-3">
-									{currentStep === 1 && selectedContractType ? (
+												variant="outline"
+												disabled={isUploading}
+												className="primary-btn px-3 sm:px-4 shimmer-hover"
+											>
+												<ChevronLeft className="w-4 h-4" />
+												Change Type
+											</Button>
+										) : currentStep > 1 ? (
+											<Button
+												type="button"
+												variant="outline"
+												onClick={prevStep}
+												disabled={isUploading}
+												className="primary-btn sm:px-4 px-3 shimmer-hover"
+											>
+												<ChevronLeft className="w-4 h-4" />
+												Previous
+											</Button>
+										) : null}
 										<Button
 											type="button"
-											onClick={() => {
-												setSelectedContractType(null);
-												setShowTypeSelection(true);
-												fileBytesRef.current = null;
-												setProcessedFileData(null);
-												setExtractedData(null);
-												setFileIngestUi("hidden");
-												setFileIngestProgress(0);
-												if (fileIngestSuccessTimeoutRef.current) {
-													clearTimeout(fileIngestSuccessTimeoutRef.current);
-													fileIngestSuccessTimeoutRef.current = null;
-												}
-											}}
 											variant="outline"
+											onClick={handleCancelClick}
 											disabled={isUploading}
 											className="primary-btn px-3 sm:px-4 shimmer-hover"
 										>
-											<ChevronLeft className="w-4 h-4" />
-											Change Type
+											<Ban className="w-4 h-4" />
+											Cancel
 										</Button>
-									) : currentStep > 1 ? (
-										<Button
-											type="button"
-											variant="outline"
-											onClick={prevStep}
-											disabled={isUploading}
-											className="primary-btn sm:px-4 px-3 shimmer-hover"
-										>
-											<ChevronLeft className="w-4 h-4" />
-											Previous
-										</Button>
-									) : null}
-									<Button
-										type="button"
-										variant="outline"
-										onClick={handleCancelClick}
-										disabled={isUploading}
-										className="primary-btn px-3 sm:px-4 shimmer-hover"
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
-									</Button>
-								</div>
+									</div>
 
-								{/* Next/Submit Button */}
-								<div className="flex items-center space-x-3">
-									{currentStep < totalSteps ? (
-										<Button
-											type="button"
-											onClick={nextStep}
-											disabled={
-												isUploading || (currentStep === 1 && !processedFileData)
-											}
-											className="primary-btn sm:px-4 px-3"
-										>
-											Next
-											<ChevronRight className="w-4 h-4" />
-										</Button>
-									) : (
-										<Button
-											type="button"
-											onClick={async () => {
-												console.log("Upload button clicked");
-												const values = form.getValues();
-												console.log("Form values:", values);
-												const errors = await form.trigger();
-												console.log("Validation result:", errors);
-												console.log("Form errors:", form.formState.errors);
-
-												if (errors) {
-													await handleSubmit(values);
-												} else {
-													toast({
-														title: "Validation Error",
-														description: "Please fill in all required fields",
-														variant: "destructive",
-													});
+									{/* Next/Submit Button */}
+									<div className="flex items-center space-x-3">
+										{currentStep < totalSteps ? (
+											<Button
+												type="button"
+												onClick={nextStep}
+												disabled={
+													isUploading ||
+													(currentStep === 1 && !processedFileData)
 												}
-											}}
-											disabled={isUploading || !processedFileData}
-											className="primary-btn min-w-[120px]"
-										>
-											{isUploading ? (
-												<>
-													<Loader2 className="h-4 w-4 animate-spin" />
-													Uploading...
-												</>
-											) : (
-												<>
-													<Upload className="h-4 w-4 mr-2" />
-													Upload Contract
-												</>
-											)}
-										</Button>
-									)}
+												className="primary-btn sm:px-4 px-3"
+											>
+												Next
+												<ChevronRight className="w-4 h-4" />
+											</Button>
+										) : (
+											<Button
+												type="button"
+												onClick={async () => {
+													console.log("Upload button clicked");
+													const values = form.getValues();
+													console.log("Form values:", values);
+													const errors = await form.trigger();
+													console.log("Validation result:", errors);
+													console.log("Form errors:", form.formState.errors);
+
+													if (errors) {
+														await handleSubmit(values);
+													} else {
+														toast({
+															title: "Validation Error",
+															description: "Please fill in all required fields",
+															variant: "destructive",
+														});
+													}
+												}}
+												disabled={isUploading || !processedFileData}
+												className="primary-btn min-w-[120px]"
+											>
+												{isUploading ? (
+													<>
+														<Loader2 className="h-4 w-4 animate-spin" />
+														Uploading...
+													</>
+												) : (
+													<>
+														<Upload className="h-4 w-4 mr-2" />
+														Upload Contract
+													</>
+												)}
+											</Button>
+										)}
+									</div>
 								</div>
 							</div>
-						</div>
-					</>
-				)}
-			</DialogContent>
+						</>
+					)}
+				</DialogContent>
 
-			{/* Delete Confirmation Dialog */}
-			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<AlertDialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
-					<AlertDialogTitle className="sr-only">Delete Draft</AlertDialogTitle>
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Header */}
-					<div className="px-6 py-4 mt-4 bg-white border-b border-slate-200">
-						<div className="flex gap-2">
-							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
-							<h2 className="text-base font-semibold sidebar-gradient-text">
-								Delete Draft
-							</h2>
-						</div>
-						<div>
-							<AlertDialogDescription className="text-sm text-slate-600 mt-1 ml-7">
-								Are you sure you want to delete this draft? This action cannot
-								be undone.
-							</AlertDialogDescription>
-						</div>
-					</div>
-
-					{/* Body */}
-					<div className="px-6 py-5 space-y-3 bg-white">
-						<p className="text-sm text-slate-600">
-							Your decision to delete is irreversible, so please make sure you
-							want to continue.
-						</p>
-						<p className="text-xs font-medium text-slate-500">
-							This action is permanent.
-						</p>
-					</div>
-
-					{/* Footer — centered actions */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
-						<AlertDialogCancel
-							onClick={() => {
-								setDeleteDialogOpen(false);
-								setDraftToDelete(null);
-							}}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={() => {
-								if (draftToDelete) {
-									deleteDraft(draftToDelete);
-									setDraftToDelete(null);
-								}
-							}}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Trash2 className="h-4 w-4" />
+				{/* Delete Confirmation Dialog */}
+				<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+					<AlertDialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
+						<AlertDialogTitle className="sr-only">
 							Delete Draft
-						</AlertDialogAction>
-					</div>
-				</AlertDialogContent>
-			</AlertDialog>
+						</AlertDialogTitle>
+						{/* Professional Cap */}
+						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
-			{/* Cancel Confirmation Dialog */}
-			<AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-				<AlertDialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Header with gradient background */}
-					<div className="sticky top-0 z-10 bg-linear-to-r from-orange-50 to-amber-50 py-4 border-b border-slate-200">
-						<div className="flex items-center gap-3 px-6">
-							{/* Title */}
+						{/* Header */}
+						<div className="px-6 py-4 mt-4 bg-white border-b border-slate-200">
+							<div className="flex gap-2">
+								<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
+								<h2 className="text-base font-semibold sidebar-gradient-text">
+									Delete Draft
+								</h2>
+							</div>
 							<div>
-								<AlertDialogTitle className="flex items-center gap-2 text-xl font-semibold sidebar-gradient-text py-2">
-									{/* Icon with circular background */}
-									<Ban className="w-5 h-5 text-[#0f5384]" />
-									Cancel Form?
-								</AlertDialogTitle>
-								<AlertDialogDescription className="text-sm ml-7 text-slate-600">
-									Your progress will not be saved
+								<AlertDialogDescription className="text-sm text-slate-600 mt-1 ml-7">
+									Are you sure you want to delete this draft? This action cannot
+									be undone.
 								</AlertDialogDescription>
 							</div>
 						</div>
-					</div>
 
-					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto py-2 px-6 bg-white">
-						<p className="text-sm text-slate-700 leading-relaxed">
-							Are you sure you want to cancel? If you cancel, the form will not
-							be saved and all progress will be lost. You can save your progress
-							using the "Save Progress" button before canceling.
-						</p>
-					</div>
+						{/* Body */}
+						<div className="px-6 py-5 space-y-3 bg-white">
+							<p className="text-sm text-slate-600">
+								Your decision to delete is irreversible, so please make sure you
+								want to continue.
+							</p>
+							<p className="text-xs font-medium text-slate-500">
+								This action is permanent.
+							</p>
+						</div>
 
-					{/* Professional Footer */}
-					<div className="py-4 bg-slate-50 border-t border-slate-200 flex justify-center items-center gap-3">
-						<AlertDialogCancel
-							onClick={() => setCancelDialogOpen(false)}
-							className="primary-btn px-4 sm:px-4 shimmer-hover"
-						>
-							<StepForward className="h-4 w-4" />
-							Continue Editing
-						</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleCancelConfirm}
-							className="primary-btn px-4 sm:px-4 shimmer-hover"
-						>
-							<Ban className="h-4 w-4" />
-							Cancel & Discard
-						</AlertDialogAction>
-					</div>
-				</AlertDialogContent>
-			</AlertDialog>
-		</Dialog>
+						{/* Footer — centered actions */}
+						<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
+							<AlertDialogCancel
+								onClick={() => {
+									setDeleteDialogOpen(false);
+									setDraftToDelete(null);
+								}}
+								className="primary-btn px-3 sm:px-4"
+							>
+								<Ban className="h-4 w-4" />
+								Cancel
+							</AlertDialogCancel>
+							<AlertDialogAction
+								onClick={() => {
+									if (draftToDelete) {
+										deleteDraft(draftToDelete);
+										setDraftToDelete(null);
+									}
+								}}
+								className="primary-btn px-3 sm:px-4"
+							>
+								<Trash2 className="h-4 w-4" />
+								Delete Draft
+							</AlertDialogAction>
+						</div>
+					</AlertDialogContent>
+				</AlertDialog>
 
-		<LocalPdfPreviewDialog
-			open={pdfPreviewOpen}
-			onOpenChange={(open) => {
-				if (!open) closePdfPreview();
-				else setPdfPreviewOpen(true);
-			}}
-			fileName={processedFileData?.name || "Contract PDF"}
-			pdfUrl={pdfPreviewUrl}
-		/>
+				{/* Cancel Confirmation Dialog */}
+				<AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+					<AlertDialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
+						{/* Professional Cap */}
+						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+
+						{/* Header with gradient background */}
+						<div className="sticky top-0 z-10 bg-linear-to-r from-orange-50 to-amber-50 py-4 border-b border-slate-200">
+							<div className="flex items-center gap-3 px-6">
+								{/* Title */}
+								<div>
+									<AlertDialogTitle className="flex items-center gap-2 text-xl font-semibold sidebar-gradient-text py-2">
+										{/* Icon with circular background */}
+										<Ban className="w-5 h-5 text-[#0f5384]" />
+										Cancel Form?
+									</AlertDialogTitle>
+									<AlertDialogDescription className="text-sm ml-7 text-slate-600">
+										Your progress will not be saved
+									</AlertDialogDescription>
+								</div>
+							</div>
+						</div>
+
+						{/* Scrollable Content */}
+						<div className="flex-1 overflow-y-auto py-2 px-6 bg-white">
+							<p className="text-sm text-slate-700 leading-relaxed">
+								Are you sure you want to cancel? If you cancel, the form will
+								not be saved and all progress will be lost. You can save your
+								progress using the "Save Progress" button before canceling.
+							</p>
+						</div>
+
+						{/* Professional Footer */}
+						<div className="py-4 bg-slate-50 border-t border-slate-200 flex justify-center items-center gap-3">
+							<AlertDialogCancel
+								onClick={() => setCancelDialogOpen(false)}
+								className="primary-btn px-4 sm:px-4 shimmer-hover"
+							>
+								<StepForward className="h-4 w-4" />
+								Continue Editing
+							</AlertDialogCancel>
+							<AlertDialogAction
+								onClick={handleCancelConfirm}
+								className="primary-btn px-4 sm:px-4 shimmer-hover"
+							>
+								<Ban className="h-4 w-4" />
+								Cancel & Discard
+							</AlertDialogAction>
+						</div>
+					</AlertDialogContent>
+				</AlertDialog>
+			</Dialog>
+
+			<LocalPdfPreviewDialog
+				open={pdfPreviewOpen}
+				onOpenChange={(open) => {
+					if (!open) closePdfPreview();
+					else setPdfPreviewOpen(true);
+				}}
+				fileName={processedFileData?.name || "Contract PDF"}
+				pdfUrl={pdfPreviewUrl}
+			/>
 		</>
 	);
 };

@@ -2,19 +2,16 @@
 
 import { FileText, GripVertical, Loader2 } from "lucide-react";
 import {
+	type DragEvent,
+	type MouseEvent,
 	useCallback,
 	useEffect,
 	useState,
-	type DragEvent,
-	type MouseEvent,
 } from "react";
 import { Button } from "@/components/ui/button";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import { cn } from "@/lib/utils";
-import {
-	beginDemoSampleDrag,
-	endDemoSampleDrag,
-} from "./demoSampleDrag";
+import { beginDemoSampleDrag, endDemoSampleDrag } from "./demoSampleDrag";
 
 export type DemoSampleDocument = {
 	/** Public URL under /public */
@@ -169,9 +166,7 @@ export function DemoSampleDocumentDrop({
 								Loading sample…
 							</p>
 						) : null}
-						{error ? (
-							<p className="mt-1 text-xs text-red">{error}</p>
-						) : null}
+						{error ? <p className="mt-1 text-xs text-red">{error}</p> : null}
 					</div>
 				</div>
 				<Button

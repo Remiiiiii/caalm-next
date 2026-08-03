@@ -11,22 +11,12 @@ type CountUpProps = {
 	id?: string;
 };
 
-function CountUpActive({
-	end,
-	delay,
-	duration,
-	id,
-}: Required<CountUpProps>) {
+function CountUpActive({ end, delay, duration, id }: Required<CountUpProps>) {
 	useCountUp({ ref: id, end, delay, duration });
 	return <span id={id} className="tabular-nums" />;
 }
 
-const CountUp = ({
-	end = 5000,
-	delay = 3,
-	duration = 3,
-	id,
-}: CountUpProps) => {
+const CountUp = ({ end = 5000, delay = 3, duration = 3, id }: CountUpProps) => {
 	const reactId = useId().replace(/:/g, "");
 	const counterId = id ?? `counter-${reactId}`;
 	const [mounted, setMounted] = useState(false);
@@ -40,12 +30,7 @@ const CountUp = ({
 	}
 
 	return (
-		<CountUpActive
-			id={counterId}
-			end={end}
-			delay={delay}
-			duration={duration}
-		/>
+		<CountUpActive id={counterId} end={end} delay={delay} duration={duration} />
 	);
 };
 

@@ -78,7 +78,7 @@ Hi ${
 
 ✅ Action needed: Please review and complete the renewal process at your earliest convenience to maintain uninterrupted services.
 
-Thank you for using Caalm!`;
+Thank you for using CAALM!`;
 
 		return this.sendSmsNotification(userId, smsMessage);
 	}

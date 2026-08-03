@@ -25,11 +25,7 @@ export function retrieveKnowledge(
 	pathname?: string,
 	limit = 4,
 ): { contextText: string; sources: RetrievedSource[] } {
-	const terms = query
-		.toLowerCase()
-		.split(/\W+/)
-		.filter(Boolean)
-		.slice(0, 24);
+	const terms = query.toLowerCase().split(/\W+/).filter(Boolean).slice(0, 24);
 
 	if (pathname) {
 		const pathTerms = pathname.split("/").filter(Boolean);

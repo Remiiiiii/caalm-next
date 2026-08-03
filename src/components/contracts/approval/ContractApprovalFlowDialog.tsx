@@ -13,11 +13,7 @@ import { useState } from "react";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useContractApprovalWorkflow } from "@/hooks/useContractApprovalWorkflow";
@@ -185,9 +181,7 @@ export default function ContractApprovalFlowDialog({
 											variant="outline"
 											className="primary-btn px-3 sm:px-4"
 											disabled={busy}
-											onClick={() =>
-												void handleDecision("changes_requested")
-											}
+											onClick={() => void handleDecision("changes_requested")}
 										>
 											Request changes
 										</Button>

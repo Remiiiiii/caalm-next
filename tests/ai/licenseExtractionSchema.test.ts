@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+	normalizeAmountString,
+	normalizeDateString,
+} from "@/lib/ai/contractExtractionSchema";
+import {
 	buildFormPatchFromLicenseExtraction,
 	isRealLicenseExtractionMethod,
 	LICENSE_EXTRACTION_METHOD,
@@ -8,10 +12,6 @@ import {
 	parseLicenseKeyValueText,
 	scrubNaValue,
 } from "@/lib/ai/licenseExtractionSchema";
-import {
-	normalizeAmountString,
-	normalizeDateString,
-} from "@/lib/ai/contractExtractionSchema";
 
 /** Golden expected values from document/Nonprofit_Residential_License_v2.pdf */
 const GOLDEN_RESIDENTIAL_LICENSE = {

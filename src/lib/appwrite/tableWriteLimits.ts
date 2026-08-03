@@ -56,7 +56,13 @@ const DEMO_CONTRACTS_LIMITS: TableWriteLimits = {
 	},
 	enumFields: {
 		compliance: ["up-to-date", "action-required", "non-compliant"],
-		status: ["active", "inactive", "pending-review", "action-required", "expired"],
+		status: [
+			"active",
+			"inactive",
+			"pending-review",
+			"action-required",
+			"expired",
+		],
 		priority: ["Low", "Medium", "High", "Urgent"],
 		department: [
 			"IT",
@@ -110,7 +116,9 @@ const DEMO_FILES_LIMITS: TableWriteLimits = {
 	},
 };
 
-export function getWriteLimitsForTable(tableId: string): TableWriteLimits | undefined {
+export function getWriteLimitsForTable(
+	tableId: string,
+): TableWriteLimits | undefined {
 	if (tableId === appwriteConfig.contractsCollectionId) {
 		return isDemoMode() ? DEMO_CONTRACTS_LIMITS : PROD_CONTRACTS_LIMITS;
 	}

@@ -605,7 +605,8 @@ export async function triggerTaskStatusChangedNotification({
 			metadata,
 			actionUrl: "/team/tasks",
 			actionText: "View Tasks",
-			priority: newStatus === "done" || newStatus === "blocked" ? "high" : "medium",
+			priority:
+				newStatus === "done" || newStatus === "blocked" ? "high" : "medium",
 		});
 		return;
 	} catch (error) {

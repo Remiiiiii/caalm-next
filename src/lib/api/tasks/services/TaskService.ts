@@ -53,8 +53,8 @@ export class TaskService {
 		}
 
 		const result = await tablesDB.listRows({
-			databaseId: this.databaseId(),
-			tableId: this.tableId(),
+			databaseId: TaskService.databaseId(),
+			tableId: TaskService.tableId(),
 			queries,
 		});
 
@@ -68,8 +68,8 @@ export class TaskService {
 		const { tablesDB } = await createAdminClient();
 		try {
 			const row = await tablesDB.getRow({
-				databaseId: this.databaseId(),
-				tableId: this.tableId(),
+				databaseId: TaskService.databaseId(),
+				tableId: TaskService.tableId(),
 				rowId: taskId,
 			});
 			const task = row as unknown as Task;
@@ -102,8 +102,8 @@ export class TaskService {
 		if (input.linkedEntityId) payload.linkedEntityId = input.linkedEntityId;
 
 		const row = await tablesDB.createRow({
-			databaseId: this.databaseId(),
-			tableId: this.tableId(),
+			databaseId: TaskService.databaseId(),
+			tableId: TaskService.tableId(),
 			rowId: ID.unique(),
 			data: payload,
 		});
@@ -116,7 +116,7 @@ export class TaskService {
 		taskId: string,
 		input: UpdateTaskInput,
 	): Promise<Task | null> {
-		const existing = await this.getTask(orgId, taskId);
+		const existing = await TaskService.getTask(orgId, taskId);
 		if (!existing) return null;
 
 		const { tablesDB } = await createAdminClient();
@@ -146,8 +146,8 @@ export class TaskService {
 		}
 
 		const row = await tablesDB.updateRow({
-			databaseId: this.databaseId(),
-			tableId: this.tableId(),
+			databaseId: TaskService.databaseId(),
+			tableId: TaskService.tableId(),
 			rowId: taskId,
 			data: payload,
 		});
@@ -156,13 +156,13 @@ export class TaskService {
 	}
 
 	static async deleteTask(orgId: string, taskId: string): Promise<boolean> {
-		const existing = await this.getTask(orgId, taskId);
+		const existing = await TaskService.getTask(orgId, taskId);
 		if (!existing) return false;
 
 		const { tablesDB } = await createAdminClient();
 		await tablesDB.deleteRow({
-			databaseId: this.databaseId(),
-			tableId: this.tableId(),
+			databaseId: TaskService.databaseId(),
+			tableId: TaskService.tableId(),
 			rowId: taskId,
 		});
 		return true;

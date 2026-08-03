@@ -103,13 +103,13 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 												<div className="flex items-center gap-3">
 													<Image
 														src="/assets/images/logo.svg"
-														alt="Caalm Logo"
+														alt="CAALM Logo"
 														width={48}
 														height={48}
 														className="h-auto w-12"
 													/>
 													<span className="text-2xl font-bold text-light-100">
-														Caalm
+														CAALM
 													</span>
 												</div>
 											</Link>

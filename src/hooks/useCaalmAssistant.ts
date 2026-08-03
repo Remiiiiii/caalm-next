@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
+import { useCallback, useState } from "react";
 import type {
 	AssistantChatMessage,
 	AssistantConversationSummary,
 	AssistantPendingAction,
 	UseCaalmAssistantReturn,
 } from "@/components/assistant/assistantTypes";
+import { useToast } from "@/hooks/use-toast";
 
 export function useCaalmAssistant(): UseCaalmAssistantReturn {
 	const pathname = usePathname();
@@ -82,9 +82,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 								| "user"
 								| "assistant",
 							content: m.content,
-							sources: m.sourcesJson
-								? JSON.parse(m.sourcesJson)
-								: undefined,
+							sources: m.sourcesJson ? JSON.parse(m.sourcesJson) : undefined,
 							suggestions,
 							createdAt: m.$createdAt,
 						};

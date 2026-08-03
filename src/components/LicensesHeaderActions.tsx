@@ -93,9 +93,7 @@ export default function LicensesHeaderActions({
 			>
 				<Upload className="w-4 h-4" />
 				<span className="hidden sm:inline">
-					{selectedIds.length > 0
-						? `Export (${selectedIds.length})`
-						: "Export"}
+					{selectedIds.length > 0 ? `Export (${selectedIds.length})` : "Export"}
 				</span>
 			</Button>
 			<LicenseForm />

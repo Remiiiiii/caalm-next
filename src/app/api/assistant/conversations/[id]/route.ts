@@ -61,10 +61,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 		await updateConversationMeta(id, patch);
 	}
 
-	const updated = await getConversationForUser(
-		id,
-		auth.user.$id,
-		auth.orgId,
-	);
+	const updated = await getConversationForUser(id, auth.user.$id, auth.orgId);
 	return NextResponse.json({ success: true, data: { conversation: updated } });
 }

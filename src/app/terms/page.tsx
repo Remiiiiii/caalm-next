@@ -2,9 +2,9 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 
 export const metadata = {
-	title: "Terms of Service - Caalm",
+	title: "Terms of Service - CAALM",
 	description:
-		"Terms of Service for Caalm — compliance, agreement, and document management platform.",
+		"Terms of Service for CAALM — compliance, agreement, and document management platform.",
 };
 
 export default function TermsPage() {
@@ -26,7 +26,7 @@ export default function TermsPage() {
 								1. Introduction
 							</h2>
 							<p>
-								Welcome to Caalm (&quot;Company&quot;, &quot;we&quot;,
+								Welcome to CAALM (&quot;Company&quot;, &quot;we&quot;,
 								&quot;our&quot;, &quot;us&quot;). These Terms of Service
 								(&quot;Terms&quot;) govern your access to and use of our
 								compliance, data, and document management services, websites,
@@ -198,7 +198,7 @@ export default function TermsPage() {
 								</li>
 								<li>
 									<span className="font-semibold">Entire Agreement:</span> These
-									Terms constitute the entire agreement between you and Caalm
+									Terms constitute the entire agreement between you and CAALM
 									regarding the Service.
 								</li>
 							</ul>
@@ -222,7 +222,7 @@ export default function TermsPage() {
 								By providing your mobile phone number and opting into our SMS
 								and text message notification program, you expressly consent to
 								receive promotional messages, alerts, and other notification
-								communications from CaalmSolutions. You also confirm that you
+								communications from CAALM Solutions. You also confirm that you
 								are the account holder or have the account holder&apos;s
 								permission to enroll in this service. Standard message and data
 								rates may apply.
@@ -246,7 +246,7 @@ export default function TermsPage() {
 							</h3>
 							<p>
 								You agree to receive SMS and text message notification
-								communications from CaalmSolutions periodically. The frequency
+								communications from CAALM Solutions periodically. The frequency
 								of messages may vary based on your interaction with our platform
 								and your preferences. You can opt-out of these messages at any
 								time by following the instructions provided in the messages.

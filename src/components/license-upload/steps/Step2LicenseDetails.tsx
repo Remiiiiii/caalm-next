@@ -299,11 +299,7 @@ export default function Step2LicenseDetails({
 												<CalendarIcon className="mr-2 h-4 w-4" />
 												{(() => {
 													const label = formatDateValue(field.value);
-													return label ? (
-														label
-													) : (
-														<span>Pick a date</span>
-													);
+													return label ? label : <span>Pick a date</span>;
 												})()}
 											</Button>
 										</FormControl>
@@ -341,11 +337,7 @@ export default function Step2LicenseDetails({
 												<CalendarIcon className="mr-2 h-4 w-4" />
 												{(() => {
 													const label = formatDateValue(field.value);
-													return label ? (
-														label
-													) : (
-														<span>Pick a date</span>
-													);
+													return label ? label : <span>Pick a date</span>;
 												})()}
 											</Button>
 										</FormControl>
@@ -383,11 +375,7 @@ export default function Step2LicenseDetails({
 												<CalendarIcon className="mr-2 h-4 w-4" />
 												{(() => {
 													const label = formatDateValue(field.value);
-													return label ? (
-														label
-													) : (
-														<span>Pick a date</span>
-													);
+													return label ? label : <span>Pick a date</span>;
 												})()}
 											</Button>
 										</FormControl>

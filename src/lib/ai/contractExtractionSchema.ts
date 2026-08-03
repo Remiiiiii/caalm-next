@@ -274,7 +274,9 @@ function mapEnum(
 }
 
 /** Normalize money strings to digits suitable for the amount input. */
-export function normalizeAmountString(raw: string | undefined): string | undefined {
+export function normalizeAmountString(
+	raw: string | undefined,
+): string | undefined {
 	if (!raw) return undefined;
 	const cleaned = raw.replace(/[^0-9.]/g, "");
 	if (!cleaned) return undefined;
@@ -284,7 +286,9 @@ export function normalizeAmountString(raw: string | undefined): string | undefin
 }
 
 /** Prefer YYYY-MM-DD; accept common US date phrases via Date parse. */
-export function normalizeDateString(raw: string | undefined): string | undefined {
+export function normalizeDateString(
+	raw: string | undefined,
+): string | undefined {
 	if (!raw) return undefined;
 	const trimmed = raw.trim();
 	const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
@@ -327,7 +331,9 @@ const LOW_CONFIDENCE_THRESHOLD = 0.7;
  * Parse Gemini (or fixture) JSON into normalized extractable fields.
  * Maps vendor → counterpartyLegalName and enum aliases onto form values.
  */
-export function parseContractExtractionJson(rawJson: string): ParsedContractExtraction {
+export function parseContractExtractionJson(
+	rawJson: string,
+): ParsedContractExtraction {
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(extractJsonObjectFromModelText(rawJson));
@@ -355,8 +361,7 @@ export function parseContractExtractionJson(rawJson: string): ParsedContractExtr
 	const data = zod.data;
 	const fields: ParsedContractExtraction["fields"] = {};
 
-	const counterparty =
-		data.counterpartyLegalName || data.vendor || undefined;
+	const counterparty = data.counterpartyLegalName || data.vendor || undefined;
 	if (counterparty) fields.counterpartyLegalName = counterparty;
 
 	if (data.contractName) fields.contractName = data.contractName;
@@ -463,7 +468,8 @@ export function parseContractExtractionJson(rawJson: string): ParsedContractExtr
 	const fieldConfidence: ParsedContractExtraction["fieldConfidence"] = {};
 	const rawConf = data.fieldConfidence || {};
 	for (const key of EXTRACTABLE_CONTRACT_FIELDS) {
-		const c = rawConf[key] ?? rawConf[key === "counterpartyLegalName" ? "vendor" : ""];
+		const c =
+			rawConf[key] ?? rawConf[key === "counterpartyLegalName" ? "vendor" : ""];
 		if (typeof c === "number" && !Number.isNaN(c)) {
 			fieldConfidence[key] = Math.min(1, Math.max(0, c));
 		}

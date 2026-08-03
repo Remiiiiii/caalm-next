@@ -228,8 +228,7 @@ export function scrubNaValue(raw: string | undefined): string | undefined {
 export function parseLicenseKeyValueText(
 	documentText: string,
 ): Partial<Record<ExtractableLicenseField, string | boolean>> {
-	const fields: Partial<Record<ExtractableLicenseField, string | boolean>> =
-		{};
+	const fields: Partial<Record<ExtractableLicenseField, string | boolean>> = {};
 	const lines = documentText.split(/\r?\n/).map((l) => l.trim());
 	const keySet = new Set<string>(EXTRACTABLE_LICENSE_FIELDS);
 
@@ -434,9 +433,7 @@ export function mergeLicenseExtractions(
 			]),
 		),
 		overallConfidence: 0.95,
-		fieldConfidence: Object.fromEntries(
-			Object.keys(kv).map((k) => [k, 0.98]),
-		),
+		fieldConfidence: Object.fromEntries(Object.keys(kv).map((k) => [k, 0.98])),
 	});
 	const kvParsed = parseLicenseExtractionJson(mergedKvJson);
 

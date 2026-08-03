@@ -10,7 +10,8 @@ export async function POST(request: NextRequest) {
 	if (isAssistantAuthError(auth)) return auth;
 
 	const body = await request.json();
-	const rating = body.rating === "up" || body.rating === "down" ? body.rating : null;
+	const rating =
+		body.rating === "up" || body.rating === "down" ? body.rating : null;
 	const comment =
 		typeof body.comment === "string" ? body.comment.trim().slice(0, 1000) : "";
 	const conversationId =

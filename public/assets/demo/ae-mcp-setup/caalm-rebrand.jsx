@@ -1,4 +1,4 @@
-(function () {
+(() => {
 	function replaceNeuroStreamText(value) {
 		if (value === null || value === undefined) return value;
 		return String(value).replace(/NeuroStream/gi, "CAALM");

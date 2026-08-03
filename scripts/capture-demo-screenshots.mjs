@@ -1,6 +1,6 @@
-import { chromium } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { chromium } from "@playwright/test";
 
 const OUT = path.resolve("public/assets/video/demo-screenshots");
 const BASE = process.env.DEMO_BASE_URL || "http://localhost:3000";

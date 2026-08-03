@@ -37,10 +37,7 @@ export async function countRowsByOrg(
 }
 
 export async function countUsersByOrg(orgId: string): Promise<number> {
-	return countRowsByOrg(
-		appwriteConfig.usersCollectionId || "users",
-		orgId,
-	);
+	return countRowsByOrg(appwriteConfig.usersCollectionId || "users", orgId);
 }
 
 /**

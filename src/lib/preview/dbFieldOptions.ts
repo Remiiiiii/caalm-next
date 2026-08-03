@@ -1,5 +1,5 @@
-import { CONTRACT_DEPARTMENTS } from "../../../constants";
 import { CONTRACT_TYPES } from "@/components/contract-upload/constants";
+import { CONTRACT_DEPARTMENTS } from "../../../constants";
 
 export { CONTRACT_DEPARTMENTS, CONTRACT_TYPES };
 

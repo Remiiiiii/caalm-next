@@ -1,13 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import {
-	AlertTriangle,
-	CheckCircle,
-	Clock,
-	X,
-	XCircle,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, X, XCircle } from "lucide-react";
 import type { AuditLog } from "@/components/audits/AuditLogTable";
 import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
 import {

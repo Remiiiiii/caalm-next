@@ -124,7 +124,11 @@ const NAV = [
 		items: [
 			{ label: "All Contracts", icon: "documents.svg", id: "contracts-all" },
 			{ label: "My Contracts", icon: "my-contracts.svg", id: "contracts-my" },
-			{ label: "Proposals & Approvals", icon: "edit.svg", id: "contracts-approvals" },
+			{
+				label: "Proposals & Approvals",
+				icon: "edit.svg",
+				id: "contracts-approvals",
+			},
 		],
 	},
 	{
@@ -132,7 +136,11 @@ const NAV = [
 		icon: "license.svg",
 		items: [
 			{ label: "All Licenses", icon: "license.svg", id: "licenses-all" },
-			{ label: "Department Licenses", icon: "department.svg", id: "licenses-dept" },
+			{
+				label: "Department Licenses",
+				icon: "department.svg",
+				id: "licenses-dept",
+			},
 		],
 	},
 	{
@@ -149,7 +157,11 @@ const NAV = [
 		header: "Audits",
 		icon: "audit.svg",
 		items: [
-			{ label: "Compliance status", icon: "compliance-status.svg", id: "audit-status" },
+			{
+				label: "Compliance status",
+				icon: "compliance-status.svg",
+				id: "audit-status",
+			},
 			{ label: "Audit logs", icon: "audit-logs.svg", id: "audit-logs" },
 		],
 	},
@@ -356,14 +368,43 @@ export const CONTENT_02 = `
 
 function buildMonthCells() {
 	const days = [
-		{ n: 28, out: true }, { n: 29, out: true }, { n: 30, out: true },
-		{ n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }, { n: 5 }, { n: 6 }, { n: 7 }, { n: 8 }, { n: 9 }, { n: 10 },
-		{ n: 11 }, { n: 12 }, { n: 13 }, { n: 14 }, { n: 15 },
+		{ n: 28, out: true },
+		{ n: 29, out: true },
+		{ n: 30, out: true },
+		{ n: 1 },
+		{ n: 2 },
+		{ n: 3 },
+		{ n: 4 },
+		{ n: 5 },
+		{ n: 6 },
+		{ n: 7 },
+		{ n: 8 },
+		{ n: 9 },
+		{ n: 10 },
+		{ n: 11 },
+		{ n: 12 },
+		{ n: 13 },
+		{ n: 14 },
+		{ n: 15 },
 		{ n: 16, events: ["9:00 AM Quic...", "12:00 PM Quic..."] },
-		{ n: 17 }, { n: 18 }, { n: 19 }, { n: 20 }, { n: 21 }, { n: 22 }, { n: 23 },
+		{ n: 17 },
+		{ n: 18 },
+		{ n: 19 },
+		{ n: 20 },
+		{ n: 21 },
+		{ n: 22 },
+		{ n: 23 },
 		{ n: 24, today: true, selected: true },
-		{ n: 25 }, { n: 26 }, { n: 27 }, { n: 28 }, { n: 29 }, { n: 30 }, { n: 31 },
-		{ n: 1, out: true }, { n: 2, out: true }, { n: 3, out: true },
+		{ n: 25 },
+		{ n: 26 },
+		{ n: 27 },
+		{ n: 28 },
+		{ n: 29 },
+		{ n: 30 },
+		{ n: 31 },
+		{ n: 1, out: true },
+		{ n: 2, out: true },
+		{ n: 3, out: true },
 	];
 	return days
 		.map((d) => {
@@ -372,8 +413,12 @@ function buildMonthCells() {
 				d.out ? "out" : "in-month",
 				d.today && "today",
 				d.selected && "selected",
-			].filter(Boolean).join(" ");
-			const chips = (d.events || []).map((e) => `<div class="event-chip">${e}</div>`).join("");
+			]
+				.filter(Boolean)
+				.join(" ");
+			const chips = (d.events || [])
+				.map((e) => `<div class="event-chip">${e}</div>`)
+				.join("");
 			return `<div class="${cls}"><div class="day-num">${d.n}</div>${chips}</div>`;
 		})
 		.join("");
@@ -399,7 +444,17 @@ const CONTRACTS_TOOLBAR = `
       </div>
     </div>`;
 
-function licenseRow(name, vendor, category, seats, seatsUsed, pillClass, status, expiry, cost) {
+function licenseRow(
+	name,
+	vendor,
+	category,
+	seats,
+	seatsUsed,
+	pillClass,
+	status,
+	expiry,
+	cost,
+) {
 	return `<tr>
       <td><input type="checkbox" /></td>
       <td><div class="file-name">${PDF_FILE_ICON}${name}</div></td>
@@ -408,7 +463,16 @@ function licenseRow(name, vendor, category, seats, seatsUsed, pillClass, status,
     </tr>`;
 }
 
-function contractRow(name, fileType, pillClass, status, size, uploaded, expires, expiresStyle = "") {
+function contractRow(
+	name,
+	fileType,
+	pillClass,
+	status,
+	size,
+	uploaded,
+	expires,
+	expiresStyle = "",
+) {
 	const icon =
 		fileType === "doc"
 			? `<img class="file-thumb" src="${BASE}/assets/icons/file-doc.svg" alt="DOC" width="32" height="32" decoding="sync" />`

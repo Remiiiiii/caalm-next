@@ -1,5 +1,4 @@
 import type {
-	Task,
 	TaskLinkedEntityType,
 	TaskPriority,
 	TaskStatus,

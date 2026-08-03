@@ -4,10 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Query } from "node-appwrite";
-import {
-	DIVISION_TO_DEPARTMENT,
-	type UserDivision,
-} from "../../../../../constants";
 import LicensesAttentionStrip from "@/components/LicensesAttentionStrip";
 import LicensesControlBar from "@/components/LicensesControlBar";
 import LicensesHeaderActions from "@/components/LicensesHeaderActions";
@@ -25,6 +21,10 @@ import {
 	getUserPermissions,
 } from "@/lib/rbac/permissions";
 import type { License } from "@/types/licenses";
+import {
+	DIVISION_TO_DEPARTMENT,
+	type UserDivision,
+} from "../../../../../constants";
 
 function matchesDepartmentScope(
 	license: License,

@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { backfillPendingWorkflows } from "@/lib/approvals/ContractApprovalWorkflowService";
 import {
 	errorResponse,
 	forbiddenResponse,
@@ -9,6 +8,7 @@ import {
 	successResponse,
 	unauthorizedResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import { backfillPendingWorkflows } from "@/lib/approvals/ContractApprovalWorkflowService";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,
@@ -19,7 +19,8 @@ export async function POST(_request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
 		const user = await getCurrentUser();
-		if (!user) return unauthorizedResponse("Authentication required", requestId);
+		if (!user)
+			return unauthorizedResponse("Authentication required", requestId);
 
 		const org = await getUserDefaultOrganization(user.$id);
 		const roles = org?.orgId ? await getUserRoles(user.$id, org.orgId) : [];
@@ -28,11 +29,7 @@ export async function POST(_request: NextRequest) {
 			(name) => name === "Super Admin" || name === "Organization Admin",
 		);
 		const canApprove = org?.orgId
-			? await hasPermission(
-					user.$id,
-					PERMISSIONS.CONTRACTS.APPROVE,
-					org.orgId,
-				)
+			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.APPROVE, org.orgId)
 			: false;
 
 		if (!isAdmin && !canApprove) {

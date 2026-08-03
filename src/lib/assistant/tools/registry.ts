@@ -1,15 +1,18 @@
+import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { listCalendarApprovalRequests } from "@/lib/actions/calendar-approval.actions";
 import { generateReport } from "@/lib/actions/report.actions";
-import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
-import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
 import { TaskService } from "@/lib/api/tasks/services/TaskService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
+import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
 import { logAuditEvent } from "@/lib/services/audit-logger";
-import { Query } from "node-appwrite";
 
-function hasAll(ctx: ToolContext, keys: Parameters<typeof ctx.permissions.includes>[0][]): boolean {
+function hasAll(
+	ctx: ToolContext,
+	keys: Parameters<typeof ctx.permissions.includes>[0][],
+): boolean {
 	return keys.every((k) => ctx.permissions.includes(k));
 }
 
@@ -293,7 +296,9 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 			if (!hasAll(ctx, [PERMISSIONS.EVENTS.APPROVE])) {
 				return { result: { error: "Missing events.approve permission" } };
 			}
-			const approvals = await listCalendarApprovalRequests({ status: "pending" });
+			const approvals = await listCalendarApprovalRequests({
+				status: "pending",
+			});
 			return { result: { approvals: approvals.slice(0, 15) } };
 		},
 	},
@@ -345,7 +350,9 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	},
 ];
 
-export function getToolsForPermissions(permissions: ToolContext["permissions"]) {
+export function getToolsForPermissions(
+	permissions: ToolContext["permissions"],
+) {
 	return ASSISTANT_TOOLS.filter((tool) =>
 		tool.requiredPermissions.every((p) => permissions.includes(p)),
 	);

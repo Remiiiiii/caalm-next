@@ -218,7 +218,7 @@ function replaceScene01WithContracts(args) {
 					parent: layer.parent ? layer.parent.name : null,
 					inPoint: layer.inPoint,
 					outPoint: layer.outPoint,
-					effects: (function () {
+					effects: (() => {
 						var names = [];
 						try {
 							var fx = layer.property("ADBE Effect Parade");
@@ -276,7 +276,13 @@ function replaceScene01WithContracts(args) {
 				plate.parent = designLayer.parent;
 				// Copy transform values/keyframes
 				try {
-					var props = ["ADBE Position", "ADBE Scale", "ADBE Rotate Z", "ADBE Opacity", "ADBE Anchor Point"];
+					var props = [
+						"ADBE Position",
+						"ADBE Scale",
+						"ADBE Rotate Z",
+						"ADBE Opacity",
+						"ADBE Anchor Point",
+					];
 					var srcT = designLayer.property("ADBE Transform Group");
 					var dstT = plate.property("ADBE Transform Group");
 					for (var p = 0; p < props.length; p++) {
@@ -322,7 +328,7 @@ function replaceScene01WithContracts(args) {
 	return JSON.stringify(report, null, 2);
 }
 
-(function () {
+(() => {
 	var isBridge =
 		typeof logToPanel === "function" || typeof getResultFilePath === "function";
 	if (isBridge) return;

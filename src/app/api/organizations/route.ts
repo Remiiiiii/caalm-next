@@ -4,10 +4,7 @@ import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requirePermission } from "@/lib/rbac/middleware";
-import {
-	getOrganization,
-	updateOrganization,
-} from "@/lib/rbac/organizations";
+import { getOrganization, updateOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 
@@ -27,7 +24,10 @@ export async function GET(request: NextRequest) {
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const permissionCheck = await requirePermission(request, {
@@ -40,12 +40,18 @@ export async function GET(request: NextRequest) {
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		const orgId = orgIdParam || defaultOrg?.orgId;
 		if (!orgId) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const org = await getOrganization(orgId);
 		if (!org) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		return NextResponse.json({ success: true, data: { organization: org } });
@@ -54,7 +60,9 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json(
 			{
 				error:
-					error instanceof Error ? error.message : "Failed to fetch organization",
+					error instanceof Error
+						? error.message
+						: "Failed to fetch organization",
 			},
 			{ status: 500 },
 		);
@@ -65,7 +73,10 @@ export async function PUT(request: NextRequest) {
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const permissionCheck = await requirePermission(request, {
@@ -78,12 +89,18 @@ export async function PUT(request: NextRequest) {
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		const orgId = orgIdParam || defaultOrg?.orgId;
 		if (!orgId) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const existing = await getOrganization(orgId);
 		if (!existing) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const body = await request.json();
@@ -136,13 +153,18 @@ export async function PUT(request: NextRequest) {
 			summary: `${(user as { fullName?: string }).fullName || user.email} updated organization settings`,
 		}).catch(() => undefined);
 
-		return NextResponse.json({ success: true, data: { organization: updated } });
+		return NextResponse.json({
+			success: true,
+			data: { organization: updated },
+		});
 	} catch (error) {
 		console.error("Organization PUT error:", error);
 		return NextResponse.json(
 			{
 				error:
-					error instanceof Error ? error.message : "Failed to update organization",
+					error instanceof Error
+						? error.message
+						: "Failed to update organization",
 			},
 			{ status: error instanceof z.ZodError ? 400 : 500 },
 		);

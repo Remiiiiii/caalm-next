@@ -43,9 +43,7 @@ export const Chart = ({
 	const chartData = [{ storage: "used", 10: used, fill: "white" }];
 	const displayLimitGB =
 		limitGB ??
-		(resolvedLimitBytes
-			? resolvedLimitBytes / (1024 * 1024 * 1024)
-			: 2);
+		(resolvedLimitBytes ? resolvedLimitBytes / (1024 * 1024 * 1024) : 2);
 
 	return (
 		<Card className="chart">

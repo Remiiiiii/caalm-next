@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { X } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +59,9 @@ export default function AssistantInPanelOverlay({
 				>
 					{title}
 				</h2>
-				<div className="mt-3 text-center text-sm text-slate-600">{children}</div>
+				<div className="mt-3 text-center text-sm text-slate-600">
+					{children}
+				</div>
 				{footer ? <div className="mt-5">{footer}</div> : null}
 			</div>
 		</div>

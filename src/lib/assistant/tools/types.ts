@@ -56,5 +56,8 @@ export type ToolDefinition = {
 	handler: (
 		ctx: ToolContext,
 		args: Record<string, unknown>,
-	) => Promise<{ result?: unknown; clientAction?: { type: "navigate"; href: string } }>;
+	) => Promise<{
+		result?: unknown;
+		clientAction?: { type: "navigate"; href: string };
+	}>;
 };

@@ -1,7 +1,4 @@
-const rateLimitCache = new Map<
-	string,
-	{ count: number; resetAt: number }
->();
+const rateLimitCache = new Map<string, { count: number; resetAt: number }>();
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS = 40;

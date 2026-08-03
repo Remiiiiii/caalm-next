@@ -28,11 +28,11 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { ContractCardSkeleton } from "@/components/ui/skeletons";
+import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import {
 	type UseSAMOpportunitiesFilters,
 	useSAMOpportunities,
 } from "@/hooks/useSAMOpportunities";
-import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import {
 	formatContractAmount,
 	formatContractDate,

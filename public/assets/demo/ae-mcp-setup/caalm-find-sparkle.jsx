@@ -1,4 +1,4 @@
-(function () {
+(() => {
 	var report = {
 		status: "success",
 		project: app.project.file ? app.project.file.fsName : "unsaved",
@@ -113,11 +113,8 @@
 				}
 
 				if (
-					/sparkle|star|flare|glint|shine|asterisk|\*|logo/i.test(
-						layer.name,
-					) ||
-					(brief.source &&
-						/sparkle|star|flare|logo/i.test(brief.source))
+					/sparkle|star|flare|glint|shine|asterisk|\*|logo/i.test(layer.name) ||
+					(brief.source && /sparkle|star|flare|logo/i.test(brief.source))
 				) {
 					report.nearCaalm.push(brief);
 				}

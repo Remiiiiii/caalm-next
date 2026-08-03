@@ -15,8 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
-import { fetcher } from "@/lib/swr-config";
 import type { Organization } from "@/lib/rbac/organizations";
+import { fetcher } from "@/lib/swr-config";
 
 interface OrgResponse {
 	success: boolean;
@@ -178,10 +178,7 @@ export default function SystemSettingsPage() {
 										Stored as org policy; users configure 2FA under Settings.
 									</p>
 								</div>
-								<Switch
-									checked={require2fa}
-									onCheckedChange={setRequire2fa}
-								/>
+								<Switch checked={require2fa} onCheckedChange={setRequire2fa} />
 							</div>
 							<Button
 								asChild

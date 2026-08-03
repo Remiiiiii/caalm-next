@@ -48,8 +48,8 @@ describe("expiry notice metadata", () => {
 		};
 		const raw = buildExpiryNoticeMetadata(meta);
 		expect(matchesExpiryNoticeMetadata(raw, meta)).toBe(true);
-		expect(
-			matchesExpiryNoticeMetadata(raw, { ...meta, daysUntil: 15 }),
-		).toBe(false);
+		expect(matchesExpiryNoticeMetadata(raw, { ...meta, daysUntil: 15 })).toBe(
+			false,
+		);
 	});
 });

@@ -9,11 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { LicenseUploadFormData } from "../schema";
 import type { Draft, ProcessedFileData } from "../types";
 
-const DATE_KEYS = new Set([
-	"licenseExpiryDate",
-	"issueDate",
-	"renewalDate",
-]);
+const DATE_KEYS = new Set(["licenseExpiryDate", "issueDate", "renewalDate"]);
 
 const STRING_KEYS = new Set([
 	"quantity",
@@ -78,7 +74,10 @@ interface UseDraftManagementProps {
 	extractedData: Record<string, unknown> | null;
 	isExtracting?: boolean;
 	setProcessedFileData: (
-		data: ProcessedFileData | null | ((prev: ProcessedFileData | null) => ProcessedFileData | null),
+		data:
+			| ProcessedFileData
+			| null
+			| ((prev: ProcessedFileData | null) => ProcessedFileData | null),
 	) => void;
 	setExtractedData: (data: Record<string, unknown> | null) => void;
 	setCurrentStep: (step: number) => void;
@@ -274,9 +273,9 @@ export function useDraftManagement({
 
 				const parsedFormData =
 					parseMaybeJson<Record<string, unknown>>(draft.formData) || {};
-				const parsedFile = parseMaybeJson<ProcessedFileData & { bucketFileId?: string | null }>(
-					draft.processedFileData,
-				);
+				const parsedFile = parseMaybeJson<
+					ProcessedFileData & { bucketFileId?: string | null }
+				>(draft.processedFileData);
 				const parsedExtracted = parseMaybeJson<Record<string, unknown>>(
 					draft.extractedData,
 				);
@@ -308,8 +307,7 @@ export function useDraftManagement({
 									dateValue as never;
 							}
 						} else if (value instanceof Date) {
-							formValues[key as keyof LicenseUploadFormData] =
-								value as never;
+							formValues[key as keyof LicenseUploadFormData] = value as never;
 						}
 						return;
 					}
@@ -352,21 +350,15 @@ export function useDraftManagement({
 
 					setProcessedFileData(restored);
 
-					if (
-						!(fromBase64 || fromBuffer) &&
-						parsedFile.bucketFileId
-					) {
+					if (!(fromBase64 || fromBuffer) && parsedFile.bucketFileId) {
 						try {
-							const fileRes = await fetch(
-								"/api/licenses/drafts/fetch-file",
-								{
-									method: "POST",
-									headers: { "Content-Type": "application/json" },
-									body: JSON.stringify({
-										bucketFileId: parsedFile.bucketFileId,
-									}),
-								},
-							);
+							const fileRes = await fetch("/api/licenses/drafts/fetch-file", {
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({
+									bucketFileId: parsedFile.bucketFileId,
+								}),
+							});
 							if (fileRes.ok) {
 								const fileJson = await fileRes.json();
 								const file = fileJson.data?.file || fileJson.file;
@@ -387,10 +379,7 @@ export function useDraftManagement({
 								}
 							}
 						} catch (fileError) {
-							console.error(
-								"Failed to restore draft file bytes:",
-								fileError,
-							);
+							console.error("Failed to restore draft file bytes:", fileError);
 						}
 					} else if (!(fromBase64 || fromBuffer)) {
 						toast({

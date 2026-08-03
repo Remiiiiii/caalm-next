@@ -1,9 +1,6 @@
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { demoRowId } from "./constants";
-import {
-	createRowIfMissing,
-	tableHasColumns,
-} from "./helpers";
+import { createRowIfMissing, tableHasColumns } from "./helpers";
 
 /**
  * Seed secondary UI-visible collections when schemas exist.

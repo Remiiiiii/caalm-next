@@ -156,7 +156,12 @@ const STAT_CARDS = [
 const TABS = [
 	{ id: "organization", label: "Organization", icon: Building2, active: true },
 	{ id: "contracts", label: "Contracts", icon: FileText, active: false },
-	{ id: "compliance", label: "Compliance & audit", icon: Shield, active: false },
+	{
+		id: "compliance",
+		label: "Compliance & audit",
+		icon: Shield,
+		active: false,
+	},
 	{ id: "calendar", label: "Calendar", icon: Calendar, active: false },
 ] as const;
 
@@ -246,7 +251,13 @@ function AnimatedPercentLabel({
 	}
 	return (
 		<span className={className}>
-			<CountUp end={percent} suffix="%" duration={1.2} delay={delay} start={0} />
+			<CountUp
+				end={percent}
+				suffix="%"
+				duration={1.2}
+				delay={delay}
+				start={0}
+			/>
 		</span>
 	);
 }

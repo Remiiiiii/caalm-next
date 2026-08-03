@@ -1,8 +1,8 @@
 import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
+import { createNotification } from "@/lib/actions/notification.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { createNotification } from "@/lib/actions/notification.actions";
 import { hasPermission } from "@/lib/rbac/permissions";
 import {
 	computeNextExpiryDate,
@@ -93,9 +93,12 @@ async function notifyAutoRenewed(params: {
 	}
 }
 
-async function processContracts(
-	now: Date,
-): Promise<{ updated: number; autoRenewed: number; checked: number; errors: string[] }> {
+async function processContracts(now: Date): Promise<{
+	updated: number;
+	autoRenewed: number;
+	checked: number;
+	errors: string[];
+}> {
 	const { tablesDB } = await createAdminClient();
 	const errors: string[] = [];
 	let updated = 0;
@@ -115,13 +118,15 @@ async function processContracts(
 		if (!contract.contractExpiryDate) continue;
 
 		try {
-			const expired = isExpiryReachedOrPassed(
-				contract.contractExpiryDate,
-				now,
-			);
+			const expired = isExpiryReachedOrPassed(contract.contractExpiryDate, now);
 			const days = daysUntilExpiry(contract.contractExpiryDate, now);
 
-			if (expired && shouldAutoRenew({ autoRenew: contract.autoRenew as boolean | undefined })) {
+			if (
+				expired &&
+				shouldAutoRenew({
+					autoRenew: contract.autoRenew as boolean | undefined,
+				})
+			) {
 				const newExpiry = computeNextExpiryDate({
 					startDate: contract.startDate as string | undefined,
 					expiryDate: contract.contractExpiryDate,
@@ -181,8 +186,7 @@ async function processContracts(
 				updated++;
 			}
 		} catch (error: unknown) {
-			const message =
-				error instanceof Error ? error.message : String(error);
+			const message = error instanceof Error ? error.message : String(error);
 			const errorMsg = `Failed to update contract ${contract.$id}: ${message}`;
 			errors.push(errorMsg);
 			console.error(errorMsg, error);
@@ -197,9 +201,12 @@ async function processContracts(
 	};
 }
 
-async function processLicenses(
-	now: Date,
-): Promise<{ updated: number; autoRenewed: number; checked: number; errors: string[] }> {
+async function processLicenses(now: Date): Promise<{
+	updated: number;
+	autoRenewed: number;
+	checked: number;
+	errors: string[];
+}> {
 	const { tablesDB } = await createAdminClient();
 	const errors: string[] = [];
 	let updated = 0;
@@ -221,13 +228,13 @@ async function processLicenses(
 		if (!license.licenseExpiryDate) continue;
 
 		try {
-			const expired = isExpiryReachedOrPassed(
-				license.licenseExpiryDate,
-				now,
-			);
+			const expired = isExpiryReachedOrPassed(license.licenseExpiryDate, now);
 			const days = daysUntilExpiry(license.licenseExpiryDate, now);
 
-			if (expired && shouldAutoRenew({ autoRenew: license.autoRenew as boolean | undefined })) {
+			if (
+				expired &&
+				shouldAutoRenew({ autoRenew: license.autoRenew as boolean | undefined })
+			) {
 				const startDate =
 					(license.issueDate as string | undefined) ||
 					(license.purchaseDate as string | undefined);
@@ -237,8 +244,9 @@ async function processLicenses(
 				});
 				const newDays = daysUntilExpiry(newExpiry, now);
 
-				const renewalHistory =
-					((license.renewalHistory as RenewalRecord[]) || []).slice();
+				const renewalHistory = (
+					(license.renewalHistory as RenewalRecord[]) || []
+				).slice();
 				renewalHistory.push({
 					renewalDate: todayStr,
 					cost: (license.cost as number) || 0,
@@ -294,8 +302,7 @@ async function processLicenses(
 				updated++;
 			}
 		} catch (error: unknown) {
-			const message =
-				error instanceof Error ? error.message : String(error);
+			const message = error instanceof Error ? error.message : String(error);
 			const errorMsg = `Failed to update license ${license.$id}: ${message}`;
 			errors.push(errorMsg);
 			console.error(errorMsg, error);

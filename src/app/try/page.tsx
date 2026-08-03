@@ -12,9 +12,8 @@ export default function TryDemoPage() {
 				<p className="text-sm font-medium text-[#0f5384] mb-2">CAALM Demo</p>
 				<h1 className="h1 sidebar-gradient-text mb-3">Try the sandbox</h1>
 				<p className="text-slate-600 mb-6">
-					Start a private sample organization with contracts, licenses,
-					calendar approvals, and dashboards. No real email or client data is
-					required.
+					Start a private sample organization with contracts, licenses, calendar
+					approvals, and dashboards. No real email or client data is required.
 				</p>
 				<ul className="text-sm text-slate-600 space-y-2 mb-8 list-disc pl-5">
 					<li>A unique sandbox ID is assigned automatically</li>

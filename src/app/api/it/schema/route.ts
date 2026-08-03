@@ -32,8 +32,7 @@ export async function GET(request: NextRequest) {
 		console.error("IT schema list error:", error);
 		return NextResponse.json(
 			{
-				error:
-					error instanceof Error ? error.message : "Failed to list tables",
+				error: error instanceof Error ? error.message : "Failed to list tables",
 			},
 			{ status: 500 },
 		);

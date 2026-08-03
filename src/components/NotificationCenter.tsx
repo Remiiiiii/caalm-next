@@ -235,16 +235,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 					notification.message.toLowerCase().includes(search.toLowerCase());
 				const matchesType =
 					typeFilter === "all" || notification.type === typeFilter;
-		const matchesStatus =
-			statusFilter === "all" ||
-			(statusFilter === "read" && notification.read === true) ||
-			(statusFilter === "unread" && notification.read !== true);
+				const matchesStatus =
+					statusFilter === "all" ||
+					(statusFilter === "read" && notification.read === true) ||
+					(statusFilter === "unread" && notification.read !== true);
 				const matchesPriority =
 					priorityFilter === "all" || notification.priority === priorityFilter;
 
-				return (
-					matchesSearch && matchesType && matchesStatus && matchesPriority
-				);
+				return matchesSearch && matchesType && matchesStatus && matchesPriority;
 			}),
 		[notifications, search, typeFilter, statusFilter, priorityFilter],
 	);

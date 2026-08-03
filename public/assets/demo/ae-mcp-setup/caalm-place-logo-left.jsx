@@ -67,8 +67,7 @@ function placeCaalmLogoLeft(args) {
 	function shouldProcess(comp, textLayer) {
 		var name = comp.name;
 		var txt = textOf(textLayer).replace(/^\s+|\s+$/g, "");
-		if (/^Text\s+0?1$/i.test(name) || /^Text\s+42$/i.test(name))
-			return true;
+		if (/^Text\s+0?1$/i.test(name) || /^Text\s+42$/i.test(name)) return true;
 		if (/^CAALM$/i.test(txt)) return true;
 		if (/^CAALM\b/i.test(txt) && txt.length <= 16) return true;
 		return false;
@@ -266,7 +265,7 @@ function placeCaalmLogoLeft(args) {
 }
 
 // Standalone run
-(function () {
+(() => {
 	var isBridge =
 		typeof logToPanel === "function" || typeof getResultFilePath === "function";
 	if (isBridge) return;

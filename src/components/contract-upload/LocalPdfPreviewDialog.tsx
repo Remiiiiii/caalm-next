@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, FileText, Minus, Plus, X } from "lucide-react";
+import {
+	ChevronLeft,
+	ChevronRight,
+	FileText,
+	Minus,
+	Plus,
+	X,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -131,9 +138,7 @@ export default function LocalPdfPreviewDialog({
 								size="icon"
 								className="h-8 w-8 cursor-pointer"
 								disabled={numPages === 0 || pageNumber >= numPages}
-								onClick={() =>
-									setPageNumber((p) => Math.min(numPages, p + 1))
-								}
+								onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
 								aria-label="Next page"
 							>
 								<ChevronRight className="h-4 w-4" />

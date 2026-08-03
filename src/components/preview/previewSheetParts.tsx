@@ -28,7 +28,9 @@ export function DetailRow({
 			<p className="pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
 				{label}
 			</p>
-			<div className="min-w-0 text-sm font-medium text-slate-900">{children}</div>
+			<div className="min-w-0 text-sm font-medium text-slate-900">
+				{children}
+			</div>
 		</div>
 	);
 }

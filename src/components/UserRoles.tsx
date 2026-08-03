@@ -55,7 +55,7 @@ const UserRoles = () => {
 						Built for Every Role
 					</h2>
 					<p className="text-xl text-slate-dark max-w-3xl mx-auto">
-						Caalm provides tailored experiences for executives, managers, and
+						CAALM provides tailored experiences for executives, managers, and
 						administrative staff with role-based access and workflows.
 					</p>
 				</div>

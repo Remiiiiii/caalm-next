@@ -5,15 +5,19 @@ import ContractsHeaderActions from "@/components/ContractsHeaderActions";
 import ContractsMetricsBar from "@/components/ContractsMetricsBar";
 import { ContractsViewProvider } from "@/components/ContractsView";
 import ContractsViewClient from "@/components/ContractsViewClient";
-import FileUsageOverview from "@/components/FileUsageOverview";
-import FileUploader from "@/components/FileUploader";
 import FilesLibraryClient from "@/components/FilesLibraryClient";
+import FileUploader from "@/components/FileUploader";
+import FileUsageOverview from "@/components/FileUsageOverview";
 import StorageUsageBar from "@/components/StorageUsageBar";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { getFiles } from "@/lib/actions/file.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getFileLibraryEmptyState } from "@/lib/storage/fileLibraryEmptyState";
-import { getFileLibraryPageTitle, getFileTypesParams, isDocumentFileExtension } from "@/lib/utils";
+import {
+	getFileLibraryPageTitle,
+	getFileTypesParams,
+	isDocumentFileExtension,
+} from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 
 type FileType = "image" | "video" | "audio" | "document" | "other";
@@ -30,8 +34,7 @@ interface SearchParamProps {
 const Page = async ({ searchParams, params }: SearchParamProps) => {
 	const type = ((await params)?.type as string) || "";
 	const searchText = ((await searchParams)?.query as string) || "";
-	const sort =
-		((await searchParams)?.sort as string) || "$createdAt-desc";
+	const sort = ((await searchParams)?.sort as string) || "$createdAt-desc";
 
 	let files: { documents: UIFileDoc[] } = { documents: [] };
 	let filteredDocuments: UIFileDoc[] = [];

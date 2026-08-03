@@ -2,7 +2,7 @@
  * Replace intro sparkle/star next to "CAALM" with public/assets/images/logo.png
  * Run: File → Scripts → Run Script File… (close MCP Bridge Auto first if -r fails)
  */
-(function () {
+(() => {
 	var LOGO_PATH =
 		"c:/Users/victo/Development/caalm-next/public/assets/images/logo.png";
 	var report = {
@@ -189,7 +189,7 @@
 						txt &&
 						txt.length <= 4 &&
 						!/[A-Za-z0-9]/.test(txt) &&
-						/[\*\u2605\u2606\u2726\u2727\u2736]/.test(txt)
+						/[*\u2605\u2606\u2726\u2727\u2736]/.test(txt)
 					) {
 						placeLogoOverLayer(
 							comp,
@@ -262,8 +262,7 @@
 			for (var l = 1; l <= comp.numLayers; l++) {
 				var layer = comp.layer(l);
 				var nameHit = isSparkleName(layer.name);
-				var sourceHit =
-					layer.source && isSparkleName(layer.source.name);
+				var sourceHit = layer.source && isSparkleName(layer.source.name);
 				var starShape = hasStarShape(layer);
 
 				// Near CAALM: small shape / named sparkle to the left of title

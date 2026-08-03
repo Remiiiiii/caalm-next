@@ -20,7 +20,10 @@ export function toDateOnlyString(date: Date): string {
 	return `${y}-${m}-${d}`;
 }
 
-export function daysUntilExpiry(expiryRaw: string, now: Date = new Date()): number {
+export function daysUntilExpiry(
+	expiryRaw: string,
+	now: Date = new Date(),
+): number {
 	const expiry = parseDateOnly(expiryRaw);
 	if (!expiry) return Number.NaN;
 	const today = new Date(now);

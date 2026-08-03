@@ -73,9 +73,7 @@ export default function AuthHeadlineTypewriter() {
 				<span
 					aria-hidden
 					className={`ml-0.5 inline-block h-[1em] w-[2px] translate-y-[0.1em] bg-[#0f5384] align-middle ${
-						phase === "hold"
-							? "animate-terminal-caret"
-							: "opacity-100"
+						phase === "hold" ? "animate-terminal-caret" : "opacity-100"
 					}`}
 				/>
 			)}

@@ -1,7 +1,9 @@
 import type { AuditEvidenceRow } from "@/lib/audits/types";
 
 /** Drop duplicate obligation rows that share the same document id. */
-export function dedupeEvidenceRows(rows: AuditEvidenceRow[]): AuditEvidenceRow[] {
+export function dedupeEvidenceRows(
+	rows: AuditEvidenceRow[],
+): AuditEvidenceRow[] {
 	const seen = new Set<string>();
 	return rows.filter((row) => {
 		if (seen.has(row.id)) return false;

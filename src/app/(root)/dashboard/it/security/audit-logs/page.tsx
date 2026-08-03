@@ -2,8 +2,8 @@
 
 import { ScrollText } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
+import { Button } from "@/components/ui/button";
 
 export default function ITSecurityAuditLogsPage() {
 	return (
@@ -14,8 +14,9 @@ export default function ITSecurityAuditLogsPage() {
 		>
 			<ITGlassPanel>
 				<p className="text-sm text-slate-600 mb-4">
-					Full audit log filtering, charts, and export live in the Audits module.
-					Open Audit Logs with your IT system-log permission to review events.
+					Full audit log filtering, charts, and export live in the Audits
+					module. Open Audit Logs with your IT system-log permission to review
+					events.
 				</p>
 				<Button asChild className="primary-btn px-3 sm:px-4 cursor-pointer">
 					<Link href="/audits/audit">Open Audit Logs</Link>
