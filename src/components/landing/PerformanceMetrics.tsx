@@ -42,7 +42,7 @@ export default function PerformanceMetrics() {
 						<motion.div key={metric.label} variants={scaleIn}>
 							<LandingFrostedCard
 								className="w-[12.5rem]"
-								contentClassName="px-4 py-4 sm:px-5 sm:py-5 text-center h-full"
+								contentClassName="px-4 pb-4 pt-7 sm:px-5 sm:pb-5 sm:pt-8 text-center h-full"
 							>
 								<p className="text-sm font-medium sidebar-gradient-text leading-snug">
 									{metric.label}

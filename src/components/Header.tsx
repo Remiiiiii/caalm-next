@@ -1,5 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
+import { X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -13,6 +14,22 @@ const NAV_LINKS = [
 	{ href: "#pricing", label: "Pricing", hideBelowXl: false },
 	{ href: "#faq", label: "FAQ", hideBelowXl: false },
 	{ href: "#contact", label: "Contact", hideBelowXl: true },
+] as const;
+
+const MOBILE_NAV_LEFT = [
+	{ href: "#features", label: "Features" },
+	{ href: "#how-it-works", label: "How it works" },
+	{ href: "#integrations", label: "Integrations" },
+	{ href: "#pricing", label: "Pricing" },
+	{ href: "#faq", label: "FAQ" },
+	{ href: "#contact", label: "Contact" },
+] as const;
+
+const MOBILE_NAV_RIGHT = [
+	{ href: "#about", label: "About us" },
+	{ href: "#features", label: "Platform" },
+	{ href: "/privacy", label: "Privacy" },
+	{ href: "/terms", label: "Terms" },
 ] as const;
 
 export const Header = () => {
@@ -42,8 +59,6 @@ export const Header = () => {
 	}, []);
 
 	const wrapperVariants = {
-		// At top of page: transparent + blur (original frosted glass bar)
-		// After scroll: compact frosted pill
 		top: {
 			width: "100%",
 			height: 70,
@@ -74,8 +89,18 @@ export const Header = () => {
 				setIsOpen(false);
 			}
 		}
+		function handleKey(e: KeyboardEvent) {
+			if (e.key === "Escape") setIsOpen(false);
+		}
 		document.addEventListener("mousedown", handleClick);
-		return () => document.removeEventListener("mousedown", handleClick);
+		document.addEventListener("keydown", handleKey);
+		const prevOverflow = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+		return () => {
+			document.removeEventListener("mousedown", handleClick);
+			document.removeEventListener("keydown", handleKey);
+			document.body.style.overflow = prevOverflow;
+		};
 	}, [isOpen]);
 
 	return (
@@ -160,69 +185,112 @@ export const Header = () => {
 
 				<button
 					type="button"
-					className="flex md:hidden flex-col items-center justify-center border-2 rounded-full z-20 w-10 h-10 border-s4/25 justify-self-end focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors bg-white cursor-pointer"
+					className="group flex md:hidden items-center justify-center z-20 size-10 justify-self-end cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2 rounded-md"
 					onClick={() => setIsOpen((prevState) => !prevState)}
 					aria-label={isOpen ? "Close menu" : "Open menu"}
+					aria-expanded={isOpen}
 				>
-					<span
-						className={`block w-6 h-0.5 bg-navy rounded transition-all duration-300 ease-in-out ${
-							isOpen ? "rotate-45 translate-y-1.5" : "-translate-y-1.5"
-						}`}
-					></span>
-					<span
-						className={`block w-6 h-0.5 bg-navy rounded transition-all duration-300 ease-in-out my-1 ${
-							isOpen ? "opacity-0" : "opacity-100"
-						}`}
-					></span>
-					<span
-						className={`block w-6 h-0.5 bg-navy rounded transition-all duration-300 ease-in-out ${
-							isOpen ? "-rotate-45 -translate-y-1.5" : "translate-y-1.5"
-						}`}
-					></span>
+					{isOpen ? (
+						<X className="h-5 w-5 text-slate-700" strokeWidth={2} />
+					) : (
+						<span
+							className="grid grid-cols-3 gap-[3px] text-slate-400 transition-colors duration-200 group-hover:text-slate-600"
+							aria-hidden
+						>
+							{Array.from({ length: 9 }).map((_, i) => (
+								<span
+									key={i}
+									className="size-1 rounded-full bg-current"
+								/>
+							))}
+						</span>
+					)}
 				</button>
 			</motion.div>
 
 			{isOpen && (
 				<>
 					<div
-						className="fixed inset-0 z-10 bg-black/30 backdrop-blur-sm"
+						className="fixed inset-0 z-10 bg-slate-900/25 backdrop-blur-[2px] md:hidden"
 						aria-hidden="true"
-					></div>
+					/>
 					<div
 						ref={menuRef}
-						className="fixed top-16 left-0 right-0 z-20 md:hidden py-6 border-t border-border bg-white w-full px-6 shadow-xl animate-fadeIn"
+						className="fixed top-[4.75rem] left-4 right-4 z-20 md:hidden rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.18)] animate-fadeIn"
+						role="dialog"
+						aria-modal="true"
+						aria-label="Site navigation"
 					>
-						<nav className="flex flex-col space-y-4 text-sm">
-							{NAV_LINKS.map((link) => (
-								<a
-									key={link.href}
-									href={link.href}
-									className="text-navy font-medium"
-									onClick={() => setIsOpen(false)}
-								>
-									{link.label}
-								</a>
-							))}
-							<div className="flex flex-col space-y-2 pt-3">
-								<Link href="/sign-in">
-									<Button
-										variant="ghost"
-										className="justify-start text-navy hover:text-[#2563eb] hover:bg-[#2563eb] hover:bg-opacity-10 w-full"
-										onClick={() => setIsOpen(false)}
-									>
-										Sign In
-									</Button>
-								</Link>
-								<Link href="/sign-in">
-									<Button
-										className="justify-start primary-btn w-full"
-										onClick={() => setIsOpen(false)}
-									>
-										Get Started
-									</Button>
-								</Link>
-							</div>
+						<div className="mb-8 flex items-center justify-between gap-3">
+							<Link
+								href="/"
+								className="flex items-center gap-1.5 min-w-0"
+								onClick={() => setIsOpen(false)}
+							>
+								<Image
+									src="/assets/images/logo.svg"
+									alt=""
+									width={32}
+									height={32}
+									className="h-8 w-8 shrink-0"
+								/>
+								<span className="font-bold text-lg text-slate-800">CAALM</span>
+							</Link>
+							<a href="#contact" onClick={() => setIsOpen(false)}>
+								<Button className="primary-btn rounded-full px-4 text-sm cursor-pointer whitespace-nowrap shadow-sm">
+									Book a Call
+								</Button>
+							</a>
+						</div>
+
+						<nav className="grid grid-cols-2 gap-x-6 gap-y-5">
+							<ul className="space-y-5">
+								{MOBILE_NAV_LEFT.map((link) => (
+									<li key={link.href}>
+										<a
+											href={link.href}
+											className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
+											onClick={() => setIsOpen(false)}
+										>
+											{link.label}
+										</a>
+									</li>
+								))}
+							</ul>
+							<ul className="space-y-5">
+								{MOBILE_NAV_RIGHT.map((link) => (
+									<li key={`${link.href}-${link.label}`}>
+										{link.href.startsWith("/") ? (
+											<Link
+												href={link.href}
+												className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
+												onClick={() => setIsOpen(false)}
+											>
+												{link.label}
+											</Link>
+										) : (
+											<a
+												href={link.href}
+												className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
+												onClick={() => setIsOpen(false)}
+											>
+												{link.label}
+											</a>
+										)}
+									</li>
+								))}
+							</ul>
 						</nav>
+
+						<div className="mt-10 flex items-center justify-end">
+							<Link
+								href="/sign-in"
+								className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
+								onClick={() => setIsOpen(false)}
+							>
+								Sign In
+							</Link>
+						</div>
 					</div>
 				</>
 			)}

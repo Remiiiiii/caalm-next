@@ -55,7 +55,7 @@ export default function AboutMission() {
 							<motion.div key={bullet.title} variants={softRise}>
 								<LandingFrostedCard
 									className="h-full"
-									contentClassName="p-4 sm:p-5"
+									contentClassName="px-4 pb-4 pt-7 sm:px-5 sm:pb-5 sm:pt-8"
 								>
 									<div className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-700/10">
 										<bullet.icon className="h-4 w-4 text-[#0f5384]" />

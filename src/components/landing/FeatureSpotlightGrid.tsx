@@ -977,7 +977,7 @@ export default function FeatureSpotlightGrid() {
 								(tile.id === "reports" || tile.id === "alerts") &&
 									"!overflow-visible",
 							)}
-							contentClassName="relative flex h-full min-h-[200px] flex-col overflow-visible p-4 sm:p-5"
+							contentClassName="relative flex h-full min-h-[200px] flex-col overflow-visible px-4 pb-4 pt-7 sm:px-5 sm:pb-5 sm:pt-8"
 						>
 							{tile.id !== "alerts" && <BentoDottedBackdrop />}
 

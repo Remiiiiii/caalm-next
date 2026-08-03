@@ -201,7 +201,7 @@ export default function ProductSpotlight() {
 
 				<motion.div variants={softRise} className="mb-8 flex flex-col items-center gap-4">
 					<div
-						className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-full border border-slate-200 bg-slate-100/90 p-1.5 sm:p-2 shadow-sm"
+						className="flex w-full max-w-sm flex-col gap-2.5 sm:inline-flex sm:max-w-full sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:rounded-full sm:border sm:border-slate-200 sm:bg-slate-100/90 sm:p-2 sm:shadow-sm"
 						role="tablist"
 						aria-label="Platform areas"
 					>
@@ -216,10 +216,10 @@ export default function ProductSpotlight() {
 									aria-selected={isActive}
 									onClick={() => selectTab(tab.id)}
 									className={cn(
-										"rounded-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
+										"inline-flex w-full items-center justify-center rounded-full px-3 py-2.5 sm:w-auto sm:px-4 sm:py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
 										isActive
 											? "primary-btn shadow-sm text-white"
-											: "text-slate-700 shadow-sm hover:text-slate-900 hover:shadow-md",
+											: "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-blue-300 hover:text-slate-900 hover:shadow-md sm:border-transparent sm:bg-transparent",
 									)}
 								>
 									<span className="inline-flex items-center gap-1.5 sm:gap-2">
@@ -238,6 +238,7 @@ export default function ProductSpotlight() {
 					</div>
 					<div
 						className="flex items-center justify-center gap-2.5"
+						role="group"
 						aria-label="Current platform area"
 					>
 						{SPOTLIGHT_TABS.map((tab) => {

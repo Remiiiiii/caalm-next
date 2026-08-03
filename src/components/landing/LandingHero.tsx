@@ -663,8 +663,10 @@ export default function LandingHero() {
 		const frame = demoFrameRef.current;
 		if (!frame) return;
 
+		const mq = window.matchMedia("(min-width: 768px)");
 		const observer = new IntersectionObserver(
 			([entry]) => {
+				if (!mq.matches) return;
 				const visible = Boolean(entry?.isIntersecting);
 				setDemoInView(visible);
 				if (visible) setDemoShouldLoad(true);
@@ -672,8 +674,20 @@ export default function LandingHero() {
 			{ rootMargin: "120px 0px", threshold: 0.2 },
 		);
 
+		const syncDesktop = () => {
+			if (!mq.matches) {
+				setDemoInView(false);
+				setDemoShouldLoad(false);
+				setDemoLoaded(false);
+			}
+		};
+		syncDesktop();
+		mq.addEventListener("change", syncDesktop);
 		observer.observe(frame);
-		return () => observer.disconnect();
+		return () => {
+			mq.removeEventListener("change", syncDesktop);
+			observer.disconnect();
+		};
 	}, []);
 
 	useAutoplayLoopVideo(videoRef, reduceMotion);
@@ -911,9 +925,10 @@ export default function LandingHero() {
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
 					>
+						{/* Demo video: desktop only — unreliable layout/playback on small screens */}
 						<div
 							ref={demoFrameRef}
-							className="relative w-full aspect-video overflow-hidden rounded-lg border border-white/70 bg-white/60 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md"
+							className="relative hidden md:block w-full aspect-video overflow-hidden rounded-lg border border-white/70 bg-white/60 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md"
 						>
 							{!demoLoaded && (
 								<div

@@ -40,7 +40,7 @@ export default function HowItWorks() {
 						<motion.div key={item.step} variants={fadeLeft}>
 							<LandingFrostedCard
 								className="h-full"
-								contentClassName="p-4 sm:p-6"
+								contentClassName="px-4 pb-4 pt-7 sm:px-6 sm:pb-6 sm:pt-8"
 							>
 								<div className="flex items-start gap-4">
 									<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00C1CB]/15 via-[#0E638F]/10 to-[#162768]/10 border border-slate-200">
@@ -75,7 +75,7 @@ export default function HowItWorks() {
 							className="relative"
 						>
 							<div className="absolute -left-6 top-5 h-3 w-3 rounded-full bg-[#0f5384] ring-4 ring-white" />
-							<LandingFrostedCard contentClassName="p-4">
+							<LandingFrostedCard contentClassName="px-4 pb-4 pt-7">
 								<p className="text-xs font-semibold uppercase tracking-wider text-[#0f5384]">
 									Step {item.step}
 								</p>
