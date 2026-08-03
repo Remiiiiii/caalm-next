@@ -15,7 +15,12 @@ import PillSwing3D from "./PillSwing3D";
 import ShimmerBadge from "./ShimmerBadge";
 
 const VIDEO_SRC = "/assets/video/wave.mp4";
-const DEMO_VIDEO_SRC = "/assets/video/demo-landing.mp4";
+/** Full-quality desktop demo (~25MB / ~18Mbps) — dual soft-loop only above lg */
+const DEMO_VIDEO_DESKTOP_SRC = "/assets/video/demo-landing.mp4";
+/** Mobile-friendly encode (~5.4MB / ~3Mbps) — single player below lg */
+const DEMO_VIDEO_MOBILE_SRC = "/assets/video/caalm-demo-15s.mp4";
+const DEMO_POSTER_SRC = "/assets/video/demo-screenshots/06-landing-hero.png";
+const NARROW_QUERY = "(max-width: 1023px)";
 
 /** Crossfade lines under the hero H1 — previous copy + current block */
 const HERO_CROSSFADE_LINES = [
@@ -451,6 +456,21 @@ function safePlay(video: HTMLVideoElement | null) {
 	}
 }
 
+function useIsNarrow(query = NARROW_QUERY) {
+	// Mobile-first default avoids briefly requesting the 25MB desktop encode
+	const [matches, setMatches] = useState(true);
+
+	useEffect(() => {
+		const mediaQuery = window.matchMedia(query);
+		const update = () => setMatches(mediaQuery.matches);
+		update();
+		mediaQuery.addEventListener("change", update);
+		return () => mediaQuery.removeEventListener("change", update);
+	}, [query]);
+
+	return matches;
+}
+
 function useAutoplayLoopVideo(
 	videoRef: RefObject<HTMLVideoElement | null>,
 	reduceMotion: boolean | null,
@@ -641,6 +661,7 @@ function LogoMarquee() {
 
 export default function LandingHero() {
 	const reduceMotion = useReducedMotion();
+	const isNarrow = useIsNarrow();
 	const videoRef = useRef<HTMLVideoElement | null>(null);
 	const demoVideoPrimaryRef = useRef<HTMLVideoElement | null>(null);
 	const demoVideoSecondaryRef = useRef<HTMLVideoElement | null>(null);
@@ -649,7 +670,11 @@ export default function LandingHero() {
 	const [demoInView, setDemoInView] = useState(false);
 	const [demoShouldLoad, setDemoShouldLoad] = useState(false);
 	const [demoLoaded, setDemoLoaded] = useState(false);
+	const [demoFailed, setDemoFailed] = useState(false);
 	const [demoActiveLayer, setDemoActiveLayer] = useState<0 | 1>(0);
+
+	const demoSrc = isNarrow ? DEMO_VIDEO_MOBILE_SRC : DEMO_VIDEO_DESKTOP_SRC;
+	const useSoftCrossfade = !isNarrow && !reduceMotion;
 
 	useEffect(() => {
 		if (reduceMotion) return;
@@ -669,21 +694,33 @@ export default function LandingHero() {
 				setDemoInView(visible);
 				if (visible) setDemoShouldLoad(true);
 			},
-			{ rootMargin: "120px 0px", threshold: 0.2 },
+			{ rootMargin: "240px 0px", threshold: 0.05 },
 		);
 
 		observer.observe(frame);
 		return () => observer.disconnect();
 	}, []);
 
+	// Reset load state when swapping mobile/desktop sources
+	useEffect(() => {
+		setDemoLoaded(false);
+		setDemoFailed(false);
+		setDemoActiveLayer(0);
+	}, [demoSrc]);
+
 	useAutoplayLoopVideo(videoRef, reduceMotion);
+	useAutoplayLoopVideo(
+		demoVideoPrimaryRef,
+		reduceMotion,
+		demoInView && demoShouldLoad && demoLoaded && !useSoftCrossfade,
+	);
 	useSoftLoopCrossfade(
 		demoVideoPrimaryRef,
 		demoVideoSecondaryRef,
 		demoActiveLayer,
 		setDemoActiveLayer,
 		reduceMotion,
-		demoInView && demoShouldLoad && demoLoaded,
+		demoInView && demoShouldLoad && demoLoaded && useSoftCrossfade,
 	);
 
 	useEffect(() => {
@@ -702,6 +739,14 @@ export default function LandingHero() {
 		}
 	}, [reduceMotion]);
 
+	const handleDemoTapToPlay = () => {
+		setDemoFailed(false);
+		setDemoShouldLoad(true);
+		const video = demoVideoPrimaryRef.current;
+		if (!video) return;
+		safePlay(video);
+	};
+
 	return (
 		<section className="relative flex flex-col items-center justify-center pt-24 pb-16 overflow-hidden">
 			{!reduceMotion ? (
@@ -712,7 +757,7 @@ export default function LandingHero() {
 					muted
 					loop
 					playsInline
-					preload="auto"
+					preload="metadata"
 					onEnded={(e) => {
 						const video = e.currentTarget;
 						video.currentTime = 0;
@@ -741,14 +786,14 @@ export default function LandingHero() {
 			</div>
 
 			{/* Logo — reserve height; .logo is absolute and would otherwise collapse layout */}
-			<div className="relative z-20 w-full mb-12 md:mt-4">
+			<div className="relative z-20 w-full mb-8 md:mb-12 md:mt-4">
 				<div className="relative mx-auto h-[140px] w-[140px]">
 					<Logo />
 				</div>
 			</div>
 
 			{/* Intro tagline — separate flow block below logo */}
-			<div className="relative z-20 w-full px-4 sm:px-6 mb-12 md:mb-16">
+			<div className="relative z-20 w-full px-4 sm:px-6 mb-8 md:mb-16">
 				<motion.div
 					className="mx-auto max-w-4xl text-center"
 					variants={staggerContainer}
@@ -773,9 +818,10 @@ export default function LandingHero() {
 			</div>
 
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 relative z-20">
-				<div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-start">
+				<div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+					{/* Copy + CTAs — first on all breakpoints */}
 					<motion.div
-						className="flex flex-col gap-4"
+						className="order-1 flex flex-col gap-4"
 						variants={staggerContainer}
 						initial="hidden"
 						animate="visible"
@@ -873,104 +919,148 @@ export default function LandingHero() {
 							<span className="text-slate-700 font-semibold text-sm">5/5</span>
 							<span className="text-slate-500 text-sm">based on reviews</span>
 						</motion.div>
-
-						<motion.div
-							variants={fadeUp}
-							className="mt-4 max-w-md mx-auto lg:mx-0 rounded-xl bg-white/80 p-4 shadow-[0_1px_2px_0_rgba(15,23,42,0.06)]"
-						>
-							<p className="text-slate-800 text-base italic">
-								&ldquo;I use CAALM every day to keep all our contracts and
-								compliance documents organized. It&rsquo;s so helpful, our team
-								never misses a deadline or audit anymore!&rdquo;
-							</p>
-							<div className="mt-2 flex items-center gap-2">
-								<Image
-									src="/assets/images/review-avatar.jpg"
-									alt="Priya Sharma"
-									width={32}
-									height={32}
-									className="h-8 w-8 rounded-full"
-									loading="lazy"
-									sizes="32px"
-								/>
-								<div>
-									<p className="text-sm font-semibold text-slate-800">
-										Priya Sharma
-									</p>
-									<p className="text-xs text-slate-500">
-										Director of Human Resources at Growthspark
-									</p>
-								</div>
-							</div>
-						</motion.div>
 					</motion.div>
 
+					{/* Demo — directly after CTAs on mobile; right column on desktop */}
 					<motion.div
-						className="relative w-full flex flex-col gap-5 lg:gap-6"
+						className="order-2 relative w-full flex flex-col gap-5 lg:gap-6 lg:row-span-2"
 						initial={reduceMotion ? false : { opacity: 0, y: 32 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
 					>
 						<div
 							ref={demoFrameRef}
-							className="relative w-full aspect-video overflow-hidden rounded-lg border border-white/70 bg-white/60 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md"
+							className="relative w-full aspect-video overflow-hidden rounded-lg border border-white/70 bg-slate-100 shadow-[0_12px_40px_rgba(15,23,42,0.18)]"
 						>
-							{!demoLoaded && (
+							<Image
+								src={DEMO_POSTER_SRC}
+								alt=""
+								fill
+								priority
+								sizes="(max-width: 1023px) 100vw, 560px"
+								className={`object-cover object-center transition-opacity duration-300 ${
+									demoLoaded && !reduceMotion ? "opacity-0" : "opacity-100"
+								}`}
+								aria-hidden
+							/>
+
+							{!demoLoaded && !reduceMotion && (
 								<div
 									aria-hidden
-									className="absolute inset-0 z-10 animate-pulse bg-linear-to-br from-slate-200/80 via-slate-100/70 to-slate-200/80"
+									className="absolute inset-0 z-[1] animate-pulse bg-gradient-to-br from-slate-200/50 via-transparent to-slate-200/40"
 								/>
 							)}
-							{demoShouldLoad && (
+
+							{!reduceMotion && demoShouldLoad && (
 								<>
 									<video
 										ref={demoVideoPrimaryRef}
-										src={DEMO_VIDEO_SRC}
+										src={demoSrc}
 										muted
 										playsInline
-										preload="auto"
-										autoPlay={!reduceMotion && demoInView}
-										onLoadedData={() => setDemoLoaded(true)}
-										className={`absolute inset-0 h-full w-full object-contain object-center brightness-[1.09] contrast-[1.04] transition-opacity ease-in-out ${
-											demoLoaded && demoActiveLayer === 0
+										preload={isNarrow ? "metadata" : "auto"}
+										autoPlay={demoInView}
+										poster={DEMO_POSTER_SRC}
+										onLoadedData={() => {
+											setDemoLoaded(true);
+											setDemoFailed(false);
+										}}
+										onError={() => setDemoFailed(true)}
+										className={`absolute inset-0 z-[2] h-full w-full object-contain object-center brightness-[1.09] contrast-[1.04] transition-opacity ease-in-out ${
+											demoLoaded && (!useSoftCrossfade || demoActiveLayer === 0)
 												? "opacity-100"
 												: "opacity-0"
 										}`}
 										style={{ transitionDuration: `${DEMO_LOOP_FADE_MS}ms` }}
 										aria-label="CAALM product demo"
 									/>
-									<video
-										ref={demoVideoSecondaryRef}
-										src={DEMO_VIDEO_SRC}
-										muted
-										playsInline
-										preload="auto"
-										className={`absolute inset-0 h-full w-full object-contain object-center brightness-[1.09] contrast-[1.04] transition-opacity ease-in-out ${
-											demoLoaded && demoActiveLayer === 1
-												? "opacity-100"
-												: "opacity-0"
-										}`}
-										style={{ transitionDuration: `${DEMO_LOOP_FADE_MS}ms` }}
-										aria-hidden
-									/>
+									{useSoftCrossfade ? (
+										<video
+											ref={demoVideoSecondaryRef}
+											src={demoSrc}
+											muted
+											playsInline
+											preload="auto"
+											className={`absolute inset-0 z-[2] h-full w-full object-contain object-center brightness-[1.09] contrast-[1.04] transition-opacity ease-in-out ${
+												demoLoaded && demoActiveLayer === 1
+													? "opacity-100"
+													: "opacity-0"
+											}`}
+											style={{ transitionDuration: `${DEMO_LOOP_FADE_MS}ms` }}
+											aria-hidden
+										/>
+									) : null}
 								</>
+							)}
+
+							{demoFailed && (
+								<button
+									type="button"
+									onClick={handleDemoTapToPlay}
+									className="absolute inset-0 z-[3] flex items-center justify-center bg-slate-900/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+									aria-label="Play product demo"
+								>
+									<span className="rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-slate-800 shadow-md">
+										Tap to play demo
+									</span>
+								</button>
 							)}
 						</div>
 
-						<div className="grid grid-cols-3 gap-3 sm:gap-4 w-full">
+						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-4 w-full">
 							{HERO_TRUST_PILLARS.map((pillar) => (
-								<article key={pillar.id} className="flex min-w-0 flex-col">
-									<div className="mb-3 h-24 sm:h-28 md:h-32 w-full">
-										<pillar.Visual animate={!reduceMotion} />
+								<article
+									key={pillar.id}
+									className="flex min-w-0 flex-col sm:flex-col gap-3 sm:gap-0 rounded-xl border border-slate-200/70 bg-white/70 p-3 sm:p-0 sm:border-0 sm:bg-transparent"
+								>
+									<div className="flex sm:block items-start gap-3">
+										<div className="mb-0 sm:mb-3 h-20 w-28 shrink-0 sm:h-28 md:h-32 sm:w-full">
+											<pillar.Visual animate={!reduceMotion} />
+										</div>
+										<div className="min-w-0 flex-1">
+											<h3 className="text-sm font-semibold leading-snug sidebar-gradient-text">
+												{pillar.title}
+											</h3>
+											<p className="mt-1 text-xs sm:text-xs leading-snug text-slate-600 sm:line-clamp-3">
+												{pillar.description}
+											</p>
+										</div>
 									</div>
-									<h3 className="text-xs sm:text-sm font-semibold leading-snug sidebar-gradient-text">
-										{pillar.title}
-									</h3>
-									<p className="mt-1 text-[11px] sm:text-xs leading-snug text-slate-600 line-clamp-3">
-										{pillar.description}
-									</p>
 								</article>
 							))}
+						</div>
+					</motion.div>
+
+					{/* Quote — after demo on mobile; under copy on desktop */}
+					<motion.div
+						variants={fadeUp}
+						initial="hidden"
+						animate="visible"
+						className="order-3 mt-0 max-w-md mx-auto lg:mx-0 rounded-xl bg-white/80 p-4 shadow-[0_1px_2px_0_rgba(15,23,42,0.06)] w-full"
+					>
+						<p className="text-slate-800 text-base italic">
+							&ldquo;I use CAALM every day to keep all our contracts and
+							compliance documents organized. It&rsquo;s so helpful, our team
+							never misses a deadline or audit anymore!&rdquo;
+						</p>
+						<div className="mt-2 flex items-center gap-2">
+							<Image
+								src="/assets/images/review-avatar.jpg"
+								alt="Priya Sharma"
+								width={32}
+								height={32}
+								className="h-8 w-8 rounded-full"
+								loading="lazy"
+								sizes="32px"
+							/>
+							<div>
+								<p className="text-sm font-semibold text-slate-800">
+									Priya Sharma
+								</p>
+								<p className="text-xs text-slate-500">
+									Director of Human Resources at Growthspark
+								</p>
+							</div>
 						</div>
 					</motion.div>
 				</div>

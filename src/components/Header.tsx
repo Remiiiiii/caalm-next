@@ -15,11 +15,23 @@ const NAV_LINKS = [
 	{ href: "#contact", label: "Contact", hideBelowXl: true },
 ] as const;
 
+const MOBILE_QUERY = "(max-width: 767px)";
+
 export const Header = () => {
 	const [isOpen, setIsOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
 	const headerRef = useRef(null);
 	const [scrolled, setScrolled] = useState(false);
+	// Mobile-first: assume narrow until matchMedia confirms desktop
+	const [isMobile, setIsMobile] = useState(true);
+
+	useEffect(() => {
+		const mediaQuery = window.matchMedia(MOBILE_QUERY);
+		const update = () => setIsMobile(mediaQuery.matches);
+		update();
+		mediaQuery.addEventListener("change", update);
+		return () => mediaQuery.removeEventListener("change", update);
+	}, []);
 
 	useEffect(() => {
 		const el = window;
@@ -42,27 +54,34 @@ export const Header = () => {
 	}, []);
 
 	const wrapperVariants = {
-		// At top of page: transparent + blur (original frosted glass bar)
-		// After scroll: compact frosted pill
+		// At top of page: transparent on desktop; frosted on mobile for contrast
+		// After scroll: compact frosted pill (full-width bar on mobile)
 		top: {
 			width: "100%",
 			height: 70,
 			borderRadius: 0,
 			marginTop: 0,
 			boxShadow: "none",
-			background: "rgba(255, 255, 255, 0)",
-			border: "1px solid rgba(255, 255, 255, 0)",
+			background: isMobile
+				? "rgba(255, 255, 255, 0.92)"
+				: "rgba(255, 255, 255, 0)",
+			border: isMobile
+				? "1px solid rgba(226, 232, 240, 0.8)"
+				: "1px solid rgba(255, 255, 255, 0)",
 			transition: { type: "spring" as const, stiffness: 260, damping: 28 },
 		},
 		scrolled: {
-			width: "min(920px, 88%)",
+			width: isMobile ? "100%" : "min(920px, 88%)",
 			height: 70,
-			borderRadius: 24,
-			marginTop: 16,
-			boxShadow:
-				"0 4px 32px 0 rgba(16,30,54,0.10), 0 1.5px 4px 0 rgba(16,30,54,0.03)",
-			background: "rgba(255,255,255,0.85)",
-			border: "1px solid rgba(200,200,200,0.18)",
+			borderRadius: isMobile ? 0 : 24,
+			marginTop: isMobile ? 0 : 16,
+			boxShadow: isMobile
+				? "0 1px 0 0 rgba(15, 23, 42, 0.06)"
+				: "0 4px 32px 0 rgba(16,30,54,0.10), 0 1.5px 4px 0 rgba(16,30,54,0.03)",
+			background: "rgba(255,255,255,0.94)",
+			border: isMobile
+				? "1px solid rgba(226, 232, 240, 0.9)"
+				: "1px solid rgba(200,200,200,0.18)",
 			transition: { type: "spring" as const, stiffness: 260, damping: 28 },
 		},
 	};
@@ -87,8 +106,9 @@ export const Header = () => {
 				left: 0,
 				right: 0,
 				zIndex: 50,
-				background: "rgba(255, 255, 255, 0)",
+				background: isMobile ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0)",
 			}}
+			className="max-md:backdrop-blur-md"
 		>
 			<motion.div
 				variants={wrapperVariants}
@@ -190,7 +210,7 @@ export const Header = () => {
 					></div>
 					<div
 						ref={menuRef}
-						className="fixed top-16 left-0 right-0 z-20 md:hidden py-6 border-t border-border bg-white w-full px-6 shadow-xl animate-fadeIn"
+						className="fixed top-[70px] left-0 right-0 z-20 md:hidden py-6 border-t border-border bg-white w-full px-6 shadow-xl animate-fadeIn"
 					>
 						<nav className="flex flex-col space-y-4 text-sm">
 							{NAV_LINKS.map((link) => (
@@ -204,6 +224,14 @@ export const Header = () => {
 								</a>
 							))}
 							<div className="flex flex-col space-y-2 pt-3">
+								<a href="#contact" onClick={() => setIsOpen(false)}>
+									<Button
+										variant="outline"
+										className="justify-start w-full rounded-full border-slate-300 text-slate-700 cursor-pointer"
+									>
+										Contact Sales
+									</Button>
+								</a>
 								<Link href="/sign-in">
 									<Button
 										variant="ghost"
