@@ -8,6 +8,8 @@ export type AssistantDataIntent =
 	| "search_licenses"
 	| "list_pending_approvals"
 	| "expiring"
+	| "schedule_event"
+	| "view_schedule"
 	| null;
 
 export function detectDataIntent(message: string): AssistantDataIntent {
@@ -36,6 +38,21 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 		/\b(contract|license|licences?)\b/.test(q)
 	) {
 		return "expiring";
+	}
+	if (
+		/\b(schedule|book|set\s?up|arrange|plan)\b/.test(q) &&
+		/\b(meeting|meet|call|event|review|appointment)\b/.test(q)
+	) {
+		return "schedule_event";
+	}
+	if (
+		/\b(my|on my|the)\s+(schedule|calendar|meetings|agenda)\b/.test(q) ||
+		/\bwhat('s| is| do i have)\b.{0,30}\b(schedule|calendar|meetings|today|tomorrow|this week|thursday|friday|monday|tuesday|wednesday)\b/.test(
+			q,
+		) ||
+		/\b(am i|are we)\s+(free|busy|booked)\b/.test(q)
+	) {
+		return "view_schedule";
 	}
 	if (
 		/\b(contract|contracts)\b/.test(q) &&

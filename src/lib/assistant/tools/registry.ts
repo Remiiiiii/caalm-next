@@ -1,5 +1,10 @@
 import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
+import {
+	type CreateCalendarEventData,
+	createCalendarEvent,
+	getCalendarEventsByMonth,
+} from "@/lib/actions/calendar.actions";
 import { listCalendarApprovalRequests } from "@/lib/actions/calendar-approval.actions";
 import { generateReport } from "@/lib/actions/report.actions";
 import { TaskService } from "@/lib/api/tasks/services/TaskService";
@@ -7,13 +12,37 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
+import { evaluateCalendarPermission } from "@/lib/auth/guards";
+import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { detectParticipantConflicts } from "@/lib/utils/conflict-detection";
 
 function hasAll(
 	ctx: ToolContext,
 	keys: Parameters<typeof ctx.permissions.includes>[0][],
 ): boolean {
 	return keys.every((k) => ctx.permissions.includes(k));
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** "2026-08-05", "14:30" -> Date in server-local time (calendar stores local date + HH:mm). */
+function dateFromDateAndTime(dateStr: string, timeStr: string): Date | null {
+	const datePart = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+	const [y, m, d] = datePart.split("-").map(Number);
+	const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+	if (!timeMatch || !y || !m || !d) return null;
+	let hours = Number(timeMatch[1]);
+	const minutes = Number(timeMatch[2]);
+	const period = timeMatch[3]?.toUpperCase();
+	if (period === "PM" && hours !== 12) hours += 12;
+	if (period === "AM" && hours === 12) hours = 0;
+	const dt = new Date(y, m - 1, d, hours, minutes, 0);
+	return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function formatLocalDate(d: Date): string {
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function summarizeTask(task: {
@@ -300,6 +329,236 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				status: "pending",
 			});
 			return { result: { approvals: approvals.slice(0, 15) } };
+		},
+	},
+	{
+		name: "list_calendar_events",
+		description:
+			"List the current user's CAALM calendar events for a given date (defaults to today) or month. Use when the user asks about their schedule, meetings, availability, or whether they are free at a time.",
+		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				date: {
+					type: "string",
+					description: "YYYY-MM-DD. Defaults to today.",
+				},
+				wholeMonth: {
+					type: "string",
+					description:
+						"Set to 'true' to return the whole month containing date instead of a single day.",
+				},
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.CREATE])) {
+				return { result: { error: "Missing calendar.create permission" } };
+			}
+			const now = new Date();
+			const dateStr = args.date ? String(args.date) : "";
+			const base = dateFromDateAndTime(
+				dateStr || formatLocalDate(now),
+				"00:00",
+			);
+			if (!base) {
+				return { result: { error: "Invalid date. Use YYYY-MM-DD." } };
+			}
+			const monthEvents = await getCalendarEventsByMonth(
+				base.getFullYear(),
+				base.getMonth() + 1,
+				ctx.user.$id,
+			);
+			const wholeMonth = String(args.wholeMonth ?? "").toLowerCase() === "true";
+			const dayKey = formatLocalDate(base);
+			const events = wholeMonth
+				? monthEvents
+				: monthEvents.filter((e) => e.startDate?.startsWith(dayKey));
+			return {
+				result: {
+					date: wholeMonth ? dayKey.slice(0, 7) : dayKey,
+					events: events.slice(0, 30).map((e) => ({
+						id: e.$id,
+						title: e.title,
+						startDate: e.startDate,
+						startTime: e.startTime ?? null,
+						endTime: e.endTime ?? null,
+						location: e.location ?? null,
+						type: e.type,
+					})),
+					total: events.length,
+					calendarHref: "/calendar",
+				},
+			};
+		},
+	},
+	{
+		name: "create_calendar_event",
+		description:
+			"Schedule a calendar event or meeting (requires user confirmation). Resolve relative dates like 'tomorrow' or 'next Tuesday' against the current date provided in the system prompt. Default to a 30 minute duration when the user does not specify one. If the date or time is missing or ambiguous, ask the user instead of guessing.",
+		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				title: { type: "string", description: "Short meeting title" },
+				date: {
+					type: "string",
+					description: "YYYY-MM-DD resolved against the current date",
+				},
+				startTime: {
+					type: "string",
+					description: "HH:mm in 24-hour time, e.g. 14:30",
+				},
+				durationMinutes: {
+					type: "number",
+					description: "Meeting length in minutes. Default 30.",
+				},
+				participants: {
+					type: "string",
+					description:
+						"Optional. Comma-separated 'Name <email>' entries. Only include emails the user explicitly gave.",
+				},
+				location: { type: "string", description: "Optional location" },
+				description: {
+					type: "string",
+					description: "Optional agenda or notes",
+				},
+			},
+			required: ["title", "date", "startTime"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.CREATE])) {
+				return { result: { error: "Missing calendar.create permission" } };
+			}
+
+			const title = String(args.title ?? "").trim();
+			if (!title) return { result: { error: "A meeting title is required." } };
+
+			const duration = Math.min(
+				Math.max(Number(args.durationMinutes) || 30, 5),
+				8 * 60,
+			);
+			const start = dateFromDateAndTime(
+				String(args.date ?? ""),
+				String(args.startTime ?? ""),
+			);
+			if (!start) {
+				return {
+					result: {
+						error:
+							"I could not understand that date or time. Ask the user for the date (YYYY-MM-DD) and start time.",
+					},
+				};
+			}
+			const end = new Date(start.getTime() + duration * 60000);
+
+			if (start.getTime() < Date.now()) {
+				return {
+					result: {
+						error: `That time (${formatLocalDate(start)} at ${pad(start.getHours())}:${pad(start.getMinutes())}) is in the past. Ask the user for a future time.`,
+					},
+				};
+			}
+
+			const eventPayload: CreateCalendarEventData = {
+				title,
+				startDate: formatLocalDate(start),
+				endDate: formatLocalDate(end),
+				type: "meeting",
+				description: args.description ? String(args.description) : "",
+				startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+				endTime: `${pad(end.getHours())}:${pad(end.getMinutes())}`,
+				participants: args.participants ? String(args.participants) : "",
+				location: args.location ? String(args.location) : undefined,
+				createdBy: ctx.user.$id,
+			};
+
+			// Conflicts: warn in the answer instead of blocking (the assistant chat
+			// has no second confirmation step like the calendar form does).
+			let conflicts: string[] = [];
+			if (eventPayload.participants) {
+				try {
+					const found = await detectParticipantConflicts(
+						eventPayload,
+						undefined,
+						ctx.user.$id,
+					);
+					conflicts = found
+						.slice(0, 3)
+						.map(
+							(c) =>
+								`${c.conflictingEvent.title} (${c.conflictingEvent.startDate} ${c.conflictingEvent.startTime ?? ""})`,
+						);
+				} catch {
+					conflicts = [];
+				}
+			}
+
+			// Same permission evaluation the calendar API uses (role + calendar permission).
+			const accountId = await getCurrentUserId();
+			const permissionCheck = await evaluateCalendarPermission({
+				userAccountId: accountId,
+				action: "create",
+			});
+			if (!permissionCheck.allowed) {
+				return {
+					result: {
+						error:
+							"Your role cannot create calendar events. Ask an admin for access or create the event from the Calendar page if your org allows it.",
+					},
+				};
+			}
+
+			const eventData: CreateCalendarEventData = {
+				...eventPayload,
+				createdBy: accountId,
+				createdByAccountId: accountId,
+				createdByUserId: permissionCheck.userId || ctx.user.$id,
+				sensitivityLevel: "standard",
+				requiresApproval: false,
+				approvalStatus: "not_required",
+			};
+
+			const event = await createCalendarEvent(eventData);
+
+			// Outlook sync for assistant-created events runs on the calendar cron sync;
+			// the direct create path here matches how non-Outlook events are stored.
+
+			const userName =
+				(ctx.user as { fullName?: string }).fullName ||
+				ctx.user.name ||
+				ctx.user.email ||
+				"User";
+			await logAuditEvent({
+				event_id: `assistant_event_${event.$id}`,
+				event_title: `Assistant scheduled event: ${title}`,
+				action: "create",
+				source: "caalm",
+				user_id: ctx.user.$id,
+				user_name: userName,
+				user_email: ctx.user.email || "",
+				status: "success",
+				orgId: ctx.orgId,
+				module: "system",
+				target_type: "calendar_event",
+				target_id: event.$id ?? "",
+				target_label: title,
+				summary: `CAALM assistant scheduled "${title}" on ${eventData.startDate} at ${eventData.startTime}`,
+				metadata: { source: "ai_assistant" },
+			}).catch(() => undefined);
+
+			return {
+				result: {
+					eventId: event.$id,
+					title,
+					date: eventData.startDate,
+					startTime: eventData.startTime,
+					endTime: eventData.endTime,
+					conflicts,
+					calendarHref: "/calendar",
+				},
+			};
 		},
 	},
 	{

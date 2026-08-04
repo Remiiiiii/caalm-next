@@ -110,6 +110,44 @@ export function suggestionsForTurn(params: {
 		];
 	}
 
+	if (toolName === "list_calendar_events" || dataIntent === "view_schedule") {
+		return [
+			{
+				id: "calendar-open",
+				label: "Open Calendar",
+				action: { type: "navigate", href: "/calendar" },
+			},
+			{
+				id: "schedule-meeting",
+				label: "Schedule a meeting",
+				action: {
+					type: "prompt",
+					text: "Schedule a meeting for me tomorrow at 10am",
+				},
+			},
+			{
+				id: "tasks-pending",
+				label: "Show my pending tasks",
+				action: { type: "prompt", text: "Show my pending tasks" },
+			},
+		];
+	}
+
+	if (toolName === "create_calendar_event" || dataIntent === "schedule_event") {
+		return [
+			{
+				id: "calendar-open",
+				label: "Open Calendar",
+				action: { type: "navigate", href: "/calendar" },
+			},
+			{
+				id: "view-schedule",
+				label: "What's on my calendar today?",
+				action: { type: "prompt", text: "What's on my calendar today?" },
+			},
+		];
+	}
+
 	if (dataIntent === "expiring") {
 		return [
 			{
