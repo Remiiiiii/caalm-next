@@ -891,7 +891,9 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 			}
 
 			const sensitivity = target.sensitivityLevel || "standard";
-			if (sensitivity !== "standard" && target.approvalStatus !== "approved") {
+			const requiresApproval =
+				Boolean(target.requiresApproval) || sensitivity !== "standard";
+			if (requiresApproval && target.approvalStatus !== "approved") {
 				const approval = await createCalendarApprovalRequest({
 					eventId: target.$id!,
 					changeType: "update",
@@ -991,6 +993,37 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				};
 			}
 
+			// Sensitive events route through an approval request instead of deleting
+			// (mirrors the calendar DELETE route).
+			const sensitivity = target.sensitivityLevel || "standard";
+			const requiresApproval =
+				Boolean(target.requiresApproval) || sensitivity !== "standard";
+			if (requiresApproval) {
+				const approval = await createCalendarApprovalRequest({
+					eventId: target.$id!,
+					changeType: "cancel",
+					requestedByAccountId: accountId,
+					requestedByUserId: permissionCheck.userId || undefined,
+					changeSummary: {
+						before: target as unknown as Record<string, unknown>,
+						after: null,
+					},
+					sensitivityLevel: sensitivity,
+				});
+				await updateCalendarEvent(target.$id!, {
+					approvalStatus: "pending",
+					pendingApprovalId: approval.$id,
+				});
+				return {
+					result: {
+						eventId: target.$id,
+						title: target.title,
+						pendingApproval: true,
+						note: "That meeting needs approval. I submitted a cancellation request.",
+					},
+				};
+			}
+
 			const { deleteCalendarEvent } = await import(
 				"@/lib/actions/calendar.actions"
 			);
@@ -1054,6 +1087,16 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				return {
 					result: {
 						error: `I couldn't find a contract matching "${search}". Ask me to search contracts first.`,
+					},
+				};
+			}
+			if (contracts.length > 1) {
+				return {
+					result: {
+						error: `I found ${contracts.length} contracts matching "${search}": ${contracts
+							.slice(0, 3)
+							.map((c) => String(c.name))
+							.join(", ")}. Tell me which one.`,
 					},
 				};
 			}
