@@ -15,6 +15,8 @@ export type AssistantDataIntent =
 	| "view_schedule"
 	| "view_audit"
 	| "complete_task"
+	| "reschedule_event"
+	| "cancel_event"
 	| null;
 
 export function detectDataIntent(message: string): AssistantDataIntent {
@@ -46,6 +48,18 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 		/\b(contract|license|licences?)/.test(q)
 	) {
 		return "expiring";
+	}
+	if (
+		/\b(reschedule|move|push|postpone|change)\b/.test(q) &&
+		/\b(meeting|meet|call|event|appointment|review)\b/.test(q)
+	) {
+		return "reschedule_event";
+	}
+	if (
+		/\b(cancel|delete|remove|call off)\b/.test(q) &&
+		/\b(meeting|meet|call|event|appointment|review)\b/.test(q)
+	) {
+		return "cancel_event";
 	}
 	if (
 		/\b(schedule|book|set\s?up|arrange|plan)/.test(q) &&

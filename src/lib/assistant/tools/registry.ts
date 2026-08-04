@@ -4,8 +4,12 @@ import {
 	type CreateCalendarEventData,
 	createCalendarEvent,
 	getCalendarEventsByMonth,
+	updateCalendarEvent,
 } from "@/lib/actions/calendar.actions";
-import { listCalendarApprovalRequests } from "@/lib/actions/calendar-approval.actions";
+import {
+	createCalendarApprovalRequest,
+	listCalendarApprovalRequests,
+} from "@/lib/actions/calendar-approval.actions";
 import { generateReport } from "@/lib/actions/report.actions";
 import { TaskService } from "@/lib/api/tasks/services/TaskService";
 import { createAdminClient } from "@/lib/appwrite";
@@ -43,6 +47,22 @@ function dateFromDateAndTime(dateStr: string, timeStr: string): Date | null {
 
 function formatLocalDate(d: Date): string {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Find a user's upcoming event by title keyword. Returns matches for caller to disambiguate. */
+async function findUpcomingEventsByTitle(ctx: ToolContext, search: string) {
+	const now = new Date();
+	const events = await getCalendarEventsByMonth(
+		now.getFullYear(),
+		now.getMonth() + 1,
+		ctx.user.$id,
+	);
+	const q = search.trim().toLowerCase();
+	const todayKey = formatLocalDate(now);
+	return events
+		.filter((e) => (e.startDate ?? "") >= todayKey)
+		.filter((e) => (e.title ?? "").toLowerCase().includes(q))
+		.slice(0, 5);
 }
 
 function summarizeTask(task: {
@@ -757,6 +777,301 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 					})),
 					total: logs.length,
 					auditHref: "/audits",
+				},
+			};
+		},
+	},
+	{
+		name: "reschedule_calendar_event",
+		description:
+			"Reschedule one of the user's own calendar meetings to a new date/time (requires user confirmation). Find the meeting by title. Resolve the new date against the current date in the system prompt. If the title matches several or none, say so and ask the user which meeting.",
+		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				eventTitle: {
+					type: "string",
+					description: "Title (or distinctive part) of the meeting to move",
+				},
+				newDate: {
+					type: "string",
+					description: "YYYY-MM-DD resolved against the current date",
+				},
+				newStartTime: {
+					type: "string",
+					description: "HH:mm 24-hour",
+				},
+			},
+			required: ["eventTitle", "newDate", "newStartTime"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.CREATE])) {
+				return { result: { error: "Missing calendar.create permission" } };
+			}
+			const search = String(args.eventTitle ?? "").trim();
+			if (!search) return { result: { error: "Which meeting should I move?" } };
+
+			const matches = await findUpcomingEventsByTitle(ctx, search);
+			if (matches.length === 0) {
+				return {
+					result: {
+						error: `I couldn't find an upcoming meeting matching "${search}". Ask me what's on your calendar first.`,
+					},
+				};
+			}
+			if (matches.length > 1) {
+				return {
+					result: {
+						error: `I found ${matches.length} meetings matching "${search}": ${matches
+							.map((e) => `${e.title} (${e.startDate} ${e.startTime ?? ""})`)
+							.join(", ")}. Tell me which one.`,
+					},
+				};
+			}
+
+			const target = matches[0];
+			const newStart = dateFromDateAndTime(
+				String(args.newDate ?? ""),
+				String(args.newStartTime ?? ""),
+			);
+			if (!newStart) {
+				return {
+					result: {
+						error:
+							"I couldn't understand the new date/time. Ask the user for the date (YYYY-MM-DD) and start time.",
+					},
+				};
+			}
+			if (newStart.getTime() < Date.now()) {
+				return {
+					result: {
+						error:
+							"The new time is in the past. Ask the user for a future time.",
+					},
+				};
+			}
+
+			// Preserve the original duration.
+			const oldStart = dateFromDateAndTime(
+				target.startDate,
+				target.startTime ?? "00:00",
+			);
+			const oldEnd = dateFromDateAndTime(
+				target.endDate ?? target.startDate,
+				target.endTime ?? target.startTime ?? "00:00",
+			);
+			const durationMs =
+				oldStart && oldEnd && oldEnd > oldStart
+					? oldEnd.getTime() - oldStart.getTime()
+					: 30 * 60000;
+			const newEnd = new Date(newStart.getTime() + durationMs);
+
+			const eventData: Partial<CreateCalendarEventData> = {
+				startDate: formatLocalDate(newStart),
+				endDate: formatLocalDate(newEnd),
+				startTime: `${pad(newStart.getHours())}:${pad(newStart.getMinutes())}`,
+				endTime: `${pad(newEnd.getHours())}:${pad(newEnd.getMinutes())}`,
+			};
+
+			// Respect approval flow for sensitive events (same rule as the calendar API).
+			const accountId = await getCurrentUserId();
+			const permissionCheck = await evaluateCalendarPermission({
+				userAccountId: accountId,
+				action: "update",
+				event: target,
+			});
+			if (!permissionCheck.allowed) {
+				return {
+					result: {
+						error:
+							"You don't have permission to move that meeting. Ask an admin, or move it from the Calendar page.",
+					},
+				};
+			}
+
+			const sensitivity = target.sensitivityLevel || "standard";
+			if (sensitivity !== "standard" && target.approvalStatus !== "approved") {
+				const approval = await createCalendarApprovalRequest({
+					eventId: target.$id!,
+					changeType: "update",
+					requestedByAccountId: accountId,
+					requestedByUserId: permissionCheck.userId || undefined,
+					changeSummary: {
+						before: target as unknown as Record<string, unknown>,
+						after: { ...target, ...eventData } as unknown as Record<
+							string,
+							unknown
+						>,
+					},
+					sensitivityLevel: sensitivity,
+				});
+				await updateCalendarEvent(target.$id!, {
+					...eventData,
+					approvalStatus: "pending",
+					pendingApprovalId: approval.$id,
+				});
+				return {
+					result: {
+						eventId: target.$id,
+						title: target.title,
+						pendingApproval: true,
+						note: "That meeting needs approval. I submitted a reschedule request.",
+					},
+				};
+			}
+
+			const updated = await updateCalendarEvent(target.$id!, eventData);
+			return {
+				result: {
+					eventId: updated.$id,
+					title: updated.title,
+					date: updated.startDate,
+					startTime: updated.startTime,
+					endTime: updated.endTime,
+				},
+			};
+		},
+	},
+	{
+		name: "cancel_calendar_event",
+		description:
+			"Cancel one of the user's own calendar meetings (requires user confirmation). Find the meeting by title. If several or none match, say so and ask which one.",
+		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				eventTitle: {
+					type: "string",
+					description: "Title (or distinctive part) of the meeting to cancel",
+				},
+			},
+			required: ["eventTitle"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.CREATE])) {
+				return { result: { error: "Missing calendar.create permission" } };
+			}
+			const search = String(args.eventTitle ?? "").trim();
+			if (!search)
+				return { result: { error: "Which meeting should I cancel?" } };
+
+			const matches = await findUpcomingEventsByTitle(ctx, search);
+			if (matches.length === 0) {
+				return {
+					result: {
+						error: `I couldn't find an upcoming meeting matching "${search}". Ask me what's on your calendar first.`,
+					},
+				};
+			}
+			if (matches.length > 1) {
+				return {
+					result: {
+						error: `I found ${matches.length} meetings matching "${search}": ${matches
+							.map((e) => `${e.title} (${e.startDate} ${e.startTime ?? ""})`)
+							.join(", ")}. Tell me which one.`,
+					},
+				};
+			}
+
+			const target = matches[0];
+			const accountId = await getCurrentUserId();
+			const permissionCheck = await evaluateCalendarPermission({
+				userAccountId: accountId,
+				action: "cancel",
+				event: target,
+			});
+			if (!permissionCheck.allowed) {
+				return {
+					result: {
+						error:
+							"You don't have permission to cancel that meeting. Ask an admin, or cancel it from the Calendar page.",
+					},
+				};
+			}
+
+			const { deleteCalendarEvent } = await import(
+				"@/lib/actions/calendar.actions"
+			);
+			await deleteCalendarEvent(target.$id!, accountId);
+			const userName =
+				(ctx.user as { fullName?: string }).fullName ||
+				ctx.user.name ||
+				ctx.user.email ||
+				"User";
+			await logAuditEvent({
+				event_id: `assistant_event_cancel_${target.$id}`,
+				event_title: `Assistant cancelled event: ${target.title}`,
+				action: "delete",
+				source: "caalm",
+				user_id: ctx.user.$id,
+				user_name: userName,
+				user_email: ctx.user.email || "",
+				status: "success",
+				orgId: ctx.orgId,
+				module: "system",
+				target_type: "calendar_event",
+				target_id: target.$id ?? "",
+				target_label: target.title,
+				summary: `CAALM assistant cancelled "${target.title}"`,
+				metadata: { source: "ai_assistant" },
+			}).catch(() => undefined);
+			return {
+				result: { eventId: target.$id, title: target.title, cancelled: true },
+			};
+		},
+	},
+	{
+		name: "create_task_for_contract",
+		description:
+			"Create a task linked to a contract (requires user confirmation). Use for follow-ups like 'remind me to review the Acme contract before it expires'. Find the contract by name.",
+		requiredPermissions: [
+			PERMISSIONS.EVENTS.CREATE,
+			PERMISSIONS.CONTRACTS.VIEW,
+		],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				contractName: {
+					type: "string",
+					description: "Contract name (or distinctive part)",
+				},
+				title: { type: "string", description: "Task title" },
+				dueDate: { type: "string", description: "ISO date" },
+				priority: { type: "string", enum: ["low", "medium", "high"] },
+			},
+			required: ["contractName", "title"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.EVENTS.CREATE])) {
+				return { result: { error: "Missing events.create permission" } };
+			}
+			const search = String(args.contractName ?? "").trim();
+			const contracts = await searchContractsTable(ctx, search);
+			if (contracts.length === 0) {
+				return {
+					result: {
+						error: `I couldn't find a contract matching "${search}". Ask me to search contracts first.`,
+					},
+				};
+			}
+			const contract = contracts[0];
+			const task = await TaskService.createTask(ctx.orgId, ctx.user.$id, {
+				title: String(args.title),
+				description: `Linked to contract: ${contract.name}`,
+				dueDate: args.dueDate ? String(args.dueDate) : undefined,
+				priority: (args.priority as "low" | "medium" | "high") || "medium",
+				status: "not_started",
+				linkedEntityType: "contract",
+				linkedEntityId: String(contract.id),
+			});
+			return {
+				result: {
+					taskId: task.$id,
+					title: task.title,
+					contract: contract.name,
 				},
 			};
 		},

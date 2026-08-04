@@ -148,6 +148,26 @@ export function suggestionsForTurn(params: {
 		];
 	}
 
+	if (
+		toolName === "reschedule_calendar_event" ||
+		toolName === "cancel_calendar_event" ||
+		dataIntent === "reschedule_event" ||
+		dataIntent === "cancel_event"
+	) {
+		return [
+			{
+				id: "calendar-open",
+				label: "Open Calendar",
+				action: { type: "navigate", href: "/calendar" },
+			},
+			{
+				id: "view-schedule",
+				label: "What's on my calendar today?",
+				action: { type: "prompt", text: "What's on my calendar today?" },
+			},
+		];
+	}
+
 	if (toolName === "list_expirations" || dataIntent === "expiring") {
 		return [
 			{

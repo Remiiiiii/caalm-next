@@ -384,7 +384,9 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 		dataIntent === "schedule_event" ||
 		dataIntent === "view_schedule" ||
 		dataIntent === "view_audit" ||
-		dataIntent === "complete_task";
+		dataIntent === "complete_task" ||
+		dataIntent === "reschedule_event" ||
+		dataIntent === "cancel_event";
 
 	const genAI = new GoogleGenerativeAI(apiKey);
 	const model = genAI.getGenerativeModel({
@@ -431,9 +433,15 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 						? `Mark task “${args.title ?? "?"}” done`
 						: tool.name === "create_calendar_event"
 							? `Schedule meeting “${args.title ?? "Untitled"}” on ${args.date ?? "?"} at ${args.startTime ?? "?"}`
-							: tool.name === "generate_report"
-								? `Generate report for ${args.department ?? "your department"}`
-								: `Confirm ${tool.name}`;
+							: tool.name === "reschedule_calendar_event"
+								? `Move “${args.eventTitle ?? "?"}” to ${args.newDate ?? "?"} at ${args.newStartTime ?? "?"}`
+								: tool.name === "cancel_calendar_event"
+									? `Cancel meeting “${args.eventTitle ?? "?"}”`
+									: tool.name === "create_task_for_contract"
+										? `Create task “${args.title ?? "Untitled"}” for ${args.contractName ?? "contract"}`
+										: tool.name === "generate_report"
+											? `Generate report for ${args.department ?? "your department"}`
+											: `Confirm ${tool.name}`;
 			const preview = JSON.stringify(args, null, 2).slice(0, 500);
 			const pending = storePendingAction({
 				userId: ctx.user.$id,
