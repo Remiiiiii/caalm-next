@@ -14,7 +14,7 @@ import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
 import { evaluateCalendarPermission } from "@/lib/auth/guards";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
-import { logAuditEvent } from "@/lib/services/audit-logger";
+import { getAuditLogs, logAuditEvent } from "@/lib/services/audit-logger";
 import { detectParticipantConflicts } from "@/lib/utils/conflict-detection";
 
 function hasAll(
@@ -557,6 +557,206 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 					endTime: eventData.endTime,
 					conflicts,
 					calendarHref: "/calendar",
+				},
+			};
+		},
+	},
+	{
+		name: "list_expirations",
+		description:
+			"List contracts and licenses expiring within a number of days (default 90). Use when the user asks what's expiring, due soon, coming up for renewal, or wants an expiration brief.",
+		requiredPermissions: [
+			PERMISSIONS.CONTRACTS.VIEW,
+			PERMISSIONS.LICENSES.VIEW,
+		],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				days: {
+					type: "number",
+					description: "Look-ahead window in days. Default 90.",
+				},
+			},
+		},
+		handler: async (ctx, args) => {
+			const days = Math.min(Math.max(Number(args.days) || 90, 1), 365);
+			const now = new Date();
+			const today = formatLocalDate(now);
+			const horizon = formatLocalDate(
+				new Date(now.getTime() + days * 24 * 60 * 60 * 1000),
+			);
+			const { tablesDB } = await createAdminClient();
+
+			const contractsPromise = hasAll(ctx, [PERMISSIONS.CONTRACTS.VIEW])
+				? tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId!,
+						tableId: appwriteConfig.contractsCollectionId || "contracts",
+						queries: [
+							Query.equal("orgId", ctx.orgId),
+							Query.greaterThanEqual("expiryDate", today),
+							Query.lessThanEqual("expiryDate", horizon),
+							Query.orderAsc("expiryDate"),
+							Query.limit(10),
+						],
+					})
+				: Promise.resolve({ rows: [] as Record<string, unknown>[] });
+
+			const licensesPromise = hasAll(ctx, [PERMISSIONS.LICENSES.VIEW])
+				? tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId!,
+						tableId: appwriteConfig.licensesCollectionId || "licenses",
+						queries: [
+							Query.equal("orgId", ctx.orgId),
+							Query.greaterThanEqual("expirationDate", today),
+							Query.lessThanEqual("expirationDate", horizon),
+							Query.orderAsc("expirationDate"),
+							Query.limit(10),
+						],
+					})
+				: Promise.resolve({ rows: [] as Record<string, unknown>[] });
+
+			const [contracts, licenses] = await Promise.all([
+				contractsPromise,
+				licensesPromise,
+			]);
+
+			return {
+				result: {
+					days,
+					contracts: contracts.rows.map((r) => ({
+						id: r.$id,
+						name: r.contractName ?? r.name,
+						expiryDate: r.expiryDate,
+						status: r.status,
+					})),
+					licenses: licenses.rows.map((r) => ({
+						id: r.$id,
+						name: r.licenseName ?? r.name,
+						expirationDate: r.expirationDate,
+						status: r.status,
+					})),
+					contractsHref: "/contracts",
+					licensesHref: "/licenses",
+				},
+			};
+		},
+	},
+	{
+		name: "complete_task",
+		description:
+			"Mark a task as done (requires user confirmation). Find the task by title from the user's open tasks. If multiple or no tasks match, say so and ask the user which one.",
+		requiredPermissions: [PERMISSIONS.EVENTS.CREATE],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				title: {
+					type: "string",
+					description: "The task title (or a distinctive part of it)",
+				},
+			},
+			required: ["title"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.EVENTS.CREATE])) {
+				return { result: { error: "Missing events.create permission" } };
+			}
+			const search = String(args.title ?? "").trim();
+			if (!search)
+				return { result: { error: "Which task should I mark done?" } };
+
+			const { tasks } = await TaskService.listTasks(
+				ctx.orgId,
+				{ search },
+				{ limit: 10, offset: 0 },
+			);
+			const open = tasks.filter((t) => t.status !== "done");
+
+			if (open.length === 0) {
+				return {
+					result: {
+						error: `I couldn't find an open task matching "${search}". Ask me to show your pending tasks first.`,
+					},
+				};
+			}
+			if (open.length > 1) {
+				return {
+					result: {
+						error: `I found ${open.length} open tasks matching "${search}": ${open
+							.slice(0, 3)
+							.map((t) => t.title)
+							.join(", ")}. Tell me which one.`,
+					},
+				};
+			}
+
+			const task = open[0];
+			const updated = await TaskService.updateTask(ctx.orgId, task.$id, {
+				status: "done",
+			});
+			const userName =
+				(ctx.user as { fullName?: string }).fullName ||
+				ctx.user.name ||
+				ctx.user.email ||
+				"User";
+			await logAuditEvent({
+				event_id: `assistant_task_done_${task.$id}`,
+				event_title: `Assistant completed task: ${task.title}`,
+				action: "update",
+				source: "caalm",
+				user_id: ctx.user.$id,
+				user_name: userName,
+				user_email: ctx.user.email || "",
+				status: "success",
+				orgId: ctx.orgId,
+				module: "system",
+				target_type: "task",
+				target_id: task.$id,
+				target_label: task.title,
+				summary: `CAALM assistant marked task "${task.title}" done`,
+				metadata: { source: "ai_assistant" },
+			}).catch(() => undefined);
+			return {
+				result: { taskId: task.$id, title: task.title, updated: !!updated },
+			};
+		},
+	},
+	{
+		name: "list_audit_logs",
+		description:
+			"List recent audit/activity events for the organization (who changed what). Use when the user asks about recent activity, changes, or audit history. Requires audit view permission.",
+		requiredPermissions: [PERMISSIONS.AUDIT.VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				limit: { type: "number", description: "Max entries. Default 10." },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.VIEW])) {
+				return {
+					result: {
+						error:
+							"You don't have permission to view audit logs. Ask an admin for audit access.",
+					},
+				};
+			}
+			const limit = Math.min(Number(args.limit) || 10, 20);
+			const logs = await getAuditLogs({ orgId: ctx.orgId, limit });
+			return {
+				result: {
+					logs: logs.map((l) => ({
+						title: l.event_title,
+						action: l.action,
+						user: l.user_name,
+						status: l.status,
+						when: l.created_at,
+						module: l.module,
+					})),
+					total: logs.length,
+					auditHref: "/audits",
 				},
 			};
 		},

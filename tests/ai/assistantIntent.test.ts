@@ -41,4 +41,37 @@ describe("detectDataIntent - scheduling", () => {
 		expect(isLiveDataIntent("schedule_event")).toBe(true);
 		expect(isLiveDataIntent("view_schedule")).toBe(true);
 	});
+
+	it("detects complete-task requests", () => {
+		expect(detectDataIntent("Mark the budget task done")).toBe(
+			"complete_task",
+		);
+		expect(detectDataIntent("Complete the onboarding task")).toBe(
+			"complete_task",
+		);
+		expect(detectDataIntent("Check off the review task")).toBe(
+			"complete_task",
+		);
+	});
+
+	it("detects audit viewing requests", () => {
+		expect(detectDataIntent("Show recent activity")).toBe("view_audit");
+		expect(detectDataIntent("View the audit log")).toBe("view_audit");
+		expect(detectDataIntent("Who changed the contract?")).toBe("view_audit");
+	});
+
+	it("detects expiration briefs", () => {
+		expect(detectDataIntent("What contracts are expiring soon?")).toBe(
+			"expiring",
+		);
+		expect(detectDataIntent("Which licenses are up for renewal?")).toBe(
+			"expiring",
+		);
+	});
+
+	it("treats new intents as live data", () => {
+		expect(isLiveDataIntent("complete_task")).toBe(true);
+		expect(isLiveDataIntent("view_audit")).toBe(true);
+		expect(isLiveDataIntent("expiring")).toBe(true);
+	});
 });

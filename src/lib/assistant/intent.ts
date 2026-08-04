@@ -1,5 +1,8 @@
 /**
  * Lightweight intent hints so live-data questions hit tools instead of RAG links.
+ *
+ * Note: keyword groups use a leading \b but no trailing \b, so plurals and
+ * inflections ("contracts", "expiring", "meetings") still match.
  */
 
 export type AssistantDataIntent =
@@ -10,59 +13,68 @@ export type AssistantDataIntent =
 	| "expiring"
 	| "schedule_event"
 	| "view_schedule"
+	| "view_audit"
+	| "complete_task"
 	| null;
 
 export function detectDataIntent(message: string): AssistantDataIntent {
 	const q = message.toLowerCase();
 
 	if (
-		/\b(task|tasks|to-?dos?|todo)\b/.test(q) &&
-		/\b(show|list|pending|open|my|assigned|due)\b/.test(q)
+		/\b(task|tasks|to-?dos?|todo)/.test(q) &&
+		/\b(show|list|pending|open|my|assigned|due)/.test(q)
 	) {
 		return "list_tasks";
 	}
 	if (
-		/\b(pending|open)\s+tasks?\b/.test(q) ||
-		/\btasks?\s+(pending|open)\b/.test(q)
+		/\b(pending|open)\s+tasks?/.test(q) ||
+		/\btasks?\s+(pending|open)/.test(q)
 	) {
 		return "list_tasks";
 	}
 	if (
-		/\b(approvals?|approve)\b/.test(q) &&
-		/\b(pending|list|show|my)\b/.test(q)
+		/\b(mark|set|complete|finish|close|check off|tick)/.test(q) &&
+		/\b(task|to-?do)/.test(q)
 	) {
+		return "complete_task";
+	}
+	if (/\b(approvals?|approve)/.test(q) && /\b(pending|list|show|my)/.test(q)) {
 		return "list_pending_approvals";
 	}
 	if (
-		/\b(expir|renewal|due soon)\b/.test(q) &&
-		/\b(contract|license|licences?)\b/.test(q)
+		/\b(expir|renewal|due soon)/.test(q) &&
+		/\b(contract|license|licences?)/.test(q)
 	) {
 		return "expiring";
 	}
 	if (
-		/\b(schedule|book|set\s?up|arrange|plan)\b/.test(q) &&
-		/\b(meeting|meet|call|event|review|appointment)\b/.test(q)
+		/\b(schedule|book|set\s?up|arrange|plan)/.test(q) &&
+		/\b(meeting|meet|call|event|review|appointment)/.test(q)
 	) {
 		return "schedule_event";
 	}
 	if (
-		/\b(my|on my|the)\s+(schedule|calendar|meetings|agenda)\b/.test(q) ||
-		/\bwhat('s| is| do i have)\b.{0,30}\b(schedule|calendar|meetings|today|tomorrow|this week|thursday|friday|monday|tuesday|wednesday)\b/.test(
+		/\b(my|on my|the)\s+(schedule|calendar|meetings|agenda)/.test(q) ||
+		/\bwhat('s| is| do i have)\b.{0,30}\b(schedule|calendar|meetings|today|tomorrow|this week|thursday|friday|monday|tuesday|wednesday)/.test(
 			q,
 		) ||
-		/\b(am i|are we)\s+(free|busy|booked)\b/.test(q)
+		/\b(am i|are we)\s+(free|busy|booked)/.test(q)
 	) {
 		return "view_schedule";
 	}
 	if (
-		/\b(contract|contracts)\b/.test(q) &&
-		/\b(search|find|show|list)\b/.test(q)
+		/\b(audit|activity log|recent activity|recent changes|who changed|change history)/.test(
+			q,
+		)
 	) {
+		return "view_audit";
+	}
+	if (/\b(contract|contracts)/.test(q) && /\b(search|find|show|list)/.test(q)) {
 		return "search_contracts";
 	}
 	if (
-		/\b(license|licenses|licences?)\b/.test(q) &&
-		/\b(search|find|show|list)\b/.test(q)
+		/\b(license|licenses|licences?)/.test(q) &&
+		/\b(search|find|show|list)/.test(q)
 	) {
 		return "search_licenses";
 	}

@@ -48,6 +48,8 @@ const DATA_TOOLS = new Set([
 	"search_licenses",
 	"list_pending_approvals",
 	"list_calendar_events",
+	"list_expirations",
+	"list_audit_logs",
 ]);
 
 const apiKey = process.env.GOOGLE_API_KEY;
@@ -226,6 +228,48 @@ function formatGenericDataAnswer(toolName: string, output: unknown): string {
 		return `Here's your schedule for ${day}:\n\n${lines}\n\nOpen the Calendar page for details.`;
 	}
 
+	if (toolName === "list_expirations") {
+		const contracts = (data.contracts ?? []) as Array<Record<string, unknown>>;
+		const licenses = (data.licenses ?? []) as Array<Record<string, unknown>>;
+		const days = Number(data.days) || 90;
+		if (!contracts.length && !licenses.length) {
+			return `Nothing is expiring in the next ${days} days. You're clear.`;
+		}
+		const parts: string[] = [];
+		if (contracts.length) {
+			const lines = contracts
+				.map(
+					(c) =>
+						`- **${c.name ?? "Untitled"}** — ${formatDueDate(c.expiryDate ? String(c.expiryDate) : null)}`,
+				)
+				.join("\n");
+			parts.push(`**Contracts:**\n${lines}`);
+		}
+		if (licenses.length) {
+			const lines = licenses
+				.map(
+					(l) =>
+						`- **${l.name ?? "Untitled"}** — ${formatDueDate(l.expirationDate ? String(l.expirationDate) : null)}`,
+				)
+				.join("\n");
+			parts.push(`**Licenses:**\n${lines}`);
+		}
+		return `Here's what's expiring in the next ${days} days:\n\n${parts.join("\n\n")}\n\nOpen Contracts or Licenses for details.`;
+	}
+
+	if (toolName === "list_audit_logs") {
+		const items = (data.logs ?? []) as Array<Record<string, unknown>>;
+		if (!items.length) return "No recent activity found for your organization.";
+		const lines = items
+			.map((l) => {
+				const when = l.when ? formatDueDate(String(l.when)) : "";
+				const who = l.user ? ` by ${l.user}` : "";
+				return `- **${l.title ?? "Event"}**${who}${when ? ` — ${when}` : ""}`;
+			})
+			.join("\n");
+		return `Here's the recent activity:\n\n${lines}\n\nOpen Audits for the full log.`;
+	}
+
 	return "I finished that request. Use a suggestion below if you want to dig in further.";
 }
 
@@ -336,7 +380,11 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 		dataIntent === "list_pending_approvals" ||
 		dataIntent === "search_contracts" ||
 		dataIntent === "search_licenses" ||
-		dataIntent === "expiring";
+		dataIntent === "expiring" ||
+		dataIntent === "schedule_event" ||
+		dataIntent === "view_schedule" ||
+		dataIntent === "view_audit" ||
+		dataIntent === "complete_task";
 
 	const genAI = new GoogleGenerativeAI(apiKey);
 	const model = genAI.getGenerativeModel({
@@ -379,11 +427,13 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 			const label =
 				tool.name === "create_task"
 					? `Create task “${args.title ?? "Untitled"}”`
-					: tool.name === "create_calendar_event"
-						? `Schedule meeting “${args.title ?? "Untitled"}” on ${args.date ?? "?"} at ${args.startTime ?? "?"}`
-						: tool.name === "generate_report"
-							? `Generate report for ${args.department ?? "your department"}`
-							: `Confirm ${tool.name}`;
+					: tool.name === "complete_task"
+						? `Mark task “${args.title ?? "?"}” done`
+						: tool.name === "create_calendar_event"
+							? `Schedule meeting “${args.title ?? "Untitled"}” on ${args.date ?? "?"} at ${args.startTime ?? "?"}`
+							: tool.name === "generate_report"
+								? `Generate report for ${args.department ?? "your department"}`
+								: `Confirm ${tool.name}`;
 			const preview = JSON.stringify(args, null, 2).slice(0, 500);
 			const pending = storePendingAction({
 				userId: ctx.user.$id,
