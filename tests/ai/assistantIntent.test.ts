@@ -52,6 +52,11 @@ describe("detectDataIntent - scheduling", () => {
 		expect(detectDataIntent("Check off the review task")).toBe(
 			"complete_task",
 		);
+		// "my" must not shadow complete_task with list_tasks
+		expect(detectDataIntent("Complete my onboarding task")).toBe(
+			"complete_task",
+		);
+		expect(detectDataIntent("Mark my task done")).toBe("complete_task");
 	});
 
 	it("detects audit viewing requests", () => {

@@ -21,6 +21,12 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 	const q = message.toLowerCase();
 
 	if (
+		/\b(mark|set|complete|finish|close|check off|tick)/.test(q) &&
+		/\b(task|to-?do)/.test(q)
+	) {
+		return "complete_task";
+	}
+	if (
 		/\b(task|tasks|to-?dos?|todo)/.test(q) &&
 		/\b(show|list|pending|open|my|assigned|due)/.test(q)
 	) {
@@ -31,12 +37,6 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 		/\btasks?\s+(pending|open)/.test(q)
 	) {
 		return "list_tasks";
-	}
-	if (
-		/\b(mark|set|complete|finish|close|check off|tick)/.test(q) &&
-		/\b(task|to-?do)/.test(q)
-	) {
-		return "complete_task";
 	}
 	if (/\b(approvals?|approve)/.test(q) && /\b(pending|list|show|my)/.test(q)) {
 		return "list_pending_approvals";

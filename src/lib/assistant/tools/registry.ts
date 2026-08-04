@@ -82,7 +82,7 @@ async function searchContractsTable(ctx: ToolContext, search: string) {
 		id: r.$id,
 		name: r.contractName ?? r.name,
 		status: r.status,
-		expiryDate: r.expiryDate,
+		expiryDate: r.contractExpiryDate,
 	}));
 }
 
@@ -105,7 +105,7 @@ async function searchLicensesTable(ctx: ToolContext, search: string) {
 		id: r.$id,
 		name: r.licenseName ?? r.name,
 		status: r.status,
-		expirationDate: r.expirationDate,
+		expirationDate: r.licenseExpiryDate,
 	}));
 }
 
@@ -335,7 +335,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 		name: "list_calendar_events",
 		description:
 			"List the current user's CAALM calendar events for a given date (defaults to today) or month. Use when the user asks about their schedule, meetings, availability, or whether they are free at a time.",
-		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
+		requiredPermissions: [PERMISSIONS.CALENDAR.VIEW_OWN],
 		mutating: false,
 		parameters: {
 			type: "object",
@@ -352,8 +352,8 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 			},
 		},
 		handler: async (ctx, args) => {
-			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.CREATE])) {
-				return { result: { error: "Missing calendar.create permission" } };
+			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.VIEW_OWN])) {
+				return { result: { error: "Missing calendar view permission" } };
 			}
 			const now = new Date();
 			const dateStr = args.date ? String(args.date) : "";
@@ -474,27 +474,6 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				createdBy: ctx.user.$id,
 			};
 
-			// Conflicts: warn in the answer instead of blocking (the assistant chat
-			// has no second confirmation step like the calendar form does).
-			let conflicts: string[] = [];
-			if (eventPayload.participants) {
-				try {
-					const found = await detectParticipantConflicts(
-						eventPayload,
-						undefined,
-						ctx.user.$id,
-					);
-					conflicts = found
-						.slice(0, 3)
-						.map(
-							(c) =>
-								`${c.conflictingEvent.title} (${c.conflictingEvent.startDate} ${c.conflictingEvent.startTime ?? ""})`,
-						);
-				} catch {
-					conflicts = [];
-				}
-			}
-
 			// Same permission evaluation the calendar API uses (role + calendar permission).
 			const accountId = await getCurrentUserId();
 			const permissionCheck = await evaluateCalendarPermission({
@@ -519,6 +498,27 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				requiresApproval: false,
 				approvalStatus: "not_required",
 			};
+
+			// Conflicts: warn in the answer instead of blocking (the assistant chat
+			// has no second confirmation step like the calendar form does).
+			let conflicts: string[] = [];
+			if (eventPayload.participants) {
+				try {
+					const found = await detectParticipantConflicts(
+						eventPayload,
+						undefined,
+						accountId,
+					);
+					conflicts = found
+						.slice(0, 3)
+						.map(
+							(c) =>
+								`${c.conflictingEvent.title} (${c.conflictingEvent.startDate} ${c.conflictingEvent.startTime ?? ""})`,
+						);
+				} catch {
+					conflicts = [];
+				}
+			}
 
 			const event = await createCalendarEvent(eventData);
 
@@ -594,9 +594,9 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 						tableId: appwriteConfig.contractsCollectionId || "contracts",
 						queries: [
 							Query.equal("orgId", ctx.orgId),
-							Query.greaterThanEqual("expiryDate", today),
-							Query.lessThanEqual("expiryDate", horizon),
-							Query.orderAsc("expiryDate"),
+							Query.greaterThanEqual("contractExpiryDate", today),
+							Query.lessThanEqual("contractExpiryDate", horizon),
+							Query.orderAsc("contractExpiryDate"),
 							Query.limit(10),
 						],
 					})
@@ -608,9 +608,9 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 						tableId: appwriteConfig.licensesCollectionId || "licenses",
 						queries: [
 							Query.equal("orgId", ctx.orgId),
-							Query.greaterThanEqual("expirationDate", today),
-							Query.lessThanEqual("expirationDate", horizon),
-							Query.orderAsc("expirationDate"),
+							Query.greaterThanEqual("licenseExpiryDate", today),
+							Query.lessThanEqual("licenseExpiryDate", horizon),
+							Query.orderAsc("licenseExpiryDate"),
 							Query.limit(10),
 						],
 					})
@@ -627,13 +627,13 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 					contracts: contracts.rows.map((r) => ({
 						id: r.$id,
 						name: r.contractName ?? r.name,
-						expiryDate: r.expiryDate,
+						expiryDate: r.contractExpiryDate,
 						status: r.status,
 					})),
 					licenses: licenses.rows.map((r) => ({
 						id: r.$id,
 						name: r.licenseName ?? r.name,
-						expirationDate: r.expirationDate,
+						expirationDate: r.licenseExpiryDate,
 						status: r.status,
 					})),
 					contractsHref: "/contracts",
@@ -831,5 +831,15 @@ export async function runToolByName(
 	if (!tool.requiredPermissions.every((p) => ctx.permissions.includes(p))) {
 		return { error: "Insufficient permissions for tool" };
 	}
-	return tool.handler(ctx, args);
+	try {
+		return await tool.handler(ctx, args);
+	} catch (error) {
+		console.error(`[assistant tool ${toolName}] failed:`, error);
+		return {
+			result: {
+				error:
+					"I ran into a problem completing that. Try rephrasing, or use the page directly.",
+			},
+		};
+	}
 }
