@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Building2 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
@@ -44,10 +45,15 @@ export default function AboutMission() {
 
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
 					<motion.div variants={fadeLeft} className="relative">
-						<div
-							className="relative rounded-2xl shadow-xl border border-white/60 w-full aspect-[560/420] bg-transparent"
-							aria-hidden
-						/>
+						<div className="relative overflow-hidden rounded-2xl shadow-xl border border-white/60 w-full aspect-[560/420] bg-slate-100">
+							<Image
+								src="/assets/video/demo-screenshots/01-dashboard-full.png"
+								alt="CAALM dashboard showing contracts, licenses, and compliance overview"
+								fill
+								className="object-cover object-top"
+								sizes="(max-width: 1023px) 100vw, 560px"
+							/>
+						</div>
 					</motion.div>
 
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

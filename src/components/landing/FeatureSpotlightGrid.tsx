@@ -951,7 +951,7 @@ export default function FeatureSpotlightGrid() {
 			initial="hidden"
 			whileInView="visible"
 			viewport={viewportOnce}
-			id="features"
+			id="feature-spotlight"
 		>
 			<motion.div variants={fadeUp} className="text-center mb-8">
 				<h3 className="text-xl sm:text-2xl md:text-3xl sidebar-gradient-text landing-section-title">
