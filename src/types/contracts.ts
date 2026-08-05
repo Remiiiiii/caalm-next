@@ -128,5 +128,10 @@ export interface ContractMetadataPayload {
 	compliance?: string;
 	priority?: string;
 	vendor?: string;
+	selectedContractType?: string;
+	grantTerms?: string;
+	donorRestrictions?: string;
+	projectDescription?: string;
+	propertyDescription?: string;
 	enterpriseMetadata?: ContractEnterpriseMetadata;
 }

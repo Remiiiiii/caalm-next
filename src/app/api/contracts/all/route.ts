@@ -1,10 +1,7 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import {
-	requireAuth,
-	requireContractPermission,
-} from "@/lib/api/contracts/middleware/auth.middleware";
 import {
 	errorResponse,
 	generateRequestId,
@@ -16,23 +13,27 @@ import {
 	buildContractQueries,
 	getContractListScope,
 } from "@/lib/rbac/data-scope";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import {
+	getUserDefaultOrganization,
+	hasPermission,
+} from "@/lib/rbac/permissions";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
-		const authError = await requireAuth(request);
-		if (authError) return authError;
-
-		const permError = await requireContractPermission(request, "read");
-		if (permError) return permError;
-
+		// Single auth+permission path (avoid triple getCurrentUser / double org lookup)
 		const user = await getCurrentUser();
 		if (!user) {
 			return errorResponse(new Error("Unauthorized"), 401, { requestId });
 		}
+
+		const { searchParams } = new URL(request.url);
+		const requestedLimit = Number.parseInt(searchParams.get("limit") || "250", 10);
+		const rowLimit = Number.isFinite(requestedLimit)
+			? Math.min(Math.max(requestedLimit, 1), 500)
+			: 250;
 
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		if (!defaultOrg) {
@@ -41,18 +42,29 @@ export async function GET(request: NextRequest) {
 			});
 		}
 
+		const allowed = await hasPermission(
+			user.$id,
+			PERMISSIONS.CONTRACTS.VIEW,
+			defaultOrg.orgId,
+		);
+		if (!allowed) {
+			return errorResponse(new Error("Permission denied: read contract"), 403, {
+				requestId,
+			});
+		}
+
 		const scope = await getContractListScope(user.$id, defaultOrg.orgId);
 		const scopeQueries = buildContractQueries(scope);
 		const cacheKey =
 			scope.mode === "all_org"
-				? CACHE_KEYS.contracts.all()
+				? `${CACHE_KEYS.contracts.all()}:limit:${rowLimit}`
 				: `contracts:all:scoped:${user.$id}:${scope.mode}:${
 						scope.mode === "department"
 							? scope.department
 							: scope.mode === "own"
 								? scope.userId
 								: ""
-					}`;
+					}:limit:${rowLimit}`;
 
 		const contractsResult = await CacheManager.withCache(
 			"contracts/all",
@@ -64,7 +76,11 @@ export async function GET(request: NextRequest) {
 					return await tablesDB.listRows({
 						databaseId: appwriteConfig.databaseId!,
 						tableId: appwriteConfig.contractsCollectionId!,
-						queries: [...scopeQueries, Query.orderAsc("contractExpiryDate")],
+						queries: [
+							...scopeQueries,
+							Query.orderAsc("contractExpiryDate"),
+							Query.limit(rowLimit),
+						],
 					});
 				} catch (dbError: any) {
 					console.error("Error querying contracts from database:", dbError);

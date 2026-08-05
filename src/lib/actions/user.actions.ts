@@ -46,18 +46,31 @@ export type AppUser = {
 
 export const getUserByEmail = async (email: string) => {
 	try {
-		const cacheKey = `user:email:${email.toLowerCase()}`;
+		const normalized = email.trim().toLowerCase();
+		const cacheKey = `user:email:${normalized}`;
 		const cachedUser = await CacheManager.withCache(
 			"users",
 			cacheKey,
 			async () => {
 				const { tablesDB } = await createAdminClient();
-				const result = await tablesDB.listRows({
-					databaseId: appwriteConfig.databaseId || "default-db",
-					tableId: appwriteConfig.usersCollectionId || "users",
-					queries: [Query.equal("email", email)],
+				const databaseId = appwriteConfig.databaseId || "default-db";
+				const tableId = appwriteConfig.usersCollectionId || "users";
+				// Prefer exact lowercase match; fall back to original casing if stored mixed-case
+				const exact = await tablesDB.listRows({
+					databaseId,
+					tableId,
+					queries: [Query.equal("email", normalized)],
 				});
-				return result.total > 0 ? result.rows[0] : null;
+				if (exact.total > 0) return exact.rows[0];
+				if (email.trim() !== normalized) {
+					const original = await tablesDB.listRows({
+						databaseId,
+						tableId,
+						queries: [Query.equal("email", email.trim())],
+					});
+					if (original.total > 0) return original.rows[0];
+				}
+				return null;
 			},
 			300, // 5 minute cache for user lookups
 		);
@@ -146,6 +159,15 @@ const handleError = (error: unknown, message: string) => {
 
 export const sendEmailOTP = async ({ email }: { email: string }) => {
 	try {
+		const {
+			getAuthLockoutStatus,
+			LOCKOUT_USER_MESSAGE,
+		} = await import("@/lib/auth/attempt-lockout");
+		const emailLock = await getAuthLockoutStatus("email-otp", email);
+		if (emailLock.locked) {
+			throw new Error(LOCKOUT_USER_MESSAGE);
+		}
+
 		const { isDemoMode, getDemoOtpCode } = await import(
 			"@/lib/config/demo-mode"
 		);
@@ -467,12 +489,28 @@ export const verifyOTP = async ({
 	accountId?: string;
 }) => {
 	try {
+		const {
+			clearAuthFailures,
+			getAuthLockoutStatus,
+			LOCKOUT_USER_MESSAGE,
+			recordAuthFailure,
+		} = await import("@/lib/auth/attempt-lockout");
+		const { runLockoutSideEffects } = await import(
+			"@/lib/auth/security-lockout-actions"
+		);
+
+		const lockStatus = await getAuthLockoutStatus("email-otp", email);
+		if (lockStatus.locked) {
+			throw new Error(LOCKOUT_USER_MESSAGE);
+		}
+
 		const { isDemoMode, getDemoOtpCode } = await import(
 			"@/lib/config/demo-mode"
 		);
 
 		// Demo mode: accept fixed OTP even if DB token is missing/stale
 		if (isDemoMode() && otp === getDemoOtpCode()) {
+			await clearAuthFailures("email-otp", email);
 			if (accountId) {
 				return { success: true, accountId };
 			}
@@ -494,6 +532,21 @@ export const verifyOTP = async ({
 		});
 
 		if (result.total === 0) {
+			const failure = await recordAuthFailure("email-otp", email);
+			if (failure.justLocked || failure.locked) {
+				const user = await getUserByEmail(email).catch(() => null);
+				const userDoc = user as {
+					accountId?: string;
+					fullName?: string;
+				} | null;
+				await runLockoutSideEffects({
+					email,
+					accountId: accountId || userDoc?.accountId || null,
+					fullName: userDoc?.fullName || null,
+					channel: "email-otp",
+				});
+				throw new Error(LOCKOUT_USER_MESSAGE);
+			}
 			throw new Error("Invalid verification code. Please check and try again.");
 		}
 
@@ -503,6 +556,21 @@ export const verifyOTP = async ({
 
 		// Check if OTP has expired
 		if (now > expiresAt) {
+			const failure = await recordAuthFailure("email-otp", email);
+			if (failure.justLocked || failure.locked) {
+				const user = await getUserByEmail(email).catch(() => null);
+				const userDoc = user as {
+					accountId?: string;
+					fullName?: string;
+				} | null;
+				await runLockoutSideEffects({
+					email,
+					accountId: accountId || userDoc?.accountId || null,
+					fullName: userDoc?.fullName || null,
+					channel: "email-otp",
+				});
+				throw new Error(LOCKOUT_USER_MESSAGE);
+			}
 			throw new Error(
 				"The verification code has expired. Please request a new one.",
 			);
@@ -534,6 +602,7 @@ export const verifyOTP = async ({
 
 		// Wait for update to complete
 		await updatePromise;
+		await clearAuthFailures("email-otp", email);
 
 		// If accountId is provided (sign-in flow), return it for client-side session creation
 		if (accountId) {
@@ -552,7 +621,8 @@ export const verifyOTP = async ({
 		if (error instanceof Error) {
 			if (
 				error.message.includes("Invalid verification code") ||
-				error.message.includes("expired")
+				error.message.includes("expired") ||
+				error.message.includes("Too many attempts")
 			) {
 				throw error; // Re-throw user-friendly messages
 			} else {
@@ -563,6 +633,14 @@ export const verifyOTP = async ({
 		throw new Error("An unexpected error occurred. Please try again.");
 	}
 };
+
+/** Clear session cookies after lockout; client should redirect to /sign-in. */
+export async function forceAuthResetAfterLockout() {
+	const { forceAuthReset } = await import(
+		"@/lib/auth/security-lockout-actions"
+	);
+	return forceAuthReset();
+}
 
 export const verifySecret = async ({
 	accountId,

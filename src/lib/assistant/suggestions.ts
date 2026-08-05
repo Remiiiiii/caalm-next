@@ -122,7 +122,7 @@ export function suggestionsForTurn(params: {
 				label: "Schedule a meeting",
 				action: {
 					type: "prompt",
-					text: "Schedule a meeting for me tomorrow at 10am",
+					text: "Help me schedule a meeting. Ask me for any details you still need.",
 				},
 			},
 			{

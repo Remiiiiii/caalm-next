@@ -10,9 +10,11 @@ import { DepartmentDashboardHeader } from "@/components/dashboard/department/Dep
 import { DepartmentMonitoringGrid } from "@/components/dashboard/department/DepartmentMonitoringGrid";
 import { DepartmentRecentActivity } from "@/components/dashboard/department/DepartmentRecentActivity";
 import { DepartmentStatCardRow } from "@/components/dashboard/department/DepartmentStatCardRow";
+import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDepartmentDashboardData } from "@/hooks/useDepartmentDashboardData";
+import { useRiskImpactDashboard } from "@/hooks/useRiskImpactDashboard";
 
 interface DepartmentManagerDashboardProps {
 	user?:
@@ -33,6 +35,12 @@ export default function DepartmentManagerDashboard({
 	const division = user?.division || "";
 	const { data, error, isLoading, refresh } =
 		useDepartmentDashboardData(division);
+	const {
+		snapshot: riskImpact,
+		isLoading: riskImpactLoading,
+		error: riskImpactError,
+		refresh: refreshRiskImpact,
+	} = useRiskImpactDashboard({ division: division || undefined });
 
 	const displayName = user?.fullName || user?.name;
 
@@ -101,6 +109,13 @@ export default function DepartmentManagerDashboard({
 				division={data?.division || division}
 				departmentLabel={data?.departmentLabel || ""}
 				userName={displayName}
+			/>
+
+			<RiskImpactHeroCard
+				snapshot={riskImpact}
+				isLoading={riskImpactLoading}
+				error={riskImpactError}
+				onRetry={() => refreshRiskImpact()}
 			/>
 
 			<DepartmentStatCardRow

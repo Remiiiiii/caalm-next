@@ -7,6 +7,7 @@ import {
 	type ReactNode,
 	useContext,
 	useEffect,
+	useLayoutEffect,
 	useState,
 } from "react";
 import { normalizeUserRole } from "@/constants/rbac";
@@ -24,6 +25,23 @@ type AuthenticatedUser = Models.User<Models.Preferences> & {
 		profileImageId?: string | null;
 	};
 };
+
+const CACHE_USER_TTL_MS = 300000;
+
+function readCachedAuthUser(): Models.User<Models.Preferences> | null {
+	if (typeof window === "undefined") return null;
+	try {
+		const cachedUser = localStorage.getItem("cached_user");
+		if (!cachedUser) return null;
+		const parsed = JSON.parse(cachedUser);
+		if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_USER_TTL_MS) {
+			return parsed.user ?? null;
+		}
+	} catch {
+		// Invalid cache
+	}
+	return null;
+}
 
 interface AuthContextType {
 	user: Models.User<Models.Preferences> | null;
@@ -45,12 +63,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 	const [isSessionValid, setIsSessionValid] = useState(false);
 	const pathname = usePathname();
 
+	// Hydrate from localStorage before paint so the layout gate does not block warm loads
+	useLayoutEffect(() => {
+		const cached = readCachedAuthUser();
+		if (cached) {
+			setUser(cached);
+			setIsSessionValid(true);
+			setLoading(false);
+		}
+	}, []);
+
 	useEffect(() => {
 		setMounted(true);
 
 		const checkSession = async () => {
 			try {
-				setLoading(true);
+				let usedCache = Boolean(readCachedAuthUser());
 
 				// Optimize: Check localStorage first for cached user data to show UI immediately
 				if (typeof window !== "undefined") {
@@ -59,16 +87,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						try {
 							const parsed = JSON.parse(cachedUser);
 							// Only use cache if it's less than 5 minutes old
-							if (parsed.timestamp && Date.now() - parsed.timestamp < 300000) {
+							if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_USER_TTL_MS) {
 								setUser(parsed.user);
 								setIsSessionValid(true);
 								setLoading(false);
+								usedCache = true;
 								// Continue with fresh check in background
 							}
 						} catch {
 							// Invalid cache, continue with fresh check
 						}
 					}
+				}
+
+				if (!usedCache) {
+					setLoading(true);
 				}
 
 				// First try to get session-based user

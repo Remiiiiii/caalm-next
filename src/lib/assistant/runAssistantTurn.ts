@@ -38,6 +38,7 @@ export type AssistantTurnResult = {
 		label: string;
 		preview: string;
 		toolName: string;
+		args?: Record<string, unknown>;
 	};
 	clientAction?: { type: "navigate"; href: string };
 };
@@ -316,7 +317,7 @@ export async function runAssistantTurn(params: {
 Rules:
 - Write in plain, natural language for end users. Never show raw enums, snake_case, JSON, code paths, or API field names (say "Not started", not "not_started"; say "the Tasks page", not "/team/tasks").
 - For live data (tasks, contracts, licenses, approvals, expirations, calendar events), ALWAYS call the matching tool. Never answer those from Knowledge Context alone.
-- Scheduling: when the user asks to schedule, book, or set up a meeting, resolve relative dates ("tomorrow", "next Tuesday") against the current date below, then call create_calendar_event. If the date or time is missing or ambiguous, ask before calling the tool. Default to 30 minutes when no duration is given. Never invent participant emails; only include them if the user gave them.
+- Scheduling: when the user asks to schedule, book, or set up a meeting, collect these fields before calling create_calendar_event if the user has not already stated them: title, start time, end time (or duration), date, and type (meeting, review, audit, deadline, or contract). Meeting agenda (description) and participants are optional — ask for them once if missing, but do not block scheduling if the user skips them. Resolve relative dates ("tomorrow", "next Tuesday") against the current date below. If only a start time is given, default end time to 30 minutes later. Never invent participant emails; only include people the user named or emailed. Prefer endTime over durationMinutes when both can be inferred.
 - Knowledge Context is for product how-to only. Do not use Analytics, Reports, or Audit sources as a substitute for listing tasks.
 - Never invent permissions or claim an action succeeded unless a tool returned success.
 - After a tool returns data, summarize the rows clearly (titles, status, due dates). Never reply with only "Done."
@@ -394,7 +395,10 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 				preview,
 			});
 			return {
-				answer: `I prepared **${label}**. Review the details and tap **Confirm** to run it, or ask me to change something first.`,
+				answer:
+					tool.name === "create_calendar_event"
+						? `I prepared **${label}**. Review the meeting card and tap **Confirm** to schedule it, or ask me to change something first.`
+						: `I prepared **${label}**. Review the details and tap **Confirm** to run it, or ask me to change something first.`,
 				sources: [],
 				suggestions: [
 					{
@@ -411,6 +415,7 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 					label,
 					preview,
 					toolName: tool.name,
+					args,
 				},
 			};
 		}

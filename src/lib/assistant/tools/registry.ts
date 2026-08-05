@@ -395,7 +395,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	{
 		name: "create_calendar_event",
 		description:
-			"Schedule a calendar event or meeting (requires user confirmation). Resolve relative dates like 'tomorrow' or 'next Tuesday' against the current date provided in the system prompt. Default to a 30 minute duration when the user does not specify one. If the date or time is missing or ambiguous, ask the user instead of guessing.",
+			"Schedule a calendar event or meeting (requires user confirmation). Before calling, ask for any of these the user has not already stated: title, date, start time, end time (or duration), and type. Meeting agenda (description) and participants are optional. Resolve relative dates like 'tomorrow' or 'next Tuesday' against the current date in the system prompt. Prefer an explicit endTime; otherwise default to 30 minutes after start. Never invent participant emails; only include people the user named or emailed. If date or times are missing or ambiguous, ask instead of guessing. When participants are included, each invitee is notified after the meeting is created.",
 		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
 		mutating: true,
 		parameters: {
@@ -410,20 +410,32 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 					type: "string",
 					description: "HH:mm in 24-hour time, e.g. 14:30",
 				},
+				endTime: {
+					type: "string",
+					description:
+						"HH:mm end time in 24-hour format. Prefer this when the user gave an end time.",
+				},
 				durationMinutes: {
 					type: "number",
-					description: "Meeting length in minutes. Default 30.",
+					description:
+						"Meeting length in minutes when endTime is not provided. Default 30.",
+				},
+				description: {
+					type: "string",
+					description: "Optional meeting agenda or notes",
 				},
 				participants: {
 					type: "string",
 					description:
-						"Optional. Comma-separated 'Name <email>' entries. Only include emails the user explicitly gave.",
+						"Optional. Comma-separated 'Name <email>' entries. Only include people the user explicitly named or emailed. Invitees are notified after confirm.",
+				},
+				type: {
+					type: "string",
+					enum: ["meeting", "review", "audit", "deadline", "contract"],
+					description:
+						"Event type. Ask the user if unclear; default to meeting.",
 				},
 				location: { type: "string", description: "Optional location" },
-				description: {
-					type: "string",
-					description: "Optional agenda or notes",
-				},
 			},
 			required: ["title", "date", "startTime"],
 		},
@@ -435,10 +447,6 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 			const title = String(args.title ?? "").trim();
 			if (!title) return { result: { error: "A meeting title is required." } };
 
-			const duration = Math.min(
-				Math.max(Number(args.durationMinutes) || 30, 5),
-				8 * 60,
-			);
 			const start = dateFromDateAndTime(
 				String(args.date ?? ""),
 				String(args.startTime ?? ""),
@@ -451,7 +459,25 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 					},
 				};
 			}
-			const end = new Date(start.getTime() + duration * 60000);
+
+			let end: Date | null = null;
+			if (args.endTime) {
+				end = dateFromDateAndTime(
+					String(args.date ?? ""),
+					String(args.endTime),
+				);
+				if (end && end.getTime() <= start.getTime()) {
+					// End before start: treat as next day
+					end = new Date(end.getTime() + 24 * 60 * 60000);
+				}
+			}
+			if (!end) {
+				const duration = Math.min(
+					Math.max(Number(args.durationMinutes) || 30, 5),
+					8 * 60,
+				);
+				end = new Date(start.getTime() + duration * 60000);
+			}
 
 			if (start.getTime() < Date.now()) {
 				return {
@@ -461,11 +487,28 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				};
 			}
 
+			const allowedTypes = [
+				"meeting",
+				"review",
+				"audit",
+				"deadline",
+				"contract",
+			] as const;
+			type CalendarEventType = (typeof allowedTypes)[number];
+			const rawType = String(args.type ?? "meeting")
+				.trim()
+				.toLowerCase();
+			const eventType: CalendarEventType = (
+				allowedTypes as readonly string[]
+			).includes(rawType)
+				? (rawType as CalendarEventType)
+				: "meeting";
+
 			const eventPayload: CreateCalendarEventData = {
 				title,
 				startDate: formatLocalDate(start),
 				endDate: formatLocalDate(end),
-				type: "meeting",
+				type: eventType,
 				description: args.description ? String(args.description) : "",
 				startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
 				endTime: `${pad(end.getHours())}:${pad(end.getMinutes())}`,
@@ -530,6 +573,36 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				ctx.user.name ||
 				ctx.user.email ||
 				"User";
+
+			let invitedCount = 0;
+			if (eventPayload.participants?.trim() && event.$id) {
+				try {
+					const { notifyMeetingInvitees } = await import(
+						"@/lib/services/calendar-notifications.service"
+					);
+					invitedCount = await notifyMeetingInvitees(
+						eventPayload.participants,
+						{
+							eventId: event.$id,
+							title,
+							date: eventData.startDate,
+							startTime: eventData.startTime,
+							endTime: eventData.endTime,
+							description: eventData.description,
+							location: eventData.location,
+							organizerName: userName,
+							organizerEmail: ctx.user.email || undefined,
+						},
+						permissionCheck.userId || ctx.user.$id,
+					);
+				} catch (inviteError) {
+					console.error(
+						"[create_calendar_event] Failed to notify invitees:",
+						inviteError,
+					);
+				}
+			}
+
 			await logAuditEvent({
 				event_id: `assistant_event_${event.$id}`,
 				event_title: `Assistant scheduled event: ${title}`,
@@ -545,7 +618,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				target_id: event.$id ?? "",
 				target_label: title,
 				summary: `CAALM assistant scheduled "${title}" on ${eventData.startDate} at ${eventData.startTime}`,
-				metadata: { source: "ai_assistant" },
+				metadata: { source: "ai_assistant", invitedCount },
 			}).catch(() => undefined);
 
 			return {
@@ -556,6 +629,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 					startTime: eventData.startTime,
 					endTime: eventData.endTime,
 					conflicts,
+					invitedCount,
 					calendarHref: "/calendar",
 				},
 			};

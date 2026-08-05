@@ -24,7 +24,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 		}
 	}, [user, loading, router]);
 
-	// Memoize sidebar props - always return an object to ensure consistent rendering
+	// Memoize sidebar props - always return an object to ensure consistent rendering - always return an object to ensure consistent rendering
 	const sidebarProps = useMemo(() => {
 		if (!user) {
 			return {
@@ -85,10 +85,11 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 		user,
 	]);
 
-	// Always render the same structure, but conditionally show content
+	// Only block with a full-screen spinner when we have no user yet.
+	// Cached/hydrated users paint the shell immediately while session revalidates.
 	return (
 		<>
-			{loading ? (
+			{loading && !user ? (
 				<LoadingSpinner fullScreen label="Loading..." />
 			) : !user ? (
 				<div className="flex h-screen items-center justify-center">

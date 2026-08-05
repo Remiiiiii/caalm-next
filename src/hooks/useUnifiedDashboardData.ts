@@ -14,6 +14,7 @@ interface DashboardData {
 	invitations: unknown[];
 	authUsers: unknown[];
 	uninvitedUsers: unknown[];
+	contracts: unknown[];
 	reports: unknown[];
 	departments: unknown[];
 	reportTemplates: unknown[];
@@ -43,10 +44,14 @@ const fetcher = async (url: string): Promise<UnifiedDashboardDataResponse> => {
 	return data;
 };
 
-export const useUnifiedDashboardData = (orgId: string) => {
+export const useUnifiedDashboardData = (
+	orgId: string,
+	serverUserId?: string | null,
+) => {
 	const { user } = useAuth();
-	const url = user?.$id
-		? `/api/dashboard/unified?orgId=${orgId}&userId=${user.$id}`
+	const effectiveUserId = serverUserId || user?.$id;
+	const url = effectiveUserId
+		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}`
 		: null;
 
 	// Get cached data as fallback for stale-while-revalidate
@@ -92,6 +97,7 @@ export const useUnifiedDashboardData = (orgId: string) => {
 		invitations: data?.data?.invitations || [],
 		authUsers: data?.data?.authUsers || [],
 		uninvitedUsers: data?.data?.uninvitedUsers || [],
+		contracts: data?.data?.contracts || [],
 		reports: data?.data?.reports || [],
 		departments: data?.data?.departments || [],
 		reportTemplates: data?.data?.reportTemplates || [],
@@ -103,6 +109,9 @@ export const useUnifiedDashboardData = (orgId: string) => {
 		// Loading states
 		isLoading,
 		error,
+
+		/** Server/cache timestamp from the last successful unified fetch */
+		lastUpdatedAt: data?.timestamp ?? null,
 
 		// Actions
 		refresh: mutate,

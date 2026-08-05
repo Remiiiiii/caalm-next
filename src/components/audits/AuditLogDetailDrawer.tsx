@@ -1,14 +1,21 @@
 "use client";
 
 import { format } from "date-fns";
-import { AlertTriangle, CheckCircle, Clock, X, XCircle } from "lucide-react";
+import {
+	AlertTriangle,
+	AlignLeft,
+	FileText,
+	Info,
+	ListTree,
+	X,
+} from "lucide-react";
+import type { ReactNode } from "react";
 import type { AuditLog } from "@/components/audits/AuditLogTable";
 import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
 import {
 	previewSectionClass,
 	previewSectionHeaderClass,
 } from "@/components/preview/previewSheetParts";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -18,29 +25,135 @@ interface AuditLogDetailDrawerProps {
 	onOpenChange: (open: boolean) => void;
 }
 
-function StatusBadge({ status }: { status: string }) {
-	if (status === "success") {
-		return (
-			<Badge className="bg-green/10 text-green border-green/20">
-				<CheckCircle className="w-3 h-3 mr-1" />
-				Success
-			</Badge>
-		);
+const META_LABELS: Record<string, string> = {
+	source: "Source",
+	invitedCount: "Invitees notified",
+	eventId: "Event ID",
+	orgId: "Organization",
+};
+
+function formatMetaLabel(key: string): string {
+	if (META_LABELS[key]) return META_LABELS[key];
+	return key
+		.replace(/_/g, " ")
+		.replace(/([a-z])([A-Z])/g, "$1 $2")
+		.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatMetaText(value: unknown): string {
+	if (value == null || value === "") return "—";
+	if (typeof value === "boolean") return value ? "Yes" : "No";
+	if (typeof value === "string") {
+		if (value === "ai_assistant") return "AI assistant";
+		return value.replace(/_/g, " ");
 	}
-	if (status === "failed") {
-		return (
-			<Badge className="bg-red/10 text-red border-red/20">
-				<XCircle className="w-3 h-3 mr-1" />
-				Failed
-			</Badge>
-		);
+	if (Array.isArray(value)) {
+		if (value.length === 0) return "—";
+		return value.map((item) => formatMetaText(item)).join(", ");
 	}
+	if (typeof value === "object") {
+		return Object.entries(value as Record<string, unknown>)
+			.map(([k, v]) => `${formatMetaLabel(k)}: ${formatMetaText(v)}`)
+			.join(" · ");
+	}
+	return String(value);
+}
+
+function formatTargetType(type?: string | null): string {
+	if (!type) return "";
+	return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function getTimezoneAbbreviation(date: Date): string {
+	const part = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
+		.formatToParts(date)
+		.find((p) => p.type === "timeZoneName")?.value;
+	return part || "UTC";
+}
+
+/** e.g. Logged Aug 4, 2026 · 11:54:55 UTC */
+function formatLoggedAt(iso?: string | null): string | null {
+	if (!iso) return null;
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) return null;
+	const datePart = format(date, "MMM d, yyyy");
+	const timePart = format(date, "HH:mm:ss");
+	const tz = getTimezoneAbbreviation(date);
+	return `Logged ${datePart} · ${timePart} ${tz}`;
+}
+
+/** Drop trailing schedule date/time from audit summaries for the header. */
+function formatEventDescription(
+	summary?: string | null,
+	fallback?: string | null,
+): string | null {
+	const raw = (summary || fallback || "").trim();
+	if (!raw) return null;
 	return (
-		<Badge className="bg-orange/10 text-orange border-orange/20">
-			<Clock className="w-3 h-3 mr-1" />
-			Pending
-		</Badge>
+		raw
+			// "on 2026-08-05 at 10:00" / "on Aug 5, 2026 at 10:00 AM"
+			.replace(
+				/\s+on\s+\d{4}-\d{2}-\d{2}\s+at\s+\d{1,2}:\d{2}(?::\d{2})?\s*(AM|PM)?/gi,
+				"",
+			)
+			.replace(
+				/\s+on\s+[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}\s+at\s+\d{1,2}:\d{2}(?::\d{2})?\s*(AM|PM)?/gi,
+				"",
+			)
+			// trailing "at 10:00" leftovers
+			.replace(/\s+at\s+\d{1,2}:\d{2}(?::\d{2})?\s*(AM|PM)?$/gi, "")
+			.trim() || null
 	);
+}
+
+/** Label left, value right — matches audit drawer info layout. */
+function InfoRow({
+	label,
+	children,
+	className,
+}: {
+	label: string;
+	children: ReactNode;
+	className?: string;
+}) {
+	return (
+		<div
+			className={cn("flex items-start justify-between gap-4 py-3", className)}
+		>
+			<p className="shrink-0 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+				{label}
+			</p>
+			<div className="min-w-0 max-w-[65%] text-right text-sm font-semibold text-slate-900">
+				{children}
+			</div>
+		</div>
+	);
+}
+
+function MetaRow({ label, children }: { label: string; children: ReactNode }) {
+	return (
+		<div className="flex items-center justify-between gap-4 py-2.5">
+			<p className="shrink-0 text-sm text-slate-500">{label}</p>
+			<div className="min-w-0 text-right text-sm font-semibold text-slate-900">
+				{children}
+			</div>
+		</div>
+	);
+}
+
+function CountBadge({ value }: { value: number }) {
+	return (
+		<span className="inline-flex min-w-6 items-center justify-center rounded-md bg-[#f3e8d2] px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-900">
+			{value}
+		</span>
+	);
+}
+
+function renderMetaValue(key: string, value: unknown): ReactNode {
+	if (key === "invitedCount" && typeof value === "number") {
+		return <CountBadge value={value} />;
+	}
+	return formatMetaText(value);
 }
 
 export function AuditLogDetailDrawer({
@@ -50,14 +163,39 @@ export function AuditLogDetailDrawer({
 }: AuditLogDetailDrawerProps) {
 	if (!log) return null;
 
+	const metadataEntries =
+		log.metadata && typeof log.metadata === "object"
+			? Object.entries(log.metadata)
+			: [];
+
+	const targetType = formatTargetType(log.target_type);
+	const loggedAt = formatLoggedAt(log.created_at);
+	const eventDescription = formatEventDescription(log.summary, log.event_title);
+
 	return (
 		<EntityPreviewSheetShell
 			open={open}
 			onOpenChange={onOpenChange}
-			maxWidth="lg"
-			title="Event details"
-			description={log.summary || log.event_title || "Audit event"}
-			icon={AlertTriangle}
+			maxWidth="md"
+			title="Event Record"
+			description={
+				<>
+					{eventDescription ? (
+						<span className="block text-slate-600">{eventDescription}</span>
+					) : null}
+					{loggedAt ? (
+						<span
+							className={cn(
+								"text-xs text-slate-600",
+								eventDescription ? "mt-1.5" : undefined,
+							)}
+						>
+							{loggedAt}
+						</span>
+					) : null}
+				</>
+			}
+			icon={Info}
 			footer={
 				<div className="flex w-full justify-end">
 					<Button
@@ -72,89 +210,127 @@ export function AuditLogDetailDrawer({
 			}
 		>
 			<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
-				<div className={previewSectionHeaderClass}>
-					<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-						Event summary
-					</h3>
-				</div>
-				<div className="grid grid-cols-1 gap-4 p-4 text-sm sm:grid-cols-2">
-					<div>
-						<p className="mb-1 text-xs text-slate-500">Timestamp</p>
-						<p className="text-slate-900">
-							{log.created_at
-								? format(new Date(log.created_at), "MMM d, yyyy HH:mm:ss")
-								: "—"}
-						</p>
-					</div>
-					<div>
-						<p className="mb-1 text-xs text-slate-500">Status</p>
-						<StatusBadge status={log.status} />
-					</div>
-					<div>
-						<p className="mb-1 text-xs text-slate-500">Action</p>
-						<p className="text-slate-900 capitalize">{log.action}</p>
-					</div>
-					<div>
-						<p className="mb-1 text-xs text-slate-500">Module</p>
-						<p className="text-slate-900 capitalize">{log.module || "—"}</p>
-					</div>
-					<div className="sm:col-span-2">
-						<p className="mb-1 text-xs text-slate-500">Actor</p>
-						<p className="font-medium text-slate-900">{log.user_name}</p>
-						<p className="text-xs text-slate-600">{log.user_email}</p>
-					</div>
-					<div>
-						<p className="mb-1 text-xs text-slate-500">Target</p>
-						<p className="text-slate-900">
-							{log.target_label || log.event_title}
-						</p>
-						{log.target_type ? (
-							<p className="text-xs text-slate-600">{log.target_type}</p>
-						) : null}
-					</div>
-					<div>
-						<p className="mb-1 text-xs text-slate-500">Source</p>
-						<p className="uppercase text-slate-900">{log.source}</p>
-					</div>
-					<div>
-						<p className="mb-1 text-xs text-slate-500">IP address</p>
-						<p className="text-slate-900">{log.ip_address || "N/A"}</p>
-					</div>
-					<div>
-						<p className="mb-1 text-xs text-slate-500">Event ID</p>
-						<p className="break-all text-xs text-slate-900">{log.event_id}</p>
-					</div>
+				<div className="divide-y divide-slate-200/70 px-4">
+					<InfoRow label="Actor">
+						<div>
+							<p className="font-bold text-slate-700">{log.user_name || "—"}</p>
+							{log.user_email ? (
+								<p className="mt-0.5 text-xs font-normal text-slate-500">
+									{log.user_email}
+								</p>
+							) : null}
+						</div>
+					</InfoRow>
+					<InfoRow label="Target">
+						<div>
+							<p className="font-bold text-slate-700">
+								{log.target_label || log.event_title || "—"}
+							</p>
+							{targetType ? (
+								<p className="mt-0.5 text-xs font-normal text-slate-500">
+									{targetType}
+								</p>
+							) : null}
+						</div>
+					</InfoRow>
+					<InfoRow label="Source">
+						<span className="uppercase tracking-wide font-bold text-slate-700">
+							{log.source || "—"}
+						</span>
+					</InfoRow>
+					<InfoRow label="IP address">
+						{log.ip_address ? (
+							<span className="font-mono text-xs font-medium text-slate-900">
+								{log.ip_address}
+							</span>
+						) : (
+							<span className="font-mono text-xs font-normal text-slate-400">
+								Not recorded
+							</span>
+						)}
+					</InfoRow>
+					<InfoRow label="Event ID">
+						<span className="break-all font-mono text-xs font-medium leading-snug text-slate-900">
+							{log.event_id || "—"}
+						</span>
+					</InfoRow>
 				</div>
 			</section>
 
+			{metadataEntries.length > 0 ? (
+				<section
+					className={cn(
+						previewSectionClass,
+						"overflow-hidden border-slate-200/60! bg-slate-50/80! p-0",
+					)}
+				>
+					<div className="border-b border-slate-200/70 px-4 py-2.5">
+						<div className="flex items-center gap-2">
+							<AlignLeft className="h-3.5 w-3.5 text-slate-400" />
+							<h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+								Metadata
+							</h3>
+						</div>
+					</div>
+					<div className="divide-y divide-slate-200/60 px-4">
+						{metadataEntries.map(([key, value]) => (
+							<MetaRow key={key} label={formatMetaLabel(key)}>
+								{renderMetaValue(key, value)}
+							</MetaRow>
+						))}
+					</div>
+				</section>
+			) : null}
+
 			{log.reason ? (
-				<section className={cn(previewSectionClass, "p-4")}>
-					<p className="mb-1 text-xs text-slate-500">Reason</p>
-					<p className="text-sm text-slate-900">{log.reason}</p>
+				<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
+					<div className={previewSectionHeaderClass}>
+						<div className="flex items-center gap-2">
+							<FileText className="h-3.5 w-3.5 text-[#0f5384]" />
+							<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+								Reason
+							</h3>
+						</div>
+					</div>
+					<div className="px-4 py-3">
+						<p className="text-sm text-slate-900">{log.reason}</p>
+					</div>
 				</section>
 			) : null}
 
 			{log.error_message ? (
-				<div className="rounded-lg border border-red/20 bg-red/10 p-3">
-					<p className="mb-1 text-xs font-medium text-red">Error</p>
-					<p className="text-sm text-red">{log.error_message}</p>
-				</div>
+				<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
+					<div className={previewSectionHeaderClass}>
+						<div className="flex items-center gap-2">
+							<AlertTriangle className="h-3.5 w-3.5 text-red" />
+							<h3 className="text-xs font-semibold uppercase tracking-wide text-red">
+								Error
+							</h3>
+						</div>
+					</div>
+					<div className="px-4 py-3">
+						<p className="text-sm text-red">{log.error_message}</p>
+					</div>
+				</section>
 			) : null}
 
 			{log.changes && log.changes.length > 0 ? (
 				<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
 					<div className={previewSectionHeaderClass}>
-						<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-							Field changes
-						</h3>
+						<div className="flex items-center gap-2">
+							<ListTree className="h-3.5 w-3.5 text-[#0f5384]" />
+							<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+								Field changes
+							</h3>
+						</div>
 					</div>
 					<div className="overflow-hidden">
 						<table className="w-full text-sm">
 							<thead className="bg-white/50 text-left text-xs text-slate-600">
 								<tr>
-									<th className="px-3 py-2">Field</th>
-									<th className="px-3 py-2">Before</th>
-									<th className="px-3 py-2">After</th>
+									<th className="px-4 py-2.5 font-semibold">Field</th>
+									<th className="px-4 py-2.5 font-semibold">Before</th>
+									<th className="px-4 py-2.5 font-semibold">After</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -163,11 +339,13 @@ export function AuditLogDetailDrawer({
 										key={`${change.field}-${String(change.before)}-${String(change.after)}`}
 										className="border-t border-white/45"
 									>
-										<td className="px-3 py-2 text-slate-900">{change.field}</td>
-										<td className="px-3 py-2 text-slate-600">
+										<td className="px-4 py-2.5 text-slate-900">
+											{change.field}
+										</td>
+										<td className="px-4 py-2.5 text-slate-600">
 											{change.before == null ? "—" : String(change.before)}
 										</td>
-										<td className="px-3 py-2 text-slate-900">
+										<td className="px-4 py-2.5 text-slate-900">
 											{change.after == null ? "—" : String(change.after)}
 										</td>
 									</tr>
@@ -178,21 +356,19 @@ export function AuditLogDetailDrawer({
 				</section>
 			) : null}
 
-			{log.metadata ? (
-				<section className={cn(previewSectionClass, "p-4")}>
-					<p className="mb-2 text-sm font-medium sidebar-gradient-text">
-						Metadata
-					</p>
-					<pre className="overflow-x-auto rounded-lg border border-white/50 bg-white/70 p-3 text-xs text-slate-700">
-						{JSON.stringify(log.metadata, null, 2)}
-					</pre>
-				</section>
-			) : null}
-
 			{log.user_agent ? (
-				<section className={cn(previewSectionClass, "p-4")}>
-					<p className="mb-1 text-xs text-slate-500">User agent</p>
-					<p className="break-all text-xs text-slate-600">{log.user_agent}</p>
+				<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
+					<div className={previewSectionHeaderClass}>
+						<div className="flex items-center gap-2">
+							<FileText className="h-3.5 w-3.5 text-[#0f5384]" />
+							<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+								User agent
+							</h3>
+						</div>
+					</div>
+					<div className="px-4 py-3">
+						<p className="break-all text-xs text-slate-600">{log.user_agent}</p>
+					</div>
 				</section>
 			) : null}
 		</EntityPreviewSheetShell>

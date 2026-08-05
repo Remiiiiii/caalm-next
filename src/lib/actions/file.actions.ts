@@ -15,6 +15,7 @@ import {
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 import { constructFileUrl, getFileType, parseStringify } from "@/lib/utils";
 import {
 	triggerContractExpiryNotification,
@@ -2749,6 +2750,64 @@ export const contractStatus = async ({
 				tableId: appwriteConfig.contractsCollectionId!,
 				rowId: fileId,
 			});
+
+			// Audit trail for risk-impact attribution (status / compliance transitions)
+			try {
+				const actor = await getCurrentUser();
+				const contractLabel =
+					updated.contractName || updated.name || "Contract";
+				const previousCompliance = String(contract?.compliance || "");
+				const nextCompliance = String(updated.compliance || previousCompliance);
+				const changes: Array<{
+					field: string;
+					before?: string;
+					after?: string;
+				}> = [];
+				if (previousStatus !== nextStatus) {
+					changes.push({
+						field: "status",
+						before: previousStatus || undefined,
+						after: nextStatus || undefined,
+					});
+				}
+				if (
+					previousCompliance &&
+					nextCompliance &&
+					previousCompliance.toLowerCase() !== nextCompliance.toLowerCase()
+				) {
+					changes.push({
+						field: "compliance",
+						before: previousCompliance,
+						after: nextCompliance,
+					});
+				}
+				await logAuditEvent({
+					event_id: `contract_status_${fileId}_${Date.now()}`,
+					event_title: `Contract status updated: ${contractLabel}`,
+					action: "update",
+					source: "caalm",
+					user_id: actor?.$id || "system",
+					user_name:
+						(actor as { fullName?: string } | null)?.fullName ||
+						actor?.email ||
+						"system",
+					user_email: actor?.email || "",
+					orgId:
+						(updated as { orgId?: string }).orgId ||
+						(actor?.$id
+							? (await getUserDefaultOrganization(actor.$id))?.orgId
+							: undefined),
+					status: "success",
+					module: "contracts",
+					target_type: "contract",
+					target_id: fileId,
+					target_label: contractLabel,
+					summary: `${(actor as { fullName?: string } | null)?.fullName || actor?.email || "User"} updated ${contractLabel} status from ${previousStatus || "unknown"} to ${nextStatus}`,
+					changes,
+				});
+			} catch (auditError) {
+				console.error("Failed to log contract status audit event:", auditError);
+			}
 
 			// Create a recent activity for the contract status change
 			try {

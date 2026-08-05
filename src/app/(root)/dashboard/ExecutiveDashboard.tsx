@@ -5,27 +5,31 @@ import {
 	Ban,
 	CheckCircle,
 	FileText,
+	Pencil,
 	RefreshCw,
+	Send,
 	Trash2,
 	Users,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { type Models, Query } from "node-appwrite";
+import type { Models } from "node-appwrite";
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import { useEffect, useState } from "react";
-import CalendarView from "@/components/CalendarView";
+import { useMemo, useState } from "react";
+import useSWR from "swr";
 import ClientTimestamp from "@/components/ClientTimestamp";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
 import ContractExpiryNotifier from "@/components/ContractExpiryNotifier";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import ContractExpiryModal from "@/components/contract-expiry-modal/ContractExpiryModal";
+import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
 import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
+import ProfilePicture from "@/components/ProfilePicture";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
 import Thumbnail from "@/components/Thumbnail";
@@ -53,22 +57,44 @@ import {
 } from "@/components/ui/skeletons";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import WeatherWidget from "@/components/WeatherWidget";
+import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { useContractExpiryModal } from "@/hooks/useContractExpiryModal";
-import { useContractsExpiring } from "@/hooks/useContractsExpiring";
 import { useDashboardLicenses } from "@/hooks/useDashboardLicenses";
+import { useRiskImpactDashboard } from "@/hooks/useRiskImpactDashboard";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
-import { tablesDB } from "@/lib/appwrite/client";
-import { appwriteConfig } from "@/lib/appwrite/config";
+import type { ContractStatus } from "@/constants/status";
+import type { UIFileDoc } from "@/types/files";
+import { cn } from "@/lib/utils";
 
 type NotifierContract = { id: string; name: string; expiryDate: string };
+
+interface UninvitedUser {
+	$id: string;
+	email: string;
+	fullName: string;
+	$createdAt: string;
+}
 
 const ClientDate = dynamic(() => import("@/components/ClientDate"), {
 	ssr: false,
 });
 
-import type { ContractStatus } from "@/constants/status";
+const CalendarView = dynamic(() => import("@/components/CalendarView"), {
+	ssr: false,
+	loading: () => (
+		<div className="flex min-h-[280px] items-center justify-center">
+			<span className="text-sm text-slate-500">Loading calendar…</span>
+		</div>
+	),
+});
+
+const uninvitedFetcher = async (url: string) => {
+	const res = await fetch(url);
+	if (!res.ok) throw new Error("Failed to fetch uninvited users");
+	return res.json() as Promise<{ data?: UninvitedUser[]; success?: boolean }>;
+};
 
 // Add Invitation type
 interface Invitation {
@@ -80,14 +106,6 @@ interface Invitation {
 	expiresAt: string;
 	status: ContractStatus;
 	revoked: boolean;
-	$createdAt: string;
-}
-
-// Add UninvitedUser type
-interface UninvitedUser {
-	$id: string;
-	email: string;
-	fullName: string;
 	$createdAt: string;
 }
 
@@ -142,29 +160,55 @@ const getInvitationStatusBadgeClasses = (status: string): string => {
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const { toast } = useToast();
 	const { orgId } = useOrganization();
+	const { user: authUser } = useAuth();
 	const adminName = "Executive"; // Replace with actual admin name
+	const profileUser = authUser ?? user ?? null;
+	const displayName =
+		(profileUser as { fullName?: string } | null)?.fullName ||
+		(profileUser as { name?: string } | null)?.name ||
+		"";
+	const divisionBadge = (user?.division || "unknown")
+		.replace(/-/g, " ")
+		.toUpperCase();
 
-	// Use unified dashboard data hook
+	// Use unified dashboard data hook (server userId starts fetch without waiting on AuthContext)
 	const {
 		stats: dashboardStats,
 		files,
 		invitations,
-		uninvitedUsers,
+		contracts: unifiedContracts,
 		isLoading: unifiedLoading,
+		lastUpdatedAt,
 		refresh: refreshUnified,
-	} = useUnifiedDashboardData(orgId || "default_organization");
+	} = useUnifiedDashboardData(
+		orgId || "default_organization",
+		user?.$id ?? user?.accountId ?? null,
+	);
 
-	// Fetch contracts from /api/contracts/all endpoint (shared by contract widgets)
 	const {
-		contracts: contractsFromApi,
-		isLoading: contractsLoading,
-		refresh: refreshContracts,
-	} = useContractsExpiring();
+		snapshot: riskImpact,
+		isLoading: riskImpactLoading,
+		error: riskImpactError,
+		refresh: refreshRiskImpact,
+	} = useRiskImpactDashboard();
+
+	const contractsFromApi = (unifiedContracts || []) as UIFileDoc[];
+
+	// Uninvited users: after unified settles so it does not compete on cold load
+	const { data: uninvitedRes, mutate: refreshUninvited } = useSWR(
+		!unifiedLoading && user?.$id ? "/api/users/uninvited" : null,
+		uninvitedFetcher,
+		{
+			revalidateOnFocus: false,
+			dedupingInterval: 120000,
+		},
+	);
+	const uninvitedUsers = uninvitedRes?.data ?? [];
 
 	// Single licenses fetch shared by license widgets
 	const { licenses: dashboardLicenses } = useDashboardLicenses();
 
-	// Contract expiry modal hook - uses contracts from /api/contracts/all
+	// Contract expiry modal hook - uses contracts from unified dashboard payload
 	const {
 		contractsToShow,
 		contractsWithDays,
@@ -174,10 +218,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		shouldPlaySpeech,
 	} = useContractExpiryModal(contractsFromApi || []);
 
-	// Handle contract status change - refresh both unified data and contracts
+	// Handle contract status change - refresh unified data (includes contracts)
 	const handleContractStatusChange = () => {
 		refreshUnified();
-		refreshContracts();
 	};
 
 	// Invitation management functions
@@ -195,8 +238,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 			const responseData = await response.json();
 
-			// Refresh unified data
+			// Refresh unified data + uninvited list
 			refreshUnified();
+			refreshUninvited();
 
 			return responseData.data;
 		} catch (error) {
@@ -321,60 +365,21 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 	// SWR handles all data fetching automatically - no manual fetch needed
 
-	// Contracts for expiry notifier
-	const [expiryContracts, setExpiryContracts] = useState<NotifierContract[]>(
-		[],
-	);
-	useEffect(() => {
-		let cancelled = false;
-		const load = async () => {
-			try {
-				const res = await tablesDB.listRows(
-					appwriteConfig.databaseId,
-					appwriteConfig.contractsCollectionId,
-					[
-						Query.isNotNull("contractExpiryDate"),
-						Query.orderAsc("contractExpiryDate"),
-						Query.limit(100),
-					],
-				);
-				if (!cancelled) {
-					const items: NotifierContract[] = (res.rows || []).map(
-						(raw: Record<string, unknown>) => {
-							const id =
-								typeof raw.$id === "string" ? raw.$id : String(raw.$id ?? "");
-							const nm =
-								typeof raw.contractName === "string"
-									? raw.contractName
-									: typeof raw.name === "string"
-										? raw.name
-										: "Contract";
-							const exp =
-								typeof raw.contractExpiryDate === "string"
-									? raw.contractExpiryDate
-									: String(raw.contractExpiryDate ?? "");
-							return { id, name: nm, expiryDate: exp };
-						},
-					);
-					setExpiryContracts(items);
-				}
-			} catch {
-				// silent
-			}
-		};
-		load();
-		// re-check at midnight to keep notifier accurate without reloads
-		const timer = setInterval(load, 12 * 60 * 60 * 1000);
-		return () => {
-			cancelled = true;
-			clearInterval(timer);
-		};
-	}, []);
+	// Contracts for expiry notifier — reuse /api/contracts/all (no duplicate Appwrite client fetch)
+	const expiryContracts = useMemo<NotifierContract[]>(() => {
+		return (contractsFromApi || [])
+			.filter((c) => Boolean(c.contractExpiryDate))
+			.map((c) => ({
+				id: c.$id,
+				name: c.contractName || c.name || "Contract",
+				expiryDate: String(c.contractExpiryDate),
+			}));
+	}, [contractsFromApi]);
 
 	const handleRefreshUsers = async () => {
 		setRefreshLoading(true);
 		try {
-			await refreshUnified();
+			await Promise.all([refreshUnified(), refreshUninvited()]);
 			toast({
 				title: "Success",
 				description: "User list refreshed successfully",
@@ -635,11 +640,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const hours = new Date().getHours();
 	let greeting = "";
 	if (hours < 12) {
-		greeting = "Good Morning";
+		greeting = "Good morning";
 	} else if (hours < 18) {
-		greeting = "Good Afternoon";
+		greeting = "Good afternoon";
 	} else {
-		greeting = "Good Evening";
+		greeting = "Good evening";
 	}
 
 	// const getDepartmentDisplay = (department: string) => {
@@ -689,34 +694,81 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 			</video>
 			{/* Main Content Container */}
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-				{/* Dashboard Header */}
-				<div className="flex items-center mb-4 gap-2">
-					<div className="h2 font-bold sidebar-gradient-text">
-						<h2>{greeting}</h2>
+				{/* Dashboard greeting — not wrapped in a card */}
+				<div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+					<div className="flex min-w-0 items-center gap-3">
+						{profileUser ? (
+							<ProfilePicture
+								user={profileUser as Models.User<Models.Preferences>}
+								size="lg"
+								editable={false}
+								className="shrink-0"
+							/>
+						) : (
+							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0f5384] text-sm font-semibold text-white">
+								?
+							</div>
+						)}
+						<div className="min-w-0">
+							<p className="text-xs text-slate-500">{greeting}</p>
+							<div className="mt-0.5 flex flex-wrap items-center gap-2">
+								<h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+									{displayName}
+								</h1>
+								<span
+									className={cn(
+										"inline-flex items-center rounded-md border px-2 py-0.5",
+										"text-[10px] font-semibold tracking-wide",
+										"border-green/20 bg-green/10 text-green",
+									)}
+								>
+									{divisionBadge}
+								</span>
+							</div>
+						</div>
 					</div>
-					<h1 className="text-xl font-bold text-slate-700">
-						{user?.fullName || ""}{" "}
-						<span className="text-xl text-slate-light">
-							{`| ${user?.division || "Unknown Division"}`}
-						</span>
-					</h1>
-					<div className="text-xs text-slate-500 ml-auto flex items-center gap-3">
-						<span>
-							Last updated: <ClientTimestamp />
-						</span>
-						{/* Test button for contract expiry modal - development only */}
+
+					<div className="ml-auto flex items-center gap-4">
+						<div className="text-right">
+							<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+								Last updated
+							</p>
+							<p className="text-xs text-slate-600">
+								<ClientTimestamp updatedAt={lastUpdatedAt} />
+							</p>
+						</div>
+
 						{process.env.NODE_ENV === "development" && (
-							<Button
-								onClick={triggerTestModal}
-								variant="outline"
-								size="sm"
-								className="bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300 text-xs"
-							>
-								🧪 Test Expiry Modal
-							</Button>
+							<>
+								<div
+									aria-hidden
+									className="hidden h-8 w-px bg-slate-300 sm:block"
+								/>
+								<Button
+									onClick={triggerTestModal}
+									variant="outline"
+									size="sm"
+									className={cn(
+										"h-9 gap-2 border border-dashed border-orange/40 bg-orange/10",
+										"px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50",
+									)}
+								>
+									<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
+										Dev
+									</span>
+									<Pencil className="h-3.5 w-3.5" />
+									Test expiry modal
+								</Button>
+							</>
 						)}
 					</div>
 				</div>
+				<RiskImpactHeroCard
+					snapshot={riskImpact}
+					isLoading={riskImpactLoading}
+					error={riskImpactError}
+					onRetry={() => refreshRiskImpact()}
+				/>
 				<Card className="glass-card mb-6 overflow-visible">
 					<div className="glass-card-cap" />
 					<CardContent className="relative p-3 sm:p-4 lg:p-6">
@@ -945,141 +997,208 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 						</div>
 
 						{/* Invitation Management Section */}
-						<Card className="glass-card">
+						<Card className="glass-card overflow-hidden">
 							<div className="glass-card-cap" />
-							<CardHeader>
-								<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-									Send Invite Link to New CAALM User
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<form
-									className="flex flex-col gap-4"
-									onSubmit={handleInviteSubmit}
-								>
-									{/* User Selection Section */}
-									<div className="flex flex-row gap-2 items-center justify-between">
-										<SelectScrollable
-											value={inviteForm.selectedUserId}
-											onValueChange={(value) =>
-												setInviteForm({ ...inviteForm, selectedUserId: value })
-											}
-											placeholder="Select a user"
-											className="glass-card text-slate-700 w-full"
-										>
-											{(uninvitedUsers as UninvitedUser[]).map(
-												(user: UninvitedUser) => (
-													<SelectItem key={user.$id} value={user.$id}>
-														<div className="flex items-center gap-3">
-															<Avatar
-																name={user.fullName}
-																userId={user.$id}
-																size="sm"
-															/>
-															<span>
-																{user.fullName} ({user.email})
-															</span>
-														</div>
-													</SelectItem>
-												),
-											)}
-										</SelectScrollable>
+							{/* Header */}
+							<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
+								<p className="mb-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#0f5384]">
+									User management
+								</p>
+								<h2 className="text-xl font-semibold tracking-tight text-slate-700">
+									Send invite link
+								</h2>
+								<p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-600">
+									Grant a new person access to CAALM by selecting their identity
+									and access level below.
+								</p>
+							</div>
 
-										{/* Refresh button positioned to the right of Select a user dropdown */}
-										<Button
-											type="button"
-											onClick={handleRefreshUsers}
-											disabled={refreshLoading}
-											className="glass-card text-slate-700 hover:opacity-80"
-										>
-											<RefreshCw
-												className={`h-4 w-4 mr-2 ${
-													refreshLoading ? "animate-spin" : ""
-												}`}
-											/>
-											{refreshLoading ? "Refreshing..." : "Refresh User List"}
-										</Button>
+							<form onSubmit={handleInviteSubmit}>
+								{/* Recipient */}
+								<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
+									<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
+										Recipient
+									</p>
+									<div>
+										<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+											Select a user
+											<span className="font-bold text-red" aria-hidden>
+												*
+											</span>
+										</label>
+										<div className="flex items-end gap-2.5">
+											<div className="min-w-0 flex-1">
+												<SelectScrollable
+													value={inviteForm.selectedUserId}
+													onValueChange={(value) =>
+														setInviteForm({
+															...inviteForm,
+															selectedUserId: value,
+														})
+													}
+													placeholder="Choose from directory…"
+													className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+												>
+													{(uninvitedUsers as UninvitedUser[]).map(
+														(inviteUser: UninvitedUser) => (
+															<SelectItem
+																key={inviteUser.$id}
+																value={inviteUser.$id}
+															>
+																<div className="flex items-center gap-3">
+																	<Avatar
+																		name={inviteUser.fullName}
+																		userId={inviteUser.$id}
+																		size="sm"
+																	/>
+																	<span>
+																		{inviteUser.fullName} ({inviteUser.email})
+																	</span>
+																</div>
+															</SelectItem>
+														),
+													)}
+												</SelectScrollable>
+											</div>
+											<Button
+												type="button"
+												variant="outline"
+												onClick={handleRefreshUsers}
+												disabled={refreshLoading}
+												aria-label="Refresh user list"
+												title="Refresh user list"
+												className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
+											>
+												<RefreshCw
+													className={cn(
+														"h-4 w-4",
+														refreshLoading && "animate-spin",
+													)}
+												/>
+											</Button>
+										</div>
+										<p className="mt-1.5 text-[11px] text-slate-500">
+											Pulled from your connected directory. Refresh if this
+											person was just added.
+										</p>
+										{(uninvitedUsers as UninvitedUser[]).length === 0 && (
+											<p className="mt-2 text-xs text-slate-500">
+												No users found in the Auth directory.
+											</p>
+										)}
 									</div>
+								</div>
 
-									{/* Role and Department Selection Section */}
-									<div className="responsive-filter-row">
-										<SelectScrollable
-											value={inviteForm.role}
-											onValueChange={(value) =>
-												setInviteForm({ ...inviteForm, role: value })
-											}
-											placeholder="Select role"
-											className="w-full sm:min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-										>
-											<SelectItem value="executive">Executive</SelectItem>
-											<SelectItem value="manager">Manager</SelectItem>
-											<SelectItem value="admin">Admin</SelectItem>
-										</SelectScrollable>
+								{/* Access & permissions */}
+								<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
+									<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
+										Access &amp; permissions
+									</p>
+									<div className="space-y-4">
+										<div>
+											<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+												Role
+												<span className="font-bold text-red" aria-hidden>
+													*
+												</span>
+											</label>
+											<SelectScrollable
+												value={inviteForm.role}
+												onValueChange={(value) =>
+													setInviteForm({ ...inviteForm, role: value })
+												}
+												placeholder="Select role…"
+												className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+											>
+												<SelectItem value="executive">Executive</SelectItem>
+												<SelectItem value="manager">Manager</SelectItem>
+												<SelectItem value="admin">Admin</SelectItem>
+											</SelectScrollable>
+										</div>
 
-										<SelectScrollable
-											value={inviteForm.department}
-											onValueChange={(value) =>
-												setInviteForm({ ...inviteForm, department: value })
-											}
-											placeholder="Select department"
-											className="w-full sm:min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-										>
-											<SelectItem value="IT">IT</SelectItem>
-											<SelectItem value="Finance">Finance</SelectItem>
-											<SelectItem value="Administration">
-												Administration
-											</SelectItem>
-											<SelectItem value="Legal">Legal</SelectItem>
-											<SelectItem value="Operations">Operations</SelectItem>
-											<SelectItem value="Sales">Sales</SelectItem>
-											<SelectItem value="Marketing">Marketing</SelectItem>
-											<SelectItem value="Executive">Executive</SelectItem>
-											<SelectItem value="Engineering">Engineering</SelectItem>
-										</SelectScrollable>
+										<div>
+											<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+												Department
+												<span className="font-mono text-[9px] font-medium uppercase tracking-wide text-slate-400">
+													Optional
+												</span>
+											</label>
+											<SelectScrollable
+												value={inviteForm.department}
+												onValueChange={(value) =>
+													setInviteForm({ ...inviteForm, department: value })
+												}
+												placeholder="Select department…"
+												className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+											>
+												<SelectItem value="IT">IT</SelectItem>
+												<SelectItem value="Finance">Finance</SelectItem>
+												<SelectItem value="Administration">
+													Administration
+												</SelectItem>
+												<SelectItem value="Legal">Legal</SelectItem>
+												<SelectItem value="Operations">Operations</SelectItem>
+												<SelectItem value="Sales">Sales</SelectItem>
+												<SelectItem value="Marketing">Marketing</SelectItem>
+												<SelectItem value="Executive">Executive</SelectItem>
+												<SelectItem value="Engineering">
+													Engineering
+												</SelectItem>
+											</SelectScrollable>
+										</div>
 
-										<SelectScrollable
-											value={inviteForm.division}
-											onValueChange={(value) =>
-												setInviteForm({ ...inviteForm, division: value })
-											}
-											placeholder="Select division"
-											className="w-full sm:min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-										>
-											<SelectItem value="behavioral-health">
-												Behavioral Health
-											</SelectItem>
-											<SelectItem value="child-welfare">
-												Child Welfare
-											</SelectItem>
-											<SelectItem value="clinic">Clinic</SelectItem>
-											<SelectItem value="c-suite">C-Suite</SelectItem>
-											<SelectItem value="cfs">CFS</SelectItem>
-											<SelectItem value="hr">Human Resources</SelectItem>
-											<SelectItem value="residential">Residential</SelectItem>
-											<SelectItem value="support">Support</SelectItem>
-											<SelectItem value="help-desk">Help Desk</SelectItem>
-											<SelectItem value="accounting">Accounting</SelectItem>
-											{/* <SelectItem value="management">Management</SelectItem> */}
-										</SelectScrollable>
+										<div>
+											<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+												Division
+												<span className="font-mono text-[9px] font-medium uppercase tracking-wide text-slate-400">
+													Optional
+												</span>
+											</label>
+											<SelectScrollable
+												value={inviteForm.division}
+												onValueChange={(value) =>
+													setInviteForm({ ...inviteForm, division: value })
+												}
+												placeholder="Select division…"
+												className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+											>
+												<SelectItem value="behavioral-health">
+													Behavioral Health
+												</SelectItem>
+												<SelectItem value="child-welfare">
+													Child Welfare
+												</SelectItem>
+												<SelectItem value="clinic">Clinic</SelectItem>
+												<SelectItem value="c-suite">C-Suite</SelectItem>
+												<SelectItem value="cfs">CFS</SelectItem>
+												<SelectItem value="hr">Human Resources</SelectItem>
+												<SelectItem value="residential">Residential</SelectItem>
+												<SelectItem value="support">Support</SelectItem>
+												<SelectItem value="help-desk">Help Desk</SelectItem>
+												<SelectItem value="accounting">Accounting</SelectItem>
+											</SelectScrollable>
+										</div>
 									</div>
+								</div>
 
+								{/* Footer */}
+								<div className="flex flex-col gap-3 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+									<p className="text-[11.5px] leading-relaxed text-slate-600">
+										The invite link expires in 7 days.
+									</p>
 									<Button
 										type="submit"
 										disabled={
 											loading ||
 											(uninvitedUsers as UninvitedUser[]).length === 0
 										}
-										className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+										className="primary-btn h-10 shrink-0 gap-2 px-5 text-[13px] font-semibold"
 									>
-										{loading ? "Inviting..." : "Send Invite"}
+										{loading ? "Sending…" : "Send invite"}
+										<Send className="h-3.5 w-3.5" />
 									</Button>
-								</form>
-								{(uninvitedUsers as UninvitedUser[]).length === 0 && (
-									<p className="text-sm text-gray-500 mt-2 text-center">
-										No users found in Auth database
-									</p>
-								)}
-							</CardContent>
+								</div>
+							</form>
 						</Card>
 
 						<Card className="glass-card">

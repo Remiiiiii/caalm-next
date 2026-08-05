@@ -214,7 +214,12 @@ export async function getUnauthorizedDashboardRedirect(
 	if (!defaultOrg) {
 		return "/sign-in";
 	}
-	if (await userMayAccessDashboardPath(userId, defaultOrg.orgId, pathname)) {
+	const mayAccess = await userMayAccessDashboardPath(
+		userId,
+		defaultOrg.orgId,
+		pathname,
+	);
+	if (mayAccess) {
 		return null;
 	}
 	return (

@@ -117,6 +117,54 @@ export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
 };
 
 /**
+ * True when the user is listed on an event's participants string.
+ * Supports bare emails/ids and "Name <email>" (assistant / picker format).
+ */
+export const isUserListedAsParticipant = (
+	participants: string | undefined | null,
+	userId: string,
+	userEmail?: string | null,
+	userAccountId?: string | null,
+): boolean => {
+	if (!participants?.trim()) return false;
+
+	const haystack = String(participants).toLowerCase();
+	const needles = [
+		userId?.trim().toLowerCase(),
+		userEmail?.trim().toLowerCase(),
+		userAccountId?.trim().toLowerCase(),
+	].filter((n): n is string => Boolean(n && n.length > 0));
+
+	if (needles.length === 0) return false;
+
+	const tokens = haystack
+		.split(",")
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
+
+	const angleEmails = [
+		...haystack.matchAll(/<([^>\s]+@[^>\s]+)>/g),
+	].map((m) => m[1].trim().toLowerCase());
+
+	const parenEmails = [
+		...haystack.matchAll(/\(([^)\s]+@[^)\s]+)\)/g),
+	].map((m) => m[1].trim().toLowerCase());
+
+	for (const needle of needles) {
+		if (tokens.includes(needle)) return true;
+		if (angleEmails.includes(needle) || parenEmails.includes(needle)) {
+			return true;
+		}
+		// Substring match for "Name <email>" / mixed id lists (same as calendar UI)
+		if (needle.includes("@") || needle.length >= 15) {
+			if (haystack.includes(needle)) return true;
+		}
+	}
+
+	return false;
+};
+
+/**
  * Filter event details based on permission level (mimics Outlook behavior)
  */
 const filterEventDetailsByPermission = (
@@ -394,23 +442,15 @@ export const getCalendarEventsByMonth = async (
 				// If not created by user, check if user is participant or has shared calendar access
 				if (!isCreatedByUser) {
 					// Check if user is a participant in this event (explicitly added as participant)
-					if (event.participants?.trim()) {
-						const participantsStr = String(event.participants).toLowerCase();
-						const participantsList = participantsStr
-							.split(",")
-							.map((p) => p.trim())
-							.filter((p) => p.length > 0);
-
-						// Check if user's ID, email, or accountId is in participants
-						const isParticipant =
-							participantsList.includes(userId.toLowerCase()) ||
-							(userEmail && participantsList.includes(userEmail)) ||
-							(userAccountId &&
-								participantsList.includes(userAccountId.toLowerCase()));
-
-						if (isParticipant) {
-							return true;
-						}
+					if (
+						isUserListedAsParticipant(
+							event.participants,
+							userId,
+							userEmail,
+							userAccountId,
+						)
+					) {
+						return true;
 					}
 
 					// Check if event was created by an owner of a shared calendar the user has access to

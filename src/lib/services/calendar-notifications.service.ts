@@ -626,3 +626,311 @@ export const sendCalendarSharedNotification = async (
 		// Don't throw - notification failures shouldn't break calendar sharing
 	}
 };
+
+export type MeetingInviteDetails = {
+	eventId: string;
+	title: string;
+	date: string;
+	startTime?: string;
+	endTime?: string;
+	description?: string;
+	location?: string;
+	organizerName: string;
+	organizerEmail?: string;
+};
+
+const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+
+/** Pull emails from "Name <email>", "Name (email)", or bare email chunks. */
+function parseParticipantEmails(participants: string): string[] {
+	return participants
+		.split(",")
+		.map((chunk) => chunk.trim())
+		.filter(Boolean)
+		.map((chunk) => {
+			const angle = chunk.match(/<([^>]+)>/);
+			if (angle?.[1] && EMAIL_RE.test(angle[1])) {
+				return angle[1].trim().toLowerCase();
+			}
+			const paren = chunk.match(/\(([^)]+)\)/);
+			if (paren?.[1] && EMAIL_RE.test(paren[1])) {
+				return paren[1].trim().toLowerCase();
+			}
+			const bare = chunk.match(EMAIL_RE);
+			return bare?.[0] ? bare[0].toLowerCase() : "";
+		})
+		.filter(Boolean);
+}
+
+/** Non-email tokens that may be user document ids or account ids. */
+function parseParticipantIds(participants: string): string[] {
+	return participants
+		.split(",")
+		.map((chunk) => chunk.trim())
+		.filter(Boolean)
+		.map((chunk) => {
+			if (EMAIL_RE.test(chunk) || chunk.includes("@") || chunk.includes(" ")) {
+				return "";
+			}
+			// Appwrite ids are typically 20+ alphanumeric chars
+			return /^[a-zA-Z0-9]{15,}$/.test(chunk) ? chunk : "";
+		})
+		.filter(Boolean);
+}
+
+async function resolveNotificationTypeKey(
+	preferred: string,
+	fallbacks: string[],
+): Promise<string | null> {
+	let typeExists = await notificationService.getNotificationType(preferred);
+	if (!typeExists) {
+		try {
+			const { initializeCalendarNotificationTypes } = await import(
+				"@/lib/actions/calendar-notification-types"
+			);
+			await initializeCalendarNotificationTypes();
+			typeExists = await notificationService.getNotificationType(preferred);
+		} catch {
+			// continue to fallbacks
+		}
+	}
+	if (typeExists) return preferred;
+	for (const key of fallbacks) {
+		const exists = await notificationService.getNotificationType(key);
+		if (exists) return key;
+	}
+	return null;
+}
+
+/**
+ * Notify a single invitee that they were added to a scheduled meeting.
+ * In-app/SMS require a CAALM user id; email is sent whenever an address is present.
+ */
+export const sendMeetingInviteNotification = async (
+	recipientUserId: string | undefined,
+	recipientEmail: string | undefined,
+	details: MeetingInviteDetails,
+): Promise<void> => {
+	try {
+		const baseUrl =
+			process.env.NEXT_PUBLIC_APP_URL || "https://www.caalmsolutions.com";
+		const calendarUrl = `${baseUrl}/calendar`;
+		const timeRange =
+			details.startTime && details.endTime
+				? `${details.startTime} – ${details.endTime}`
+				: details.startTime || "Time TBD";
+		const agenda = details.description?.trim();
+		const location = details.location?.trim();
+
+		const messageParts = [
+			`${details.organizerName} invited you to “${details.title}” on ${details.date} at ${timeRange}.`,
+		];
+		if (agenda) messageParts.push(`Agenda: ${agenda}`);
+		if (location) messageParts.push(`Location: ${location}`);
+		const message = messageParts.join(" ");
+
+		const notificationType = await resolveNotificationTypeKey("meeting_invite", [
+			"event_created",
+			"calendar",
+			"system",
+		]);
+
+		if (recipientUserId && notificationType) {
+			try {
+				await notificationService.createNotification({
+					userId: recipientUserId,
+					title: `Meeting invite: ${details.title}`,
+					message,
+					type: notificationType,
+					priority: "medium",
+					actionUrl: calendarUrl,
+					actionText: "View Calendar",
+					metadata: {
+						eventId: details.eventId,
+						title: details.title,
+						date: details.date,
+						startTime: details.startTime,
+						endTime: details.endTime,
+						description: details.description,
+						location: details.location,
+						organizerName: details.organizerName,
+					},
+				});
+			} catch (error) {
+				console.error(
+					"[SERVER] sendMeetingInviteNotification] in-app notification failed:",
+					error,
+				);
+			}
+		}
+
+		if (recipientEmail) {
+			try {
+				const { mailgunService } = await import("./mailgun");
+				const emailSubject = `[CAALM] Meeting invite: ${details.title}`;
+				const emailText = [
+					`Hello,`,
+					``,
+					`${details.organizerName} invited you to a meeting in CAALM.`,
+					``,
+					`Title: ${details.title}`,
+					`Date: ${details.date}`,
+					`Time: ${timeRange}`,
+					agenda ? `Agenda: ${agenda}` : null,
+					location ? `Location: ${location}` : null,
+					``,
+					`View Calendar: ${calendarUrl}`,
+					``,
+					`Best regards,`,
+					`CAALM Solutions Team`,
+				]
+					.filter((line) => line !== null)
+					.join("\n");
+
+				const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #078FAB; text-align: center;">CAALM Solutions</h2>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #333; margin-top: 0;">You're invited to a meeting</h3>
+          <p style="color: #666; font-size: 16px;"><strong>${details.organizerName}</strong> invited you to <strong>“${details.title}”</strong>.</p>
+          <ul style="color: #666; font-size: 15px; line-height: 1.6;">
+            <li><strong>Date:</strong> ${details.date}</li>
+            <li><strong>Time:</strong> ${timeRange}</li>
+            ${agenda ? `<li><strong>Agenda:</strong> ${agenda}</li>` : ""}
+            ${location ? `<li><strong>Location:</strong> ${location}</li>` : ""}
+          </ul>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${calendarUrl}" style="background-color: #078FAB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">View Calendar</a>
+          </div>
+        </div>
+        <p style="color: #999; font-size: 12px; text-align: center;">Best regards,<br>CAALM Solutions Team</p>
+      </div>
+    `;
+
+				await mailgunService.sendEmail({
+					to: recipientEmail,
+					subject: emailSubject,
+					text: emailText,
+					html: emailHtml,
+				});
+			} catch (error) {
+				console.error(
+					"[SERVER] sendMeetingInviteNotification] email failed:",
+					error,
+				);
+			}
+		}
+
+		if (recipientUserId) {
+			try {
+				await notificationService.sendSMSNotification(recipientUserId, {
+					title: "Meeting invite",
+					message: `${details.organizerName} invited you to “${details.title}” on ${details.date} at ${timeRange}.`,
+					priority: "medium",
+					actionUrl: calendarUrl,
+					type: notificationType || "meeting_invite",
+				});
+			} catch (error) {
+				console.error(
+					"[SERVER] sendMeetingInviteNotification] SMS failed:",
+					error,
+				);
+			}
+		}
+	} catch (error) {
+		console.error(
+			"[SERVER] sendMeetingInviteNotification] Unexpected error:",
+			error,
+		);
+	}
+};
+
+type InviteRecipient = {
+	email: string;
+	userId?: string;
+};
+
+/**
+ * Resolve participant emails/ids to recipients and notify each invitee.
+ * Emails are always sent when an address is known; in-app requires a user.
+ * Failures are logged and do not throw.
+ */
+export const notifyMeetingInvitees = async (
+	participants: string | undefined,
+	details: MeetingInviteDetails,
+	excludeUserId?: string,
+): Promise<number> => {
+	if (!participants?.trim()) return 0;
+
+	const {
+		getUserByEmail,
+		getUserById,
+		getUserByAccountId,
+	} = await import("@/lib/actions/user.actions");
+
+	const byEmail = new Map<string, InviteRecipient>();
+	const organizerEmail = details.organizerEmail?.trim().toLowerCase();
+
+	const addRecipient = (emailRaw: string, userId?: string) => {
+		const email = emailRaw.trim().toLowerCase();
+		if (!email || !EMAIL_RE.test(email)) return;
+		if (organizerEmail && email === organizerEmail) return;
+		const existing = byEmail.get(email);
+		if (existing) {
+			if (!existing.userId && userId) existing.userId = userId;
+			return;
+		}
+		byEmail.set(email, { email, userId });
+	};
+
+	for (const email of parseParticipantEmails(participants)) {
+		try {
+			const user = await getUserByEmail(email);
+			if (excludeUserId && user?.$id === excludeUserId) continue;
+			addRecipient(user?.email || email, user?.$id);
+		} catch (error) {
+			console.error(
+				`[SERVER] notifyMeetingInvitees] Lookup failed for ${email}:`,
+				error,
+			);
+			addRecipient(email);
+		}
+	}
+
+	for (const id of parseParticipantIds(participants)) {
+		try {
+			if (excludeUserId && id === excludeUserId) continue;
+			let user = await getUserById(id);
+			if (!user?.email) {
+				user = await getUserByAccountId(id);
+			}
+			if (!user?.email) continue;
+			if (excludeUserId && user.$id === excludeUserId) continue;
+			addRecipient(String(user.email), user.$id);
+		} catch (error) {
+			console.error(
+				`[SERVER] notifyMeetingInvitees] Id resolve failed for ${id}:`,
+				error,
+			);
+		}
+	}
+
+	let notified = 0;
+	for (const recipient of byEmail.values()) {
+		try {
+			await sendMeetingInviteNotification(
+				recipient.userId,
+				recipient.email,
+				details,
+			);
+			notified += 1;
+		} catch (error) {
+			console.error(
+				`[SERVER] notifyMeetingInvitees] Failed for ${recipient.email}:`,
+				error,
+			);
+		}
+	}
+
+	return notified;
+};
