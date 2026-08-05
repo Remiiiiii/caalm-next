@@ -2501,7 +2501,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		if (!selectedEvent?.$id) return;
 
 		// Check if user has permission to update this event
-		if (!selectedEventPermissions?.updateEvent) {
+		if (!canCreateEvent || !selectedEventPermissions?.updateEvent) {
 			toast({
 				title: "Permission denied",
 				description: "You do not have permission to update this event.",
@@ -2777,21 +2777,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	};
 
 	const handleDeleteEvent = () => {
-		console.log("Delete button clicked, selectedEvent:", selectedEvent);
 		if (!selectedEvent || (!selectedEvent.$id && !selectedEvent.id)) {
-			console.log("No selected event or event ID");
 			return;
 		}
 
-		// Check if user has cancelEvent permission OR is the event creator
+		// Creating is required to edit/delete; cancelEvent gates delete for the role
 		const hasCancelPermission = selectedEventPermissions?.cancelEvent ?? false;
-		const isEventCreator =
-			(userId && selectedEvent.createdByUserId === userId) ||
-			(accountId &&
-				(selectedEvent.createdByAccountId === accountId ||
-					selectedEvent.createdBy === accountId));
 
-		if (!hasCancelPermission && !isEventCreator) {
+		if (!canCreateEvent || !hasCancelPermission) {
 			toast({
 				title: "Permission denied",
 				description: "You do not have permission to cancel this event.",
@@ -2808,12 +2801,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 			return;
 		}
 
-		if (selectedEventPermissions && !selectedEventPermissions.cancelEvent) {
-			console.warn("[confirmDeleteEvent] Permission denied:", {
-				permissions: selectedEventPermissions,
-				role,
-				userId,
-			});
+		if (
+			!canCreateEvent ||
+			(selectedEventPermissions && !selectedEventPermissions.cancelEvent)
+		) {
 			toast({
 				title: "Permission denied",
 				description: "You do not have permission to cancel this event.",
@@ -4768,7 +4759,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 														{/* Date & Time */}
 														{eventDate && (
 															<div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-																<div className="w-8 h-8 bg-[#E6FAF9] rounded-full flex items-center justify-center mt-0.5">
+																<div className="w-8 h-8 bg-[#E6FAF9] rounded-lg flex items-center justify-center mt-0.5">
 																	<Clock className="w-4 h-4 text-blue-600" />
 																</div>
 																<div className="flex-1">
@@ -5401,9 +5392,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 															{selectedEvent.sensitivityLevel && (
 																<Badge
 																	variant="outline"
-																	className={getSensitivityBadgeClasses(
-																		selectedEvent.sensitivityLevel ||
-																			"standard",
+																	className={cn(
+																		"h-5! min-h-0 w-fit min-w-0 rounded-full! px-1.5! py-0! text-[10px]! font-medium leading-none",
+																		getSensitivityBadgeClasses(
+																			selectedEvent.sensitivityLevel ||
+																				"standard",
+																		),
 																	)}
 																>
 																	{
@@ -5577,7 +5571,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 													}
 												>
 													<div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-														<div className="w-8 h-8 bg-[#E6FAF9] rounded-full flex items-center justify-center mt-0.5">
+														<div className="w-8 h-8 bg-[#E6FAF9] rounded-lg flex items-center justify-center mt-0.5">
 															<Clock className="w-4 h-4 text-blue" />
 														</div>
 														<div className="flex-1">
@@ -5597,7 +5591,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 													{/* Event Type - Only show for non-holiday events */}
 													{!isHolidayEvent && (
 														<div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-															<div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
+															<div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mt-0.5">
 																<Tag className="w-4 h-4 text-purple-600" />
 															</div>
 															<div className="flex-1">
@@ -5618,7 +5612,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 												{!isHolidayEvent &&
 												canViewSelectedEventSensitiveDetails ? (
 													<div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-														<div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
+														<div className="w-8 h-8 bg-[#e0e0f5] rounded-lg flex items-center justify-center mt-0.5">
 															<Users className="w-4 h-4 text-[#5558F9]" />
 														</div>
 														<div className="flex-1">
@@ -5714,7 +5708,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 												) : (
 													!isHolidayEvent && (
 														<div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200 text-sm text-slate-500">
-															<div className="w-8 h-8 bg-[#e0e0f5] rounded-full flex items-center justify-center mt-0.5">
+															<div className="w-8 h-8 bg-[#e0e0f5] rounded-lg flex items-center justify-center mt-0.5">
 																<Users className="w-4 h-4 text-[#5558F9]" />
 															</div>
 															<div className="flex-1">
@@ -5781,7 +5775,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 													canViewSelectedEventSensitiveDetails &&
 													selectedEvent.description?.trim() && (
 														<div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-slate-200">
-															<div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mt-0.5">
+															<div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center mt-0.5">
 																<MessageSquare className="w-4 h-4 text-indigo-600" />
 															</div>
 															<div className="flex-1">
@@ -5919,7 +5913,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 												{!isHolidayEvent && (
 													<Button
 														variant="outline"
-														className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
+														className="h-auto w-full justify-start bg-white px-4 py-3 border-slate-200 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
 														disabled={!canViewSelectedEventSensitiveDetails}
 														title={
 															!canViewSelectedEventSensitiveDetails
@@ -5930,12 +5924,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 															handleOpenAiPanel("pre-reads", selectedEvent)
 														}
 													>
-														<Paperclip className="w-4 h-4 mr-3 text-slate-500" />
-														<div className="text-left">
-															<div className="font-medium text-slate-900">
+														<span className="mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#078FAB]/10 text-[#078FAB]">
+															<Paperclip className="h-5 w-5" />
+														</span>
+														<div className="min-w-0 flex-1 text-left">
+															<div className="text-sm font-semibold text-slate-900">
 																What pre-reads should I review?
 															</div>
-															<div className="text-xs text-slate-500">
+															<div className="mt-0.5 text-xs text-slate-500">
 																Get AI recommendations for preparation materials
 															</div>
 														</div>
@@ -5944,7 +5940,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
 												<Button
 													variant="outline"
-													className="w-full justify-start h-12 bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
+													className="h-auto w-full justify-start bg-white px-4 py-3 border-slate-200 hover:border-blue-500 hover:bg-blue-50 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
 													disabled={
 														!isHolidayEvent &&
 														!canViewSelectedEventSensitiveDetails
@@ -5959,12 +5955,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 														handleOpenAiPanel("chat", selectedEvent)
 													}
 												>
-													<MessageSquare className="w-4 h-4 mr-3 text-slate-500" />
-													<div className="text-left">
-														<div className="font-medium text-slate-900">
-															Chat with AI Assistant
+													<span className="mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#078FAB]/10 text-[#078FAB]">
+														<MessageSquare className="h-5 w-5" />
+													</span>
+													<div className="min-w-0 flex-1 text-left">
+														<div className="text-sm font-semibold text-slate-900">
+															Chat with CAALM Calendar Assistant
 														</div>
-														<div className="text-xs text-slate-500">
+														<div className="mt-0.5 text-xs text-slate-500">
 															Get help with meeting preparation and insights
 														</div>
 													</div>
@@ -5985,84 +5983,93 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 													"MMM d, yyyy",
 												)}
 										</div>
-										{/* Only show Edit and Delete buttons for non-holiday events */}
-										{!isHolidayEvent && (
-											<div className="flex items-center gap-3">
-												<Button
-													variant="outline"
-													onClick={() => {
-														if (!selectedEvent) return;
-														// Pre-fill edit form
-														setNewEvent({
-															title: selectedEvent.title || "",
-															date: new Date(selectedEvent.startDate),
-															endDate: new Date(
-																selectedEvent.endDate ||
-																	selectedEvent.startDate,
-															), // Use endDate if available, otherwise startDate
-															type: selectedEvent.type || "meeting",
-															description: selectedEvent.description || "",
-															startTime: selectedEvent.startTime || "",
-															endTime: selectedEvent.endTime || "",
-															contractName: selectedEvent.contractName || "",
-															participants: selectedEvent.participants || "",
-															location: selectedEvent.location || "",
-															sensitivityLevel:
-																selectedEvent.sensitivityLevel || "standard",
-														});
-														setLocationSearch(selectedEvent.location || "");
+										{/* Edit/Delete only when user can create events (and role allows update/cancel) */}
+										{!isHolidayEvent &&
+											canCreateEvent &&
+											(selectedEventPermissions?.updateEvent ||
+												selectedEventPermissions?.cancelEvent) && (
+												<div className="flex items-center gap-3">
+													{selectedEventPermissions?.updateEvent ? (
+														<Button
+															variant="outline"
+															onClick={() => {
+																if (!selectedEvent) return;
+																// Pre-fill edit form
+																setNewEvent({
+																	title: selectedEvent.title || "",
+																	date: new Date(selectedEvent.startDate),
+																	endDate: new Date(
+																		selectedEvent.endDate ||
+																			selectedEvent.startDate,
+																	), // Use endDate if available, otherwise startDate
+																	type: selectedEvent.type || "meeting",
+																	description: selectedEvent.description || "",
+																	startTime: selectedEvent.startTime || "",
+																	endTime: selectedEvent.endTime || "",
+																	contractName:
+																		selectedEvent.contractName || "",
+																	participants:
+																		selectedEvent.participants || "",
+																	location: selectedEvent.location || "",
+																	sensitivityLevel:
+																		selectedEvent.sensitivityLevel ||
+																		"standard",
+																});
+																setLocationSearch(selectedEvent.location || "");
 
-														// Parse participants string to populate selectedParticipants
-														if (
-															selectedEvent.participants &&
-															typeof selectedEvent.participants === "string"
-														) {
-															const participantStrings =
-																selectedEvent.participants.split(", ");
-															const parsedParticipants = participantStrings.map(
-																(p) => {
-																	// Parse "Name <email>" format
-																	const match = p.match(/^(.+?) <(.+?)>$/);
-																	if (match) {
-																		return {
-																			$id: match[2], // Use email as ID for now
-																			fullName: match[1],
-																			name: match[1],
-																			email: match[2],
-																		};
-																	}
-																	// Fallback for old format (just user ID)
-																	return {
-																		$id: p,
-																		fullName: p,
-																		name: p,
-																		email: p,
-																	};
-																},
-															);
-															setSelectedParticipants(parsedParticipants);
-														} else {
-															setSelectedParticipants([]);
-														}
+																// Parse participants string to populate selectedParticipants
+																if (
+																	selectedEvent.participants &&
+																	typeof selectedEvent.participants === "string"
+																) {
+																	const participantStrings =
+																		selectedEvent.participants.split(", ");
+																	const parsedParticipants =
+																		participantStrings.map((p) => {
+																			// Parse "Name <email>" format
+																			const match = p.match(/^(.+?) <(.+?)>$/);
+																			if (match) {
+																				return {
+																					$id: match[2], // Use email as ID for now
+																					fullName: match[1],
+																					name: match[1],
+																					email: match[2],
+																				};
+																			}
+																			// Fallback for old format (just user ID)
+																			return {
+																				$id: p,
+																				fullName: p,
+																				name: p,
+																				email: p,
+																			};
+																		});
+																	setSelectedParticipants(parsedParticipants);
+																} else {
+																	setSelectedParticipants([]);
+																}
 
-														setIsEditEventOpen(false);
-														setIsAddEventOpen(true);
-													}}
-													className="primary-btn px-3 sm:px-4"
-												>
-													<Pencil className="w-4 h-4 " />
-													Edit Event
-												</Button>
-												<Button
-													variant="outline"
-													onClick={handleDeleteEvent}
-													className="primary-btn px-3 sm:px-4 text-red-600 hover:text-red-700 hover:bg-red-50"
-												>
-													<Trash2 className="w-4 h-4" />
-													Delete
-												</Button>
-											</div>
-										)}
+																setIsEditEventOpen(false);
+																setIsAddEventOpen(true);
+															}}
+															className="primary-btn px-3 sm:px-4"
+														>
+															<Pencil className="w-4 h-4 " />
+															Edit Event
+														</Button>
+													) : null}
+													{selectedEventPermissions?.cancelEvent ? (
+														<Button
+															variant="outline"
+															onClick={handleDeleteEvent}
+															className="primary-btn px-3 sm:px-4 text-red-600 hover:text-red-700 hover:bg-red-50"
+														>
+															<Trash2 className="w-4 h-4" />
+															Delete
+														</Button>
+													) : null}
+												</div>
+											)}
 									</div>
 								</div>
 							</>
@@ -6220,24 +6227,40 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				</Dialog>
 				<OverflowDialog />
 
-				{/* AI Assistant Panel */}
-				<Sheet open={showAiPanel} onOpenChange={setShowAiPanel}>
+				{/* AI Assistant Panel — same dimensions as Ask Caalm preview */}
+				<Sheet open={showAiPanel} onOpenChange={setShowAiPanel} modal={false}>
 					<SheetContent
 						side="right"
-						className="!w-full sm:!w-[500px] md:!w-[600px] lg:!w-[700px] !max-w-none p-0 flex flex-col h-full"
+						showOverlay={false}
+						onInteractOutside={(e) => e.preventDefault()}
+						className={cn(
+							"flex w-full flex-col gap-0 overflow-visible border-0 bg-transparent p-0 shadow-none backdrop-blur-none",
+							"sm:max-w-md",
+							"inset-y-auto! top-4! right-4! bottom-4! h-[calc(100vh-2rem)]! max-h-none!",
+							"transition-none! duration-200! ease-out!",
+							"data-[state=open]:duration-200! data-[state=closed]:duration-200!",
+							"data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
+							"data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+							"pointer-events-auto",
+							"[&>button]:hidden",
+						)}
 					>
-						<SheetTitle>
-							<div className="flex items-center justify-between">
-								<h3 className="font-bold sidebar-gradient-text"></h3>
+						<div
+							className="glass-card-frosted relative flex h-full w-full flex-col overflow-hidden rounded-2xl"
+							style={{ background: "rgba(255, 255, 255, 0.92)" }}
+						>
+							<div className="glass-card-cap rounded-t-2xl!" />
+							<SheetTitle className="sr-only">AI Assistant</SheetTitle>
+							<div className="mt-4 min-h-0 flex-1 overflow-hidden">
+								<CalendarAIChat
+									mode={aiPanelMode}
+									event={selectedEventWithDetails || selectedEvent}
+									contractData={contractData}
+									isContractLoading={loadingContract}
+									onClose={() => setShowAiPanel(false)}
+								/>
 							</div>
-						</SheetTitle>
-						<CalendarAIChat
-							mode={aiPanelMode}
-							event={selectedEventWithDetails || selectedEvent}
-							contractData={contractData}
-							isContractLoading={loadingContract}
-							onClose={() => setShowAiPanel(false)}
-						/>
+						</div>
 					</SheetContent>
 				</Sheet>
 

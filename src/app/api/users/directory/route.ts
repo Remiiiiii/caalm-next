@@ -10,16 +10,22 @@ export type ShareDirectoryUser = {
 	fullName: string;
 	email: string;
 	department: string;
+	/** Appwrite profile picture file id, when set */
+	avatar?: string | null;
 };
 
 /**
- * Lightweight org user directory for Share pickers.
- * Requires contracts.view or users.view (anyone who can share files).
+ * Lightweight org user directory for Share pickers and assistant invitees.
+ * Requires contracts.view, users.view, or calendar.create.
  */
 export async function GET(request: NextRequest) {
 	try {
 		const permissionCheck = await requirePermission(request, {
-			permission: [PERMISSIONS.CONTRACTS.VIEW, PERMISSIONS.USERS.VIEW],
+			permission: [
+				PERMISSIONS.CONTRACTS.VIEW,
+				PERMISSIONS.USERS.VIEW,
+				PERMISSIONS.CALENDAR.CREATE,
+			],
 		});
 		if (permissionCheck) {
 			return permissionCheck;
@@ -60,6 +66,14 @@ export async function GET(request: NextRequest) {
 				if (!email || status === "inactive" || status === "suspended") {
 					return null;
 				}
+				const avatarRaw = String(user.avatar || "").trim();
+				const avatar =
+					avatarRaw &&
+					!avatarRaw.startsWith("/") &&
+					!/^https?:\/\//i.test(avatarRaw) &&
+					!avatarRaw.includes("avatar-placeholder")
+						? avatarRaw
+						: null;
 				return {
 					$id: String(user.$id || ""),
 					fullName: String(user.fullName || "Unknown").trim() || "Unknown",
@@ -67,6 +81,7 @@ export async function GET(request: NextRequest) {
 					department:
 						String(user.department || user.division || "Other").trim() ||
 						"Other",
+					avatar,
 				};
 			})
 			.filter((u): u is ShareDirectoryUser => Boolean(u?.$id && u.email));

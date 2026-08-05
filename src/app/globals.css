@@ -467,24 +467,20 @@
 	/* Matches .glass-dialog-panel — OTP / 2FA alert shells */
 	.shad-alert-dialog {
 		@apply space-y-4 w-full max-w-[min(95vw,28rem)] overflow-hidden rounded-xl md:rounded-[30px] px-4 md:px-8 py-10 outline-hidden;
-		background: rgba(255, 255, 255, 0.45);
+		background: rgba(255, 255, 255, 0.9);
 		backdrop-filter: blur(24px);
 		-webkit-backdrop-filter: blur(24px);
-		border: 1px solid rgba(255, 255, 255, 0.5);
+		border: 1px solid rgb(226 232 240); /* slate-200 */
 		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
 	}
 	.shad-submit-btn {
-		@apply text-[14px] leading-[20px] font-medium transition-all rounded-full;
-		background-color: #1976d2;
-	}
-	.shad-submit-btn:hover {
-		background-color: #1565c0;
+		@apply text-[14px] leading-[20px] font-medium transition-all rounded-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
 	}
 	.shad-otp {
 		@apply w-full max-w-full flex flex-nowrap items-center justify-between gap-1 sm:gap-2;
 	}
 	.shad-otp-slot {
-		@apply text-[24px] sm:text-[32px] md:text-[36px] font-medium rounded-xl shadow-drop-1 text-brand-100 justify-center flex border-2 border-light-300 h-9 w-9 sm:h-11 sm:w-11 md:h-12 md:w-12 shrink min-w-0 basis-0 flex-1 max-w-12;
+		@apply text-[24px] sm:text-[32px] md:text-[36px] font-medium rounded-xl shadow-none text-brand justify-center flex border-2 border-slate-300 h-9 w-9 sm:h-11 sm:w-11 md:h-12 md:w-12 shrink min-w-0 basis-0 flex-1 max-w-12 transition-all duration-200;
 	}
 
 	.shad-sheet {

@@ -21,6 +21,16 @@ export async function initializeCalendarNotificationTypes(): Promise<void> {
 			description: "Reminders for upcoming calendar events",
 		},
 		{
+			type_key: "meeting_invite",
+			label: "Meeting Invite",
+			icon: "calendar",
+			color_classes: "text-blue-600",
+			bg_color_classes: "bg-blue-50",
+			priority: "medium" as const,
+			enabled: true,
+			description: "Notification when you are invited to a scheduled meeting",
+		},
+		{
 			type_key: "event_created",
 			label: "Event Created",
 			icon: "plus-circle",

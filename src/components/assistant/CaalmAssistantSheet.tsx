@@ -15,7 +15,9 @@ import AssistantHistoryList from "@/components/assistant/AssistantHistoryList";
 import AssistantInPanelOverlay, {
 	AssistantInPanelActions,
 } from "@/components/assistant/AssistantInPanelOverlay";
+import AssistantMeetingCreatedCard from "@/components/assistant/AssistantMeetingCreatedCard";
 import AssistantMessageActions from "@/components/assistant/AssistantMessageActions";
+import AssistantPendingActionCard from "@/components/assistant/AssistantPendingActionCard";
 import AssistantPreviewSheetShell from "@/components/assistant/AssistantPreviewSheetShell";
 import AssistantSuggestions from "@/components/assistant/AssistantSuggestions";
 import AssistantThinkingIndicator from "@/components/assistant/AssistantThinkingIndicator";
@@ -24,6 +26,7 @@ import type {
 	UseCaalmAssistantReturn,
 } from "@/components/assistant/assistantTypes";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	Tooltip,
@@ -339,7 +342,7 @@ export default function CaalmAssistantSheet({
 			header={header}
 			overlay={overlay}
 			footer={
-				tab === "chat" ? (
+				tab === "chat" && !assistant.conversationLoading ? (
 					assistant.conversationStatus === "closed" ? (
 						<div className="flex flex-col gap-2">
 							<p className="text-center text-sm text-slate-600">
@@ -357,26 +360,16 @@ export default function CaalmAssistantSheet({
 					) : (
 						<div className="flex flex-col gap-2">
 							{assistant.pendingAction ? (
-								<div className="rounded-lg border border-slate-200 bg-white/60 p-3 text-sm">
-									<p className="font-medium text-slate-900">
-										{assistant.pendingAction.label}
-									</p>
-									<pre className="mt-2 max-h-24 overflow-auto whitespace-pre-wrap text-xs text-slate-600">
-										{assistant.pendingAction.preview}
-									</pre>
-									<div className="mt-3 flex justify-end gap-2">
-										<Button
-											type="button"
-											variant="outline"
-											size="sm"
-											className="primary-btn"
-											onClick={() => assistant.confirmAction()}
-											disabled={assistant.isSending}
-										>
-											Confirm
-										</Button>
-									</div>
-								</div>
+								<AssistantPendingActionCard
+									action={assistant.pendingAction}
+									onConfirm={(argsPatch) =>
+										void assistant.confirmAction(argsPatch)
+									}
+									onArgsChange={(argsPatch) =>
+										assistant.patchPendingArgs(argsPatch)
+									}
+									disabled={assistant.isSending}
+								/>
 							) : null}
 
 							<div className="relative w-full">
@@ -443,7 +436,17 @@ export default function CaalmAssistantSheet({
 				/>
 			) : (
 				<div className="space-y-4">
-					{assistant.messages.length === 0 && !assistant.isSending ? (
+					{assistant.conversationLoading ? (
+						<LoadingSpinner
+							size="md"
+							label="Loading conversation…"
+							className="py-16"
+						/>
+					) : null}
+
+					{!assistant.conversationLoading &&
+					assistant.messages.length === 0 &&
+					!assistant.isSending ? (
 						<div className="space-y-6 py-6">
 							<div className="text-center">
 								<div className="mb-4 flex justify-center">
@@ -484,7 +487,8 @@ export default function CaalmAssistantSheet({
 						</div>
 					) : null}
 
-					{assistant.messages.map((m) => (
+					{!assistant.conversationLoading
+						? assistant.messages.map((m) => (
 						<div
 							key={m.id}
 							className={cn(
@@ -509,12 +513,26 @@ export default function CaalmAssistantSheet({
 										: "bg-white/60 text-slate-900 border border-slate-200/80",
 								)}
 							>
-								<div
-									className="prose prose-sm max-w-none text-slate-900"
-									dangerouslySetInnerHTML={{
-										__html: formatAssistantMarkdown(m.content),
-									}}
-								/>
+								{m.meetingCreated ? (
+									<>
+										<p className="text-sm text-slate-900">
+											Your meeting is on the calendar.
+										</p>
+										<AssistantMeetingCreatedCard
+											meeting={m.meetingCreated}
+											onOpenCalendar={() =>
+												router.push(m.meetingCreated?.calendarHref || "/calendar")
+											}
+										/>
+									</>
+								) : (
+									<div
+										className="prose prose-sm max-w-none text-slate-900"
+										dangerouslySetInnerHTML={{
+											__html: formatAssistantMarkdown(m.content),
+										}}
+									/>
+								)}
 								{m.sources?.length ? (
 									<ul className="mt-2 space-y-1 border-t border-slate-200/80 pt-2">
 										{m.sources.map((s) => (
@@ -571,9 +589,12 @@ export default function CaalmAssistantSheet({
 								) : null}
 							</div>
 						</div>
-					))}
+					))
+					: null}
 
-					{assistant.isSending ? <AssistantThinkingIndicator /> : null}
+					{!assistant.conversationLoading && assistant.isSending ? (
+						<AssistantThinkingIndicator />
+					) : null}
 					<div ref={endRef} />
 				</div>
 			)}

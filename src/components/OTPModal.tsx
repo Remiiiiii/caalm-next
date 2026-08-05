@@ -16,8 +16,26 @@ import {
 	InputOTPGroup,
 	InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { sendEmailOTP, verifyOTP } from "@/lib/actions/user.actions";
+import { sendEmailOTP, verifyOTP, forceAuthResetAfterLockout } from "@/lib/actions/user.actions";
 import { Button } from "./ui/button";
+
+const OTP_TTL_MS = 5 * 60 * 1000;
+const LOCKOUT_MESSAGE = "Too many attempts. Sign in again.";
+
+function formatCountdown(totalSeconds: number): string {
+	const mins = Math.floor(totalSeconds / 60);
+	const secs = totalSeconds % 60;
+	return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+async function handleLockoutAndRedirect() {
+	try {
+		await forceAuthResetAfterLockout();
+	} catch {
+		// continue to sign-in even if cookie clear fails
+	}
+	window.location.href = "/sign-in";
+}
 
 const OTPModal = ({
 	accountId,
@@ -40,32 +58,48 @@ const OTPModal = ({
 	const [isLoading, setIsLoading] = useState(false);
 	const [attempts, setAttempts] = useState(0);
 	const [lastError, setLastError] = useState("");
+	const [isLockedOut, setIsLockedOut] = useState(false);
 	const [isResending, setIsResending] = useState(false);
 	const [hasAutoSent, setHasAutoSent] = useState(false);
+	const [secondsLeft, setSecondsLeft] = useState(5 * 60);
 	const hasAutoSentRef = useRef(false);
+	const expiresAtRef = useRef<number | null>(null);
 
 	// Use parent-controlled isOpen prop
 	const modalIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
 
-	// Show success message when modal opens (OTP already sent by signInUser)
+	const startCountdown = () => {
+		expiresAtRef.current = Date.now() + OTP_TTL_MS;
+		setSecondsLeft(Math.ceil(OTP_TTL_MS / 1000));
+	};
+
+	// Start countdown when modal opens (OTP already sent by signInUser)
 	useEffect(() => {
 		if (modalIsOpen && email && !hasAutoSentRef.current) {
 			setHasAutoSent(true);
 			hasAutoSentRef.current = true;
-
-			// Show success message since OTP was already sent by signInUser
-			// setError('Verification code sent! Please check your email.');
-			// setLastError('Verification code sent! Please check your email.');
-
-			// // Clear success message after 3 seconds
-			// setTimeout(() => {
-			//   setError('');
-			//   setLastError('');
-			// }, 3000);
+			startCountdown();
 		}
 	}, [modalIsOpen, email]);
 
+	// Tick every second while the modal is open
+	useEffect(() => {
+		if (!modalIsOpen || !expiresAtRef.current) return;
+
+		const tick = () => {
+			const expiresAt = expiresAtRef.current;
+			if (!expiresAt) return;
+			const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+			setSecondsLeft(remaining);
+		};
+
+		tick();
+		const id = window.setInterval(tick, 1000);
+		return () => window.clearInterval(id);
+	}, [modalIsOpen, hasAutoSent]);
+
 	const handleVerify = async () => {
+		if (isLockedOut || isExpired) return;
 		setIsLoading(true);
 		setError(""); // Clear previous errors
 		setLastError(""); // Clear last error too
@@ -79,45 +113,31 @@ const OTPModal = ({
 				return; // Exit early on success
 			} else {
 				setAttempts((prev) => prev + 1);
-				if (attempts >= 2) {
-					// 3 attempts total
-					setError("Too many failed attempts. Please try again later.");
-					setLastError("Too many failed attempts. Please try again later.");
-					setIsLoading(false);
-					return;
-				}
 				setError("Invalid OTP. Try again.");
 				setLastError("Invalid OTP. Try again.");
 			}
 		} catch (error) {
-			// Use the user-friendly error message from the server action
-			if (error instanceof Error) {
-				setError(error.message);
-				setLastError(error.message);
-				// Also notify parent component of the error
-				if (onError) {
-					onError(error.message);
-				}
-			} else {
-				const genericError = "Failed to verify OTP. Please try again later.";
-				setError(genericError);
-				setLastError(genericError);
-				// Also notify parent component of the error
-				if (onError) {
-					onError(genericError);
-				}
+			const message =
+				error instanceof Error
+					? error.message
+					: "Failed to verify OTP. Please try again later.";
+
+			if (message.includes("Too many attempts")) {
+				setIsLockedOut(true);
+				setError(LOCKOUT_MESSAGE);
+				setLastError(LOCKOUT_MESSAGE);
+				if (onError) onError(LOCKOUT_MESSAGE);
+				setIsLoading(false);
+				await handleLockoutAndRedirect();
+				return;
 			}
 
-			// Increment attempts for any error
+			setError(message);
+			setLastError(message);
+			if (onError) {
+				onError(message);
+			}
 			setAttempts((prev) => prev + 1);
-
-			// If too many attempts, show a more specific message
-			if (attempts >= 2) {
-				const tooManyAttemptsError =
-					"Too many failed attempts. Please request a new verification code.";
-				setError(tooManyAttemptsError);
-				setLastError(tooManyAttemptsError);
-			}
 		}
 
 		// Only clear loading if we didn't call onSuccess
@@ -125,44 +145,29 @@ const OTPModal = ({
 	};
 
 	const handleResendOtp = async () => {
+		if (isLockedOut) return;
 		setIsResending(true);
 		try {
-			setError(""); // Clear previous errors
-			setLastError(""); // Clear last error too
-			console.log("Resending OTP to:", email);
-
+			setError("");
+			setLastError("");
 			await sendEmailOTP({ email });
-			console.log("OTP resent successfully");
-
-			// Show success feedback
-			// setError('Verification code sent! Please check your email.');
-			// setLastError('Verification code sent! Please check your email.');
-
-			// // Clear success message after 3 seconds
-			// setTimeout(() => {
-			//   setError('');
-			//   setLastError('');
-			// }, 3000);
+			startCountdown();
+			setAttempts(0);
+			setOtp("");
 		} catch (error) {
-			console.error("Failed to resend OTP", error);
-			console.log("Resend error type:", typeof error);
-			console.log(
-				"Resend error message:",
-				error instanceof Error ? error.message : "Unknown error",
-			);
-
-			// Use the user-friendly error message from the server action
-			if (error instanceof Error) {
-				console.log("Setting resend error message:", error.message);
-				setError(error.message);
-				setLastError(error.message);
-			} else {
-				console.log("Setting generic resend error message");
-				const genericError =
-					"Failed to resend verification code. Please try again.";
-				setError(genericError);
-				setLastError(genericError);
+			const message =
+				error instanceof Error
+					? error.message
+					: "Failed to resend verification code. Please try again.";
+			if (message.includes("Too many attempts")) {
+				setIsLockedOut(true);
+				setError(LOCKOUT_MESSAGE);
+				setLastError(LOCKOUT_MESSAGE);
+				await handleLockoutAndRedirect();
+				return;
 			}
+			setError(message);
+			setLastError(message);
 		} finally {
 			setIsResending(false);
 		}
@@ -170,15 +175,15 @@ const OTPModal = ({
 
 	const handleModalClose = (open: boolean) => {
 		if (!open) {
-			// Clear errors when closing
 			setError("");
 			setLastError("");
 			setOtp("");
 			setAttempts(0);
-			setHasAutoSent(false); // Reset auto-send state
-			hasAutoSentRef.current = false; // Reset ref as well
+			setHasAutoSent(false);
+			hasAutoSentRef.current = false;
+			expiresAtRef.current = null;
+			setSecondsLeft(5 * 60);
 
-			// Call parent's onClose if provided
 			if (onClose) {
 				onClose();
 			} else {
@@ -187,11 +192,13 @@ const OTPModal = ({
 		}
 	};
 
+	const isExpired = hasAutoSent && secondsLeft <= 0;
+
 	return (
 		<AlertDialog open={modalIsOpen} onOpenChange={handleModalClose}>
 			<AlertDialogContent className="shad-alert-dialog !max-h-none overflow-hidden">
 				<AlertDialogHeader className="relative flex justify-center max-w-full">
-					<AlertDialogTitle className="h2 text-center">
+					<AlertDialogTitle className="h2 text-center text-slate-700">
 						Enter Your OTP
 						<Image
 							src="/assets/icons/close-dark.svg"
@@ -209,15 +216,35 @@ const OTPModal = ({
 						/>
 					</AlertDialogTitle>
 					<AlertDialogDescription className="subtitle-2 text-center break-all px-1 max-w-full">
-						{hasAutoSent
-							? `We've sent you a code to ${email}`
-							: `Sending verification code to ${email}...`}
+						<span className="text-lg text-slate-700">
+							{hasAutoSent
+								? `Enter the verification code sent to`
+								: `Sending verification code to`}
+						</span>
+						<p className="font-light text-slate-900">{email}</p>
 					</AlertDialogDescription>
+					{hasAutoSent ? (
+						<p
+							className={`mt-2 text-center text-sm font-medium tabular-nums transition-colors duration-200 ${
+								isExpired
+									? "text-brand"
+									: secondsLeft <= 60
+										? "text-brand"
+										: "text-slate-600"
+							}`}
+							aria-live="polite"
+						>
+							{isExpired
+								? "Code expired. Request a new one."
+								: `Code expires in ${formatCountdown(secondsLeft)}`}
+						</p>
+					) : null}
 				</AlertDialogHeader>
 				<div className="w-full max-w-full overflow-hidden flex justify-center">
 					<InputOTP
 						maxLength={6}
 						value={otp}
+						disabled={isExpired || isLockedOut}
 						containerClassName="w-full max-w-full justify-center"
 						onChange={(value) => {
 							setOtp(value);
@@ -295,10 +322,12 @@ const OTPModal = ({
 						<AlertDialogAction
 							onClick={(e) => {
 								e.preventDefault();
+								if (isExpired) return;
 								void handleVerify();
 							}}
-							className="shad-submit-btn h-12"
+							className="shad-submit-btn h-12 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 							type="button"
+							disabled={isExpired || isLoading || isLockedOut}
 						>
 							Submit
 							{isLoading && (
@@ -311,15 +340,16 @@ const OTPModal = ({
 								/>
 							)}
 						</AlertDialogAction>
-						<div className="subtitle-2 mt-2 text-center text-light-100">
-							Didn&apos;t get a code?
+						<div className="subtitle-2 mt-2 text-center text-slate-600">
+							{isExpired ? "Need a new code?" : "Didn't get a code?"}
 							<Button
 								type="button"
 								variant="link"
-								className="pl-1 text-brand"
+								className="pl-1 text-brand cursor-pointer transition-colors duration-200"
 								onClick={handleResendOtp}
+								disabled={isResending}
 							>
-								Resend Code
+								{isResending ? "Sending..." : "Resend Code"}
 							</Button>
 						</div>
 					</div>

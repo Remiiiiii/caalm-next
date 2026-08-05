@@ -64,7 +64,13 @@ class MailgunService {
 				return { success: true, data: { id: "demo-noop" } };
 			}
 
-			const fromAddress = from || `Mailgun Sandbox <postmaster@${this.domain}>`;
+			// Prefer an explicitly configured sender. Fall back to postmaster@
+			// (Mailgun’s default authorized address for the domain) — noreply@
+			// is often not verified and gets queued then dropped.
+			const fromAddress =
+				from ||
+				process.env.MAILGUN_FROM ||
+				`CAALM Solutions <postmaster@${this.domain}>`;
 
 			const client = this.getClient();
 			const data = await client.messages.create(this.domain, {

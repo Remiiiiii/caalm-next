@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { useId, useState } from "react";
 import {
 	Area,
 	AreaChart,
@@ -12,9 +13,16 @@ import {
 } from "recharts";
 import {
 	CAALM_CHART_COLORS,
+	CAALM_CHART_COLORS_LIGHT,
 	CaalmAnalyticsChartShell,
 	darkChartTooltipStyle,
+	lightChartTooltipStyle,
 } from "@/components/charts/CaalmAnalyticsChartShell";
+import {
+	type ChartTone,
+	ChartToneSwitch,
+} from "@/components/charts/ChartToneSwitch";
+import { cn } from "@/lib/utils";
 
 interface AuditLogChartProps {
 	data?: Array<{ date: string; count: number }>;
@@ -22,6 +30,12 @@ interface AuditLogChartProps {
 }
 
 export function AuditLogChart({ data, isLoading }: AuditLogChartProps) {
+	const [tone, setTone] = useState<ChartTone>("dark");
+	const gradientId = useId().replace(/:/g, "");
+	const isLight = tone === "light";
+	const colors = isLight ? CAALM_CHART_COLORS_LIGHT : CAALM_CHART_COLORS;
+	const tooltipStyle = isLight ? lightChartTooltipStyle : darkChartTooltipStyle;
+
 	const chartData = (data || []).map((point) => ({
 		...point,
 		label: format(new Date(`${point.date}T00:00:00`), "MMM d"),
@@ -38,11 +52,23 @@ export function AuditLogChart({ data, isLoading }: AuditLogChartProps) {
 					? `${total.toLocaleString()} audit events across the selected window`
 					: "Daily audit event counts for your organization"
 			}
+			panelTone={tone}
+			headerAction={<ChartToneSwitch tone={tone} onChange={setTone} />}
 		>
 			{isLoading ? (
-				<div className="h-48 w-full animate-pulse rounded-lg bg-slate-800/60" />
+				<div
+					className={cn(
+						"h-48 w-full animate-pulse rounded-lg",
+						isLight ? "bg-slate-200/70" : "bg-slate-800/60",
+					)}
+				/>
 			) : chartData.length === 0 ? (
-				<div className="flex h-48 items-center justify-center text-sm text-slate-400">
+				<div
+					className={cn(
+						"flex h-48 items-center justify-center text-sm",
+						isLight ? "text-slate-500" : "text-slate-400",
+					)}
+				>
 					No event volume data for this period.
 				</div>
 			) : (
@@ -51,7 +77,7 @@ export function AuditLogChart({ data, isLoading }: AuditLogChartProps) {
 						<AreaChart data={chartData} margin={{ left: 4, right: 8, top: 8 }}>
 							<defs>
 								<linearGradient
-									id="auditVolumeFill"
+									id={`auditVolumeFill-${gradientId}`}
 									x1="0"
 									y1="0"
 									x2="0"
@@ -59,38 +85,38 @@ export function AuditLogChart({ data, isLoading }: AuditLogChartProps) {
 								>
 									<stop
 										offset="0%"
-										stopColor={CAALM_CHART_COLORS.primary}
-										stopOpacity={0.45}
+										stopColor={colors.primary}
+										stopOpacity={isLight ? 0.35 : 0.45}
 									/>
 									<stop
 										offset="100%"
-										stopColor={CAALM_CHART_COLORS.primary}
+										stopColor={colors.primary}
 										stopOpacity={0}
 									/>
 								</linearGradient>
 							</defs>
 							<CartesianGrid
 								strokeDasharray="3 3"
-								stroke={CAALM_CHART_COLORS.grid}
+								stroke={colors.grid}
 								vertical={false}
 							/>
 							<XAxis
 								dataKey="label"
-								tick={{ fill: CAALM_CHART_COLORS.axis, fontSize: 11 }}
+								tick={{ fill: colors.axis, fontSize: 11 }}
 								axisLine={false}
 								tickLine={false}
 							/>
 							<YAxis
 								allowDecimals={false}
-								tick={{ fill: CAALM_CHART_COLORS.axis, fontSize: 11 }}
+								tick={{ fill: colors.axis, fontSize: 11 }}
 								axisLine={false}
 								tickLine={false}
 								width={28}
 							/>
 							<Tooltip
-								contentStyle={darkChartTooltipStyle}
-								labelStyle={{ color: "#f8fafc" }}
-								itemStyle={{ color: CAALM_CHART_COLORS.primary }}
+								contentStyle={tooltipStyle}
+								labelStyle={{ color: isLight ? "#0f172a" : "#f8fafc" }}
+								itemStyle={{ color: colors.primary }}
 								formatter={(value) => [
 									`${Number(value || 0).toLocaleString()} events`,
 									"Volume",
@@ -99,14 +125,14 @@ export function AuditLogChart({ data, isLoading }: AuditLogChartProps) {
 							<Area
 								type="monotone"
 								dataKey="count"
-								stroke={CAALM_CHART_COLORS.primary}
+								stroke={colors.primary}
 								strokeWidth={2.5}
-								fill="url(#auditVolumeFill)"
+								fill={`url(#auditVolumeFill-${gradientId})`}
 								dot={false}
 								activeDot={{
 									r: 5,
-									fill: CAALM_CHART_COLORS.primary,
-									stroke: "#0f172a",
+									fill: colors.primary,
+									stroke: isLight ? "#ffffff" : "#0f172a",
 									strokeWidth: 2,
 								}}
 							/>

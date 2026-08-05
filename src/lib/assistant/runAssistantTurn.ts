@@ -38,6 +38,7 @@ export type AssistantTurnResult = {
 		label: string;
 		preview: string;
 		toolName: string;
+		args?: Record<string, unknown>;
 	};
 	clientAction?: { type: "navigate"; href: string };
 };
@@ -47,6 +48,7 @@ const DATA_TOOLS = new Set([
 	"search_contracts",
 	"search_licenses",
 	"list_pending_approvals",
+	"list_calendar_events",
 ]);
 
 const apiKey = process.env.GOOGLE_API_KEY;
@@ -208,6 +210,23 @@ function formatGenericDataAnswer(toolName: string, output: unknown): string {
 		)}`;
 	}
 
+	if (toolName === "list_calendar_events") {
+		const items = (data.events ?? []) as Array<Record<string, unknown>>;
+		const day = data.date ? String(data.date) : "that day";
+		if (!items.length)
+			return `You have nothing on your CAALM calendar for ${day}.`;
+		const lines = items
+			.map((e) => {
+				const time = e.startTime
+					? `${e.startTime}${e.endTime ? `–${e.endTime}` : ""}`
+					: "All day";
+				const loc = e.location ? ` — ${e.location}` : "";
+				return `- **${e.title ?? "Untitled"}** (${time})${loc}`;
+			})
+			.join("\n");
+		return `Here's your schedule for ${day}:\n\n${lines}\n\nOpen the Calendar page for details.`;
+	}
+
 	return "I finished that request. Use a suggestion below if you want to dig in further.";
 }
 
@@ -223,6 +242,19 @@ function sourcesForTool(
 					title: "Tasks",
 					href: "/team/tasks",
 					excerpt: "Live task list from your organization",
+				},
+			];
+		}
+		if (
+			toolName === "list_calendar_events" ||
+			toolName === "create_calendar_event"
+		) {
+			return [
+				{
+					id: "module-calendar",
+					title: "Calendar",
+					href: "/calendar",
+					excerpt: "Your CAALM calendar",
 				},
 			];
 		}
@@ -284,13 +316,16 @@ export async function runAssistantTurn(params: {
 
 Rules:
 - Write in plain, natural language for end users. Never show raw enums, snake_case, JSON, code paths, or API field names (say "Not started", not "not_started"; say "the Tasks page", not "/team/tasks").
-- For live data (tasks, contracts, licenses, approvals, expirations), ALWAYS call the matching tool. Never answer those from Knowledge Context alone.
+- For live data (tasks, contracts, licenses, approvals, expirations, calendar events), ALWAYS call the matching tool. Never answer those from Knowledge Context alone.
+- Scheduling: when the user asks to schedule, book, or set up a meeting, collect these fields before calling create_calendar_event if the user has not already stated them: title, start time, end time (or duration), date, and type (meeting, review, audit, deadline, or contract). Meeting agenda (description) and participants are optional — ask for them once if missing, but do not block scheduling if the user skips them. Resolve relative dates ("tomorrow", "next Tuesday") against the current date below. If only a start time is given, default end time to 30 minutes later. Never invent participant emails; only include people the user named or emailed. Prefer endTime over durationMinutes when both can be inferred.
 - Knowledge Context is for product how-to only. Do not use Analytics, Reports, or Audit sources as a substitute for listing tasks.
 - Never invent permissions or claim an action succeeded unless a tool returned success.
 - After a tool returns data, summarize the rows clearly (titles, status, due dates). Never reply with only "Done."
 - Only call navigate when the user asks to open or go to a page.
 - Refuse legal, billing dispute, and security incident advice; suggest contacting an admin.
 - Keep answers concise and actionable.
+
+Current date and time (server timezone): ${new Date().toString()}
 
 Knowledge Context (product help only):
 ${isLiveDataIntent(dataIntent) ? "Skipped for this live-data question." : contextText || "No specific docs matched."}
@@ -345,9 +380,11 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 			const label =
 				tool.name === "create_task"
 					? `Create task “${args.title ?? "Untitled"}”`
-					: tool.name === "generate_report"
-						? `Generate report for ${args.department ?? "your department"}`
-						: `Confirm ${tool.name}`;
+					: tool.name === "create_calendar_event"
+						? `Schedule meeting “${args.title ?? "Untitled"}” on ${args.date ?? "?"} at ${args.startTime ?? "?"}`
+						: tool.name === "generate_report"
+							? `Generate report for ${args.department ?? "your department"}`
+							: `Confirm ${tool.name}`;
 			const preview = JSON.stringify(args, null, 2).slice(0, 500);
 			const pending = storePendingAction({
 				userId: ctx.user.$id,
@@ -358,7 +395,10 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 				preview,
 			});
 			return {
-				answer: `I prepared **${label}**. Review the details and tap **Confirm** to run it, or ask me to change something first.`,
+				answer:
+					tool.name === "create_calendar_event"
+						? `I prepared **${label}**. Review the meeting card and tap **Confirm** to schedule it, or ask me to change something first.`
+						: `I prepared **${label}**. Review the details and tap **Confirm** to run it, or ask me to change something first.`,
 				sources: [],
 				suggestions: [
 					{
@@ -375,6 +415,7 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 					label,
 					preview,
 					toolName: tool.name,
+					args,
 				},
 			};
 		}

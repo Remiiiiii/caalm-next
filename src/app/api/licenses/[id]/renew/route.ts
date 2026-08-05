@@ -60,6 +60,12 @@ export async function POST(
 			target_label: licenseLabel,
 			summary: `${(user as { fullName?: string }).fullName || user.email} renewed license ${licenseLabel}`,
 			correlation_id: requestId,
+			changes: [
+				{
+					field: "renewalDate",
+					after: validatedData.renewalDate,
+				},
+			],
 		});
 
 		return successResponse(

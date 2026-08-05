@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
-import { getUninvitedUsers } from "@/lib/actions/user.actions";
 import { createApiAdminClient } from "@/lib/appwrite/api-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Check cache first (include pagination in cache key)
-		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:page:${page}:limit:${limit}`;
+		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v2:page:${page}:limit:${limit}`;
 
 		// Try to get cached data first to check ETag
 		const existingCache = (await import("@/lib/services/redis-cache").then(
@@ -77,6 +76,7 @@ export async function GET(request: NextRequest) {
 				// Fetch all data simultaneously using Promise.allSettled for error handling
 				const [
 					contractsResult,
+					dashboardContractsResult,
 					usersResult,
 					invitationsResult,
 					filesResult,
@@ -87,7 +87,6 @@ export async function GET(request: NextRequest) {
 					notificationsStatsResult,
 					recentActivitiesResult,
 					calendarEventsResult,
-					uninvitedUsersResult,
 				] = await Promise.allSettled([
 					// Contracts data - Paginated for performance
 					tablesDB.listRows({
@@ -97,6 +96,17 @@ export async function GET(request: NextRequest) {
 							Query.orderDesc("$createdAt"),
 							Query.limit(limit),
 							Query.offset(offset),
+						],
+					}),
+
+					// Dashboard widgets: upcoming expiries (replaces separate /api/contracts/all)
+					tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId || "default-db",
+						tableId: appwriteConfig.contractsCollectionId || "contracts",
+						queries: [
+							Query.isNotNull("contractExpiryDate"),
+							Query.orderAsc("contractExpiryDate"),
+							Query.limit(100),
 						],
 					}),
 
@@ -180,9 +190,6 @@ export async function GET(request: NextRequest) {
 							appwriteConfig.calendarEventsCollectionId || "calendar-events",
 						queries: [Query.orderDesc("$createdAt"), Query.limit(20)],
 					}),
-
-					// Uninvited users from Auth database
-					getUninvitedUsers(),
 				]);
 
 				// Helper function to safely get results
@@ -199,6 +206,7 @@ export async function GET(request: NextRequest) {
 
 				// Extract results safely
 				const contracts = getResult(contractsResult);
+				const dashboardContracts = getResult(dashboardContractsResult);
 				const users = getResult(usersResult);
 				const invitations = getResult(invitationsResult);
 				const files = getResult(filesResult);
@@ -207,6 +215,48 @@ export async function GET(request: NextRequest) {
 				const notificationsStats = getResult(notificationsStatsResult);
 				const recentActivities = getResult(recentActivitiesResult);
 				const calendarEvents = getResult(calendarEventsResult);
+
+				const now = new Date();
+				now.setHours(0, 0, 0, 0);
+				const mappedDashboardContracts = dashboardContracts.documents.map(
+					(contract: Record<string, unknown>) => {
+						let daysUntilExpiry: number | undefined =
+							typeof contract.daysUntilExpiry === "number"
+								? contract.daysUntilExpiry
+								: undefined;
+						let contractStatus =
+							typeof contract.status === "string" ? contract.status : undefined;
+						const expiryRaw = contract.contractExpiryDate;
+						if (typeof expiryRaw === "string" && expiryRaw) {
+							const expiryStr = expiryRaw.split("T")[0];
+							const [year, month, day] = expiryStr.split("-").map(Number);
+							const expiryDate = new Date(year, month - 1, day);
+							expiryDate.setHours(0, 0, 0, 0);
+							if (daysUntilExpiry === undefined) {
+								daysUntilExpiry = Math.floor(
+									(expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+								);
+							}
+							if (expiryDate <= now) {
+								contractStatus = "expired";
+							}
+						}
+						return {
+							$id: contract.$id,
+							$createdAt: contract.$createdAt,
+							$updatedAt: contract.$updatedAt,
+							type: "contract",
+							name: contract.contractName || "Unnamed Contract",
+							contractName: contract.contractName || "Unnamed Contract",
+							contractExpiryDate: contract.contractExpiryDate,
+							isExpired: contract.isExpired || false,
+							daysUntilExpiry,
+							status: contractStatus,
+							department: contract.department,
+							snoozedUntil: contract.snoozedUntil || null,
+						};
+					},
+				);
 
 				// Calculate dashboard stats
 				const totalContracts = contracts.total;
@@ -239,11 +289,8 @@ export async function GET(request: NextRequest) {
 				).length;
 				const totalNotifications = notificationsStats.total;
 
-				// Get uninvited users result
-				const uninvitedUsers =
-					uninvitedUsersResult.status === "fulfilled"
-						? uninvitedUsersResult.value
-						: [];
+				// Uninvited users load via /api/users/uninvited (not on critical path)
+				const uninvitedUsers: unknown[] = [];
 
 				const unifiedData = {
 					stats: {
@@ -256,6 +303,7 @@ export async function GET(request: NextRequest) {
 					invitations: invitations.documents,
 					authUsers: users.documents,
 					uninvitedUsers: uninvitedUsers,
+					contracts: mappedDashboardContracts,
 					reports: reports.documents,
 					departments: getResult(departmentsResult).documents,
 					reportTemplates: getResult(reportTemplatesResult).documents,

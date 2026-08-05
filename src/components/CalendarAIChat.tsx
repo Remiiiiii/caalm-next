@@ -18,7 +18,6 @@ import Image from "next/image";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -952,15 +951,16 @@ Contract: ${contractTitle}`;
 			<div className="flex items-center justify-between p-4 border-b border-light-300 bg-white/80 backdrop-blur">
 				<div className="flex items-center gap-2">
 					<Image
-						src="/assets/images/assistant.svg"
+						src="/assets/images/logo.png"
 						alt="AI Assistant"
 						width={30}
 						height={30}
+						className="h-[30px] w-[30px] object-contain"
 					/>
 					<h3 className="font-bold sidebar-gradient-text">
 						{mode === "pre-reads"
 							? "Pre-Reads Recommendations"
-							: "AI Assistant"}
+							: "CAALM Calendar Assistant"}
 					</h3>
 				</div>
 				{onClose && (
@@ -1065,7 +1065,7 @@ Contract: ${contractTitle}`;
 												key={idx}
 												type="button"
 												onClick={() => handleSuggestedAction(value)}
-												className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-[#078FAB] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-1"
+												className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-xs transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-1"
 											>
 												<span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#078FAB]/10 text-[#078FAB]">
 													<Icon className="h-5 w-5" />
@@ -1275,7 +1275,7 @@ Contract: ${contractTitle}`;
 										key={idx}
 										type="button"
 										onClick={() => handleSuggestedAction(value)}
-										className="w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#078FAB] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-1"
+										className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white/90 px-4 py-3 text-left shadow-sm transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-1"
 									>
 										<div className="flex items-start gap-3">
 											<span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#078FAB]/10 text-[#078FAB]">
@@ -1298,27 +1298,25 @@ Contract: ${contractTitle}`;
 				)}
 
 			{/* Input Area */}
-			<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur m-4">
-				<CardContent className="p-4 space-y-3">
-					<div className="flex gap-2">
-						<Textarea
-							placeholder={
-								mode === "pre-reads"
-									? "Ask about contract details..."
-									: "Message AI Assistant..."
+			<div className="shrink-0 border-t border-slate-200/80 bg-white/35 px-4 py-3 backdrop-blur-sm">
+				<div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+					<Textarea
+						placeholder={
+							mode === "pre-reads"
+								? "Ask about contract details..."
+								: "Message CAALM Calendar Assistant..."
+						}
+						value={aiInput}
+						onChange={(e) => setAiInput(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" && !e.shiftKey) {
+								e.preventDefault();
+								handleSendMessage();
 							}
-							value={aiInput}
-							onChange={(e) => setAiInput(e.target.value)}
-							onKeyDown={(e) => {
-								if (e.key === "Enter" && !e.shiftKey) {
-									e.preventDefault();
-									handleSendMessage();
-								}
-							}}
-							className="text-sm focus-visible:ring-[#078FAB] image.png"
-							rows={2}
-						/>
-					</div>
+						}}
+						className="min-h-16 resize-y border-slate-300 text-sm text-slate-900 focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]"
+						rows={2}
+					/>
 					<Button
 						onClick={() => handleSendMessage()}
 						disabled={isAiLoading || !aiInput.trim()}
@@ -1337,34 +1335,34 @@ Contract: ${contractTitle}`;
 							</>
 						)}
 					</Button>
+				</div>
 
-					{/* Suggested Questions */}
-					{chatMessages.length > 0 && (
-						<div className="mt-4">
-							<div className="mb-3">
-								<h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-									<FileText className="h-4 w-4 text-cyan-600" />
-									Quick Questions
-								</h4>
-							</div>
-							<div className="flex flex-wrap gap-2">
-								{getSuggestedQuestions().map((q, idx) => (
-									<Button
-										key={idx}
-										variant="outline"
-										size="sm"
-										className="text-xs rounded-full bg-white border-light-300 hover:bg-light-400 hover:border-[#00C1CB] focus:ring-2 focus:ring-[#078FAB] focus:outline-none transition-all duration-200 shadow-drop-1"
-										onClick={() => handleSuggestedAction(q)}
-										disabled={isAiLoading}
-									>
-										{q}
-									</Button>
-								))}
-							</div>
+				{/* Suggested Questions */}
+				{chatMessages.length > 0 && (
+					<div className="mt-3">
+						<div className="mb-3">
+							<h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+								<FileText className="h-4 w-4 text-cyan-600" />
+								Quick Questions
+							</h4>
 						</div>
-					)}
-				</CardContent>
-			</Card>
+						<div className="flex flex-wrap gap-2">
+							{getSuggestedQuestions().map((q, idx) => (
+								<Button
+									key={idx}
+									variant="outline"
+									size="sm"
+									className="text-xs rounded-full bg-white border-light-300 cursor-pointer hover:bg-blue-50 hover:border-blue-500 focus:ring-2 focus:ring-[#078FAB] focus:outline-none transition-all duration-200 shadow-drop-1"
+									onClick={() => handleSuggestedAction(q)}
+									disabled={isAiLoading}
+								>
+									{q}
+								</Button>
+							))}
+						</div>
+					</div>
+				)}
+			</div>
 		</div>
 	);
 };

@@ -43,6 +43,25 @@ export function consumePendingAction(
 	return record;
 }
 
+/** Merge client-side confirmation edits into a still-pending action. */
+export function patchPendingActionArgs(
+	id: string,
+	ctx: AssistantAuthContext,
+	argsPatch: Record<string, unknown>,
+): PendingAssistantAction | null {
+	const record = pending.get(id);
+	if (!record) return null;
+	if (record.expiresAt < Date.now()) {
+		pending.delete(id);
+		return null;
+	}
+	if (record.userId !== ctx.user.$id || record.orgId !== ctx.orgId) return null;
+	record.args = { ...record.args, ...argsPatch };
+	record.preview = JSON.stringify(record.args, null, 2).slice(0, 500);
+	pending.set(id, record);
+	return record;
+}
+
 export type ToolContext = AssistantAuthContext & {
 	pathname?: string;
 };

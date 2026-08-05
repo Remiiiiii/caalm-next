@@ -2395,14 +2395,16 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 									size="sm"
 									variant="outline"
 									disabled={
-										selectedEventPermissions
+										!canCreateEvent ||
+										(selectedEventPermissions
 											? !selectedEventPermissions.updateEvent
-											: false
+											: false)
 									}
 									className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 disabled:opacity-50"
 									title={
-										selectedEventPermissions &&
-										!selectedEventPermissions.updateEvent
+										!canCreateEvent ||
+										(selectedEventPermissions &&
+											!selectedEventPermissions.updateEvent)
 											? "You do not have permission to edit this event"
 											: undefined
 									}
@@ -2413,14 +2415,16 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 									size="sm"
 									variant="outline"
 									disabled={
-										selectedEventPermissions
+										!canCreateEvent ||
+										(selectedEventPermissions
 											? !selectedEventPermissions.cancelEvent
-											: false
+											: false)
 									}
 									className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40 disabled:opacity-50"
 									title={
-										selectedEventPermissions &&
-										!selectedEventPermissions.cancelEvent
+										!canCreateEvent ||
+										(selectedEventPermissions &&
+											!selectedEventPermissions.cancelEvent)
 											? "You do not have permission to cancel this event"
 											: undefined
 									}

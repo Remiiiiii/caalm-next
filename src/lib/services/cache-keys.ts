@@ -12,6 +12,13 @@ export const CACHE_KEYS = {
 			`dashboard:unified:${orgId}:${userId}`,
 		department: (orgId: string, userId: string, division: string) =>
 			`dashboard:department:${orgId}:${userId}:${division}`,
+		riskImpact: (
+			orgId: string,
+			userId: string,
+			period: string,
+			division?: string,
+		) =>
+			`dashboard:risk-impact:v2:${orgId}:${userId}:${period}:${division || "all"}`,
 		stats: (orgId: string) => `dashboard:stats:${orgId}`,
 		invitations: (orgId: string) => `dashboard:invitations:${orgId}`,
 		files: (orgId?: string, limit?: number) =>
@@ -177,6 +184,7 @@ export const getTTLForRoute = (route: string): number => {
 		// Dashboard
 		"dashboard/unified": CACHE_TTLS.veryLong,
 		"dashboard/department": CACHE_TTLS.short, // 2 minutes
+		"dashboard/risk-impact": CACHE_TTLS.medium, // 5 minutes
 		"dashboard/stats": CACHE_TTLS.medium, // 5 minutes
 		"dashboard/invitations": CACHE_TTLS.medium, // 5 minutes
 		"dashboard/files": CACHE_TTLS.medium, // 5 minutes

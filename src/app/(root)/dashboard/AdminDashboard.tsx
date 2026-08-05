@@ -8,6 +8,7 @@ import {
 	FileStack,
 	FileText,
 	RefreshCw,
+	Send,
 	Server,
 	Settings,
 	Shield,
@@ -24,6 +25,7 @@ import CalendarView from "@/components/CalendarView";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
+import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
@@ -46,7 +48,9 @@ import WeatherWidget from "@/components/WeatherWidget";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminStats } from "@/hooks/useAdminStats";
+import { useRiskImpactDashboard } from "@/hooks/useRiskImpactDashboard";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
+import { cn } from "@/lib/utils";
 
 const ClientDate = dynamic(() => import("@/components/ClientDate"), {
 	ssr: false,
@@ -115,6 +119,13 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		isLoading: unifiedLoading,
 		refresh: refreshUnified,
 	} = useUnifiedDashboardData(orgId || "default_organization");
+
+	const {
+		snapshot: riskImpact,
+		isLoading: riskImpactLoading,
+		error: riskImpactError,
+		refresh: refreshRiskImpact,
+	} = useRiskImpactDashboard();
 
 	const { toast } = useToast();
 
@@ -423,6 +434,12 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 	return (
 		<div className="space-y-6">
+			<RiskImpactHeroCard
+				snapshot={riskImpact}
+				isLoading={riskImpactLoading}
+				error={riskImpactError}
+				onRetry={() => refreshRiskImpact()}
+			/>
 			{/* Widget Carousel */}
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
@@ -865,122 +882,186 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 			</div>
 
 			{/* Invite New User to CAALM */}
-			<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-				<CardHeader>
-					<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-						Invite New User to CAALM
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<form className="flex flex-col gap-4" onSubmit={handleInviteSubmit}>
-						<div className="flex flex-row gap-2 items-center justify-between">
-							<SelectScrollable
-								value={inviteForm.selectedUserId}
-								onValueChange={(value) =>
-									setInviteForm({ ...inviteForm, selectedUserId: value })
-								}
-								placeholder="Select a user"
-								className=" bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-							>
-								{(uninvitedUsers as UninvitedUser[]).map((u) => (
-									<SelectItem key={u.$id} value={u.$id}>
-										<div className="flex items-center gap-3">
-											<Avatar name={u.fullName} userId={u.$id} size="sm" />
-											<span>
-												{u.fullName} ({u.email})
-											</span>
-										</div>
+			<Card className="glass-card overflow-hidden">
+				<div className="glass-card-cap" />
+				<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
+					<p className="mb-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#0f5384]">
+						User management
+					</p>
+					<h2 className="text-xl font-semibold tracking-tight text-slate-700">
+						Send invite link
+					</h2>
+					<p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-600">
+						Grant a new person access to CAALM by selecting their identity and
+						access level below.
+					</p>
+				</div>
+
+				<form onSubmit={handleInviteSubmit}>
+					<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
+						<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
+							Recipient
+						</p>
+						<div>
+							<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+								Select a user
+								<span className="font-bold text-red" aria-hidden>
+									*
+								</span>
+							</label>
+							<div className="flex items-end gap-2.5">
+								<div className="min-w-0 flex-1">
+									<SelectScrollable
+										value={inviteForm.selectedUserId}
+										onValueChange={(value) =>
+											setInviteForm({ ...inviteForm, selectedUserId: value })
+										}
+										placeholder="Choose from directory…"
+										className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+									>
+										{(uninvitedUsers as UninvitedUser[]).map((u) => (
+											<SelectItem key={u.$id} value={u.$id}>
+												<div className="flex items-center gap-3">
+													<Avatar name={u.fullName} userId={u.$id} size="sm" />
+													<span>
+														{u.fullName} ({u.email})
+													</span>
+												</div>
+											</SelectItem>
+										))}
+									</SelectScrollable>
+								</div>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={handleRefreshUsers}
+									disabled={refreshLoading}
+									aria-label="Refresh user list"
+									title="Refresh user list"
+									className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
+								>
+									<RefreshCw
+										className={cn(
+											"h-4 w-4",
+											refreshLoading && "animate-spin",
+										)}
+									/>
+								</Button>
+							</div>
+							<p className="mt-1.5 text-[11px] text-slate-500">
+								Pulled from your connected directory. Refresh if this person was
+								just added.
+							</p>
+							{(uninvitedUsers as UninvitedUser[]).length === 0 && (
+								<p className="mt-2 text-xs text-slate-500">
+									No users found in the Auth directory.
+								</p>
+							)}
+						</div>
+					</div>
+
+					<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
+						<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
+							Access &amp; permissions
+						</p>
+						<div className="space-y-4">
+							<div>
+								<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+									Role
+									<span className="font-bold text-red" aria-hidden>
+										*
+									</span>
+								</label>
+								<SelectScrollable
+									value={inviteForm.role}
+									onValueChange={(value) =>
+										setInviteForm({ ...inviteForm, role: value })
+									}
+									placeholder="Select role…"
+									className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+								>
+									<SelectItem value="executive">Executive</SelectItem>
+									<SelectItem value="manager">Manager</SelectItem>
+									<SelectItem value="admin">Admin</SelectItem>
+								</SelectScrollable>
+							</div>
+
+							<div>
+								<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+									Department
+									<span className="font-mono text-[9px] font-medium uppercase tracking-wide text-slate-400">
+										Optional
+									</span>
+								</label>
+								<SelectScrollable
+									value={inviteForm.department}
+									onValueChange={(value) =>
+										setInviteForm({ ...inviteForm, department: value })
+									}
+									placeholder="Select department…"
+									className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+								>
+									<SelectItem value="IT">IT</SelectItem>
+									<SelectItem value="Finance">Finance</SelectItem>
+									<SelectItem value="Administration">Administration</SelectItem>
+									<SelectItem value="Legal">Legal</SelectItem>
+									<SelectItem value="Operations">Operations</SelectItem>
+									<SelectItem value="Sales">Sales</SelectItem>
+									<SelectItem value="Marketing">Marketing</SelectItem>
+									<SelectItem value="Executive">Executive</SelectItem>
+									<SelectItem value="Engineering">Engineering</SelectItem>
+								</SelectScrollable>
+							</div>
+
+							<div>
+								<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+									Division
+									<span className="font-mono text-[9px] font-medium uppercase tracking-wide text-slate-400">
+										Optional
+									</span>
+								</label>
+								<SelectScrollable
+									value={inviteForm.division}
+									onValueChange={(value) =>
+										setInviteForm({ ...inviteForm, division: value })
+									}
+									placeholder="Select division…"
+									className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+								>
+									<SelectItem value="behavioral-health">
+										Behavioral Health
 									</SelectItem>
-								))}
-							</SelectScrollable>
-							<Button
-								type="button"
-								onClick={handleRefreshUsers}
-								disabled={refreshLoading}
-								className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
-							>
-								<RefreshCw
-									className={`h-4 w-4 mr-2 ${
-										refreshLoading ? "animate-spin" : ""
-									}`}
-								/>
-								{refreshLoading ? "Refreshing..." : "Refresh User List"}
-							</Button>
+									<SelectItem value="child-welfare">Child Welfare</SelectItem>
+									<SelectItem value="clinic">Clinic</SelectItem>
+									<SelectItem value="c-suite">C-Suite</SelectItem>
+									<SelectItem value="cfs">CFS</SelectItem>
+									<SelectItem value="hr">Human Resources</SelectItem>
+									<SelectItem value="residential">Residential</SelectItem>
+									<SelectItem value="support">Support</SelectItem>
+									<SelectItem value="help-desk">Help Desk</SelectItem>
+									<SelectItem value="accounting">Accounting</SelectItem>
+								</SelectScrollable>
+							</div>
 						</div>
+					</div>
 
-						<div className="responsive-filter-row">
-							<SelectScrollable
-								value={inviteForm.role}
-								onValueChange={(value) =>
-									setInviteForm({ ...inviteForm, role: value })
-								}
-								placeholder="Select role"
-								className="w-full sm:min-w-[80px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-							>
-								<SelectItem value="executive">Executive</SelectItem>
-								<SelectItem value="manager">Manager</SelectItem>
-								<SelectItem value="admin">Admin</SelectItem>
-							</SelectScrollable>
-
-							<SelectScrollable
-								value={inviteForm.department}
-								onValueChange={(value) =>
-									setInviteForm({ ...inviteForm, department: value })
-								}
-								placeholder="Select department"
-								className="w-full sm:min-w-[180px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-							>
-								<SelectItem value="IT">IT</SelectItem>
-								<SelectItem value="Finance">Finance</SelectItem>
-								<SelectItem value="Administration">Administration</SelectItem>
-								<SelectItem value="Legal">Legal</SelectItem>
-								<SelectItem value="Operations">Operations</SelectItem>
-								<SelectItem value="Sales">Sales</SelectItem>
-								<SelectItem value="Marketing">Marketing</SelectItem>
-								<SelectItem value="Executive">Executive</SelectItem>
-								<SelectItem value="Engineering">Engineering</SelectItem>
-							</SelectScrollable>
-
-							<SelectScrollable
-								value={inviteForm.division}
-								onValueChange={(value) =>
-									setInviteForm({ ...inviteForm, division: value })
-								}
-								placeholder="Select division"
-								className="w-full sm:min-w-[150px] bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-							>
-								<SelectItem value="behavioral-health">
-									Behavioral Health
-								</SelectItem>
-								<SelectItem value="child-welfare">Child Welfare</SelectItem>
-								<SelectItem value="clinic">Clinic</SelectItem>
-								<SelectItem value="c-suite">C-Suite</SelectItem>
-								<SelectItem value="cfs">CFS</SelectItem>
-								<SelectItem value="hr">Human Resources</SelectItem>
-								<SelectItem value="residential">Residential</SelectItem>
-								<SelectItem value="support">Support</SelectItem>
-								<SelectItem value="help-desk">Help Desk</SelectItem>
-								<SelectItem value="accounting">Accounting</SelectItem>
-							</SelectScrollable>
-						</div>
-
+					<div className="flex flex-col gap-3 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+						<p className="text-[11.5px] leading-relaxed text-slate-600">
+							The invite link expires in 7 days.
+						</p>
 						<Button
 							type="submit"
 							disabled={
 								loadingInvite ||
 								(uninvitedUsers as UninvitedUser[]).length === 0
 							}
-							className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+							className="primary-btn h-10 shrink-0 gap-2 px-5 text-[13px] font-semibold"
 						>
-							{loadingInvite ? "Inviting..." : "Send Invite"}
+							{loadingInvite ? "Sending…" : "Send invite"}
+							<Send className="h-3.5 w-3.5" />
 						</Button>
-						{(uninvitedUsers as UninvitedUser[]).length === 0 && (
-							<p className="text-sm text-gray-500 mt-2 text-center">
-								No users found in Auth database
-							</p>
-						)}
-					</form>
-				</CardContent>
+					</div>
+				</form>
 			</Card>
 
 			{/* Pending Invitations */}

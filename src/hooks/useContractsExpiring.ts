@@ -71,9 +71,14 @@ const fetcher = async (url: string): Promise<UIFileDoc[]> => {
 /**
  * Hook to fetch contracts from /api/contracts/all endpoint
  */
-export function useContractsExpiring() {
+export function useContractsExpiring(options?: {
+	enabled?: boolean;
+	limit?: number;
+}) {
+	const enabled = options?.enabled !== false;
+	const limit = options?.limit ?? 100;
 	const { data, error, isLoading, mutate } = useSWR<UIFileDoc[]>(
-		"/api/contracts/all",
+		enabled ? `/api/contracts/all?limit=${limit}` : null,
 		fetcher,
 		{
 			refreshInterval: 300000, // Refresh every 5 minutes
