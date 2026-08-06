@@ -4,8 +4,12 @@ import {
 	type CreateCalendarEventData,
 	createCalendarEvent,
 	getCalendarEventsByMonth,
+	updateCalendarEvent,
 } from "@/lib/actions/calendar.actions";
-import { listCalendarApprovalRequests } from "@/lib/actions/calendar-approval.actions";
+import {
+	createCalendarApprovalRequest,
+	listCalendarApprovalRequests,
+} from "@/lib/actions/calendar-approval.actions";
 import { generateReport } from "@/lib/actions/report.actions";
 import { TaskService } from "@/lib/api/tasks/services/TaskService";
 import { createAdminClient } from "@/lib/appwrite";
@@ -14,7 +18,7 @@ import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
 import { evaluateCalendarPermission } from "@/lib/auth/guards";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
-import { logAuditEvent } from "@/lib/services/audit-logger";
+import { getAuditLogs, logAuditEvent } from "@/lib/services/audit-logger";
 import { detectParticipantConflicts } from "@/lib/utils/conflict-detection";
 
 function hasAll(
@@ -43,6 +47,22 @@ function dateFromDateAndTime(dateStr: string, timeStr: string): Date | null {
 
 function formatLocalDate(d: Date): string {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Find a user's upcoming event by title keyword. Returns matches for caller to disambiguate. */
+async function findUpcomingEventsByTitle(ctx: ToolContext, search: string) {
+	const now = new Date();
+	const events = await getCalendarEventsByMonth(
+		now.getFullYear(),
+		now.getMonth() + 1,
+		ctx.user.$id,
+	);
+	const q = search.trim().toLowerCase();
+	const todayKey = formatLocalDate(now);
+	return events
+		.filter((e) => (e.startDate ?? "") >= todayKey)
+		.filter((e) => (e.title ?? "").toLowerCase().includes(q))
+		.slice(0, 5);
 }
 
 function summarizeTask(task: {
@@ -82,7 +102,7 @@ async function searchContractsTable(ctx: ToolContext, search: string) {
 		id: r.$id,
 		name: r.contractName ?? r.name,
 		status: r.status,
-		expiryDate: r.expiryDate,
+		expiryDate: r.contractExpiryDate,
 	}));
 }
 
@@ -105,7 +125,7 @@ async function searchLicensesTable(ctx: ToolContext, search: string) {
 		id: r.$id,
 		name: r.licenseName ?? r.name,
 		status: r.status,
-		expirationDate: r.expirationDate,
+		expirationDate: r.licenseExpiryDate,
 	}));
 }
 
@@ -335,7 +355,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 		name: "list_calendar_events",
 		description:
 			"List the current user's CAALM calendar events for a given date (defaults to today) or month. Use when the user asks about their schedule, meetings, availability, or whether they are free at a time.",
-		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
+		requiredPermissions: [PERMISSIONS.CALENDAR.VIEW_OWN],
 		mutating: false,
 		parameters: {
 			type: "object",
@@ -352,8 +372,8 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 			},
 		},
 		handler: async (ctx, args) => {
-			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.CREATE])) {
-				return { result: { error: "Missing calendar.create permission" } };
+			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.VIEW_OWN])) {
+				return { result: { error: "Missing calendar view permission" } };
 			}
 			const now = new Date();
 			const dateStr = args.date ? String(args.date) : "";
@@ -517,27 +537,6 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				createdBy: ctx.user.$id,
 			};
 
-			// Conflicts: warn in the answer instead of blocking (the assistant chat
-			// has no second confirmation step like the calendar form does).
-			let conflicts: string[] = [];
-			if (eventPayload.participants) {
-				try {
-					const found = await detectParticipantConflicts(
-						eventPayload,
-						undefined,
-						ctx.user.$id,
-					);
-					conflicts = found
-						.slice(0, 3)
-						.map(
-							(c) =>
-								`${c.conflictingEvent.title} (${c.conflictingEvent.startDate} ${c.conflictingEvent.startTime ?? ""})`,
-						);
-				} catch {
-					conflicts = [];
-				}
-			}
-
 			// Same permission evaluation the calendar API uses (role + calendar permission).
 			const accountId = await getCurrentUserId();
 			const permissionCheck = await evaluateCalendarPermission({
@@ -562,6 +561,27 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				requiresApproval: false,
 				approvalStatus: "not_required",
 			};
+
+			// Conflicts: warn in the answer instead of blocking (the assistant chat
+			// has no second confirmation step like the calendar form does).
+			let conflicts: string[] = [];
+			if (eventPayload.participants) {
+				try {
+					const found = await detectParticipantConflicts(
+						eventPayload,
+						undefined,
+						accountId,
+					);
+					conflicts = found
+						.slice(0, 3)
+						.map(
+							(c) =>
+								`${c.conflictingEvent.title} (${c.conflictingEvent.startDate} ${c.conflictingEvent.startTime ?? ""})`,
+						);
+				} catch {
+					conflicts = [];
+				}
+			}
 
 			const event = await createCalendarEvent(eventData);
 
@@ -636,6 +656,544 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 		},
 	},
 	{
+		name: "list_expirations",
+		description:
+			"List contracts and licenses expiring within a number of days (default 90). Use when the user asks what's expiring, due soon, coming up for renewal, or wants an expiration brief.",
+		requiredPermissions: [
+			PERMISSIONS.CONTRACTS.VIEW,
+			PERMISSIONS.LICENSES.VIEW,
+		],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				days: {
+					type: "number",
+					description: "Look-ahead window in days. Default 90.",
+				},
+			},
+		},
+		handler: async (ctx, args) => {
+			const days = Math.min(Math.max(Number(args.days) || 90, 1), 365);
+			const now = new Date();
+			const today = formatLocalDate(now);
+			const horizon = formatLocalDate(
+				new Date(now.getTime() + days * 24 * 60 * 60 * 1000),
+			);
+			const { tablesDB } = await createAdminClient();
+
+			const contractsPromise = hasAll(ctx, [PERMISSIONS.CONTRACTS.VIEW])
+				? tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId!,
+						tableId: appwriteConfig.contractsCollectionId || "contracts",
+						queries: [
+							Query.equal("orgId", ctx.orgId),
+							Query.greaterThanEqual("contractExpiryDate", today),
+							Query.lessThanEqual("contractExpiryDate", horizon),
+							Query.orderAsc("contractExpiryDate"),
+							Query.limit(10),
+						],
+					})
+				: Promise.resolve({ rows: [] as Record<string, unknown>[] });
+
+			const licensesPromise = hasAll(ctx, [PERMISSIONS.LICENSES.VIEW])
+				? tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId!,
+						tableId: appwriteConfig.licensesCollectionId || "licenses",
+						queries: [
+							Query.equal("orgId", ctx.orgId),
+							Query.greaterThanEqual("licenseExpiryDate", today),
+							Query.lessThanEqual("licenseExpiryDate", horizon),
+							Query.orderAsc("licenseExpiryDate"),
+							Query.limit(10),
+						],
+					})
+				: Promise.resolve({ rows: [] as Record<string, unknown>[] });
+
+			const [contracts, licenses] = await Promise.all([
+				contractsPromise,
+				licensesPromise,
+			]);
+
+			return {
+				result: {
+					days,
+					contracts: contracts.rows.map((r) => ({
+						id: r.$id,
+						name: r.contractName ?? r.name,
+						expiryDate: r.contractExpiryDate,
+						status: r.status,
+					})),
+					licenses: licenses.rows.map((r) => ({
+						id: r.$id,
+						name: r.licenseName ?? r.name,
+						expirationDate: r.licenseExpiryDate,
+						status: r.status,
+					})),
+					contractsHref: "/contracts",
+					licensesHref: "/licenses",
+				},
+			};
+		},
+	},
+	{
+		name: "complete_task",
+		description:
+			"Mark a task as done (requires user confirmation). Find the task by title from the user's open tasks. If multiple or no tasks match, say so and ask the user which one.",
+		requiredPermissions: [PERMISSIONS.EVENTS.CREATE],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				title: {
+					type: "string",
+					description: "The task title (or a distinctive part of it)",
+				},
+			},
+			required: ["title"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.EVENTS.CREATE])) {
+				return { result: { error: "Missing events.create permission" } };
+			}
+			const search = String(args.title ?? "").trim();
+			if (!search)
+				return { result: { error: "Which task should I mark done?" } };
+
+			const { tasks } = await TaskService.listTasks(
+				ctx.orgId,
+				{ search },
+				{ limit: 10, offset: 0 },
+			);
+			const open = tasks.filter((t) => t.status !== "done");
+
+			if (open.length === 0) {
+				return {
+					result: {
+						error: `I couldn't find an open task matching "${search}". Ask me to show your pending tasks first.`,
+					},
+				};
+			}
+			if (open.length > 1) {
+				return {
+					result: {
+						error: `I found ${open.length} open tasks matching "${search}": ${open
+							.slice(0, 3)
+							.map((t) => t.title)
+							.join(", ")}. Tell me which one.`,
+					},
+				};
+			}
+
+			const task = open[0];
+			const updated = await TaskService.updateTask(ctx.orgId, task.$id, {
+				status: "done",
+			});
+			const userName =
+				(ctx.user as { fullName?: string }).fullName ||
+				ctx.user.name ||
+				ctx.user.email ||
+				"User";
+			await logAuditEvent({
+				event_id: `assistant_task_done_${task.$id}`,
+				event_title: `Assistant completed task: ${task.title}`,
+				action: "update",
+				source: "caalm",
+				user_id: ctx.user.$id,
+				user_name: userName,
+				user_email: ctx.user.email || "",
+				status: "success",
+				orgId: ctx.orgId,
+				module: "system",
+				target_type: "task",
+				target_id: task.$id,
+				target_label: task.title,
+				summary: `CAALM assistant marked task "${task.title}" done`,
+				metadata: { source: "ai_assistant" },
+			}).catch(() => undefined);
+			return {
+				result: { taskId: task.$id, title: task.title, updated: !!updated },
+			};
+		},
+	},
+	{
+		name: "list_audit_logs",
+		description:
+			"List recent audit/activity events for the organization (who changed what). Use when the user asks about recent activity, changes, or audit history. Requires audit view permission.",
+		requiredPermissions: [PERMISSIONS.AUDIT.VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				limit: { type: "number", description: "Max entries. Default 10." },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.VIEW])) {
+				return {
+					result: {
+						error:
+							"You don't have permission to view audit logs. Ask an admin for audit access.",
+					},
+				};
+			}
+			const limit = Math.min(Number(args.limit) || 10, 20);
+			const logs = await getAuditLogs({ orgId: ctx.orgId, limit });
+			return {
+				result: {
+					logs: logs.map((l) => ({
+						title: l.event_title,
+						action: l.action,
+						user: l.user_name,
+						status: l.status,
+						when: l.created_at,
+						module: l.module,
+					})),
+					total: logs.length,
+					auditHref: "/audits",
+				},
+			};
+		},
+	},
+	{
+		name: "reschedule_calendar_event",
+		description:
+			"Reschedule one of the user's own calendar meetings to a new date/time (requires user confirmation). Find the meeting by title. Resolve the new date against the current date in the system prompt. If the title matches several or none, say so and ask the user which meeting.",
+		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				eventTitle: {
+					type: "string",
+					description: "Title (or distinctive part) of the meeting to move",
+				},
+				newDate: {
+					type: "string",
+					description: "YYYY-MM-DD resolved against the current date",
+				},
+				newStartTime: {
+					type: "string",
+					description: "HH:mm 24-hour",
+				},
+			},
+			required: ["eventTitle", "newDate", "newStartTime"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.CREATE])) {
+				return { result: { error: "Missing calendar.create permission" } };
+			}
+			const search = String(args.eventTitle ?? "").trim();
+			if (!search) return { result: { error: "Which meeting should I move?" } };
+
+			const matches = await findUpcomingEventsByTitle(ctx, search);
+			if (matches.length === 0) {
+				return {
+					result: {
+						error: `I couldn't find an upcoming meeting matching "${search}". Ask me what's on your calendar first.`,
+					},
+				};
+			}
+			if (matches.length > 1) {
+				return {
+					result: {
+						error: `I found ${matches.length} meetings matching "${search}": ${matches
+							.map((e) => `${e.title} (${e.startDate} ${e.startTime ?? ""})`)
+							.join(", ")}. Tell me which one.`,
+					},
+				};
+			}
+
+			const target = matches[0];
+			const newStart = dateFromDateAndTime(
+				String(args.newDate ?? ""),
+				String(args.newStartTime ?? ""),
+			);
+			if (!newStart) {
+				return {
+					result: {
+						error:
+							"I couldn't understand the new date/time. Ask the user for the date (YYYY-MM-DD) and start time.",
+					},
+				};
+			}
+			if (newStart.getTime() < Date.now()) {
+				return {
+					result: {
+						error:
+							"The new time is in the past. Ask the user for a future time.",
+					},
+				};
+			}
+
+			// Preserve the original duration.
+			const oldStart = dateFromDateAndTime(
+				target.startDate,
+				target.startTime ?? "00:00",
+			);
+			const oldEnd = dateFromDateAndTime(
+				target.endDate ?? target.startDate,
+				target.endTime ?? target.startTime ?? "00:00",
+			);
+			const durationMs =
+				oldStart && oldEnd && oldEnd > oldStart
+					? oldEnd.getTime() - oldStart.getTime()
+					: 30 * 60000;
+			const newEnd = new Date(newStart.getTime() + durationMs);
+
+			const eventData: Partial<CreateCalendarEventData> = {
+				startDate: formatLocalDate(newStart),
+				endDate: formatLocalDate(newEnd),
+				startTime: `${pad(newStart.getHours())}:${pad(newStart.getMinutes())}`,
+				endTime: `${pad(newEnd.getHours())}:${pad(newEnd.getMinutes())}`,
+			};
+
+			// Respect approval flow for sensitive events (same rule as the calendar API).
+			const accountId = await getCurrentUserId();
+			const permissionCheck = await evaluateCalendarPermission({
+				userAccountId: accountId,
+				action: "update",
+				event: target,
+			});
+			if (!permissionCheck.allowed) {
+				return {
+					result: {
+						error:
+							"You don't have permission to move that meeting. Ask an admin, or move it from the Calendar page.",
+					},
+				};
+			}
+
+			const sensitivity = target.sensitivityLevel || "standard";
+			const requiresApproval =
+				Boolean(target.requiresApproval) || sensitivity !== "standard";
+			if (requiresApproval && target.approvalStatus !== "approved") {
+				const approval = await createCalendarApprovalRequest({
+					eventId: target.$id!,
+					changeType: "update",
+					requestedByAccountId: accountId,
+					requestedByUserId: permissionCheck.userId || undefined,
+					changeSummary: {
+						before: target as unknown as Record<string, unknown>,
+						after: { ...target, ...eventData } as unknown as Record<
+							string,
+							unknown
+						>,
+					},
+					sensitivityLevel: sensitivity,
+				});
+				await updateCalendarEvent(target.$id!, {
+					...eventData,
+					approvalStatus: "pending",
+					pendingApprovalId: approval.$id,
+				});
+				return {
+					result: {
+						eventId: target.$id,
+						title: target.title,
+						pendingApproval: true,
+						note: "That meeting needs approval. I submitted a reschedule request.",
+					},
+				};
+			}
+
+			const updated = await updateCalendarEvent(target.$id!, eventData);
+			return {
+				result: {
+					eventId: updated.$id,
+					title: updated.title,
+					date: updated.startDate,
+					startTime: updated.startTime,
+					endTime: updated.endTime,
+				},
+			};
+		},
+	},
+	{
+		name: "cancel_calendar_event",
+		description:
+			"Cancel one of the user's own calendar meetings (requires user confirmation). Find the meeting by title. If several or none match, say so and ask which one.",
+		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				eventTitle: {
+					type: "string",
+					description: "Title (or distinctive part) of the meeting to cancel",
+				},
+			},
+			required: ["eventTitle"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.CREATE])) {
+				return { result: { error: "Missing calendar.create permission" } };
+			}
+			const search = String(args.eventTitle ?? "").trim();
+			if (!search)
+				return { result: { error: "Which meeting should I cancel?" } };
+
+			const matches = await findUpcomingEventsByTitle(ctx, search);
+			if (matches.length === 0) {
+				return {
+					result: {
+						error: `I couldn't find an upcoming meeting matching "${search}". Ask me what's on your calendar first.`,
+					},
+				};
+			}
+			if (matches.length > 1) {
+				return {
+					result: {
+						error: `I found ${matches.length} meetings matching "${search}": ${matches
+							.map((e) => `${e.title} (${e.startDate} ${e.startTime ?? ""})`)
+							.join(", ")}. Tell me which one.`,
+					},
+				};
+			}
+
+			const target = matches[0];
+			const accountId = await getCurrentUserId();
+			const permissionCheck = await evaluateCalendarPermission({
+				userAccountId: accountId,
+				action: "cancel",
+				event: target,
+			});
+			if (!permissionCheck.allowed) {
+				return {
+					result: {
+						error:
+							"You don't have permission to cancel that meeting. Ask an admin, or cancel it from the Calendar page.",
+					},
+				};
+			}
+
+			// Sensitive events route through an approval request instead of deleting
+			// (mirrors the calendar DELETE route).
+			const sensitivity = target.sensitivityLevel || "standard";
+			const requiresApproval =
+				Boolean(target.requiresApproval) || sensitivity !== "standard";
+			if (requiresApproval) {
+				const approval = await createCalendarApprovalRequest({
+					eventId: target.$id!,
+					changeType: "cancel",
+					requestedByAccountId: accountId,
+					requestedByUserId: permissionCheck.userId || undefined,
+					changeSummary: {
+						before: target as unknown as Record<string, unknown>,
+						after: null,
+					},
+					sensitivityLevel: sensitivity,
+				});
+				await updateCalendarEvent(target.$id!, {
+					approvalStatus: "pending",
+					pendingApprovalId: approval.$id,
+				});
+				return {
+					result: {
+						eventId: target.$id,
+						title: target.title,
+						pendingApproval: true,
+						note: "That meeting needs approval. I submitted a cancellation request.",
+					},
+				};
+			}
+
+			const { deleteCalendarEvent } = await import(
+				"@/lib/actions/calendar.actions"
+			);
+			await deleteCalendarEvent(target.$id!, accountId);
+			const userName =
+				(ctx.user as { fullName?: string }).fullName ||
+				ctx.user.name ||
+				ctx.user.email ||
+				"User";
+			await logAuditEvent({
+				event_id: `assistant_event_cancel_${target.$id}`,
+				event_title: `Assistant cancelled event: ${target.title}`,
+				action: "delete",
+				source: "caalm",
+				user_id: ctx.user.$id,
+				user_name: userName,
+				user_email: ctx.user.email || "",
+				status: "success",
+				orgId: ctx.orgId,
+				module: "system",
+				target_type: "calendar_event",
+				target_id: target.$id ?? "",
+				target_label: target.title,
+				summary: `CAALM assistant cancelled "${target.title}"`,
+				metadata: { source: "ai_assistant" },
+			}).catch(() => undefined);
+			return {
+				result: { eventId: target.$id, title: target.title, cancelled: true },
+			};
+		},
+	},
+	{
+		name: "create_task_for_contract",
+		description:
+			"Create a task linked to a contract (requires user confirmation). Use for follow-ups like 'remind me to review the Acme contract before it expires'. Find the contract by name.",
+		requiredPermissions: [
+			PERMISSIONS.EVENTS.CREATE,
+			PERMISSIONS.CONTRACTS.VIEW,
+		],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				contractName: {
+					type: "string",
+					description: "Contract name (or distinctive part)",
+				},
+				title: { type: "string", description: "Task title" },
+				dueDate: { type: "string", description: "ISO date" },
+				priority: { type: "string", enum: ["low", "medium", "high"] },
+			},
+			required: ["contractName", "title"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.EVENTS.CREATE])) {
+				return { result: { error: "Missing events.create permission" } };
+			}
+			const search = String(args.contractName ?? "").trim();
+			const contracts = await searchContractsTable(ctx, search);
+			if (contracts.length === 0) {
+				return {
+					result: {
+						error: `I couldn't find a contract matching "${search}". Ask me to search contracts first.`,
+					},
+				};
+			}
+			if (contracts.length > 1) {
+				return {
+					result: {
+						error: `I found ${contracts.length} contracts matching "${search}": ${contracts
+							.slice(0, 3)
+							.map((c) => String(c.name))
+							.join(", ")}. Tell me which one.`,
+					},
+				};
+			}
+			const contract = contracts[0];
+			const task = await TaskService.createTask(ctx.orgId, ctx.user.$id, {
+				title: String(args.title),
+				description: `Linked to contract: ${contract.name}`,
+				dueDate: args.dueDate ? String(args.dueDate) : undefined,
+				priority: (args.priority as "low" | "medium" | "high") || "medium",
+				status: "not_started",
+				linkedEntityType: "contract",
+				linkedEntityId: String(contract.id),
+			});
+			return {
+				result: {
+					taskId: task.$id,
+					title: task.title,
+					contract: contract.name,
+				},
+			};
+		},
+	},
+	{
 		name: "generate_report",
 		description: "Start an AI report generation for the user's department",
 		requiredPermissions: [PERMISSIONS.SETTINGS.VIEW],
@@ -705,5 +1263,15 @@ export async function runToolByName(
 	if (!tool.requiredPermissions.every((p) => ctx.permissions.includes(p))) {
 		return { error: "Insufficient permissions for tool" };
 	}
-	return tool.handler(ctx, args);
+	try {
+		return await tool.handler(ctx, args);
+	} catch (error) {
+		console.error(`[assistant tool ${toolName}] failed:`, error);
+		return {
+			result: {
+				error:
+					"I ran into a problem completing that. Try rephrasing, or use the page directly.",
+			},
+		};
+	}
 }

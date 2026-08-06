@@ -28,9 +28,7 @@ describe("detectDataIntent - scheduling", () => {
 
 	it("does not hijack unrelated queries", () => {
 		expect(detectDataIntent("Show my pending tasks")).toBe("list_tasks");
-		expect(detectDataIntent("Find the Acme contract")).toBe(
-			"search_contracts",
-		);
+		expect(detectDataIntent("Find the Acme contract")).toBe("search_contracts");
 		expect(detectDataIntent("Which licenses are expiring soon?")).toBe(
 			"expiring",
 		);
@@ -40,5 +38,50 @@ describe("detectDataIntent - scheduling", () => {
 	it("treats scheduling intents as live data", () => {
 		expect(isLiveDataIntent("schedule_event")).toBe(true);
 		expect(isLiveDataIntent("view_schedule")).toBe(true);
+	});
+
+	it("detects complete-task requests", () => {
+		expect(detectDataIntent("Mark the budget task done")).toBe("complete_task");
+		expect(detectDataIntent("Complete the onboarding task")).toBe(
+			"complete_task",
+		);
+		expect(detectDataIntent("Check off the review task")).toBe("complete_task");
+		// "my" must not shadow complete_task with list_tasks
+		expect(detectDataIntent("Complete my onboarding task")).toBe(
+			"complete_task",
+		);
+		expect(detectDataIntent("Mark my task done")).toBe("complete_task");
+	});
+
+	it("detects audit viewing requests", () => {
+		expect(detectDataIntent("Show recent activity")).toBe("view_audit");
+		expect(detectDataIntent("View the audit log")).toBe("view_audit");
+		expect(detectDataIntent("Who changed the contract?")).toBe("view_audit");
+	});
+
+	it("detects expiration briefs", () => {
+		expect(detectDataIntent("What contracts are expiring soon?")).toBe(
+			"expiring",
+		);
+		expect(detectDataIntent("Which licenses are up for renewal?")).toBe(
+			"expiring",
+		);
+	});
+
+	it("detects reschedule and cancel requests", () => {
+		expect(detectDataIntent("Move my 3pm meeting to Friday")).toBe(
+			"reschedule_event",
+		);
+		expect(detectDataIntent("Reschedule the review call")).toBe(
+			"reschedule_event",
+		);
+		expect(detectDataIntent("Cancel my meeting tomorrow")).toBe("cancel_event");
+		expect(detectDataIntent("Call off the budget review")).toBe("cancel_event");
+	});
+
+	it("treats new intents as live data", () => {
+		expect(isLiveDataIntent("complete_task")).toBe(true);
+		expect(isLiveDataIntent("view_audit")).toBe(true);
+		expect(isLiveDataIntent("expiring")).toBe(true);
 	});
 });

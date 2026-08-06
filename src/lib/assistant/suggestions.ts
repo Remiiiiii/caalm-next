@@ -148,6 +148,82 @@ export function suggestionsForTurn(params: {
 		];
 	}
 
+	if (
+		toolName === "reschedule_calendar_event" ||
+		toolName === "cancel_calendar_event" ||
+		dataIntent === "reschedule_event" ||
+		dataIntent === "cancel_event"
+	) {
+		return [
+			{
+				id: "calendar-open",
+				label: "Open Calendar",
+				action: { type: "navigate", href: "/calendar" },
+			},
+			{
+				id: "view-schedule",
+				label: "What's on my calendar today?",
+				action: { type: "prompt", text: "What's on my calendar today?" },
+			},
+		];
+	}
+
+	if (toolName === "list_expirations" || dataIntent === "expiring") {
+		return [
+			{
+				id: "contracts-open",
+				label: "Open Contracts",
+				action: { type: "navigate", href: "/contracts" },
+			},
+			{
+				id: "licenses-open",
+				label: "Open Licenses",
+				action: { type: "navigate", href: "/licenses" },
+			},
+			{
+				id: "schedule-review",
+				label: "Schedule a renewal review",
+				action: {
+					type: "prompt",
+					text: "Schedule a renewal review meeting for next week",
+				},
+			},
+		];
+	}
+
+	if (toolName === "list_audit_logs" || dataIntent === "view_audit") {
+		return [
+			{
+				id: "audits-open",
+				label: "Open Audits",
+				action: { type: "navigate", href: "/audits" },
+			},
+			{
+				id: "expiring",
+				label: "What's expiring soon?",
+				action: {
+					type: "prompt",
+					text: "What contracts or licenses are expiring soon?",
+				},
+			},
+		];
+	}
+
+	if (toolName === "complete_task" || dataIntent === "complete_task") {
+		return [
+			{
+				id: "tasks-open",
+				label: "Open the Tasks page",
+				action: { type: "navigate", href: "/team/tasks" },
+			},
+			{
+				id: "tasks-pending",
+				label: "Show my pending tasks",
+				action: { type: "prompt", text: "Show my pending tasks" },
+			},
+		];
+	}
+
 	if (dataIntent === "expiring") {
 		return [
 			{
