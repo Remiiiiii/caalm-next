@@ -385,7 +385,7 @@ export default function ComingSoonPage() {
 								</a>
 								<div className="flex items-center space-x-1 text-slate-600">
 									<CheckCircle className="w-4 h-4 text-green-500" />
-									<span>Launching Q2 2026</span>
+									<span>Launching Q4 2026</span>
 								</div>
 							</div>
 						</div>
