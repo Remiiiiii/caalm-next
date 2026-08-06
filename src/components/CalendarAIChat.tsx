@@ -951,11 +951,11 @@ Contract: ${contractTitle}`;
 			<div className="flex items-center justify-between p-4 border-b border-light-300 bg-white/80 backdrop-blur">
 				<div className="flex items-center gap-2">
 					<Image
-						src="/assets/images/logo.png"
+						src="/assets/images/caalm-assistant.png"
 						alt="AI Assistant"
-						width={30}
-						height={30}
-						className="h-[30px] w-[30px] object-contain"
+						width={40}
+						height={40}
+						className="h-10 w-10 object-contain"
 					/>
 					<h3 className="font-bold sidebar-gradient-text">
 						{mode === "pre-reads"
@@ -1094,11 +1094,11 @@ Contract: ${contractTitle}`;
 								<div className="flex items-start space-x-3 max-w-[95%]">
 									<div className="flex-shrink-0">
 										<Image
-											src="/assets/images/assistant.svg"
+											src="/assets/images/caalm-assistant.png"
 											alt="AI Assistant"
-											width={54}
-											height={54}
-											className="w-12 h-12 rounded-full bg-blue-100 p-1"
+											width={56}
+											height={56}
+											className="h-14 w-14 shrink-0 rounded-full object-contain outline outline-3 outline-[#D6E8F5] outline-offset-[-2px]"
 										/>
 									</div>
 									<div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
@@ -1166,11 +1166,11 @@ Contract: ${contractTitle}`;
 								<div className="flex items-start space-x-3 max-w-[95%]">
 									<div className="flex-shrink-0">
 										<Image
-											src="/assets/images/assistant.svg"
+											src="/assets/images/caalm-assistant.png"
 											alt="AI Assistant"
-											width={54}
-											height={54}
-											className="w-12 h-12 rounded-full bg-blue-100 p-1"
+											width={64}
+											height={64}
+											className="h-16 w-16 shrink-0 rounded-full object-contain outline outline-2 outline-[#D6E8F5] outline-offset-[-2px]"
 										/>
 									</div>
 									<div className="flex-1">
@@ -1234,11 +1234,11 @@ Contract: ${contractTitle}`;
 							<div className="flex items-start space-x-3 max-w-[85%]">
 								<div className="flex-shrink-0">
 									<Image
-										src="/assets/images/assistant.svg"
+										src="/assets/images/caalm-assistant.png"
 										alt="AI Assistant"
-										width={54}
-										height={54}
-										className="w-12 h-12 rounded-full bg-blue-100 p-1"
+										width={64}
+										height={64}
+										className="h-16 w-16 shrink-0 rounded-full object-contain outline outline-2 outline-[#D6E8F5] outline-offset-[-2px]"
 									/>
 								</div>
 								<div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">

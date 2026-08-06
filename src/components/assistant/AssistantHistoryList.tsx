@@ -52,14 +52,14 @@ export default function AssistantHistoryList({
 							)}
 						>
 							<Image
-								src="/assets/images/assistant.svg"
+								src="/assets/images/caalm-assistant.png"
 								alt=""
 								width={36}
 								height={36}
-								className="h-9 w-9 shrink-0 object-contain"
+								className="h-9 w-9 shrink-0 rounded-full object-contain outline outline-2 outline-[#D6E8F5] outline-offset-[-2px]"
 							/>
 							<div className="min-w-0 flex-1">
-								<p className="truncate text-sm font-medium text-slate-900">
+								<p className="truncate text-sm font-medium text-slate-700">
 									{c.title || "Conversation"}
 								</p>
 								<p className="truncate text-xs text-slate-600 mt-0.5">

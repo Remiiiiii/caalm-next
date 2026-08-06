@@ -75,6 +75,9 @@ describe("detectDataIntent - scheduling", () => {
 		expect(detectDataIntent("Reschedule the review call")).toBe(
 			"reschedule_event",
 		);
+		expect(detectDataIntent("Change the review from 2pm to 10am")).toBe(
+			"reschedule_event",
+		);
 		expect(detectDataIntent("Cancel my meeting tomorrow")).toBe("cancel_event");
 		expect(detectDataIntent("Call off the budget review")).toBe("cancel_event");
 	});
@@ -83,5 +86,105 @@ describe("detectDataIntent - scheduling", () => {
 		expect(isLiveDataIntent("complete_task")).toBe(true);
 		expect(isLiveDataIntent("view_audit")).toBe(true);
 		expect(isLiveDataIntent("expiring")).toBe(true);
+	});
+});
+
+describe("sanitizeRescheduleArgs - time-only vs date change", () => {
+	const thursday = new Date(2026, 7, 6); // Aug 6, 2026 — Thursday
+
+	it("drops newDate when the user only changes the time", async () => {
+		const { sanitizeRescheduleArgs } = await import(
+			"@/lib/assistant/rescheduleArgs"
+		);
+		expect(
+			sanitizeRescheduleArgs(
+				"Change the review from 14:00 to 10:00",
+				{
+					eventTitle: "Contract Renewal Review",
+					newDate: "2026-08-14",
+					newStartTime: "10:00",
+				},
+				thursday,
+			),
+		).toEqual({
+			eventTitle: "Contract Renewal Review",
+			newStartTime: "10:00",
+		});
+		expect(
+			sanitizeRescheduleArgs(
+				"Move the review to 10am",
+				{
+					eventTitle: "Review",
+					newDate: "2026-08-14",
+					newStartTime: "10:00",
+				},
+				thursday,
+			),
+		).not.toHaveProperty("newDate");
+	});
+
+	it("resolves Friday to the upcoming Friday, not next week", async () => {
+		const { sanitizeRescheduleArgs } = await import(
+			"@/lib/assistant/rescheduleArgs"
+		);
+		// Thu Aug 6 → soonest Friday is Aug 7 (not Aug 14)
+		expect(
+			sanitizeRescheduleArgs(
+				"Move my review to Friday at 10am",
+				{
+					eventTitle: "Review",
+					newDate: "2026-08-14",
+					newStartTime: "10:00",
+				},
+				thursday,
+			),
+		).toEqual({
+			eventTitle: "Review",
+			newDate: "2026-08-07",
+			newStartTime: "10:00",
+		});
+	});
+
+	it("resolves next Friday to the following week", async () => {
+		const { sanitizeRescheduleArgs } = await import(
+			"@/lib/assistant/rescheduleArgs"
+		);
+		expect(
+			sanitizeRescheduleArgs(
+				"Move the review to next Friday at 10am",
+				{
+					eventTitle: "Review",
+					newDate: "2026-08-07",
+					newStartTime: "10:00",
+				},
+				thursday,
+			),
+		).toEqual({
+			eventTitle: "Review",
+			newDate: "2026-08-14",
+			newStartTime: "10:00",
+		});
+	});
+});
+
+describe("buildGeminiChatHistory", () => {
+	it("drops leading assistant turns so history starts with user", async () => {
+		const { buildGeminiChatHistory } = await import(
+			"@/lib/assistant/geminiHistory"
+		);
+		const history = buildGeminiChatHistory(
+			[
+				{ role: "assistant", content: "Action completed" },
+				{ role: "user", content: "Move review to Friday" },
+				{ role: "assistant", content: "Prepared move" },
+				{ role: "user", content: "Change it back to 2pm" },
+			],
+			"Change it back to 2pm",
+		);
+		expect(history[0]?.role).toBe("user");
+		expect(history.at(-1)?.role).toBe("model");
+		expect(history.some((h) => h.parts[0]?.text === "Change it back to 2pm")).toBe(
+			false,
+		);
 	});
 });

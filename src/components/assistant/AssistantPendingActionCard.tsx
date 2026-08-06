@@ -335,7 +335,7 @@ function ParticipantsPickerDialog({
 													</div>
 													<UserFace user={user} size={32} />
 													<span className="min-w-0 flex-1">
-														<span className="block truncate text-sm font-medium text-slate-900">
+														<span className="block truncate text-sm font-medium text-slate-700">
 															{user.fullName}
 														</span>
 														<span className="block truncate text-xs text-slate-500">
@@ -446,7 +446,7 @@ function MeetingPreview({
 		<>
 			<div className="glass-card overflow-hidden text-left">
 				<div className="glass-card-cap" />
-				<div className="relative z-[1] p-4 sm:p-5">
+				<div className="relative z-[1] px-4 pb-4 pt-6 sm:px-5 sm:pb-5 sm:pt-7">
 					<div className="flex items-start justify-between gap-3">
 						<div className="min-w-0">
 							<p className="text-base font-semibold sidebar-gradient-text leading-snug">
@@ -466,7 +466,7 @@ function MeetingPreview({
 							<CalendarCheck2 className="h-4 w-4 text-[#0f5384]" />
 						</div>
 						<div className="min-w-0 pt-0.5">
-							<p className="text-sm font-semibold text-slate-900">
+							<p className="text-sm font-semibold text-slate-700">
 								{dateLabel ?? "Date TBD"}
 							</p>
 							<p className="mt-0.5 text-sm text-slate-600">
@@ -478,7 +478,7 @@ function MeetingPreview({
 					<div className="mt-4 rounded-xl border border-slate-200 bg-white/70 p-3">
 						<label
 							htmlFor="meeting-agenda"
-							className="mb-1.5 flex items-center gap-2 text-sm font-medium text-slate-900"
+							className="mb-1.5 flex items-center gap-2 text-sm font-medium text-slate-700"
 						>
 							<FileText className="h-3.5 w-3.5 text-[#0f5384]" />
 							Meeting agenda{" "}
@@ -498,7 +498,7 @@ function MeetingPreview({
 								// Agenda-only patch — never clear participants while typing
 								onPatchChange({ description: value });
 							}}
-							className="min-h-[4.5rem] resize-y border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]"
+							className="min-h-[4.5rem] resize-y border-slate-300 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]"
 						/>
 						{location ? (
 							<p className="mt-2 text-xs text-slate-500">
@@ -518,7 +518,7 @@ function MeetingPreview({
 								<Users className="h-4 w-4 text-[#0f5384]" />
 							</div>
 							<div className="min-w-0">
-								<p className="text-sm font-semibold text-slate-900">
+								<p className="text-sm font-semibold text-slate-700">
 									Participants{" "}
 									<span className="font-normal text-xs text-slate-500">
 										(optional)
@@ -574,7 +574,7 @@ function GenericPreview({
 	return (
 		<div className="glass-card overflow-hidden">
 			<div className="glass-card-cap" />
-			<div className="relative z-[1] p-4">
+			<div className="relative z-[1] px-4 pb-4 pt-6">
 				<p className="text-sm font-semibold sidebar-gradient-text">{label}</p>
 				{entries.length > 0 ? (
 					<dl className="mt-3 space-y-2">
@@ -583,7 +583,7 @@ function GenericPreview({
 								<dt className="w-28 shrink-0 capitalize text-slate-500">
 									{key.replace(/([A-Z])/g, " $1").trim()}
 								</dt>
-								<dd className="min-w-0 flex-1 wrap-break-word text-slate-900">
+								<dd className="min-w-0 flex-1 wrap-break-word text-slate-700">
 									{String(value)}
 								</dd>
 							</div>

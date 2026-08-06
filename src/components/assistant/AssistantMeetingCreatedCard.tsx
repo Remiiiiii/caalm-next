@@ -169,13 +169,13 @@ export default function AssistantMeetingCreatedCard({
 	return (
 		<div className="glass-card mt-2 overflow-hidden text-left">
 			<div className="glass-card-cap" />
-			<div className="relative z-1 p-4">
+			<div className="relative z-1 px-4 pb-4 pt-6">
 				<div className="flex items-start gap-3">
 					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-green/20 bg-green/10">
 						<CheckCircle2 className="h-5 w-5 text-green" />
 					</div>
 					<div className="min-w-0">
-						<p className="text-sm font-semibold text-slate-900">
+						<p className="text-sm font-semibold text-slate-700">
 							Meeting successfully created
 						</p>
 						<p className="mt-0.5 text-xs text-slate-600">
@@ -193,7 +193,7 @@ export default function AssistantMeetingCreatedCard({
 							<CalendarCheck2 className="h-4 w-4 text-[#0f5384]" />
 						</div>
 						<div className="min-w-0 pt-0.5">
-							<p className="text-sm font-semibold text-slate-900">{dateLabel}</p>
+							<p className="text-sm font-semibold text-slate-700">{dateLabel}</p>
 							<p className="mt-0.5 text-sm text-slate-600">{timeLine}</p>
 						</div>
 					</div>

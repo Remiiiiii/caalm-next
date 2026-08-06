@@ -446,6 +446,7 @@ export async function POST(request: NextRequest) {
 		await CacheManager.invalidateCalendar(
 			eventDate.getFullYear(),
 			eventDate.getMonth() + 1,
+			permissionCheck.userId || undefined,
 		);
 
 		return NextResponse.json({
@@ -751,7 +752,11 @@ export async function PUT(request: NextRequest) {
 			const dateStr = (eventData.startDate || event.startDate) as string;
 			const datePart = dateStr.split("T")[0];
 			const [year, month] = datePart.split("-").map(Number);
-			await CacheManager.invalidateCalendar(year, month);
+			await CacheManager.invalidateCalendar(
+				year,
+				month,
+				permissionCheck.userId || undefined,
+			);
 		}
 
 		return NextResponse.json({
@@ -976,8 +981,22 @@ export async function DELETE(request: NextRequest) {
 			// The sync service will handle logging the failure
 		});
 
-		// Invalidate all calendar caches (event could be in any month)
-		await CacheManager.invalidateCalendar();
+		// Invalidate calendar caches (prefer user-scoped key; Vercel KV can't pattern-delete)
+		if (event.startDate) {
+			const datePart = String(event.startDate).split("T")[0];
+			const [year, month] = datePart.split("-").map(Number);
+			await CacheManager.invalidateCalendar(
+				year,
+				month,
+				permissionCheck.userId || undefined,
+			);
+		} else {
+			await CacheManager.invalidateCalendar(
+				undefined,
+				undefined,
+				permissionCheck.userId || undefined,
+			);
+		}
 
 		return NextResponse.json({
 			success: true,

@@ -135,6 +135,27 @@ export async function listConversations(params: {
 	};
 }
 
+/** Most recently active open conversation for this user+org, if any. */
+export async function getActiveConversation(
+	userId: string,
+	orgId: string,
+): Promise<AssistantConversation | null> {
+	const { databases } = await createAdminClient();
+	const response = await databases.listDocuments(
+		appwriteConfig.databaseId!,
+		conversationsCollection(),
+		[
+			Query.equal("userId", userId),
+			Query.equal("orgId", orgId),
+			Query.equal("status", "active"),
+			Query.orderDesc("lastMessageAt"),
+			Query.limit(1),
+		],
+	);
+	const doc = response.documents[0];
+	return doc ? (doc as unknown as AssistantConversation) : null;
+}
+
 export async function getConversationForUser(
 	conversationId: string,
 	userId: string,

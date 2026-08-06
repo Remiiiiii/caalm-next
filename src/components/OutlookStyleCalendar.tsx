@@ -1070,6 +1070,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		return `${hours12}:${minutes} ${ampm}`;
 	};
 
+	const getTimezoneAbbreviation = (date: Date = new Date()) => {
+		const part = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
+			.formatToParts(date)
+			.find((p) => p.type === "timeZoneName")?.value;
+		return part || "";
+	};
+
 	// Function to parse time string and convert to minutes since midnight for sorting
 	const parseTimeToMinutes = (timeStr: string | undefined): number => {
 		if (!timeStr) return 0; // Events without time come first (or use 1440 to put them last)
@@ -1510,6 +1517,17 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		enableRealTime: true,
 		pollingInterval: 10000,
 	});
+
+	// Assistant (and other) creates: optimistic SWR + this event for an immediate redraw
+	useEffect(() => {
+		const onCalendarUpdated = () => {
+			void forceRefresh();
+		};
+		window.addEventListener("caalm:calendar-updated", onCalendarUpdated);
+		return () => {
+			window.removeEventListener("caalm:calendar-updated", onCalendarUpdated);
+		};
+	}, [forceRefresh]);
 
 	const normalizedEvents = useMemo(() => {
 		const combined = [...events, ...(calendarEvents || [])];
@@ -5586,6 +5604,29 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																	"EEEE, MMMM d, yyyy",
 																)}
 															</div>
+															{selectedEvent.startTime ? (
+																<div className="text-xs text-slate-500 mt-0.5">
+																	{(() => {
+																		const start = formatTimeForDisplay(
+																			selectedEvent.startTime,
+																		);
+																		const end = selectedEvent.endTime
+																			? formatTimeForDisplay(
+																					selectedEvent.endTime,
+																				)
+																			: "";
+																		const tz = getTimezoneAbbreviation(
+																			selectedEvent.startDate instanceof Date
+																				? selectedEvent.startDate
+																				: new Date(selectedEvent.startDate),
+																		);
+																		const timePart = end
+																			? `${start} – ${end}`
+																			: start;
+																		return `${timePart}${tz ? ` ${tz}` : ""}`;
+																	})()}
+																</div>
+															) : null}
 														</div>
 													</div>
 													{/* Event Type - Only show for non-holiday events */}

@@ -69,6 +69,9 @@ export class CacheManager {
 	 * Invalidate calendar cache
 	 * When year and month are provided, invalidates all user-specific caches for that month
 	 * When no parameters, invalidates all calendar event caches
+	 *
+	 * Prefer passing userId: Vercel KV cannot delete by pattern, so exact key deletes
+	 * are required for assistant/API writes to show up on the next fetch.
 	 */
 	static async invalidateCalendar(
 		year?: number,
@@ -77,24 +80,27 @@ export class CacheManager {
 		orgId?: string,
 	): Promise<void> {
 		if (year && month) {
-			// Invalidate all user-specific caches for this month
-			// Pattern matches: calendar:events:*:year:month and calendar:events:year:month (legacy)
-			await cache.clear(`^calendar:events:.*:${year}:${month}$`);
-			await cache.clear(`^calendar:events:${year}:${month}$`);
+			if (userId) {
+				await cache.del(CACHE_KEYS.calendar.events(year, month, userId));
+			}
+			// Legacy key without userId
+			await cache.del(CACHE_KEYS.calendar.events(year, month));
+			// Glob patterns for ioredis SCAN (regex anchors do not work with SCAN MATCH)
+			await cache.clear(`calendar:events:*:${year}:${month}`);
+			await cache.clear(`calendar:events:${year}:${month}`);
+		} else if (userId) {
+			await cache.clear(`calendar:events:${userId}:*`);
 		} else {
-			// Invalidate all calendar events (all users, all months)
-			await cache.clear("^calendar:events:");
+			await cache.clear("calendar:events:*");
 		}
 
 		// Invalidate shared calendars cache if userId and orgId provided
 		if (userId && orgId) {
 			await cache.del(CACHE_KEYS.calendar.shared(userId, orgId));
 		} else if (userId) {
-			// Invalidate all shared calendar caches for this user
-			await cache.clear(`^calendar:shared:${userId}:`);
+			await cache.clear(`calendar:shared:${userId}:*`);
 		} else {
-			// Invalidate all shared calendar caches
-			await cache.clear("^calendar:shared:");
+			await cache.clear("calendar:shared:*");
 		}
 	}
 

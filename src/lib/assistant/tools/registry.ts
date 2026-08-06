@@ -19,6 +19,7 @@ import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
 import { evaluateCalendarPermission } from "@/lib/auth/guards";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
 import { getAuditLogs, logAuditEvent } from "@/lib/services/audit-logger";
+import CacheManager from "@/lib/services/cache-manager";
 import { detectParticipantConflicts } from "@/lib/utils/conflict-detection";
 
 function hasAll(
@@ -26,6 +27,25 @@ function hasAll(
 	keys: Parameters<typeof ctx.permissions.includes>[0][],
 ): boolean {
 	return keys.every((k) => ctx.permissions.includes(k));
+}
+
+async function invalidateCalendarForDate(
+	dateStr: string,
+	userId?: string,
+): Promise<void> {
+	const part = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+	const [year, month] = part.split("-").map(Number);
+	if (!year || !month) {
+		await CacheManager.invalidateCalendar(
+			undefined,
+			undefined,
+			userId,
+		).catch(() => undefined);
+		return;
+	}
+	await CacheManager.invalidateCalendar(year, month, userId).catch(
+		() => undefined,
+	);
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -585,6 +605,12 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 
 			const event = await createCalendarEvent(eventData);
 
+			// Match /api/calendar/events POST: clear Redis so the next fetch is fresh.
+			await invalidateCalendarForDate(
+				eventData.startDate,
+				permissionCheck.userId || ctx.user.$id,
+			);
+
 			// Outlook sync for assistant-created events runs on the calendar cron sync;
 			// the direct create path here matches how non-Outlook events are stored.
 
@@ -594,36 +620,39 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				ctx.user.email ||
 				"User";
 
-			let invitedCount = 0;
+			const invitedCount = eventPayload.participants?.trim()
+				? eventPayload.participants.split(",").filter((p) => p.trim()).length
+				: 0;
+
+			// Don't block the confirm response on invite emails — calendar UI updates first.
 			if (eventPayload.participants?.trim() && event.$id) {
-				try {
-					const { notifyMeetingInvitees } = await import(
-						"@/lib/services/calendar-notifications.service"
-					);
-					invitedCount = await notifyMeetingInvitees(
-						eventPayload.participants,
-						{
-							eventId: event.$id,
-							title,
-							date: eventData.startDate,
-							startTime: eventData.startTime,
-							endTime: eventData.endTime,
-							description: eventData.description,
-							location: eventData.location,
-							organizerName: userName,
-							organizerEmail: ctx.user.email || undefined,
-						},
-						permissionCheck.userId || ctx.user.$id,
-					);
-				} catch (inviteError) {
-					console.error(
-						"[create_calendar_event] Failed to notify invitees:",
-						inviteError,
-					);
-				}
+				void import("@/lib/services/calendar-notifications.service")
+					.then(({ notifyMeetingInvitees }) =>
+						notifyMeetingInvitees(
+							eventPayload.participants!,
+							{
+								eventId: event.$id!,
+								title,
+								date: eventData.startDate,
+								startTime: eventData.startTime,
+								endTime: eventData.endTime,
+								description: eventData.description,
+								location: eventData.location,
+								organizerName: userName,
+								organizerEmail: ctx.user.email || undefined,
+							},
+							permissionCheck.userId || ctx.user.$id,
+						),
+					)
+					.catch((inviteError) => {
+						console.error(
+							"[create_calendar_event] Failed to notify invitees:",
+							inviteError,
+						);
+					});
 			}
 
-			await logAuditEvent({
+			void logAuditEvent({
 				event_id: `assistant_event_${event.$id}`,
 				event_title: `Assistant scheduled event: ${title}`,
 				action: "create",
@@ -858,7 +887,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	{
 		name: "reschedule_calendar_event",
 		description:
-			"Reschedule one of the user's own calendar meetings to a new date/time (requires user confirmation). Find the meeting by title. Resolve the new date against the current date in the system prompt. If the title matches several or none, say so and ask the user which meeting.",
+			"Reschedule one of the user's own calendar meetings (requires user confirmation). Find the meeting by title. TIME-ONLY RULE: if the user only asks to change the clock time (e.g. 'move it to 10am', 'change from 14:00 to 10:00') and does not name a different day or date, omit newDate — the meeting stays on its current date and only the start time changes. Set newDate only when the user explicitly asks for a different day (e.g. 'to Friday', 'next week', 'August 14'). Never invent or guess a new date for a time-only request. Resolve any explicit new date against the current date in the system prompt. If the title matches several or none, say so and ask which meeting.",
 		requiredPermissions: [PERMISSIONS.CALENDAR.CREATE],
 		mutating: true,
 		parameters: {
@@ -870,14 +899,15 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				},
 				newDate: {
 					type: "string",
-					description: "YYYY-MM-DD resolved against the current date",
+					description:
+						"Optional YYYY-MM-DD. Omit for time-only changes so the existing meeting date is kept. Include only when the user named a different day/date.",
 				},
 				newStartTime: {
 					type: "string",
-					description: "HH:mm 24-hour",
+					description: "HH:mm 24-hour new start time",
 				},
 			},
-			required: ["eventTitle", "newDate", "newStartTime"],
+			required: ["eventTitle", "newStartTime"],
 		},
 		handler: async (ctx, args) => {
 			if (!hasAll(ctx, [PERMISSIONS.CALENDAR.CREATE])) {
@@ -905,15 +935,18 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 			}
 
 			const target = matches[0];
+			const requestedDate = String(args.newDate ?? "").trim();
+			// Time-only reschedule: keep the meeting on its existing date.
+			const dateToUse = requestedDate || target.startDate;
 			const newStart = dateFromDateAndTime(
-				String(args.newDate ?? ""),
+				dateToUse,
 				String(args.newStartTime ?? ""),
 			);
 			if (!newStart) {
 				return {
 					result: {
 						error:
-							"I couldn't understand the new date/time. Ask the user for the date (YYYY-MM-DD) and start time.",
+							"I couldn't understand the new time. Ask the user for a start time (HH:mm).",
 					},
 				};
 			}
@@ -998,6 +1031,17 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 			}
 
 			const updated = await updateCalendarEvent(target.$id!, eventData);
+			const cacheUserId = permissionCheck.userId || ctx.user.$id;
+			const newDateStr = String(
+				updated.startDate ?? eventData.startDate ?? target.startDate,
+			);
+			await invalidateCalendarForDate(newDateStr, cacheUserId);
+			const oldDateStr = String(target.startDate ?? "");
+			const oldYm = oldDateStr.slice(0, 7);
+			const newYm = newDateStr.slice(0, 7);
+			if (oldYm && newYm && oldYm !== newYm) {
+				await invalidateCalendarForDate(oldDateStr, cacheUserId);
+			}
 			return {
 				result: {
 					eventId: updated.$id,
@@ -1102,6 +1146,10 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				"@/lib/actions/calendar.actions"
 			);
 			await deleteCalendarEvent(target.$id!, accountId);
+			await invalidateCalendarForDate(
+				String(target.startDate ?? ""),
+				permissionCheck.userId || ctx.user.$id,
+			);
 			const userName =
 				(ctx.user as { fullName?: string }).fullName ||
 				ctx.user.name ||
@@ -1125,7 +1173,12 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 				metadata: { source: "ai_assistant" },
 			}).catch(() => undefined);
 			return {
-				result: { eventId: target.$id, title: target.title, cancelled: true },
+				result: {
+					eventId: target.$id,
+					title: target.title,
+					date: target.startDate,
+					cancelled: true,
+				},
 			};
 		},
 	},

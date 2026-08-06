@@ -45,7 +45,7 @@ export default function AssistantInPanelOverlay({
 				<button
 					type="button"
 					onClick={onClose}
-					className="absolute right-3 top-3 cursor-pointer rounded-md p-1 text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+					className="absolute right-3 top-3 cursor-pointer rounded-md p-1 text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 					aria-label="Close"
 				>
 					<X className="h-4 w-4" />
@@ -53,7 +53,7 @@ export default function AssistantInPanelOverlay({
 				<h2
 					id="assistant-in-panel-title"
 					className={cn(
-						"pr-8 text-center text-lg font-semibold text-slate-900",
+						"pr-8 text-center text-lg font-semibold text-slate-700",
 						titleClassName,
 					)}
 				>

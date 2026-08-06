@@ -194,17 +194,17 @@ export function suggestionsForTurn(params: {
 	if (toolName === "list_audit_logs" || dataIntent === "view_audit") {
 		return [
 			{
-				id: "audits-open",
-				label: "Open Audits",
-				action: { type: "navigate", href: "/audits" },
-			},
-			{
 				id: "expiring",
 				label: "What's expiring soon?",
 				action: {
 					type: "prompt",
 					text: "What contracts or licenses are expiring soon?",
 				},
+			},
+			{
+				id: "tasks-pending",
+				label: "Show my pending tasks",
+				action: { type: "prompt", text: "Show my pending tasks" },
 			},
 		];
 	}
