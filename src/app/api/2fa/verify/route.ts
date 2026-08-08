@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
 import {
 	clearAuthFailures,
 	getAuthLockoutStatus,
@@ -7,8 +9,6 @@ import {
 	recordAuthFailure,
 } from "@/lib/auth/attempt-lockout";
 import { runLockoutSideEffects } from "@/lib/auth/security-lockout-actions";
-import { createAdminClient } from "@/lib/appwrite";
-import { appwriteConfig } from "@/lib/appwrite/config";
 import { verifyTOTPCode } from "@/lib/totp";
 
 function lockoutResponse(retryAfterSeconds: number) {
@@ -103,8 +103,7 @@ export async function POST(request: NextRequest) {
 			}
 
 			const user = userResponse.rows[0];
-			const email =
-				typeof user.email === "string" ? user.email : undefined;
+			const email = typeof user.email === "string" ? user.email : undefined;
 			const fullName =
 				typeof user.fullName === "string"
 					? user.fullName

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
+import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import CaalmAssistantSheet from "@/components/assistant/CaalmAssistantSheet";
 import ShimmerBadge from "@/components/landing/ShimmerBadge";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -27,13 +27,7 @@ export default function CaalmAssistantLauncher() {
 				className="h-10 shrink-0"
 				innerClassName="h-full bg-white px-3 text-sm font-medium text-[#0f5384]"
 			>
-				<Image
-					src="/assets/images/caalm-assistant.png"
-					alt=""
-					width={24}
-					height={24}
-					className="h-6 w-6 shrink-0 rounded-full object-contain outline outline-2 outline-[#D6E8F5] outline-offset-[-1px]"
-				/>
+				<AssistantAvatar size="xs" />
 				Ask CAALM
 			</ShimmerBadge>
 			<CaalmAssistantSheet

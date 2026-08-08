@@ -623,8 +623,7 @@ export default function AssistantPendingActionCard({
 
 	useEffect(() => {
 		setMeetingPatch({
-			description:
-				typeof args.description === "string" ? args.description : "",
+			description: typeof args.description === "string" ? args.description : "",
 			participants:
 				typeof args.participants === "string" ? args.participants : "",
 		});

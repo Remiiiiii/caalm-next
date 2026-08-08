@@ -8,11 +8,11 @@ import {
 	Send,
 	SquarePen,
 } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import AssistantActionCompletedCard from "@/components/assistant/AssistantActionCompletedCard";
 import AssistantActivityFeedCard from "@/components/assistant/AssistantActivityFeedCard";
+import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import AssistantHistoryList from "@/components/assistant/AssistantHistoryList";
 import AssistantInPanelOverlay, {
 	AssistantInPanelActions,
@@ -453,14 +453,7 @@ export default function CaalmAssistantSheet({
 						<div className="space-y-6 py-6">
 							<div className="text-center">
 								<div className="mb-4 flex justify-center">
-									<Image
-										src="/assets/images/caalm-assistant.png"
-										alt="CAALM"
-										width={96}
-										height={96}
-										className="h-24 w-24 rounded-full object-contain outline outline-3 outline-[#D6E8F5] outline-offset-[-2px]"
-										priority
-									/>
+									<AssistantAvatar size="hero" alt="CAALM" priority />
 								</div>
 								<p className="text-xl font-bold sidebar-gradient-text">
 									Hello {firstName}
@@ -500,13 +493,7 @@ export default function CaalmAssistantSheet({
 									)}
 								>
 									{m.role === "assistant" ? (
-										<Image
-											src="/assets/images/caalm-assistant.png"
-											alt=""
-											width={56}
-											height={56}
-											className="h-14 w-14 shrink-0 rounded-full object-contain outline outline-3 outline-[#D6E8F5] outline-offset-[-2px]"
-										/>
+										<AssistantAvatar size="md" />
 									) : null}
 									<div
 										className={cn(

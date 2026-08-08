@@ -3,12 +3,14 @@
  */
 
 import { cookies } from "next/headers";
-import { Query } from "node-appwrite";
 import * as sdk from "node-appwrite";
+import { Query } from "node-appwrite";
 import { createAdminClient, createSessionClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 
-export async function invalidateUnusedOtpsForEmail(email: string): Promise<number> {
+export async function invalidateUnusedOtpsForEmail(
+	email: string,
+): Promise<number> {
 	if (!email) return 0;
 	try {
 		const { tablesDB } = await createAdminClient();
@@ -85,9 +87,7 @@ export async function notifySuspiciousSignInAttempt(params: {
 
 	const name = (fullName || "there").split(" ")[0];
 	const where =
-		channel === "2fa"
-			? "two-factor authentication"
-			: "email verification";
+		channel === "2fa" ? "two-factor authentication" : "email verification";
 
 	try {
 		const { mailgunService } = await import("@/lib/services/mailgun");

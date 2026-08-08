@@ -159,10 +159,9 @@ const handleError = (error: unknown, message: string) => {
 
 export const sendEmailOTP = async ({ email }: { email: string }) => {
 	try {
-		const {
-			getAuthLockoutStatus,
-			LOCKOUT_USER_MESSAGE,
-		} = await import("@/lib/auth/attempt-lockout");
+		const { getAuthLockoutStatus, LOCKOUT_USER_MESSAGE } = await import(
+			"@/lib/auth/attempt-lockout"
+		);
 		const emailLock = await getAuthLockoutStatus("email-otp", email);
 		if (emailLock.locked) {
 			throw new Error(LOCKOUT_USER_MESSAGE);

@@ -9,11 +9,10 @@ import type {
 	UseCaalmAssistantReturn,
 } from "@/components/assistant/assistantTypes";
 import { useToast } from "@/hooks/use-toast";
+import type { AssistantCalendarMutation } from "@/lib/assistant/executeTypes";
 import { readJsonResponse } from "@/lib/assistant/readJsonResponse";
 import {
-	refreshCalendarAfterEventRemoved,
-	refreshCalendarAfterEventUpdated,
-	refreshCalendarAfterMeetingCreated,
+	refreshCalendarCache,
 	revalidateCalendarMonth,
 } from "@/lib/ui/refreshCalendarCache";
 
@@ -74,9 +73,7 @@ function mapStoredMessages(
 		}
 		return {
 			id: m.$id,
-			role: (m.role === "user" ? "user" : "assistant") as
-				| "user"
-				| "assistant",
+			role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
 			content: m.content,
 			sources: m.sourcesJson ? JSON.parse(m.sourcesJson) : undefined,
 			suggestions,
@@ -344,9 +341,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 						summary?: string;
 						meetingCreated?: AssistantChatMessage["meetingCreated"];
 						actionCompleted?: AssistantChatMessage["actionCompleted"];
-						result?: {
-							result?: unknown;
-						};
+						calendarMutation?: AssistantCalendarMutation;
 					};
 				}>(res);
 				if (!parsed.ok || !parsed.data?.data) {
@@ -356,6 +351,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 				const summary = jsonData.summary ?? "Action completed.";
 				const meetingCreated = jsonData.meetingCreated;
 				const actionCompleted = jsonData.actionCompleted;
+				const calendarMutation = jsonData.calendarMutation;
 				setMessages((prev) => [
 					...prev,
 					{
@@ -368,60 +364,68 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 					},
 				]);
 				setPendingAction(null);
-				if (meetingCreated?.date) {
-					void refreshCalendarAfterMeetingCreated({
-						$id: meetingCreated.eventId || `temp-${Date.now()}`,
-						title: meetingCreated.title,
-						startDate: meetingCreated.date,
-						endDate: meetingCreated.date,
-						startTime: meetingCreated.startTime,
-						endTime: meetingCreated.endTime,
-						description: meetingCreated.description,
-						participants: meetingCreated.participants,
-						type: "meeting",
-					});
-				} else if (pendingAction.toolName === "reschedule_calendar_event") {
-					const result =
-						jsonData.result?.result &&
-						typeof jsonData.result.result === "object"
-							? (jsonData.result.result as {
-									eventId?: string;
-									title?: string;
-									date?: string;
-									startTime?: string;
-									endTime?: string;
-								})
-							: null;
-					if (result?.eventId && result.date) {
-						void refreshCalendarAfterEventUpdated({
-							$id: result.eventId,
-							title: result.title || "Meeting",
-							startDate: result.date,
-							endDate: result.date,
-							startTime: result.startTime,
-							endTime: result.endTime,
+				if (calendarMutation?.kind === "create" && calendarMutation.date) {
+					void refreshCalendarCache({
+						mode: "insert",
+						event: {
+							$id: calendarMutation.eventId || `temp-${Date.now()}`,
+							title:
+								calendarMutation.title || meetingCreated?.title || "Meeting",
+							startDate: calendarMutation.date,
+							endDate: calendarMutation.date,
+							startTime: calendarMutation.startTime,
+							endTime: calendarMutation.endTime,
+							description: meetingCreated?.description,
+							participants: meetingCreated?.participants,
 							type: "meeting",
-						});
-					} else {
-						void revalidateCalendarMonth(result?.date);
-					}
-				} else if (pendingAction.toolName === "cancel_calendar_event") {
-					const result =
-						jsonData.result?.result &&
-						typeof jsonData.result.result === "object"
-							? (jsonData.result.result as {
-									eventId?: string;
-									date?: string;
-								})
-							: null;
-					if (result?.eventId) {
-						void refreshCalendarAfterEventRemoved(
-							result.eventId,
-							result.date,
-						);
-					} else {
-						void revalidateCalendarMonth(result?.date);
-					}
+						},
+					});
+				} else if (
+					calendarMutation?.kind === "update" &&
+					calendarMutation.eventId &&
+					calendarMutation.date
+				) {
+					void refreshCalendarCache({
+						mode: "patch",
+						event: {
+							$id: calendarMutation.eventId,
+							title: calendarMutation.title || "Meeting",
+							startDate: calendarMutation.date,
+							endDate: calendarMutation.date,
+							startTime: calendarMutation.startTime,
+							endTime: calendarMutation.endTime,
+							type: "meeting",
+						},
+					});
+				} else if (
+					calendarMutation?.kind === "remove" &&
+					calendarMutation.eventId
+				) {
+					void refreshCalendarCache({
+						mode: "remove",
+						eventId: calendarMutation.eventId,
+						dateStr: calendarMutation.date,
+					});
+				} else if (meetingCreated?.date) {
+					void refreshCalendarCache({
+						mode: "insert",
+						event: {
+							$id: meetingCreated.eventId || `temp-${Date.now()}`,
+							title: meetingCreated.title,
+							startDate: meetingCreated.date,
+							endDate: meetingCreated.date,
+							startTime: meetingCreated.startTime,
+							endTime: meetingCreated.endTime,
+							description: meetingCreated.description,
+							participants: meetingCreated.participants,
+							type: "meeting",
+						},
+					});
+				} else if (
+					pendingAction.toolName === "reschedule_calendar_event" ||
+					pendingAction.toolName === "cancel_calendar_event"
+				) {
+					void revalidateCalendarMonth();
 				}
 				void loadHistory();
 			} catch (e) {

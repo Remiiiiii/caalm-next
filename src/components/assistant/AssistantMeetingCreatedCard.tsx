@@ -139,8 +139,7 @@ export default function AssistantMeetingCreatedCard({
 			? `${meeting.startTime} – ${meeting.endTime}`
 			: meeting.startTime || "Time TBD";
 	const invited =
-		meeting.invitedCount ??
-		emailsFromParticipants(meeting.participants).length;
+		meeting.invitedCount ?? emailsFromParticipants(meeting.participants).length;
 
 	useEffect(() => {
 		const emails = emailsFromParticipants(meeting.participants);
@@ -193,7 +192,9 @@ export default function AssistantMeetingCreatedCard({
 							<CalendarCheck2 className="h-4 w-4 text-[#0f5384]" />
 						</div>
 						<div className="min-w-0 pt-0.5">
-							<p className="text-sm font-semibold text-slate-700">{dateLabel}</p>
+							<p className="text-sm font-semibold text-slate-700">
+								{dateLabel}
+							</p>
 							<p className="mt-0.5 text-sm text-slate-600">{timeLine}</p>
 						</div>
 					</div>

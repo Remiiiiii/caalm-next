@@ -22,7 +22,12 @@ interface UseElevenLabsTTSReturn {
 export function useElevenLabsTTS(
 	options: UseElevenLabsTTSOptions = {},
 ): UseElevenLabsTTSReturn {
-	const { autoPlay = false, voiceId = "K8RBkZM3VaxoGBaGvie0" } = options;
+	// Default: Rachel (ElevenLabs Default voice). Library voices require a paid plan via API.
+	const {
+		autoPlay = false,
+		voiceId = process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID ||
+			"21m00Tcm4TlvDq8ikWAM",
+	} = options;
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -115,11 +120,31 @@ export function useElevenLabsTTS(
 					// Extract error message from parsed error or use defaults
 					let errorMessage = "Failed to generate speech";
 					if (errorInfo.parsedError) {
+						const parsed = errorInfo.parsedError;
+						const detail = parsed.detail as
+							| { message?: string; code?: string }
+							| string
+							| undefined;
+						const detailMessage =
+							typeof detail === "object" && detail?.message
+								? detail.message
+								: typeof detail === "string"
+									? detail
+									: undefined;
 						errorMessage =
-							(errorInfo.parsedError.error as string) ||
-							(errorInfo.parsedError.message as string) ||
-							(errorInfo.parsedError.details as string) ||
+							detailMessage ||
+							(parsed.error as string) ||
+							(parsed.message as string) ||
+							(parsed.details as string) ||
 							errorMessage;
+
+						if (
+							typeof detail === "object" &&
+							detail?.code === "paid_plan_required"
+						) {
+							errorMessage =
+								"ElevenLabs Free plan cannot use Voice Library voices via the API. Use a Default voice ID (NEXT_PUBLIC_ELEVENLABS_VOICE_ID) or upgrade to Starter.";
+						}
 					}
 
 					// Fallback to HTTP status if no message found

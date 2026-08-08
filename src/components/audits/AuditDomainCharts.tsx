@@ -90,8 +90,7 @@ export function AuditDomainCharts({
 			donut.reduce((acc, item, index) => {
 				acc[item.name] = {
 					label: item.name,
-					color:
-						item.fill || colors.donut[index % colors.donut.length],
+					color: item.fill || colors.donut[index % colors.donut.length],
 				};
 				return acc;
 			}, {} as ChartConfig),
@@ -212,10 +211,7 @@ export function AuditDomainCharts({
 			</CaalmAnalyticsChartShell>
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-				<CaalmAnalyticsChartShell
-					title={breakdownTitle}
-					panelTone={tone}
-				>
+				<CaalmAnalyticsChartShell title={breakdownTitle} panelTone={tone}>
 					<ChartContainer
 						config={breakdownChartConfig}
 						className={cn("h-[240px] w-full", axisTickClass)}
@@ -245,8 +241,7 @@ export function AuditDomainCharts({
 									<Cell
 										key={entry.name}
 										fill={
-											entry.fill ||
-											colors.donut[index % colors.donut.length]
+											entry.fill || colors.donut[index % colors.donut.length]
 										}
 										className="cursor-pointer"
 									/>
@@ -276,8 +271,7 @@ export function AuditDomainCharts({
 									<Cell
 										key={entry.name}
 										fill={
-											entry.fill ||
-											colors.donut[index % colors.donut.length]
+											entry.fill || colors.donut[index % colors.donut.length]
 										}
 										className="cursor-pointer"
 									/>

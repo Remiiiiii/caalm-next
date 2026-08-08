@@ -64,11 +64,10 @@ export async function patchPendingActionArgs(
 	const updated: PendingAssistantAction = {
 		...record,
 		args: { ...record.args, ...argsPatch },
-		preview: JSON.stringify(
-			{ ...record.args, ...argsPatch },
-			null,
-			2,
-		).slice(0, 500),
+		preview: JSON.stringify({ ...record.args, ...argsPatch }, null, 2).slice(
+			0,
+			500,
+		),
 	};
 	const remainingSec = Math.max(
 		1,

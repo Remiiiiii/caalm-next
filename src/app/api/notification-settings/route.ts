@@ -49,6 +49,7 @@ export async function PUT(request: NextRequest) {
 			userId: body.userId,
 			emailEnabled: body.emailEnabled,
 			pushEnabled: body.pushEnabled,
+			desktopAlertsEnabled: body.desktopAlertsEnabled,
 			phoneNumber: body.phoneNumber,
 			notificationTypes: body.notificationTypes,
 			frequency: body.frequency,

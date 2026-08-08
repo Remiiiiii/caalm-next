@@ -14,11 +14,7 @@ export default function AssistantActionCompletedCard({
 			<div className="relative z-1">
 				<div className="flex items-start gap-2.5 border-b border-slate-200/80 px-4 pb-3.5 pt-6">
 					<div className="mt-0.5 flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full bg-green/10">
-						<Check
-							className="h-3 w-3 text-green"
-							strokeWidth={3}
-							aria-hidden
-						/>
+						<Check className="h-3 w-3 text-green" strokeWidth={3} aria-hidden />
 					</div>
 					<div className="min-w-0 flex flex-col gap-0.5">
 						<span className="text-[10px] font-bold uppercase tracking-wider text-[#0f5384]">

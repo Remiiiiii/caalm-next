@@ -183,8 +183,8 @@ describe("buildGeminiChatHistory", () => {
 		);
 		expect(history[0]?.role).toBe("user");
 		expect(history.at(-1)?.role).toBe("model");
-		expect(history.some((h) => h.parts[0]?.text === "Change it back to 2pm")).toBe(
-			false,
-		);
+		expect(
+			history.some((h) => h.parts[0]?.text === "Change it back to 2pm"),
+		).toBe(false);
 	});
 });

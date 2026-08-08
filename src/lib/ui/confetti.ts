@@ -146,8 +146,7 @@ export function fireCaalmConfetti(options: ConfettiOptions = {}) {
 	const pieces: HTMLSpanElement[] = [];
 	for (let i = 0; i < count; i++) {
 		const piece = document.createElement("span");
-		const color =
-			CAALM_CONFETTI_COLORS[i % CAALM_CONFETTI_COLORS.length]!;
+		const color = CAALM_CONFETTI_COLORS[i % CAALM_CONFETTI_COLORS.length]!;
 		const size = 6 + Math.random() * 8;
 		const isRect = Math.random() > 0.45;
 		const dx = (Math.random() - 0.5) * window.innerWidth * 0.55;

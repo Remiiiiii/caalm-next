@@ -1,30 +1,59 @@
 import { type NextRequest, NextResponse } from "next/server";
 import {
-	isAssistantAuthError,
-	requireAssistantAccess,
-} from "@/lib/assistant/auth";
-import {
 	buildCalendarActionCompleted,
 	formatGenericSuccessSummary,
 } from "@/lib/assistant/actionCompleted";
+import {
+	isAssistantAuthError,
+	requireAssistantAccess,
+} from "@/lib/assistant/auth";
 import {
 	appendMessage,
 	truncatePreview,
 	updateConversationMeta,
 } from "@/lib/assistant/conversationStore";
+import type { AssistantCalendarMutation } from "@/lib/assistant/executeTypes";
 import { runToolByName } from "@/lib/assistant/tools/registry";
 import {
 	consumePendingAction,
 	patchPendingActionArgs,
 } from "@/lib/assistant/tools/types";
 
+function buildCalendarMutation(
+	toolName: string,
+	resultObj: Record<string, unknown> | null,
+): AssistantCalendarMutation | undefined {
+	if (!resultObj || resultObj.error || resultObj.pendingApproval) {
+		return undefined;
+	}
+	const eventId =
+		typeof resultObj.eventId === "string" ? resultObj.eventId : undefined;
+	const title =
+		typeof resultObj.title === "string" ? resultObj.title : undefined;
+	const date = typeof resultObj.date === "string" ? resultObj.date : undefined;
+	const startTime =
+		typeof resultObj.startTime === "string" ? resultObj.startTime : undefined;
+	const endTime =
+		typeof resultObj.endTime === "string" ? resultObj.endTime : undefined;
+
+	if (toolName === "create_calendar_event") {
+		return { kind: "create", eventId, title, date, startTime, endTime };
+	}
+	if (toolName === "reschedule_calendar_event") {
+		return { kind: "update", eventId, title, date, startTime, endTime };
+	}
+	if (toolName === "cancel_calendar_event") {
+		return { kind: "remove", eventId, title, date };
+	}
+	return undefined;
+}
+
 function formatMeetingSuccessSummary(result: Record<string, unknown>): string {
 	const title = String(result.title ?? "Meeting");
 	const date = String(result.date ?? "");
 	const start = result.startTime ? String(result.startTime) : "";
 	const end = result.endTime ? String(result.endTime) : "";
-	const time =
-		start && end ? `${start} – ${end}` : start || end || "time TBD";
+	const time = start && end ? `${start} – ${end}` : start || end || "time TBD";
 	const invited = Number(result.invitedCount) || 0;
 	const inviteLine =
 		invited > 0
@@ -90,7 +119,9 @@ export async function POST(request: NextRequest) {
 		const meetingCreated = isMeetingSuccess
 			? {
 					eventId:
-						typeof resultObj.eventId === "string" ? resultObj.eventId : undefined,
+						typeof resultObj.eventId === "string"
+							? resultObj.eventId
+							: undefined,
 					title: String(resultObj.title ?? pending.args.title ?? "Meeting"),
 					date: String(resultObj.date ?? pending.args.date ?? ""),
 					startTime:
@@ -139,6 +170,10 @@ export async function POST(request: NextRequest) {
 					})
 				: undefined;
 
+		const calendarMutation = !toolResult.error
+			? buildCalendarMutation(pending.toolName, resultObj)
+			: undefined;
+
 		const summary = toolResult.error
 			? `Action failed: ${toolResult.error}`
 			: meetingCreated
@@ -155,10 +190,11 @@ export async function POST(request: NextRequest) {
 						: `Action completed: ${pending.label}`;
 
 		const metadataJson =
-			meetingCreated || actionCompleted
+			meetingCreated || actionCompleted || calendarMutation
 				? JSON.stringify({
 						...(meetingCreated ? { meetingCreated } : {}),
 						...(actionCompleted ? { actionCompleted } : {}),
+						...(calendarMutation ? { calendarMutation } : {}),
 					})
 				: undefined;
 
@@ -184,6 +220,7 @@ export async function POST(request: NextRequest) {
 				summary,
 				meetingCreated,
 				actionCompleted,
+				calendarMutation,
 			},
 		});
 	} catch (error) {

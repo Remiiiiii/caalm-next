@@ -7,23 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import {
+	disableDesktopAlerts,
+	enableDesktopAlerts,
+} from "@/lib/push/notifications-client";
 
 const NotificationSettings = () => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [notifications, setNotifications] = useState({
 		emailNotifications: false,
-		pushNotifications: false,
+		desktopAlerts: false,
 		weeklyReports: false,
 	});
 	const { toast } = useToast();
 	const { user } = useAuth();
-
-	const handleToggle = (key: string) => {
-		setNotifications((prev) => ({
-			...prev,
-			[key]: !prev[key as keyof typeof prev],
-		}));
-	};
 
 	useEffect(() => {
 		const load = async () => {
@@ -37,14 +34,44 @@ const NotificationSettings = () => {
 					setNotifications((prev) => ({
 						...prev,
 						emailNotifications: !!data.email_enabled,
-						pushNotifications: !!data.push_enabled,
+						desktopAlerts: !!data.desktop_alerts_enabled,
 						weeklyReports: data.frequency === "weekly",
 					}));
 				}
-			} catch {}
+			} catch {
+				// ignore load errors; defaults stay off
+			}
 		};
 		load();
 	}, [user?.$id]);
+
+	const handleDesktopAlertsToggle = async (checked: boolean) => {
+		if (checked) {
+			const result = await enableDesktopAlerts();
+			if (!result.ok) {
+				toast({
+					title: "Desktop alerts unavailable",
+					description: result.message || "Could not enable desktop alerts.",
+					variant: "destructive",
+				});
+				return;
+			}
+			setNotifications((prev) => ({ ...prev, desktopAlerts: true }));
+			toast({
+				title: "Desktop alerts enabled",
+				description:
+					"CAALM can send browser notifications when the tab is closed.",
+			});
+			return;
+		}
+
+		await disableDesktopAlerts();
+		setNotifications((prev) => ({ ...prev, desktopAlerts: false }));
+		toast({
+			title: "Desktop alerts disabled",
+			description: "You will no longer receive desktop push notifications.",
+		});
+	};
 
 	const handleSave = async () => {
 		try {
@@ -55,7 +82,7 @@ const NotificationSettings = () => {
 				body: JSON.stringify({
 					userId: user?.$id,
 					emailEnabled: notifications.emailNotifications,
-					pushEnabled: notifications.pushNotifications,
+					desktopAlertsEnabled: notifications.desktopAlerts,
 					frequency: notifications.weeklyReports ? "weekly" : "instant",
 				}),
 			});
@@ -96,20 +123,27 @@ const NotificationSettings = () => {
 					</div>
 					<Switch
 						checked={notifications.emailNotifications}
-						onCheckedChange={() => handleToggle("emailNotifications")}
+						onCheckedChange={(checked) =>
+							setNotifications((prev) => ({
+								...prev,
+								emailNotifications: checked,
+							}))
+						}
 					/>
 				</div>
 
 				<div className="flex items-center justify-between">
 					<div className="space-y-0.5">
-						<Label className="text-sm text-light-200">Push Notifications</Label>
+						<Label className="text-sm text-light-200">Desktop alerts</Label>
 						<p className="text-xs text-light-200">
-							Enable browser push notifications
+							Native browser notifications even when the CAALM tab is closed
 						</p>
 					</div>
 					<Switch
-						checked={notifications.pushNotifications}
-						onCheckedChange={() => handleToggle("pushNotifications")}
+						checked={notifications.desktopAlerts}
+						onCheckedChange={(checked) => {
+							void handleDesktopAlertsToggle(checked);
+						}}
 					/>
 				</div>
 
@@ -122,7 +156,12 @@ const NotificationSettings = () => {
 					</div>
 					<Switch
 						checked={notifications.weeklyReports}
-						onCheckedChange={() => handleToggle("weeklyReports")}
+						onCheckedChange={(checked) =>
+							setNotifications((prev) => ({
+								...prev,
+								weeklyReports: checked,
+							}))
+						}
 					/>
 				</div>
 			</div>

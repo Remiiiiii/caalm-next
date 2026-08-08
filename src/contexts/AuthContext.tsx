@@ -87,7 +87,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						try {
 							const parsed = JSON.parse(cachedUser);
 							// Only use cache if it's less than 5 minutes old
-							if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_USER_TTL_MS) {
+							if (
+								parsed.timestamp &&
+								Date.now() - parsed.timestamp < CACHE_USER_TTL_MS
+							) {
 								setUser(parsed.user);
 								setIsSessionValid(true);
 								setLoading(false);

@@ -4,15 +4,19 @@ import {
 	GoogleGenerativeAI,
 	SchemaType,
 } from "@google/generative-ai";
+import type { ActivityFeedPayload } from "@/lib/assistant/activityFeed";
+import { buildActivityFeed } from "@/lib/assistant/activityFeed";
 import type { AssistantAuthContext } from "@/lib/assistant/auth";
 import {
 	formatDueDate,
 	formatPriority,
 	formatTaskStatus,
 } from "@/lib/assistant/formatLabels";
+import { buildGeminiChatHistory } from "@/lib/assistant/geminiHistory";
 import { detectDataIntent, isLiveDataIntent } from "@/lib/assistant/intent";
 import type { RetrievedSource } from "@/lib/assistant/knowledge/retrieve";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
+import { sanitizeRescheduleArgs } from "@/lib/assistant/rescheduleArgs";
 import {
 	type AssistantSuggestion,
 	suggestionsForTurn,
@@ -23,10 +27,6 @@ import {
 } from "@/lib/assistant/tools/registry";
 import type { ToolDefinition } from "@/lib/assistant/tools/types";
 import { storePendingAction } from "@/lib/assistant/tools/types";
-import { sanitizeRescheduleArgs } from "@/lib/assistant/rescheduleArgs";
-import { buildGeminiChatHistory } from "@/lib/assistant/geminiHistory";
-import { buildActivityFeed } from "@/lib/assistant/activityFeed";
-import type { ActivityFeedPayload } from "@/lib/assistant/activityFeed";
 
 export type ChatTurnMessage = {
 	role: "user" | "assistant";
@@ -507,8 +507,13 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 				? buildActivityFeed(toolResult.result ?? toolResult)
 				: undefined;
 
+		// Card owns the copy when a structured activity feed is present.
+		const answer = activityFeed
+			? ""
+			: text || "I ran the request but got an empty reply.";
+
 		return {
-			answer: text || "I ran the request but got an empty reply.",
+			answer,
 			sources: sourcesForTool(call.name, ragSources),
 			suggestions: suggestionsForTurn({
 				toolName: call.name,

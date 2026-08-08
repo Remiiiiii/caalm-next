@@ -4,7 +4,12 @@
  */
 export async function readJsonResponse<T = unknown>(
 	res: Response,
-): Promise<{ ok: boolean; status: number; data: T | null; error: string | null }> {
+): Promise<{
+	ok: boolean;
+	status: number;
+	data: T | null;
+	error: string | null;
+}> {
 	const text = await res.text();
 	if (!text.trim()) {
 		return {

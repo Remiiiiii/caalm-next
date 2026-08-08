@@ -34,7 +34,10 @@ export async function POST(request: NextRequest) {
 			typeof body.pathname === "string" ? body.pathname : undefined;
 
 		if (!message) {
-			return NextResponse.json({ error: "Message is required" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Message is required" },
+				{ status: 400 },
+			);
 		}
 
 		let convId = conversationId;
@@ -113,7 +116,9 @@ export async function POST(request: NextRequest) {
 			content: turn.answer,
 			sourcesJson: JSON.stringify(turn.sources),
 			metadataJson: JSON.stringify({
-				...(turn.pendingAction ? { pendingActionId: turn.pendingAction.id } : {}),
+				...(turn.pendingAction
+					? { pendingActionId: turn.pendingAction.id }
+					: {}),
 				...(turn.suggestions?.length ? { suggestions: turn.suggestions } : {}),
 				...(turn.activityFeed ? { activityFeed: turn.activityFeed } : {}),
 			}),
@@ -122,7 +127,10 @@ export async function POST(request: NextRequest) {
 		const now = new Date().toISOString();
 		await updateConversationMeta(convId, {
 			lastMessageAt: now,
-			lastMessagePreview: truncatePreview(turn.answer.replace(/[#*`]/g, ""), 120),
+			lastMessagePreview: truncatePreview(
+				turn.answer.replace(/[#*`]/g, ""),
+				120,
+			),
 			title: truncatePreview(message, 80),
 		});
 
@@ -142,8 +150,7 @@ export async function POST(request: NextRequest) {
 		console.error("[assistant/chat]", error);
 		return NextResponse.json(
 			{
-				error:
-					error instanceof Error ? error.message : "Assistant chat failed",
+				error: error instanceof Error ? error.message : "Assistant chat failed",
 			},
 			{ status: 500 },
 		);

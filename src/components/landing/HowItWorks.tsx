@@ -205,6 +205,7 @@ export default function HowItWorks() {
 					*/
 					<div
 						className="flex items-stretch justify-center gap-5 xl:gap-7"
+						role="status"
 						aria-live="polite"
 						aria-atomic="true"
 						aria-label={`Step ${activeStep} of ${HOW_IT_WORKS_STEPS.length}`}

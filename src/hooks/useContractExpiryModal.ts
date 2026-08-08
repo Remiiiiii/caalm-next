@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { UIFileDoc } from "@/types/files";
 
 /**
@@ -107,29 +107,12 @@ export function useContractExpiryModal(files: UIFileDoc[]) {
 			.map((item) => ({ file: item.file, days: item.days }));
 	}, [files, shownContractIds, testMode, testContracts]);
 
-	// Determine if speech should play based on days until expiry
+	// Speak whenever the full-screen expiry modal has contracts to show
+	// (including test mode / notification click-through at any day count).
 	const shouldPlaySpeech = useMemo(() => {
 		if (contractsToShow.length === 0) return false;
-
-		// Get the first contract's days (assuming all contracts in the list have similar days)
-		const firstContract = contractsToShow[0];
-		const days = firstContract.days;
-
-		if (days === null) return false;
-
-		// Play speech at 30, 15, 10 days, and 24 hours
-		// Don't play speech from 9-2 days (unless 24 hours remain)
-		if (days === 30 || days === 15 || days === 10) {
-			return true;
-		}
-		if (days <= 1) {
-			return true; // 24 hours or less
-		}
-		if (days >= 2 && days <= 9) {
-			return false; // No speech from 9-2 days
-		}
-
-		return true; // Default to playing speech
+		const days = contractsToShow[0]?.days;
+		return days !== null && days !== undefined;
 	}, [contractsToShow]);
 
 	// Auto-open modal when contracts are detected (but not if it was manually closed)
@@ -232,12 +215,33 @@ export function useContractExpiryModal(files: UIFileDoc[]) {
 		}
 	};
 
+	/** Open modal for a specific contract (e.g. desktop notification click-through). */
+	const openForContractId = useCallback(
+		(contractId: string) => {
+			const filesArray = Array.isArray(files) ? files : [];
+			const match = filesArray.find((f) => f.$id === contractId);
+			if (!match) {
+				console.warn(
+					`[useContractExpiryModal] No contract found for id ${contractId}`,
+				);
+				return false;
+			}
+			setWasManuallyClosed(false);
+			setTestContracts([match]);
+			setTestMode(true);
+			setIsModalOpen(true);
+			return true;
+		},
+		[files],
+	);
+
 	return {
 		contractsToShow: contractsToShow.map((item) => item.file),
 		contractsWithDays: contractsToShow,
 		isModalOpen,
 		closeModal,
 		triggerTestModal,
+		openForContractId,
 		shouldPlaySpeech,
 	};
 }

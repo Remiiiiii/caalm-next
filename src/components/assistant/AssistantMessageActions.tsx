@@ -58,10 +58,7 @@ export default function AssistantMessageActions({
 							<Copy className="h-3.5 w-3.5" />
 						)}
 					</Button>
-					<span
-						className="mx-1 h-3.5 w-px bg-slate-200"
-						aria-hidden
-					/>
+					<span className="mx-1 h-3.5 w-px bg-slate-200" aria-hidden />
 					<Button
 						type="button"
 						variant="ghost"
@@ -91,10 +88,7 @@ export default function AssistantMessageActions({
 						}}
 					>
 						<ThumbsDown
-							className={cn(
-								"h-3.5 w-3.5",
-								rating === "down" && "fill-current",
-							)}
+							className={cn("h-3.5 w-3.5", rating === "down" && "fill-current")}
 						/>
 					</Button>
 				</div>

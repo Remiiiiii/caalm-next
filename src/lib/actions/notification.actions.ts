@@ -303,6 +303,15 @@ async function notifyEligibleUsers(params: {
 	matchDepartmentOnly?: boolean;
 	channels?: Set<AlertChannel>;
 	recipientIds?: string[];
+	actionUrl?: string;
+	desktopAlert?: {
+		title: string;
+		body: string;
+		url: string;
+		urgent?: boolean;
+		tag?: string;
+		severity?: "info" | "warning" | "critical";
+	};
 }): Promise<number> {
 	const { tablesDB } = await createAdminClient();
 	if (!appwriteConfig.databaseId || !appwriteConfig.usersCollectionId) {
@@ -365,6 +374,8 @@ async function notifyEligibleUsers(params: {
 					read: false,
 					metadata: params.metadata,
 					triggerType: "scheduled",
+					actionUrl: params.actionUrl,
+					actionText: params.actionUrl ? "View" : undefined,
 				});
 				if (notification) created++;
 			}
@@ -376,6 +387,21 @@ async function notifyEligibleUsers(params: {
 				message: params.message,
 				smsMessage: params.smsMessage,
 			});
+
+			// Native desktop Web Push (opt-in via Settings → Desktop alerts)
+			if (params.desktopAlert) {
+				try {
+					const { sendDesktopAlert } = await import(
+						"@/lib/push/notifications-server"
+					);
+					await sendDesktopAlert(user.accountId, params.desktopAlert);
+				} catch (desktopError) {
+					console.warn(
+						`Desktop alert failed for user ${user.$id}:`,
+						desktopError,
+					);
+				}
+			}
 		} catch (notifyError) {
 			console.error(
 				`Failed to create expiry notification for user ${user.$id}:`,
@@ -453,6 +479,9 @@ export const checkDocumentExpirations = async () => {
 					contract.$id,
 				);
 
+				const { buildDesktopExpiryAlert } = await import(
+					"@/lib/push/notifications-server"
+				);
 				notificationsCreated += await notifyEligibleUsers({
 					title,
 					message,
@@ -464,6 +493,16 @@ export const checkDocumentExpirations = async () => {
 					matchDepartmentOnly: true,
 					channels: alertSettings.channels,
 					recipientIds: alertSettings.recipientIds,
+					actionUrl: "/contracts",
+					desktopAlert: buildDesktopExpiryAlert({
+						kind: "contract",
+						name: contractName,
+						daysUntil,
+						expirySlice,
+						autoRenew,
+						entityId: contract.$id,
+						url: "/dashboard",
+					}),
 				});
 			}
 		}
@@ -512,6 +551,9 @@ export const checkDocumentExpirations = async () => {
 					autoRenew,
 				});
 
+				const { buildDesktopExpiryAlert } = await import(
+					"@/lib/push/notifications-server"
+				);
 				notificationsCreated += await notifyEligibleUsers({
 					title,
 					message,
@@ -521,6 +563,77 @@ export const checkDocumentExpirations = async () => {
 					viewPermission: PERMISSIONS.LICENSES.VIEW,
 					matchDepartmentOnly: false,
 					channels: parseAlertChannels(null),
+					actionUrl: "/licenses",
+					desktopAlert: buildDesktopExpiryAlert({
+						kind: "license",
+						name: licenseName,
+						daysUntil,
+						expirySlice,
+						entityId: license.$id,
+						url: "/licenses",
+					}),
+				});
+			}
+		}
+
+		// --- Audits ---
+		if (appwriteConfig.auditsCollectionId) {
+			const audits = await tablesDB.listRows({
+				databaseId: appwriteConfig.databaseId,
+				tableId: appwriteConfig.auditsCollectionId,
+				queries: [Query.isNotNull("auditExpiryDate"), Query.limit(1000)],
+			});
+
+			for (const audit of audits.rows) {
+				if (!audit.auditExpiryDate) continue;
+
+				const daysUntil = daysUntilExpiry(audit.auditExpiryDate);
+				if (!shouldSendExpiryNotice(daysUntil, audit.renewalNoticeDays)) {
+					continue;
+				}
+
+				const meta: ExpiryNoticeMetadata = {
+					entityType: "audit",
+					entityId: audit.$id,
+					daysUntil,
+				};
+				if (await expiryNoticeAlreadySent("audit-upcoming", meta)) {
+					continue;
+				}
+
+				const expirySlice = String(audit.auditExpiryDate).slice(0, 10);
+				const auditName = (audit.auditName as string) || "Untitled";
+				const title = "Upcoming Audit Reminder";
+				const message = `The audit "${auditName}" is due in ${daysUntil} days (on ${expirySlice}).`;
+				const smsMessage = buildExpirySmsMessage({
+					entityLabel: "Audit",
+					name: auditName,
+					daysUntil,
+					expirySlice,
+					autoRenew: false,
+				});
+
+				const { buildDesktopExpiryAlert } = await import(
+					"@/lib/push/notifications-server"
+				);
+				notificationsCreated += await notifyEligibleUsers({
+					title,
+					message,
+					smsMessage,
+					type: "audit-upcoming",
+					metadata: buildExpiryNoticeMetadata(meta),
+					viewPermission: PERMISSIONS.AUDIT.VIEW,
+					matchDepartmentOnly: false,
+					channels: parseAlertChannels(null),
+					actionUrl: "/audits",
+					desktopAlert: buildDesktopExpiryAlert({
+						kind: "audit",
+						name: auditName,
+						daysUntil,
+						expirySlice,
+						entityId: audit.$id,
+						url: "/audits",
+					}),
 				});
 			}
 		}

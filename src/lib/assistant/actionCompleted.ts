@@ -115,7 +115,10 @@ export function formatGenericSuccessSummary(
 		const entries = Object.entries(result as Record<string, unknown>)
 			.filter(([key, value]) => {
 				if (value === undefined || value === null) return false;
-				if (HIDDEN_RESULT_KEYS.has(key) || HIDDEN_RESULT_KEYS.has(key.toLowerCase()))
+				if (
+					HIDDEN_RESULT_KEYS.has(key) ||
+					HIDDEN_RESULT_KEYS.has(key.toLowerCase())
+				)
 					return false;
 				if (Array.isArray(value) && value.length === 0) return false;
 				return true;

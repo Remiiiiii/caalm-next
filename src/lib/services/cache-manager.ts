@@ -79,27 +79,34 @@ export class CacheManager {
 		userId?: string,
 		orgId?: string,
 	): Promise<void> {
+		const canPatternClear = cache.supportsPatternClear();
+
 		if (year && month) {
 			if (userId) {
 				await cache.del(CACHE_KEYS.calendar.events(year, month, userId));
 			}
 			// Legacy key without userId
 			await cache.del(CACHE_KEYS.calendar.events(year, month));
-			// Glob patterns for ioredis SCAN (regex anchors do not work with SCAN MATCH)
-			await cache.clear(`calendar:events:*:${year}:${month}`);
-			await cache.clear(`calendar:events:${year}:${month}`);
+			// Pattern deletes only work on ioredis / in-memory — Vercel KV is a no-op
+			if (canPatternClear) {
+				await cache.clear(`calendar:events:*:${year}:${month}`);
+				await cache.clear(`calendar:events:${year}:${month}`);
+			}
 		} else if (userId) {
-			await cache.clear(`calendar:events:${userId}:*`);
-		} else {
+			if (canPatternClear) {
+				await cache.clear(`calendar:events:${userId}:*`);
+			}
+			// Without pattern clear, callers must pass year/month + userId for exact del
+		} else if (canPatternClear) {
 			await cache.clear("calendar:events:*");
 		}
 
 		// Invalidate shared calendars cache if userId and orgId provided
 		if (userId && orgId) {
 			await cache.del(CACHE_KEYS.calendar.shared(userId, orgId));
-		} else if (userId) {
+		} else if (userId && canPatternClear) {
 			await cache.clear(`calendar:shared:${userId}:*`);
-		} else {
+		} else if (canPatternClear) {
 			await cache.clear("calendar:shared:*");
 		}
 	}

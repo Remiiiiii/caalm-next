@@ -3,6 +3,8 @@ export interface NotificationSettingsDoc {
 	user_id: string;
 	email_enabled: boolean;
 	push_enabled: boolean;
+	/** Browser Web Push (desktop OS notifications). Separate from SMS push_enabled. */
+	desktop_alerts_enabled?: boolean;
 	phone_number?: string;
 	notification_types: string[];
 	frequency: "instant" | "daily" | "weekly";
@@ -12,6 +14,7 @@ export interface UpsertNotificationSettingsRequest {
 	userId: string;
 	emailEnabled?: boolean;
 	pushEnabled?: boolean;
+	desktopAlertsEnabled?: boolean;
 	phoneNumber?: string;
 	notificationTypes?: string[];
 	frequency?: "instant" | "daily" | "weekly";

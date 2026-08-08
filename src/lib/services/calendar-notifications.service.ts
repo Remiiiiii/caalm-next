@@ -729,11 +729,10 @@ export const sendMeetingInviteNotification = async (
 		if (location) messageParts.push(`Location: ${location}`);
 		const message = messageParts.join(" ");
 
-		const notificationType = await resolveNotificationTypeKey("meeting_invite", [
-			"event_created",
-			"calendar",
-			"system",
-		]);
+		const notificationType = await resolveNotificationTypeKey(
+			"meeting_invite",
+			["event_created", "calendar", "system"],
+		);
 
 		if (recipientUserId && notificationType) {
 			try {
@@ -862,11 +861,9 @@ export const notifyMeetingInvitees = async (
 ): Promise<number> => {
 	if (!participants?.trim()) return 0;
 
-	const {
-		getUserByEmail,
-		getUserById,
-		getUserByAccountId,
-	} = await import("@/lib/actions/user.actions");
+	const { getUserByEmail, getUserById, getUserByAccountId } = await import(
+		"@/lib/actions/user.actions"
+	);
 
 	const byEmail = new Map<string, InviteRecipient>();
 	const organizerEmail = details.organizerEmail?.trim().toLowerCase();

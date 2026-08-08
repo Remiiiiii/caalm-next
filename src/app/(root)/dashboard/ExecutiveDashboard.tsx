@@ -13,10 +13,11 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Models } from "node-appwrite";
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import ClientTimestamp from "@/components/ClientTimestamp";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
@@ -24,8 +25,8 @@ import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget"
 import ContractExpiryNotifier from "@/components/ContractExpiryNotifier";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import ContractExpiryModal from "@/components/contract-expiry-modal/ContractExpiryModal";
-import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
+import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
 import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
@@ -57,6 +58,7 @@ import {
 } from "@/components/ui/skeletons";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import WeatherWidget from "@/components/WeatherWidget";
+import type { ContractStatus } from "@/constants/status";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -64,9 +66,8 @@ import { useContractExpiryModal } from "@/hooks/useContractExpiryModal";
 import { useDashboardLicenses } from "@/hooks/useDashboardLicenses";
 import { useRiskImpactDashboard } from "@/hooks/useRiskImpactDashboard";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
-import type { ContractStatus } from "@/constants/status";
-import type { UIFileDoc } from "@/types/files";
 import { cn } from "@/lib/utils";
+import type { UIFileDoc } from "@/types/files";
 
 type NotifierContract = { id: string; name: string; expiryDate: string };
 
@@ -215,8 +216,29 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		isModalOpen,
 		closeModal,
 		triggerTestModal,
+		openForContractId,
 		shouldPlaySpeech,
 	} = useContractExpiryModal(contractsFromApi || []);
+
+	const router = useRouter();
+	const searchParams = useSearchParams();
+
+	// Desktop push View → /dashboard?expiryEntity=contract&expiryId=…
+	useEffect(() => {
+		const entity = searchParams.get("expiryEntity");
+		const id = searchParams.get("expiryId");
+		if (entity !== "contract" || !id) return;
+		if (!contractsFromApi?.length) return;
+
+		const opened = openForContractId(id);
+		if (opened) {
+			const next = new URLSearchParams(searchParams.toString());
+			next.delete("expiryEntity");
+			next.delete("expiryId");
+			const qs = next.toString();
+			router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
+		}
+	}, [searchParams, contractsFromApi, openForContractId, router]);
 
 	// Handle contract status change - refresh unified data (includes contracts)
 	const handleContractStatusChange = () => {
@@ -1141,9 +1163,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												<SelectItem value="Sales">Sales</SelectItem>
 												<SelectItem value="Marketing">Marketing</SelectItem>
 												<SelectItem value="Executive">Executive</SelectItem>
-												<SelectItem value="Engineering">
-													Engineering
-												</SelectItem>
+												<SelectItem value="Engineering">Engineering</SelectItem>
 											</SelectScrollable>
 										</div>
 

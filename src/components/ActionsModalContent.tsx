@@ -113,6 +113,42 @@ const getStatusLabel = (status: string) => {
 	}
 };
 
+/** Parse date string as local calendar date (avoids UTC timezone shifts). */
+function parseLocalDate(dateString: string | undefined): Date | undefined {
+	if (!dateString) return undefined;
+
+	const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+	if (dateOnlyMatch) {
+		const [, year, month, day] = dateOnlyMatch;
+		return new Date(
+			parseInt(year, 10),
+			parseInt(month, 10) - 1,
+			parseInt(day, 10),
+		);
+	}
+
+	const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+	if (isoMatch) {
+		const [, year, month, day] = isoMatch;
+		return new Date(
+			parseInt(year, 10),
+			parseInt(month, 10) - 1,
+			parseInt(day, 10),
+		);
+	}
+
+	return new Date(dateString);
+}
+
+function sameLocalDay(a: Date | undefined, b: Date | undefined): boolean {
+	if (!a || !b) return a === b;
+	return (
+		a.getFullYear() === b.getFullYear() &&
+		a.getMonth() === b.getMonth() &&
+		a.getDate() === b.getDate()
+	);
+}
+
 export const FileDetails = ({
 	file,
 	onRefresh,
@@ -262,37 +298,6 @@ export const FileDetails = ({
 		fullFile: file,
 	});
 
-	// Helper function to parse date string as local date (avoiding timezone issues)
-	const parseLocalDate = (dateString: string | undefined): Date | undefined => {
-		if (!dateString) return undefined;
-
-		// If it's a date-only string (YYYY-MM-DD), parse it as local date
-		const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
-		if (dateOnlyMatch) {
-			const [, year, month, day] = dateOnlyMatch;
-			// Create date in local timezone (month is 0-indexed)
-			return new Date(
-				parseInt(year, 10),
-				parseInt(month, 10) - 1,
-				parseInt(day, 10),
-			);
-		}
-
-		// For ISO strings with time, extract date part and parse as local
-		const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})T/);
-		if (isoMatch) {
-			const [, year, month, day] = isoMatch;
-			return new Date(
-				parseInt(year, 10),
-				parseInt(month, 10) - 1,
-				parseInt(day, 10),
-			);
-		}
-
-		// Fallback to standard Date parsing
-		return new Date(dateString);
-	};
-
 	// Helper function to format date for display (avoiding timezone issues)
 	const formatDateForDisplay = (dateString: string | undefined): string => {
 		if (!dateString) return "N/A";
@@ -309,13 +314,13 @@ export const FileDetails = ({
 
 	// Initialize selectedDate with current expiry date when editing starts
 	React.useEffect(() => {
-		if (editing && displayExpiry) {
-			const parsedDate = parseLocalDate(displayExpiry);
-			if (parsedDate && !Number.isNaN(parsedDate.getTime())) {
-				setSelectedDate(parsedDate);
-			}
-		}
-	}, [editing, displayExpiry, parseLocalDate]);
+		if (!editing || !displayExpiry) return;
+		const parsedDate = parseLocalDate(displayExpiry);
+		if (!parsedDate || Number.isNaN(parsedDate.getTime())) return;
+		setSelectedDate((prev) =>
+			sameLocalDay(prev, parsedDate) ? prev : parsedDate,
+		);
+	}, [editing, displayExpiry]);
 
 	// Fetch assigned manager users
 	React.useEffect(() => {
@@ -874,7 +879,12 @@ export const FileDetails = ({
 										"Contract Category",
 										contractAttributes.contractCategory,
 									)}
-									{renderField("Description", contractAttributes.description)}
+									<div className="col-span-3">
+										{renderField(
+											"Description",
+											contractAttributes.description,
+										)}
+									</div>
 								</div>
 							</AccordionContent>
 						</AccordionItem>

@@ -43,24 +43,64 @@ function formatDayLabel(when: Date, now = new Date()): string {
 	return short;
 }
 
-function formatWhenMeta(when: Date, kind: ActivityFeedKind): string {
-	const date = when.toLocaleDateString("en-US", {
+/** Activity timestamp label (not a due date). */
+export function formatWhenMeta(when: Date): string {
+	return when.toLocaleDateString("en-US", {
 		month: "short",
 		day: "numeric",
 		year: "numeric",
 	});
-	if (kind === "feedback") return date;
-	return `Due ${date}`;
 }
 
-function classifyKind(title: string, action?: string, module?: string): ActivityFeedKind {
-	const blob = `${title} ${action ?? ""} ${module ?? ""}`.toLowerCase();
-	if (blob.includes("feedback") || blob.includes("helpful")) return "feedback";
+/**
+ * Prefer structured audit fields; title keywords only as last resort.
+ */
+export function classifyKind(params: {
+	title: string;
+	action?: string;
+	module?: string;
+	targetType?: string;
+}): ActivityFeedKind {
+	const title = params.title.toLowerCase();
+	const action = (params.action ?? "").toLowerCase();
+	const module = (params.module ?? "").toLowerCase();
+	const targetType = (params.targetType ?? "").toLowerCase();
+
 	if (
-		blob.includes("schedul") ||
-		blob.includes("calendar") ||
-		blob.includes("meeting") ||
-		blob.includes("event")
+		targetType.includes("feedback") ||
+		title.includes("assistant feedback") ||
+		title.includes("marked helpful") ||
+		title.includes("marked not helpful")
+	) {
+		return "feedback";
+	}
+
+	if (
+		targetType === "calendar_event" ||
+		targetType.includes("calendar") ||
+		module === "calendar"
+	) {
+		return "schedule";
+	}
+
+	if (
+		targetType.includes("task") ||
+		module === "tasks" ||
+		module === "task" ||
+		action.includes("task")
+	) {
+		return "task";
+	}
+
+	// Fallback: title keywords only
+	if (title.includes("feedback") || title.includes("helpful")) {
+		return "feedback";
+	}
+	if (
+		title.includes("schedul") ||
+		title.includes("calendar") ||
+		title.includes("meeting") ||
+		title.includes("event")
 	) {
 		return "schedule";
 	}
@@ -104,6 +144,8 @@ type RawLog = {
 	when?: unknown;
 	module?: unknown;
 	status?: unknown;
+	target_type?: unknown;
+	targetType?: unknown;
 };
 
 /**
@@ -125,11 +167,17 @@ export function buildActivityFeed(data: unknown): ActivityFeedPayload | null {
 		const whenRaw = l.when ? String(l.when) : "";
 		const when = whenRaw ? new Date(whenRaw) : now;
 		const validWhen = Number.isNaN(when.getTime()) ? now : when;
-		const kind = classifyKind(
+		const targetType = l.target_type
+			? String(l.target_type)
+			: l.targetType
+				? String(l.targetType)
+				: undefined;
+		const kind = classifyKind({
 			title,
-			l.action ? String(l.action) : undefined,
-			l.module ? String(l.module) : undefined,
-		);
+			action: l.action ? String(l.action) : undefined,
+			module: l.module ? String(l.module) : undefined,
+			targetType,
+		});
 		const { verb, detail } = parseVerbAndDetail(title);
 		const who = l.user ? String(l.user).trim() : undefined;
 		const dayKey = startOfLocalDay(validWhen).toISOString();
@@ -139,7 +187,7 @@ export function buildActivityFeed(data: unknown): ActivityFeedPayload | null {
 			verb,
 			detail,
 			who: who || undefined,
-			whenLabel: formatWhenMeta(validWhen, kind),
+			whenLabel: formatWhenMeta(validWhen),
 			sortKey: validWhen.getTime(),
 			dayKey,
 		});
@@ -147,7 +195,6 @@ export function buildActivityFeed(data: unknown): ActivityFeedPayload | null {
 
 	if (!items.length) return null;
 
-	// Collapse consecutive identical verb+detail+who into a count badge
 	const collapsed: typeof items = [];
 	for (const item of items) {
 		const prev = collapsed[collapsed.length - 1];

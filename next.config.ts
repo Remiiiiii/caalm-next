@@ -137,6 +137,20 @@ const nextConfig: NextConfig = {
 	},
 	async headers() {
 		return [
+			// Service worker — always revalidate so push handler updates propagate
+			{
+				source: "/sw.js",
+				headers: [
+					{
+						key: "Cache-Control",
+						value: "no-cache, no-store, must-revalidate",
+					},
+					{
+						key: "Service-Worker-Allowed",
+						value: "/",
+					},
+				],
+			},
 			// Static assets - cache aggressively in production, disable in dev
 			{
 				source: "/:all*(js|css|svg|png|jpg|jpeg|gif|webp|avif)",
