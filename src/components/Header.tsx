@@ -133,7 +133,9 @@ export const Header = () => {
 				left: 0,
 				right: 0,
 				zIndex: 50,
-				background: isMobile ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0)",
+				background: isMobile
+					? "rgba(255, 255, 255, 0.92)"
+					: "rgba(255, 255, 255, 0)",
 			}}
 			className="max-md:backdrop-blur-md"
 		>

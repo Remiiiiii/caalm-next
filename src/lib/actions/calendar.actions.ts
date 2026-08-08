@@ -142,13 +142,13 @@ export const isUserListedAsParticipant = (
 		.map((p) => p.trim())
 		.filter((p) => p.length > 0);
 
-	const angleEmails = [
-		...haystack.matchAll(/<([^>\s]+@[^>\s]+)>/g),
-	].map((m) => m[1].trim().toLowerCase());
+	const angleEmails = [...haystack.matchAll(/<([^>\s]+@[^>\s]+)>/g)].map((m) =>
+		m[1].trim().toLowerCase(),
+	);
 
-	const parenEmails = [
-		...haystack.matchAll(/\(([^)\s]+@[^)\s]+)\)/g),
-	].map((m) => m[1].trim().toLowerCase());
+	const parenEmails = [...haystack.matchAll(/\(([^)\s]+@[^)\s]+)\)/g)].map(
+		(m) => m[1].trim().toLowerCase(),
+	);
 
 	for (const needle of needles) {
 		if (tokens.includes(needle)) return true;

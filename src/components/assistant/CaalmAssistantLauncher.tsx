@@ -1,7 +1,7 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
+import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import CaalmAssistantSheet from "@/components/assistant/CaalmAssistantSheet";
 import ShimmerBadge from "@/components/landing/ShimmerBadge";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -27,7 +27,7 @@ export default function CaalmAssistantLauncher() {
 				className="h-10 shrink-0"
 				innerClassName="h-full bg-white px-3 text-sm font-medium text-[#0f5384]"
 			>
-				<Sparkles className="h-4 w-4 shrink-0" />
+				<AssistantAvatar size="xs" />
 				Ask CAALM
 			</ShimmerBadge>
 			<CaalmAssistantSheet

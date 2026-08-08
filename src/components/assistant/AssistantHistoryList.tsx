@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import type { AssistantConversationSummary } from "@/components/assistant/assistantTypes";
 import { formatRelativeTime } from "@/lib/assistant/formatMarkdown";
 import { cn } from "@/lib/utils";
@@ -51,15 +51,9 @@ export default function AssistantHistoryList({
 								activeId === c.$id && "bg-white/50",
 							)}
 						>
-							<Image
-								src="/assets/images/assistant.svg"
-								alt=""
-								width={36}
-								height={36}
-								className="h-9 w-9 shrink-0 object-contain"
-							/>
+							<AssistantAvatar size="sm" />
 							<div className="min-w-0 flex-1">
-								<p className="truncate text-sm font-medium text-slate-900">
+								<p className="truncate text-sm font-medium text-slate-700">
 									{c.title || "Conversation"}
 								</p>
 								<p className="truncate text-xs text-slate-600 mt-0.5">

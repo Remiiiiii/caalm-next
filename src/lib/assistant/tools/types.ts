@@ -1,5 +1,6 @@
 import type { PermissionKey } from "@/constants/permissions";
 import type { AssistantAuthContext } from "@/lib/assistant/auth";
+import * as cache from "@/lib/services/redis-cache";
 
 export type PendingAssistantAction = {
 	id: string;
@@ -13,12 +14,16 @@ export type PendingAssistantAction = {
 	expiresAt: number;
 };
 
-const pending = new Map<string, PendingAssistantAction>();
 const TTL_MS = 10 * 60 * 1000;
+const TTL_SEC = 10 * 60;
 
-export function storePendingAction(
+function pendingKey(id: string): string {
+	return `assistant:pending:${id}`;
+}
+
+export async function storePendingAction(
 	action: Omit<PendingAssistantAction, "id" | "createdAt" | "expiresAt">,
-): PendingAssistantAction {
+): Promise<PendingAssistantAction> {
 	const id = crypto.randomUUID();
 	const now = Date.now();
 	const record: PendingAssistantAction = {
@@ -27,39 +32,49 @@ export function storePendingAction(
 		createdAt: now,
 		expiresAt: now + TTL_MS,
 	};
-	pending.set(id, record);
+	await cache.set(pendingKey(id), record, TTL_SEC);
 	return record;
 }
 
-export function consumePendingAction(
+export async function consumePendingAction(
 	id: string,
 	ctx: AssistantAuthContext,
-): PendingAssistantAction | null {
-	const record = pending.get(id);
+): Promise<PendingAssistantAction | null> {
+	const record = await cache.get<PendingAssistantAction>(pendingKey(id));
 	if (!record) return null;
-	pending.delete(id);
+	await cache.del(pendingKey(id));
 	if (record.expiresAt < Date.now()) return null;
 	if (record.userId !== ctx.user.$id || record.orgId !== ctx.orgId) return null;
 	return record;
 }
 
 /** Merge client-side confirmation edits into a still-pending action. */
-export function patchPendingActionArgs(
+export async function patchPendingActionArgs(
 	id: string,
 	ctx: AssistantAuthContext,
 	argsPatch: Record<string, unknown>,
-): PendingAssistantAction | null {
-	const record = pending.get(id);
+): Promise<PendingAssistantAction | null> {
+	const record = await cache.get<PendingAssistantAction>(pendingKey(id));
 	if (!record) return null;
 	if (record.expiresAt < Date.now()) {
-		pending.delete(id);
+		await cache.del(pendingKey(id));
 		return null;
 	}
 	if (record.userId !== ctx.user.$id || record.orgId !== ctx.orgId) return null;
-	record.args = { ...record.args, ...argsPatch };
-	record.preview = JSON.stringify(record.args, null, 2).slice(0, 500);
-	pending.set(id, record);
-	return record;
+	const updated: PendingAssistantAction = {
+		...record,
+		args: { ...record.args, ...argsPatch },
+		preview: JSON.stringify({ ...record.args, ...argsPatch }, null, 2).slice(
+			0,
+			500,
+		),
+	};
+	const remainingSec = Math.max(
+		1,
+		Math.ceil((updated.expiresAt - Date.now()) / 1000),
+	);
+	await cache.set(pendingKey(id), updated, remainingSec);
+	return updated;
 }
 
 export type ToolContext = AssistantAuthContext & {

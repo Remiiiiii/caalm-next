@@ -27,16 +27,12 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const periodParam =
-			request.nextUrl.searchParams.get("period") || "ytd";
+		const periodParam = request.nextUrl.searchParams.get("period") || "ytd";
 		const period = (
-			VALID_PERIODS.has(periodParam as RiskImpactPeriod)
-				? periodParam
-				: "ytd"
+			VALID_PERIODS.has(periodParam as RiskImpactPeriod) ? periodParam : "ytd"
 		) as RiskImpactPeriod;
 
-		const division =
-			request.nextUrl.searchParams.get("division") || undefined;
+		const division = request.nextUrl.searchParams.get("division") || undefined;
 
 		let orgId = getOrgIdFromRequest(request);
 		if (!orgId) {

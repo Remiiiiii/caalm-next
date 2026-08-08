@@ -197,5 +197,4 @@ export async function clearAuthFailures(
 	);
 }
 
-export const LOCKOUT_USER_MESSAGE =
-	"Too many attempts. Sign in again.";
+export const LOCKOUT_USER_MESSAGE = "Too many attempts. Sign in again.";

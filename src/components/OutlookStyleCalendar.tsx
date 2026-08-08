@@ -133,6 +133,12 @@ import {
 import type { SharedCalendar } from "@/lib/actions/shared-calendar.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { resolveCalendarPermissions } from "@/lib/auth/permissions";
+import {
+	formatEventDetailDateLine,
+	formatEventDetailTimeLine,
+	formatTimeForDisplay,
+	parseTimeToMinutes,
+} from "@/lib/calendar/eventDisplayFormat";
 import { cn, convertFileSize, getFileType } from "@/lib/utils";
 import { getUSHolidaysForMonth, parseHolidayDate } from "@/lib/utils/holidays";
 
@@ -1052,57 +1058,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		return times;
 	};
 
-	// Function to convert 24-hour format to 12-hour format for display
-	const formatTimeForDisplay = (timeInput: string) => {
-		if (!timeInput) return "";
-
-		// Check if already in 12-hour format with AM/PM
-		if (timeInput.includes("AM") || timeInput.includes("PM")) {
-			// Already formatted, just ensure proper spacing
-			return timeInput.replace(/\s+(AM|PM)/i, " $1");
-		}
-
-		// Parse 24-hour format (e.g., "19:00")
-		const [hours, minutes] = timeInput.split(":");
-		const hour = parseInt(hours, 10);
-		const hours12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-		const ampm = hour >= 12 ? "PM" : "AM";
-		return `${hours12}:${minutes} ${ampm}`;
-	};
-
-	// Function to parse time string and convert to minutes since midnight for sorting
-	const parseTimeToMinutes = (timeStr: string | undefined): number => {
-		if (!timeStr) return 0; // Events without time come first (or use 1440 to put them last)
-
-		// Check if it's 12-hour format (e.g., "8:00 AM" or "2:30 PM")
-		const twelveHourMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-		if (twelveHourMatch) {
-			let hours = parseInt(twelveHourMatch[1], 10);
-			const minutes = parseInt(twelveHourMatch[2], 10);
-			const period = twelveHourMatch[3].toUpperCase();
-
-			// Convert to 24-hour format
-			if (period === "PM" && hours !== 12) {
-				hours += 12;
-			} else if (period === "AM" && hours === 12) {
-				hours = 0;
-			}
-
-			return hours * 60 + minutes;
-		}
-
-		// Check if it's 24-hour format (e.g., "08:00" or "14:30")
-		const twentyFourHourMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
-		if (twentyFourHourMatch) {
-			const hours = parseInt(twentyFourHourMatch[1], 10);
-			const minutes = parseInt(twentyFourHourMatch[2], 10);
-			return hours * 60 + minutes;
-		}
-
-		// If format is unrecognized, return 0
-		return 0;
-	};
-
 	// Function to fetch contracts from database
 	const fetchContracts = async () => {
 		setLoadingContracts(true);
@@ -1510,6 +1465,17 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		enableRealTime: true,
 		pollingInterval: 10000,
 	});
+
+	// Assistant (and other) creates: optimistic SWR + this event for an immediate redraw
+	useEffect(() => {
+		const onCalendarUpdated = () => {
+			void forceRefresh();
+		};
+		window.addEventListener("caalm:calendar-updated", onCalendarUpdated);
+		return () => {
+			window.removeEventListener("caalm:calendar-updated", onCalendarUpdated);
+		};
+	}, [forceRefresh]);
 
 	const normalizedEvents = useMemo(() => {
 		const combined = [...events, ...(calendarEvents || [])];
@@ -5579,13 +5545,22 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																Date
 															</div>
 															<div className="text-sm text-slate-600">
-																{format(
-																	selectedEvent.startDate instanceof Date
-																		? selectedEvent.startDate
-																		: new Date(selectedEvent.startDate),
-																	"EEEE, MMMM d, yyyy",
+																{formatEventDetailDateLine(
+																	selectedEvent.startDate,
 																)}
 															</div>
+															{(() => {
+																const timeLine = formatEventDetailTimeLine({
+																	startDate: selectedEvent.startDate,
+																	startTime: selectedEvent.startTime,
+																	endTime: selectedEvent.endTime,
+																});
+																return timeLine ? (
+																	<div className="text-xs text-slate-500 mt-0.5">
+																		{timeLine}
+																	</div>
+																) : null;
+															})()}
 														</div>
 													</div>
 													{/* Event Type - Only show for non-holiday events */}

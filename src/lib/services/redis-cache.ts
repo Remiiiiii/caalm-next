@@ -340,6 +340,11 @@ export async function clear(pattern: string): Promise<void> {
 	}
 }
 
+/** Vercel KV cannot SCAN/delete by pattern; ioredis and in-memory can. */
+export function supportsPatternClear(): boolean {
+	return !useVercelKV;
+}
+
 /**
  * Get or set pattern with automatic caching.
  * If Redis is unavailable (e.g. ENOTFOUND, ECONNRESET), falls back to fetchFn only.
@@ -439,6 +444,7 @@ export default {
 	del,
 	exists,
 	clear,
+	supportsPatternClear,
 	getOrSet,
 	getStats,
 	healthCheck,

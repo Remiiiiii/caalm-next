@@ -242,13 +242,21 @@ export const useCalendarEvents = ({
 	};
 
 	const forceRefresh = async () => {
-		console.log("Force refresh called, fetching new data immediately");
-		// Clear cache and force revalidation to ensure deleted events don't reappear
-		await mutate(undefined, {
-			revalidate: true,
-			populateCache: true,
-			rollbackOnError: false,
-		});
+		const url = `${key}&noCache=1`;
+		await mutate(
+			async () => {
+				const res = await fetch(url, { cache: "no-store" });
+				if (!res.ok) {
+					throw new Error("Failed to refresh calendar events");
+				}
+				return res.json();
+			},
+			{
+				revalidate: false,
+				populateCache: true,
+				rollbackOnError: false,
+			},
+		);
 	};
 
 	return {

@@ -1,16 +1,12 @@
 "use client";
 
-import {
-	AnimatePresence,
-	motion,
-	useReducedMotion,
-} from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
 	BarChart3,
 	FileText,
+	type LucideIcon,
 	Search,
 	ShieldCheck,
-	type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -19,13 +15,13 @@ import { cn } from "@/lib/utils";
 import FeatureSpotlightGrid from "./FeatureSpotlightGrid";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
+import { LicenseIcon } from "./LicenseIcon";
 import { SPOTLIGHT_TABS } from "./landingContent";
 import { fadeIn, softRise, staggerContainer, viewportOnce } from "./motion";
 import AnalyticsMock from "./spotlight/AnalyticsMock";
 import AuditsMock from "./spotlight/AuditsMock";
 import ContractsMock from "./spotlight/ContractsMock";
 import LicensesMock from "./spotlight/LicensesMock";
-import { LicenseIcon } from "./LicenseIcon";
 
 type SpotlightTabId = (typeof SPOTLIGHT_TABS)[number]["id"];
 
@@ -199,7 +195,10 @@ export default function ProductSpotlight() {
 					</p>
 				</motion.div>
 
-				<motion.div variants={softRise} className="mb-8 flex flex-col items-center gap-4">
+				<motion.div
+					variants={softRise}
+					className="mb-8 flex flex-col items-center gap-4"
+				>
 					<div
 						className="flex w-full max-w-sm flex-col gap-2.5 sm:inline-flex sm:max-w-full sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:rounded-full sm:border sm:border-slate-200 sm:bg-slate-100/90 sm:p-2 sm:shadow-sm"
 						role="tablist"
@@ -294,9 +293,7 @@ export default function ProductSpotlight() {
 															<CountUp
 																key={`${active.id}-${kpi.label}-count`}
 																end={kpi.value}
-																decimals={
-																	"decimals" in kpi ? kpi.decimals : 0
-																}
+																decimals={"decimals" in kpi ? kpi.decimals : 0}
 																prefix={"prefix" in kpi ? kpi.prefix : ""}
 																suffix={kpi.suffix}
 																duration={1.4}

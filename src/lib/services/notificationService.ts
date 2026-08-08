@@ -1291,6 +1291,10 @@ class NotificationService {
 				user_id: payload.userId,
 				email_enabled: payload.emailEnabled ?? existing?.email_enabled ?? false,
 				push_enabled: payload.pushEnabled ?? existing?.push_enabled ?? false,
+				desktop_alerts_enabled:
+					payload.desktopAlertsEnabled ??
+					existing?.desktop_alerts_enabled ??
+					false,
 				phone_number: payload.phoneNumber ?? existing?.phone_number,
 				notification_types:
 					payload.notificationTypes ?? existing?.notification_types ?? [],

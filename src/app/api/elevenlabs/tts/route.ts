@@ -2,7 +2,13 @@ import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
 	try {
-		const { text, voice_id = "21m00Tcm4TlvDq8ikWAM" } = await request.json();
+		const body = await request.json();
+		const { text } = body;
+		// Prefer server env, then request body, then Rachel (Default voice — Free API OK)
+		const voice_id =
+			process.env.ELEVENLABS_VOICE_ID ||
+			body.voice_id ||
+			"21m00Tcm4TlvDq8ikWAM";
 
 		if (!text || typeof text !== "string") {
 			return NextResponse.json(

@@ -25,8 +25,8 @@ import CalendarView from "@/components/CalendarView";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
-import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
+import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
@@ -941,10 +941,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 									className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
 								>
 									<RefreshCw
-										className={cn(
-											"h-4 w-4",
-											refreshLoading && "animate-spin",
-										)}
+										className={cn("h-4 w-4", refreshLoading && "animate-spin")}
 									/>
 								</Button>
 							</div>

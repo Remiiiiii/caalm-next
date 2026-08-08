@@ -3,6 +3,7 @@
 import type { Models } from "appwrite";
 import type React from "react";
 import DashboardHeader from "@/components/DashboardHeader";
+import { DesktopNotificationNavListener } from "@/components/DesktopNotificationNavListener";
 import InactivityDialog from "@/components/InactivityDialog";
 import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";
@@ -47,6 +48,7 @@ const AuthenticatedLayout = ({
 		<OrganizationProvider>
 			<SidebarProvider>
 				<NotificationSoundListener />
+				<DesktopNotificationNavListener />
 				<main className="flex h-screen">
 					<Sidebar
 						name={user.name || "Unknown User"}

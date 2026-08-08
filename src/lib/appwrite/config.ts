@@ -128,6 +128,11 @@ export const appwriteConfig = {
 		"test-notification-settings",
 	),
 
+	pushSubscriptionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PUSH_SUBSCRIPTIONS_COLLECTION",
+		"push_subscriptions",
+	),
+
 	smsFormSubmissionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_SMS_FORM_SUBMISSIONS_COLLECTION",
 		"test-sms-form-submissions",

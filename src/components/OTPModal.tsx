@@ -16,7 +16,11 @@ import {
 	InputOTPGroup,
 	InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { sendEmailOTP, verifyOTP, forceAuthResetAfterLockout } from "@/lib/actions/user.actions";
+import {
+	forceAuthResetAfterLockout,
+	sendEmailOTP,
+	verifyOTP,
+} from "@/lib/actions/user.actions";
 import { Button } from "./ui/button";
 
 const OTP_TTL_MS = 5 * 60 * 1000;

@@ -14,9 +14,9 @@ import {
 	NotebookPen,
 	Sparkles,
 } from "lucide-react";
-import Image from "next/image";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -950,13 +950,7 @@ Contract: ${contractTitle}`;
 			{/* Header */}
 			<div className="flex items-center justify-between p-4 border-b border-light-300 bg-white/80 backdrop-blur">
 				<div className="flex items-center gap-2">
-					<Image
-						src="/assets/images/logo.png"
-						alt="AI Assistant"
-						width={30}
-						height={30}
-						className="h-[30px] w-[30px] object-contain"
-					/>
+					<AssistantAvatar size="sm" alt="AI Assistant" className="h-10 w-10" />
 					<h3 className="font-bold sidebar-gradient-text">
 						{mode === "pre-reads"
 							? "Pre-Reads Recommendations"
@@ -1093,13 +1087,7 @@ Contract: ${contractTitle}`;
 							<div className="flex justify-start">
 								<div className="flex items-start space-x-3 max-w-[95%]">
 									<div className="flex-shrink-0">
-										<Image
-											src="/assets/images/assistant.svg"
-											alt="AI Assistant"
-											width={54}
-											height={54}
-											className="w-12 h-12 rounded-full bg-blue-100 p-1"
-										/>
+										<AssistantAvatar size="md" alt="AI Assistant" />
 									</div>
 									<div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
 										<div className="text-sm text-gray-700 space-y-2">
@@ -1165,13 +1153,7 @@ Contract: ${contractTitle}`;
 							{message.sender === "assistant" && (
 								<div className="flex items-start space-x-3 max-w-[95%]">
 									<div className="flex-shrink-0">
-										<Image
-											src="/assets/images/assistant.svg"
-											alt="AI Assistant"
-											width={54}
-											height={54}
-											className="w-12 h-12 rounded-full bg-blue-100 p-1"
-										/>
+										<AssistantAvatar size="lg" alt="AI Assistant" />
 									</div>
 									<div className="flex-1">
 										<div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
@@ -1233,13 +1215,7 @@ Contract: ${contractTitle}`;
 						<div className="flex justify-start">
 							<div className="flex items-start space-x-3 max-w-[85%]">
 								<div className="flex-shrink-0">
-									<Image
-										src="/assets/images/assistant.svg"
-										alt="AI Assistant"
-										width={54}
-										height={54}
-										className="w-12 h-12 rounded-full bg-blue-100 p-1"
-									/>
+									<AssistantAvatar size="lg" alt="AI Assistant" />
 								</div>
 								<div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
 									<div className="flex space-x-1">

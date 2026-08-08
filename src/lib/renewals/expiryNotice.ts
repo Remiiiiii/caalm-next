@@ -34,7 +34,7 @@ export function shouldSendExpiryNotice(
 }
 
 export type ExpiryNoticeMetadata = {
-	entityType: "contract" | "license";
+	entityType: "contract" | "license" | "audit";
 	entityId: string;
 	daysUntil: number;
 };
@@ -50,7 +50,9 @@ export function parseExpiryNoticeMetadata(
 	try {
 		const parsed = JSON.parse(raw) as ExpiryNoticeMetadata;
 		if (
-			(parsed.entityType === "contract" || parsed.entityType === "license") &&
+			(parsed.entityType === "contract" ||
+				parsed.entityType === "license" ||
+				parsed.entityType === "audit") &&
 			typeof parsed.entityId === "string" &&
 			typeof parsed.daysUntil === "number"
 		) {

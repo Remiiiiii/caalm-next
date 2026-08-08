@@ -5,9 +5,12 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-	"Searching CAALM product docs…",
-	"Reviewing your question…",
-	"Drafting a reply…",
+	"Calibrating…",
+	"Orchestrating…",
+	"Synthesizing…",
+	"Untangling…",
+	"Wrangling…",
+	"Assembling…",
 ] as const;
 
 const STEP_MS = 2200;

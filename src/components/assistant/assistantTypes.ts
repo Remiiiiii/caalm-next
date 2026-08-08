@@ -33,6 +33,30 @@ export type AssistantMeetingCreated = {
 	conflicts?: string[];
 };
 
+export type AssistantActionCompleted = {
+	eyebrow?: string;
+	headline: string;
+	fields: Array<{ label: string; value: string }>;
+};
+
+export type AssistantActivityFeedItem = {
+	id: string;
+	kind: "schedule" | "feedback" | "task";
+	verb: string;
+	detail?: string;
+	who?: string;
+	whenLabel: string;
+	count?: number;
+};
+
+export type AssistantActivityFeed = {
+	title: string;
+	days: Array<{
+		label: string;
+		items: AssistantActivityFeedItem[];
+	}>;
+};
+
 export type AssistantChatMessage = {
 	id: string;
 	role: "user" | "assistant";
@@ -42,6 +66,10 @@ export type AssistantChatMessage = {
 	pendingAction?: AssistantPendingAction;
 	/** Structured success card after scheduling a meeting */
 	meetingCreated?: AssistantMeetingCreated;
+	/** Structured success card after confirming a mutating action (e.g. reschedule) */
+	actionCompleted?: AssistantActionCompleted;
+	/** Structured recent-activity list card */
+	activityFeed?: AssistantActivityFeed;
 	createdAt?: string;
 };
 
@@ -59,6 +87,8 @@ export type UseCaalmAssistantReturn = {
 	loadHistory: () => Promise<void>;
 	selectConversation: (id: string) => Promise<void>;
 	startNewChat: () => Promise<void>;
+	/** Restore the current active session after hide/remount (does not create a new chat). */
+	resumeActiveSession: () => Promise<void>;
 	sendMessage: (text: string) => Promise<void>;
 	confirmAction: (argsPatch?: Record<string, unknown>) => Promise<void>;
 	/** Merge confirmation-card edits into the in-memory pending action */

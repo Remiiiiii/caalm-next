@@ -819,7 +819,8 @@ export default function LandingHero() {
 						className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-semibold tracking-tight leading-[1.2] sidebar-gradient-text"
 					>
 						<span className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.75rem] text-center">
-							Centralize Contracts Audits and Licenses
+							The Renewal You Miss Becomes the Funding You Lose and the Audit
+							You Fail
 						</span>
 					</motion.h2>
 					<motion.p
@@ -1036,7 +1037,7 @@ export default function LandingHero() {
 											<h3 className="text-sm font-semibold leading-snug sidebar-gradient-text">
 												{pillar.title}
 											</h3>
-											<p className="mt-1 text-xs sm:text-xs leading-snug text-slate-600 sm:line-clamp-3">
+											<p className="mt-1 text-xs sm:text-xs leading-snug text-slate-600">
 												{pillar.description}
 											</p>
 										</div>

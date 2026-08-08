@@ -4,15 +4,19 @@ import {
 	GoogleGenerativeAI,
 	SchemaType,
 } from "@google/generative-ai";
+import type { ActivityFeedPayload } from "@/lib/assistant/activityFeed";
+import { buildActivityFeed } from "@/lib/assistant/activityFeed";
 import type { AssistantAuthContext } from "@/lib/assistant/auth";
 import {
 	formatDueDate,
 	formatPriority,
 	formatTaskStatus,
 } from "@/lib/assistant/formatLabels";
+import { buildGeminiChatHistory } from "@/lib/assistant/geminiHistory";
 import { detectDataIntent, isLiveDataIntent } from "@/lib/assistant/intent";
 import type { RetrievedSource } from "@/lib/assistant/knowledge/retrieve";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
+import { sanitizeRescheduleArgs } from "@/lib/assistant/rescheduleArgs";
 import {
 	type AssistantSuggestion,
 	suggestionsForTurn,
@@ -41,6 +45,7 @@ export type AssistantTurnResult = {
 		args?: Record<string, unknown>;
 	};
 	clientAction?: { type: "navigate"; href: string };
+	activityFeed?: ActivityFeedPayload;
 };
 
 const DATA_TOOLS = new Set([
@@ -49,6 +54,8 @@ const DATA_TOOLS = new Set([
 	"search_licenses",
 	"list_pending_approvals",
 	"list_calendar_events",
+	"list_expirations",
+	"list_audit_logs",
 ]);
 
 const apiKey = process.env.GOOGLE_API_KEY;
@@ -227,6 +234,41 @@ function formatGenericDataAnswer(toolName: string, output: unknown): string {
 		return `Here's your schedule for ${day}:\n\n${lines}\n\nOpen the Calendar page for details.`;
 	}
 
+	if (toolName === "list_expirations") {
+		const contracts = (data.contracts ?? []) as Array<Record<string, unknown>>;
+		const licenses = (data.licenses ?? []) as Array<Record<string, unknown>>;
+		const days = Number(data.days) || 90;
+		if (!contracts.length && !licenses.length) {
+			return `Nothing is expiring in the next ${days} days. You're clear.`;
+		}
+		const parts: string[] = [];
+		if (contracts.length) {
+			const lines = contracts
+				.map(
+					(c) =>
+						`- **${c.name ?? "Untitled"}** — ${formatDueDate(c.expiryDate ? String(c.expiryDate) : null)}`,
+				)
+				.join("\n");
+			parts.push(`**Contracts:**\n${lines}`);
+		}
+		if (licenses.length) {
+			const lines = licenses
+				.map(
+					(l) =>
+						`- **${l.name ?? "Untitled"}** — ${formatDueDate(l.expirationDate ? String(l.expirationDate) : null)}`,
+				)
+				.join("\n");
+			parts.push(`**Licenses:**\n${lines}`);
+		}
+		return `Here's what's expiring in the next ${days} days:\n\n${parts.join("\n\n")}\n\nOpen Contracts or Licenses for details.`;
+	}
+
+	if (toolName === "list_audit_logs") {
+		const items = (data.logs ?? []) as Array<Record<string, unknown>>;
+		if (!items.length) return "No recent activity found for your organization.";
+		return "Here's the recent activity.";
+	}
+
 	return "I finished that request. Use a suggestion below if you want to dig in further.";
 }
 
@@ -318,6 +360,7 @@ Rules:
 - Write in plain, natural language for end users. Never show raw enums, snake_case, JSON, code paths, or API field names (say "Not started", not "not_started"; say "the Tasks page", not "/team/tasks").
 - For live data (tasks, contracts, licenses, approvals, expirations, calendar events), ALWAYS call the matching tool. Never answer those from Knowledge Context alone.
 - Scheduling: when the user asks to schedule, book, or set up a meeting, collect these fields before calling create_calendar_event if the user has not already stated them: title, start time, end time (or duration), date, and type (meeting, review, audit, deadline, or contract). Meeting agenda (description) and participants are optional — ask for them once if missing, but do not block scheduling if the user skips them. Resolve relative dates ("tomorrow", "next Tuesday") against the current date below. If only a start time is given, default end time to 30 minutes later. Never invent participant emails; only include people the user named or emailed. Prefer endTime over durationMinutes when both can be inferred.
+- Rescheduling: decide what the user wants to change before calling reschedule_calendar_event. If they only change the clock time (e.g. "move the review to 10am", "change it from 14:00 to 10:00", "make it 10 o'clock") and do not name a different day or date, omit newDate so the meeting stays on its existing date — only pass eventTitle and newStartTime. Only include newDate when the user explicitly asks for a different day (e.g. "to Friday", "next week", "the 14th", "August 14"). Never invent a new date for a time-only request. When listing or confirming, keep the original date visible if only the time changed.
 - Knowledge Context is for product how-to only. Do not use Analytics, Reports, or Audit sources as a substitute for listing tasks.
 - Never invent permissions or claim an action succeeded unless a tool returned success.
 - After a tool returns data, summarize the rows clearly (titles, status, due dates). Never reply with only "Done."
@@ -326,6 +369,7 @@ Rules:
 - Keep answers concise and actionable.
 
 Current date and time (server timezone): ${new Date().toString()}
+Today is ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} (${new Date().toISOString().slice(0, 10)}). When the user says a weekday like "Friday", use the soonest upcoming that weekday (including today if it matches) — do not skip ahead a week unless they said "next Friday".
 
 Knowledge Context (product help only):
 ${isLiveDataIntent(dataIntent) ? "Skipped for this live-data question." : contextText || "No specific docs matched."}
@@ -337,7 +381,13 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 		dataIntent === "list_pending_approvals" ||
 		dataIntent === "search_contracts" ||
 		dataIntent === "search_licenses" ||
-		dataIntent === "expiring";
+		dataIntent === "expiring" ||
+		dataIntent === "schedule_event" ||
+		dataIntent === "view_schedule" ||
+		dataIntent === "view_audit" ||
+		dataIntent === "complete_task" ||
+		dataIntent === "reschedule_event" ||
+		dataIntent === "cancel_event";
 
 	const genAI = new GoogleGenerativeAI(apiKey);
 	const model = genAI.getGenerativeModel({
@@ -353,10 +403,7 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 		},
 	});
 
-	const history = messages.slice(-12).map((m) => ({
-		role: m.role === "assistant" ? "model" : "user",
-		parts: [{ text: m.content }],
-	}));
+	const history = buildGeminiChatHistory(messages, userMessage);
 
 	const chat = model.startChat({ history });
 	const result = await chat.sendMessage(userMessage);
@@ -374,19 +421,32 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 			};
 		}
 
-		const args = (call.args ?? {}) as Record<string, unknown>;
+		let args = (call.args ?? {}) as Record<string, unknown>;
+		if (tool.name === "reschedule_calendar_event") {
+			args = sanitizeRescheduleArgs(userMessage, args);
+		}
 
 		if (tool.mutating) {
 			const label =
 				tool.name === "create_task"
 					? `Create task “${args.title ?? "Untitled"}”`
-					: tool.name === "create_calendar_event"
-						? `Schedule meeting “${args.title ?? "Untitled"}” on ${args.date ?? "?"} at ${args.startTime ?? "?"}`
-						: tool.name === "generate_report"
-							? `Generate report for ${args.department ?? "your department"}`
-							: `Confirm ${tool.name}`;
+					: tool.name === "complete_task"
+						? `Mark task “${args.title ?? "?"}” done`
+						: tool.name === "create_calendar_event"
+							? `Schedule meeting “${args.title ?? "Untitled"}” on ${args.date ?? "?"} at ${args.startTime ?? "?"}`
+							: tool.name === "reschedule_calendar_event"
+								? args.newDate
+									? `Move “${args.eventTitle ?? "?"}” to ${args.newDate} at ${args.newStartTime ?? "?"}`
+									: `Change “${args.eventTitle ?? "?"}” to ${args.newStartTime ?? "?"} (keep same date)`
+								: tool.name === "cancel_calendar_event"
+									? `Cancel meeting “${args.eventTitle ?? "?"}”`
+									: tool.name === "create_task_for_contract"
+										? `Create task “${args.title ?? "Untitled"}” for ${args.contractName ?? "contract"}`
+										: tool.name === "generate_report"
+											? `Generate report for ${args.department ?? "your department"}`
+											: `Confirm ${tool.name}`;
 			const preview = JSON.stringify(args, null, 2).slice(0, 500);
-			const pending = storePendingAction({
+			const pending = await storePendingAction({
 				userId: ctx.user.$id,
 				orgId: ctx.orgId,
 				toolName: tool.name,
@@ -442,8 +502,18 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 			);
 		}
 
+		const activityFeed =
+			call.name === "list_audit_logs"
+				? buildActivityFeed(toolResult.result ?? toolResult)
+				: undefined;
+
+		// Card owns the copy when a structured activity feed is present.
+		const answer = activityFeed
+			? ""
+			: text || "I ran the request but got an empty reply.";
+
 		return {
-			answer: text || "I ran the request but got an empty reply.",
+			answer,
 			sources: sourcesForTool(call.name, ragSources),
 			suggestions: suggestionsForTurn({
 				toolName: call.name,
@@ -451,6 +521,7 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 				taskCount: taskCountFromResult(toolResult.result),
 			}),
 			clientAction: toolResult.clientAction,
+			...(activityFeed ? { activityFeed } : {}),
 		};
 	}
 

@@ -24,7 +24,7 @@ export async function PATCH(request: NextRequest) {
 		);
 	}
 
-	const patched = patchPendingActionArgs(pendingId, auth, argsPatch);
+	const patched = await patchPendingActionArgs(pendingId, auth, argsPatch);
 	if (!patched) {
 		return NextResponse.json(
 			{ error: "Action expired or not found" },

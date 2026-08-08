@@ -14,6 +14,7 @@ import {
 	Info,
 	Mail,
 	MessageSquare,
+	Monitor,
 	RotateCcw,
 	Save,
 	Settings,
@@ -30,6 +31,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { client } from "@/lib/appwrite/client";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import {
+	disableDesktopAlerts,
+	enableDesktopAlerts,
+} from "@/lib/push/notifications-client";
 import { SmsFormDialog } from "./SmsFormDialog";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -201,6 +206,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 	const [globalSettings, setGlobalSettings] = useState({
 		emailNotifications: false,
 		pushNotifications: false,
+		desktopAlerts: false,
 		phoneNumber: "",
 		inAppNotifications: true,
 		smsNotifications: false,
@@ -229,7 +235,33 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 		[],
 	);
 
-	// Push notifications removed
+	const handleDesktopAlertsToggle = async (checked: boolean) => {
+		if (checked) {
+			const result = await enableDesktopAlerts();
+			if (!result.ok) {
+				toast({
+					title: "Desktop alerts unavailable",
+					description: result.message || "Could not enable desktop alerts.",
+					variant: "destructive",
+				});
+				return;
+			}
+			handleGlobalSettingChange("desktopAlerts", true);
+			toast({
+				title: "Desktop alerts enabled",
+				description:
+					"CAALM can send browser notifications when the tab is closed.",
+			});
+			return;
+		}
+
+		await disableDesktopAlerts();
+		handleGlobalSettingChange("desktopAlerts", false);
+		toast({
+			title: "Desktop alerts disabled",
+			description: "You will no longer receive desktop push notifications.",
+		});
+	};
 
 	// Load settings from API on open
 	useEffect(() => {
@@ -268,6 +300,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 						...prev,
 						emailNotifications: !!data.email_enabled,
 						pushNotifications: !!data.push_enabled,
+						desktopAlerts: !!data.desktop_alerts_enabled,
 						smsNotifications: !!data.phone_number,
 						phoneNumber: data.phone_number || "",
 						digestFrequency: (data.frequency as string) || "daily",
@@ -486,6 +519,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 					userId: user?.$id,
 					emailEnabled: globalSettings.emailNotifications,
 					pushEnabled: globalSettings.pushNotifications,
+					desktopAlertsEnabled: globalSettings.desktopAlerts,
 					phoneNumber: sanitizedPhone || undefined,
 					notificationTypes: preferences
 						.filter((p) => p.email || p.push || p.inApp || p.sms)
@@ -544,6 +578,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 		setGlobalSettings({
 			emailNotifications: true,
 			pushNotifications: true,
+			desktopAlerts: false,
 			phoneNumber: "",
 			inAppNotifications: true,
 			smsNotifications: false,
@@ -713,6 +748,24 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 											onCheckedChange={(checked) =>
 												handleGlobalSettingChange("inAppNotifications", checked)
 											}
+										/>
+									</div>
+
+									<div className="flex items-center gap-5">
+										<div className="space-y-0.5">
+											<Label className="flex items-center gap-2">
+												<Monitor className="w-4 h-4 text-[#0f5384]" />
+												Desktop alerts
+											</Label>
+											<p className="text-xs text-slate-500 ml-6">
+												Browser notifications when the CAALM tab is closed
+											</p>
+										</div>
+										<Switch
+											checked={globalSettings.desktopAlerts}
+											onCheckedChange={(checked) => {
+												void handleDesktopAlertsToggle(checked);
+											}}
 										/>
 									</div>
 

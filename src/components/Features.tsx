@@ -50,8 +50,8 @@ const Features = () => {
 								className="h-full"
 								contentClassName="p-4 sm:p-6 pt-6"
 							>
-								<div className="orbit-animated-border w-[70px] h-[70px] mx-auto mb-3">
-									<feature.icon className="orbit-3d w-full h-full p-4 rounded-2xl shadow-xl border border-slate-200 text-[#059BB2] ring-2 ring-cyan-100/40" />
+								<div className="flex h-[70px] w-[70px] mx-auto mb-4 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00C1CB]/15 via-[#0E638F]/10 to-[#162768]/10 border border-slate-200 shadow-sm">
+									<feature.icon className="h-8 w-8 text-[#0f5384]" />
 								</div>
 								<h3 className="text-center text-base sm:text-lg font-semibold sidebar-gradient-text mb-2">
 									{feature.title}

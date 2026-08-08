@@ -234,7 +234,8 @@ export async function GET(request: NextRequest) {
 							expiryDate.setHours(0, 0, 0, 0);
 							if (daysUntilExpiry === undefined) {
 								daysUntilExpiry = Math.floor(
-									(expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+									(expiryDate.getTime() - now.getTime()) /
+										(1000 * 60 * 60 * 24),
 								);
 							}
 							if (expiryDate <= now) {

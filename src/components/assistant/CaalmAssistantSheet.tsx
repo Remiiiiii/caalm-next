@@ -8,9 +8,11 @@ import {
 	Send,
 	SquarePen,
 } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import AssistantActionCompletedCard from "@/components/assistant/AssistantActionCompletedCard";
+import AssistantActivityFeedCard from "@/components/assistant/AssistantActivityFeedCard";
+import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import AssistantHistoryList from "@/components/assistant/AssistantHistoryList";
 import AssistantInPanelOverlay, {
 	AssistantInPanelActions,
@@ -94,8 +96,9 @@ export default function CaalmAssistantSheet({
 	useEffect(() => {
 		if (open) {
 			void assistant.loadHistory();
+			void assistant.resumeActiveSession();
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- load when sheet opens only
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- resume when sheet opens only
 	}, [open]);
 
 	useEffect(() => {
@@ -182,8 +185,8 @@ export default function CaalmAssistantSheet({
 						className={cn(
 							"cursor-pointer rounded-full px-3 py-1 text-xs font-medium capitalize transition-all duration-200",
 							tab === t
-								? "bg-white text-slate-900 shadow-sm"
-								: "text-slate-600 hover:text-slate-900",
+								? "bg-white text-slate-700 shadow-sm"
+								: "text-slate-600 hover:text-slate-700",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 						)}
 					>
@@ -200,7 +203,7 @@ export default function CaalmAssistantSheet({
 								type="button"
 								variant="ghost"
 								size="icon"
-								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 								aria-label="Download chat"
 								disabled={assistant.messages.length === 0}
 								onClick={() =>
@@ -221,7 +224,7 @@ export default function CaalmAssistantSheet({
 								type="button"
 								variant="ghost"
 								size="icon"
-								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 								aria-label="Start new chat"
 								onClick={() => setNewChatOpen(true)}
 							>
@@ -236,7 +239,7 @@ export default function CaalmAssistantSheet({
 								type="button"
 								variant="ghost"
 								size="icon"
-								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 								aria-label="Hide chat window"
 								onClick={() => onOpenChange(false)}
 							>
@@ -299,7 +302,7 @@ export default function CaalmAssistantSheet({
 				<div className="text-left">
 					<label
 						htmlFor="assistant-feedback-comment"
-						className="mb-1.5 block text-sm font-medium text-slate-900"
+						className="mb-1.5 block text-sm font-medium text-slate-700"
 					>
 						Comments
 					</label>
@@ -311,7 +314,7 @@ export default function CaalmAssistantSheet({
 						placeholder="Write your comments"
 						rows={4}
 						className={cn(
-							"min-h-24 resize-y rounded-xl border border-slate-300! bg-white text-slate-900",
+							"min-h-24 resize-y rounded-xl border border-slate-300! bg-white text-slate-700",
 							feedbackTouched &&
 								!feedbackValid &&
 								"border-red-500! focus-visible:ring-red-500/30",
@@ -379,7 +382,7 @@ export default function CaalmAssistantSheet({
 									placeholder="Ask CAALM anything…"
 									rows={4}
 									className={cn(
-										"min-h-[7.5rem] w-full resize-none rounded-3xl bg-white text-slate-900 shadow-sm",
+										"min-h-[7.5rem] w-full resize-none rounded-3xl bg-white text-slate-700 shadow-sm",
 										"border border-slate-300! px-4! pb-14! pt-3.5! pe-14!",
 										"placeholder:text-slate-400 focus-visible:border-[#078FAB]! focus-visible:ring-[#078FAB]",
 									)}
@@ -450,14 +453,7 @@ export default function CaalmAssistantSheet({
 						<div className="space-y-6 py-6">
 							<div className="text-center">
 								<div className="mb-4 flex justify-center">
-									<Image
-										src="/assets/images/logo.png"
-										alt="CAALM"
-										width={56}
-										height={56}
-										className="h-14 w-14 object-contain"
-										priority
-									/>
+									<AssistantAvatar size="hero" alt="CAALM" priority />
 								</div>
 								<p className="text-xl font-bold sidebar-gradient-text">
 									Hello {firstName}
@@ -489,108 +485,110 @@ export default function CaalmAssistantSheet({
 
 					{!assistant.conversationLoading
 						? assistant.messages.map((m) => (
-						<div
-							key={m.id}
-							className={cn(
-								"flex gap-2",
-								m.role === "user" ? "justify-end" : "justify-start",
-							)}
-						>
-							{m.role === "assistant" ? (
-								<Image
-									src="/assets/images/assistant.svg"
-									alt=""
-									width={32}
-									height={32}
-									className="h-8 w-8 shrink-0 object-contain"
-								/>
-							) : null}
-							<div
-								className={cn(
-									"max-w-[85%] rounded-2xl px-3 py-2 text-sm",
-									m.role === "user"
-										? "bg-[#0f5384]/10 text-slate-900"
-										: "bg-white/60 text-slate-900 border border-slate-200/80",
-								)}
-							>
-								{m.meetingCreated ? (
-									<>
-										<p className="text-sm text-slate-900">
-											Your meeting is on the calendar.
-										</p>
-										<AssistantMeetingCreatedCard
-											meeting={m.meetingCreated}
-											onOpenCalendar={() =>
-												router.push(m.meetingCreated?.calendarHref || "/calendar")
-											}
-										/>
-									</>
-								) : (
+								<div
+									key={m.id}
+									className={cn(
+										"flex gap-2",
+										m.role === "user" ? "justify-end" : "justify-start",
+									)}
+								>
+									{m.role === "assistant" ? (
+										<AssistantAvatar size="md" />
+									) : null}
 									<div
-										className="prose prose-sm max-w-none text-slate-900"
-										dangerouslySetInnerHTML={{
-											__html: formatAssistantMarkdown(m.content),
-										}}
-									/>
-								)}
-								{m.sources?.length ? (
-									<ul className="mt-2 space-y-1 border-t border-slate-200/80 pt-2">
-										{m.sources.map((s) => (
-											<li key={s.id} className="text-xs text-slate-600">
-												Source: {s.title}
-												{s.href ? (
-													<button
-														type="button"
-														onClick={() => router.push(s.href!)}
-														className="ml-1 cursor-pointer text-[#0f5384] underline"
-													>
-														Open
-													</button>
-												) : null}
-											</li>
-										))}
-									</ul>
-								) : null}
-								{m.role === "assistant" &&
-								m.id === lastAssistantId &&
-								m.suggestions?.length &&
-								!assistant.isSending &&
-								assistant.conversationStatus !== "closed" ? (
-									<AssistantSuggestions
-										suggestions={m.suggestions}
-										disabled={assistant.isSending}
-										onSelect={handleSuggestion}
-									/>
-								) : null}
-								{m.role === "assistant" ? (
-									<AssistantMessageActions
-										messageId={m.id}
-										content={m.content}
-										showLeaveFeedback={feedbackPromptId === m.id}
-										onThumbsDown={(id) => setFeedbackPromptId(id)}
-										onLeaveFeedback={(id) => {
-											setFeedbackMessageId(id);
-											setFeedbackOpen(true);
-											setFeedbackComment("");
-											setFeedbackTouched(false);
-										}}
-										onThumbsUp={(id) => {
-											void fetch("/api/assistant/feedback", {
-												method: "POST",
-												headers: { "Content-Type": "application/json" },
-												body: JSON.stringify({
-													rating: "up",
-													conversationId: assistant.conversationId,
-													messageId: id,
-												}),
-											});
-										}}
-									/>
-								) : null}
-							</div>
-						</div>
-					))
-					: null}
+										className={cn(
+											"max-w-[85%] rounded-2xl px-3 py-2 text-sm",
+											m.role === "user"
+												? "bg-[#0f5384]/10 text-slate-700"
+												: "bg-white/60 text-slate-700 border border-slate-200/80",
+										)}
+									>
+										{m.meetingCreated ? (
+											<>
+												<p className="text-sm text-slate-700">
+													Your meeting is on the calendar.
+												</p>
+												<AssistantMeetingCreatedCard
+													meeting={m.meetingCreated}
+													onOpenCalendar={() =>
+														router.push(
+															m.meetingCreated?.calendarHref || "/calendar",
+														)
+													}
+												/>
+											</>
+										) : m.actionCompleted ? (
+											<AssistantActionCompletedCard
+												action={m.actionCompleted}
+											/>
+										) : m.activityFeed ? (
+											<AssistantActivityFeedCard feed={m.activityFeed} />
+										) : (
+											<div
+												className="prose prose-sm max-w-none text-slate-700"
+												dangerouslySetInnerHTML={{
+													__html: formatAssistantMarkdown(m.content),
+												}}
+											/>
+										)}
+										{m.sources?.length ? (
+											<ul className="mt-2 space-y-1 border-t border-slate-200/80 pt-2">
+												{m.sources.map((s) => (
+													<li key={s.id} className="text-xs text-slate-600">
+														Source: {s.title}
+														{s.href ? (
+															<button
+																type="button"
+																onClick={() => router.push(s.href!)}
+																className="ml-1 cursor-pointer text-[#0f5384] underline"
+															>
+																Open
+															</button>
+														) : null}
+													</li>
+												))}
+											</ul>
+										) : null}
+										{m.role === "assistant" &&
+										m.id === lastAssistantId &&
+										m.suggestions?.length &&
+										!assistant.isSending &&
+										assistant.conversationStatus !== "closed" ? (
+											<AssistantSuggestions
+												suggestions={m.suggestions}
+												disabled={assistant.isSending}
+												onSelect={handleSuggestion}
+											/>
+										) : null}
+										{m.role === "assistant" ? (
+											<AssistantMessageActions
+												messageId={m.id}
+												content={m.content}
+												showLeaveFeedback={feedbackPromptId === m.id}
+												onThumbsDown={(id) => setFeedbackPromptId(id)}
+												onLeaveFeedback={(id) => {
+													setFeedbackMessageId(id);
+													setFeedbackOpen(true);
+													setFeedbackComment("");
+													setFeedbackTouched(false);
+												}}
+												onThumbsUp={(id) => {
+													void fetch("/api/assistant/feedback", {
+														method: "POST",
+														headers: { "Content-Type": "application/json" },
+														body: JSON.stringify({
+															rating: "up",
+															conversationId: assistant.conversationId,
+															messageId: id,
+														}),
+													});
+												}}
+											/>
+										) : null}
+									</div>
+								</div>
+							))
+						: null}
 
 					{!assistant.conversationLoading && assistant.isSending ? (
 						<AssistantThinkingIndicator />
