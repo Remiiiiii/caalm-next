@@ -1022,7 +1022,7 @@ export default function LandingHero() {
 											<h3 className="text-sm font-semibold leading-snug sidebar-gradient-text">
 												{pillar.title}
 											</h3>
-											<p className="mt-1 text-xs sm:text-xs leading-snug text-slate-600 sm:line-clamp-3">
+											<p className="mt-1 text-xs sm:text-xs leading-snug text-slate-600">
 												{pillar.description}
 											</p>
 										</div>

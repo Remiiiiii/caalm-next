@@ -154,7 +154,7 @@ export const ABOUT_TRUST_BULLETS = [
 	{
 		title: "Permission-based access",
 		description:
-			"Navigation and data access follow permissions assigned in your roles — not hardcoded shortcuts.",
+			"Navigation and data access follow permissions assigned in your roles, not hardcoded shortcuts.",
 		icon: ShieldCheck,
 	},
 	{
