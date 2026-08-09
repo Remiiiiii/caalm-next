@@ -12,6 +12,7 @@ const SECTION_LABEL: Record<string, string> = {
 	guides: "Guides",
 	reference: "Reference",
 	admin: "Admin",
+	runbooks: "Runbooks",
 	troubleshooting: "Troubleshooting",
 };
 

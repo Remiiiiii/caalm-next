@@ -4,6 +4,7 @@ export type DocsSectionId =
 	| "guides"
 	| "reference"
 	| "admin"
+	| "runbooks"
 	| "troubleshooting";
 
 export type DocsNavItem = {

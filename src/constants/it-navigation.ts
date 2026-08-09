@@ -299,6 +299,12 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 				url: "/dashboard/it/incidents/post-mortems",
 				permission: PERMISSIONS.IT.VIEW_INCIDENTS,
 			},
+			{
+				name: "Runbooks",
+				icon: "/assets/icons/documents.svg",
+				url: "/dashboard/it/incidents/runbooks",
+				permission: PERMISSIONS.IT.VIEW_RUNBOOKS,
+			},
 		],
 	},
 	{

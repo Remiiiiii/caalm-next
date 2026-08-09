@@ -293,6 +293,44 @@ export const DOCS_NAV: DocsNavGroup[] = [
 		],
 	},
 	{
+		id: "runbooks",
+		title: "Runbooks",
+		description:
+			"How operational runbooks work in CAALM — and where IT keeps the live ones.",
+		items: [
+			{
+				title: "What are runbooks?",
+				slug: "runbooks/overview",
+				path: "runbooks/overview",
+				summary: "Action guides for production problems, not product manuals.",
+			},
+			{
+				title: "Using the IT Runbooks CMS",
+				slug: "runbooks/using-the-cms",
+				path: "runbooks/using-the-cms",
+				summary: "Find, open, create, and update live runbooks in the IT portal.",
+			},
+			{
+				title: "Writing a good runbook",
+				slug: "runbooks/writing",
+				path: "runbooks/writing",
+				summary: "Symptoms, steps, verification, and escalation that work at 2 a.m.",
+			},
+			{
+				title: "Integrations",
+				slug: "runbooks/integrations",
+				path: "runbooks/integrations",
+				summary: "How PagerDuty, Opsgenie, and monitoring hooks attach later.",
+			},
+			{
+				title: "Admin setup",
+				slug: "runbooks/admin-setup",
+				path: "runbooks/admin-setup",
+				summary: "Permissions, Appwrite collection, and first published runbooks.",
+			},
+		],
+	},
+	{
 		id: "troubleshooting",
 		title: "Troubleshooting",
 		description: "When something looks wrong — start here.",
