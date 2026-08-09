@@ -232,6 +232,12 @@ export const appwriteConfig = {
 		"newsversions",
 	),
 
+	// IT Runbooks
+	runbooksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_RUNBOOKS_COLLECTION",
+		"runbooks",
+	),
+
 	// Imagine Art API (AI Image Generation)
 	imagineArtApiKey: process.env.IMAGINE_ART_API_KEY,
 

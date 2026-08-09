@@ -86,6 +86,8 @@ export const PERMISSIONS = {
 		VIEW_SECURITY: "it.view_security",
 		MANAGE_DATABASE: "it.manage_database",
 		VIEW_INCIDENTS: "it.view_incidents",
+		VIEW_RUNBOOKS: "it.view_runbooks",
+		MANAGE_RUNBOOKS: "it.manage_runbooks",
 	},
 
 	// News Permissions
@@ -407,6 +409,18 @@ export const PERMISSION_DEFINITIONS = [
 		name: "View Incidents",
 		category: "it",
 		description: "View incident management",
+	},
+	{
+		key: PERMISSIONS.IT.VIEW_RUNBOOKS,
+		name: "View Runbooks",
+		category: "it",
+		description: "View operational runbooks in the IT portal",
+	},
+	{
+		key: PERMISSIONS.IT.MANAGE_RUNBOOKS,
+		name: "Manage Runbooks",
+		category: "it",
+		description: "Create, edit, publish, and archive IT runbooks",
 	},
 
 	// News
