@@ -89,7 +89,13 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
 					<aside className="hidden max-h-[calc(100vh-3.5rem)] overflow-y-auto py-8 lg:sticky lg:top-14 lg:block">
 						<DocsSidebar />
 					</aside>
-					<div className="min-w-0 py-8">{children}</div>
+					<main className="relative min-w-0 py-8">
+						<div
+							className="pointer-events-none absolute inset-0 z-0 landing-grid-bg"
+							aria-hidden
+						/>
+						<div className="relative z-10 min-w-0">{children}</div>
+					</main>
 				</div>
 			</div>
 		</DocsThemeProvider>
