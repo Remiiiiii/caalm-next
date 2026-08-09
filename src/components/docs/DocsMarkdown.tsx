@@ -15,14 +15,14 @@ function Inline({ nodes }: { nodes: InlineNode[] }): ReactNode {
 				return (
 					<code
 						key={i}
-						className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] font-medium text-slate-800"
+						className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200"
 					>
 						{node.value}
 					</code>
 				);
 			case "strong":
 				return (
-					<strong key={i} className="font-semibold text-slate-900">
+					<strong key={i} className="font-semibold text-slate-900 dark:text-slate-100">
 						<Inline nodes={node.children} />
 					</strong>
 				);
@@ -35,7 +35,7 @@ function Inline({ nodes }: { nodes: InlineNode[] }): ReactNode {
 			case "link": {
 				const external = node.href.startsWith("http");
 				const className =
-					"font-medium text-[#0f5384] underline decoration-slate-300 underline-offset-2 hover:decoration-[#0f5384]";
+					"font-medium text-[#0f5384] underline decoration-slate-300 underline-offset-2 hover:decoration-[#0f5384] dark:text-sky-300 dark:decoration-slate-600 dark:hover:decoration-sky-300";
 				if (external) {
 					return (
 						<a
@@ -62,17 +62,19 @@ function Inline({ nodes }: { nodes: InlineNode[] }): ReactNode {
 }
 
 const calloutStyles = {
-	note: "border-blue-200 bg-blue-50/80 text-slate-800",
-	tip: "border-emerald-200 bg-emerald-50/80 text-slate-800",
-	warning: "border-amber-200 bg-amber-50/80 text-slate-800",
-	important: "border-rose-200 bg-rose-50/80 text-slate-800",
+	note: "border-blue-200 bg-blue-50/80 text-slate-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-slate-200",
+	tip: "border-emerald-200 bg-emerald-50/80 text-slate-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-slate-200",
+	warning:
+		"border-amber-200 bg-amber-50/80 text-slate-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-slate-200",
+	important:
+		"border-rose-200 bg-rose-50/80 text-slate-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-slate-200",
 } as const;
 
 function Block({ block }: { block: MdBlock }) {
 	switch (block.type) {
 		case "h1":
 			return (
-				<h1 className="mt-2 mb-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+				<h1 className="mt-2 mb-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl dark:text-slate-50">
 					{block.text}
 				</h1>
 			);
@@ -80,7 +82,7 @@ function Block({ block }: { block: MdBlock }) {
 			return (
 				<h2
 					id={block.id}
-					className="mt-10 mb-3 scroll-mt-28 text-2xl font-semibold tracking-tight text-slate-900"
+					className="mt-10 mb-3 scroll-mt-28 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50"
 				>
 					{block.text}
 				</h2>
@@ -89,20 +91,20 @@ function Block({ block }: { block: MdBlock }) {
 			return (
 				<h3
 					id={block.id}
-					className="mt-8 mb-2 scroll-mt-28 text-lg font-semibold text-slate-900"
+					className="mt-8 mb-2 scroll-mt-28 text-lg font-semibold text-slate-900 dark:text-slate-100"
 				>
 					{block.text}
 				</h3>
 			);
 		case "p":
 			return (
-				<p className="my-4 text-[15px] leading-7 text-slate-700 sm:text-base sm:leading-7">
+				<p className="my-4 text-[15px] leading-7 text-slate-700 sm:text-base sm:leading-7 dark:text-slate-300">
 					<Inline nodes={block.children} />
 				</p>
 			);
 		case "ul":
 			return (
-				<ul className="my-4 list-disc space-y-2 pl-5 text-[15px] leading-7 text-slate-700">
+				<ul className="my-4 list-disc space-y-2 pl-5 text-[15px] leading-7 text-slate-700 dark:text-slate-300">
 					{block.items.map((item, i) => (
 						<li key={i}>
 							<Inline nodes={item} />
@@ -112,7 +114,7 @@ function Block({ block }: { block: MdBlock }) {
 			);
 		case "ol":
 			return (
-				<ol className="my-4 list-decimal space-y-2 pl-5 text-[15px] leading-7 text-slate-700">
+				<ol className="my-4 list-decimal space-y-2 pl-5 text-[15px] leading-7 text-slate-700 dark:text-slate-300">
 					{block.items.map((item, i) => (
 						<li key={i}>
 							<Inline nodes={item} />
@@ -122,7 +124,7 @@ function Block({ block }: { block: MdBlock }) {
 			);
 		case "blockquote":
 			return (
-				<blockquote className="my-5 border-l-4 border-slate-300 bg-slate-50 px-4 py-3 text-slate-700">
+				<blockquote className="my-5 border-l-4 border-slate-300 bg-slate-50 px-4 py-3 text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300">
 					<Inline nodes={block.children} />
 				</blockquote>
 			);
@@ -144,31 +146,34 @@ function Block({ block }: { block: MdBlock }) {
 			);
 		case "code":
 			return (
-				<pre className="my-5 overflow-x-auto rounded-xl border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-100">
+				<pre className="my-5 overflow-x-auto rounded-xl border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-100 dark:border-slate-700">
 					<code>{block.code}</code>
 				</pre>
 			);
 		case "table":
 			return (
-				<div className="my-6 overflow-x-auto rounded-xl border border-slate-200">
-					<table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-						<thead className="bg-slate-50">
+				<div className="my-6 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+					<table className="min-w-full divide-y divide-slate-200 text-left text-sm dark:divide-slate-700">
+						<thead className="bg-slate-50 dark:bg-slate-900">
 							<tr>
 								{block.headers.map((h) => (
 									<th
 										key={h}
-										className="px-3 py-2.5 font-semibold text-slate-800"
+										className="px-3 py-2.5 font-semibold text-slate-800 dark:text-slate-200"
 									>
 										{h}
 									</th>
 								))}
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-slate-100 bg-white">
+						<tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-950">
 							{block.rows.map((row, ri) => (
 								<tr key={ri}>
 									{row.map((cell, ci) => (
-										<td key={ci} className="px-3 py-2.5 text-slate-700">
+										<td
+											key={ci}
+											className="px-3 py-2.5 text-slate-700 dark:text-slate-300"
+										>
 											{cell}
 										</td>
 									))}
@@ -179,7 +184,7 @@ function Block({ block }: { block: MdBlock }) {
 				</div>
 			);
 		case "hr":
-			return <hr className="my-10 border-slate-200" />;
+			return <hr className="my-10 border-slate-200 dark:border-slate-800" />;
 		default:
 			return null;
 	}

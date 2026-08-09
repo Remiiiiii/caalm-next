@@ -11,6 +11,13 @@ export const metadata: Metadata = {
 		"Complete documentation for CAALM — contracts, licenses, audits, roles, permissions, and day-to-day workflows.",
 };
 
+const docsThemeBoot = `(function(){try{var k='caalm-docs-theme';var t=localStorage.getItem(k);if(t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();`;
+
 export default function DocsLayout({ children }: { children: ReactNode }) {
-	return <DocsShell>{children}</DocsShell>;
+	return (
+		<>
+			<script dangerouslySetInnerHTML={{ __html: docsThemeBoot }} />
+			<DocsShell>{children}</DocsShell>
+		</>
+	);
 }

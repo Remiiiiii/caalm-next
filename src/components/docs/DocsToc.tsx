@@ -33,10 +33,10 @@ export function DocsToc({ headings }: { headings: DocsHeading[] }) {
 
 	return (
 		<nav aria-label="On this page" className="space-y-3">
-			<p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+			<p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
 				On this page
 			</p>
-			<ul className="space-y-1 border-l border-slate-200">
+			<ul className="space-y-1 border-l border-slate-200 dark:border-slate-700">
 				{headings.map((heading) => (
 					<li key={heading.id}>
 						<a
@@ -45,8 +45,8 @@ export function DocsToc({ headings }: { headings: DocsHeading[] }) {
 								"block border-l-2 py-1 text-sm transition-colors duration-200",
 								heading.level === 3 ? "pl-5" : "pl-3",
 								activeId === heading.id
-									? "-ml-px border-[#0f5384] font-medium text-[#0f5384]"
-									: "border-transparent text-slate-500 hover:text-slate-800",
+									? "-ml-px border-[#0f5384] font-medium text-[#0f5384] dark:border-sky-400 dark:text-sky-300"
+									: "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200",
 							)}
 						>
 							{heading.text}

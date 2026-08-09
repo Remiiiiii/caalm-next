@@ -52,18 +52,18 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
 							onClick={() => toggleGroup(group.id)}
 							aria-expanded={!collapsed}
 							className={cn(
-								"mb-2 flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5",
-								"cursor-pointer transition-colors duration-200",
-								"hover:bg-slate-100/80",
+								"mb-2 flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5",
+								"transition-colors duration-200",
+								"hover:bg-slate-100/80 dark:hover:bg-slate-800/80",
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 							)}
 						>
-							<span className="text-sm font-bold tracking-wide text-slate-900">
+							<span className="text-sm font-bold tracking-wide text-slate-900 dark:text-slate-100">
 								{group.title}
 							</span>
 							<ChevronDown
 								className={cn(
-									"h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200",
+									"h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 dark:text-slate-400",
 									collapsed && "-rotate-90",
 								)}
 								aria-hidden
@@ -82,8 +82,8 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
 												className={cn(
 													"block rounded-md px-2 py-1.5 text-sm transition-colors duration-200",
 													active
-														? "bg-blue-50 font-medium text-[#0f5384]"
-														: "font-normal text-slate-500 hover:bg-slate-100 hover:text-slate-800",
+														? "bg-blue-50 font-medium text-[#0f5384] dark:bg-slate-800 dark:text-sky-300"
+														: "font-normal text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-slate-200",
 												)}
 											>
 												{item.title}

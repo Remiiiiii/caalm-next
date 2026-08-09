@@ -235,7 +235,7 @@ export const appwriteConfig = {
 	// IT Runbooks
 	runbooksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_RUNBOOKS_COLLECTION",
-		"runbooks",
+		"69a3f91200a8c4d1e2f0",
 	),
 
 	// Imagine Art API (AI Image Generation)

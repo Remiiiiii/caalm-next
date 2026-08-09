@@ -37,15 +37,15 @@ export default async function DocsArticlePage({ params }: PageProps) {
 		<div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_220px]">
 			<article className="min-w-0">
 				<div className="mb-6">
-					<p className="text-xs font-semibold uppercase tracking-wider text-[#0f5384]">
+					<p className="text-xs font-semibold uppercase tracking-wider text-[#0f5384] dark:text-sky-300">
 						<Link href="/docs" className="hover:underline">
 							Docs
 						</Link>
-						<span className="mx-2 text-slate-300">/</span>
+						<span className="mx-2 text-slate-300 dark:text-slate-600">/</span>
 						{page.frontmatter.section}
 					</p>
 					{page.frontmatter.audience?.length ? (
-						<p className="mt-3 text-xs text-slate-500">
+						<p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
 							Best for: {page.frontmatter.audience.join(" · ")}
 						</p>
 					) : null}

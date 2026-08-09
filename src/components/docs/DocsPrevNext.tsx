@@ -11,17 +11,17 @@ export function DocsPrevNext({
 	if (!prev && !next) return null;
 
 	return (
-		<div className="mt-14 grid gap-3 border-t border-slate-200 pt-8 sm:grid-cols-2">
+		<div className="mt-14 grid gap-3 border-t border-slate-200 pt-8 sm:grid-cols-2 dark:border-slate-800">
 			{prev ? (
 				<Link
 					href={`/docs/${prev.slug}`}
-					className="group rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/40"
+					className="group rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-sky-700 dark:hover:bg-slate-800/60"
 				>
-					<p className="mb-1 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+					<p className="mb-1 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
 						<ArrowLeft className="h-3.5 w-3.5" />
 						Previous
 					</p>
-					<p className="text-sm font-semibold text-slate-900 group-hover:text-[#0f5384]">
+					<p className="text-sm font-semibold text-slate-900 group-hover:text-[#0f5384] dark:text-slate-100 dark:group-hover:text-sky-300">
 						{prev.title}
 					</p>
 				</Link>
@@ -31,13 +31,13 @@ export function DocsPrevNext({
 			{next ? (
 				<Link
 					href={`/docs/${next.slug}`}
-					className="group rounded-xl border border-slate-200 bg-white p-4 text-right transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/40 sm:justify-self-end sm:text-right"
+					className="group rounded-xl border border-slate-200 bg-white p-4 text-right transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/40 sm:justify-self-end sm:text-right dark:border-slate-700 dark:bg-slate-900 dark:hover:border-sky-700 dark:hover:bg-slate-800/60"
 				>
-					<p className="mb-1 flex items-center justify-end gap-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+					<p className="mb-1 flex items-center justify-end gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
 						Next
 						<ArrowRight className="h-3.5 w-3.5" />
 					</p>
-					<p className="text-sm font-semibold text-slate-900 group-hover:text-[#0f5384]">
+					<p className="text-sm font-semibold text-slate-900 group-hover:text-[#0f5384] dark:text-slate-100 dark:group-hover:text-sky-300">
 						{next.title}
 					</p>
 				</Link>

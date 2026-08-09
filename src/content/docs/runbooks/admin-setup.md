@@ -18,7 +18,7 @@ IT staff who already hold incident permissions usually need both.
 
 ## 2. Create the Appwrite collection
 
-In Appwrite Console, create a collection/table (suggested id: `runbooks`) with attributes:
+In Appwrite Console, create a collection/table (use an alphanumeric id, e.g. `69a3f91200a8c4d1e2f0`) with attributes:
 
 | Attribute | Type | Notes |
 |---|---|---|
