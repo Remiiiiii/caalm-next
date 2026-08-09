@@ -19,7 +19,7 @@ export default function DemoBanner() {
 		<div className="w-full bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2 text-sm flex items-center justify-center gap-2 z-50">
 			<FlaskConical className="h-4 w-4 shrink-0 text-[#0f5384]" />
 			<span>
-				Sandbox demo — fictional data only. Changes expire after a few days.
+				Sandbox demo — fictional data only. Changes expire after 7 days.
 			</span>
 		</div>
 	);

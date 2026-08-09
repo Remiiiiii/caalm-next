@@ -1,5 +1,6 @@
 /**
  * Expire and delete demo sandbox orgs past settings.expiresAt.
+ * Also deletes Appwrite Auth users with @caalm.demo emails older than DEMO_ORG_TTL_DAYS.
  * Protected by CRON_SECRET. Only meaningful when APP_MODE=demo.
  */
 
@@ -7,7 +8,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { isDemoMode } from "@/lib/config/demo-mode";
+import { getDemoOrgTtlDays, isDemoMode } from "@/lib/config/demo-mode";
+
+const DEMO_AUTH_EMAIL_SUFFIX = "@caalm.demo";
 
 const ORG_SCOPED_TABLES = [
 	appwriteConfig.contractsCollectionId,
@@ -81,6 +84,56 @@ async function deleteRowsByOrg(
 	return deleted;
 }
 
+async function deleteExpiredDemoAuthUsers(): Promise<{
+	scanned: number;
+	deleted: string[];
+	errors: string[];
+}> {
+	const { Client, Users } = await import("node-appwrite");
+	const client = new Client()
+		.setEndpoint(appwriteConfig.endpointUrl)
+		.setProject(appwriteConfig.projectId)
+		.setKey(appwriteConfig.secretKey);
+	const users = new Users(client);
+
+	const cutoff = Date.now() - getDemoOrgTtlDays() * 24 * 60 * 60 * 1000;
+	const deleted: string[] = [];
+	const errors: string[] = [];
+	let scanned = 0;
+	let cursor: string | undefined;
+
+	for (;;) {
+		const queries = [Query.limit(100)];
+		if (cursor) queries.push(Query.cursorAfter(cursor));
+
+		const page = await users.list({ queries });
+		if (!page.users.length) break;
+
+		for (const user of page.users) {
+			scanned += 1;
+			cursor = user.$id;
+			const email = (user.email || "").toLowerCase();
+			if (!email.endsWith(DEMO_AUTH_EMAIL_SUFFIX)) continue;
+
+			const createdAt = Date.parse(user.$createdAt);
+			if (!Number.isFinite(createdAt) || createdAt > cutoff) continue;
+
+			try {
+				await users.delete(user.$id);
+				deleted.push(user.$id);
+			} catch (error) {
+				errors.push(
+					`${user.$id}: ${error instanceof Error ? error.message : "unknown"}`,
+				);
+			}
+		}
+
+		if (page.users.length < 100) break;
+	}
+
+	return { scanned, deleted, errors };
+}
+
 export async function GET(request: NextRequest) {
 	const authHeader = request.headers.get("authorization");
 	const cronSecret = process.env.CRON_SECRET;
@@ -125,6 +178,8 @@ export async function GET(request: NextRequest) {
 			scanned: orgs.rows.length,
 			expired: 0,
 			deletedOrgs: [] as string[],
+			deletedAuthUsers: [] as string[],
+			authScanned: 0,
 			errors: [] as string[],
 		};
 
@@ -198,6 +253,11 @@ export async function GET(request: NextRequest) {
 				);
 			}
 		}
+
+		const authCleanup = await deleteExpiredDemoAuthUsers();
+		results.authScanned = authCleanup.scanned;
+		results.deletedAuthUsers = authCleanup.deleted;
+		results.errors.push(...authCleanup.errors);
 
 		return NextResponse.json({ success: true, ...results });
 	} catch (error) {

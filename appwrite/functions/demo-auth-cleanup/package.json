@@ -1,0 +1,10 @@
+{
+	"name": "demo-auth-cleanup",
+	"version": "1.0.0",
+	"private": true,
+	"type": "commonjs",
+	"main": "src/main.js",
+	"dependencies": {
+		"node-appwrite": "^14.1.0"
+	}
+}
