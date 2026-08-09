@@ -144,8 +144,8 @@ dist
 test-results/
 playwright-report/
 
-# Feature documentation
-docs/
+# Internal engineering notes at repo root (product docs live under src/content/docs + src/app/docs)
+/docs/
 .vercel
 
 # Google credentials

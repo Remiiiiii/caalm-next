@@ -147,10 +147,17 @@ export async function proxy(request: NextRequest) {
 		"/terms",
 		"/privacy",
 		"/coming-soon",
+		"/try",
 	];
 
 	// Static and system paths to always allow
-	const systemPathPrefixes = ["/api", "/_next", "/favicon.ico", "/assets"];
+	const systemPathPrefixes = [
+		"/api",
+		"/_next",
+		"/favicon.ico",
+		"/assets",
+		"/docs",
+	];
 
 	if (
 		publicPaths.includes(pathname) ||

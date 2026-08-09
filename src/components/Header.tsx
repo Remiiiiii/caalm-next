@@ -12,6 +12,7 @@ const NAV_LINKS = [
 	{ href: "#how-it-works", label: "How it works", hideBelowXl: false },
 	{ href: "#integrations", label: "Integrations", hideBelowXl: false },
 	{ href: "#pricing", label: "Pricing", hideBelowXl: false },
+	{ href: "/docs", label: "Docs", hideBelowXl: false },
 	{ href: "#faq", label: "FAQ", hideBelowXl: false },
 	{ href: "#contact", label: "Contact", hideBelowXl: true },
 ] as const;
@@ -23,6 +24,7 @@ const MOBILE_NAV_LEFT = [
 	{ href: "#how-it-works", label: "How it works" },
 	{ href: "#integrations", label: "Integrations" },
 	{ href: "#pricing", label: "Pricing" },
+	{ href: "/docs", label: "Docs" },
 	{ href: "#faq", label: "FAQ" },
 	{ href: "#contact", label: "Contact" },
 ] as const;
@@ -30,6 +32,7 @@ const MOBILE_NAV_LEFT = [
 const MOBILE_NAV_RIGHT = [
 	{ href: "#about", label: "About us" },
 	{ href: "#features", label: "Platform" },
+	{ href: "/docs", label: "Docs" },
 	{ href: "/privacy", label: "Privacy" },
 	{ href: "/terms", label: "Terms" },
 ] as const;
