@@ -11,9 +11,9 @@ Your **home dashboard** is CAALM’s answer to “what should I look at first to
 
 | Role | Home | What it emphasizes |
 |---|---|---|
-| Super Admin | `/dashboard/superadmin` | Org-wide risk, expiries, users, executive charts |
+| Super Admin | `/dashboard/superadmin` | Platform oversight + org-wide risk (keep membership tiny) |
 | IT | `/dashboard/it` | Platform operations (separate IT sidebar) |
-| Organization Admin | `/dashboard/organizationadmin` | Invites, users, operational widgets |
+| Organization Admin | `/dashboard/organizationadmin` | Company ops: invites, users, settings, operational widgets |
 | Content Creator | `/dashboard/content-creator` | News stats, articles, publishing |
 | Department Manager | `/dashboard/departmentmanager` | Division-scoped action queue + compliance |
 | Viewer | `/dashboard/viewer` | Read-oriented executive-style visibility |
@@ -37,7 +37,8 @@ IT users get a dedicated portal and sidebar (`IT_NAVIGATION`). Monitoring, CI/CD
 ## Practical advice
 
 - New users: trust the home dashboard for week one.
-- Admins: do not hand out Super Admin to skip permission design.
+- Admins: do not hand out Super Admin to skip permission design — use Organization Admin for company ops.
+- Non-profits: ED / Ops / Finance → Organization Admin; IT vendor → Super Admin.
 - Managers: if your division is blank, your user profile may be missing `division` — fix identity data before blaming widgets.
 
 Deep dives: [Guides by role](/docs/guides/super-admin).

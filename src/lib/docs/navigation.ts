@@ -100,13 +100,15 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Executive / Super Admin",
 				slug: "guides/super-admin",
 				path: "guides/super-admin",
-				summary: "Org-wide risk, users, and oversight.",
+				summary:
+					"Platform operators and break-glass access — keep this role rare.",
 			},
 			{
 				title: "Organization Admin",
 				slug: "guides/organization-admin",
 				path: "guides/organization-admin",
-				summary: "Invites, settings, and day-to-day org ops.",
+				summary:
+					"Run the company in CAALM: invites, roles, settings, and day-to-day ops.",
 			},
 			{
 				title: "Department Manager",
