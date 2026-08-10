@@ -1,5 +1,5 @@
 ---
-title: "Executive / Super Admin guide"
+title: "Super Admin guide"
 description: "Platform operators and break-glass access — who Super Admin is for, and how to keep it rare."
 section: guides
 audience: "Super Admin"

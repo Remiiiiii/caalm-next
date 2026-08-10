@@ -97,7 +97,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
 		description: "Step-by-step playbooks for the people who use CAALM every day.",
 		items: [
 			{
-				title: "Executive / Super Admin",
+				title: "Super Admin",
 				slug: "guides/super-admin",
 				path: "guides/super-admin",
 				summary:
