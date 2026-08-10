@@ -17,7 +17,6 @@ import {
 import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.types";
 import {
 	getUserDefaultOrganization,
-	getUserRoles,
 	hasPermission,
 } from "@/lib/rbac/permissions";
 
@@ -54,18 +53,13 @@ export async function POST(
 
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
-		const roles = orgId ? await getUserRoles(user.$id, orgId) : [];
-		const roleNames = roles.map((r) => r.roleName || "");
-		const isAdminOverride = roleNames.some(
-			(name) => name === "Super Admin" || name === "Organization Admin",
-		);
-
 		const canReview = orgId
 			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.REVIEW, orgId)
 			: false;
 		const canApprove = orgId
 			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.APPROVE, orgId)
 			: false;
+		const isAdminOverride = canApprove;
 
 		if (!canReview && !canApprove && !isAdminOverride) {
 			return forbiddenResponse(

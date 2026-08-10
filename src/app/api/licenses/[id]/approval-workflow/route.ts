@@ -11,7 +11,6 @@ import {
 import { getLicenseWorkflowForViewer } from "@/lib/approvals/LicenseApprovalWorkflowService";
 import {
 	getUserDefaultOrganization,
-	getUserRoles,
 	hasPermission,
 } from "@/lib/rbac/permissions";
 
@@ -39,11 +38,9 @@ export async function GET(
 			return forbiddenResponse("Permission denied: view license", requestId);
 		}
 
-		const roles = orgId ? await getUserRoles(user.$id, orgId) : [];
-		const roleNames = roles.map((r) => r.roleName || "");
-		const isAdminOverride = roleNames.some(
-			(name) => name === "Super Admin" || name === "Organization Admin",
-		);
+		const isAdminOverride = orgId
+			? await hasPermission(user.$id, PERMISSIONS.LICENSES.EDIT, orgId)
+			: false;
 
 		const payload = await getLicenseWorkflowForViewer(licenseId, user.$id, {
 			isAdminOverride,

@@ -6,7 +6,7 @@
 "use server";
 
 import { type NextRequest, NextResponse } from "next/server";
-import type { PermissionKey } from "@/constants/permissions";
+import { PERMISSIONS, type PermissionKey } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
 	getUserDefaultOrganization,
@@ -14,8 +14,10 @@ import {
 	hasAnyPermission,
 } from "@/lib/rbac/permissions";
 
+const IT_PERMISSIONS = Object.values(PERMISSIONS.IT) as PermissionKey[];
+
 /**
- * Check if user has IT role
+ * Check if user has any IT permission
  */
 export async function hasITRole(userId: string): Promise<boolean> {
 	try {
@@ -24,8 +26,7 @@ export async function hasITRole(userId: string): Promise<boolean> {
 			return false;
 		}
 
-		const userRoles = await getUserRoles(userId, defaultOrg.orgId);
-		return userRoles.some((role) => role.roleName === "IT");
+		return await hasAnyPermission(userId, IT_PERMISSIONS, defaultOrg.orgId);
 	} catch (error) {
 		console.error("[hasITRole] Error:", error);
 		return false;
@@ -33,7 +34,7 @@ export async function hasITRole(userId: string): Promise<boolean> {
 }
 
 /**
- * Require IT role - returns error response if user doesn't have IT role
+ * Require any IT permission - returns error response if user has none
  */
 export async function requireITRole(
 	request: NextRequest,
@@ -55,7 +56,7 @@ export async function requireITRole(
 			);
 
 			return NextResponse.json(
-				{ error: "Access denied. IT role required." },
+				{ error: "Access denied. IT permission required." },
 				{ status: 403 },
 			);
 		}
@@ -64,7 +65,7 @@ export async function requireITRole(
 	} catch (error) {
 		console.error("[requireITRole] Error:", error);
 		return NextResponse.json(
-			{ error: "Failed to verify IT role" },
+			{ error: "Failed to verify IT permission" },
 			{ status: 500 },
 		);
 	}
@@ -78,12 +79,6 @@ export async function requireITPermission(
 	permission: PermissionKey,
 ): Promise<NextResponse | null> {
 	try {
-		// First check if user has IT role
-		const roleCheck = await requireITRole(request);
-		if (roleCheck) {
-			return roleCheck;
-		}
-
 		const user = await getCurrentUser();
 		if (!user) {
 			return NextResponse.json(
@@ -100,13 +95,13 @@ export async function requireITPermission(
 			);
 		}
 
-		const hasPermission = await hasAnyPermission(
+		const allowed = await hasAnyPermission(
 			user.$id,
 			[permission],
 			defaultOrg.orgId,
 		);
 
-		if (!hasPermission) {
+		if (!allowed) {
 			// Log unauthorized access attempt
 			console.warn(
 				`[IT Route Guard] Unauthorized permission access attempt by user ${user.$id} to ${request.nextUrl.pathname} - required: ${permission}`,
@@ -129,7 +124,7 @@ export async function requireITPermission(
 }
 
 /**
- * Redirect if user doesn't have IT role
+ * Redirect if user doesn't have any IT permission
  * Returns redirect response to user's default dashboard
  */
 export async function redirectIfNotIT(

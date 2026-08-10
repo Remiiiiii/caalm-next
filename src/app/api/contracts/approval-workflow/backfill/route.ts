@@ -11,7 +11,6 @@ import {
 import { backfillPendingWorkflows } from "@/lib/approvals/ContractApprovalWorkflowService";
 import {
 	getUserDefaultOrganization,
-	getUserRoles,
 	hasPermission,
 } from "@/lib/rbac/permissions";
 
@@ -23,16 +22,11 @@ export async function POST(_request: NextRequest) {
 			return unauthorizedResponse("Authentication required", requestId);
 
 		const org = await getUserDefaultOrganization(user.$id);
-		const roles = org?.orgId ? await getUserRoles(user.$id, org.orgId) : [];
-		const roleNames = roles.map((r) => r.roleName || "");
-		const isAdmin = roleNames.some(
-			(name) => name === "Super Admin" || name === "Organization Admin",
-		);
 		const canApprove = org?.orgId
 			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.APPROVE, org.orgId)
 			: false;
 
-		if (!isAdmin && !canApprove) {
+		if (!canApprove) {
 			return forbiddenResponse("Permission denied", requestId);
 		}
 

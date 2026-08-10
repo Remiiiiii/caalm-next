@@ -17,7 +17,6 @@ import {
 } from "@/lib/approvals/LicenseApprovalWorkflowService";
 import {
 	getUserDefaultOrganization,
-	getUserRoles,
 	hasPermission,
 } from "@/lib/rbac/permissions";
 
@@ -54,15 +53,10 @@ export async function POST(
 
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
-		const roles = orgId ? await getUserRoles(user.$id, orgId) : [];
-		const roleNames = roles.map((r) => r.roleName || "");
-		const isAdminOverride = roleNames.some(
-			(name) => name === "Super Admin" || name === "Organization Admin",
-		);
-
 		const canEdit = orgId
 			? await hasPermission(user.$id, PERMISSIONS.LICENSES.EDIT, orgId)
 			: false;
+		const isAdminOverride = canEdit;
 
 		if (!canEdit && !isAdminOverride) {
 			return forbiddenResponse(
