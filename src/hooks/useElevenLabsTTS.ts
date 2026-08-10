@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 interface UseElevenLabsTTSOptions {
 	autoPlay?: boolean;
 	voiceId?: string;
+	/** Fires when audio finishes naturally (not pause/stop). */
+	onPlaybackEnd?: () => void;
 }
 
 interface UseElevenLabsTTSReturn {
@@ -27,12 +29,17 @@ export function useElevenLabsTTS(
 		autoPlay = false,
 		voiceId = process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID ||
 			"21m00Tcm4TlvDq8ikWAM",
+		onPlaybackEnd,
 	} = options;
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const audioUrlRef = useRef<string | null>(null);
+	const generationRef = useRef(0);
+	const abortControllerRef = useRef<AbortController | null>(null);
+	const onPlaybackEndRef = useRef(onPlaybackEnd);
+	onPlaybackEndRef.current = onPlaybackEnd;
 	const eventHandlersRef = useRef<{
 		handlePlay?: () => void;
 		handlePause?: () => void;
@@ -40,9 +47,14 @@ export function useElevenLabsTTS(
 		handleError?: (e: Event) => void;
 	}>({});
 
-	const cleanup = useCallback(() => {
+	const cleanup = useCallback((options?: { invalidateInFlight?: boolean }) => {
+		if (options?.invalidateInFlight) {
+			generationRef.current += 1;
+			abortControllerRef.current?.abort();
+			abortControllerRef.current = null;
+		}
+
 		if (audioRef.current) {
-			// Remove all event listeners before cleanup
 			const handlers = eventHandlersRef.current;
 			if (handlers.handlePlay) {
 				audioRef.current.removeEventListener("play", handlers.handlePlay);
@@ -70,10 +82,15 @@ export function useElevenLabsTTS(
 
 	const generateSpeech = useCallback(
 		async (text: string) => {
+			const generation = ++generationRef.current;
+			abortControllerRef.current?.abort();
+			const abortController = new AbortController();
+			abortControllerRef.current = abortController;
+
 			setIsLoading(true);
 			setError(null);
 
-			// Cleanup previous audio
+			// Cleanup previous audio without bumping generation again
 			cleanup();
 
 			try {
@@ -83,7 +100,12 @@ export function useElevenLabsTTS(
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({ text, voice_id: voiceId }),
+					signal: abortController.signal,
 				});
+
+				if (generation !== generationRef.current) {
+					return;
+				}
 
 				if (!response.ok) {
 					let errorText = "";
@@ -93,7 +115,6 @@ export function useElevenLabsTTS(
 						errorText = "Failed to read error response";
 					}
 
-					// Build error information object with guaranteed fields
 					const errorInfo: {
 						status: number;
 						statusText: string;
@@ -105,7 +126,6 @@ export function useElevenLabsTTS(
 						responseBody: errorText || "(empty response body)",
 					};
 
-					// Try to parse JSON error response
 					if (errorText?.trim()) {
 						try {
 							const parsed = JSON.parse(errorText);
@@ -113,11 +133,10 @@ export function useElevenLabsTTS(
 								errorInfo.parsedError = parsed;
 							}
 						} catch {
-							// Not JSON, that's fine - we have the raw text
+							// Not JSON
 						}
 					}
 
-					// Extract error message from parsed error or use defaults
 					let errorMessage = "Failed to generate speech";
 					if (errorInfo.parsedError) {
 						const parsed = errorInfo.parsedError;
@@ -147,12 +166,10 @@ export function useElevenLabsTTS(
 						}
 					}
 
-					// Fallback to HTTP status if no message found
 					if (errorMessage === "Failed to generate speech" && errorText) {
 						errorMessage = errorText;
 					}
 
-					// Final fallback to HTTP status
 					if (errorMessage === "Failed to generate speech") {
 						errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 					}
@@ -162,36 +179,45 @@ export function useElevenLabsTTS(
 					throw new Error(errorMessage);
 				}
 
-				// Get blob immediately without extensive validation (faster)
 				const audioBlob = await response.blob();
 
-				// Quick validation only
+				if (generation !== generationRef.current) {
+					return;
+				}
+
 				if (!audioBlob || audioBlob.size === 0) {
 					throw new Error("Received empty audio blob");
 				}
 
 				const audioUrl = URL.createObjectURL(audioBlob);
+
+				if (generation !== generationRef.current) {
+					URL.revokeObjectURL(audioUrl);
+					return;
+				}
+
 				audioUrlRef.current = audioUrl;
 
-				// Create new audio element with preload for faster playback
 				const audio = new Audio(audioUrl);
-				audio.preload = "auto"; // Preload audio for faster playback
+				audio.preload = "auto";
 				audioRef.current = audio;
 
-				// Set up event listeners (store references for cleanup)
 				const handlePlay = () => setIsPlaying(true);
 				const handlePause = () => setIsPlaying(false);
 				const handleEnded = () => {
 					setIsPlaying(false);
+					onPlaybackEndRef.current?.();
 					cleanup();
 				};
 				const handleError = (e: Event) => {
+					if (generation !== generationRef.current) return;
+
 					const audioElement = audioRef.current;
 					let errorMessage = "Audio playback error";
 
 					if (audioElement?.error) {
-						const error = audioElement.error;
-						switch (error.code) {
+						const mediaError = audioElement.error;
+						switch (mediaError.code) {
 							case MediaError.MEDIA_ERR_ABORTED:
 								errorMessage = "Audio loading aborted";
 								break;
@@ -205,7 +231,7 @@ export function useElevenLabsTTS(
 								errorMessage = "Audio format not supported";
 								break;
 							default:
-								errorMessage = `Audio error (code: ${error.code})`;
+								errorMessage = `Audio error (code: ${mediaError.code})`;
 						}
 					}
 
@@ -221,7 +247,6 @@ export function useElevenLabsTTS(
 					cleanup();
 				};
 
-				// Store handlers for cleanup
 				eventHandlersRef.current = {
 					handlePlay,
 					handlePause,
@@ -234,25 +259,38 @@ export function useElevenLabsTTS(
 				audio.addEventListener("ended", handleEnded);
 				audio.addEventListener("error", handleError);
 
-				// Start loading audio immediately (don't wait for full load)
 				audio.load();
 
 				if (autoPlay) {
 					try {
-						// Try to play immediately - browser will buffer if needed
 						const playPromise = audio.play();
 						if (playPromise !== undefined) {
 							await playPromise;
 						}
+						if (generation !== generationRef.current) {
+							cleanup();
+							return;
+						}
 					} catch (playError) {
-						// Browser autoplay policy may block this
+						if (generation !== generationRef.current) {
+							return;
+						}
 						console.warn("Autoplay was blocked:", playError);
 						setError("Autoplay blocked. Click play to hear audio.");
 					}
 				}
 
-				setIsLoading(false);
+				if (generation === generationRef.current) {
+					setIsLoading(false);
+				}
 			} catch (err) {
+				if (generation !== generationRef.current) {
+					return;
+				}
+				if (err instanceof DOMException && err.name === "AbortError") {
+					setIsLoading(false);
+					return;
+				}
 				const errorMessage =
 					err instanceof Error ? err.message : "Unknown error";
 				setError(errorMessage);
@@ -281,13 +319,13 @@ export function useElevenLabsTTS(
 	}, []);
 
 	const stop = useCallback(() => {
-		cleanup();
+		cleanup({ invalidateInFlight: true });
+		setIsLoading(false);
 	}, [cleanup]);
 
-	// Cleanup on unmount
 	useEffect(() => {
 		return () => {
-			cleanup();
+			cleanup({ invalidateInFlight: true });
 		};
 	}, [cleanup]);
 

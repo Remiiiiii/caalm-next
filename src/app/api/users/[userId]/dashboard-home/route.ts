@@ -28,7 +28,7 @@ export async function GET(
 
 		return NextResponse.json({
 			success: true,
-			data: { path: path ?? "/dashboard" },
+			data: { path },
 		});
 	} catch (error) {
 		console.error("[dashboard-home] Error:", error);

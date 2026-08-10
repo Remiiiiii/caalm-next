@@ -6,17 +6,23 @@
 
 import { ID, Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getUserById } from "@/lib/actions/user.actions";
 import {
+	applyReassignToCurrentStep,
 	assertDecisionAllowed,
+	assertReassignAllowed,
+	assigneeHintForKind,
 	buildDerivedSteps,
+	buildReassignCandidates,
+	needsExecutiveAssignmentFlag,
 	parseWorkflowState,
+	resetWorkflowForResubmit,
+	resolveParticipant,
 	resolveStatusAfterApprove,
 	serializeWorkflowState,
+	upgradeAwaitingExecutiveStep,
 } from "@/lib/approvals/ContractApprovalWorkflowService";
 import type {
 	ApprovalDecision,
-	ApprovalParticipant,
 	ApprovalWorkflowNotification,
 	ApprovalWorkflowState,
 	ApprovalWorkflowViewerPayload,
@@ -25,8 +31,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { isDemoMode } from "@/lib/config/demo-mode";
-import { hasPermission } from "@/lib/rbac/permissions";
-import { getProfilePictureUrl } from "@/lib/utils";
+import { getUserRoles, hasPermission } from "@/lib/rbac/permissions";
 import { getAllAdmins, getAllExecutives } from "@/lib/utils/get-users-by-role";
 import { triggerNotification } from "@/lib/utils/notificationTriggers";
 
@@ -187,52 +192,6 @@ async function buildStateForLicense(
 	};
 }
 
-function resolveParticipantImageUrl(user: {
-	avatar?: string | null;
-	profileImageId?: string | null;
-}): string | null {
-	const avatarValue = user.avatar?.trim();
-	if (avatarValue && /^https?:\/\//i.test(avatarValue)) return avatarValue;
-	if (avatarValue?.startsWith("/")) return avatarValue;
-	const imageId =
-		avatarValue && !/^https?:\/\//i.test(avatarValue)
-			? avatarValue
-			: user.profileImageId || null;
-	return getProfilePictureUrl(imageId);
-}
-
-async function resolveParticipant(
-	userId: string,
-	viewerUserId: string,
-): Promise<ApprovalParticipant> {
-	try {
-		const user = (await getUserById(userId)) as Record<string, any> | null;
-		if (!user) {
-			return {
-				userId,
-				fullName: "Unknown user",
-				isYou: userId === viewerUserId,
-			};
-		}
-		return {
-			userId: String(user.$id || userId),
-			fullName: user.fullName || user.email || "User",
-			email: user.email,
-			department: user.department || user.division,
-			subDepartment: user.subDepartment,
-			division: user.division,
-			profileImageUrl: resolveParticipantImageUrl(user),
-			isYou: userId === viewerUserId || user.$id === viewerUserId,
-		};
-	} catch {
-		return {
-			userId,
-			fullName: "Unknown user",
-			isYou: userId === viewerUserId,
-		};
-	}
-}
-
 async function appendNotification(
 	state: ApprovalWorkflowState,
 	notification: Omit<ApprovalWorkflowNotification, "id" | "sentAt"> & {
@@ -273,6 +232,50 @@ async function notifyUsers(
 	}
 }
 
+async function ensureLicenseExecutiveStep(
+	state: ApprovalWorkflowState,
+	orgId: string | undefined,
+	uploaderUserId: string,
+): Promise<{ state: ApprovalWorkflowState; upgraded: boolean }> {
+	if (!needsExecutiveAssignmentFlag(state)) {
+		return { state, upgraded: false };
+	}
+	const executiveIds = await resolveExecutiveApproverIds(orgId, uploaderUserId);
+	const upgradedState = upgradeAwaitingExecutiveStep(state, executiveIds);
+	if (!upgradedState) return { state, upgraded: false };
+	return { state: upgradedState, upgraded: true };
+}
+
+async function collectAdminUserIds(orgId: string | undefined): Promise<string[]> {
+	const [executives, admins] = await Promise.all([
+		getAllExecutives(orgId),
+		getAllAdmins(orgId),
+	]);
+	return uniqueIds(
+		[...executives, ...admins].map(
+			(u: { $id?: string; accountId?: string }) => u.accountId || u.$id,
+		),
+	);
+}
+
+async function assertAssigneesAreExecOrAdmin(
+	assigneeUserIds: string[],
+	orgId: string | undefined,
+): Promise<void> {
+	for (const userId of uniqueIds(assigneeUserIds)) {
+		const roles = orgId ? await getUserRoles(userId, orgId) : [];
+		const ok = roles.some((r) => {
+			const name = r.roleName || "";
+			return name === "Super Admin" || name === "Organization Admin";
+		});
+		if (!ok) {
+			throw new Error(
+				"Executive approval assignees must be Super Admin or Organization Admin",
+			);
+		}
+	}
+}
+
 export async function getLicenseWorkflowForViewer(
 	licenseId: string,
 	viewerUserId: string,
@@ -280,9 +283,20 @@ export async function getLicenseWorkflowForViewer(
 ): Promise<ApprovalWorkflowViewerPayload> {
 	const license = await getLicense(licenseId);
 	let state = parseWorkflowState(license.approvalWorkflowState as string);
+	const uploader = String(license.licenseOwnerId || license.createdBy || "");
+	const orgId = license.orgId as string | undefined;
 
 	if (!state) {
 		state = await buildStateForLicense(license);
+		await updateLicense(licenseId, {
+			approvalWorkflowState: serializeWorkflowState(state),
+			currentApprovalStage: state.steps[state.currentStepIndex]?.label || "",
+		});
+	}
+
+	const ensured = await ensureLicenseExecutiveStep(state, orgId, uploader);
+	state = ensured.state;
+	if (ensured.upgraded) {
 		await updateLicense(licenseId, {
 			approvalWorkflowState: serializeWorkflowState(state),
 			currentApprovalStage: state.steps[state.currentStepIndex]?.label || "",
@@ -296,6 +310,7 @@ export async function getLicenseWorkflowForViewer(
 			);
 			return {
 				...step,
+				assigneeHint: assigneeHintForKind(step.kind),
 				participants: participants.map((p) => ({
 					...p,
 					fullName:
@@ -315,7 +330,7 @@ export async function getLicenseWorkflowForViewer(
 	const canDecideByRole = await hasPermission(
 		viewerUserId,
 		PERMISSIONS.LICENSES.EDIT,
-		license.orgId as string | undefined,
+		orgId,
 	);
 
 	const canDecide =
@@ -325,10 +340,26 @@ export async function getLicenseWorkflowForViewer(
 		(isAssignee || !!options?.isAdminOverride) &&
 		(!!options?.isAdminOverride || canDecideByRole);
 
+	const needsExecutiveAssignment = needsExecutiveAssignmentFlag(state);
+	const contractStatus = String(license.status || "pending-review");
+	const canResubmit =
+		contractStatus === "action-required" &&
+		(viewerUserId === uploader || !!options?.isAdminOverride);
+	const canAssignExecutive =
+		needsExecutiveAssignment && !!options?.isAdminOverride;
+	const canReassignUi =
+		!!options?.isAdminOverride &&
+		(needsExecutiveAssignment || current?.status === "current") &&
+		current?.kind !== "activated" &&
+		current?.kind !== "submitted";
+	const reassignCandidates = canReassignUi
+		? await buildReassignCandidates(orgId, current?.kind)
+		: [];
+
 	return {
 		contractId: licenseId,
 		contractName: String(license.licenseName || "Untitled License"),
-		contractStatus: String(license.status || "pending-review"),
+		contractStatus,
 		department: (license.division || license.department) as string | undefined,
 		businessUnit: license.businessUnit as string | undefined,
 		subDepartment: license.subDepartment as string | undefined,
@@ -337,7 +368,12 @@ export async function getLicenseWorkflowForViewer(
 		notifications: state.notifications || [],
 		canDecide,
 		canOverride: !!options?.isAdminOverride,
+		needsExecutiveAssignment,
+		canAssignExecutive,
+		canResubmit,
 		viewerUserId,
+		uploaderUserId: uploader || undefined,
+		reassignCandidates,
 	};
 }
 
@@ -411,12 +447,16 @@ export async function decideLicense({
 	adminOverride?: boolean;
 }): Promise<{ state: ApprovalWorkflowState; contractStatus: string }> {
 	const license = await getLicense(licenseId);
-	const state =
+	let state =
 		parseWorkflowState(license.approvalWorkflowState as string) ||
 		(await buildStateForLicense(license));
+	const uploader = String(license.licenseOwnerId || license.createdBy || "");
+	const orgId = license.orgId as string | undefined;
+
+	const ensured = await ensureLicenseExecutiveStep(state, orgId, uploader);
+	state = ensured.state;
 
 	const current = state.steps[state.currentStepIndex];
-	const uploader = String(license.licenseOwnerId || license.createdBy || "");
 	assertDecisionAllowed({
 		current,
 		viewerUserId,
@@ -485,6 +525,11 @@ export async function decideLicense({
 			if (nextStep?.kind === "activated") {
 				nextStep.status = "complete";
 				nextStep.completedAt = now;
+				nextStep.completedByUserId = viewerUserId;
+				nextStep.assigneeUserIds = uniqueIds([
+					...(nextStep.assigneeUserIds || []),
+					viewerUserId,
+				]);
 				state.currentStepIndex = nextIndex;
 			}
 			const managerIds = await resolveManagerIdsFromNamesOrIds(
@@ -506,8 +551,64 @@ export async function decideLicense({
 			);
 		} else if (nextStep) {
 			if (nextStep.kind === "awaiting_executive") {
-				nextStep.status = "current";
-				state.currentStepIndex = nextIndex;
+				const execIds = await resolveExecutiveApproverIds(orgId, uploader);
+				const upgraded = upgradeAwaitingExecutiveStep(
+					{
+						...state,
+						currentStepIndex: nextIndex,
+						steps: state.steps.map((s, i) =>
+							i === nextIndex ? { ...s, status: "current" } : s,
+						),
+					},
+					execIds,
+				);
+				if (upgraded) {
+					state.steps = upgraded.steps;
+					state.currentStepIndex = upgraded.currentStepIndex;
+					state.derivedAt = upgraded.derivedAt;
+					const execStep = state.steps[state.currentStepIndex];
+					await appendNotification(state, {
+						type: "stage_advanced",
+						recipientUserIds: uniqueIds([
+							...(execStep?.assigneeUserIds || []),
+							uploader,
+						]),
+						stepId: execStep?.id,
+						label: "Stage advanced",
+					});
+					await notifyUsers(
+						execStep?.assigneeUserIds || [],
+						"info",
+						`Approval needed: ${license.licenseName || "License"}`,
+						`"${license.licenseName || "A license"}" is ready for ${execStep?.label}.`,
+						{
+							licenseId,
+							actionUrl: "/licenses/approvals",
+							actionText: "Open Approvals",
+						},
+					);
+				} else {
+					nextStep.status = "current";
+					state.currentStepIndex = nextIndex;
+					const admins = await collectAdminUserIds(orgId);
+					await appendNotification(state, {
+						type: "needs_executive_assignment",
+						recipientUserIds: admins,
+						stepId: nextStep.id,
+						label: "Needs executive assignment",
+					});
+					await notifyUsers(
+						admins,
+						"info",
+						`Executive needed: ${license.licenseName || "License"}`,
+						`"${license.licenseName || "A license"}" is waiting for an executive assignee (Super Admin or Organization Admin).`,
+						{
+							licenseId,
+							actionUrl: "/licenses/approvals",
+							actionText: "Open Approvals",
+						},
+					);
+				}
 			} else {
 				nextStep.status = "current";
 				state.currentStepIndex = nextIndex;
@@ -539,6 +640,129 @@ export async function decideLicense({
 		approvalWorkflowState: serializeWorkflowState(state),
 		status: nextStatus,
 		currentApprovalStage: state.steps[state.currentStepIndex]?.label || "",
+	});
+
+	return { state, contractStatus: nextStatus };
+}
+
+export async function reassignLicenseCurrentStep({
+	licenseId,
+	viewerUserId,
+	assigneeUserIds,
+	adminOverride = false,
+}: {
+	licenseId: string;
+	viewerUserId: string;
+	assigneeUserIds: string[];
+	adminOverride?: boolean;
+}): Promise<ApprovalWorkflowState> {
+	const license = await getLicense(licenseId);
+	let state =
+		parseWorkflowState(license.approvalWorkflowState as string) ||
+		(await buildStateForLicense(license));
+	const uploader = String(license.licenseOwnerId || license.createdBy || "");
+	const orgId = license.orgId as string | undefined;
+
+	const ensured = await ensureLicenseExecutiveStep(state, orgId, uploader);
+	state = ensured.state;
+
+	const current = state.steps[state.currentStepIndex];
+	assertReassignAllowed({ current, adminOverride });
+
+	if (
+		current?.kind === "executive_approval" ||
+		current?.kind === "awaiting_executive"
+	) {
+		await assertAssigneesAreExecOrAdmin(assigneeUserIds, orgId);
+	}
+
+	state = applyReassignToCurrentStep(state, assigneeUserIds);
+	const nextCurrent = state.steps[state.currentStepIndex];
+
+	await appendNotification(state, {
+		type: "reassigned",
+		recipientUserIds: uniqueIds([
+			...(nextCurrent?.assigneeUserIds || []),
+			uploader,
+			viewerUserId,
+		]),
+		stepId: nextCurrent?.id,
+		label: "Step reassigned",
+	});
+	await notifyUsers(
+		nextCurrent?.assigneeUserIds || [],
+		"info",
+		`Reassigned: ${license.licenseName || "License"}`,
+		`You were assigned to "${nextCurrent?.label}" for "${license.licenseName || "a license"}".`,
+		{
+			licenseId,
+			actionUrl: "/licenses/approvals",
+			actionText: "Open Approvals",
+		},
+	);
+
+	await updateLicense(licenseId, {
+		approvalWorkflowState: serializeWorkflowState(state),
+		currentApprovalStage: nextCurrent?.label || "",
+		...(current?.kind === "department_review"
+			? { assignedManagers: uniqueIds(assigneeUserIds) }
+			: {}),
+	});
+
+	return state;
+}
+
+export async function resubmitLicenseAfterChanges({
+	licenseId,
+	viewerUserId,
+	adminOverride = false,
+}: {
+	licenseId: string;
+	viewerUserId: string;
+	adminOverride?: boolean;
+}): Promise<{ state: ApprovalWorkflowState; contractStatus: string }> {
+	const license = await getLicense(licenseId);
+	const status = String(license.status || "");
+	if (status !== "action-required") {
+		throw new Error("Only items with requested changes can be resubmitted");
+	}
+	const uploader = String(license.licenseOwnerId || license.createdBy || "");
+	if (viewerUserId !== uploader && !adminOverride) {
+		throw new Error("Only the uploader can resubmit after changes");
+	}
+
+	let state =
+		parseWorkflowState(license.approvalWorkflowState as string) ||
+		(await buildStateForLicense(license));
+	state = resetWorkflowForResubmit(state);
+	const dept = state.steps[state.currentStepIndex];
+
+	await appendNotification(state, {
+		type: "resubmitted",
+		recipientUserIds: uniqueIds([
+			...(dept?.assigneeUserIds || []),
+			uploader,
+		]),
+		stepId: dept?.id,
+		label: "Resubmitted for review",
+	});
+	await notifyUsers(
+		dept?.assigneeUserIds || [],
+		"info",
+		`Resubmitted: ${license.licenseName || "License"}`,
+		`"${license.licenseName || "A license"}" was resubmitted and needs department review.`,
+		{
+			licenseId,
+			actionUrl: "/licenses/approvals",
+			actionText: "Open Approvals",
+		},
+	);
+
+	const nextStatus = "pending-review";
+	await updateLicense(licenseId, {
+		approvalWorkflowState: serializeWorkflowState(state),
+		status: nextStatus,
+		currentApprovalStage: dept?.label || "Department review",
 	});
 
 	return { state, contractStatus: nextStatus };

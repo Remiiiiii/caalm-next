@@ -52,16 +52,17 @@ export async function POST(
 			return validationErrorResponse("Invalid decision", requestId);
 		}
 
+		const viewerUserId = user.accountId || user.$id;
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
-		const roles = orgId ? await getUserRoles(user.$id, orgId) : [];
+		const roles = orgId ? await getUserRoles(viewerUserId, orgId) : [];
 		const roleNames = roles.map((r) => r.roleName || "");
 		const isAdminOverride = roleNames.some(
 			(name) => name === "Super Admin" || name === "Organization Admin",
 		);
 
 		const canEdit = orgId
-			? await hasPermission(user.$id, PERMISSIONS.LICENSES.EDIT, orgId)
+			? await hasPermission(viewerUserId, PERMISSIONS.LICENSES.EDIT, orgId)
 			: false;
 
 		if (!canEdit && !isAdminOverride) {
@@ -71,7 +72,7 @@ export async function POST(
 			);
 		}
 
-		const before = await getLicenseWorkflowForViewer(licenseId, user.$id, {
+		const before = await getLicenseWorkflowForViewer(licenseId, viewerUserId, {
 			isAdminOverride,
 		});
 		if (!before.canDecide && !isAdminOverride) {
@@ -83,7 +84,7 @@ export async function POST(
 
 		const result = await decideLicense({
 			licenseId,
-			viewerUserId: user.$id,
+			viewerUserId,
 			decision,
 			notes,
 			adminOverride: isAdminOverride && !before.canDecide,
@@ -93,7 +94,7 @@ export async function POST(
 		revalidatePath("/licenses");
 		revalidatePath("/licenses/approvals");
 
-		const payload = await getLicenseWorkflowForViewer(licenseId, user.$id, {
+		const payload = await getLicenseWorkflowForViewer(licenseId, viewerUserId, {
 			isAdminOverride,
 		});
 

@@ -13,6 +13,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { agingLabel } from "@/components/approvals/ApprovalsAttentionStrip";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
+import ApprovalWorkflowActions from "@/components/contracts/approval/ApprovalWorkflowActions";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import DocumentViewer from "@/components/DocumentViewer";
 import FormattedDateTime from "@/components/FormattedDateTime";
@@ -63,11 +64,15 @@ export default function ApprovalDecideSheet({
 	const {
 		workflow: contractWorkflow,
 		decide: decideContractWorkflow,
+		reassign: reassignContractWorkflow,
+		resubmit: resubmitContractWorkflow,
 		isLoading: contractWorkflowLoading,
 	} = useContractApprovalWorkflow(contractIdForWorkflow);
 	const {
 		workflow: licenseWorkflow,
 		decide: decideLicenseWorkflow,
+		reassign: reassignLicenseWorkflow,
+		resubmit: resubmitLicenseWorkflow,
 		isLoading: licenseWorkflowLoading,
 	} = useLicenseApprovalWorkflow(licenseIdForWorkflow);
 	const workflow =
@@ -76,6 +81,14 @@ export default function ApprovalDecideSheet({
 		item?.entity === "contract"
 			? decideContractWorkflow
 			: decideLicenseWorkflow;
+	const reassignWorkflow =
+		item?.entity === "contract"
+			? reassignContractWorkflow
+			: reassignLicenseWorkflow;
+	const resubmitWorkflow =
+		item?.entity === "contract"
+			? resubmitContractWorkflow
+			: resubmitLicenseWorkflow;
 	const workflowLoading =
 		item?.entity === "contract"
 			? contractWorkflowLoading
@@ -295,8 +308,43 @@ export default function ApprovalDecideSheet({
 									Loading workflow…
 								</div>
 							) : workflow ? (
-								<div className="overflow-x-auto">
-									<ContractApprovalFlowCanvas workflow={workflow} />
+								<div className="space-y-3">
+									<div className="overflow-x-auto">
+										<ContractApprovalFlowCanvas workflow={workflow} />
+									</div>
+									<ApprovalWorkflowActions
+										workflow={workflow}
+										busy={busy}
+										onReassign={async (assigneeUserIds) => {
+											await reassignWorkflow({
+												assigneeUserIds,
+												path:
+													pathname ||
+													(item.entity === "contract"
+														? "/contracts/approvals"
+														: "/licenses/approvals"),
+											});
+											toast({
+												title: "Step reassigned",
+												description: "Approval assignees were updated.",
+											});
+											router.refresh();
+										}}
+										onResubmit={async () => {
+											await resubmitWorkflow({
+												path:
+													pathname ||
+													(item.entity === "contract"
+														? "/contracts/approvals"
+														: "/licenses/approvals"),
+											});
+											toast({
+												title: "Resubmitted",
+												description: "Department review restarted.",
+											});
+											router.refresh();
+										}}
+									/>
 								</div>
 							) : (
 								<p className="text-xs text-slate-500">Workflow unavailable</p>
@@ -367,7 +415,7 @@ export default function ApprovalDecideSheet({
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
 							placeholder="Required for deny or request changes"
-							className="min-h-[88px] border-white/60 bg-white/80"
+							className="min-h-[88px] border border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
 						/>
 					</div>
 				) : null}

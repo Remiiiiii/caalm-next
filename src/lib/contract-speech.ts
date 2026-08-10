@@ -1,5 +1,8 @@
 import { format } from "date-fns";
+import { normalizeSpeechPronunciation } from "@/lib/speech-pronunciation";
 import type { UIFileDoc } from "@/types/files";
+
+export type SpeechSegment = "full" | "itemOnly";
 
 interface FormatContractForSpeechOptions {
 	contract: UIFileDoc;
@@ -8,6 +11,9 @@ interface FormatContractForSpeechOptions {
 	userName?: string;
 	userFullName?: string;
 	daysUntilExpiry?: number | null;
+	/** full = legacy single-item script with aggregate intros; itemOnly = body for carousel */
+	speechSegment?: SpeechSegment;
+	includeGreeting?: boolean;
 }
 
 /**
@@ -64,93 +70,88 @@ export function formatContractForSpeech({
 	userName,
 	userFullName,
 	daysUntilExpiry,
+	speechSegment = "full",
+	includeGreeting = true,
 }: FormatContractForSpeechOptions): string {
 	const parts: string[] = [];
+	const itemOnly = speechSegment === "itemOnly";
 
-	// Greeting with user's first name
-	const firstName = getFirstName(userFullName || userName);
-	const greeting = getTimeBasedGreeting();
-	if (firstName) {
-		parts.push(`Hey ${firstName}, ${greeting}!`);
-	} else {
-		parts.push(`${greeting.charAt(0).toUpperCase() + greeting.slice(1)}!`);
+	if (includeGreeting) {
+		const firstName = getFirstName(userFullName || userName);
+		const greeting = getTimeBasedGreeting();
+		if (firstName) {
+			parts.push(`Hey ${firstName}, ${greeting}!`);
+		} else {
+			parts.push(`${greeting.charAt(0).toUpperCase() + greeting.slice(1)}!`);
+		}
 	}
 
-	// Contract name (declare once at the top)
 	const contractName =
 		contract.contractName || contract.name || "Untitled Contract";
-
-	// Contract count notification based on days until expiry
 	const days = daysUntilExpiry ?? null;
 
-	if (days !== null && days <= 1) {
-		// 24 hours or less
-		if (totalContracts === 1) {
-			parts.push(
-				`Urgent: ${contractName} expires in 24 hours. Immediate action required.`,
-			);
+	if (!itemOnly) {
+		if (days !== null && days <= 1) {
+			if (totalContracts === 1) {
+				parts.push(
+					`Urgent: ${contractName} expires in 24 hours. Immediate action required.`,
+				);
+			} else {
+				parts.push(
+					`Urgent: You have ${totalContracts} contracts expiring in 24 hours. Immediate action required.`,
+				);
+			}
+		} else if (days !== null && days >= 2 && days <= 9) {
+			if (totalContracts === 1) {
+				parts.push(`Reminder: ${contractName} expires in ${days} days.`);
+			} else {
+				parts.push(
+					`Reminder: You have ${totalContracts} contracts expiring in ${days} days.`,
+				);
+			}
+		} else if (days !== null && days === 10) {
+			if (totalContracts === 1) {
+				parts.push(
+					`Important reminder: ${contractName} expires in 10 days. Please take action soon.`,
+				);
+			} else {
+				parts.push(
+					`Important reminder: You have ${totalContracts} contracts expiring in 10 days. Please take action soon.`,
+				);
+			}
+		} else if (days !== null && days === 15) {
+			if (totalContracts === 1) {
+				parts.push(
+					"Just a heads-up—you've got a contract coming up for renewal in the next 15 days.",
+				);
+			} else {
+				parts.push(
+					"Just a heads-up—you've got a few contracts coming up for renewal in the next 15 days.",
+				);
+			}
 		} else {
-			parts.push(
-				`Urgent: You have ${totalContracts} contracts expiring in 24 hours. Immediate action required.`,
-			);
+			if (totalContracts === 1) {
+				parts.push(
+					"Just a heads-up—you've got a contract coming up for renewal in the next 30 days.",
+				);
+			} else if (totalContracts >= 2 && totalContracts <= 3) {
+				parts.push(
+					"Just a heads-up—you've got a few contracts coming up for renewal in the next 30 days.",
+				);
+			} else {
+				parts.push(
+					`Looks like you have ${totalContracts} contracts expiring soon, within the next month.`,
+				);
+			}
 		}
-	} else if (days !== null && days >= 2 && days <= 9) {
-		// 9-2 days: No speech (handled by shouldPlaySpeech flag)
-		// This case should not be reached if shouldPlaySpeech is false, but include fallback
-		if (totalContracts === 1) {
-			parts.push(`Reminder: ${contractName} expires in ${days} days.`);
-		} else {
+
+		if (totalContracts > 1) {
 			parts.push(
-				`Reminder: You have ${totalContracts} contracts expiring in ${days} days.`,
-			);
-		}
-	} else if (days !== null && days === 10) {
-		// 10 days
-		if (totalContracts === 1) {
-			parts.push(
-				`Important reminder: ${contractName} expires in 10 days. Please take action soon.`,
-			);
-		} else {
-			parts.push(
-				`Important reminder: You have ${totalContracts} contracts expiring in 10 days. Please take action soon.`,
-			);
-		}
-	} else if (days !== null && days === 15) {
-		// 15 days
-		if (totalContracts === 1) {
-			parts.push(
-				"Just a heads-up—you've got a contract coming up for renewal in the next 15 days.",
-			);
-		} else {
-			parts.push(
-				"Just a heads-up—you've got a few contracts coming up for renewal in the next 15 days.",
-			);
-		}
-	} else {
-		// 30 days (default)
-		if (totalContracts === 1) {
-			parts.push(
-				"Just a heads-up—you've got a contract coming up for renewal in the next 30 days.",
-			);
-		} else if (totalContracts >= 2 && totalContracts <= 3) {
-			parts.push(
-				"Just a heads-up—you've got a few contracts coming up for renewal in the next 30 days.",
-			);
-		} else {
-			parts.push(
-				`Looks like you have ${totalContracts} contracts expiring soon, within the next month.`,
+				`Let's start with contract ${contractIndex + 1} of ${totalContracts}.`,
 			);
 		}
 	}
 
-	// If multiple contracts, introduce which one we're talking about
-	if (totalContracts > 1) {
-		parts.push(
-			`Let's start with contract ${contractIndex + 1} of ${totalContracts}.`,
-		);
-	}
-
-	// Contract expiry date
 	let expiryDateText = "";
 	if (contract.contractExpiryDate) {
 		try {
@@ -167,13 +168,18 @@ export function formatContractForSpeech({
 
 	if (expiryDateText) {
 		parts.push(
-			`Let's start with your ${contractName}, which expires on ${expiryDateText}.`,
+			itemOnly
+				? `This is your ${contractName}, which expires on ${expiryDateText}.`
+				: `Let's start with your ${contractName}, which expires on ${expiryDateText}.`,
 		);
 	} else {
-		parts.push(`Let's start with your ${contractName}.`);
+		parts.push(
+			itemOnly
+				? `This is your ${contractName}.`
+				: `Let's start with your ${contractName}.`,
+		);
 	}
 
-	// Status and amount in natural flow
 	const statusText = contract.status
 		? contract.status.charAt(0).toUpperCase() +
 			contract.status.slice(1).replace(/-/g, " ")
@@ -189,11 +195,9 @@ export function formatContractForSpeech({
 				}).format(contract.amount)
 			: null;
 
-	// Contract type and vendor
 	const contractType = contract.contractType || "service agreement";
 	const vendor = contract.vendor;
 
-	// Combine status, amount, type, and vendor in one natural sentence
 	if (statusText && formattedAmount && vendor) {
 		parts.push(
 			`The status of this contract is ${statusText.toLowerCase()} in the amount of ${formattedAmount}. The contract type is a ${contractType.toLowerCase()} and the vendor is ${vendor}.`,
@@ -218,7 +222,6 @@ export function formatContractForSpeech({
 		parts.push(`The vendor is ${vendor}.`);
 	}
 
-	// Vendor contact information
 	const counterparty = contract as UIFileDoc & {
 		counterpartyLegalName?: string;
 		counterpartyContactTitle?: string;
@@ -272,10 +275,9 @@ export function formatContractForSpeech({
 		}
 	}
 
-	// Action options
 	parts.push(
 		"So, what would you like to do? You can renew it now, let it expire, take a closer look at the details, or I can help you get in touch with the provider directly.",
 	);
 
-	return parts.join(" ");
+	return normalizeSpeechPronunciation(parts.join(" "));
 }

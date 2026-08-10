@@ -3,10 +3,14 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 
 export async function GET() {
 	try {
-		console.log("Fetching current user");
-
 		const user = await getCurrentUser();
-		console.log("Current user fetched:", user ? "found" : "not found");
+
+		if (!user) {
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
 
 		return NextResponse.json(user);
 	} catch (error) {

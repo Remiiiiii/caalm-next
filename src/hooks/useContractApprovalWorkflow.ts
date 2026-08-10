@@ -56,11 +56,61 @@ export function useContractApprovalWorkflow(contractId: string | null) {
 		[contractId, mutate],
 	);
 
+	const reassign = useCallback(
+		async ({
+			assigneeUserIds,
+			path,
+		}: {
+			assigneeUserIds: string[];
+			path?: string;
+		}) => {
+			if (!contractId) throw new Error("Missing contract id");
+			const res = await fetch(
+				`/api/contracts/${contractId}/approval-workflow/reassign`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ assigneeUserIds, path }),
+				},
+			);
+			const json = await res.json();
+			if (!res.ok || !json.success) {
+				throw new Error(json.error || "Failed to reassign step");
+			}
+			await mutate(json.data, false);
+			return json.data as ApprovalWorkflowViewerPayload;
+		},
+		[contractId, mutate],
+	);
+
+	const resubmit = useCallback(
+		async ({ path }: { path?: string } = {}) => {
+			if (!contractId) throw new Error("Missing contract id");
+			const res = await fetch(
+				`/api/contracts/${contractId}/approval-workflow/resubmit`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ path }),
+				},
+			);
+			const json = await res.json();
+			if (!res.ok || !json.success) {
+				throw new Error(json.error || "Failed to resubmit");
+			}
+			await mutate(json.data, false);
+			return json.data as ApprovalWorkflowViewerPayload;
+		},
+		[contractId, mutate],
+	);
+
 	return {
 		workflow: data,
 		error,
 		isLoading,
 		refresh: mutate,
 		decide,
+		reassign,
+		resubmit,
 	};
 }

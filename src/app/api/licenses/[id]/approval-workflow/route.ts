@@ -30,22 +30,23 @@ export async function GET(
 			return errorResponse("License ID is required", 400, { requestId });
 		}
 
+		const viewerUserId = user.accountId || user.$id;
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
 		const canView = orgId
-			? await hasPermission(user.$id, PERMISSIONS.LICENSES.VIEW, orgId)
+			? await hasPermission(viewerUserId, PERMISSIONS.LICENSES.VIEW, orgId)
 			: false;
 		if (!canView) {
 			return forbiddenResponse("Permission denied: view license", requestId);
 		}
 
-		const roles = orgId ? await getUserRoles(user.$id, orgId) : [];
+		const roles = orgId ? await getUserRoles(viewerUserId, orgId) : [];
 		const roleNames = roles.map((r) => r.roleName || "");
 		const isAdminOverride = roleNames.some(
 			(name) => name === "Super Admin" || name === "Organization Admin",
 		);
 
-		const payload = await getLicenseWorkflowForViewer(licenseId, user.$id, {
+		const payload = await getLicenseWorkflowForViewer(licenseId, viewerUserId, {
 			isAdminOverride,
 		});
 

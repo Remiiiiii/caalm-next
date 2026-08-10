@@ -345,6 +345,44 @@ export class LicenseService {
 				? parseFloat(String(mappedData.availableQuantity))
 				: quantity;
 
+		let approvalWorkflowPatch: Record<string, string> = {};
+		if (
+			Array.isArray(mappedData.assignedManagers) &&
+			mappedData.assignedManagers.length > 0
+		) {
+			try {
+				const existing = await tablesDB.getRow({
+					databaseId: appwriteConfig.databaseId,
+					tableId: appwriteConfig.licensesCollectionId,
+					rowId: licenseId,
+				});
+				const {
+					parseWorkflowState,
+					serializeWorkflowState,
+					syncDepartmentAssigneesIfCurrent,
+				} = await import("@/lib/approvals/ContractApprovalWorkflowService");
+				const existingState = parseWorkflowState(
+					(existing as { approvalWorkflowState?: string }).approvalWorkflowState,
+				);
+				const synced = existingState
+					? syncDepartmentAssigneesIfCurrent(
+							existingState,
+							mappedData.assignedManagers,
+						)
+					: null;
+				if (synced) {
+					approvalWorkflowPatch = {
+						approvalWorkflowState: serializeWorkflowState(synced),
+						currentApprovalStage:
+							synced.steps[synced.currentStepIndex]?.label ||
+							"Department review",
+					};
+				}
+			} catch {
+				// Keep manager update even if workflow sync fails
+			}
+		}
+
 		const updateData = LicenseService.sanitizePayload({
 			// Required fields (if provided)
 			licenseName: mappedData.licenseName,
@@ -364,6 +402,7 @@ export class LicenseService {
 			assignedManagers: mappedData.assignedManagers,
 			licenseUrl: mappedData.licenseUrl,
 			fileId: mappedData.fileId,
+			...approvalWorkflowPatch,
 
 			// Optional - Software licenses
 			vendor: mappedData.vendor,

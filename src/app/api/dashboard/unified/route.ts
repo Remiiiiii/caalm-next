@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Check cache first (include pagination in cache key)
-		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v2:page:${page}:limit:${limit}`;
+		// v3: include amount, contractType, vendor on dashboard contract payloads
+		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v3:page:${page}:limit:${limit}`;
 
 		// Try to get cached data first to check ETag
 		const existingCache = (await import("@/lib/services/redis-cache").then(
@@ -242,6 +243,14 @@ export async function GET(request: NextRequest) {
 								contractStatus = "expired";
 							}
 						}
+						const amountRaw = contract.amount;
+						const amount =
+							typeof amountRaw === "number"
+								? amountRaw
+								: typeof amountRaw === "string" && amountRaw.trim() !== ""
+									? Number.parseFloat(amountRaw)
+									: undefined;
+
 						return {
 							$id: contract.$id,
 							$createdAt: contract.$createdAt,
@@ -255,6 +264,28 @@ export async function GET(request: NextRequest) {
 							status: contractStatus,
 							department: contract.department,
 							snoozedUntil: contract.snoozedUntil || null,
+							amount: Number.isFinite(amount) ? amount : undefined,
+							contractType:
+								typeof contract.contractType === "string"
+									? contract.contractType
+									: undefined,
+							vendor:
+								(typeof contract.vendor === "string" && contract.vendor) ||
+								(typeof contract.counterpartyLegalName === "string" &&
+									contract.counterpartyLegalName) ||
+								undefined,
+							counterpartyLegalName:
+								typeof contract.counterpartyLegalName === "string"
+									? contract.counterpartyLegalName
+									: undefined,
+							counterpartyContactEmail:
+								typeof contract.counterpartyContactEmail === "string"
+									? contract.counterpartyContactEmail
+									: undefined,
+							counterpartyContactPhone:
+								typeof contract.counterpartyContactPhone === "string"
+									? contract.counterpartyContactPhone
+									: undefined,
 						};
 					},
 				);

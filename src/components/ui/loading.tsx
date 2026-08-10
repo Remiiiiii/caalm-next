@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 
 const LOGO_SPINNER_WIDTH = {
 	sm: "w-6",
-	md: "w-12",
-	lg: "w-20",
+	md: "w-10",
+	lg: "w-14",
 } as const;
 
 type LogoSpinnerSize = keyof typeof LOGO_SPINNER_WIDTH;

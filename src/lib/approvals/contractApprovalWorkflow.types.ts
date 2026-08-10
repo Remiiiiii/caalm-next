@@ -22,7 +22,10 @@ export type ApprovalNotificationType =
 	| "stage_advanced"
 	| "executive_approved"
 	| "changes_requested"
-	| "rejected";
+	| "rejected"
+	| "needs_executive_assignment"
+	| "reassigned"
+	| "resubmitted";
 
 export interface ApprovalWorkflowStep {
 	id: string;
@@ -64,6 +67,14 @@ export interface ApprovalParticipant {
 	isYou?: boolean;
 }
 
+/** People the viewer can pick when reassigning the current step. */
+export interface ApprovalReassignCandidate {
+	userId: string;
+	fullName: string;
+	email: string;
+	roleLabel: string;
+}
+
 export interface ApprovalWorkflowViewerPayload {
 	contractId: string;
 	contractName: string;
@@ -76,10 +87,20 @@ export interface ApprovalWorkflowViewerPayload {
 		ApprovalWorkflowStep & {
 			participants: ApprovalParticipant[];
 			notifications: ApprovalWorkflowNotification[];
+			assigneeHint?: string;
 		}
 	>;
 	notifications: ApprovalWorkflowNotification[];
 	canDecide: boolean;
 	canOverride: boolean;
+	/** Current step is awaiting_executive with no assignees. */
+	needsExecutiveAssignment: boolean;
+	/** Viewer may assign Super Admin / Org Admin to the executive step. */
+	canAssignExecutive: boolean;
+	/** Uploader (or admin) may resubmit after changes_requested. */
+	canResubmit: boolean;
 	viewerUserId: string;
+	uploaderUserId?: string;
+	/** Eligible people for Assign / Reassign (pick by name; IDs stay server-side). */
+	reassignCandidates?: ApprovalReassignCandidate[];
 }

@@ -29,7 +29,6 @@ import ExpandedCalendarView from "@/components/ExpandedCalendarView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -484,77 +483,100 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 		);
 	};
 
+	const goToToday = () => {
+		const today = new Date();
+		setSelectedDate(today);
+		handleMonthChange(today);
+		onDateSelect?.(today);
+	};
+
 	return (
-		<div className="space-y-4">
-			{/* Calendar Header with View Toggle */}
-			<div className="flex items-center justify-between">
-				<div className="flex items-center space-x-4">
-					<h3 className="text-xl font-bold sidebar-gradient-text">
+		<div className="flex w-full min-w-0 flex-col gap-3">
+			{/* Enterprise toolbar: title + nav | view + actions (Zoho / Sprout pattern) */}
+			<div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div className="flex min-w-0 flex-wrap items-center gap-1.5">
+					<h3 className="truncate text-base font-semibold sidebar-gradient-text sm:text-lg">
 						{format(currentMonth, "MMMM yyyy")}
 					</h3>
-					<div className="flex items-center space-x-2">
+					<div className="flex items-center gap-0.5">
 						<Button
+							type="button"
 							size="sm"
 							variant="ghost"
+							aria-label="Previous month"
 							onClick={() => {
 								const prevMonth = new Date(currentMonth);
 								prevMonth.setMonth(prevMonth.getMonth() - 1);
 								handleMonthChange(prevMonth);
 							}}
-							className="h-8 w-8 p-0 hover:bg-slate-100"
+							className="h-8 w-8 shrink-0 p-0 hover:bg-slate-100"
 						>
 							<ChevronLeft className="h-4 w-4" />
 						</Button>
 						<Button
+							type="button"
 							size="sm"
 							variant="ghost"
+							aria-label="Next month"
 							onClick={() => {
 								const nextMonth = new Date(currentMonth);
 								nextMonth.setMonth(nextMonth.getMonth() + 1);
 								handleMonthChange(nextMonth);
 							}}
-							className="h-8 w-8 p-0 hover:bg-slate-100"
+							className="h-8 w-8 shrink-0 p-0 hover:bg-slate-100"
 						>
 							<ChevronRight className="h-4 w-4" />
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onClick={goToToday}
+							className="h-8 shrink-0 border-slate-200 px-2 text-xs text-slate-700 hover:bg-slate-50"
+						>
+							Today
 						</Button>
 					</div>
 				</div>
 
-				<div className="flex items-center space-x-2">
+				<div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:justify-end">
 					<Tabs
 						value={viewMode}
 						onValueChange={(value) => setViewMode(value as "month" | "week")}
+						className="w-auto shrink-0"
 					>
-						<TabsList className="grid w-full grid-cols-2 gap-4">
+						<TabsList className="inline-flex h-8 w-auto gap-0.5 bg-slate-100/80 p-0.5">
 							<TabsTrigger
 								value="month"
-								className="flex items-center space-x-2"
+								className="h-7 gap-1 px-2 text-xs data-[state=active]:bg-white sm:px-2.5"
 							>
-								<Grid3X3 className="h-4 w-4" />
+								<Grid3X3 className="h-3.5 w-3.5" />
 								<span>Month</span>
 							</TabsTrigger>
-							<TabsTrigger value="week" className="flex items-center space-x-2">
-								<CalendarDays className="h-4 w-4" />
+							<TabsTrigger
+								value="week"
+								className="h-7 gap-1 px-2 text-xs data-[state=active]:bg-white sm:px-2.5"
+							>
+								<CalendarDays className="h-3.5 w-3.5" />
 								<span>Week</span>
 							</TabsTrigger>
 						</TabsList>
 					</Tabs>
 
-					{/* Outlook Status Indicator */}
 					{outlookConnected && (
-						<div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
+						<div className="hidden items-center gap-1 rounded-md bg-green/10 px-2 py-1 text-xs text-green sm:flex">
 							<CheckCircle className="h-3 w-3" />
 							<span>Outlook</span>
 						</div>
 					)}
 
-					{/* Settings Button */}
 					<Dialog open={showSettings} onOpenChange={setShowSettings}>
 						<DialogTrigger asChild>
 							<Button
+								type="button"
 								size="sm"
 								variant="ghost"
-								className="h-8 w-8 p-0 hover:bg-slate-100"
+								className="h-8 w-8 shrink-0 p-0 hover:bg-slate-100"
 								title="Calendar Settings"
 							>
 								<Settings className="h-4 w-4" />
@@ -573,7 +595,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 						</DialogContent>
 					</Dialog>
 
-					{/* Expand Button */}
 					<ExpandedCalendarView
 						events={events}
 						onEventClick={onEventClick}
@@ -584,72 +605,75 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 				</div>
 			</div>
 
-			{/* Calendar and Events Layout */}
-			<div className="w-full space-y-4">
-				<Card className="glass-card w-full">
-					<div className="glass-card-cap" />
-					<CardContent className="w-full px-3 py-3 sm:px-4">
-						{isLoading && (
-							<div className="flex items-center justify-center py-4">
-								<div className="h-6 w-6 animate-spin rounded-full border-b-2 border-blue-500"></div>
-							</div>
-						)}
-						{viewMode === "month" ? (
-							<div className="w-full [&_.rdp]:w-full [&_.rdp-months]:w-full [&_.rdp-month]:w-full [&_.rdp-caption]:!hidden [&_.rdp-nav]:!hidden">
-								<Calendar
-									mode="single"
-									selected={selectedDate}
-									onSelect={handleDateSelect}
-									month={currentMonth}
-									onMonthChange={handleMonthChange}
-									disabled={(date) => {
-										const today = new Date();
-										today.setHours(0, 0, 0, 0);
-										return date < today;
-									}}
-									className="w-full"
-									classNames={{
-										months: "flex w-full flex-col space-y-2",
-										month: "w-full space-y-1",
-										caption: "hidden",
-										caption_label: "hidden",
-										nav: "hidden",
-										nav_button: "hidden",
-										nav_button_previous: "hidden",
-										nav_button_next: "hidden",
-										table: "w-full border-collapse space-y-0",
-										head_row: "flex w-full",
-										head_cell:
-											"text-slate-600 rounded-md flex-1 text-center font-semibold text-xs py-1 px-0",
-										row: "flex w-full mt-0",
-										cell: "h-8 sm:h-9 flex-1 text-center text-xs px-0 py-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-										day: cn(
-											"h-8 sm:h-9 w-full px-0 py-0 font-normal aria-selected:opacity-100 hover:bg-slate-100 rounded-full transition-colors relative text-xs",
-										),
-										day_range_end: "day-range-end",
-										day_selected:
-											"bg-blue-500 text-white hover:bg-blue-600 focus:bg-blue-500",
-										day_today: "bg-slate-100 text-slate-900 font-semibold",
-										day_outside:
-											"day-outside text-slate-400 opacity-50 aria-selected:bg-accent/50 aria-selected:text-slate-500 aria-selected:opacity-30",
-										day_disabled: "text-slate-400 opacity-50",
-										day_range_middle:
-											"aria-selected:bg-accent aria-selected:text-accent-foreground",
-										day_hidden: "invisible",
-									}}
-								/>
-							</div>
-						) : (
-							<WeekView />
-						)}
-						<div className="mt-3 border-t border-slate-200/60 pt-3">
-							<Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-								<DialogTrigger asChild>
-									<Button size="lg" className="primary-btn w-full px-3 sm:px-4">
-										<Plus className="mr-2 h-5 w-5" />
-										Add Event
-									</Button>
-								</DialogTrigger>
+			{/* Single calendar surface (parent dashboard already provides glass-card) */}
+			<div className="w-full min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white/80">
+				<div className="w-full px-2 py-2 sm:px-3 sm:py-3">
+					{isLoading && (
+						<div className="flex items-center justify-center py-4">
+							<div className="h-5 w-5 animate-spin rounded-full border-b-2 border-[#0f5384]" />
+						</div>
+					)}
+					{viewMode === "month" ? (
+						<div className="w-full min-w-0 [&_.rdp]:w-full [&_.rdp-months]:w-full [&_.rdp-month]:w-full [&_.rdp-caption]:!hidden [&_.rdp-nav]:!hidden [&_button[name=previous-month]]:!hidden [&_button[name=next-month]]:!hidden">
+							<Calendar
+								mode="single"
+								selected={selectedDate}
+								onSelect={handleDateSelect}
+								month={currentMonth}
+								onMonthChange={handleMonthChange}
+								hideNavigation
+								disabled={(date) => {
+									const today = new Date();
+									today.setHours(0, 0, 0, 0);
+									return date < today;
+								}}
+								className="w-full p-0 sm:p-1"
+								classNames={{
+									months: "flex w-full flex-col space-y-1",
+									month: "w-full space-y-1",
+									caption: "hidden",
+									caption_label: "hidden",
+									nav: "hidden",
+									nav_button: "hidden",
+									nav_button_previous: "hidden",
+									nav_button_next: "hidden",
+									table: "w-full border-collapse space-y-0",
+									head_row: "flex w-full",
+									head_cell:
+										"text-slate-500 flex-1 text-center font-medium text-[10px] uppercase tracking-wide py-1.5 px-0 sm:text-xs",
+									row: "flex w-full mt-0",
+									cell: "h-8 sm:h-9 flex-1 text-center text-xs px-0 py-0 relative focus-within:relative focus-within:z-20",
+									day: cn(
+										"h-8 sm:h-9 w-full px-0 py-0 font-normal aria-selected:opacity-100 hover:bg-slate-100 rounded-full transition-colors duration-200 relative text-xs",
+									),
+									day_range_end: "day-range-end",
+									day_selected:
+										"bg-[#0f5384] text-white hover:bg-[#0f5384]/90 focus:bg-[#0f5384]",
+									day_today:
+										"bg-slate-100 text-slate-900 font-semibold ring-1 ring-[#0f5384]/40",
+									day_outside:
+										"day-outside text-slate-400 opacity-50 aria-selected:bg-accent/50 aria-selected:text-slate-500 aria-selected:opacity-30",
+									day_disabled: "text-slate-400 opacity-50",
+									day_range_middle:
+										"aria-selected:bg-accent aria-selected:text-accent-foreground",
+									day_hidden: "invisible",
+								}}
+							/>
+						</div>
+					) : (
+						<WeekView />
+					)}
+					<div className="mt-3 flex justify-center border-t border-slate-200/60 pt-3">
+						<Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+							<DialogTrigger asChild>
+								<Button
+									size="sm"
+									className="primary-btn px-4 sm:px-6"
+								>
+									<Plus className="h-4 w-4" />
+									Add Event
+								</Button>
+							</DialogTrigger>
 								<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
 									<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
 									<div className="glass-dialog-wizard-header mt-4">
@@ -887,8 +911,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 								</DialogContent>
 							</Dialog>
 						</div>
-					</CardContent>
-				</Card>
+				</div>
 			</div>
 		</div>
 	);

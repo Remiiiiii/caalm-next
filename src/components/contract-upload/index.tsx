@@ -239,6 +239,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			});
 			return;
 		}
+		if (!selectedManagers?.length) {
+			toast({
+				title: "Department manager required",
+				description: "Select at least one department manager before upload.",
+				variant: "destructive",
+			});
+			return;
+		}
 
 		setIsUploading(true);
 		setUploadProgress(0);

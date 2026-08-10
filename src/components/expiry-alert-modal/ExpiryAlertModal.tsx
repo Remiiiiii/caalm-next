@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import {
 	CalendarClock,
@@ -49,6 +50,8 @@ export type ExpiryAlertModalProps = {
 	onClose: () => void;
 	/** Optional: busy state for destructive / snooze */
 	isBusy?: boolean;
+	/** When set, only the details panel cross-fades (shell/Spline stay mounted). */
+	contentKey?: string;
 };
 
 function urgencyPillClass(days: number): string {
@@ -118,12 +121,18 @@ export default function ExpiryAlertModal({
 	onContactProvider,
 	onClose,
 	isBusy = false,
+	contentKey,
 }: ExpiryAlertModalProps) {
 	const titleId = useId();
 	const descId = useId();
 	const modalRef = useRef<HTMLDivElement>(null);
 	const previousActive = useRef<HTMLElement | null>(null);
 	const [confirmLetExpire, setConfirmLetExpire] = useState(false);
+	const panelKey = contentKey ?? `${entityType}-${title}-${expiryDate}`;
+
+	useEffect(() => {
+		setConfirmLetExpire(false);
+	}, [panelKey]);
 
 	useEffect(() => {
 		if (!open) {
@@ -223,7 +232,15 @@ export default function ExpiryAlertModal({
 				className="pointer-events-none absolute inset-0 z-40 flex flex-col items-stretch justify-center py-8 pr-6 pl-[min(42vw,22rem)] md:pr-12 md:pl-[min(38vw,26rem)] lg:pl-[28rem]"
 			>
 				<div className="pointer-events-auto relative z-40 isolate w-full max-w-4xl -mt-6">
-					<div className="flex flex-col items-start space-y-5 w-full">
+					<AnimatePresence mode="wait" initial={false}>
+						<motion.div
+							key={panelKey}
+							initial={{ opacity: 0, y: 8 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: -8 }}
+							transition={{ duration: 0.28, ease: "easeInOut" }}
+							className="flex flex-col items-start space-y-5 w-full"
+						>
 						{/* Title block */}
 						<div className="space-y-3 w-full">
 							<h2
@@ -423,7 +440,8 @@ export default function ExpiryAlertModal({
 								)}
 							</div>
 						</div>
-					</div>
+						</motion.div>
+					</AnimatePresence>
 				</div>
 			</div>
 		</div>

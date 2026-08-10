@@ -58,18 +58,25 @@ function CustomNavbar(props: NavProps) {
 export function Calendar({
 	className,
 	components,
+	navLayout = "around",
+	hideNavigation = false,
 	...props
-}: React.ComponentProps<typeof DayPicker>) {
+}: React.ComponentProps<typeof DayPicker> & {
+	/** Hide month prev/next controls (e.g. when a parent toolbar owns navigation). */
+	hideNavigation?: boolean;
+}) {
 	return (
 		<DayPicker
 			showOutsideDays
-			navLayout="around"
+			navLayout={hideNavigation ? undefined : navLayout}
 			className={cn("p-3", className)}
 			{...props}
 			components={{
 				...components,
 				Chevron: CalendarChevron,
-				Nav: components?.Nav ?? CustomNavbar,
+				Nav: hideNavigation
+					? () => <></>
+					: (components?.Nav ?? CustomNavbar),
 			}}
 		/>
 	);

@@ -52,19 +52,20 @@ export async function POST(
 			return validationErrorResponse("Invalid decision", requestId);
 		}
 
+		const viewerUserId = user.accountId || user.$id;
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
-		const roles = orgId ? await getUserRoles(user.$id, orgId) : [];
+		const roles = orgId ? await getUserRoles(viewerUserId, orgId) : [];
 		const roleNames = roles.map((r) => r.roleName || "");
 		const isAdminOverride = roleNames.some(
 			(name) => name === "Super Admin" || name === "Organization Admin",
 		);
 
 		const canReview = orgId
-			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.REVIEW, orgId)
+			? await hasPermission(viewerUserId, PERMISSIONS.CONTRACTS.REVIEW, orgId)
 			: false;
 		const canApprove = orgId
-			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.APPROVE, orgId)
+			? await hasPermission(viewerUserId, PERMISSIONS.CONTRACTS.APPROVE, orgId)
 			: false;
 
 		if (!canReview && !canApprove && !isAdminOverride) {
@@ -74,7 +75,7 @@ export async function POST(
 			);
 		}
 
-		const before = await getWorkflowForViewer(contractId, user.$id, {
+		const before = await getWorkflowForViewer(contractId, viewerUserId, {
 			isAdminOverride,
 		});
 		if (!before.canDecide && !isAdminOverride) {
@@ -86,7 +87,7 @@ export async function POST(
 
 		const result = await decide({
 			contractId,
-			viewerUserId: user.$id,
+			viewerUserId,
 			decision,
 			notes,
 			adminOverride: isAdminOverride && !before.canDecide,
@@ -96,7 +97,7 @@ export async function POST(
 		revalidatePath("/contracts");
 		revalidatePath("/contracts/approvals");
 
-		const payload = await getWorkflowForViewer(contractId, user.$id, {
+		const payload = await getWorkflowForViewer(contractId, viewerUserId, {
 			isAdminOverride,
 		});
 

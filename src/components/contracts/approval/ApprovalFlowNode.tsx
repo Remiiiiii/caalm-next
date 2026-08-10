@@ -2,7 +2,6 @@
 
 import { Bell, CheckCircle2, Clock, User, XCircle } from "lucide-react";
 import { getAvatarColor } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import type {
 	ApprovalParticipant,
 	ApprovalWorkflowNotification,
@@ -21,6 +20,7 @@ function avatarColor(id: string): string {
 type StepWithExtras = ApprovalWorkflowStep & {
 	participants: ApprovalParticipant[];
 	notifications: ApprovalWorkflowNotification[];
+	assigneeHint?: string;
 };
 
 interface ApprovalFlowNodeProps {
@@ -35,25 +35,25 @@ function statusMeta(status: string) {
 		case "complete":
 			return {
 				label: "Complete",
-				className: "bg-green/10 text-green border-green/20",
+				className: "bg-green/10 text-green border-green/25",
 				Icon: CheckCircle2,
 			};
 		case "current":
 			return {
 				label: "In progress",
-				className: "bg-blue/10 text-[#0f5384] border-blue/20",
+				className: "bg-orange/10 text-orange border-orange/30",
 				Icon: Clock,
 			};
 		case "changes_requested":
 			return {
 				label: "Changes requested",
-				className: "bg-orange/10 text-orange border-orange/20",
+				className: "bg-orange/10 text-orange border-orange/30",
 				Icon: Clock,
 			};
 		case "rejected":
 			return {
 				label: "Rejected",
-				className: "bg-red/10 text-red border-red/20",
+				className: "bg-red/10 text-red border-red/25",
 				Icon: XCircle,
 			};
 		default:
@@ -83,7 +83,7 @@ function ParticipantAvatar({
 			<img
 				src={participant.profileImageUrl}
 				alt={participant.fullName || "Profile"}
-				className="h-8 w-8 rounded-full border-2 border-white object-cover shadow-sm"
+				className="h-6 w-6 rounded-full border border-slate-200 object-cover"
 			/>
 		);
 	}
@@ -91,12 +91,12 @@ function ParticipantAvatar({
 	return (
 		<div
 			className={cn(
-				"flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[10px] font-semibold text-white shadow-sm",
+				"flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-semibold text-white",
 				avatarColor(participant.userId),
 			)}
 			aria-hidden
 		>
-			{initials || <User className="h-3.5 w-3.5" />}
+			{initials || <User className="h-3 w-3" />}
 		</div>
 	);
 }
@@ -128,69 +128,115 @@ export default function ApprovalFlowNode({
 		})
 		.filter(Boolean) as string[];
 
+	const assigneeLabel = (() => {
+		if (step.kind === "activated") {
+			if (step.status === "complete") {
+				const name = step.participants[0]?.fullName;
+				return name ? `Live — approved by ${name}` : "Live";
+			}
+			return "Waiting for executive approval";
+		}
+		if (step.participants.length === 0) {
+			return step.kind === "awaiting_executive"
+				? "No executive assigned"
+				: "No one assigned";
+		}
+		return step.participants
+			.map((p) => p.fullName)
+			.slice(0, 2)
+			.join(", ");
+	})();
+
+	// Keep "Awaiting executive" on one line (non-breaking space)
+	const titleLabel = step.label.replace(
+		/Awaiting\s+executive/gi,
+		"Awaiting\u00A0executive",
+	);
+
 	return (
 		<div
 			className={cn(
-				"glass-card-frosted relative w-[200px] shrink-0 rounded-sm! text-card-foreground sm:w-[220px]",
-				isCurrent && "ring-2 ring-[#0f5384]/35",
+				"relative w-[300px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm sm:w-[320px]",
+				"transition-all duration-200",
+				isCurrent &&
+					"border-[#0f5384]/20 shadow-md ring-2 ring-[#0f5384]/30",
 			)}
 		>
-			<div className="relative space-y-3 p-4">
-				<div className="flex items-start justify-between gap-2">
-					<div>
-						<p className="text-sm font-semibold sidebar-gradient-text">
-							{step.label}
-						</p>
-						{deptLine ? (
-							<p className="mt-0.5 text-[11px] text-slate-500">{deptLine}</p>
-						) : null}
-					</div>
-					<Badge
-						variant="outline"
-						className={cn("shrink-0 text-[10px]", meta.className)}
+			<div className="glass-card-cap" />
+			<div className="px-5 pt-6 pb-[18px]">
+				<div className="mb-3 flex items-start justify-between gap-3">
+					<p className="min-w-0 flex-1 text-[15px] font-bold leading-snug sidebar-gradient-text">
+						{titleLabel}
+					</p>
+					<span
+						className={cn(
+							"inline-flex shrink-0 items-center gap-1 rounded border px-2 py-1 text-[10px] font-medium uppercase tracking-wide",
+							meta.className,
+						)}
 					>
-						<StatusIcon className="mr-1 h-3 w-3" />
+						<StatusIcon className="h-2.5 w-2.5" />
 						{meta.label}
-					</Badge>
+					</span>
 				</div>
 
+				{/* Department / category */}
+				{deptLine ? (
+					<div className="mb-3.5 flex items-center gap-1.5">
+						<span
+							className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400"
+							aria-hidden
+						/>
+						<p className="text-[11.5px] leading-snug text-slate-600">
+							{deptLine}
+						</p>
+					</div>
+				) : (
+					<div className="mb-3.5" />
+				)}
+
+				<div className="mb-3 h-px bg-slate-200" />
+
+				{/* Assignee */}
 				<div className="flex items-center gap-2">
-					<div className="flex items-center">
-						{step.participants.length === 0 ? (
-							<div className="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-slate-300 bg-white/50 text-slate-400">
-								<User className="h-3.5 w-3.5" />
-							</div>
-						) : (
-							step.participants.slice(0, 3).map((p, idx) => (
+					{step.participants.length === 0 ? (
+						<div
+							className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] border-dashed border-slate-300"
+							aria-hidden
+						>
+							<User className="h-3 w-3 text-slate-400" />
+						</div>
+					) : (
+						<div className="flex items-center">
+							{step.participants.slice(0, 3).map((p, idx) => (
 								<div
 									key={p.userId}
-									className={cn(idx > 0 && "-ml-2")}
+									className={cn(idx > 0 && "-ml-1.5")}
 									title={p.fullName}
 								>
 									<ParticipantAvatar participant={p} />
 								</div>
-							))
-						)}
-						{step.participants.length > 3 ? (
-							<span className="ml-1 text-[10px] text-slate-500">
-								+{step.participants.length - 3}
-							</span>
-						) : null}
-					</div>
-					<div className="min-w-0 flex-1">
-						<p className="truncate text-xs font-medium text-slate-900">
-							{step.participants.length === 0
-								? "Unassigned"
-								: step.participants
-										.map((p) => p.fullName)
-										.slice(0, 2)
-										.join(", ")}
+							))}
+							{step.participants.length > 3 ? (
+								<span className="ml-1 text-[10px] text-slate-500">
+									+{step.participants.length - 3}
+								</span>
+							) : null}
+						</div>
+					)}
+					<div className="min-w-0">
+						<p className="truncate text-xs font-semibold text-slate-600">
+							{assigneeLabel}
 						</p>
+						{step.assigneeHint ? (
+							<p className="truncate text-[10px] text-slate-500">
+								{step.assigneeHint}
+							</p>
+						) : null}
 					</div>
 				</div>
 
 				{(step.notifications.length > 0 || notifiedLabels.length > 0) && (
-					<div className="flex items-start gap-1.5 rounded-lg border border-white/40 bg-white/40 px-2 py-1.5 text-[10px] text-slate-600">
+					<div className="mt-3 flex items-start gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[10px] text-slate-600">
 						<Bell className="mt-0.5 h-3 w-3 shrink-0 text-[#0f5384]" />
 						<span className="leading-snug">
 							Notified:{" "}

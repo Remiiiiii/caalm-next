@@ -33,6 +33,85 @@ const getOrSet = async <T>(
 };
 
 /**
+ * Like getOrSet, but never persists empty arrays.
+ * Empty RBAC results are often transient (identity mismatch, cold roles);
+ * caching them locks users out of nav/dashboards for the full TTL.
+ */
+const getOrSetNonEmptyArray = async <T>(
+	key: string,
+	fetchFn: () => Promise<T[]>,
+	ttl: number,
+): Promise<T[]> => {
+	if (typeof window !== "undefined") {
+		return fetchFn();
+	}
+
+	const { get, set, del } = await import("@/lib/services/redis-cache");
+	const cached = await get<T[]>(key);
+	if (cached !== null && Array.isArray(cached) && cached.length > 0) {
+		return cached;
+	}
+	if (cached !== null && Array.isArray(cached) && cached.length === 0) {
+		await del(key);
+	}
+
+	const fresh = await fetchFn();
+	if (fresh.length > 0) {
+		try {
+			await set(key, fresh, ttl);
+		} catch {
+			// ignore cache write failures
+		}
+	}
+	return fresh;
+};
+
+/**
+ * Normalize profile document $id → Auth accountId.
+ * Callers may pass either. `user_roles.userId` and `user_organizations.userId`
+ * are inconsistent in production (Auth accountId vs users-table $id), so
+ * role/org lookups query both candidate IDs.
+ */
+export async function resolveAuthAccountId(userId: string): Promise<string> {
+	if (!userId) return userId;
+
+	try {
+		const { tablesDB } = await createAdminClient();
+		const databaseId = appwriteConfig.databaseId || "default-db";
+		const tableId = appwriteConfig.usersCollectionId || "users";
+
+		try {
+			const profile = await tablesDB.getRow({
+				databaseId,
+				tableId,
+				rowId: userId,
+			});
+			const accountId = String(
+				(profile as { accountId?: string }).accountId || "",
+			).trim();
+			if (accountId) return accountId;
+		} catch {
+			// Not a users-table document id — may already be an accountId
+		}
+
+		const byAccount = await tablesDB.listRows({
+			databaseId,
+			tableId,
+			queries: [Query.equal("accountId", userId), Query.limit(1)],
+		});
+		if (byAccount.rows[0]) {
+			return String(
+				(byAccount.rows[0] as { accountId?: string }).accountId || userId,
+			);
+		}
+	} catch (error) {
+		console.error("[resolveAuthAccountId] Error:", error);
+	}
+
+	return userId;
+}
+
+/**
  * Check if user has a specific permission in an organization
  */
 export async function hasPermission(
@@ -118,11 +197,11 @@ async function getUserPermissionsImpl(
 		targetOrgId = defaultOrg.orgId;
 	}
 
-	// Use Redis cache for permissions
+	// Use Redis cache for permissions (never cache empty — see getOrSetNonEmptyArray)
 	const cacheKey = CACHE_KEYS.rbac.permissions(userId, targetOrgId);
 	const ttl = CACHE_TTLS.veryLong; // 15 minutes
 
-	return getOrSet<PermissionKey[]>(
+	return getOrSetNonEmptyArray<PermissionKey>(
 		cacheKey,
 		async () => {
 			try {
@@ -241,10 +320,16 @@ async function getUserRolesImpl(
 		return [];
 	}
 
-	const cacheKey = CACHE_KEYS.rbac.userRoles(userId, orgId);
+	const accountId = await resolveAuthAccountId(userId);
+	// Roles may be stored under Auth accountId OR users-table document $id.
+	const candidateIds = [...new Set([userId, accountId].filter(Boolean))];
+	const cacheKey = CACHE_KEYS.rbac.userRoles(
+		candidateIds.slice().sort().join("|"),
+		orgId,
+	);
 	const ttl = CACHE_TTLS.veryLong;
 
-	return getOrSet<UserRoleAssignment[]>(
+	return getOrSetNonEmptyArray<UserRoleAssignment>(
 		cacheKey,
 		async () => {
 			try {
@@ -253,15 +338,31 @@ async function getUserRolesImpl(
 				const userRoles = await tablesDB.listRows({
 					databaseId: appwriteConfig.databaseId || "default-db",
 					tableId: "user_roles",
-					queries: [Query.equal("userId", userId), Query.equal("orgId", orgId)],
+					queries: [
+						candidateIds.length === 1
+							? Query.equal("userId", candidateIds[0])
+							: Query.or(
+									candidateIds.map((id) => Query.equal("userId", id)),
+								),
+						Query.equal("orgId", orgId),
+						Query.limit(50),
+					],
 				});
 
 				if (!userRoles.rows.length) {
 					return [];
 				}
 
+				const uniqueByRole = new Map<string, (typeof userRoles.rows)[0]>();
+				for (const ur of userRoles.rows) {
+					const roleId = String((ur as { roleId?: string }).roleId || "");
+					if (roleId && !uniqueByRole.has(roleId)) {
+						uniqueByRole.set(roleId, ur);
+					}
+				}
+
 				const rolesWithNames = await Promise.all(
-					userRoles.rows.map(async (ur: any) => {
+					[...uniqueByRole.values()].map(async (ur: any) => {
 						try {
 							const role = await tablesDB.getRow({
 								databaseId: appwriteConfig.databaseId || "default-db",
@@ -374,11 +475,38 @@ export async function getUserOrganizations(
 
 	try {
 		const { tablesDB } = await createAdminClient();
+		const databaseId = appwriteConfig.databaseId || "default-db";
+		const usersTableId = appwriteConfig.usersCollectionId || "users";
+		const accountId = await resolveAuthAccountId(userId);
+
+		let profileDocId = userId;
+		try {
+			const byAccount = await tablesDB.listRows({
+				databaseId,
+				tableId: usersTableId,
+				queries: [Query.equal("accountId", accountId), Query.limit(1)],
+			});
+			if (byAccount.rows[0]?.$id) {
+				profileDocId = String(byAccount.rows[0].$id);
+			}
+		} catch {
+			// keep profileDocId as provided userId
+		}
+
+		// user_organizations rows may store profile $id or Auth accountId
+		const candidateIds = [
+			...new Set([userId, accountId, profileDocId].filter(Boolean)),
+		];
 
 		const userOrgs = await tablesDB.listRows({
-			databaseId: appwriteConfig.databaseId || "default-db",
+			databaseId,
 			tableId: "user_organizations",
-			queries: [Query.equal("userId", userId)],
+			queries: [
+				candidateIds.length === 1
+					? Query.equal("userId", candidateIds[0])
+					: Query.or(candidateIds.map((id) => Query.equal("userId", id))),
+				Query.limit(100),
+			],
 		});
 
 		return userOrgs.rows.map((uo: any) => ({

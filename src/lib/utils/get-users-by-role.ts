@@ -20,6 +20,84 @@ const LEGACY_ROLE_MAP: Record<string, string[]> = {
 	viewer: ["Viewer"],
 };
 
+type UserRoleFilters = {
+	division?: string;
+	department?: string;
+	status?: string;
+};
+
+/**
+ * Resolve profile rows for Auth account IDs (user_roles.userId).
+ * Profiles often use a different document $id than accountId.
+ */
+async function fetchUsersByAccountOrDocIds(
+	tablesDB: Awaited<ReturnType<typeof createAdminClient>>["tablesDB"],
+	userIds: string[],
+	additionalFilters?: UserRoleFilters,
+): Promise<any[]> {
+	const filterQueries: any[] = [];
+	if (additionalFilters?.division) {
+		filterQueries.push(Query.equal("division", additionalFilters.division));
+	}
+	if (additionalFilters?.department) {
+		filterQueries.push(Query.equal("department", additionalFilters.department));
+	}
+	if (additionalFilters?.status) {
+		filterQueries.push(Query.equal("status", additionalFilters.status));
+	}
+
+	const byAccountQueries: any[] = [];
+	if (userIds.length === 1) {
+		byAccountQueries.push(Query.equal("accountId", userIds[0]));
+	} else {
+		byAccountQueries.push(
+			Query.or(userIds.map((userId) => Query.equal("accountId", userId))),
+		);
+	}
+	byAccountQueries.push(...filterQueries, Query.limit(1000));
+
+	const byAccount = await tablesDB.listRows({
+		databaseId: appwriteConfig.databaseId || "default-db",
+		tableId: appwriteConfig.usersCollectionId || "users",
+		queries: byAccountQueries,
+	});
+
+	const foundAccountIds = new Set(
+		byAccount.rows
+			.map((row: any) => String(row.accountId || "").trim())
+			.filter(Boolean),
+	);
+	const missingIds = userIds.filter((id) => !foundAccountIds.has(id));
+
+	if (missingIds.length === 0) {
+		return byAccount.rows;
+	}
+
+	// Fallback for legacy rows where document $id equals the Auth user id
+	const byDocQueries: any[] = [];
+	if (missingIds.length === 1) {
+		byDocQueries.push(Query.equal("$id", missingIds[0]));
+	} else {
+		byDocQueries.push(
+			Query.or(missingIds.map((userId) => Query.equal("$id", userId))),
+		);
+	}
+	byDocQueries.push(...filterQueries, Query.limit(1000));
+
+	const byDoc = await tablesDB.listRows({
+		databaseId: appwriteConfig.databaseId || "default-db",
+		tableId: appwriteConfig.usersCollectionId || "users",
+		queries: byDocQueries,
+	});
+
+	const byId = new Map<string, any>();
+	for (const row of [...byAccount.rows, ...byDoc.rows]) {
+		const key = String(row.accountId || row.$id || "");
+		if (key && !byId.has(key)) byId.set(key, row);
+	}
+	return [...byId.values()];
+}
+
 /**
  * Get users by role name(s) using the new RBAC system
  * @param roleNames - Array of role names (new RBAC names or legacy names)
@@ -101,38 +179,8 @@ export async function getUsersByRoleNames(
 				return [];
 			}
 
-			// Get user documents
-			const userQueries: any[] = [];
-			if (userIds.length === 1) {
-				userQueries.push(Query.equal("$id", userIds[0]));
-			} else {
-				userQueries.push(
-					Query.or(userIds.map((userId) => Query.equal("$id", userId))),
-				);
-			}
-
-			// Apply additional filters
-			if (additionalFilters?.division) {
-				userQueries.push(Query.equal("division", additionalFilters.division));
-			}
-			if (additionalFilters?.department) {
-				userQueries.push(
-					Query.equal("department", additionalFilters.department),
-				);
-			}
-			if (additionalFilters?.status) {
-				userQueries.push(Query.equal("status", additionalFilters.status));
-			}
-
-			userQueries.push(Query.limit(1000));
-
-			const users = await tablesDB.listRows({
-				databaseId: appwriteConfig.databaseId || "default-db",
-				tableId: appwriteConfig.usersCollectionId || "users",
-				queries: userQueries,
-			});
-
-			return users.rows;
+			// user_roles.userId stores Auth account IDs; profile $id may differ.
+			return fetchUsersByAccountOrDocIds(tablesDB, userIds, additionalFilters);
 		} else {
 			// orgId provided - more efficient query
 			const userRolesQueries = [Query.equal("orgId", targetOrgId)];
@@ -158,38 +206,8 @@ export async function getUsersByRoleNames(
 				return [];
 			}
 
-			// Get user documents
-			const userQueries: any[] = [];
-			if (userIds.length === 1) {
-				userQueries.push(Query.equal("$id", userIds[0]));
-			} else {
-				userQueries.push(
-					Query.or(userIds.map((userId) => Query.equal("$id", userId))),
-				);
-			}
-
-			// Apply additional filters
-			if (additionalFilters?.division) {
-				userQueries.push(Query.equal("division", additionalFilters.division));
-			}
-			if (additionalFilters?.department) {
-				userQueries.push(
-					Query.equal("department", additionalFilters.department),
-				);
-			}
-			if (additionalFilters?.status) {
-				userQueries.push(Query.equal("status", additionalFilters.status));
-			}
-
-			userQueries.push(Query.limit(1000));
-
-			const users = await tablesDB.listRows({
-				databaseId: appwriteConfig.databaseId || "default-db",
-				tableId: appwriteConfig.usersCollectionId || "users",
-				queries: userQueries,
-			});
-
-			return users.rows;
+			// user_roles.userId stores Auth account IDs; profile $id may differ.
+			return fetchUsersByAccountOrDocIds(tablesDB, userIds, additionalFilters);
 		}
 	} catch (error) {
 		console.error("[getUsersByRoleNames] Error:", error);

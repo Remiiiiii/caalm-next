@@ -35,9 +35,13 @@ export function usePermissions(): UsePermissionsResult {
 		// Check client-side cache first (stale-while-revalidate pattern)
 		const cacheKey = `permissions:${user.$id}:${orgId || "default"}`;
 		const cachedPermissions = getCachedData<PermissionKey[]>(cacheKey);
+		const usableCache =
+			Array.isArray(cachedPermissions) && cachedPermissions.length > 0
+				? cachedPermissions
+				: null;
 
-		if (cachedPermissions) {
-			setPermissions(cachedPermissions);
+		if (usableCache) {
+			setPermissions(usableCache);
 			setLoading(false);
 			// Continue fetching in background to update cache
 		} else {
@@ -45,7 +49,7 @@ export function usePermissions(): UsePermissionsResult {
 		}
 
 		const fetchPermissions = async () => {
-			const hasCachedData = !!cachedPermissions;
+			const hasCachedData = !!usableCache;
 
 			try {
 				const url = `/api/permissions/check${orgId ? `?orgId=${orgId}` : ""}`;
@@ -67,8 +71,10 @@ export function usePermissions(): UsePermissionsResult {
 				if (data.success) {
 					const fetchedPermissions = data.permissions || [];
 
-					// Cache for 5 minutes
-					setCachedData(cacheKey, fetchedPermissions, 300000);
+					// Cache for 5 minutes — skip empty so a transient miss does not blank the nav
+					if (fetchedPermissions.length > 0) {
+						setCachedData(cacheKey, fetchedPermissions, 300000);
+					}
 
 					setPermissions(fetchedPermissions);
 					setError(null);

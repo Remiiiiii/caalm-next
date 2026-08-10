@@ -309,6 +309,14 @@ export const uploadFile = async ({
 			}
 
 			const assignedManagerIds = metadata?.assignedManagers || [];
+			if (
+				!Array.isArray(assignedManagerIds) ||
+				assignedManagerIds.length === 0
+			) {
+				throw new Error(
+					"At least one department manager is required before upload.",
+				);
+			}
 
 			// Build contract document, explicitly excluding contractId (not in Contracts collection schema)
 			const contractDocumentRaw: any = {
@@ -1016,9 +1024,19 @@ export const uploadFile = async ({
 					);
 				}
 
+				const licenseManagerIds = licenseMetadata.assignedManagers || [];
+				if (
+					!Array.isArray(licenseManagerIds) ||
+					licenseManagerIds.length === 0
+				) {
+					throw new Error(
+						"At least one department manager is required before upload.",
+					);
+				}
+
 				// Convert assignedManagers IDs to names
 				const assignedManagers = await (async () => {
-					const managerIds = licenseMetadata.assignedManagers || [];
+					const managerIds = licenseManagerIds;
 					if (managerIds.length === 0) return [];
 
 					const managerNames: string[] = [];
@@ -2379,13 +2397,30 @@ export const assignContract = async ({
 			throw new Error("Invalid contract document. Cannot assign.");
 		}
 
-		// Update the contract document: assign manager(s)
+		const { parseWorkflowState, serializeWorkflowState, syncDepartmentAssigneesIfCurrent } =
+			await import("@/lib/approvals/ContractApprovalWorkflowService");
+		const existingState = parseWorkflowState(
+			(contractDoc as { approvalWorkflowState?: string }).approvalWorkflowState,
+		);
+		const syncedState = existingState
+			? syncDepartmentAssigneesIfCurrent(existingState, managerAccountIds)
+			: null;
+
+		// Update the contract document: assign manager(s) (+ department step if current)
 		const updatedContract = await tablesDB.updateRow({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
 			rowId: contractDoc.$id, // Use the actual contract document ID
 			data: {
 				assignedManagers: managerAccountIds,
+				...(syncedState
+					? {
+							approvalWorkflowState: serializeWorkflowState(syncedState),
+							currentApprovalStage:
+								syncedState.steps[syncedState.currentStepIndex]?.label ||
+								"Department review",
+						}
+					: {}),
 			},
 		});
 
@@ -3131,14 +3166,25 @@ export const getContracts = async () => {
 };
 
 // Get contracts assigned to a specific manager
-export const getContractsForManager = async (managerAccountId: string) => {
+export const getContractsForManager = async (managerUserId: string) => {
 	const { tablesDB } = await createAdminClient();
 	try {
-		// Fetch contracts where the manager's accountId is in the assignedManagers array
+		const { resolveAuthAccountId } = await import("@/lib/rbac/permissions");
+		const accountId = await resolveAuthAccountId(managerUserId);
+		const managerIds = [...new Set([accountId, managerUserId].filter(Boolean))];
+
+		// assignedManagers is a string array — use contains, not search
 		const contracts = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
-			queries: [Query.search("assignedManagers", managerAccountId)],
+			queries: [
+				managerIds.length === 1
+					? Query.contains("assignedManagers", managerIds[0])
+					: Query.or(
+							managerIds.map((id) => Query.contains("assignedManagers", id)),
+						),
+				Query.limit(500),
+			],
 		});
 		return parseStringify(contracts.rows);
 	} catch (error) {

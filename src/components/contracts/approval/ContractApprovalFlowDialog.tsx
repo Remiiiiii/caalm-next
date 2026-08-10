@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import ApprovalWorkflowActions from "@/components/contracts/approval/ApprovalWorkflowActions";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ export default function ContractApprovalFlowDialog({
 	contractId,
 	contractName,
 }: ContractApprovalFlowDialogProps) {
-	const { workflow, isLoading, error, decide, refresh } =
+	const { workflow, isLoading, error, decide, reassign, resubmit, refresh } =
 		useContractApprovalWorkflow(open ? contractId : null);
 	const { toast } = useToast();
 	const router = useRouter();
@@ -149,6 +150,53 @@ export default function ContractApprovalFlowDialog({
 								) : null}
 							</div>
 							<ContractApprovalFlowCanvas workflow={workflow} />
+							<ApprovalWorkflowActions
+								workflow={workflow}
+								busy={busy}
+								onReassign={async (assigneeUserIds) => {
+									try {
+										await reassign({
+											assigneeUserIds,
+											path: pathname || "/contracts",
+										});
+										toast({
+											title: "Step reassigned",
+											description: "Approval assignees were updated.",
+										});
+										router.refresh();
+									} catch (err) {
+										toast({
+											title: "Reassign failed",
+											description:
+												err instanceof Error
+													? err.message
+													: "Could not reassign",
+											variant: "destructive",
+										});
+										throw err;
+									}
+								}}
+								onResubmit={async () => {
+									try {
+										await resubmit({ path: pathname || "/contracts" });
+										toast({
+											title: "Resubmitted",
+											description: "Department review restarted.",
+										});
+										router.refresh();
+									} catch (err) {
+										toast({
+											title: "Resubmit failed",
+											description:
+												err instanceof Error
+													? err.message
+													: "Could not resubmit",
+											variant: "destructive",
+										});
+										throw err;
+									}
+								}}
+							/>
 							{(workflow.canDecide || workflow.canOverride) && (
 								<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
 									<p className="mb-2 text-sm font-medium text-slate-800">
@@ -160,51 +208,53 @@ export default function ContractApprovalFlowDialog({
 										value={notes}
 										onChange={(e) => setNotes(e.target.value)}
 										placeholder="Notes (required for reject / request changes)"
-										className="mb-3 min-h-[72px] bg-white"
+										className="min-h-[72px] border border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
 									/>
-									<div className="flex flex-wrap gap-2">
-										<Button
-											type="button"
-											className="primary-btn px-3 sm:px-4"
-											disabled={busy}
-											onClick={() => void handleDecision("approved")}
-										>
-											{busy ? (
-												<Loader2 className="h-4 w-4 animate-spin" />
-											) : (
-												<CheckCircle2 className="h-4 w-4" />
-											)}
-											Approve
-										</Button>
-										<Button
-											type="button"
-											variant="outline"
-											className="primary-btn px-3 sm:px-4"
-											disabled={busy}
-											onClick={() => void handleDecision("changes_requested")}
-										>
-											Request changes
-										</Button>
-										<Button
-											type="button"
-											variant="outline"
-											className={cn(
-												"primary-btn px-3 sm:px-4 text-red border-red/30",
-											)}
-											disabled={busy}
-											onClick={() => void handleDecision("rejected")}
-										>
-											<XCircle className="h-4 w-4" />
-											Reject
-										</Button>
-									</div>
 								</div>
 							)}
 						</div>
 					) : null}
 				</div>
 
-				<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+				<div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+					{workflow && (workflow.canDecide || workflow.canOverride) ? (
+						<>
+							<Button
+								type="button"
+								className="primary-btn px-3 sm:px-4"
+								disabled={busy}
+								onClick={() => void handleDecision("approved")}
+							>
+								{busy ? (
+									<Loader2 className="h-4 w-4 animate-spin" />
+								) : (
+									<CheckCircle2 className="h-4 w-4" />
+								)}
+								Approve
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								className="primary-btn px-3 sm:px-4"
+								disabled={busy}
+								onClick={() => void handleDecision("changes_requested")}
+							>
+								Request changes
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								className={cn(
+									"primary-btn px-3 sm:px-4 text-red border-red/30",
+								)}
+								disabled={busy}
+								onClick={() => void handleDecision("rejected")}
+							>
+								<XCircle className="h-4 w-4" />
+								Reject
+							</Button>
+						</>
+					) : null}
 					<Button
 						type="button"
 						variant="outline"

@@ -19,15 +19,15 @@ export async function GET(request: NextRequest) {
 		const { searchParams } = new URL(request.url);
 		const orgId = searchParams.get("orgId") || undefined;
 
-		// Cache key for permissions check
 		const cacheKey = CACHE_KEYS.rbac.check(user.$id, orgId);
 
-		// Fetch permissions with caching (15 minutes TTL) + request deduplication
-		const permissions = await deduplicateRequest(cacheKey, async () => {
-			return CacheManager.withCache("rbac/check", cacheKey, async () =>
-				getUserPermissions(user.$id, orgId),
-			);
-		});
+		// Drop any stale empty `rbac:check:*` entries; getUserPermissions already
+		// caches non-empty permission lists.
+		await CacheManager.invalidate(cacheKey);
+
+		const permissions = await deduplicateRequest(cacheKey, async () =>
+			getUserPermissions(user.$id, orgId),
+		);
 
 		return NextResponse.json({
 			success: true,

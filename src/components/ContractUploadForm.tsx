@@ -641,7 +641,9 @@ const contractSchema = z.object({
 	serviceCreditTerms: z.string().optional(),
 	escalationProcedures: z.string().optional(),
 	obligationOwners: z.string().optional(),
-	assignedManagers: z.array(z.string()).optional(),
+	assignedManagers: z
+		.array(z.string())
+		.min(1, "Select at least one department manager"),
 	internalApproverIds: z.array(z.string()).optional(),
 	approvalWorkflowTemplate: z.string().optional(),
 	currentApprovalStage: z.string().optional(),
@@ -2311,6 +2313,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			toast({
 				title: "No File Selected",
 				description: "Please select a contract file to upload.",
+				variant: "destructive",
+			});
+			return;
+		}
+		if (!selectedManagers?.length) {
+			toast({
+				title: "Department manager required",
+				description: "Select at least one department manager before upload.",
 				variant: "destructive",
 			});
 			return;

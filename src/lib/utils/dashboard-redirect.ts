@@ -43,7 +43,11 @@ export async function getDashboardUrlForUser(
 		if (homeRes.ok) {
 			const homeData = await homeRes.json();
 			const path = homeData?.data?.path;
-			if (typeof path === "string" && path.startsWith("/dashboard")) {
+			if (
+				typeof path === "string" &&
+				path.startsWith("/dashboard") &&
+				path !== "/dashboard"
+			) {
 				dashboardUrlCache.set(cacheKey, {
 					url: path,
 					timestamp: Date.now(),

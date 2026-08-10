@@ -2,30 +2,28 @@
 
 import ContractExpiryModal from "@/components/contract-expiry-modal/ContractExpiryModal";
 import { Button } from "@/components/ui/button";
-import { useContractExpiryModal } from "@/hooks/useContractExpiryModal";
+import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useContractsExpiring } from "@/hooks/useContractsExpiring";
 
 export default function ContractsExpiryModalTestButton() {
-	// Fetch contracts from /api/contracts/all endpoint
 	const {
 		contracts: contractsFromApi,
-		isLoading: contractsLoading,
 		refresh: refreshContracts,
 	} = useContractsExpiring();
 
-	// Contract expiry modal hook - uses contracts from /api/contracts/all
 	const {
-		contractsToShow,
-		contractsWithDays,
+		itemsToShow,
 		isModalOpen,
 		closeModal,
 		triggerTestModal,
+		markItemDismissed,
+		refreshLicenses,
 		shouldPlaySpeech,
-	} = useContractExpiryModal(contractsFromApi || []);
+	} = useCombinedExpiryModal(contractsFromApi || []);
 
-	// Handle contract status change - refresh contracts
-	const handleContractStatusChange = () => {
+	const handleStatusChange = () => {
 		refreshContracts();
+		void refreshLicenses();
 	};
 
 	return (
@@ -36,14 +34,14 @@ export default function ContractsExpiryModalTestButton() {
 				size="sm"
 				className="bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300 text-xs"
 			>
-				🧪 Test Expiry Modal
+				Test Expiry Modal
 			</Button>
 			<ContractExpiryModal
-				contracts={contractsToShow}
-				contractsWithDays={contractsWithDays}
+				items={itemsToShow}
 				isOpen={isModalOpen}
 				onClose={closeModal}
-				onStatusChange={handleContractStatusChange}
+				onStatusChange={handleStatusChange}
+				onItemDismissed={markItemDismissed}
 				shouldPlaySpeech={shouldPlaySpeech}
 			/>
 		</>

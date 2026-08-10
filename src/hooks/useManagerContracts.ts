@@ -35,8 +35,11 @@ export const useManagerContracts = ({
 		},
 	);
 
-	// Extract current user from response
-	const currentUser = currentUserResponse?.user || currentUserResponse?.data;
+	// /api/user/current returns the user object directly (or { user } / { data })
+	const currentUser =
+		currentUserResponse?.$id != null
+			? currentUserResponse
+			: currentUserResponse?.user || currentUserResponse?.data;
 
 	// Use the global SWR key based on current user
 	const key = currentUser?.$id

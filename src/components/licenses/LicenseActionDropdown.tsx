@@ -31,14 +31,37 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
+import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import type { AppUser } from "@/lib/actions/user.actions";
 import type { License } from "@/types/licenses";
+import {
+	type ContractDepartment,
+	DIVISION_TO_DEPARTMENT,
+	formatDepartmentName,
+	formatDivisionName,
+	type UserDivision,
+} from "../../../constants";
 import LicenseAllocationDialog from "./LicenseAllocationDialog";
 import LicenseApprovalFlowDialog from "./LicenseApprovalFlowDialog";
 import LicenseDetailView from "./LicenseDetailView";
 import LicenseForm from "./LicenseForm";
 import LicenseRenewalDialog from "./LicenseRenewalDialog";
+
+const getStatusBadgeClasses = (status: string): string => {
+	const normalized = status?.toLowerCase?.() ?? "";
+	switch (normalized) {
+		case "active":
+			return "bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-xl font-medium px-2 py-1";
+		case "inactive":
+			return "bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-xl font-medium px-2 py-1";
+		case "pending":
+			return "bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-xl font-medium px-2 py-1";
+		default:
+			return "bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-xl font-medium px-2 py-1";
+	}
+};
 
 // License action items
 const licenseActionsDropdownItems = [
@@ -126,6 +149,14 @@ const LicenseActionDropdown = ({
 	const { toast } = useToast();
 	const { permissions } = usePermissions();
 	const { roles: userRoles } = useUserRoles();
+	const {
+		departmentEnums,
+		filteredManagers,
+		selectedDepartment,
+		selectedManagers,
+		handleDepartmentChange,
+		handleManagerToggle,
+	} = useDepartmentAssignment();
 
 	const _actualRoleName = userRoles[0]?.roleName || userRole || "";
 
@@ -173,6 +204,34 @@ const LicenseActionDropdown = ({
 				onRefresh?.();
 			} else if (action.value === "share") {
 				closeAllModals();
+			} else if (action.value === "assign") {
+				if (selectedManagers.length === 0) {
+					throw new Error("Select at least one department manager");
+				}
+
+				const updateRes = await fetch(`/api/licenses/${license.$id}`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						assignedManagers: selectedManagers,
+						...(selectedDepartment
+							? { division: selectedDepartment, department: selectedDepartment }
+							: {}),
+					}),
+				});
+				if (!updateRes.ok) {
+					const err = await updateRes.json().catch(() => ({}));
+					throw new Error(
+						err?.error || err?.message || "Failed to update license managers",
+					);
+				}
+
+				toast({
+					title: "License reassigned",
+					description: `"${license.licenseName}" managers were updated.`,
+				});
+				closeAllModals();
+				onRefresh?.();
 			}
 		} catch (error) {
 			console.error("Action failed:", error);
@@ -619,7 +678,6 @@ const LicenseActionDropdown = ({
 				</Dialog>
 			)}
 
-			{/* Re-assign Dialog - TODO: Implement re-assign functionality */}
 			{showAssign && (
 				<Dialog open={showAssign} onOpenChange={setShowAssign}>
 					<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
@@ -637,20 +695,174 @@ const LicenseActionDropdown = ({
 								</div>
 							</div>
 							<p className="text-sm text-slate-600 mt-1 ml-14">
-								Assign this license to different department/managers
+								Assign this license to different department managers
 							</p>
 						</div>
 						<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-							<div className="bg-white rounded-lg p-4 border border-slate-200">
-								<p className="text-sm text-slate-600">
-									Re-assign functionality coming soon
-								</p>
+							<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm space-y-6">
+								<div>
+									<div className="mb-3 text-sm font-medium text-slate-700">
+										Select department for this license:
+									</div>
+									<div className="grid grid-cols-3 gap-2">
+										{departmentEnums.length > 0 ? (
+											departmentEnums.map((dept) => (
+												<label
+													key={dept}
+													className={`flex items-center gap-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-2 rounded-lg border-2 ${
+														selectedDepartment === dept
+															? "border-blue-500 bg-blue-50"
+															: "border-slate-200 bg-white"
+													} group shadow-sm hover:shadow-md`}
+													onClick={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														if (!isLoading) handleDepartmentChange(dept);
+													}}
+												>
+													<input
+														type="radio"
+														name="license-department"
+														value={dept}
+														checked={selectedDepartment === dept}
+														onChange={() => {
+															if (!isLoading) handleDepartmentChange(dept);
+														}}
+														disabled={isLoading}
+														className="cursor-pointer w-4 h-4 text-blue-600"
+													/>
+													<span className="text-sm cursor-pointer text-slate-900 font-medium group-hover:text-blue-600 transition-colors">
+														{formatDepartmentName(dept as ContractDepartment)}
+													</span>
+												</label>
+											))
+										) : (
+											<div className="text-sm text-slate-500 col-span-3">
+												No departments available
+											</div>
+										)}
+									</div>
+								</div>
+								<div>
+									<div className="mb-3 text-sm font-medium text-slate-700">
+										Select manager(s) to assign this license:
+									</div>
+									<div className="overflow-x-auto rounded-lg border border-slate-200">
+										<table className="min-w-full divide-y divide-slate-200">
+											<thead className="bg-slate-50">
+												<tr>
+													<th />
+													<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+														Name
+													</th>
+													<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+														Department
+													</th>
+													<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+														Division
+													</th>
+													<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+														Status
+													</th>
+												</tr>
+											</thead>
+											<tbody className="text-slate-700 text-sm bg-white">
+												{filteredManagers.length > 0 ? (
+													filteredManagers.map((manager: AppUser) => (
+														<tr
+															key={manager.accountId}
+															className={`hover:bg-blue-50 cursor-pointer transition-colors ${
+																selectedManagers.includes(manager.accountId)
+																	? "bg-blue-50"
+																	: ""
+															}`}
+															onClick={() =>
+																handleManagerToggle(manager.accountId)
+															}
+														>
+															<td
+																className="p-2"
+																onClick={(e) => e.stopPropagation()}
+															>
+																<input
+																	type="checkbox"
+																	checked={selectedManagers.includes(
+																		manager.accountId,
+																	)}
+																	onChange={() =>
+																		handleManagerToggle(manager.accountId)
+																	}
+																	className="cursor-pointer"
+																/>
+															</td>
+															<td className="text-center px-2 py-2">
+																{manager.fullName}
+															</td>
+															<td className="text-center px-2 py-2">
+																{(manager as AppUser & { department?: string })
+																	.department
+																	? formatDepartmentName(
+																			(
+																				manager as AppUser & {
+																					department?: string;
+																				}
+																			).department as ContractDepartment,
+																		)
+																	: manager.division
+																		? formatDepartmentName(
+																				DIVISION_TO_DEPARTMENT[
+																					manager.division
+																				] as ContractDepartment,
+																			)
+																		: "N/A"}
+															</td>
+															<td className="text-center px-2 py-2">
+																{manager.division
+																	? formatDivisionName(
+																			manager.division as UserDivision,
+																		)
+																	: "-"}
+															</td>
+															<td className="text-center px-2 py-2">
+																<span
+																	className={`inline-block ${getStatusBadgeClasses(
+																		manager.status || "",
+																	)}`}
+																>
+																	{manager.status
+																		? manager.status.charAt(0).toUpperCase() +
+																			manager.status.slice(1).toLowerCase()
+																		: "N/A"}
+																</span>
+															</td>
+														</tr>
+													))
+												) : (
+													<tr>
+														<td
+															colSpan={5}
+															className="text-center py-4 text-sm text-slate-500"
+														>
+															{!selectedDepartment
+																? "Please select a department first"
+																: "No managers available"}
+														</td>
+													</tr>
+												)}
+											</tbody>
+										</table>
+									</div>
+								</div>
 							</div>
 						</div>
 						<div className="glass-dialog-footer-wrap">
 							<div className="flex items-center justify-between">
 								<div className="text-sm text-slate-500">
-									Select department and managers
+									{selectedManagers.length > 0
+										? `${selectedManagers.length} manager${
+												selectedManagers.length === 1 ? "" : "s"
+											} selected`
+										: "Select at least one manager"}
 								</div>
 								<div className="flex items-center gap-3">
 									<Button
@@ -666,13 +878,26 @@ const LicenseActionDropdown = ({
 										onClick={(e) => {
 											e.stopPropagation();
 											e.preventDefault();
+											void handleAction();
 										}}
-										disabled
+										disabled={
+											isLoading ||
+											selectedManagers.length === 0 ||
+											!selectedDepartment
+										}
 										className="primary-btn px-3 sm:px-4"
-										title="Re-assign is not available yet"
 									>
+										{isLoading && (
+											<Image
+												src="/assets/icons/loader.svg"
+												alt="loader"
+												width={16}
+												height={16}
+												className="animate-spin mr-2"
+											/>
+										)}
 										<UserRoundCheck className="w-4 h-4" />
-										Assign (unavailable)
+										Assign License
 									</Button>
 								</div>
 							</div>

@@ -693,9 +693,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					{/* Column 1: Calendar - Full Height */}
 					{user && (
-						<Card className="glass-card">
+						<Card className="glass-card min-w-0">
 							<div className="glass-card-cap" />
-							<CardContent className="p-4">
+							<CardContent className="min-w-0 overflow-hidden p-3 sm:p-4">
 								<CalendarView
 									user={user as any}
 									onEventCreate={() =>

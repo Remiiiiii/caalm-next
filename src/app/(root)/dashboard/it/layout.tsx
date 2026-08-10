@@ -34,7 +34,7 @@ const ITLayoutContent = ({ children }: { children: React.ReactNode }) => {
 			<ITDashboardErrorBoundary>
 				{loading ? (
 					<div className="flex h-full min-h-[200px] items-center justify-center">
-						<LoadingSpinner size="lg" label="Loading IT dashboard..." />
+						<LoadingSpinner size="md" label="Loading IT dashboard..." />
 					</div>
 				) : (
 					children

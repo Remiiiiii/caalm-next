@@ -1101,11 +1101,15 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 		<>
 			{/* Expand Button */}
 			<Button
+				type="button"
+				size="sm"
+				variant="outline"
 				onClick={() => setIsExpanded(true)}
-				className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
+				className="h-8 shrink-0 gap-1.5 border-slate-200 bg-white px-2 text-slate-700 shadow-sm hover:bg-slate-50 sm:px-3"
+				title="Expand calendar"
 			>
 				<Expand className="h-4 w-4" />
-				Expand
+				<span className="hidden sm:inline">Expand</span>
 			</Button>
 
 			{/* Expanded Calendar Modal */}

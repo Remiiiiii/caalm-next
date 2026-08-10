@@ -45,7 +45,7 @@ export default function ContractExpiryAlertBridge({
 		contract.vendor ||
 		(contract as UIFileDoc & { counterpartyLegalName?: string })
 			.counterpartyLegalName ||
-		"—";
+		"";
 
 	const handleRenew = () => {
 		router.push("/contracts");
@@ -124,11 +124,17 @@ export default function ContractExpiryAlertBridge({
 			expiryDate={expiryDate}
 			daysRemaining={daysRemaining}
 			amount={
-				typeof contract.amount === "number" ? contract.amount : undefined
+				typeof contract.amount === "number"
+					? contract.amount
+					: typeof contract.amount === "string" &&
+							contract.amount.trim() !== "" &&
+							Number.isFinite(Number.parseFloat(contract.amount))
+						? Number.parseFloat(contract.amount)
+						: undefined
 			}
 			status={contract.status || "active"}
 			typeLabel={formatExpiryTypeLabel(contract.contractType)}
-			vendor={vendor}
+			vendor={vendor || "—"}
 			onRenew={handleRenew}
 			onViewDetails={handleViewDetails}
 			onSnooze={handleSnooze}

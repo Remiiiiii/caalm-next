@@ -62,7 +62,7 @@ import type { ContractStatus } from "@/constants/status";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
-import { useContractExpiryModal } from "@/hooks/useContractExpiryModal";
+import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useDashboardLicenses } from "@/hooks/useDashboardLicenses";
 import { useRiskImpactDashboard } from "@/hooks/useRiskImpactDashboard";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
@@ -209,40 +209,42 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	// Single licenses fetch shared by license widgets
 	const { licenses: dashboardLicenses } = useDashboardLicenses();
 
-	// Contract expiry modal hook - uses contracts from unified dashboard payload
+	// Combined contracts + licenses expiry modal (0–30 days)
 	const {
-		contractsToShow,
-		contractsWithDays,
+		itemsToShow,
 		isModalOpen,
 		closeModal,
 		triggerTestModal,
-		openForContractId,
+		openForEntityId,
+		markItemDismissed,
+		refreshLicenses,
 		shouldPlaySpeech,
-	} = useContractExpiryModal(contractsFromApi || []);
+	} = useCombinedExpiryModal(contractsFromApi || []);
 
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
-	// Desktop push View → /dashboard?expiryEntity=contract&expiryId=…
+	// Desktop push View → /dashboard?expiryEntity=contract|license&expiryId=…
 	useEffect(() => {
 		const entity = searchParams.get("expiryEntity");
 		const id = searchParams.get("expiryId");
-		if (entity !== "contract" || !id) return;
-		if (!contractsFromApi?.length) return;
+		if ((entity !== "contract" && entity !== "license") || !id) return;
+		if (entity === "contract" && !contractsFromApi?.length) return;
 
-		const opened = openForContractId(id);
-		if (opened) {
+		const opened = openForEntityId(entity, id);
+		if (opened || entity === "license") {
 			const next = new URLSearchParams(searchParams.toString());
 			next.delete("expiryEntity");
 			next.delete("expiryId");
 			const qs = next.toString();
 			router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
 		}
-	}, [searchParams, contractsFromApi, openForContractId, router]);
+	}, [searchParams, contractsFromApi, openForEntityId, router]);
 
-	// Handle contract status change - refresh unified data (includes contracts)
+	// Handle contract/license status change - refresh unified data + licenses
 	const handleContractStatusChange = () => {
 		refreshUnified();
+		void refreshLicenses();
 	};
 
 	// Invitation management functions
@@ -696,11 +698,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		<div className="relative">
 			{/* Contract Expiry Modal */}
 			<ContractExpiryModal
-				contracts={contractsToShow}
-				contractsWithDays={contractsWithDays}
+				items={itemsToShow}
 				isOpen={isModalOpen}
 				onClose={closeModal}
 				onStatusChange={handleContractStatusChange}
+				onItemDismissed={markItemDismissed}
 				shouldPlaySpeech={shouldPlaySpeech}
 			/>
 			<ContractExpiryNotifier contracts={expiryContracts} />
@@ -861,9 +863,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							</div>
 
 							{/* Calendar View */}
-							<Card className="glass-card lg:col-span-3">
+							<Card className="glass-card lg:col-span-3 min-w-0">
 								<div className="glass-card-cap" />
-								<CardContent className="p-4 sm:p-6">
+								<CardContent className="min-w-0 overflow-hidden p-3 sm:p-4 md:p-6">
 									<CalendarView
 										user={user}
 										onEventClick={(event) => {

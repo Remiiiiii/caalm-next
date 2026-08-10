@@ -54,11 +54,61 @@ export function useLicenseApprovalWorkflow(licenseId: string | null) {
 		[licenseId, mutate],
 	);
 
+	const reassign = useCallback(
+		async ({
+			assigneeUserIds,
+			path,
+		}: {
+			assigneeUserIds: string[];
+			path?: string;
+		}) => {
+			if (!licenseId) throw new Error("Missing license id");
+			const res = await fetch(
+				`/api/licenses/${licenseId}/approval-workflow/reassign`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ assigneeUserIds, path }),
+				},
+			);
+			const json = await res.json();
+			if (!res.ok || !json.success) {
+				throw new Error(json.error || "Failed to reassign step");
+			}
+			await mutate(json.data, false);
+			return json.data as ApprovalWorkflowViewerPayload;
+		},
+		[licenseId, mutate],
+	);
+
+	const resubmit = useCallback(
+		async ({ path }: { path?: string } = {}) => {
+			if (!licenseId) throw new Error("Missing license id");
+			const res = await fetch(
+				`/api/licenses/${licenseId}/approval-workflow/resubmit`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ path }),
+				},
+			);
+			const json = await res.json();
+			if (!res.ok || !json.success) {
+				throw new Error(json.error || "Failed to resubmit");
+			}
+			await mutate(json.data, false);
+			return json.data as ApprovalWorkflowViewerPayload;
+		},
+		[licenseId, mutate],
+	);
+
 	return {
 		workflow: data,
 		error,
 		isLoading,
 		refresh: mutate,
 		decide,
+		reassign,
+		resubmit,
 	};
 }
