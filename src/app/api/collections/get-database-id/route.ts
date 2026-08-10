@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {
 	const permissionCheck = await requirePermission(request, {
-		permission: PERMISSIONS.IT.MANAGE_DATABASE,
+		permission: PERMISSIONS.PLATFORM.MANAGE_SCHEMA,
 	});
 	if (permissionCheck) {
 		return permissionCheck;

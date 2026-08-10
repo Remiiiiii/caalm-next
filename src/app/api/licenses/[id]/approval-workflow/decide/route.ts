@@ -56,9 +56,14 @@ export async function POST(
 		const canEdit = orgId
 			? await hasPermission(user.$id, PERMISSIONS.LICENSES.EDIT, orgId)
 			: false;
-		const isAdminOverride = canEdit;
+		const canApprove = orgId
+			? await hasPermission(user.$id, PERMISSIONS.LICENSES.APPROVE, orgId)
+			: false;
+		const isAdminOverride = orgId
+			? await hasPermission(user.$id, PERMISSIONS.APPROVALS.OVERRIDE, orgId)
+			: false;
 
-		if (!canEdit && !isAdminOverride) {
+		if (!canEdit && !canApprove && !isAdminOverride) {
 			return forbiddenResponse(
 				"Permission denied: decide license approval",
 				requestId,

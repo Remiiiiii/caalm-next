@@ -5,21 +5,19 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import type { PermissionKey } from "@/constants/permissions";
+import { authorize } from "@/lib/rbac/authorize";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import {
-	hasAllPermissions,
-	hasAnyPermission,
-	validateUserOrgAccess,
-} from "./permissions";
 
 export interface PermissionMiddlewareOptions {
 	permission?: PermissionKey | PermissionKey[];
 	requireAll?: boolean; // If multiple permissions, require all (default: any)
-	allowSuperAdmin?: boolean; // Allow super admin to bypass (default: true)
+	/** When true, reject requests that omit org context */
+	requireOrg?: boolean;
 }
 
 /**
- * Middleware to check if user has required permission(s)
+ * Middleware to check if user has required permission(s).
+ * Returns a NextResponse error, or null when authorized.
  */
 export async function requirePermission(
 	request: NextRequest,
@@ -34,42 +32,27 @@ export async function requirePermission(
 		);
 	}
 
-	// Get orgId from query params or headers
 	const orgId =
 		request.nextUrl.searchParams.get("orgId") ||
 		request.headers.get("x-org-id") ||
 		undefined;
 
-	// If orgId provided, validate user belongs to organization
-	if (orgId) {
-		const hasAccess = await validateUserOrgAccess(user.$id, orgId);
-		if (!hasAccess) {
-			return NextResponse.json(
-				{ error: "Access denied to this organization" },
-				{ status: 403 },
-			);
-		}
+	const decision = await authorize({
+		userId: user.$id,
+		orgId,
+		permission: options.permission,
+		requireAll: options.requireAll,
+		requireOrg: options.requireOrg,
+	});
+
+	if (!decision.allowed) {
+		const status = decision.reason === "Authentication required" ? 401 : 403;
+		return NextResponse.json(
+			{ error: decision.reason || "Insufficient permissions" },
+			{ status },
+		);
 	}
 
-	// Check permissions
-	if (options.permission) {
-		const permissions = Array.isArray(options.permission)
-			? options.permission
-			: [options.permission];
-
-		const hasRequiredPermission = options.requireAll
-			? await hasAllPermissions(user.$id, permissions, orgId)
-			: await hasAnyPermission(user.$id, permissions, orgId);
-
-		if (!hasRequiredPermission) {
-			return NextResponse.json(
-				{ error: "Insufficient permissions" },
-				{ status: 403 },
-			);
-		}
-	}
-
-	// All checks passed
 	return null;
 }
 

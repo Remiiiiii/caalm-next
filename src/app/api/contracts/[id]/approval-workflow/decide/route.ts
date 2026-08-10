@@ -59,7 +59,9 @@ export async function POST(
 		const canApprove = orgId
 			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.APPROVE, orgId)
 			: false;
-		const isAdminOverride = canApprove;
+		const isAdminOverride = orgId
+			? await hasPermission(user.$id, PERMISSIONS.APPROVALS.OVERRIDE, orgId)
+			: false;
 
 		if (!canReview && !canApprove && !isAdminOverride) {
 			return forbiddenResponse(

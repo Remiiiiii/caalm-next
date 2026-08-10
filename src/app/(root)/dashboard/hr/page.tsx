@@ -1,15 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import HRDashboard from "../HRDashboard";
+import { requireDashboardPathAccess } from "@/lib/rbac/page-guards";
 
 export default async function HRDashboardPage() {
-	const currentUser = await getCurrentUser();
-
-	if (!currentUser) {
-		redirect("/sign-in");
-	}
-
+	await requireDashboardPathAccess("/dashboard/hr");
 	return <HRDashboard />;
 }

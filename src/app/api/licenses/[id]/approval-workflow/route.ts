@@ -39,7 +39,7 @@ export async function GET(
 		}
 
 		const isAdminOverride = orgId
-			? await hasPermission(user.$id, PERMISSIONS.LICENSES.EDIT, orgId)
+			? await hasPermission(user.$id, PERMISSIONS.APPROVALS.OVERRIDE, orgId)
 			: false;
 
 		const payload = await getLicenseWorkflowForViewer(licenseId, user.$id, {

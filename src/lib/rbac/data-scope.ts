@@ -1,5 +1,6 @@
 /**
- * Row-level style contract list scoping from permissions + user attributes (ABAC-style).
+ * Row-level style contract list scoping from permissions + user attributes.
+ * Uses contracts.view_* scopes (not calendar proxies).
  */
 
 import { Query } from "node-appwrite";
@@ -20,17 +21,24 @@ export async function getContractListScope(
 	orgId: string,
 ): Promise<ContractListScope> {
 	const viewAll =
-		(await hasPermission(userId, PERMISSIONS.CALENDAR.VIEW_ALL, orgId)) ||
+		(await hasPermission(
+			userId,
+			PERMISSIONS.CONTRACTS.VIEW_ALL,
+			orgId,
+		)) ||
 		(await hasPermission(userId, PERMISSIONS.CONTRACTS.REVIEW, orgId)) ||
-		(await hasPermission(userId, PERMISSIONS.CONTRACTS.APPROVE, orgId));
+		(await hasPermission(userId, PERMISSIONS.CONTRACTS.APPROVE, orgId)) ||
+		(await hasPermission(userId, PERMISSIONS.APPROVALS.OVERRIDE, orgId));
 
 	if (viewAll) {
 		return { mode: "all_org" };
 	}
 
-	const team =
-		(await hasPermission(userId, PERMISSIONS.CALENDAR.VIEW_TEAM, orgId)) ||
-		(await hasPermission(userId, PERMISSIONS.EVENTS.APPROVE, orgId));
+	const team = await hasPermission(
+		userId,
+		PERMISSIONS.CONTRACTS.VIEW_DEPARTMENT,
+		orgId,
+	);
 
 	if (team) {
 		const user = await getUserById(userId);

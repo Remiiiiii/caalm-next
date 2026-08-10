@@ -9,7 +9,7 @@ const CONTRACT_DRAFTS_COLLECTION_ID = "692f4a86002ae8f45cae";
 export async function POST(request: NextRequest) {
 	try {
 		const permissionCheck = await requirePermission(request, {
-			permission: PERMISSIONS.IT.MANAGE_DATABASE,
+			permission: PERMISSIONS.PLATFORM.MANAGE_SCHEMA,
 		});
 		if (permissionCheck) {
 			return permissionCheck;

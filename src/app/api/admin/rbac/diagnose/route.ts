@@ -15,13 +15,11 @@ import CacheManager from "@/lib/services/cache-manager";
 /**
  * Diagnose RBAC issues and clear cache
  * GET /api/admin/rbac/diagnose?action=check|clear|test
- *
- * Note: Prefer PLATFORM.DIAGNOSE once PLATFORM permissions are wired.
  */
 export async function GET(request: NextRequest) {
 	try {
 		const permissionCheck = await requirePermission(request, {
-			permission: PERMISSIONS.SETTINGS.EDIT,
+			permission: PERMISSIONS.PLATFORM.DIAGNOSE,
 		});
 		if (permissionCheck) {
 			return permissionCheck;

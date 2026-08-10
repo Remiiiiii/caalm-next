@@ -7,12 +7,11 @@ import { requirePermission } from "@/lib/rbac/middleware";
 /**
  * Force delete endpoint that tries multiple deletion strategies
  * to work around Appwrite's two-way relationship constraints
- * Note: Prefer PLATFORM.FORCE_DELETE once PLATFORM permissions are wired.
  */
 export async function POST(request: NextRequest) {
 	try {
 		const permissionCheck = await requirePermission(request, {
-			permission: PERMISSIONS.IT.MANAGE_DATABASE,
+			permission: PERMISSIONS.PLATFORM.FORCE_DELETE,
 		});
 		if (permissionCheck) {
 			return permissionCheck;

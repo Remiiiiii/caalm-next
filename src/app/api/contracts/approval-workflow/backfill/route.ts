@@ -22,11 +22,20 @@ export async function POST(_request: NextRequest) {
 			return unauthorizedResponse("Authentication required", requestId);
 
 		const org = await getUserDefaultOrganization(user.$id);
-		const canApprove = org?.orgId
-			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.APPROVE, org.orgId)
+		const canBackfill = org?.orgId
+			? (await hasPermission(
+					user.$id,
+					PERMISSIONS.APPROVALS.OVERRIDE,
+					org.orgId,
+				)) ||
+				(await hasPermission(
+					user.$id,
+					PERMISSIONS.CONTRACTS.APPROVE,
+					org.orgId,
+				))
 			: false;
 
-		if (!canApprove) {
+		if (!canBackfill) {
 			return forbiddenResponse("Permission denied", requestId);
 		}
 

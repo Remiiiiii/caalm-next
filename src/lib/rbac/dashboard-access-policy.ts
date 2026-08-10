@@ -70,11 +70,23 @@ export const DASHBOARD_ROUTE_POLICY: DashboardPolicyEntry[] = [
 		anyOf: [PERMISSIONS.USERS.ASSIGN_ROLES],
 	},
 	{
+		pathPrefix: "/dashboard/admin/rate-limits",
+		anyOf: [PERMISSIONS.IT.VIEW_RATE_LIMITS, PERMISSIONS.PLATFORM.DIAGNOSE],
+	},
+	{
 		pathPrefix: "/dashboard/admin",
-		anyOf: [PERMISSIONS.SETTINGS.VIEW, PERMISSIONS.USERS.ASSIGN_ROLES],
+		anyOf: [
+			PERMISSIONS.SETTINGS.VIEW,
+			PERMISSIONS.USERS.ASSIGN_ROLES,
+			PERMISSIONS.PLATFORM.SYSTEM_SETTINGS,
+		],
 	},
 	{
 		pathPrefix: "/dashboard/user-management",
+		anyOf: [PERMISSIONS.USERS.VIEW, PERMISSIONS.USERS.INVITE],
+	},
+	{
+		pathPrefix: "/dashboard/hr",
 		anyOf: [PERMISSIONS.USERS.VIEW, PERMISSIONS.USERS.INVITE],
 	},
 ];

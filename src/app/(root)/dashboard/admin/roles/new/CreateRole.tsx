@@ -11,8 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { PERMISSIONS } from "@/constants/permissions";
+import {
+	ROLE_TEMPLATES,
+	type RoleTemplateId,
+} from "@/constants/role-templates";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface Permission {
 	$id: string;
@@ -40,9 +45,25 @@ const CreateRole = () => {
 		name: "",
 		description: "",
 	});
+	const [templateId, setTemplateId] = useState<RoleTemplateId>("blank");
 	const { toast } = useToast();
 	const router = useRouter();
 	const { orgId } = useOrganization();
+
+	const applyTemplate = (id: RoleTemplateId) => {
+		const template = ROLE_TEMPLATES.find((t) => t.id === id);
+		if (!template) return;
+		setTemplateId(id);
+		setSelectedPermissions(new Set(template.permissionKeys));
+		if (id !== "blank") {
+			setFormData((prev) => ({
+				name: prev.name.trim() ? prev.name : template.name,
+				description: prev.description.trim()
+					? prev.description
+					: template.description,
+			}));
+		}
+	};
 
 	const selectionSummary = useMemo(() => {
 		const count = selectedPermissions.size;
@@ -232,6 +253,45 @@ const CreateRole = () => {
 									className="border-white/40 bg-white/40"
 								/>
 							</div>
+						</div>
+					</section>
+
+					<section className="space-y-3">
+						<div>
+							<h2 className="text-xl font-semibold sidebar-gradient-text">
+								Start from a template
+							</h2>
+							<p className="mt-1 text-sm text-slate-600">
+								Pick a job-shaped starting point, then fine-tune permissions
+								below.
+							</p>
+						</div>
+						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							{ROLE_TEMPLATES.map((template) => (
+								<button
+									key={template.id}
+									type="button"
+									onClick={() => applyTemplate(template.id)}
+									className={cn(
+										"rounded-lg border p-4 text-left transition-all duration-200",
+										"bg-white/40 hover:border-blue-300 hover:bg-blue-50",
+										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+										templateId === template.id
+											? "border-[#0f5384] ring-1 ring-[#0f5384]/30"
+											: "border-white/40",
+									)}
+								>
+									<p className="text-sm font-semibold text-slate-900">
+										{template.name}
+									</p>
+									<p className="mt-1 text-xs text-slate-600">
+										{template.description}
+									</p>
+									<p className="mt-2 text-[11px] font-medium text-[#0f5384]">
+										{template.permissionKeys.length} permissions
+									</p>
+								</button>
+							))}
 						</div>
 					</section>
 

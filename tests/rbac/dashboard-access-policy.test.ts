@@ -20,20 +20,28 @@ describe("dashboard-access-policy", () => {
 });
 
 describe("separation-of-duties", () => {
-	it("allows elevated roles that can assign roles", () => {
+	it("does not exempt assign_roles alone from SoD", () => {
 		const r = validatePermissionsForSod([
 			PERMISSIONS.USERS.ASSIGN_ROLES,
 			PERMISSIONS.CONTRACTS.CREATE,
 			PERMISSIONS.CONTRACTS.APPROVE,
 		]);
-		expect(r.ok).toBe(true);
+		expect(r.ok).toBe(false);
 	});
 
-	it("rejects create and approve on the same role without assign_roles", () => {
+	it("rejects create and approve on the same custom role", () => {
 		const r = validatePermissionsForSod([
 			PERMISSIONS.CONTRACTS.CREATE,
 			PERMISSIONS.CONTRACTS.APPROVE,
 		]);
 		expect(r.ok).toBe(false);
+	});
+
+	it("allows toxic pairs on system roles", () => {
+		const r = validatePermissionsForSod(
+			[PERMISSIONS.CONTRACTS.CREATE, PERMISSIONS.CONTRACTS.APPROVE],
+			{ isSystemRole: true },
+		);
+		expect(r.ok).toBe(true);
 	});
 });

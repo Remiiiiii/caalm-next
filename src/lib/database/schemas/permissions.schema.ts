@@ -22,7 +22,11 @@ export const PERMISSION_CATEGORIES = [
 	"settings",
 	"ai",
 	"audit",
+	"it",
 	"news",
+	"licenses",
+	"approvals",
+	"platform",
 ] as const;
 
 export type PermissionCategory = (typeof PERMISSION_CATEGORIES)[number];
