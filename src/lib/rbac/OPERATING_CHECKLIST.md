@@ -60,7 +60,14 @@ An admin UI is optional: it only helps non-technical operators avoid the Console
 - [ ] Users have org context; contract list APIs scope by `data-scope.ts` (org / department / own) — verify department fields on users/contracts match expectations.
 - [ ] Cache keys for contract lists are scope-aware; after permission changes, expect different cache segments per user.
 
+## API authz CI matrix
+
+- [ ] New `src/app/api/**/route.ts` handlers must use `requirePermission`, session auth, cron secret, or webhook verification — or an intentional allowlist entry in `api-authz-allowlist.ts` with a reason.
+- [ ] CI job **API authz matrix** (`pnpm run test:api-authz`) fails if the unguarded set grows vs `api-authz-baseline.json`.
+- [ ] When you lock down a grandfathered route, re-run `pnpm run api-authz:baseline` so the baseline shrinks (ratchet only goes one way in reviews).
+- [ ] Do not regenerate the baseline to hide new gaps — fix or allowlist with a written reason.
+
 ## Verification
 
-- [ ] Run unit tests: `tests/rbac/dashboard-access-policy.test.ts` (and full `pnpm test` as you normally do).
+- [ ] Run unit tests: `pnpm exec vitest run tests/rbac/` (includes API authz matrix).
 - [ ] Smoke: sign in as each role, hit `/dashboard`, confirm redirect to the right home; try a forbidden path and confirm redirect to home, not a blank page.
