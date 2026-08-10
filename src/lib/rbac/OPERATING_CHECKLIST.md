@@ -63,6 +63,7 @@ An admin UI is optional: it only helps non-technical operators avoid the Console
 ## API authz CI matrix
 
 - [ ] New `src/app/api/**/route.ts` handlers must use `requirePermission`, session auth, cron secret, or webhook verification — or an intentional allowlist entry in `api-authz-allowlist.ts` with a reason.
+- [ ] Prefer scaffolding: `pnpm new:api-route <path> --permission CONTRACTS.VIEW` (see `.cursor/rules/api-route-authz.mdc`).
 - [ ] CI job **API authz matrix** (`pnpm run test:api-authz`) fails if the unguarded set grows vs `api-authz-baseline.json`.
 - [ ] When you lock down a grandfathered route, re-run `pnpm run api-authz:baseline` so the baseline shrinks (ratchet only goes one way in reviews).
 - [ ] Do not regenerate the baseline to hide new gaps — fix or allowlist with a written reason.
