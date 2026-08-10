@@ -331,6 +331,10 @@ export function UserManagementActionDialogs({
 			>
 				<div className="rounded-lg border border-slate-200 bg-white p-4">
 					<Label className="mb-1 text-sm text-slate-700">Role</Label>
+					<p className="mb-2 text-xs text-slate-500">
+						A role sets this user&apos;s access. Permissions come from the role,
+						not from this dialog.
+					</p>
 					<Select value={roleName} onValueChange={setRoleName}>
 						<SelectTrigger className="bg-white">
 							<SelectValue placeholder="Select role" />

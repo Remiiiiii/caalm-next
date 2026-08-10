@@ -725,7 +725,7 @@ const UserManagement = () => {
 															disabled={!canAssignRoles}
 															onSelect={() => openAction(user, "role")}
 														>
-															Change role / permissions
+															Change role
 														</AppDropdownMenuItem>
 														<DropdownMenuSeparator />
 														<AppDropdownMenuItem

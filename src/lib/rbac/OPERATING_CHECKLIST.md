@@ -25,19 +25,30 @@ An admin UI is optional: it only helps non-technical operators avoid the Console
 - [ ] Add/update `ROLE_DASHBOARD_FALLBACK` in `role-dashboard-metadata.ts` if the role is new or the home path changes.
 - [ ] Update `ROLE_PRIORITY_ORDER` / role-priority behavior in `role-priority.ts` if naming or precedence changes.
 - [ ] Sync Sidebar `roleToDashboardMap` (and any nav URLs in `constants`) if users need a new shortcut.
-- [ ] If the role should own a new route: add a server page guard with `getUnauthorizedDashboardRedirect` (same rules as proxy).
+- [ ] If the role should own a new route: guard the page with `requireDashboardPathAccess` from `page-guards.ts` (wraps `getUnauthorizedDashboardRedirect`, same rules as proxy).
 
 ## When you change permissions
 
 - [ ] Map new capabilities in `constants/permissions` and wire `role_permissions` in Appwrite.
 - [ ] Use `requirePermission` / `hasPermission` on new APIs; for contracts use `requireContractPermission` and align with `getContractListScope` if lists are affected.
+- [ ] Platform / break-glass keys live under `PERMISSIONS.PLATFORM` (diagnose, manage_schema, force_delete, view_all_orgs, system_settings, elevate). Gate Super-Admin-only nav (e.g. System Settings) with `PLATFORM.SYSTEM_SETTINGS`, not role name alone.
 - [ ] Invalidate or wait out RBAC cache after bulk permission changes (`CacheManager.invalidateRBAC` is used on role assignment APIs).
+
+## Role create / update (SoD)
+
+- [ ] Role create and update APIs enforce separation of duties via `sod-rules.ts` / `separation-of-duties.ts` (block conflicting permission sets on custom roles).
+- [ ] Prefer job-shaped starters from `constants/role-templates.ts` instead of blank 70+ permission walls.
 
 ## Role assignment (ops / admin APIs)
 
 - [ ] Assign roles only through supported admin flows (`/api/admin/...`) so SoD checks and audit events run.
+- [ ] Multi-role assign API (`/api/admin/users/[userId]/roles`): body may use `roleId` + `action` (legacy) or `roleIds` + `mode`; modes are `replace` | `add` | `remove` (default `replace`).
 - [ ] If assignment fails with SoD: split duties across roles/users per `separation-of-duties.ts`.
 - [ ] Confirm audit logs show `rbac_user_role_assigned` / `rbac_user_role_set_by_email` for changes you care about.
+
+## Page guards
+
+- [ ] Dashboard / settings server pages use `requireDashboardPathAccess` / `requirePagePermission` from `page-guards.ts` instead of hand-rolled permission checks.
 
 ## URLs and legacy links
 
