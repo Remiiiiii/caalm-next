@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getOrgIdFromRequest } from "@/lib/rbac/middleware";
+import { PERMISSIONS } from "@/constants/permissions";
+import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getUserRoles } from "@/lib/rbac/permissions";
 import { getRole } from "@/lib/rbac/roles";
 import { CACHE_TTLS } from "@/lib/services/cache-keys";
@@ -13,6 +14,13 @@ export async function GET(
 	{ params }: { params: Promise<{ userId: string }> },
 ) {
 	try {
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.USERS.VIEW,
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
+
 		const { userId } = await params;
 		const orgId =
 			(await getOrgIdFromRequest(request)) || "default_organization";

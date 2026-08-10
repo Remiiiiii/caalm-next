@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 import {
 	getUserDefaultOrganization,
 	getUserPermissions,
@@ -14,38 +16,22 @@ import CacheManager from "@/lib/services/cache-manager";
  * Diagnose RBAC issues and clear cache
  * GET /api/admin/rbac/diagnose?action=check|clear|test
  *
- * Note: This endpoint checks for Super Admin role directly (bypassing permission checks)
- * to allow diagnosing RBAC issues when permissions might be misconfigured.
+ * Note: Prefer PLATFORM.DIAGNOSE once PLATFORM permissions are wired.
  */
 export async function GET(request: NextRequest) {
 	try {
-		// Check authentication
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.SETTINGS.EDIT,
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
+
 		const user = await getCurrentUser();
 		if (!user) {
 			return NextResponse.json(
 				{ error: "Authentication required" },
 				{ status: 401 },
-			);
-		}
-
-		// Check if user has Super Admin role (direct role check, bypassing permissions)
-		const defaultOrg = await getUserDefaultOrganization(user.$id);
-		if (!defaultOrg) {
-			return NextResponse.json(
-				{ error: "User has no default organization" },
-				{ status: 403 },
-			);
-		}
-
-		const userRoles = await getUserRoles(user.$id, defaultOrg.orgId);
-		const isSuperAdmin = userRoles.some(
-			(ur) => ur.roleId === "role_super_admin",
-		);
-
-		if (!isSuperAdmin) {
-			return NextResponse.json(
-				{ error: "Super Admin role required for diagnostic access" },
-				{ status: 403 },
 			);
 		}
 

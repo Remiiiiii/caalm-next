@@ -1,37 +1,47 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createInvitation } from "@/lib/actions/user.actions";
+import { PERMISSIONS } from "@/constants/permissions";
+import { createInvitation, getCurrentUser } from "@/lib/actions/user.actions";
+import { requirePermission } from "@/lib/rbac/middleware";
+import { validateUserOrgAccess } from "@/lib/rbac/permissions";
 
 export async function POST(request: NextRequest) {
-	let body;
 	try {
-		body = await request.json();
-		console.log("API: Received invitation request:", body);
-		const { email, name, role, department, division, orgId, invitedBy } = body;
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.USERS.INVITE,
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
 
-		// Validate required fields
-		if (!email || !name || !role || !department || !orgId || !invitedBy) {
-			console.log("API: Missing required fields:", {
-				email,
-				name,
-				role,
-				department,
-				orgId,
-				invitedBy,
-			});
+		const currentUser = await getCurrentUser();
+		if (!currentUser) {
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
+
+		const body = await request.json();
+		const { email, name, role, department, division, orgId } = body;
+
+		if (!email || !name || !role || !department || !orgId) {
 			return NextResponse.json(
 				{
 					error:
-						"Missing required fields: email, name, role, department, orgId, invitedBy",
+						"Missing required fields: email, name, role, department, orgId",
 				},
 				{ status: 400 },
 			);
 		}
 
-		console.log(
-			"API: All required fields present, calling createInvitation...",
-		);
+		const hasOrgAccess = await validateUserOrgAccess(currentUser.$id, orgId);
+		if (!hasOrgAccess) {
+			return NextResponse.json(
+				{ error: "Access denied to this organization" },
+				{ status: 403 },
+			);
+		}
 
-		// Create invitation using the existing action
 		const invitation = await createInvitation({
 			email,
 			name,
@@ -39,24 +49,17 @@ export async function POST(request: NextRequest) {
 			department,
 			division,
 			orgId,
-			invitedBy,
+			invitedBy: currentUser.$id,
 		});
 
 		return NextResponse.json({ data: invitation });
 	} catch (error) {
-		console.error("Failed to create invitation:", {
-			error: error instanceof Error ? error.message : "Unknown error",
-			stack: error instanceof Error ? error.stack : undefined,
-			body: body,
-			timestamp: new Date().toISOString(),
-		});
+		console.error("Failed to create invitation:", error);
 
 		return NextResponse.json(
 			{
 				error: "Failed to create invitation",
 				details: error instanceof Error ? error.message : "Unknown error",
-				stack: error instanceof Error ? error.stack : undefined,
-				timestamp: new Date().toISOString(),
 			},
 			{ status: 500 },
 		);

@@ -4,6 +4,7 @@ import {
 	getTotalContractsCount,
 } from "@/lib/actions/file.actions";
 import { getActiveUsersCount } from "@/lib/actions/user.actions";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
@@ -20,6 +21,12 @@ export async function GET(request: NextRequest) {
 				},
 				{ status: 400 },
 			);
+		}
+
+		// Auth + org membership (orgId from query is validated by requirePermission)
+		const permissionCheck = await requirePermission(request, {});
+		if (permissionCheck) {
+			return permissionCheck;
 		}
 
 		// Cache key for dashboard stats

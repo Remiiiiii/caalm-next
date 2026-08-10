@@ -1,9 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {
 	try {
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.IT.MANAGE_DATABASE,
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
+
 		const { searchParams } = new URL(request.url);
 		const collectionId = searchParams.get("collectionId");
 

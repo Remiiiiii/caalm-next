@@ -1,11 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 const _CONTRACT_DRAFTS_COLLECTION_ID = "692f4a86002ae8f45cae";
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
 	try {
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.IT.MANAGE_DATABASE,
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
+
 		if (!appwriteConfig.databaseId) {
 			return NextResponse.json(
 				{ error: "Database configuration missing" },

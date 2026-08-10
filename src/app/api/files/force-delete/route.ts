@@ -1,13 +1,23 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 /**
  * Force delete endpoint that tries multiple deletion strategies
  * to work around Appwrite's two-way relationship constraints
+ * Note: Prefer PLATFORM.FORCE_DELETE once PLATFORM permissions are wired.
  */
 export async function POST(request: NextRequest) {
 	try {
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.IT.MANAGE_DATABASE,
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
+
 		const { searchParams } = new URL(request.url);
 		const fileId = searchParams.get("fileId");
 
