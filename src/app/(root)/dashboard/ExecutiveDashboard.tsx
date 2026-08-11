@@ -856,16 +856,16 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				{/* Dashboard Content */}
 				<div className="relative z-10 py-8">
 					<div className="space-y-6">
-						<div className="grid lg:grid-cols-6 gap-6">
+						<div className="grid items-stretch gap-6 lg:grid-cols-6">
 							{/* Recent Activity */}
 							<div className="lg:col-span-3">
-								<RecentActivity />
+								<RecentActivity limit={25} />
 							</div>
 
 							{/* Calendar View */}
-							<Card className="glass-card lg:col-span-3 min-w-0">
+							<Card className="glass-card flex h-full min-w-0 flex-col lg:col-span-3">
 								<div className="glass-card-cap" />
-								<CardContent className="min-w-0 overflow-hidden p-3 sm:p-4 md:p-6">
+								<CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-4 md:p-6">
 									<CalendarView
 										user={user}
 										onEventClick={(event) => {

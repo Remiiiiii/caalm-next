@@ -112,7 +112,7 @@ interface LocalCalendarEvent {
 	id: string;
 	title: string;
 	date?: Date;
-	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	type: "contract" | "deadline" | "meeting" | "review" | "audit" | "license";
 	description?: string;
 	participants?: string[];
 	contractName?: string;
@@ -125,6 +125,8 @@ interface LocalCalendarEvent {
 	pendingApprovalId?: string | null;
 	overrides?: PermissionOverrideRecord[];
 }
+
+export type CalendarDisplayEvent = LocalCalendarEvent;
 
 type EventWithExtras = LocalCalendarEvent & {
 	sensitivityLevel?: CalendarSensitivity;
@@ -163,6 +165,8 @@ interface ExpandedCalendarViewProps {
 		role?: string;
 		department?: string;
 	} | null;
+	triggerClassName?: string;
+	showExpandLabel?: boolean;
 }
 
 // Map sensitivity level to badge color classes
@@ -187,6 +191,8 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 	onDateSelect,
 	onEventCreate,
 	user,
+	triggerClassName,
+	showExpandLabel = true,
 }) => {
 	const { toast } = useToast();
 	const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -1102,14 +1108,16 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 			{/* Expand Button */}
 			<Button
 				type="button"
-				size="sm"
 				variant="outline"
 				onClick={() => setIsExpanded(true)}
-				className="h-8 shrink-0 gap-1.5 border-slate-200 bg-white px-2 text-slate-700 shadow-sm hover:bg-slate-50 sm:px-3"
+				className={cn(
+					"flex h-auto shrink-0 items-center justify-center gap-1.5 border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600 shadow-none transition-colors duration-200 hover:bg-slate-50 sm:text-[12.5px]",
+					triggerClassName,
+				)}
 				title="Expand calendar"
 			>
-				<Expand className="h-4 w-4" />
-				<span className="hidden sm:inline">Expand</span>
+				<Expand className="h-3.5 w-3.5" />
+				{showExpandLabel && "Expand"}
 			</Button>
 
 			{/* Expanded Calendar Modal */}

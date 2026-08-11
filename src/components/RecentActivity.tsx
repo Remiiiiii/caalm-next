@@ -6,6 +6,11 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { ActivityItemSkeleton } from "@/components/ui/skeletons";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
+import { cn } from "@/lib/utils";
+
+/** Viewport height for ~7 activity rows (item + gap). */
+const ACTIVITY_VIEWPORT_CLASS = "h-[33rem]";
+const ACTIVITY_VISIBLE_COUNT = 7;
 
 interface RecentActivity {
 	$id: string;
@@ -24,23 +29,18 @@ interface RecentActivity {
 
 interface RecentActivityProps {
 	limit?: number;
+	className?: string;
 }
 
-const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
+const RecentActivity: FC<RecentActivityProps> = ({
+	limit = 25,
+	className,
+}) => {
 	const { orgId } = useOrganization();
 	const { recentActivities, isLoading } = useUnifiedDashboardData(
 		orgId || "default_organization",
 	);
 
-	// Debug logging
-	console.log("RecentActivity Debug:", {
-		orgId,
-		isLoading,
-		recentActivitiesLength: recentActivities?.length || 0,
-		recentActivities: recentActivities?.slice(0, 3) || [],
-	});
-
-	// Limit the activities to the specified limit
 	const activities: RecentActivity[] = (recentActivities ||
 		[]) as RecentActivity[];
 	const limitedActivities = activities.slice(0, limit);
@@ -88,10 +88,10 @@ const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
 
 	if (isLoading) {
 		return (
-			<Card className="glass-card">
+			<Card className={cn("glass-card", className)}>
 				<div className="glass-card-cap" />
 				<CardHeader className="pb-3">
-					<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+					<CardTitle className="flex left-0 text-center text-lg font-bold sidebar-gradient-text">
 						Recent Activity
 					</CardTitle>
 				</CardHeader>
@@ -103,11 +103,13 @@ const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
 							className="!p-0"
 						/>
 					</div>
-					<div className="h-[400px] overflow-y-auto">
-						<div className="space-y-3 py-2">
-							{[1, 2, 3, 4, 5].map((i) => (
-								<ActivityItemSkeleton key={i} />
-							))}
+					<div className={cn(ACTIVITY_VIEWPORT_CLASS, "overflow-y-auto")}>
+						<div className="space-y-3 py-2 pr-2">
+							{Array.from({ length: ACTIVITY_VISIBLE_COUNT }, (_, i) => i + 1).map(
+								(i) => (
+									<ActivityItemSkeleton key={i} />
+								),
+							)}
 						</div>
 					</div>
 				</CardContent>
@@ -116,35 +118,35 @@ const RecentActivity: FC<RecentActivityProps> = ({ limit = 15 }) => {
 	}
 
 	return (
-		<Card className="glass-card">
+		<Card className={cn("glass-card", className)}>
 			<div className="glass-card-cap" />
 			<CardHeader className="pb-3">
-				<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+				<CardTitle className="flex left-0 text-center text-lg font-bold sidebar-gradient-text">
 					Recent Activity
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="pt-0">
-				<div className="h-[400px] overflow-y-auto">
-					<div className="space-y-3 py-4 pr-2">
+				<div className={cn(ACTIVITY_VIEWPORT_CLASS, "overflow-y-auto")}>
+					<div className="space-y-3 py-2 pr-2">
 						{limitedActivities.length === 0 ? (
-							<div className="text-center text-slate-dark py-8">
+							<div className="py-8 text-center text-slate-dark">
 								<p className="text-sm">No recent activities</p>
 							</div>
 						) : (
-							limitedActivities.map((activity, _index) => (
+							limitedActivities.map((activity) => (
 								<div
 									key={activity.$id}
-									className="flex justify-between items-start bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-3 shadow-sm transition-all duration-300"
+									className="flex items-start justify-between rounded-lg border border-white/30 bg-white/20 p-3 shadow-sm backdrop-blur-md transition-all duration-300"
 								>
 									<div>
-										<p className="font-medium text-slate-700 text-sm">
+										<p className="text-sm font-medium text-slate-700">
 											{activity.action}
 										</p>
-										<p className="text-xs text-slate-600 mt-1">
+										<p className="mt-1 text-xs text-slate-600">
 											{getActivityDisplayText(activity)}
 										</p>
 									</div>
-									<span className="text-xs text-slate-500 ml-4">
+									<span className="ml-4 shrink-0 text-xs text-slate-500">
 										{formatTimeAgo(activity.timestamp)}
 									</span>
 								</div>

@@ -1724,6 +1724,178 @@ button[data-state="active"] > span {
 	color: #fff !important;
 }
 
+/* Dashboard calendar widget: full-width grid + soft selected/today badge */
+.rdp-root.caalm-dashboard-cal,
+.caalm-dashboard-cal {
+	--rdp-accent-color: #2563eb;
+	--rdp-selected-border: 2px solid transparent;
+	--rdp-today-color: #2563eb;
+	--rdp-day-width: calc(100% / 7);
+	--rdp-day-height: auto;
+	--rdp-day_button-width: 100%;
+	--rdp-day_button-height: 100%;
+	--rdp-nav_button-width: 1.5rem;
+	--rdp-nav_button-height: 1.5rem;
+	--rdp-nav-height: 0;
+	--rdp-weekday-padding: 0.125rem 0;
+	width: 100% !important;
+	max-width: 100% !important;
+	margin: 0 !important;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-months,
+.caalm-dashboard-cal .rdp-months {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-month,
+.caalm-dashboard-cal .rdp-month {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-month_caption,
+.rdp-root.caalm-dashboard-cal .rdp-nav,
+.caalm-dashboard-cal .rdp-month_caption,
+.caalm-dashboard-cal .rdp-nav {
+	display: none !important;
+	height: 0 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	overflow: hidden;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-month_grid,
+.caalm-dashboard-cal .rdp-month_grid {
+	display: flex !important;
+	flex-direction: column;
+	width: 100% !important;
+	border-collapse: unset;
+	border-spacing: 0;
+	table-layout: unset !important;
+}
+
+/* Identical 7-column rows for weekdays and dates */
+.rdp-root.caalm-dashboard-cal .rdp-weekdays,
+.rdp-root.caalm-dashboard-cal .rdp-week,
+.caalm-dashboard-cal .rdp-weekdays,
+.caalm-dashboard-cal .rdp-week {
+	display: grid !important;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	width: 100% !important;
+	align-items: center;
+	justify-items: center;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-weeks,
+.caalm-dashboard-cal .rdp-weeks {
+	display: flex !important;
+	flex-direction: column;
+	width: 100%;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-weekday,
+.rdp-root.caalm-dashboard-cal .rdp-day,
+.caalm-dashboard-cal .rdp-weekday,
+.caalm-dashboard-cal .rdp-day {
+	width: 100% !important;
+	max-width: none !important;
+	min-width: 0;
+	box-sizing: border-box;
+	display: flex !important;
+	align-items: center;
+	justify-content: center;
+	justify-self: stretch;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: 0 !important;
+	text-align: center;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-weekday,
+.caalm-dashboard-cal .rdp-weekday {
+	color: #475569;
+	font-weight: 600;
+	font-size: 0.75rem;
+	height: auto !important;
+	aspect-ratio: auto;
+	padding-block: 0.25rem !important;
+	opacity: 1;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-day,
+.caalm-dashboard-cal .rdp-day {
+	height: auto !important;
+	aspect-ratio: auto;
+	min-height: 2.5rem;
+	font-size: inherit !important;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-selected,
+.caalm-dashboard-cal .rdp-selected {
+	font-size: inherit !important;
+	font-weight: inherit !important;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-day_button,
+.caalm-dashboard-cal .rdp-day_button {
+	width: 2.25rem !important;
+	height: 2.25rem !important;
+	max-width: 100% !important;
+	aspect-ratio: 1;
+	border-radius: 9999px;
+	margin: 0 !important;
+	padding: 0 !important;
+	color: #334155;
+	font-weight: 500;
+	font-size: 0.875rem !important;
+	border: none !important;
+	box-shadow: none !important;
+	outline: none !important;
+	background: transparent;
+	display: inline-flex !important;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-outside .rdp-day_button,
+.caalm-dashboard-cal .rdp-outside .rdp-day_button {
+	color: #94a3b8;
+	opacity: 0.7;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-disabled .rdp-day_button,
+.caalm-dashboard-cal .rdp-disabled .rdp-day_button {
+	color: #94a3b8;
+	opacity: 0.5;
+}
+
+/* Active / today: pale blue circle + vibrant blue text */
+.rdp-root.caalm-dashboard-cal .rdp-today:not(.rdp-outside) .rdp-day_button,
+.rdp-root.caalm-dashboard-cal .rdp-selected .rdp-day_button,
+.caalm-dashboard-cal .rdp-today:not(.rdp-outside) .rdp-day_button,
+.caalm-dashboard-cal .rdp-selected .rdp-day_button {
+	border: none !important;
+	color: #2563eb !important;
+	background: #dbeafe !important;
+	font-weight: 600;
+	box-shadow: none !important;
+}
+
+.rdp-root.caalm-dashboard-cal .rdp-today:not(.rdp-outside) .rdp-day_button:hover,
+.rdp-root.caalm-dashboard-cal .rdp-selected .rdp-day_button:hover,
+.rdp-root.caalm-dashboard-cal .rdp-today:not(.rdp-outside) .rdp-day_button:focus-visible,
+.rdp-root.caalm-dashboard-cal .rdp-selected .rdp-day_button:focus-visible,
+.caalm-dashboard-cal .rdp-today:not(.rdp-outside) .rdp-day_button:hover,
+.caalm-dashboard-cal .rdp-selected .rdp-day_button:hover,
+.caalm-dashboard-cal .rdp-today:not(.rdp-outside) .rdp-day_button:focus-visible,
+.caalm-dashboard-cal .rdp-selected .rdp-day_button:focus-visible {
+	background: #bfdbfe !important;
+	color: #1d4ed8 !important;
+}
+
 /* biome-ignore-end lint/complexity/noImportantStyles: end React DayPicker override block */
 /* biome-ignore-end lint/style/noDescendingSpecificity: end React DayPicker override block */
 

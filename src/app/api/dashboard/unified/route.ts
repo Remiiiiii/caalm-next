@@ -176,12 +176,12 @@ export async function GET(request: NextRequest) {
 						],
 					}),
 
-					// Recent activities - reduced limit
+					// Recent activities
 					tablesDB.listRows({
 						databaseId: appwriteConfig.databaseId || "default-db",
 						tableId:
 							appwriteConfig.recentActivityCollectionId || "recent-activity",
-						queries: [Query.orderDesc("$createdAt"), Query.limit(10)],
+						queries: [Query.orderDesc("$createdAt"), Query.limit(25)],
 					}),
 
 					// Calendar events - reduced limit
@@ -259,6 +259,7 @@ export async function GET(request: NextRequest) {
 							name: contract.contractName || "Unnamed Contract",
 							contractName: contract.contractName || "Unnamed Contract",
 							contractExpiryDate: contract.contractExpiryDate,
+							startDate: contract.startDate,
 							isExpired: contract.isExpired || false,
 							daysUntilExpiry,
 							status: contractStatus,
