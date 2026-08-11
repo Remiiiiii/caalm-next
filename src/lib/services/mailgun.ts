@@ -182,6 +182,36 @@ class MailgunService {
 		});
 	}
 
+	async sendNewUserRequestAdminAlert(
+		adminEmail: string,
+		userFullName: string,
+		userEmail: string,
+	) {
+		const subject = `New user request: ${userFullName}`;
+		const text = `A new user has requested access to CAALM Solutions.\n\nName: ${userFullName}\nEmail: ${userEmail}\n\nReview and invite them from your dashboard when ready.\n\nCAALM Solutions`;
+		const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #078FAB; text-align: center;">New User Request</h2>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="color: #666; font-size: 16px;">A new user has requested access to CAALM Solutions.</p>
+          <div style="background-color: #e3f2fd; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #078FAB;">
+            <p style="color: #333; margin: 0;"><strong>Name:</strong> ${userFullName}</p>
+            <p style="color: #333; margin: 8px 0 0 0;"><strong>Email:</strong> ${userEmail}</p>
+          </div>
+          <p style="color: #666; font-size: 14px;">Review and invite them from your dashboard when ready.</p>
+        </div>
+        <p style="color: #999; font-size: 12px; text-align: center;">CAALM Solutions</p>
+      </div>
+    `;
+
+		return this.sendEmail({
+			to: adminEmail,
+			subject,
+			text,
+			html,
+		});
+	}
+
 	async sendInvitationEmail(
 		email: string,
 		fullName: string,

@@ -26,6 +26,7 @@ export const PERMISSION_CATEGORIES = [
 	"news",
 	"licenses",
 	"approvals",
+	"tickets",
 	"platform",
 ] as const;
 

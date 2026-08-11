@@ -9,9 +9,10 @@ Onboarding is successful only when the user can do their real job on day one —
 
 ## Invite checklist
 
+- [ ] Org structure catalog matches real teams ([Organization settings](/docs/reference/organization-settings))
 - [ ] Correct email
 - [ ] Correct role(s)
-- [ ] Correct division/department context
+- [ ] Correct division/department context (from that catalog)
 - [ ] Manager knows the person is coming
 - [ ] 2FA expectation communicated
 

@@ -238,6 +238,21 @@ export const appwriteConfig = {
 		"69a3f91200a8c4d1e2f0",
 	),
 
+	orgUnitsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ORG_UNITS_COLLECTION",
+		"org_units",
+	),
+
+	costCentersCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_COST_CENTERS_COLLECTION",
+		"cost_centers",
+	),
+
+	orgUnitHistoryCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ORG_UNIT_HISTORY_COLLECTION",
+		"org_unit_history",
+	),
+
 	// Imagine Art API (AI Image Generation)
 	imagineArtApiKey: process.env.IMAGINE_ART_API_KEY,
 

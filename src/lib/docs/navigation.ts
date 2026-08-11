@@ -226,6 +226,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "Personal settings, 2FA, and View My Access.",
 			},
 			{
+				title: "Organization settings",
+				slug: "reference/organization-settings",
+				path: "reference/organization-settings",
+				summary:
+					"Profile, limits, org structure, and cost centers at /settings/organization.",
+			},
+			{
 				title: "Billing and integrations",
 				slug: "reference/billing-integrations",
 				path: "reference/billing-integrations",

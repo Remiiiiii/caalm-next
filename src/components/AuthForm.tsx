@@ -406,7 +406,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
 									<FormLabel className="shad-form-label">Full Name</FormLabel>
 									<FormControl>
 										<Input
-											placeholder="Demo User"
+											placeholder={
+												isClientDemoMode()
+													? "Demo User"
+													: "Enter your full name"
+											}
 											{...field}
 											value={
 												field.value ? ` ${field.value.replace(/^ /, "")}` : ""
@@ -709,15 +713,21 @@ const AuthForm = ({ type }: { type: FormType }) => {
 						setPendingSignup(null);
 					}}
 					onSuccess={async () => {
+						const signup = pendingSignup;
+						if (!signup) return;
+
+						// Close OTP modal before redirect so the spinner cannot stick
+						setPendingSignup(null);
+
 						if (isClientDemoMode()) {
 							try {
 								const result = await finalizeAccountAfterEmailVerification({
-									fullName: pendingSignup.fullName,
-									email: pendingSignup.email,
+									fullName: signup.fullName,
+									email: signup.email,
 								});
-								await completeDemoSession(pendingSignup.email);
-								saveDemoSandboxEmail(pendingSignup.email);
-								saveDemoSandboxFullName(pendingSignup.fullName);
+								await completeDemoSession(signup.email);
+								saveDemoSandboxEmail(signup.email);
+								saveDemoSandboxFullName(signup.fullName);
 								if (result?.orgId) {
 									localStorage.setItem("caalm_org_id", result.orgId);
 								}
@@ -728,22 +738,25 @@ const AuthForm = ({ type }: { type: FormType }) => {
 								setErrorMessage(
 									"Could not create your sandbox. Please try again.",
 								);
-								setPendingSignup(null);
 							}
 							return;
 						}
 
-						// Redirect immediately for better UX
-						router.push("/?signup=success");
+						// Await finalize so admin notifications are not aborted by navigation
+						try {
+							await finalizeAccountAfterEmailVerification({
+								fullName: signup.fullName,
+								email: signup.email,
+							});
+						} catch (error) {
+							console.error("Signup finalization error:", error);
+							setErrorMessage(
+								"Your code was verified, but account setup hit a problem. Try signing in or contact support.",
+							);
+							return;
+						}
 
-						// Run finalization in background without blocking the redirect
-						finalizeAccountAfterEmailVerification({
-							fullName: pendingSignup.fullName,
-							email: pendingSignup.email,
-						}).catch((error) => {
-							console.error("Background finalization error:", error);
-							// Error is logged but doesn't affect user experience
-						});
+						window.location.href = "/?signup=success";
 					}}
 				/>
 			)}

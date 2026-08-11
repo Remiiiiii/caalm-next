@@ -121,6 +121,15 @@ export const PERMISSIONS = {
 		OVERRIDE: "approvals.override",
 	},
 
+	// Tickets / support queue
+	TICKETS: {
+		VIEW: "tickets.view",
+		CREATE: "tickets.create",
+		EDIT: "tickets.edit",
+		DELETE: "tickets.delete",
+		ASSIGN: "tickets.assign",
+	},
+
 	// Platform / break-glass capabilities (Super Admin only by default)
 	PLATFORM: {
 		DIAGNOSE: "platform.diagnose",
@@ -142,6 +151,8 @@ export const SENSITIVE_PERMISSIONS: readonly string[] = [
 	PERMISSIONS.LICENSES.APPROVE,
 	PERMISSIONS.LICENSES.DELETE,
 	PERMISSIONS.APPROVALS.OVERRIDE,
+	PERMISSIONS.TICKETS.DELETE,
+	PERMISSIONS.TICKETS.ASSIGN,
 	PERMISSIONS.IT.MANAGE_DATABASE,
 	PERMISSIONS.IT.MANAGE_API_KEYS,
 	PERMISSIONS.IT.MANAGE_DEPLOYMENTS,
@@ -593,6 +604,38 @@ export const PERMISSION_DEFINITIONS = [
 		category: "approvals",
 		description:
 			"Decide approval steps outside the normal assignee chain (break-glass)",
+	},
+
+	// Tickets
+	{
+		key: PERMISSIONS.TICKETS.VIEW,
+		name: "View Tickets",
+		category: "tickets",
+		description: "View support and operations tickets",
+	},
+	{
+		key: PERMISSIONS.TICKETS.CREATE,
+		name: "Create Tickets",
+		category: "tickets",
+		description: "Create new tickets",
+	},
+	{
+		key: PERMISSIONS.TICKETS.EDIT,
+		name: "Edit Tickets",
+		category: "tickets",
+		description: "Update ticket details and status",
+	},
+	{
+		key: PERMISSIONS.TICKETS.DELETE,
+		name: "Delete Tickets",
+		category: "tickets",
+		description: "Delete tickets",
+	},
+	{
+		key: PERMISSIONS.TICKETS.ASSIGN,
+		name: "Assign Tickets",
+		category: "tickets",
+		description: "Assign tickets to users or teams",
 	},
 
 	// Platform

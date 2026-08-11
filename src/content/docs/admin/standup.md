@@ -10,10 +10,10 @@ A new CAALM org fails when admins invite everyone before deciding how work shoul
 ## The first 10 moves
 
 1. **Sign in as the founding admin** and complete 2FA yourself first.
-2. **Confirm org profile** (name, basics) under organization settings.
+2. **Confirm org profile** (name, basics) under [Organization settings](/docs/reference/organization-settings).
 3. **Decide the role model** — start from default roles; only invent new roles with a written purpose.
 4. **Assign permissions explicitly** (especially Super Admin / Org Admin — no mythical implicit powers).
-5. **Set division taxonomy** to match how managers actually work.
+5. **Set division taxonomy** on the Org structure tab (seed defaults, then match how managers actually work). Add cost centers only if finance needs budget codes.
 6. **Turn on required 2FA** if policy demands it *before* mass invites.
 7. **Invite a pilot group** (one executive, one manager, one viewer, one content creator if needed).
 8. **Load a small set of real records** (or clean sample) and validate dashboards.

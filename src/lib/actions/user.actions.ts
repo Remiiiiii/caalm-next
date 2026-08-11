@@ -14,6 +14,10 @@ import CacheManager from "@/lib/services/cache-manager";
 import { avatarPlaceholderUrl, type UserDivision } from "../../../constants";
 import { createAdminClient, createSessionClient } from "../appwrite";
 import { appwriteConfig } from "../appwrite/config";
+import {
+	normalizeOrgPlacement,
+	OrgUnitValidationError,
+} from "../org/org-unit-validation";
 import { parseStringify } from "../utils";
 import { triggerUserInvitationNotification } from "../utils/notificationTriggers";
 import {
@@ -37,8 +41,9 @@ export type AppUser = {
 	avatar: string;
 	accountId: string;
 	role: CalendarRole; // For calendar permissions compatibility only
-	division?: UserDivision;
+	division?: UserDivision | string;
 	department?: string; // Direct department field (if available)
+	managerUserId?: string | null;
 	phone?: string;
 	status?: "active" | "inactive" | "suspended";
 	profileImageId?: string | null;
@@ -427,15 +432,13 @@ export const finalizeAccountAfterEmailVerification = async ({
 		};
 	}
 
-	// 4-6. Run non-critical operations in parallel (don't await)
-	// These operations run in the background and don't block the user's redirect
-	Promise.allSettled([
-		// Add messaging target
+	// 4-6. Messaging target + emails/notifications must finish before return.
+	// Fire-and-forget was aborted by hard client navigations after signup OTP.
+	await Promise.allSettled([
 		addUserEmailTarget({ userId: accountId, email }).catch((error) => {
 			console.warn("Failed to add email target:", error);
 		}),
 
-		// Send confirmation email
 		(async () => {
 			try {
 				const { mailgunService } = await import("../services/mailgun");
@@ -449,7 +452,6 @@ export const finalizeAccountAfterEmailVerification = async ({
 			}
 		})(),
 
-		// Notify executives
 		(async () => {
 			try {
 				const { triggerNewUserRequestNotification } = await import(
@@ -457,24 +459,19 @@ export const finalizeAccountAfterEmailVerification = async ({
 				);
 				await triggerNewUserRequestNotification(email, fullName);
 				console.log(
-					"Executive notification sent for new user request from:",
+					"Admin notifications sent for new user request from:",
 					email,
 				);
-
-				// Also send SMS notification using our new system
-				await notifyOTPVerified(email, fullName);
 			} catch (error) {
 				console.error(
-					"Failed to notify executives about new user request:",
+					"Failed to notify admins about new user request:",
 					error,
 				);
 			}
 		})(),
-	]).then(() => {
-		console.log("Background tasks completed for user:", email);
-	});
+	]);
 
-	// Return immediately without waiting for background tasks
+	console.log("Signup side effects completed for user:", email);
 	return { accountId, userId: usersCollectionId };
 };
 
@@ -1148,48 +1145,18 @@ export const createInvitation = async ({
 		}
 		console.log("createInvitation: Role validation passed");
 
-		// Validate division against expected enum values
-		const validDivisions = [
-			"c-suite",
-			"clinic",
-			"residential",
-			"help-desk",
-			"hr",
-			"support",
-			"accounting",
-			"behavioral-health",
-			"child-welfare",
-			"cfs",
-		];
-
-		// Debug: Log the received parameters
-		console.log("createInvitation: Received parameters:", {
-			email,
-			role,
-			department,
-			division,
-			divisionType: typeof division,
-			divisionLength: division?.length,
-			divisionTrimmed: division?.trim(),
-			isValidDivision: validDivisions.includes(division?.trim() || ""),
-			validDivisions,
-			name,
-			orgId,
-			invitedBy,
-		});
-
-		// Validate division value if provided
-		if (division && !validDivisions.includes(division.trim())) {
-			console.error("createInvitation: Invalid division value:", {
-				received: division,
-				trimmed: division.trim(),
-				validOptions: validDivisions,
+		let normalizedPlacement;
+		try {
+			normalizedPlacement = normalizeOrgPlacement({
+				department: department?.trim() || (division ? undefined : "Administration"),
+				division,
+				requireDepartment: true,
 			});
-			throw new Error(
-				`Invalid division value: "${division}". Must be one of: ${validDivisions.join(
-					", ",
-				)}`,
-			);
+		} catch (err) {
+			if (err instanceof OrgUnitValidationError) {
+				throw err;
+			}
+			throw err;
 		}
 
 		// 1. Create invitation document
@@ -1202,8 +1169,8 @@ export const createInvitation = async ({
 				email,
 				orgId,
 				role: normalizedRole,
-				department: department?.trim(),
-				division: division?.trim(),
+				department: normalizedPlacement.department,
+				division: normalizedPlacement.division,
 				name,
 				token,
 				expiresAt,
@@ -1220,7 +1187,7 @@ export const createInvitation = async ({
 				email,
 				name,
 				normalizedRole,
-				department || "N/A",
+				normalizedPlacement.department || "N/A",
 			);
 		} catch (error) {
 			console.error("Failed to send invitation SMS:", error);
@@ -1240,7 +1207,7 @@ export const createInvitation = async ({
 				name,
 				inviteLink,
 				normalizedRole,
-				department,
+				normalizedPlacement.department,
 			);
 			console.log("Invitation email sent via Mailgun to:", email);
 		} catch (error) {
@@ -1264,6 +1231,10 @@ export const createInvitation = async ({
 	} catch (error) {
 		console.error("createInvitation: Error occurred:", error);
 
+		if (error instanceof OrgUnitValidationError) {
+			throw error;
+		}
+
 		// Handle specific errors with user-friendly messages
 		if (error instanceof Error) {
 			if (
@@ -1283,6 +1254,8 @@ export const createInvitation = async ({
 				error.message.includes("collection")
 			) {
 				throw new Error("Database error. Please try again later.");
+			} else if (error.message.includes("Invalid division") || error.message.includes("Department is required") || error.message.includes("belongs under")) {
+				throw error;
 			} else {
 				// Log the original error for debugging but return a user-friendly message
 				console.error("createInvitation: Original error:", error);
@@ -1326,46 +1299,19 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 	// 2. Create users collection document if not exists (role is assigned via user_roles table)
 	let user = await getUserByEmail(invite.email);
 	if (!user) {
-		// Validate division against expected enum values
-		const validDivisions = [
-			"c-suite",
-			"clinic",
-			"residential",
-			"help-desk",
-			"hr",
-			"support",
-			"accounting",
-			"behavioral-health",
-			"child-welfare",
-			"cfs",
-		];
+		const placement = normalizeOrgPlacement({
+			department: invite.department,
+			division: invite.division,
+			requireDepartment: true,
+		});
 
 		console.log("acceptInvitation: Creating user with data:", {
 			fullName: invite.name,
 			email: invite.email,
 			role: invite.role,
-			department: invite.department,
-			division: invite.division,
-			divisionType: typeof invite.division,
-			divisionLength: invite.division?.length,
-			divisionTrimmed: invite.division?.trim(),
-			isValidDivision: validDivisions.includes(invite.division?.trim() || ""),
-			validDivisions,
+			department: placement.department,
+			division: placement.division,
 		});
-
-		// Validate division value
-		if (invite.division && !validDivisions.includes(invite.division.trim())) {
-			console.error("acceptInvitation: Invalid division value:", {
-				received: invite.division,
-				trimmed: invite.division.trim(),
-				validOptions: validDivisions,
-			});
-			throw new Error(
-				`Invalid division value: "${
-					invite.division
-				}". Must be one of: ${validDivisions.join(", ")}`,
-			);
-		}
 
 		await tablesDB.createRow({
 			databaseId: appwriteConfig.databaseId || "default-db",
@@ -1376,8 +1322,11 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 				email: invite.email,
 				avatar: avatarPlaceholderUrl,
 				accountId,
-				department: invite.department,
-				division: invite.division,
+				department: placement.department,
+				division: placement.division,
+				orgId: invite.orgId,
+				departmentLabel: placement.department,
+				divisionLabel: placement.division,
 			},
 		});
 		user = await getUserByEmail(invite.email);
@@ -1735,13 +1684,23 @@ export const updateUserProfile = async ({
 	role,
 	department,
 	status,
+	managerUserId,
+	costCenterId,
+	primaryOrgUnitId,
+	departmentId,
+	divisionId,
 }: {
 	accountId: string;
 	fullName?: string;
-	division?: UserDivision;
+	division?: UserDivision | string;
 	role?: string;
 	department?: string;
 	status?: "active" | "inactive" | "suspended";
+	managerUserId?: string | null;
+	costCenterId?: string | null;
+	primaryOrgUnitId?: string | null;
+	departmentId?: string | null;
+	divisionId?: string | null;
 }) => {
 	try {
 		const { tablesDB } = await createAdminClient();
@@ -1758,9 +1717,45 @@ export const updateUserProfile = async ({
 		// Note: role updates should be done via user_roles table, not directly on user
 		const updatePayload: Record<string, unknown> = {};
 		if (fullName !== undefined) updatePayload.fullName = fullName;
-		if (division !== undefined) updatePayload.division = division;
-		if (department !== undefined) updatePayload.department = department;
 		if (status !== undefined) updatePayload.status = status;
+
+		if (division !== undefined || department !== undefined) {
+			const placement = normalizeOrgPlacement({
+				department:
+					department !== undefined
+						? department
+						: (userDoc.department as string | undefined),
+				division:
+					division !== undefined
+						? division
+						: (userDoc.division as string | undefined),
+				requireDepartment: true,
+			});
+			updatePayload.department = placement.department;
+			updatePayload.departmentLabel = placement.department;
+			if (placement.division) {
+				updatePayload.division = placement.division;
+				updatePayload.divisionLabel = placement.division;
+			} else if (division === undefined || division === "") {
+				// leave division as-is unless explicitly cleared via org-unit assign
+			}
+		}
+
+		if (managerUserId !== undefined) {
+			updatePayload.managerUserId = managerUserId;
+		}
+		if (costCenterId !== undefined) {
+			updatePayload.costCenterId = costCenterId;
+		}
+		if (primaryOrgUnitId !== undefined) {
+			updatePayload.primaryOrgUnitId = primaryOrgUnitId;
+		}
+		if (departmentId !== undefined) {
+			updatePayload.departmentId = departmentId;
+		}
+		if (divisionId !== undefined) {
+			updatePayload.divisionId = divisionId;
+		}
 
 		// Preserve required fields like orgId if they exist in the document
 		// This ensures we don't lose required attributes during partial updates
@@ -1777,6 +1772,9 @@ export const updateUserProfile = async ({
 		});
 		return updatedUser;
 	} catch (error) {
+		if (error instanceof OrgUnitValidationError) {
+			throw error;
+		}
 		handleError(error, "Failed to update user profile");
 	}
 };
@@ -1809,9 +1807,20 @@ export const updateUserDepartment = async ({
 		}
 
 		// Prepare update payload with department and preserve required fields
-		const updatePayload: Record<string, unknown> = {
+		const placement = normalizeOrgPlacement({
 			department,
+			division: userDoc.division as string | undefined,
+			requireDepartment: true,
+		});
+
+		const updatePayload: Record<string, unknown> = {
+			department: placement.department,
+			departmentLabel: placement.department,
 		};
+		if (placement.division) {
+			updatePayload.division = placement.division;
+			updatePayload.divisionLabel = placement.division;
+		}
 
 		// Preserve orgId if it exists (required attribute)
 		if (userDoc.orgId) {

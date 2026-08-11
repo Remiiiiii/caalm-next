@@ -236,16 +236,13 @@ export async function getManagersByDepartment(
  * Get executives (Super Admins) - convenience function
  */
 export async function getAllExecutives(orgId?: string): Promise<any[]> {
-	return getUsersByRoleNames(["Super Admin", "executive"], orgId, {
-		status: "active",
-	});
+	// Do not require status=active — many admins have null status and would be skipped.
+	return getUsersByRoleNames(["Super Admin", "executive"], orgId);
 }
 
 /**
  * Get admins (Organization Admins) - convenience function
  */
 export async function getAllAdmins(orgId?: string): Promise<any[]> {
-	return getUsersByRoleNames(["Organization Admin", "admin"], orgId, {
-		status: "active",
-	});
+	return getUsersByRoleNames(["Organization Admin", "admin"], orgId);
 }

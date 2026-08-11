@@ -111,6 +111,12 @@ function getFallbackTriggers(): Record<string, NotificationTrigger> {
 			defaultTitle: "User Invited",
 			defaultMessage: "A new user has been invited to the system.",
 		},
+		"new-user-request": {
+			type: "new-user-request",
+			priority: "high" as const,
+			defaultTitle: "New User Request",
+			defaultMessage: "A new user has requested access to CAALM.",
+		},
 		"system-update": {
 			type: "system-update",
 			priority: "low" as const,
@@ -309,28 +315,22 @@ export async function triggerNewUserRequestNotification(
 	userEmail: string,
 	userFullName: string,
 ): Promise<void> {
-	// Get all executives to notify them
-	const { createAdminClient } = await import("../appwrite");
-	const { Query } = await import("node-appwrite");
-	const { appwriteConfig } = await import("../appwrite/config");
-
 	try {
-		const { tablesDB } = await createAdminClient();
-
-		// Get all executives and admins using new RBAC system
 		const { getAllExecutives, getAllAdmins } = await import(
 			"./get-users-by-role"
 		);
-		const executivesList = await Promise.all([
-			getAllExecutives(),
-			getAllAdmins(),
-		]);
-		const executives = { rows: executivesList.flat() };
+		const recipients = [
+			...(await getAllExecutives()),
+			...(await getAllAdmins()),
+		];
+		// Dedupe by user document id
+		const uniqueRecipients = [
+			...new Map(recipients.map((user) => [user.$id, user])).values(),
+		];
 
-		// Send notification to each executive
-		for (const executive of executives.rows) {
+		for (const recipient of uniqueRecipients) {
 			await triggerNotification("new-user-request", {
-				userId: executive.accountId,
+				userId: recipient.$id || recipient.accountId,
 				title: "New User Request",
 				message: `${userFullName} (${userEmail}) has requested access to CAALM Solutions.`,
 				metadata: {
@@ -343,24 +343,28 @@ export async function triggerNewUserRequestNotification(
 		}
 
 		console.log(
-			`Notified ${executives.rows.length} executives about new user request from ${userEmail}`,
+			`Notified ${uniqueRecipients.length} admins about new user request from ${userEmail}`,
 		);
 
-		// Also send SMS notifications to executives who have SMS enabled
 		await sendSMSNotificationsToExecutives(
 			userEmail,
 			userFullName,
-			executives.rows,
+			uniqueRecipients,
+		);
+
+		await sendEmailNotificationsToAdmins(
+			userEmail,
+			userFullName,
+			uniqueRecipients,
 		);
 	} catch (error) {
 		console.error("Failed to trigger new user request notification:", error);
-		// Don't throw error to avoid breaking the signup process
 	}
 }
 
 /**
  * Send SMS notifications to executives about new user requests
- * Updated to use our new Twilio-based SMS system
+ * Uses Auth phone numbers (users collection does not store phone).
  */
 async function sendSMSNotificationsToExecutives(
 	userEmail: string,
@@ -368,11 +372,10 @@ async function sendSMSNotificationsToExecutives(
 	executives: any[],
 ): Promise<void> {
 	try {
-		// Use our new SMS notification system
-		const { sendOnboardingSMS } = await import("./smsNotifications");
-
-		// Filter executives who have phone numbers
-		const executivesWithPhones = executives.filter((exec) => exec.phone);
+		const { getUsersWithPhoneNumbers, sendOnboardingSMS } = await import(
+			"./smsNotifications"
+		);
+		const executivesWithPhones = await getUsersWithPhoneNumbers(executives);
 
 		if (executivesWithPhones.length === 0) {
 			console.log(
@@ -382,15 +385,49 @@ async function sendSMSNotificationsToExecutives(
 		}
 
 		const message = `CAALM Alert: New user request from ${userFullName} (${userEmail}). Please review in the dashboard.`;
-
 		await sendOnboardingSMS(executivesWithPhones, message);
-
 		console.log(
 			`Sent SMS notifications to ${executivesWithPhones.length} executives`,
 		);
 	} catch (error) {
 		console.error("Failed to send SMS notifications to executives:", error);
-		// Don't throw error to avoid breaking the main flow
+	}
+}
+
+async function sendEmailNotificationsToAdmins(
+	userEmail: string,
+	userFullName: string,
+	admins: any[],
+): Promise<void> {
+	try {
+		const { mailgunService } = await import("../services/mailgun");
+		const emails = [
+			...new Set(
+				admins
+					.map((admin) => String(admin.email || "").trim())
+					.filter((email) => email.includes("@")),
+			),
+		];
+
+		if (emails.length === 0) {
+			console.log("No admin emails found for new user request notification");
+			return;
+		}
+
+		await Promise.allSettled(
+			emails.map((email) =>
+				mailgunService.sendNewUserRequestAdminAlert(
+					email,
+					userFullName,
+					userEmail,
+				),
+			),
+		);
+		console.log(
+			`Sent new-user-request emails to ${emails.length} admins`,
+		);
+	} catch (error) {
+		console.error("Failed to send admin emails for new user request:", error);
 	}
 }
 

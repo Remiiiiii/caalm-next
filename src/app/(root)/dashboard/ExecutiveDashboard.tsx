@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/skeletons";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import WeatherWidget from "@/components/WeatherWidget";
+import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import type { ContractStatus } from "@/constants/status";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -1138,65 +1139,22 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 											</SelectScrollable>
 										</div>
 
-										<div>
-											<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-												Department
-												<span className="font-mono text-[9px] font-medium uppercase tracking-wide text-slate-400">
-													Optional
-												</span>
-											</label>
-											<SelectScrollable
-												value={inviteForm.department}
-												onValueChange={(value) =>
-													setInviteForm({ ...inviteForm, department: value })
+										<div className="sm:col-span-2">
+											<OrgUnitPicker
+												orgId={orgId || "default_organization"}
+												departmentCode={inviteForm.department}
+												divisionCode={inviteForm.division}
+												onDepartmentChange={(value) =>
+													setInviteForm({
+														...inviteForm,
+														department: value,
+														division: "",
+													})
 												}
-												placeholder="Select department…"
-												className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
-											>
-												<SelectItem value="IT">IT</SelectItem>
-												<SelectItem value="Finance">Finance</SelectItem>
-												<SelectItem value="Administration">
-													Administration
-												</SelectItem>
-												<SelectItem value="Legal">Legal</SelectItem>
-												<SelectItem value="Operations">Operations</SelectItem>
-												<SelectItem value="Sales">Sales</SelectItem>
-												<SelectItem value="Marketing">Marketing</SelectItem>
-												<SelectItem value="Executive">Executive</SelectItem>
-												<SelectItem value="Engineering">Engineering</SelectItem>
-											</SelectScrollable>
-										</div>
-
-										<div>
-											<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-												Division
-												<span className="font-mono text-[9px] font-medium uppercase tracking-wide text-slate-400">
-													Optional
-												</span>
-											</label>
-											<SelectScrollable
-												value={inviteForm.division}
-												onValueChange={(value) =>
+												onDivisionChange={(value) =>
 													setInviteForm({ ...inviteForm, division: value })
 												}
-												placeholder="Select division…"
-												className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
-											>
-												<SelectItem value="behavioral-health">
-													Behavioral Health
-												</SelectItem>
-												<SelectItem value="child-welfare">
-													Child Welfare
-												</SelectItem>
-												<SelectItem value="clinic">Clinic</SelectItem>
-												<SelectItem value="c-suite">C-Suite</SelectItem>
-												<SelectItem value="cfs">CFS</SelectItem>
-												<SelectItem value="hr">Human Resources</SelectItem>
-												<SelectItem value="residential">Residential</SelectItem>
-												<SelectItem value="support">Support</SelectItem>
-												<SelectItem value="help-desk">Help Desk</SelectItem>
-												<SelectItem value="accounting">Accounting</SelectItem>
-											</SelectScrollable>
+											/>
 										</div>
 									</div>
 								</div>

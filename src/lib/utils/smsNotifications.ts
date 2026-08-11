@@ -3,11 +3,18 @@ import { twilioService } from "@/lib/services/twilioService";
 // Get users by roles from users collection using new RBAC system
 async function getUsersByRoles(roles: string[]) {
 	const { getUsersByRoleNames } = await import("./get-users-by-role");
-	return getUsersByRoleNames(roles, undefined, { status: "active" });
+	// Include null/undefined status; only skip explicitly deactivated accounts
+	const users = await getUsersByRoleNames(roles);
+	return users.filter((user) => {
+		const status = String(user.status || "").toLowerCase();
+		return !["inactive", "deactivated", "disabled", "suspended"].includes(
+			status,
+		);
+	});
 }
 
 // Get phone numbers from Appwrite Auth for users
-async function getUsersWithPhoneNumbers(users: any[]) {
+export async function getUsersWithPhoneNumbers(users: any[]) {
 	const { Client, Users } = await import("node-appwrite");
 	const client = new Client()
 		.setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
@@ -96,10 +103,10 @@ export async function sendOnboardingSMS(recipients: any[], message: string) {
 	}
 }
 
-// Notification 1: OTP Verified - Admin only
+// Notification 1: OTP Verified - Super Admin + Organization Admin
 export async function notifyOTPVerified(email: string, name?: string) {
 	console.log("SMS: notifyOTPVerified called for", email);
-	const adminUsers = await getUsersByRoles(["admin"]);
+	const adminUsers = await getUsersByRoles(["admin", "executive"]);
 	console.log("SMS: Found admin users:", adminUsers.length);
 	const adminsWithPhones = await getUsersWithPhoneNumbers(adminUsers);
 	const message = `New user ${name} (${email}) has verified their email and is pending approval.`;

@@ -14,6 +14,7 @@ export interface UserManagementUser extends AppUser {
 	assignedByName?: string;
 	assignedDate?: string;
 	lastActiveAt?: string;
+	managerUserId?: string | null;
 	$createdAt?: string;
 	$updatedAt?: string;
 }
@@ -61,6 +62,8 @@ export const useUsers = ({
 				accountId: u.accountId,
 				role: u.role,
 				department: u.department,
+				division: u.division,
+				managerUserId: (u as { managerUserId?: string }).managerUserId,
 				status:
 					u.status === "inactive" || u.status === "suspended"
 						? u.status

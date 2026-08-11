@@ -86,9 +86,9 @@ const OTPModal = ({
 		}
 	}, [modalIsOpen, email]);
 
-	// Tick every second while the modal is open
+	// Tick every second while the modal is open (pause while verifying)
 	useEffect(() => {
-		if (!modalIsOpen || !expiresAtRef.current) return;
+		if (!modalIsOpen || !expiresAtRef.current || isLoading) return;
 
 		const tick = () => {
 			const expiresAt = expiresAtRef.current;
@@ -100,26 +100,26 @@ const OTPModal = ({
 		tick();
 		const id = window.setInterval(tick, 1000);
 		return () => window.clearInterval(id);
-	}, [modalIsOpen, hasAutoSent]);
+	}, [modalIsOpen, hasAutoSent, isLoading]);
 
 	const handleVerify = async () => {
-		if (isLockedOut || isExpired) return;
+		if (isLockedOut || isExpired || isLoading) return;
 		setIsLoading(true);
-		setError(""); // Clear previous errors
-		setLastError(""); // Clear last error too
+		setError("");
+		setLastError("");
 
 		try {
-			// Use the new verifyOTP function for both sign-in and sign-up
 			const res = await verifyOTP({ email, otp, accountId });
 			if (res?.success) {
-				// Only call onSuccess if verification was successful
-				onSuccess();
-				return; // Exit early on success
-			} else {
-				setAttempts((prev) => prev + 1);
-				setError("Invalid OTP. Try again.");
-				setLastError("Invalid OTP. Try again.");
+				// Freeze client countdown so "expired" cannot flash while redirecting
+				expiresAtRef.current = null;
+				await onSuccess();
+				return;
 			}
+
+			setAttempts((prev) => prev + 1);
+			setError("Invalid OTP. Try again.");
+			setLastError("Invalid OTP. Try again.");
 		} catch (error) {
 			const message =
 				error instanceof Error
@@ -131,7 +131,6 @@ const OTPModal = ({
 				setError(LOCKOUT_MESSAGE);
 				setLastError(LOCKOUT_MESSAGE);
 				if (onError) onError(LOCKOUT_MESSAGE);
-				setIsLoading(false);
 				await handleLockoutAndRedirect();
 				return;
 			}
@@ -142,10 +141,9 @@ const OTPModal = ({
 				onError(message);
 			}
 			setAttempts((prev) => prev + 1);
+		} finally {
+			setIsLoading(false);
 		}
-
-		// Only clear loading if we didn't call onSuccess
-		setIsLoading(false);
 	};
 
 	const handleResendOtp = async () => {
@@ -196,7 +194,7 @@ const OTPModal = ({
 		}
 	};
 
-	const isExpired = hasAutoSent && secondsLeft <= 0;
+	const isExpired = !isLoading && hasAutoSent && secondsLeft <= 0;
 
 	return (
 		<AlertDialog open={modalIsOpen} onOpenChange={handleModalClose}>
@@ -225,22 +223,26 @@ const OTPModal = ({
 								? `Enter the verification code sent to`
 								: `Sending verification code to`}
 						</span>
-						<p className="font-light text-slate-900">{email}</p>
+						<span className="block font-light text-slate-900">{email}</span>
 					</AlertDialogDescription>
 					{hasAutoSent ? (
 						<p
 							className={`mt-2 text-center text-sm font-medium tabular-nums transition-colors duration-200 ${
-								isExpired
-									? "text-brand"
-									: secondsLeft <= 60
+								isLoading
+									? "text-slate-600"
+									: isExpired
 										? "text-brand"
-										: "text-slate-600"
+										: secondsLeft <= 60
+											? "text-brand"
+											: "text-slate-600"
 							}`}
 							aria-live="polite"
 						>
-							{isExpired
-								? "Code expired. Request a new one."
-								: `Code expires in ${formatCountdown(secondsLeft)}`}
+							{isLoading
+								? "Verifying code…"
+								: isExpired
+									? "Code expired. Request a new one."
+									: `Code expires in ${formatCountdown(secondsLeft)}`}
 						</p>
 					) : null}
 				</AlertDialogHeader>

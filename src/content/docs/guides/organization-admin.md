@@ -61,7 +61,7 @@ If the ED wants Super Admin “just in case,” start with Organization Admin. A
 - Deactivate users who left — do not just “take them out of the email list”
 
 ### 3. Maintain settings surfaces
-- Organization settings
+- [Organization settings](/docs/reference/organization-settings) (`/settings/organization`) — profile, limits, org structure, cost centers
 - Billing & Integrations when you hold `settings.billing` / `settings.integrations`
 - Leave **System settings** to Super Admin unless you are explicitly granted platform system access
 
