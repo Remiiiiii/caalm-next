@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/contexts/AuthContext";
-import { getCachedData, setCachedData } from "@/lib/utils/client-cache";
+import { clearCachedData, getCachedData, setCachedData } from "@/lib/utils/client-cache";
 
 interface DashboardData {
 	stats: {
@@ -85,6 +85,48 @@ export const useUnifiedDashboardData = (
 		},
 	});
 
+	const refresh = useCallback(
+		(
+			data?: UnifiedDashboardDataResponse | Promise<UnifiedDashboardDataResponse>,
+			options?: { revalidate?: boolean; populateCache?: boolean },
+		) => {
+			if (url && options?.revalidate !== false) {
+				clearCachedData(url);
+			}
+			return mutate(data, { dedupe: false, ...options });
+		},
+		[mutate, url],
+	);
+
+	const prependInvitation = useCallback(
+		async (invitation: unknown) => {
+			await mutate(
+				(current) => {
+					if (!current?.data) return current;
+					const existing = current.data.invitations || [];
+					const token = (invitation as { token?: string }).token;
+					if (
+						token &&
+						existing.some(
+							(inv) => (inv as { token?: string }).token === token,
+						)
+					) {
+						return current;
+					}
+					return {
+						...current,
+						data: {
+							...current.data,
+							invitations: [invitation, ...existing],
+						},
+					};
+				},
+				{ revalidate: false },
+			);
+		},
+		[mutate],
+	);
+
 	return {
 		// Data
 		stats: data?.data?.stats || {
@@ -114,6 +156,7 @@ export const useUnifiedDashboardData = (
 		lastUpdatedAt: data?.timestamp ?? null,
 
 		// Actions
-		refresh: mutate,
+		refresh,
+		prependInvitation,
 	};
 };

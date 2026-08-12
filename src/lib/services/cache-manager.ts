@@ -5,6 +5,11 @@
 
 import { CACHE_KEYS, getTTLForRoute } from "./cache-keys";
 import * as cache from "./redis-cache";
+import { supportsPatternClear } from "./redis-cache";
+
+function escapeRegex(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * Cache wrapper for API routes
@@ -45,13 +50,36 @@ export class CacheManager {
 		orgId: string,
 		userId?: string,
 	): Promise<void> {
+		const escapedOrgId = escapeRegex(orgId);
+
 		if (userId) {
-			await cache.del(CACHE_KEYS.dashboard.unified(orgId, userId));
+			const baseKey = CACHE_KEYS.dashboard.unified(orgId, userId);
+			if (supportsPatternClear()) {
+				await cache.clear(
+					`^dashboard:unified:${escapedOrgId}:${escapeRegex(userId)}`,
+				);
+			} else {
+				// Vercel KV: delete known unified dashboard cache keys (paginated variants)
+				for (const page of [1, 2]) {
+					for (const limit of [20, 50]) {
+						await cache.del(`${baseKey}:v3:page:${page}:limit:${limit}`);
+					}
+				}
+			}
 		}
+
 		await cache.del(CACHE_KEYS.dashboard.stats(orgId));
 		await cache.del(CACHE_KEYS.dashboard.invitations(orgId));
-		// Clear all dashboard files caches (with different limits)
-		await cache.clear(`^dashboard:files:${orgId}:`);
+		await cache.clear(`^dashboard:files:${escapedOrgId}:`);
+	}
+
+	/** After invitation create/revoke/delete/resend */
+	static async invalidateInvitationCaches(
+		orgId: string,
+		userId?: string,
+	): Promise<void> {
+		await this.invalidateDashboard(orgId, userId);
+		await cache.del(CACHE_KEYS.users.uninvited());
 	}
 
 	/**

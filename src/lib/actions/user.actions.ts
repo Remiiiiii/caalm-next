@@ -12,6 +12,10 @@ import {
 } from "@/lib/rbac/permissions";
 import CacheManager from "@/lib/services/cache-manager";
 import { avatarPlaceholderUrl, type UserDivision } from "../../../constants";
+import {
+	INVITATION_STATUS,
+	isPendingInvitationStatus,
+} from "@/constants/status";
 import { createAdminClient, createSessionClient } from "../appwrite";
 import { appwriteConfig } from "../appwrite/config";
 import {
@@ -1092,6 +1096,18 @@ const VALID_RBAC_ROLES = [
 	"Viewer",
 ];
 
+const LEGACY_INVITE_ROLE_MAP: Record<string, string> = {
+	executive: "Super Admin",
+	admin: "Organization Admin",
+	manager: "Department Manager",
+	viewer: "Viewer",
+};
+
+const resolveInvitationRole = (role: string): string => {
+	const trimmed = role.trim();
+	return LEGACY_INVITE_ROLE_MAP[trimmed.toLowerCase()] ?? trimmed;
+};
+
 export const createInvitation = async ({
 	email,
 	orgId,
@@ -1119,11 +1135,11 @@ export const createInvitation = async ({
 		const expiresAt = new Date(
 			Date.now() + expiresInDays * 24 * 60 * 60 * 1000,
 		).toISOString();
-		const status = "pending";
+		const status = INVITATION_STATUS.PENDING;
 		const revoked = false;
 
-		// Validate role against new RBAC roles
-		const normalizedRole = role.trim();
+		// Validate role against RBAC catalog (supports legacy invite form values)
+		const normalizedRole = resolveInvitationRole(role);
 		const isRecognizedRole = VALID_RBAC_ROLES.includes(normalizedRole);
 
 		console.log("createInvitation: Role validation:", {
@@ -1161,7 +1177,7 @@ export const createInvitation = async ({
 
 		// 1. Create invitation document
 		console.log("createInvitation: Creating database row...");
-		await tablesDB.createRow({
+		const row = await tablesDB.createRow({
 			databaseId: appwriteConfig.databaseId || "default-db",
 			tableId: INVITATIONS_COLLECTION,
 			rowId: ID.unique(),
@@ -1227,7 +1243,9 @@ export const createInvitation = async ({
 			// Don't throw error here as the invitation was created successfully
 		}
 
-		return { email, token, expiresAt };
+		await CacheManager.invalidateInvitationCaches(orgId, invitedBy);
+
+		return row;
 	} catch (error) {
 		console.error("createInvitation: Error occurred:", error);
 
@@ -1254,6 +1272,13 @@ export const createInvitation = async ({
 				error.message.includes("collection")
 			) {
 				throw new Error("Database error. Please try again later.");
+			} else if (
+				error.message.includes("Invalid document structure") ||
+				error.message.includes("invalid format")
+			) {
+				throw new Error(
+					"Invitation could not be saved due to a data format mismatch. Contact support if this continues.",
+				);
 			} else if (error.message.includes("Invalid division") || error.message.includes("Department is required") || error.message.includes("belongs under")) {
 				throw error;
 			} else {
@@ -1278,7 +1303,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 	});
 	if (result.total === 0) throw new Error("Invalid invitation token");
 	const invite = result.rows[0];
-	if (invite.status !== "pending" || invite.revoked)
+	if (!isPendingInvitationStatus(String(invite.status)) || invite.revoked)
 		throw new Error("Invitation is not valid");
 	if (new Date(invite.expiresAt) < new Date())
 		throw new Error("Invitation expired");
@@ -1381,7 +1406,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 		databaseId: appwriteConfig.databaseId || "default-db",
 		tableId: INVITATIONS_COLLECTION,
 		rowId: invite.$id,
-		data: { status: "accepted" },
+		data: { status: INVITATION_STATUS.ACCEPTED },
 	});
 
 	// Send SMS notification to admins, executives, and department managers
@@ -1420,8 +1445,9 @@ export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
 		databaseId: appwriteConfig.databaseId || "default-db",
 		tableId: INVITATIONS_COLLECTION,
 		rowId: invite.$id,
-		data: { revoked: true, status: "revoked" },
+		data: { revoked: true, status: INVITATION_STATUS.REVOKED },
 	});
+	await CacheManager.invalidateInvitationCaches(String(invite.orgId));
 	return { success: true };
 };
 
@@ -1439,6 +1465,7 @@ export const deleteInvitation = async ({ token }: RevokeInvitationParams) => {
 		tableId: INVITATIONS_COLLECTION,
 		rowId: invite.$id,
 	});
+	await CacheManager.invalidateInvitationCaches(String(invite.orgId));
 	return { success: true };
 };
 
@@ -1452,7 +1479,10 @@ export const listPendingInvitations = async ({
 			tableId: INVITATIONS_COLLECTION,
 			queries: [
 				sdk.Query.equal("orgId", orgId),
-				sdk.Query.equal("status", "pending"),
+				sdk.Query.or([
+					sdk.Query.equal("status", INVITATION_STATUS.PENDING),
+					sdk.Query.equal("status", "pending"),
+				]),
 				sdk.Query.equal("revoked", false),
 			],
 		});
@@ -2176,11 +2206,13 @@ export const getAllAuthUsers = async () => {
 	}
 };
 
-// Get users who have signed up but haven't been invited yet
+// Auth users who still need an invite (no role assigned, no pending invitation)
 export const getUninvitedUsers = async () => {
 	const { tablesDB } = await createAdminClient();
+	const databaseId = appwriteConfig.databaseId || "default-db";
+	const usersTableId = appwriteConfig.usersCollectionId || "users";
+
 	try {
-		// Get all Auth users
 		const client = new sdk.Client()
 			.setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
 			.setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
@@ -2188,32 +2220,57 @@ export const getUninvitedUsers = async () => {
 		const users = new sdk.Users(client);
 		const authUsers = await users.list({});
 
-		// Get all users in the users collection (invited users)
-		const invitedUsers = await tablesDB.listRows({
-			databaseId: appwriteConfig.databaseId || "default-db",
-			tableId: appwriteConfig.usersCollectionId || "users",
-		});
-
-		// Get all pending invitations
-		const pendingInvitations = await tablesDB.listRows({
-			databaseId: appwriteConfig.databaseId || "default-db",
-			tableId: INVITATIONS_COLLECTION,
-			queries: [sdk.Query.equal("status", "pending")],
-		});
-
-		// Filter out users who are already in the users collection or have pending invitations
-		const invitedEmails = new Set([
-			...invitedUsers.rows.map(
-				(u: Record<string, unknown>) => u.email as string,
-			),
-			...pendingInvitations.rows.map(
-				(inv: Record<string, unknown>) => inv.email as string,
-			),
+		const [appUsers, userRoles, pendingInvitations] = await Promise.all([
+			tablesDB.listRows({
+				databaseId,
+				tableId: usersTableId,
+			}),
+			tablesDB.listRows({
+				databaseId,
+				tableId: "user_roles",
+			}),
+			tablesDB.listRows({
+				databaseId,
+				tableId: INVITATIONS_COLLECTION,
+				queries: [
+					sdk.Query.or([
+						sdk.Query.equal("status", INVITATION_STATUS.PENDING),
+						sdk.Query.equal("status", "pending"),
+					]),
+				],
+			}),
 		]);
 
-		const uninvitedUsers = authUsers.users.filter(
-			(authUser) => !invitedEmails.has(authUser.email),
+		const userByEmail = new Map(
+			appUsers.rows.map((row: Record<string, unknown>) => [
+				String(row.email ?? "").toLowerCase(),
+				row,
+			]),
 		);
+		const usersWithRoles = new Set(
+			userRoles.rows.map(
+				(row: Record<string, unknown>) => row.userId as string,
+			),
+		);
+		const pendingInviteEmails = new Set(
+			pendingInvitations.rows.map((inv: Record<string, unknown>) =>
+				String(inv.email ?? "").toLowerCase(),
+			),
+		);
+
+		const uninvitedUsers = authUsers.users.filter((authUser) => {
+			const email = authUser.email.toLowerCase();
+			if (pendingInviteEmails.has(email)) {
+				return false;
+			}
+
+			const appUser = userByEmail.get(email);
+			if (!appUser) {
+				return true;
+			}
+
+			return !usersWithRoles.has(appUser.$id as string);
+		});
 
 		return uninvitedUsers.map((user) => ({
 			$id: user.$id,

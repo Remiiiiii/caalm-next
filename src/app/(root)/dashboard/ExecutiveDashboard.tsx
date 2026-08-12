@@ -33,6 +33,7 @@ import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
 import ProfilePicture from "@/components/ProfilePicture";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
+import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import Thumbnail from "@/components/Thumbnail";
 import {
 	AlertDialog,
@@ -58,7 +59,6 @@ import {
 } from "@/components/ui/skeletons";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import WeatherWidget from "@/components/WeatherWidget";
-import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import type { ContractStatus } from "@/constants/status";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -68,6 +68,7 @@ import { useDashboardLicenses } from "@/hooks/useDashboardLicenses";
 import { useRiskImpactDashboard } from "@/hooks/useRiskImpactDashboard";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { cn } from "@/lib/utils";
+import { resolveInviteDepartment } from "../../../../constants";
 import type { UIFileDoc } from "@/types/files";
 
 type NotifierContract = { id: string; name: string; expiryDate: string };
@@ -93,10 +94,15 @@ const CalendarView = dynamic(() => import("@/components/CalendarView"), {
 });
 
 const uninvitedFetcher = async (url: string) => {
-	const res = await fetch(url);
+	const res = await fetch(url, { credentials: "include" });
 	if (!res.ok) throw new Error("Failed to fetch uninvited users");
 	return res.json() as Promise<{ data?: UninvitedUser[]; success?: boolean }>;
 };
+
+const fetchUninvitedUsers = (refresh = false) =>
+	uninvitedFetcher(
+		refresh ? "/api/users/uninvited?refresh=1" : "/api/users/uninvited",
+	);
 
 // Add Invitation type
 interface Invitation {
@@ -162,6 +168,7 @@ const getInvitationStatusBadgeClasses = (status: string): string => {
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const { toast } = useToast();
 	const { orgId } = useOrganization();
+	const effectiveOrgId = orgId || "default_organization";
 	const { user: authUser } = useAuth();
 	const adminName = "Executive"; // Replace with actual admin name
 	const profileUser = authUser ?? user ?? null;
@@ -182,6 +189,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		isLoading: unifiedLoading,
 		lastUpdatedAt,
 		refresh: refreshUnified,
+		prependInvitation,
 	} = useUnifiedDashboardData(
 		orgId || "default_organization",
 		user?.$id ?? user?.accountId ?? null,
@@ -254,20 +262,40 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 			const response = await fetch("/api/invitations", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
+				credentials: "include",
 				body: JSON.stringify(invitationData),
 			});
 
+			const responseData = await response.json().catch(() => ({}));
+
 			if (!response.ok) {
-				throw new Error("Failed to create invitation");
+				const message =
+					(typeof responseData.details === "string" && responseData.details) ||
+					(typeof responseData.error === "string" && responseData.error) ||
+					"Failed to create invitation";
+				throw new Error(message);
 			}
 
-			const responseData = await response.json();
+			const created = responseData.data;
 
-			// Refresh unified data + uninvited list
-			refreshUnified();
-			refreshUninvited();
+			if (created?.token) {
+				await prependInvitation({
+					$id: created.$id ?? `temp-${created.token}`,
+					name: String(invitationData.name ?? created.name ?? ""),
+					email: String(invitationData.email ?? created.email ?? ""),
+					role: String(invitationData.role ?? created.role ?? ""),
+					token: created.token,
+					expiresAt: created.expiresAt,
+					status: created.status ?? "pending-review",
+					revoked: false,
+					$createdAt: created.$createdAt ?? new Date().toISOString(),
+				});
+			}
 
-			return responseData.data;
+			await refreshUnified(undefined, { revalidate: true });
+			refreshUninvited(fetchUninvitedUsers(true), { revalidate: false });
+
+			return created;
 		} catch (error) {
 			console.error("Failed to create invitation:", error);
 			throw error;
@@ -404,7 +432,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const handleRefreshUsers = async () => {
 		setRefreshLoading(true);
 		try {
-			await Promise.all([refreshUnified(), refreshUninvited()]);
+			await Promise.all([
+				refreshUnified(),
+				refreshUninvited(fetchUninvitedUsers(true), { revalidate: false }),
+			]);
 			toast({
 				title: "Success",
 				description: "User list refreshed successfully",
@@ -431,6 +462,26 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 			});
 			return;
 		}
+		if (!inviteForm.role) {
+			toast({
+				title: "Error",
+				description: "Please select a role",
+				variant: "destructive",
+			});
+			return;
+		}
+		const inviteDepartment = resolveInviteDepartment(
+			inviteForm.department,
+			inviteForm.division,
+		);
+		if (!inviteDepartment) {
+			toast({
+				title: "Error",
+				description: "Select a department before sending the invite.",
+				variant: "destructive",
+			});
+			return;
+		}
 
 		setLoading(true);
 
@@ -449,30 +500,27 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		}
 
 		try {
-			// Mark as adding for visual feedback
 			const tempToken = `temp_token_${Date.now()}`;
 			setAddingInvitations((prev) => new Set(prev).add(tempToken));
 
-			// Debug: Log the form values being sent
-			console.log("Frontend: Sending invitation with values:", {
+			const created = await createInvitation({
 				email: selectedUser.email,
 				name: selectedUser.fullName,
 				role: inviteForm.role,
-				department: inviteForm.department,
+				department: inviteDepartment,
 				division: inviteForm.division,
-				divisionType: typeof inviteForm.division,
-				divisionLength: inviteForm.division?.length,
-			});
-
-			await createInvitation({
-				email: selectedUser.email,
-				name: selectedUser.fullName,
-				role: inviteForm.role,
-				department: inviteForm.department,
-				division: inviteForm.division,
-				orgId,
+				orgId: effectiveOrgId,
 				invitedBy: adminName,
 			});
+
+			if (created?.token) {
+				setAddingInvitations((prev) => {
+					const next = new Set(prev);
+					next.delete(tempToken);
+					next.add(created.token);
+					return next;
+				});
+			}
 
 			// Success feedback
 			toast({
@@ -493,13 +541,17 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				setAddingInvitations((prev) => {
 					const newSet = new Set(prev);
 					newSet.delete(tempToken);
+					if (created?.token) newSet.delete(created.token);
 					return newSet;
 				});
 			}, 300);
-		} catch {
+		} catch (error) {
 			toast({
 				title: "Error",
-				description: "Failed to send invitation. Please try again.",
+				description:
+					error instanceof Error
+						? error.message
+						: "Failed to send invitation. Please try again.",
 				variant: "destructive",
 			});
 		} finally {
@@ -1056,10 +1108,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												<SelectScrollable
 													value={inviteForm.selectedUserId}
 													onValueChange={(value) =>
-														setInviteForm({
-															...inviteForm,
+														setInviteForm((prev) => ({
+															...prev,
 															selectedUserId: value,
-														})
+														}))
 													}
 													placeholder="Choose from directory…"
 													className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
@@ -1108,7 +1160,8 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 										</p>
 										{(uninvitedUsers as UninvitedUser[]).length === 0 && (
 											<p className="mt-2 text-xs text-slate-500">
-												No users found in the Auth directory.
+												No Auth users are waiting for an invite. Everyone either
+												has a role or already has a pending invitation.
 											</p>
 										)}
 									</div>
@@ -1119,8 +1172,8 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
 										Access &amp; permissions
 									</p>
-									<div className="space-y-4">
-										<div>
+									<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.5fr)]">
+										<div className="min-w-0 space-y-2 md:col-span-2 lg:col-span-1">
 											<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
 												Role
 												<span className="font-bold text-red" aria-hidden>
@@ -1130,35 +1183,48 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 											<SelectScrollable
 												value={inviteForm.role}
 												onValueChange={(value) =>
-													setInviteForm({ ...inviteForm, role: value })
+													setInviteForm((prev) => ({ ...prev, role: value }))
 												}
 												placeholder="Select role…"
 												className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
 											>
-												<SelectItem value="executive">Executive</SelectItem>
-												<SelectItem value="manager">Manager</SelectItem>
-												<SelectItem value="admin">Admin</SelectItem>
+												<SelectItem value="Super Admin">Super Admin</SelectItem>
+												<SelectItem value="Organization Admin">
+													Organization Admin
+												</SelectItem>
+												<SelectItem value="Department Manager">
+													Department Manager
+												</SelectItem>
+												<SelectItem value="Viewer">Viewer</SelectItem>
 											</SelectScrollable>
 										</div>
 
-										<div className="sm:col-span-2">
-											<OrgUnitPicker
-												orgId={orgId || "default_organization"}
-												departmentCode={inviteForm.department}
-												divisionCode={inviteForm.division}
-												onDepartmentChange={(value) =>
-													setInviteForm({
-														...inviteForm,
-														department: value,
-														division: "",
-													})
-												}
-												onDivisionChange={(value) =>
-													setInviteForm({ ...inviteForm, division: value })
-												}
-											/>
-										</div>
+										<OrgUnitPicker
+											layout="inline"
+											departmentRequired
+											orgId={effectiveOrgId}
+											divisionOptional
+											departmentCode={inviteForm.department}
+											divisionCode={inviteForm.division}
+											onDepartmentChange={(value) =>
+												setInviteForm((prev) => ({
+													...prev,
+													department: value,
+													division: "",
+												}))
+											}
+											onDivisionChange={(value) =>
+												setInviteForm((prev) => ({ ...prev, division: value }))
+											}
+										/>
 									</div>
+									{inviteForm.department && (
+										<p className="mt-3 text-[11px] text-slate-500">
+											Division is optional. Selecting{" "}
+											{inviteForm.department.replace(/-/g, " ")} as department
+											is enough to send the invite.
+										</p>
+									)}
 								</div>
 
 								{/* Footer */}
@@ -1174,8 +1240,8 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 										}
 										className="primary-btn h-10 shrink-0 gap-2 px-5 text-[13px] font-semibold"
 									>
-										{loading ? "Sending…" : "Send invite"}
 										<Send className="h-3.5 w-3.5" />
+										{loading ? "Sending…" : "Send invite"}
 									</Button>
 								</div>
 							</form>

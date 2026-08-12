@@ -248,6 +248,20 @@ export const getParentDepartment = (division: UserDivision): string => {
 	return DIVISION_TO_DEPARTMENT[division];
 };
 
+/** Resolve department for invite/profile forms (department field or division parent). */
+export const resolveInviteDepartment = (
+	department?: string,
+	division?: string,
+): string => {
+	const dept = department?.trim();
+	if (dept) return dept;
+	const div = division?.trim();
+	if (div && USER_DIVISIONS.includes(div as UserDivision)) {
+		return getParentDepartment(div as UserDivision);
+	}
+	return "";
+};
+
 // Check if division is an operations subdivision
 export const isOperationsSubdivision = (division: UserDivision): boolean => {
 	return [

@@ -114,7 +114,6 @@
     "users/[userId]/role-name",
     "users/get-by-ids",
     "users/search",
-    "users/uninvited",
     "v1/contracts/check-expirations",
     "v1/contracts/check-expiry",
     "v1/contracts/database",

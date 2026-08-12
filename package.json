@@ -34,6 +34,7 @@
 		"deps:check": "pnpm outdated",
 		"test:redis": "node scripts/test-redis.js",
 		"vercel:delete-env": "node src/scripts/delete-vercel-env-vars.js",
+		"vercel:sync-env": "node scripts/sync-vercel-env-from-local.mjs",
 		"preinstall": "npx only-allow pnpm",
 		"lint-format": "biome check --write",
 		"lint-fix": "biome check --write --unsafe",

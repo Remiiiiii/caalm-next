@@ -60,7 +60,7 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 			</div>
 			<div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
 				<CaalmAssistantLauncher />
-				<header className="bg-white/30 backdrop-blur border border-white/30 shadow-lg rounded-full w-full sm:w-fit px-2.5 sm:px-3 shrink-0">
+				<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-full w-full sm:w-fit px-2.5 sm:px-3 shrink-0">
 					<div className="flex h-10 items-center">
 						{user && (
 							<div className="flex items-center gap-1.5">

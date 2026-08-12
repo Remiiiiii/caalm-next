@@ -23,3 +23,17 @@ export const CONTRACT_STATUS_OPTIONS = [
 	{ value: "action-required" as const, label: "Action Required" },
 	{ value: "expired" as const, label: "Expired" },
 ] as const;
+
+/** Invitation rows use the shared contract status enum. */
+export const INVITATION_STATUS = {
+	PENDING: "pending-review",
+	ACCEPTED: "active",
+	REVOKED: "inactive",
+} as const;
+
+export function isPendingInvitationStatus(
+	status: string | null | undefined,
+): boolean {
+	const normalized = status?.toLowerCase?.() ?? "";
+	return normalized === INVITATION_STATUS.PENDING || normalized === "pending";
+}

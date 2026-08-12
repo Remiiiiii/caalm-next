@@ -607,8 +607,12 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 				color: "bg-purple-100 text-purple-800 border-purple-200",
 				icon: FileText,
 			},
+			license: {
+				color: "bg-teal-100 text-teal-800 border-teal-200",
+				icon: FileText,
+			},
 		};
-		return configs[type];
+		return configs[type] ?? configs.meeting;
 	};
 
 	// Check if event is from Outlook

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
+import { isPendingInvitationStatus } from "@/constants/status";
 import { createApiAdminClient } from "@/lib/appwrite/api-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
@@ -333,7 +334,11 @@ export async function GET(request: NextRequest) {
 						complianceRate: `${complianceRate}%`,
 					},
 					files: files.documents,
-					invitations: invitations.documents,
+					invitations: invitations.documents.filter(
+						(invitation: Record<string, unknown>) =>
+							isPendingInvitationStatus(String(invitation.status)) &&
+							invitation.revoked !== true,
+					),
 					authUsers: users.documents,
 					uninvitedUsers: uninvitedUsers,
 					contracts: mappedDashboardContracts,
