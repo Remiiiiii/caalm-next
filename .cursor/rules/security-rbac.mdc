@@ -29,6 +29,7 @@ alwaysApply: true
 - **ALWAYS check permissions** before allowing access to features, routes, or data
 - **Use `hasNavigationPermission()`** function for navigation items
 - **Use `requirePermission()` middleware** for API routes
+- **Prefer `pnpm new:api-route`** when creating new API handlers (see `.cursor/rules/api-route-authz.mdc`)
 - **Check permissions at the data level**, not just UI level
 
 ### Role-Based Access Control (RBAC)

@@ -8,6 +8,8 @@ import {
 	getRolePermissions,
 	updateRole,
 } from "@/lib/rbac/roles";
+import { validatePermissionsForSod } from "@/lib/rbac/separation-of-duties";
+import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(
 	request: NextRequest,
@@ -86,6 +88,17 @@ export async function PUT(
 			);
 		}
 
+		const keys = (permissionKeys ?? []) as PermissionKey[];
+		const sod = validatePermissionsForSod(keys, {
+			isSystemRole: Boolean(existing.isSystemRole),
+		});
+		if (!sod.ok) {
+			return NextResponse.json(
+				{ success: false, error: sod.message },
+				{ status: 400 },
+			);
+		}
+
 		const updates: { name?: string; description?: string } = {
 			description: description ?? "",
 		};
@@ -101,10 +114,7 @@ export async function PUT(
 			);
 		}
 
-		const assigned = await assignPermissionsToRole(
-			roleId,
-			(permissionKeys ?? []) as PermissionKey[],
-		);
+		const assigned = await assignPermissionsToRole(roleId, keys);
 
 		if (!assigned) {
 			return NextResponse.json(
@@ -113,9 +123,12 @@ export async function PUT(
 			);
 		}
 
+		await CacheManager.invalidateRBAC();
+
 		return NextResponse.json({
 			success: true,
 			data: role,
+			sodWarnings: "warnings" in sod ? sod.warnings ?? [] : [],
 		});
 	} catch (error) {
 		console.error("Error updating role:", error);
@@ -141,6 +154,7 @@ export async function DELETE(
 
 		const { roleId } = await params;
 		await deleteRole(roleId);
+		await CacheManager.invalidateRBAC();
 
 		return NextResponse.json({
 			success: true,

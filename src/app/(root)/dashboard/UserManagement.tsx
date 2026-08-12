@@ -725,7 +725,7 @@ const UserManagement = () => {
 															disabled={!canAssignRoles}
 															onSelect={() => openAction(user, "role")}
 														>
-															Change role / permissions
+															Change role
 														</AppDropdownMenuItem>
 														<DropdownMenuSeparator />
 														<AppDropdownMenuItem
@@ -794,7 +794,7 @@ const UserManagement = () => {
 				roleOptions={allRoles.filter((r) => r !== "Unassigned")}
 				busy={actionBusy}
 				onClose={closeAction}
-				onSaveEdit={async ({ fullName, department }) => {
+				onSaveEdit={async ({ fullName, department, division, managerUserId }) => {
 					if (!actionUser) return;
 					await runAction(
 						async () => {
@@ -805,6 +805,8 @@ const UserManagement = () => {
 									accountId: actionUser.accountId,
 									fullName,
 									department: department || undefined,
+									division: division || undefined,
+									managerUserId,
 								}),
 							});
 							const data = await res.json().catch(() => ({}));

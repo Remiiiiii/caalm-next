@@ -35,8 +35,8 @@ That process feels normal until one miss costs a license, a grant, or a week of 
 
 | Role | Primary job in CAALM |
 |---|---|
-| Super Admin | Org-wide oversight, risk, user governance |
-| Organization Admin | Invites, settings, operational administration |
+| Super Admin | Platform / break-glass operator (rare; not “whoever is in charge”) |
+| Organization Admin | Run the company in CAALM: invites, roles, settings, day-to-day ops |
 | Department Manager | Own division contracts/licenses and action queues |
 | Viewer | Monitor and escalate without editing |
 | Content Creator | Author and publish company news |

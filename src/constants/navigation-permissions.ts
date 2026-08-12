@@ -259,8 +259,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				name: "System Settings",
 				icon: "/assets/icons/settings.svg",
 				url: "/settings/system",
-				permissions: [PERMISSIONS.SETTINGS.VIEW, PERMISSIONS.SETTINGS.EDIT],
-				// Only Super Admin
+				permissions: [
+					PERMISSIONS.SETTINGS.VIEW,
+					PERMISSIONS.SETTINGS.EDIT,
+					PERMISSIONS.PLATFORM.SYSTEM_SETTINGS,
+				],
+				// Only Super Admin (role hide + PLATFORM gate for permission-based nav)
 				hiddenForRoles: ["Organization Admin", "Department Manager", "Viewer"],
 				requiresElevated: true,
 			},

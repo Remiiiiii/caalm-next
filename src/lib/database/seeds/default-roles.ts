@@ -3,7 +3,10 @@
  * Seed data for default system roles with permission assignments
  */
 
-import { PERMISSIONS } from "@/constants/permissions";
+import {
+	getOrganizationAdminPermissionKeys,
+	PERMISSIONS,
+} from "@/constants/permissions";
 import { assignPermissionsToRole, createRole } from "@/lib/rbac/roles";
 
 export interface DefaultRoleDefinition {
@@ -16,7 +19,8 @@ export interface DefaultRoleDefinition {
 export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
 	{
 		name: "Super Admin",
-		description: "Full system access with all permissions",
+		description:
+			"Full platform access including break-glass diagnostics and schema tools",
 		isSystemRole: true,
 		permissions: Object.values(PERMISSIONS).flatMap((category) =>
 			Object.values(category),
@@ -24,11 +28,10 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
 	},
 	{
 		name: "Organization Admin",
-		description: "Full access within organization",
+		description:
+			"Full access within an organization (no platform break-glass tools)",
 		isSystemRole: true,
-		permissions: Object.values(PERMISSIONS).flatMap((category) =>
-			Object.values(category),
-		),
+		permissions: getOrganizationAdminPermissionKeys(),
 	},
 	{
 		name: "Department Manager",
@@ -40,17 +43,47 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
 			PERMISSIONS.EVENTS.APPROVE,
 			PERMISSIONS.EVENTS.RESCHEDULE,
 			PERMISSIONS.CONTRACTS.VIEW,
+			PERMISSIONS.CONTRACTS.VIEW_DEPARTMENT,
 			PERMISSIONS.CONTRACTS.REVIEW,
 			PERMISSIONS.CONTRACTS.APPROVE,
+			PERMISSIONS.LICENSES.VIEW,
+			PERMISSIONS.LICENSES.VIEW_DEPARTMENT,
 			PERMISSIONS.USERS.VIEW,
 			PERMISSIONS.USERS.INVITE,
 		],
 	},
 	{
 		name: "Viewer",
-		description: "Read-only access",
+		description: "Read-only access across core modules",
 		isSystemRole: true,
-		permissions: [PERMISSIONS.CALENDAR.VIEW_OWN, PERMISSIONS.CONTRACTS.VIEW],
+		permissions: [
+			PERMISSIONS.CALENDAR.VIEW_OWN,
+			PERMISSIONS.CONTRACTS.VIEW,
+			PERMISSIONS.CONTRACTS.VIEW_OWN,
+			PERMISSIONS.LICENSES.VIEW,
+			PERMISSIONS.LICENSES.VIEW_OWN,
+			PERMISSIONS.NEWS.READ,
+			PERMISSIONS.AUDIT.VIEW,
+			PERMISSIONS.AI.CHAT,
+			PERMISSIONS.TICKETS.VIEW,
+		],
+	},
+	{
+		name: "Content Creator",
+		description: "Create and publish internal news; no billing or user admin",
+		isSystemRole: true,
+		permissions: [
+			PERMISSIONS.NEWS.READ,
+			PERMISSIONS.NEWS.CREATE,
+			PERMISSIONS.NEWS.UPDATE,
+			PERMISSIONS.NEWS.PUBLISH,
+			PERMISSIONS.NEWS.DELETE,
+			PERMISSIONS.AI.CHAT,
+			PERMISSIONS.AI.IMAGE_GENERATE,
+			PERMISSIONS.CALENDAR.VIEW_OWN,
+			PERMISSIONS.TICKETS.VIEW,
+			PERMISSIONS.TICKETS.CREATE,
+		],
 	},
 	{
 		name: "IT",
@@ -58,19 +91,14 @@ export const DEFAULT_ROLES: DefaultRoleDefinition[] = [
 			"IT/Software Engineering staff with access to monitoring, CI/CD, security, and system administration",
 		isSystemRole: true,
 		permissions: [
-			PERMISSIONS.IT.VIEW_RATE_LIMITS,
-			PERMISSIONS.IT.VIEW_SYSTEM_LOGS,
-			PERMISSIONS.IT.MANAGE_API_KEYS,
-			PERMISSIONS.IT.VIEW_ANALYTICS,
-			PERMISSIONS.IT.MANAGE_DEPLOYMENTS,
-			PERMISSIONS.IT.VIEW_MONITORING,
-			PERMISSIONS.IT.MANAGE_CI_CD,
-			PERMISSIONS.IT.VIEW_SECURITY,
-			PERMISSIONS.IT.MANAGE_DATABASE,
-			PERMISSIONS.IT.VIEW_INCIDENTS,
-			PERMISSIONS.IT.VIEW_RUNBOOKS,
-			PERMISSIONS.IT.MANAGE_RUNBOOKS,
+			...Object.values(PERMISSIONS.IT),
 			PERMISSIONS.AUDIT.VIEW,
+			PERMISSIONS.AUDIT.EXPORT,
+			PERMISSIONS.CALENDAR.VIEW_OWN,
+			PERMISSIONS.TICKETS.VIEW,
+			PERMISSIONS.TICKETS.CREATE,
+			PERMISSIONS.TICKETS.EDIT,
+			PERMISSIONS.TICKETS.ASSIGN,
 		],
 	},
 ];
@@ -83,9 +111,8 @@ export async function seedDefaultRoles(createdBy: string): Promise<void> {
 
 	for (const roleDef of DEFAULT_ROLES) {
 		try {
-			// Check if role already exists
 			const { listRoles } = await import("@/lib/rbac/roles");
-			const existingRoles = await listRoles(null); // Get system roles
+			const existingRoles = await listRoles(null);
 			const existing = existingRoles.find((r) => r.name === roleDef.name);
 
 			let roleId: string;
@@ -96,7 +123,7 @@ export async function seedDefaultRoles(createdBy: string): Promise<void> {
 				const role = await createRole({
 					name: roleDef.name,
 					description: roleDef.description,
-					orgId: null, // System role
+					orgId: null,
 					isSystemRole: roleDef.isSystemRole,
 					createdBy,
 				});
@@ -104,7 +131,6 @@ export async function seedDefaultRoles(createdBy: string): Promise<void> {
 				console.log(`Created role: ${roleDef.name}`);
 			}
 
-			// Assign permissions
 			await assignPermissionsToRole(roleId, roleDef.permissions as any);
 			console.log(
 				`Assigned ${roleDef.permissions.length} permissions to ${roleDef.name}`,

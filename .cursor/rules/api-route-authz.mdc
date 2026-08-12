@@ -1,0 +1,68 @@
+---
+description: Every new API route must include requirePermission (or an approved alternate gate)
+globs: "src/app/api/**/route.ts"
+alwaysApply: false
+---
+
+# API route authorization (mandatory)
+
+When creating or editing `src/app/api/**/route.ts` handlers, authorization is required **before** business logic.
+
+## Default for agents
+
+1. **Prefer the scaffold** instead of hand-writing a blank route:
+
+```bash
+pnpm new:api-route <path> --permission <PERMISSIONS.DOT.PATH> [--methods GET,POST]
+```
+
+Example:
+
+```bash
+pnpm new:api-route contracts/export --permission CONTRACTS.VIEW --methods GET
+```
+
+2. If you must hand-write a route, copy the same pattern: call `requirePermission` first and return early on denial.
+
+## Required pattern (app features)
+
+```typescript
+import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
+import { requirePermission } from "@/lib/rbac/middleware";
+
+export async function GET(request: NextRequest) {
+	const denied = await requirePermission(request, {
+		permission: PERMISSIONS.CONTRACTS.VIEW, // pick the real key for this feature
+	});
+	if (denied) return denied;
+
+	// business logic...
+	return NextResponse.json({ success: true });
+}
+```
+
+## Approved alternatives (only when they truly apply)
+
+| Kind | When | Gate |
+|---|---|---|
+| `permission` | Normal app/API features | `requirePermission` |
+| `cron` | Scheduled jobs | Bearer `CRON_SECRET` check |
+| `webhook` | Stripe (or similar) callbacks | Signature verification |
+| `oauth` | OAuth redirect callbacks | Provider callback flow |
+| `public` / `token` / `health` | Intentionally unauthenticated | Add entry to `src/lib/rbac/api-authz-allowlist.ts` with a written reason |
+
+## Hard rules
+
+- **Do not** ship a new `route.ts` with only business logic and no auth gate.
+- **Do not** use role-name checks (`=== "Super Admin"`) as authorization.
+- **Do not** regenerate `api-authz-baseline.json` to hide a new unguarded route.
+- After adding a route, run `pnpm run test:api-authz` (or full `tests/rbac`) before finishing.
+- Choose the **smallest real permission** from `src/constants/permissions.ts` — do not invent keys unless the catalog is updated in the same change.
+
+## Related
+
+- Matrix scanner: `src/lib/rbac/api-authz-matrix.ts`
+- Allowlist: `src/lib/rbac/api-authz-allowlist.ts`
+- Scaffold: `scripts/new-api-route.ts` (`pnpm new:api-route`)
+- Broader RBAC policy: `.cursor/rules/security-rbac.mdc`

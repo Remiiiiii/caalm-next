@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import useSWR from "swr";
+import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -23,7 +25,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import type { UserManagementUser } from "@/hooks/useUsers";
-import { avatarPlaceholderUrl, CONTRACT_DEPARTMENTS } from "../../../constants";
+import { avatarPlaceholderUrl } from "../../../constants";
+import { fetcher } from "@/lib/swr-config";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 function isSafeNextImageSrc(src: string): boolean {
 	const s = src.trim();
@@ -58,7 +62,12 @@ interface UserManagementActionDialogsProps {
 	roleOptions: string[];
 	busy: boolean;
 	onClose: () => void;
-	onSaveEdit: (payload: { fullName: string; department: string }) => void;
+	onSaveEdit: (payload: {
+		fullName: string;
+		department: string;
+		division: string;
+		managerUserId: string | null;
+	}) => void;
 	onSaveRole: (roleName: string) => void;
 	onConfirmReset: () => void;
 	onConfirmRevoke: () => void;
@@ -122,14 +131,33 @@ export function UserManagementActionDialogs({
 	onConfirmSuspend,
 	onConfirmDelete,
 }: UserManagementActionDialogsProps) {
+	const { orgId } = useOrganization();
 	const [fullName, setFullName] = useState("");
 	const [department, setDepartment] = useState("");
+	const [division, setDivision] = useState("");
+	const [managerUserId, setManagerUserId] = useState<string>("");
 	const [roleName, setRoleName] = useState("");
+
+	const historyUrl =
+		user && action === "edit"
+			? `/api/users/${user.$id}/org-history`
+			: null;
+	const { data: historyData } = useSWR<{
+		success: boolean;
+		data: { history: Array<{ $id: string; changedAt: string; reason?: string; toOrgUnitId?: string }> };
+	}>(historyUrl, fetcher);
+
+	const usersUrl = orgId
+		? `/api/users?orgId=${encodeURIComponent(orgId)}`
+		: null;
+	const { data: orgUsersRaw } = useSWR(usersUrl, fetcher);
 
 	useEffect(() => {
 		if (!user) return;
 		setFullName(user.fullName || "");
 		setDepartment(user.department || "");
+		setDivision(user.division || "");
+		setManagerUserId(user.managerUserId || "");
 		setRoleName(user.roleName || "");
 	}, [user, action]);
 
@@ -206,6 +234,12 @@ export function UserManagementActionDialogs({
 							</dd>
 						</div>
 						<div>
+							<dt className="text-slate-500">Division</dt>
+							<dd className="font-medium text-slate-800">
+								{user.division || "—"}
+							</dd>
+						</div>
+						<div>
 							<dt className="text-slate-500">Assigned by</dt>
 							<dd className="font-medium text-slate-800">
 								{user.assignedByName || "System"}
@@ -248,6 +282,8 @@ export function UserManagementActionDialogs({
 								onSaveEdit({
 									fullName: fullName.trim(),
 									department,
+									division,
+									managerUserId: managerUserId || null,
 								})
 							}
 							className="primary-btn px-3 sm:px-4"
@@ -271,25 +307,52 @@ export function UserManagementActionDialogs({
 							className="bg-white"
 						/>
 					</div>
+					<OrgUnitPicker
+						orgId={orgId || "default_organization"}
+						departmentCode={department}
+						divisionCode={division}
+						onDepartmentChange={setDepartment}
+						onDivisionChange={setDivision}
+						disabled={busy}
+					/>
 					<div>
-						<Label className="mb-1 text-sm text-slate-700">Department</Label>
+						<Label className="mb-1 text-sm text-slate-700">Manager</Label>
 						<Select
-							value={department || "__none"}
-							onValueChange={(v) => setDepartment(v === "__none" ? "" : v)}
+							value={managerUserId || "__none"}
+							onValueChange={(v) => setManagerUserId(v === "__none" ? "" : v)}
 						>
-							<SelectTrigger className="bg-white">
-								<SelectValue placeholder="Select department" />
+							<SelectTrigger className="bg-white cursor-pointer">
+								<SelectValue placeholder="Select manager" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="__none">None</SelectItem>
-								{CONTRACT_DEPARTMENTS.map((dept) => (
-									<SelectItem key={dept} value={dept}>
-										{dept}
-									</SelectItem>
-								))}
+								{(Array.isArray(orgUsersRaw) ? orgUsersRaw : [])
+									.filter(
+										(u: { $id?: string }) => u.$id && u.$id !== user.$id,
+									)
+									.map((u: { $id: string; fullName?: string; email?: string }) => (
+										<SelectItem key={u.$id} value={u.$id}>
+											{u.fullName || u.email || u.$id}
+										</SelectItem>
+									))}
 							</SelectContent>
 						</Select>
 					</div>
+					{historyData?.data?.history?.length ? (
+						<div>
+							<p className="text-sm font-medium text-slate-800 mb-2">
+								Org placement history
+							</p>
+							<ul className="space-y-1 text-xs text-slate-600 max-h-32 overflow-y-auto">
+								{historyData.data.history.map((h) => (
+									<li key={h.$id} className="border-b border-slate-100 py-1">
+										{new Date(h.changedAt).toLocaleString()}
+										{h.reason ? ` — ${h.reason}` : ""}
+									</li>
+								))}
+							</ul>
+						</div>
+					) : null}
 				</div>
 			</DialogShell>
 		);
@@ -331,6 +394,10 @@ export function UserManagementActionDialogs({
 			>
 				<div className="rounded-lg border border-slate-200 bg-white p-4">
 					<Label className="mb-1 text-sm text-slate-700">Role</Label>
+					<p className="mb-2 text-xs text-slate-500">
+						A role sets this user&apos;s access. Permissions come from the role,
+						not from this dialog.
+					</p>
 					<Select value={roleName} onValueChange={setRoleName}>
 						<SelectTrigger className="bg-white">
 							<SelectValue placeholder="Select role" />

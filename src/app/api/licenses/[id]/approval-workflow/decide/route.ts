@@ -17,7 +17,6 @@ import {
 } from "@/lib/approvals/LicenseApprovalWorkflowService";
 import {
 	getUserDefaultOrganization,
-	getUserRoles,
 	hasPermission,
 } from "@/lib/rbac/permissions";
 
@@ -55,17 +54,17 @@ export async function POST(
 		const viewerUserId = user.accountId || user.$id;
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
-		const roles = orgId ? await getUserRoles(viewerUserId, orgId) : [];
-		const roleNames = roles.map((r) => r.roleName || "");
-		const isAdminOverride = roleNames.some(
-			(name) => name === "Super Admin" || name === "Organization Admin",
-		);
-
 		const canEdit = orgId
 			? await hasPermission(viewerUserId, PERMISSIONS.LICENSES.EDIT, orgId)
 			: false;
+		const canApprove = orgId
+			? await hasPermission(user.$id, PERMISSIONS.LICENSES.APPROVE, orgId)
+			: false;
+		const isAdminOverride = orgId
+			? await hasPermission(user.$id, PERMISSIONS.APPROVALS.OVERRIDE, orgId)
+			: false;
 
-		if (!canEdit && !isAdminOverride) {
+		if (!canEdit && !canApprove && !isAdminOverride) {
 			return forbiddenResponse(
 				"Permission denied: decide license approval",
 				requestId,

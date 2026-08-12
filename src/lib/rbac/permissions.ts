@@ -11,6 +11,7 @@ import { cache } from "react";
 import type { PermissionKey } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 
@@ -125,7 +126,7 @@ export async function hasPermission(
 
 	try {
 		const permissions = await getUserPermissions(userId, orgId);
-		return permissions.includes(permissionKey);
+		return permissionSatisfied(permissions, permissionKey);
 	} catch (error) {
 		console.error("[hasPermission] Error checking permission:", error);
 		return false;
@@ -146,7 +147,9 @@ export async function hasAnyPermission(
 
 	try {
 		const permissions = await getUserPermissions(userId, orgId);
-		return permissionKeys.some((key) => permissions.includes(key));
+		return permissionKeys.some((key) =>
+			permissionSatisfied(permissions, key),
+		);
 	} catch (error) {
 		console.error("[hasAnyPermission] Error checking permissions:", error);
 		return false;
@@ -167,7 +170,9 @@ export async function hasAllPermissions(
 
 	try {
 		const permissions = await getUserPermissions(userId, orgId);
-		return permissionKeys.every((key) => permissions.includes(key));
+		return permissionKeys.every((key) =>
+			permissionSatisfied(permissions, key),
+		);
 	} catch (error) {
 		console.error("[hasAllPermissions] Error checking permissions:", error);
 		return false;

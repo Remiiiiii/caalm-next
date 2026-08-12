@@ -91,6 +91,18 @@ export async function POST(request: NextRequest) {
 				: undefined;
 		const resolvedOrgId = fromRequest?.trim() || fromBody || null;
 
+		const keys = (permissionKeys ?? []) as PermissionKey[];
+		const { validatePermissionsForSod } = await import(
+			"@/lib/rbac/separation-of-duties"
+		);
+		const sod = validatePermissionsForSod(keys, { isSystemRole: false });
+		if (!sod.ok) {
+			return NextResponse.json(
+				{ success: false, error: sod.message },
+				{ status: 400 },
+			);
+		}
+
 		const role = await createRole({
 			name: name.trim(),
 			description: description || "",
@@ -99,10 +111,7 @@ export async function POST(request: NextRequest) {
 			createdBy: currentUser.$id,
 		});
 
-		const assigned = await assignPermissionsToRole(
-			role.$id,
-			(permissionKeys ?? []) as PermissionKey[],
-		);
+		const assigned = await assignPermissionsToRole(role.$id, keys);
 
 		if (!assigned) {
 			try {
@@ -119,9 +128,13 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
+		const CacheManager = (await import("@/lib/services/cache-manager")).default;
+		await CacheManager.invalidateRBAC();
+
 		return NextResponse.json({
 			success: true,
 			data: role,
+			sodWarnings: sod.warnings ?? [],
 		});
 	} catch (error) {
 		console.error("Error creating role:", error);

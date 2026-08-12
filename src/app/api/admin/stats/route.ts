@@ -1,10 +1,17 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { getRecentActivities } from "@/lib/actions/recentActivity.actions";
 import { listAllUsers } from "@/lib/actions/user.actions";
+import { requirePermission } from "@/lib/rbac/middleware";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
 	try {
-		console.log("Fetching admin statistics");
+		const permissionCheck = await requirePermission(request, {
+			permission: [PERMISSIONS.USERS.VIEW, PERMISSIONS.SETTINGS.VIEW],
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
 
 		// Fetch users
 		const users = await listAllUsers();
@@ -41,8 +48,6 @@ export async function GET() {
 			recentActivities,
 			systemHealth,
 		};
-
-		console.log("Admin stats calculated:", stats);
 
 		return NextResponse.json(stats);
 	} catch (error) {

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { updateUserDepartment } from "@/lib/actions/user.actions";
+import { OrgUnitValidationError } from "@/lib/org/org-unit-validation";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 /**
@@ -12,7 +13,6 @@ export async function PATCH(
 	{ params }: { params: Promise<{ userId: string }> },
 ) {
 	try {
-		// Check permission to update users
 		const permissionCheck = await requirePermission(request, {
 			permission: PERMISSIONS.USERS.EDIT,
 		});
@@ -55,16 +55,13 @@ export async function PATCH(
 			message: "User department updated successfully",
 			user: updatedUser,
 		});
-	} catch (error: any) {
-		console.error("Error updating user department:", error);
-		return NextResponse.json(
-			{
-				error: error.message || "Failed to update user department",
-				details:
-					process.env.NODE_ENV === "development" ? error.stack : undefined,
-			},
-			{ status: 500 },
-		);
+	} catch (error: unknown) {
+		const message =
+			error instanceof Error
+				? error.message
+				: "Failed to update user department";
+		const status = error instanceof OrgUnitValidationError ? 400 : 500;
+		return NextResponse.json({ error: message }, { status });
 	}
 }
 

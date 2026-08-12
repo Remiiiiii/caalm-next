@@ -1,15 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import UserManagement from "../UserManagement";
+import { requireDashboardPathAccess } from "@/lib/rbac/page-guards";
 
 export default async function UserManagementPage() {
-	const currentUser = await getCurrentUser();
-
-	if (!currentUser) {
-		redirect("/sign-in");
-	}
-
+	await requireDashboardPathAccess("/dashboard/user-management");
 	return <UserManagement />;
 }

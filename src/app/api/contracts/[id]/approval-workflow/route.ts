@@ -11,7 +11,6 @@ import {
 import { getWorkflowForViewer } from "@/lib/approvals/ContractApprovalWorkflowService";
 import {
 	getUserDefaultOrganization,
-	getUserRoles,
 	hasPermission,
 } from "@/lib/rbac/permissions";
 
@@ -40,11 +39,9 @@ export async function GET(
 			return forbiddenResponse("Permission denied: view contract", requestId);
 		}
 
-		const roles = orgId ? await getUserRoles(viewerUserId, orgId) : [];
-		const roleNames = roles.map((r) => r.roleName || "");
-		const isAdminOverride = roleNames.some(
-			(name) => name === "Super Admin" || name === "Organization Admin",
-		);
+		const isAdminOverride = orgId
+			? await hasPermission(user.$id, PERMISSIONS.APPROVALS.OVERRIDE, orgId)
+			: false;
 
 		const payload = await getWorkflowForViewer(contractId, viewerUserId, {
 			isAdminOverride,

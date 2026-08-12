@@ -97,16 +97,18 @@ export const DOCS_NAV: DocsNavGroup[] = [
 		description: "Step-by-step playbooks for the people who use CAALM every day.",
 		items: [
 			{
-				title: "Executive / Super Admin",
+				title: "Super Admin",
 				slug: "guides/super-admin",
 				path: "guides/super-admin",
-				summary: "Org-wide risk, users, and oversight.",
+				summary:
+					"Platform operators and break-glass access — keep this role rare.",
 			},
 			{
 				title: "Organization Admin",
 				slug: "guides/organization-admin",
 				path: "guides/organization-admin",
-				summary: "Invites, settings, and day-to-day org ops.",
+				summary:
+					"Run the company in CAALM: invites, roles, settings, and day-to-day ops.",
 			},
 			{
 				title: "Department Manager",
@@ -222,6 +224,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				slug: "reference/settings",
 				path: "reference/settings",
 				summary: "Personal settings, 2FA, and View My Access.",
+			},
+			{
+				title: "Organization settings",
+				slug: "reference/organization-settings",
+				path: "reference/organization-settings",
+				summary:
+					"Profile, limits, org structure, and cost centers at /settings/organization.",
 			},
 			{
 				title: "Billing and integrations",

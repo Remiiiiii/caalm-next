@@ -4,6 +4,7 @@ import { Building2, Save } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { PermissionGate } from "@/components/PermissionGate";
+import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Organization } from "@/lib/rbac/organizations";
 import { fetcher } from "@/lib/swr-config";
-import { CONTRACT_DEPARTMENTS } from "../../../constants";
 
 interface OrgResponse {
 	success: boolean;
@@ -157,8 +157,8 @@ export default function OrganizationSettingsPage() {
 					<TabsTrigger value="limits" className="cursor-pointer">
 						Limits
 					</TabsTrigger>
-					<TabsTrigger value="departments" className="cursor-pointer">
-						Departments
+					<TabsTrigger value="structure" className="cursor-pointer">
+						Org structure
 					</TabsTrigger>
 				</TabsList>
 
@@ -173,7 +173,7 @@ export default function OrganizationSettingsPage() {
 									value={name}
 									onChange={(e) => setName(e.target.value)}
 									disabled={!canEdit}
-									className="bg-white"
+									className="bg-white !border !border-solid !border-slate-200"
 								/>
 							</div>
 							<div className="space-y-2">
@@ -184,7 +184,7 @@ export default function OrganizationSettingsPage() {
 									onChange={(e) => setDomain(e.target.value)}
 									disabled={!canEdit}
 									placeholder="example.org"
-									className="bg-white"
+									className="bg-white !border !border-solid !border-slate-200"
 								/>
 							</div>
 							<PermissionGate permission={PERMISSIONS.SETTINGS.EDIT}>
@@ -216,7 +216,7 @@ export default function OrganizationSettingsPage() {
 										value={maxUsers}
 										onChange={(e) => setMaxUsers(Number(e.target.value) || 1)}
 										disabled={!canEdit}
-										className="bg-white"
+										className="bg-white !border !border-solid !border-slate-200"
 									/>
 								</div>
 								<div className="space-y-2">
@@ -230,7 +230,7 @@ export default function OrganizationSettingsPage() {
 											setMaxDepartments(Number(e.target.value) || 1)
 										}
 										disabled={!canEdit}
-										className="bg-white"
+										className="bg-white !border !border-solid !border-slate-200"
 									/>
 								</div>
 							</div>
@@ -249,26 +249,12 @@ export default function OrganizationSettingsPage() {
 					</GlassCard>
 				</TabsContent>
 
-				<TabsContent value="departments" className="mt-4">
-					<GlassCard className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6 bg-slate-50">
-							<p className="text-sm text-slate-600 mb-4">
-								Standard departments available for contracts and licenses
-								(read-only).
-							</p>
-							<ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-								{CONTRACT_DEPARTMENTS.map((dept) => (
-									<li
-										key={dept}
-										className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
-									>
-										{dept}
-									</li>
-								))}
-							</ul>
-						</CardContent>
-					</GlassCard>
+				<TabsContent value="structure" className="mt-4">
+					<OrgStructureManager
+						orgId={org.$id}
+						canEdit={canEdit}
+						maxDepartments={maxDepartments}
+					/>
 				</TabsContent>
 			</Tabs>
 		</div>

@@ -1,9 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function POST(request: NextRequest) {
 	try {
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.MANAGE_SCHEMA,
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
+
 		const { collectionId, attributeKey } = await request.json();
 
 		if (!collectionId || !attributeKey) {

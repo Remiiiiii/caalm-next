@@ -29,6 +29,7 @@ When creating new pages, components, dialogs, or cards, always reference the Glo
 
 - Use `pnpm add` when installing new packages.
 - Use `npx shadcn add` to add new shadcn components.
+- Prefer `pnpm new:api-route <path> --permission CONTRACTS.VIEW` when creating API routes (see `.cursor/rules/api-route-authz.mdc`). Do not hand-write ungated `route.ts` files.
 - Never try to start the app itself (I have it running in a separate terminal), instead, if you need to restart the server on localhost:3000 first use the `taskkill` command and then the `pnpm run dev` command.
 - Always clean up resources (event listeners, timers, subscriptions) in the cleanup function to prevent memory leaks and ensure your app performs well!
 

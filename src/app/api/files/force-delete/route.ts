@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 /**
  * Force delete endpoint that tries multiple deletion strategies
@@ -8,6 +10,13 @@ import { appwriteConfig } from "@/lib/appwrite/config";
  */
 export async function POST(request: NextRequest) {
 	try {
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.FORCE_DELETE,
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
+
 		const { searchParams } = new URL(request.url);
 		const fileId = searchParams.get("fileId");
 

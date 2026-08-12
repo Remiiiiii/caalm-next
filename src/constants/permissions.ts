@@ -29,6 +29,9 @@ export const PERMISSIONS = {
 	// Contract Permissions
 	CONTRACTS: {
 		VIEW: "contracts.view",
+		VIEW_OWN: "contracts.view_own",
+		VIEW_DEPARTMENT: "contracts.view_department",
+		VIEW_ALL: "contracts.view_all",
 		CREATE: "contracts.create",
 		EDIT: "contracts.edit",
 		REVIEW: "contracts.review",
@@ -102,13 +105,64 @@ export const PERMISSIONS = {
 	// License Permissions
 	LICENSES: {
 		VIEW: "licenses.view",
+		VIEW_OWN: "licenses.view_own",
+		VIEW_DEPARTMENT: "licenses.view_department",
+		VIEW_ALL: "licenses.view_all",
 		CREATE: "licenses.create",
 		EDIT: "licenses.edit",
 		DELETE: "licenses.delete",
 		ALLOCATE: "licenses.allocate",
 		RENEW: "licenses.renew",
+		APPROVE: "licenses.approve",
+	},
+
+	// Approval workflow overrides (explicit; never inferred from role names)
+	APPROVALS: {
+		OVERRIDE: "approvals.override",
+	},
+
+	// Tickets / support queue
+	TICKETS: {
+		VIEW: "tickets.view",
+		CREATE: "tickets.create",
+		EDIT: "tickets.edit",
+		DELETE: "tickets.delete",
+		ASSIGN: "tickets.assign",
+	},
+
+	// Platform / break-glass capabilities (Super Admin only by default)
+	PLATFORM: {
+		DIAGNOSE: "platform.diagnose",
+		MANAGE_SCHEMA: "platform.manage_schema",
+		FORCE_DELETE: "platform.force_delete",
+		VIEW_ALL_ORGS: "platform.view_all_orgs",
+		SYSTEM_SETTINGS: "platform.system_settings",
+		ELEVATE: "platform.elevate",
 	},
 } as const;
+
+/** Permissions that should show a Sensitive badge in the admin UI */
+export const SENSITIVE_PERMISSIONS: readonly string[] = [
+	PERMISSIONS.USERS.ASSIGN_ROLES,
+	PERMISSIONS.USERS.DEACTIVATE,
+	PERMISSIONS.SETTINGS.BILLING,
+	PERMISSIONS.CONTRACTS.APPROVE,
+	PERMISSIONS.CONTRACTS.SIGN,
+	PERMISSIONS.LICENSES.APPROVE,
+	PERMISSIONS.LICENSES.DELETE,
+	PERMISSIONS.APPROVALS.OVERRIDE,
+	PERMISSIONS.TICKETS.DELETE,
+	PERMISSIONS.TICKETS.ASSIGN,
+	PERMISSIONS.IT.MANAGE_DATABASE,
+	PERMISSIONS.IT.MANAGE_API_KEYS,
+	PERMISSIONS.IT.MANAGE_DEPLOYMENTS,
+	PERMISSIONS.PLATFORM.DIAGNOSE,
+	PERMISSIONS.PLATFORM.MANAGE_SCHEMA,
+	PERMISSIONS.PLATFORM.FORCE_DELETE,
+	PERMISSIONS.PLATFORM.VIEW_ALL_ORGS,
+	PERMISSIONS.PLATFORM.SYSTEM_SETTINGS,
+	PERMISSIONS.PLATFORM.ELEVATE,
+] as const;
 
 // Flatten all permissions into a single array
 export const ALL_PERMISSIONS = Object.values(PERMISSIONS).flatMap((category) =>
@@ -204,7 +258,25 @@ export const PERMISSION_DEFINITIONS = [
 		key: PERMISSIONS.CONTRACTS.VIEW,
 		name: "View Contracts",
 		category: "contracts",
-		description: "View contracts",
+		description: "View contracts (base gate)",
+	},
+	{
+		key: PERMISSIONS.CONTRACTS.VIEW_OWN,
+		name: "View Own Contracts",
+		category: "contracts",
+		description: "List only contracts you own",
+	},
+	{
+		key: PERMISSIONS.CONTRACTS.VIEW_DEPARTMENT,
+		name: "View Department Contracts",
+		category: "contracts",
+		description: "List contracts in your department",
+	},
+	{
+		key: PERMISSIONS.CONTRACTS.VIEW_ALL,
+		name: "View All Organization Contracts",
+		category: "contracts",
+		description: "List all contracts in the organization",
 	},
 	{
 		key: PERMISSIONS.CONTRACTS.CREATE,
@@ -468,7 +540,25 @@ export const PERMISSION_DEFINITIONS = [
 		key: PERMISSIONS.LICENSES.VIEW,
 		name: "View Licenses",
 		category: "licenses",
-		description: "View licenses",
+		description: "View licenses (base gate)",
+	},
+	{
+		key: PERMISSIONS.LICENSES.VIEW_OWN,
+		name: "View Own Licenses",
+		category: "licenses",
+		description: "List only licenses you own or are allocated",
+	},
+	{
+		key: PERMISSIONS.LICENSES.VIEW_DEPARTMENT,
+		name: "View Department Licenses",
+		category: "licenses",
+		description: "List licenses in your department",
+	},
+	{
+		key: PERMISSIONS.LICENSES.VIEW_ALL,
+		name: "View All Organization Licenses",
+		category: "licenses",
+		description: "List all licenses in the organization",
 	},
 	{
 		key: PERMISSIONS.LICENSES.CREATE,
@@ -500,6 +590,97 @@ export const PERMISSION_DEFINITIONS = [
 		category: "licenses",
 		description: "Renew licenses",
 	},
+	{
+		key: PERMISSIONS.LICENSES.APPROVE,
+		name: "Approve Licenses",
+		category: "licenses",
+		description: "Approve license requests and renewals",
+	},
+
+	// Approvals
+	{
+		key: PERMISSIONS.APPROVALS.OVERRIDE,
+		name: "Override Approvals",
+		category: "approvals",
+		description:
+			"Decide approval steps outside the normal assignee chain (break-glass)",
+	},
+
+	// Tickets
+	{
+		key: PERMISSIONS.TICKETS.VIEW,
+		name: "View Tickets",
+		category: "tickets",
+		description: "View support and operations tickets",
+	},
+	{
+		key: PERMISSIONS.TICKETS.CREATE,
+		name: "Create Tickets",
+		category: "tickets",
+		description: "Create new tickets",
+	},
+	{
+		key: PERMISSIONS.TICKETS.EDIT,
+		name: "Edit Tickets",
+		category: "tickets",
+		description: "Update ticket details and status",
+	},
+	{
+		key: PERMISSIONS.TICKETS.DELETE,
+		name: "Delete Tickets",
+		category: "tickets",
+		description: "Delete tickets",
+	},
+	{
+		key: PERMISSIONS.TICKETS.ASSIGN,
+		name: "Assign Tickets",
+		category: "tickets",
+		description: "Assign tickets to users or teams",
+	},
+
+	// Platform
+	{
+		key: PERMISSIONS.PLATFORM.DIAGNOSE,
+		name: "RBAC Diagnostics",
+		category: "platform",
+		description: "Run RBAC diagnostics and clear permission caches",
+	},
+	{
+		key: PERMISSIONS.PLATFORM.MANAGE_SCHEMA,
+		name: "Manage Database Schema",
+		category: "platform",
+		description: "Create or modify database collections and attributes",
+	},
+	{
+		key: PERMISSIONS.PLATFORM.FORCE_DELETE,
+		name: "Force Delete Files",
+		category: "platform",
+		description: "Force-delete files bypassing normal ownership checks",
+	},
+	{
+		key: PERMISSIONS.PLATFORM.VIEW_ALL_ORGS,
+		name: "View All Organizations",
+		category: "platform",
+		description: "Access data across organizations (platform operators)",
+	},
+	{
+		key: PERMISSIONS.PLATFORM.SYSTEM_SETTINGS,
+		name: "System Settings",
+		category: "platform",
+		description: "Manage platform-wide system settings",
+	},
+	{
+		key: PERMISSIONS.PLATFORM.ELEVATE,
+		name: "Request Privileged Elevation",
+		category: "platform",
+		description: "Eligible to request time-boxed privileged access",
+	},
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
+
+/** Org Admin baseline: everything except platform break-glass keys */
+export function getOrganizationAdminPermissionKeys(): string[] {
+	const platformKeys = new Set<string>(Object.values(PERMISSIONS.PLATFORM));
+	return ALL_PERMISSIONS.filter((key) => !platformKeys.has(key));
+}

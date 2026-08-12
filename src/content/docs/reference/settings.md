@@ -22,4 +22,7 @@ This page is your personal source of truth for roles and permissions. Use it bef
 
 Organization / system / billing settings are separate admin surfaces and require settings permissions.
 
-If you cannot see billing, you are not broken — you are correctly scoped.
+- **[Organization settings](/docs/reference/organization-settings)** (`/settings/organization`) — profile, plan limits, departments, divisions, and cost centers
+- Billing & Integrations — see [Billing and integrations](/docs/reference/billing-integrations)
+
+If you cannot see billing or organization settings, you are not broken — you are correctly scoped.

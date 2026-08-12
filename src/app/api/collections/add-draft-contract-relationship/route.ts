@@ -1,13 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { RelationMutate, RelationshipType } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 const CONTRACT_DRAFTS_COLLECTION_ID = "692f4a86002ae8f45cae";
 const CONTRACTS_COLLECTION_ID = "6912e5a400789ef12345";
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
 	try {
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.MANAGE_SCHEMA,
+		});
+		if (permissionCheck) {
+			return permissionCheck;
+		}
+
 		if (!appwriteConfig.databaseId) {
 			return NextResponse.json(
 				{ error: "Database ID is not configured" },
