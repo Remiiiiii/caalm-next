@@ -408,7 +408,7 @@ const ActionDropdown = ({
 													disabled={isLoading}
 													className="cursor-pointer w-4 h-4 text-blue-600"
 												/>
-												<span className="text-sm cursor-pointer text-slate-900 font-medium group-hover:text-blue-600 transition-colors">
+												<span className="text-sm cursor-pointer text-slate-700 font-medium group-hover:text-blue-600 transition-colors">
 													{formatDepartmentName(dept as ContractDepartment)}
 												</span>
 											</label>

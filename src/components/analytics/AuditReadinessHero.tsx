@@ -132,13 +132,13 @@ export function AuditReadinessHero({
 								</p>
 								<div className="flex flex-wrap gap-4 text-sm text-slate-600">
 									<span>
-										<span className="font-semibold text-slate-900">
+										<span className="font-semibold text-slate-700">
 											{areasAtRisk}
 										</span>{" "}
 										areas at risk
 									</span>
 									<span>
-										<span className="font-semibold text-slate-900">
+										<span className="font-semibold text-slate-700">
 											{upcomingDeadlines}
 										</span>{" "}
 										upcoming deadlines
@@ -213,7 +213,7 @@ export function AuditReadinessHero({
 								{periodLabel ? (
 									<p className="text-xs text-slate-600">
 										Showing{" "}
-										<span className="font-medium text-slate-900">
+										<span className="font-medium text-slate-700">
 											{periodLabel.toLowerCase()}
 										</span>
 										.

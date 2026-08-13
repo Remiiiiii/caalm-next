@@ -9,7 +9,10 @@ import {
 	getCurrentUserFrom2FA,
 } from "@/lib/actions/user.actions";
 import { authorize } from "@/lib/rbac/authorize";
-import { getUnauthorizedDashboardRedirect } from "@/lib/rbac/dashboard-access-policy";
+import {
+	getDashboardProfileRedirect,
+	getUnauthorizedDashboardRedirect,
+} from "@/lib/rbac/dashboard-access-policy";
 
 export async function getSessionUser() {
 	let currentUser = await getCurrentUser();
@@ -59,5 +62,13 @@ export async function requireDashboardPathAccess(pathname: string) {
 	if (dest) {
 		redirect(dest);
 	}
+
+	const profileDest = await getDashboardProfileRedirect(user.$id, pathname, {
+		division: user.division,
+	});
+	if (profileDest) {
+		redirect(profileDest);
+	}
+
 	return user;
 }

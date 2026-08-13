@@ -156,7 +156,7 @@ export default function ApprovalFlowNode({
 	return (
 		<div
 			className={cn(
-				"relative w-[300px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm sm:w-[320px]",
+				"relative w-[300px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm sm:w-[320px]",
 				"transition-all duration-200",
 				isCurrent &&
 					"border-[#0f5384]/20 shadow-md ring-2 ring-[#0f5384]/30",

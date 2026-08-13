@@ -84,7 +84,7 @@ export default function SystemHealthPage() {
 								className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-4 py-3"
 							>
 								<div>
-									<p className="text-sm font-medium text-slate-900">
+									<p className="text-sm font-medium text-slate-700">
 										{check.name}
 									</p>
 									<p className="text-xs text-slate-500">{check.detail}</p>

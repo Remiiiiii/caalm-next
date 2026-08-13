@@ -197,7 +197,7 @@ export default function LicenseAllocationDialog({
 													<label
 														key={dept}
 														htmlFor={`allocate-dept-${dept}`}
-														className="flex cursor-pointer items-center gap-2 text-sm text-slate-900"
+														className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
 													>
 														<Checkbox
 															id={`allocate-dept-${dept}`}

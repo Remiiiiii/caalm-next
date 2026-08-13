@@ -102,13 +102,13 @@ export default function InvoiceHistoryTable({
 										key={invoice.id}
 										className={cn(DATA_TABLE_BODY_ROW_BASE)}
 									>
-										<TableCell className="text-sm text-slate-900">
+										<TableCell className="text-sm text-slate-700">
 											{new Date(invoice.created * 1000).toLocaleDateString()}
 										</TableCell>
 										<TableCell className="text-sm text-slate-600">
 											{invoice.number || invoice.id.slice(0, 12)}
 										</TableCell>
-										<TableCell className="text-sm text-slate-900">
+										<TableCell className="text-sm text-slate-700">
 											{formatMoney(
 												invoice.amountPaid || invoice.amountDue,
 												invoice.currency,

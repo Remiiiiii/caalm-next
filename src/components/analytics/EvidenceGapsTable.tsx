@@ -97,7 +97,7 @@ export function EvidenceGapsTable({
 												{row.id}
 											</td>
 										) : null}
-										<td className="py-3 px-3 text-sm text-slate-900 font-medium">
+										<td className="py-3 px-3 text-sm text-slate-700 font-medium">
 											{row.title}
 										</td>
 										<td className="py-3 px-3 text-sm text-slate-600">

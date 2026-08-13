@@ -128,7 +128,7 @@ export function DocsSearch() {
 								placeholder="Search CAALM documentation"
 								aria-controls={listId}
 								aria-autocomplete="list"
-								className="h-12 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+								className="h-12 w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
 								onKeyDown={(e) => {
 									if (e.key === "ArrowDown") {
 										e.preventDefault();
@@ -174,7 +174,7 @@ export function DocsSearch() {
 											)}
 										>
 											<div className="flex items-center justify-between gap-3">
-												<p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+												<p className="text-sm font-medium text-slate-700 dark:text-slate-100">
 													{hit.title}
 												</p>
 												<span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">

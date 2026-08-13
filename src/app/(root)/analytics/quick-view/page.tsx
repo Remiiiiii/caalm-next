@@ -194,7 +194,7 @@ const QuickViewPage = () => {
 										key={dept.name}
 										className="flex items-center justify-between p-3 rounded-lg bg-white/50 border border-slate-200"
 									>
-										<span className="text-sm font-medium text-slate-900">
+										<span className="text-sm font-medium text-slate-700">
 											{dept.name}
 										</span>
 										<span className="text-sm text-slate-600">

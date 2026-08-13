@@ -173,7 +173,7 @@ export default function LicenseReviewStep({
 								)}
 							>
 								<span className="text-slate-500 shrink-0">{row.label}</span>
-								<span className="text-slate-900 text-right font-medium wrap-break-word max-w-[60%]">
+								<span className="text-slate-700 text-right font-medium wrap-break-word max-w-[60%]">
 									{section.title === "File" ? (
 										<span className="inline-flex items-center gap-1.5">
 											<FileText className="h-4 w-4 text-[#0f5384] shrink-0" />

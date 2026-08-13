@@ -146,7 +146,7 @@ export default function Pricing({ plans }: Props) {
 								className="flex flex-col transition-all duration-200 h-full"
 								contentClassName="p-6 flex flex-col h-full"
 							>
-								<h3 className="mb-2 mt-2 flex flex-wrap items-center gap-2 text-lg font-semibold text-slate-900">
+								<h3 className="mb-2 mt-2 flex flex-wrap items-center gap-2 text-lg font-semibold text-slate-700">
 									{plan.name}
 									{idx === 1 ? (
 										<span className="inline-flex items-center rounded-full border border-[#05A1B7]/30 bg-[#E8F8FA] px-2.5 py-0.5 text-xs font-medium text-[#057A8A]">

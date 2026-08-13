@@ -213,7 +213,7 @@ export function RunbooksCmsPage() {
 					<ITGlassPanel>
 						<div className="flex flex-col items-start gap-2">
 							<BookOpen className="h-8 w-8 text-slate-400" />
-							<p className="text-base font-medium text-slate-900">
+							<p className="text-base font-medium text-slate-700">
 								No runbooks match
 							</p>
 							<p className="text-sm text-slate-600">
@@ -233,7 +233,7 @@ export function RunbooksCmsPage() {
 								<div className="p-4 sm:p-6">
 									<div className="flex items-start justify-between gap-3">
 										<div>
-											<p className="text-sm font-semibold text-slate-900">
+											<p className="text-sm font-semibold text-slate-700">
 												{item.title}
 											</p>
 											<p className="mt-1 text-xs text-slate-600">

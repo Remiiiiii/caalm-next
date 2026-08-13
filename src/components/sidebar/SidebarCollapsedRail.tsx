@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { Fragment } from "react";
 import { SectionNavIcon } from "@/components/sidebar/SectionNavIcon";
 import SidebarSectionFlyout, {
 	type FlyoutNavItem,
@@ -46,7 +47,15 @@ export default function SidebarCollapsedRail({
 				const active = isSectionActive(pathname, urls, rootException);
 
 				return (
-					<HoverCard key={section.header} openDelay={0} closeDelay={150}>
+					<Fragment key={section.header}>
+						{section.header === "Settings" && (
+							<div
+								aria-hidden
+								className="my-1 w-8 border-t border-slate-200/80"
+								role="separator"
+							/>
+						)}
+						<HoverCard key={section.header} openDelay={0} closeDelay={150}>
 						<HoverCardTrigger asChild>
 							<button
 								type="button"
@@ -86,6 +95,7 @@ export default function SidebarCollapsedRail({
 							/>
 						</HoverCardContent>
 					</HoverCard>
+					</Fragment>
 				);
 			})}
 		</nav>

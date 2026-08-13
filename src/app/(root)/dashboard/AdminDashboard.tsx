@@ -533,16 +533,16 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 				<div className="glass-card-cap" />
 				<CardContent className="p-3 sm:p-4 lg:p-6">
 					<WidgetCarousel ariaLabel="Admin dashboard widgets">
-						<WeatherWidget />
-						<CompanyNewsFeed />
-						<ContractStatusPieChart />
-						<DepartmentPerformanceWidget />
-						{user && <QuickNotesWidget user={user as any} />}
 						<ContractExpiryAlertsWidget
 							maxVisible={2}
 							showSettings={false}
 							compact={true}
 						/>
+						<ContractStatusPieChart />
+						<DepartmentPerformanceWidget />
+						<CompanyNewsFeed />
+						{user && <QuickNotesWidget user={user as any} />}
+						<WeatherWidget />
 					</WidgetCarousel>
 				</CardContent>
 			</Card>

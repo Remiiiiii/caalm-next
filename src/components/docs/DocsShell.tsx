@@ -49,7 +49,7 @@ export function DocsHeader() {
 							className="object-contain dark:brightness-0 dark:invert"
 						/>
 					</span>
-					<span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+					<span className="text-sm font-semibold text-slate-700 dark:text-slate-100">
 						CAALM Docs
 					</span>
 				</Link>
@@ -61,7 +61,7 @@ export function DocsHeader() {
 					<DocsThemeToggle />
 					<Link
 						href="/sign-in"
-						className="hidden text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 sm:inline dark:text-slate-400 dark:hover:text-slate-100"
+						className="hidden text-sm font-medium text-slate-600 transition-colors hover:text-slate-700 sm:inline dark:text-slate-400 dark:hover:text-slate-100"
 					>
 						Sign in
 					</Link>
@@ -83,7 +83,7 @@ export function DocsHeader() {
 export function DocsShell({ children }: { children: React.ReactNode }) {
 	return (
 		<DocsThemeProvider>
-			<div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_rgba(15,83,132,0.06),_transparent_55%),linear-gradient(to_bottom,#ffffff,#f8fafc)] text-slate-900 dark:bg-[radial-gradient(ellipse_at_top,_rgba(56,189,248,0.08),_transparent_50%),linear-gradient(to_bottom,#020617,#0f172a)] dark:text-slate-100">
+			<div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_rgba(15,83,132,0.06),_transparent_55%),linear-gradient(to_bottom,#ffffff,#f8fafc)] text-slate-700 dark:bg-[radial-gradient(ellipse_at_top,_rgba(56,189,248,0.08),_transparent_50%),linear-gradient(to_bottom,#020617,#0f172a)] dark:text-slate-100">
 				<DocsHeader />
 				<div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-0 px-4 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8 lg:px-8 xl:grid-cols-[260px_minmax(0,1fr)]">
 					<aside className="hidden max-h-[calc(100vh-3.5rem)] overflow-y-auto py-8 lg:sticky lg:top-14 lg:block">

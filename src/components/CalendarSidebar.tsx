@@ -121,7 +121,7 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
 					<button
 						type="button"
 						onClick={() => setIsMyCalendarsExpanded(!isMyCalendarsExpanded)}
-						className="flex items-center justify-between w-full text-left font-medium text-slate-700 hover:text-slate-900 mb-2 cursor-pointer transition-colors duration-200"
+						className="flex items-center justify-between w-full text-left font-medium text-slate-700 hover:text-slate-700 mb-2 cursor-pointer transition-colors duration-200"
 					>
 						<span className="text-sm sidebar-gradient-text">My calendars</span>
 						{isMyCalendarsExpanded ? (
@@ -218,7 +218,7 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
 						onClick={() =>
 							setIsSharedCalendarsExpanded(!isSharedCalendarsExpanded)
 						}
-						className="flex items-center justify-between w-full text-left font-medium text-slate-700 hover:text-slate-900 mb-2 cursor-pointer transition-colors duration-200"
+						className="flex items-center justify-between w-full text-left font-medium text-slate-700 hover:text-slate-700 mb-2 cursor-pointer transition-colors duration-200"
 					>
 						<span className="text-sm sidebar-gradient-text">
 							Shared calendars

@@ -408,7 +408,7 @@ export const ResourceManager: React.FC<ResourceManagerProps> = ({
 									<div className="flex items-start justify-between">
 										<div className="flex-1">
 											<div className="flex items-center gap-2 mb-2">
-												<span className="font-medium text-slate-900">
+												<span className="font-medium text-slate-700">
 													{resource.name}
 												</span>
 												<Badge variant="secondary" className="text-xs">

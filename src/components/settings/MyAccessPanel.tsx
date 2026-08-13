@@ -85,7 +85,7 @@ export default function MyAccessPanel() {
 										<Badge
 											key={r.roleId}
 											variant="outline"
-											className="border-blue/20 bg-blue/10 text-slate-900"
+											className="border-blue/20 bg-blue/10 text-slate-700"
 										>
 											<Shield className="h-3 w-3 mr-1 text-[#0f5384]" />
 											{r.roleName || "Role"}
@@ -97,7 +97,7 @@ export default function MyAccessPanel() {
 						<div className="text-sm text-slate-600">
 							<p>
 								Organization:{" "}
-								<span className="font-medium text-slate-900">
+								<span className="font-medium text-slate-700">
 									{formatOrganizationLabel(orgId)}
 								</span>
 							</p>
@@ -149,7 +149,7 @@ export default function MyAccessPanel() {
 										<div className="min-w-0">
 											<p
 												className={`text-sm font-medium ${
-													item.granted ? "text-slate-900" : "text-slate-500"
+													item.granted ? "text-slate-700" : "text-slate-500"
 												}`}
 											>
 												{item.name}

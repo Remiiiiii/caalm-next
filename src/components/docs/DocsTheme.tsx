@@ -84,7 +84,7 @@ export function DocsThemeToggle({ className }: { className?: string }) {
 			title={isDark ? "Light mode" : "Dark mode"}
 			className={cn(
 				"inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600",
-				"transition-colors duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900",
+				"transition-colors duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700",
 				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 				"dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300",
 				"dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-white",

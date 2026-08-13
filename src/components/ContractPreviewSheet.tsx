@@ -271,7 +271,7 @@ export default function ContractPreviewSheet({
 				<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
 					Contract value
 				</p>
-				<p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+				<p className="mt-1 text-2xl font-bold tracking-tight text-slate-700">
 					{amountValue != null ? formatCurrency(amountValue) : "—"}
 				</p>
 				{file.vendor ? (
@@ -281,7 +281,7 @@ export default function ContractPreviewSheet({
 							<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
 								Vendor / counterparty
 							</p>
-							<p className="mt-0.5 text-sm font-medium leading-snug text-slate-900">
+							<p className="mt-0.5 text-sm font-medium leading-snug text-slate-700">
 								{file.vendor}
 							</p>
 						</div>
@@ -303,7 +303,7 @@ export default function ContractPreviewSheet({
 						{file.$createdAt ? (
 							<FormattedDateTime
 								date={file.$createdAt}
-								className="body-2 font-medium text-slate-900"
+								className="body-2 font-medium text-slate-700"
 							/>
 						) : (
 							"—"

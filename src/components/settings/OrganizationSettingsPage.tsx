@@ -137,12 +137,12 @@ export default function OrganizationSettingsPage() {
 				<div>
 					<p className="text-sm text-slate-600">
 						Tier:{" "}
-						<span className="font-medium text-slate-900 capitalize">
+						<span className="font-medium text-slate-700 capitalize">
 							{org.subscriptionTier}
 						</span>
 						{" · "}
 						Status:{" "}
-						<span className="font-medium text-slate-900 capitalize">
+						<span className="font-medium text-slate-700 capitalize">
 							{org.status}
 						</span>
 					</p>

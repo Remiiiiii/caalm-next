@@ -276,6 +276,12 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 		header: "Incident Management",
 		items: [
 			{
+				name: "Status",
+				icon: "/assets/icons/info.svg",
+				url: "/dashboard/it/status",
+				permission: PERMISSIONS.TICKETS.VIEW,
+			},
+			{
 				name: "Active Incidents",
 				icon: "/assets/icons/alert-circle.svg",
 				url: "/dashboard/it/incidents/active",

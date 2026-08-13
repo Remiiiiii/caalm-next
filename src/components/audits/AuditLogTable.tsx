@@ -252,7 +252,7 @@ export function AuditLogTable({
 													: "—"}
 											</TableCell>
 											<TableCell>
-												<div className="text-sm font-medium text-slate-900">
+												<div className="text-sm font-medium text-slate-700">
 													{log.user_name}
 												</div>
 												<div className="text-xs text-slate-500">
@@ -264,7 +264,7 @@ export function AuditLogTable({
 												<ModuleBadge module={log.module} />
 											</TableCell>
 											<TableCell className="max-w-[160px]">
-												<div className="text-sm text-slate-900 truncate">
+												<div className="text-sm text-slate-700 truncate">
 													{log.target_label || log.event_title}
 												</div>
 												{log.target_type ? (

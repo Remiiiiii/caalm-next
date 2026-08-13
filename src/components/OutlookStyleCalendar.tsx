@@ -3232,7 +3232,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 														className={cn(
 															"text-sm font-semibold truncate",
 															canViewSensitive
-																? "text-slate-900"
+																? "text-slate-700"
 																: "text-slate-500 italic",
 														)}
 													>
@@ -3692,7 +3692,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																						.toUpperCase()}
 																				</div>
 																				<div className="flex flex-col">
-																					<span className="font-medium text-sm text-slate-900">
+																					<span className="font-medium text-sm text-slate-700">
 																						{user.fullName || user.name}
 																					</span>
 																					<span className="text-xs text-slate-500">
@@ -4158,7 +4158,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																							<MapPin className="h-4 w-4 text-slate-500" />
 																						</div>
 																						<div className="flex flex-col">
-																							<span className="font-medium text-sm text-slate-900">
+																							<span className="font-medium text-sm text-slate-700">
 																								{location.name}
 																							</span>
 																							<span className="text-xs text-slate-500">
@@ -4288,7 +4288,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																			<div className="flex items-center gap-2 flex-1 min-w-0">
 																				<FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
 																				<div className="flex-1 min-w-0">
-																					<p className="text-sm font-medium text-slate-900 truncate">
+																					<p className="text-sm font-medium text-slate-700 truncate">
 																						{attachment.name || "Unknown file"}
 																					</p>
 																					<p className="text-xs text-slate-500">
@@ -4700,7 +4700,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 													<div className="space-y-4">
 														{/* Title and Sensitivity */}
 														<div className="flex flex-wrap items-center gap-2">
-															<h3 className="text-base font-semibold text-slate-900">
+															<h3 className="text-base font-semibold text-slate-700">
 																{eventTitle}
 															</h3>
 															{selectedApproval.sensitivityLevel !==
@@ -4729,7 +4729,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																	<Clock className="w-4 h-4 text-blue-600" />
 																</div>
 																<div className="flex-1">
-																	<div className="text-sm font-medium text-slate-900">
+																	<div className="text-sm font-medium text-slate-700">
 																		{format(eventDate, "EEEE, MMMM d, yyyy")}
 																	</div>
 																	{(() => {
@@ -5190,7 +5190,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 											<div className="space-y-3 text-sm">
 												<div className="flex items-center justify-between">
 													<span className="text-slate-600">Submitted:</span>
-													<span className="font-medium text-slate-900">
+													<span className="font-medium text-slate-700">
 														{selectedApproval.submittedAt
 															? format(
 																	new Date(selectedApproval.submittedAt),
@@ -5541,7 +5541,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 															<Clock className="w-4 h-4 text-blue" />
 														</div>
 														<div className="flex-1">
-															<div className="text-sm font-medium text-slate-900">
+															<div className="text-sm font-medium text-slate-700">
 																Date
 															</div>
 															<div className="text-sm text-slate-600">
@@ -5570,7 +5570,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																<Tag className="w-4 h-4 text-purple-600" />
 															</div>
 															<div className="flex-1">
-																<div className="text-sm font-medium text-slate-900">
+																<div className="text-sm font-medium text-slate-700">
 																	Event Type
 																</div>
 																<div className="text-sm text-slate-600 whitespace-nowrap">
@@ -5591,7 +5591,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 															<Users className="w-4 h-4 text-[#5558F9]" />
 														</div>
 														<div className="flex-1">
-															<div className="text-sm font-medium text-slate-900 mb-1">
+															<div className="text-sm font-medium text-slate-700 mb-1">
 																Participants
 															</div>
 															<div className="text-sm text-slate-600">
@@ -5713,7 +5713,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																	<FileText className="w-4 h-4 text-[#838181]" />
 																</div>
 																<div className="flex-1">
-																	<div className="text-sm font-medium text-slate-900 mb-1">
+																	<div className="text-sm font-medium text-slate-700 mb-1">
 																		Contract
 																	</div>
 																	<div className="text-sm text-slate-600 break-words">
@@ -5733,7 +5733,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 															<MapPin className="w-4 h-4 text-orange" />
 														</div>
 														<div className="flex-1">
-															<div className="text-sm font-medium text-slate-900 mb-1">
+															<div className="text-sm font-medium text-slate-700 mb-1">
 																Location
 															</div>
 															<div className="text-sm text-slate-600 break-words">
@@ -5754,7 +5754,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																<MessageSquare className="w-4 h-4 text-indigo-600" />
 															</div>
 															<div className="flex-1">
-																<div className="text-sm font-medium text-slate-900 mb-1">
+																<div className="text-sm font-medium text-slate-700 mb-1">
 																	Description
 																</div>
 																<div className="text-sm text-slate-600 break-words whitespace-pre-wrap">
@@ -5784,7 +5784,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																	<Paperclip className="w-4 h-4 text-[#808080]" />
 																</div>
 																<div className="flex-1">
-																	<div className="text-sm font-medium text-slate-900 mb-2">
+																	<div className="text-sm font-medium text-slate-700 mb-2">
 																		Attachments ({attachmentFileIds.length})
 																	</div>
 																	<div className="space-y-2">
@@ -5800,7 +5800,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																						<div className="flex items-center gap-2 flex-1 min-w-0">
 																							<RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
 																							<div className="flex-1 min-w-0">
-																								<p className="text-sm font-medium text-slate-900 truncate">
+																								<p className="text-sm font-medium text-slate-700 truncate">
 																									Loading...
 																								</p>
 																							</div>
@@ -5833,7 +5833,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																										"Unknown file"}
 																								</a>
 																							) : (
-																								<p className="text-sm font-medium text-slate-900 truncate">
+																								<p className="text-sm font-medium text-slate-700 truncate">
 																									{attachment.name ||
 																										"Unknown file"}
 																								</p>
@@ -5903,7 +5903,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 															<Paperclip className="h-5 w-5" />
 														</span>
 														<div className="min-w-0 flex-1 text-left">
-															<div className="text-sm font-semibold text-slate-900">
+															<div className="text-sm font-semibold text-slate-700">
 																What pre-reads should I review?
 															</div>
 															<div className="mt-0.5 text-xs text-slate-500">
@@ -5934,7 +5934,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 														<MessageSquare className="h-5 w-5" />
 													</span>
 													<div className="min-w-0 flex-1 text-left">
-														<div className="text-sm font-semibold text-slate-900">
+														<div className="text-sm font-semibold text-slate-700">
 															Chat with CAALM Calendar Assistant
 														</div>
 														<div className="mt-0.5 text-xs text-slate-500">

@@ -158,7 +158,7 @@ export function AuditEvidenceTable({
 										<TableCell className="font-mono text-sm text-slate-700">
 											{formatEvidenceDisplayId(row.id)}
 										</TableCell>
-										<TableCell className="font-medium text-slate-900">
+										<TableCell className="font-medium text-slate-700">
 											{row.title}
 											{row.category ? (
 												<p className="text-xs text-slate-500 mt-0.5">

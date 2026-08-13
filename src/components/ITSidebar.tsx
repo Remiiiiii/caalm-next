@@ -187,7 +187,7 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, avatar, email }) => {
 									</div>
 								)}
 								<div className="flex-1 min-w-0">
-									<p className="text-sm font-semibold text-slate-900 truncate">
+									<p className="text-sm font-semibold text-slate-700 truncate">
 										{name || email}
 									</p>
 									<p className="text-xs text-slate-600 truncate">{email}</p>
@@ -338,7 +338,7 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, avatar, email }) => {
 																</span>
 																<p
 																	className={cn(
-																		"text-xs text-slate-900 px-2 font-medium flex items-center gap-2",
+																		"text-xs text-slate-700 px-2 font-medium flex items-center gap-2",
 																		isActive && "text-[#0f5384] font-semibold",
 																	)}
 																>

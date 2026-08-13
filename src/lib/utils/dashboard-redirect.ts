@@ -17,6 +17,19 @@ const ROLE_NAME_TO_PATH: Record<string, string> = {
 
 const dashboardUrlCache = new Map<string, { url: string; timestamp: number }>();
 
+export function invalidateDashboardUrlCache(userId?: string): void {
+	if (!userId) {
+		dashboardUrlCache.clear();
+		return;
+	}
+
+	for (const key of dashboardUrlCache.keys()) {
+		if (key.startsWith(`${userId}:`)) {
+			dashboardUrlCache.delete(key);
+		}
+	}
+}
+
 /**
  * Get dashboard URL for a user (server policy via API).
  */

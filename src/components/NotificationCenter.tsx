@@ -698,7 +698,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 											<div className="w-12 h-12 mx-auto mb-3 bg-blue-100 rounded-full flex items-center justify-center">
 												<Bell className="w-6 h-6 text-blue-600" />
 											</div>
-											<p className="text-lg font-semibold text-slate-900 mb-1">
+											<p className="text-lg font-semibold text-slate-700 mb-1">
 												No notifications found
 											</p>
 											<p className="text-sm text-slate-600">
@@ -910,7 +910,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 					<div className="flex items-start justify-between gap-2">
 						<div className="flex-1">
 							<div className="flex items-center gap-2 mb-1">
-								<span className="text-sm font-semibold text-slate-900">
+								<span className="text-sm font-semibold text-slate-700">
 									{notification.title}
 								</span>
 								{notification.priority && (
@@ -950,7 +950,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 									variant="ghost"
 									size="sm"
 									onClick={() => onMarkAsRead(notification.$id)}
-									className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900"
+									className="h-7 px-2 text-xs text-slate-600 hover:text-slate-700"
 								>
 									Mark read
 								</Button>
@@ -960,7 +960,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 									variant="ghost"
 									size="sm"
 									onClick={() => onMarkAsUnread(notification.$id)}
-									className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900"
+									className="h-7 px-2 text-xs text-slate-600 hover:text-slate-700"
 								>
 									Mark unread
 								</Button>

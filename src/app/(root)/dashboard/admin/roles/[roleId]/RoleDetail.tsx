@@ -236,7 +236,7 @@ const RoleDetail = ({ roleId }: { roleId: string }) => {
 			<Button
 				variant="ghost"
 				size="sm"
-				className="mb-4 shrink-0 text-slate-600 hover:text-slate-900 bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+				className="mb-4 shrink-0 text-slate-600 hover:text-slate-700 bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
 				onClick={() => router.push("/dashboard/admin/roles")}
 			>
 				<ArrowLeft className="h-4 w-4" />
@@ -251,7 +251,7 @@ const RoleDetail = ({ roleId }: { roleId: string }) => {
 							{role.isSystemRole ? (
 								<Badge
 									variant="secondary"
-									className="h-5 shrink-0 w-fit  text-slate-600 hover:text-slate-900 bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300 px-1.5 py-3 text-xs font-medium leading-none"
+									className="h-5 shrink-0 w-fit  text-slate-600 hover:text-slate-700 bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300 px-1.5 py-3 text-xs font-medium leading-none"
 								>
 									Default Role
 								</Badge>

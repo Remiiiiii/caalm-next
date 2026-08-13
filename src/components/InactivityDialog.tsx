@@ -120,7 +120,7 @@ export default function InactivityDialog({
 					<AlertDialogAction
 						onClick={handleContinue}
 						disabled={isLoggingOut}
-						className="text-slate-900flex items-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
+						className="text-slate-700flex items-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
 					>
 						<RefreshCw className="h-4 w-4" />
 						Continue Session

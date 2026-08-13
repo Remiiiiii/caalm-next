@@ -1,7 +1,32 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { deleteUser } from "@/lib/actions/user.actions";
-import { requirePermission } from "@/lib/rbac/middleware";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
+import { deleteUserAccount } from "@/lib/users/delete-user.service";
+
+function resolveErrorMessage(error: unknown, fallback: string): string {
+	if (error instanceof Error && error.message.trim()) {
+		return error.message;
+	}
+	if (typeof error === "object" && error !== null && "message" in error) {
+		const message = String((error as { message?: unknown }).message || "").trim();
+		if (message) return message;
+	}
+	return fallback;
+}
+
+async function parseUserId(req: NextRequest): Promise<string | null> {
+	const fromQuery = req.nextUrl.searchParams.get("userId")?.trim();
+	if (fromQuery) return fromQuery;
+
+	try {
+		const body = await req.json();
+		const fromBody = String(body?.userId || "").trim();
+		return fromBody || null;
+	} catch {
+		return null;
+	}
+}
 
 export async function DELETE(req: NextRequest) {
 	try {
@@ -10,16 +35,31 @@ export async function DELETE(req: NextRequest) {
 		});
 		if (permissionCheck) return permissionCheck;
 
-		const body = await req.json();
-		const { userId } = body;
+		const userId = await parseUserId(req);
 		if (!userId) {
 			return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 		}
-		await deleteUser(userId);
+
+		const currentUser = await getCurrentUser();
+		if (
+			currentUser &&
+			(currentUser.$id === userId || currentUser.accountId === userId)
+		) {
+			return NextResponse.json(
+				{ error: "You cannot delete your own account" },
+				{ status: 400 },
+			);
+		}
+
+		const orgId = getOrgIdFromRequest(req);
+		await deleteUserAccount(userId, orgId);
 		return NextResponse.json({ success: true });
 	} catch (error) {
+		console.error("[DELETE /api/user/delete]", error);
 		return NextResponse.json(
-			{ error: (error as Error).message || "Failed to delete user" },
+			{
+				error: resolveErrorMessage(error, "Failed to delete user"),
+			},
 			{ status: 500 },
 		);
 	}

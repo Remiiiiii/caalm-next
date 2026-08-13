@@ -34,6 +34,11 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason: "Stripe signature verification (constructWebhookEvent)",
 	},
 	{
+		path: "webhooks/github",
+		class: "webhook",
+		reason: "GitHub HMAC signature verification (X-Hub-Signature-256)",
+	},
+	{
 		path: "auth/callback/microsoft",
 		class: "oauth",
 		reason: "Microsoft OAuth redirect callback",

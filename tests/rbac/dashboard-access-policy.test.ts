@@ -1,9 +1,39 @@
 import { describe, expect, it } from "vitest";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getPolicyEntryForPath } from "@/lib/rbac/dashboard-access-policy";
+import {
+	getPolicyEntryForPath,
+	isRoleDashboardHomePath,
+} from "@/lib/rbac/dashboard-access-policy";
+import {
+	appendSessionChangedNotice,
+	getCachedUserId,
+	parseCachedAuthUser,
+} from "@/lib/auth/session-sync";
 import { validatePermissionsForSod } from "@/lib/rbac/separation-of-duties";
 
+describe("session-sync", () => {
+	it("appends session changed notice query param", () => {
+		expect(appendSessionChangedNotice("/dashboard/superadmin")).toBe(
+			"/dashboard/superadmin?notice=session_changed",
+		);
+	});
+
+	it("parses cached user id from localStorage payload", () => {
+		const raw = JSON.stringify({
+			user: { $id: "user_1", name: "Victor" },
+			timestamp: Date.now(),
+		});
+		expect(getCachedUserId(raw)).toBe("user_1");
+		expect(parseCachedAuthUser(raw)?.user?.name).toBe("Victor");
+	});
+});
+
 describe("dashboard-access-policy", () => {
+	it("identifies role dashboard home paths", () => {
+		expect(isRoleDashboardHomePath("/dashboard/departmentmanager")).toBe(true);
+		expect(isRoleDashboardHomePath("/dashboard/it/monitoring")).toBe(false);
+	});
+
 	it("matches longest dashboard prefix for nested admin routes", () => {
 		const entry = getPolicyEntryForPath("/dashboard/admin/roles/new");
 		expect(entry?.pathPrefix).toBe("/dashboard/admin/roles");

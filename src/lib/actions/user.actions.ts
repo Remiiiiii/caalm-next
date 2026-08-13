@@ -6,10 +6,12 @@ import { redirect } from "next/navigation";
 import * as sdk from "node-appwrite";
 import { ID, Query } from "node-appwrite";
 import { cache } from "react";
+import { addUserToOrganization } from "@/lib/rbac/organizations";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,
 } from "@/lib/rbac/permissions";
+import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 import CacheManager from "@/lib/services/cache-manager";
 import { avatarPlaceholderUrl, type UserDivision } from "../../../constants";
 import {
@@ -1358,50 +1360,80 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 	}
 	if (!user) throw new Error("User creation failed");
 
-	// 3. Assign role to user via user_roles table
-	// Get role ID from roles table
+	const inviteOrgId =
+		(typeof invite.orgId === "string" && invite.orgId.trim()) ||
+		"default_organization";
+	const normalizedInviteRole = resolveInvitationRole(String(invite.role || ""));
+	const orgMembershipRole: "admin" | "member" =
+		normalizedInviteRole === "Super Admin" ||
+		normalizedInviteRole === "Organization Admin"
+			? "admin"
+			: "member";
+
+	// 3. Ensure org membership first — role assignment depends on this
+	const orgLinked = await addUserToOrganization({
+		userId: user.$id,
+		orgId: inviteOrgId,
+		orgRole: orgMembershipRole,
+		isDefault: true,
+		invitedBy:
+			typeof invite.invitedBy === "string" ? invite.invitedBy : undefined,
+	});
+	if (!orgLinked) {
+		throw new Error("Failed to add invited user to organization");
+	}
+
+	if ((user as { orgId?: string }).orgId !== inviteOrgId) {
+		await tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId || "default-db",
+			tableId: appwriteConfig.usersCollectionId || "users",
+			rowId: user.$id,
+			data: { orgId: inviteOrgId },
+		});
+	}
+
+	// 4. Assign role to user via user_roles table
 	const rolesResult = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId || "default-db",
 		tableId: "roles",
-		queries: [sdk.Query.equal("name", invite.role)],
+		queries: [sdk.Query.equal("name", normalizedInviteRole), Query.limit(1)],
 	});
 
-	if (rolesResult.total > 0) {
-		const roleId = rolesResult.rows[0].$id;
-		// Get default organization
-		const defaultOrg = await getUserDefaultOrganization(user.$id);
-		if (defaultOrg) {
-			// Check if user_role already exists
-			const existingUserRoles = await tablesDB.listRows({
-				databaseId: appwriteConfig.databaseId || "default-db",
-				tableId: "user_roles",
-				queries: [
-					sdk.Query.equal("userId", user.$id),
-					sdk.Query.equal("orgId", defaultOrg.orgId),
-					sdk.Query.equal("roleId", roleId),
-				],
-			});
-
-			if (existingUserRoles.total === 0) {
-				await tablesDB.createRow({
-					databaseId: appwriteConfig.databaseId || "default-db",
-					tableId: "user_roles",
-					rowId: ID.unique(),
-					data: {
-						userId: user.$id,
-						orgId: defaultOrg.orgId,
-						roleId: roleId,
-						assignedBy: invite.invitedBy || user.$id,
-					},
-				});
-
-				// Invalidate RBAC cache for this user
-				await CacheManager.invalidateRBAC(user.$id, defaultOrg.orgId);
-			}
-		}
+	if (rolesResult.total === 0) {
+		throw new Error(
+			`Invite role "${normalizedInviteRole}" was not found. Ask an admin to assign a role.`,
+		);
 	}
 
-	// 4. Mark invitation as accepted
+	const roleId = rolesResult.rows[0].$id;
+	const existingUserRoles = await tablesDB.listRows({
+		databaseId: appwriteConfig.databaseId || "default-db",
+		tableId: "user_roles",
+		queries: [
+			sdk.Query.equal("userId", user.$id),
+			sdk.Query.equal("orgId", inviteOrgId),
+			sdk.Query.equal("roleId", roleId),
+			Query.limit(1),
+		],
+	});
+
+	if (existingUserRoles.total === 0) {
+		await tablesDB.createRow({
+			databaseId: appwriteConfig.databaseId || "default-db",
+			tableId: "user_roles",
+			rowId: ID.unique(),
+			data: {
+				userId: user.$id,
+				orgId: inviteOrgId,
+				roleId,
+				assignedBy: invite.invitedBy || user.$id,
+			},
+		});
+	}
+
+	await CacheManager.invalidateRBAC(user.$id, inviteOrgId);
+
+	// 5. Mark invitation as accepted
 	await tablesDB.updateRow({
 		databaseId: appwriteConfig.databaseId || "default-db",
 		tableId: INVITATIONS_COLLECTION,
@@ -1414,7 +1446,7 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 		await notifyInvitationAccepted(
 			invite.email,
 			invite.name,
-			invite.role,
+			normalizedInviteRole,
 			invite.department || "N/A",
 		);
 	} catch (error) {
@@ -1422,13 +1454,14 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 		// Don't throw - SMS failure shouldn't block invitation acceptance
 	}
 
-	// 5. Return info for frontend to redirect to dashboard
+	// 6. Return info for frontend to complete sign-in (OTP → 2FA → dashboard)
 	return {
 		success: true,
 		email: invite.email,
 		accountId: user.accountId,
-		role: invite.role,
+		role: normalizedInviteRole,
 		department: user.department,
+		orgId: inviteOrgId,
 	};
 };
 
@@ -1910,6 +1943,7 @@ export interface UserManagementRow {
 	$createdAt?: string;
 	$updatedAt?: string;
 	department?: string;
+	division?: string;
 	status?: string;
 }
 
@@ -1964,6 +1998,61 @@ function resolveProfileImageId(user: {
 	return user.profileImageId || null;
 }
 
+type RoleMeta = { name: string; priority: number };
+
+type UserManagementAssignment = {
+	roleName: string;
+	priority: number;
+	assignedByName: string;
+	assignedDate?: string;
+};
+
+function resolveProfileIdFromRoleUserId(
+	rawUserId: string,
+	profileIds: Set<string>,
+	accountIdToProfileId: Map<string, string>,
+): string | null {
+	if (profileIds.has(rawUserId)) return rawUserId;
+	return accountIdToProfileId.get(rawUserId) ?? null;
+}
+
+function resolveAssignedByDisplayName(
+	assignedById: string,
+	usersById: Map<string, { fullName: string }>,
+	accountIdToProfileId: Map<string, string>,
+): string {
+	if (
+		!assignedById ||
+		assignedById === "system" ||
+		assignedById === "admin_manual"
+	) {
+		return "System";
+	}
+
+	const direct = usersById.get(assignedById);
+	if (direct?.fullName) return direct.fullName;
+
+	const profileId = accountIdToProfileId.get(assignedById);
+	if (profileId) {
+		return usersById.get(profileId)?.fullName || "System";
+	}
+
+	return "System";
+}
+
+function pickPrimaryUserManagementAssignment(
+	assignments: UserManagementAssignment[],
+): UserManagementAssignment | undefined {
+	if (!assignments.length) return undefined;
+
+	return [...assignments].sort((a, b) => {
+		if (a.priority !== b.priority) return a.priority - b.priority;
+		const aTs = a.assignedDate ? new Date(a.assignedDate).getTime() : 0;
+		const bTs = b.assignedDate ? new Date(b.assignedDate).getTime() : 0;
+		return bTs - aTs;
+	})[0];
+}
+
 export const listUsersForManagement = async (
 	orgId: string,
 ): Promise<UserManagementRow[]> => {
@@ -1972,104 +2061,139 @@ export const listUsersForManagement = async (
 		const databaseId = appwriteConfig.databaseId || "default-db";
 		const usersTableId = appwriteConfig.usersCollectionId || "users";
 
-		const [usersResult, userRolesResult, rolesResult] = await Promise.all([
-			tablesDB.listRows({
-				databaseId,
-				tableId: usersTableId,
-				queries: [Query.limit(500)],
-			}),
-			tablesDB.listRows({
-				databaseId,
-				tableId: "user_roles",
-				queries: [Query.equal("orgId", orgId), Query.limit(500)],
-			}),
-			tablesDB.listRows({
-				databaseId,
-				tableId: "roles",
-				queries: [Query.limit(500)],
-			}),
-		]);
+		const [usersResult, userRolesResult, rolesResult, userOrgsResult] =
+			await Promise.all([
+				tablesDB.listRows({
+					databaseId,
+					tableId: usersTableId,
+					queries: [Query.limit(500)],
+				}),
+				tablesDB.listRows({
+					databaseId,
+					tableId: "user_roles",
+					queries: [Query.equal("orgId", orgId), Query.limit(500)],
+				}),
+				tablesDB.listRows({
+					databaseId,
+					tableId: "roles",
+					queries: [Query.limit(500)],
+				}),
+				tablesDB.listRows({
+					databaseId,
+					tableId: "user_organizations",
+					queries: [Query.equal("orgId", orgId), Query.limit(500)],
+				}),
+			]);
 
-		const rolesById = new Map<string, string>();
+		const rolesById = new Map<string, RoleMeta>();
 		for (const role of rolesResult.rows) {
 			const roleId = String((role as { $id?: string }).$id || "");
+			if (!roleId) continue;
 			const roleName = String((role as { name?: string }).name || "N/A");
-			if (roleId) rolesById.set(roleId, roleName);
+			const dbPriority = (role as { priority?: number }).priority;
+			const fallback = ROLE_DASHBOARD_FALLBACK[roleId];
+			rolesById.set(roleId, {
+				name: roleName,
+				priority:
+					typeof dbPriority === "number"
+						? dbPriority
+						: (fallback?.priority ?? 9999),
+			});
 		}
 
 		const usersById = new Map<
 			string,
 			{ fullName: string; email: string; avatar?: string }
 		>();
+		const profileIds = new Set<string>();
+		const accountIdToProfileId = new Map<string, string>();
 		for (const user of usersResult.rows) {
 			const userId = String((user as { $id?: string }).$id || "");
 			if (!userId) continue;
+			profileIds.add(userId);
 			usersById.set(userId, {
 				fullName: String((user as { fullName?: string }).fullName || "Unknown"),
 				email: String((user as { email?: string }).email || ""),
 				avatar: (user as { avatar?: string }).avatar,
 			});
+			const accountId = String((user as { accountId?: string }).accountId || "");
+			if (accountId) accountIdToProfileId.set(accountId, userId);
 		}
 
-		const assignmentsByUserId = new Map<
-			string,
-			{
-				roleName: string;
-				assignedByName: string;
-				assignedDate?: string;
-			}
-		>();
+		const assignmentsByProfileId = new Map<string, UserManagementAssignment[]>();
 
 		for (const assignment of userRolesResult.rows) {
-			const targetUserId = String(
+			const rawUserId = String(
 				(assignment as { userId?: string }).userId || "",
 			);
-			if (!targetUserId) continue;
+			if (!rawUserId) continue;
+
+			const profileId = resolveProfileIdFromRoleUserId(
+				rawUserId,
+				profileIds,
+				accountIdToProfileId,
+			);
+			if (!profileId) continue;
 
 			const roleId = String((assignment as { roleId?: string }).roleId || "");
+			const roleMeta = roleId ? rolesById.get(roleId) : undefined;
 			const assignedById = String(
 				(assignment as { assignedBy?: string }).assignedBy || "",
 			);
-			const assignedByUser = assignedById ? usersById.get(assignedById) : null;
-			const roleName = roleId ? (rolesById.get(roleId) ?? "N/A") : "N/A";
 			const assignedDate =
 				(assignment as { assignedAt?: string }).assignedAt ||
 				(assignment as { $createdAt?: string }).$createdAt;
 
-			const existing = assignmentsByUserId.get(targetUserId);
-			if (!existing) {
-				assignmentsByUserId.set(targetUserId, {
-					roleName,
-					assignedByName: assignedByUser?.fullName || "System",
-					assignedDate,
-				});
-				continue;
-			}
+			const entry: UserManagementAssignment = {
+				roleName: roleMeta?.name ?? "N/A",
+				priority: roleMeta?.priority ?? 9999,
+				assignedByName: resolveAssignedByDisplayName(
+					assignedById,
+					usersById,
+					accountIdToProfileId,
+				),
+				assignedDate,
+			};
 
-			const existingTs = existing.assignedDate
-				? new Date(existing.assignedDate).getTime()
-				: 0;
-			const nextTs = assignedDate ? new Date(assignedDate).getTime() : 0;
+			const existing = assignmentsByProfileId.get(profileId) ?? [];
+			existing.push(entry);
+			assignmentsByProfileId.set(profileId, existing);
+		}
 
-			if (nextTs > existingTs) {
-				assignmentsByUserId.set(targetUserId, {
-					roleName,
-					assignedByName: assignedByUser?.fullName || "System",
-					assignedDate,
-				});
-			}
+		const primaryAssignmentsByProfileId = new Map<
+			string,
+			UserManagementAssignment
+		>();
+		for (const [profileId, entries] of assignmentsByProfileId) {
+			const primary = pickPrimaryUserManagementAssignment(entries);
+			if (primary) primaryAssignmentsByProfileId.set(profileId, primary);
+		}
+
+		const orgMemberProfileIds = new Set<string>();
+		for (const membership of userOrgsResult.rows) {
+			const rawUserId = String(
+				(membership as { userId?: string }).userId || "",
+			);
+			const profileId = resolveProfileIdFromRoleUserId(
+				rawUserId,
+				profileIds,
+				accountIdToProfileId,
+			);
+			if (profileId) orgMemberProfileIds.add(profileId);
 		}
 
 		return usersResult.rows
 			.filter((user) => {
 				const userId = String((user as { $id?: string }).$id || "");
 				const docOrgId = (user as { orgId?: string }).orgId;
-				if (docOrgId === orgId || assignmentsByUserId.has(userId)) return true;
+				if (docOrgId === orgId) return true;
+				if (primaryAssignmentsByProfileId.has(userId)) return true;
+				if (orgMemberProfileIds.has(userId)) return true;
 				return false;
 			})
 			.map((user) => {
 				const userId = String((user as { $id?: string }).$id || "");
-				const assignment = assignmentsByUserId.get(userId);
+				const assignment = primaryAssignmentsByProfileId.get(userId);
 				const createdAt = (user as { $createdAt?: string }).$createdAt;
 				const updatedAt = (user as { $updatedAt?: string }).$updatedAt;
 				const roleName = assignment?.roleName || "Unassigned";
@@ -2094,6 +2218,7 @@ export const listUsersForManagement = async (
 					$createdAt: createdAt,
 					$updatedAt: updatedAt,
 					department: (user as { department?: string }).department,
+					division: (user as { division?: string }).division,
 					status: (user as { status?: string }).status,
 				};
 			});
@@ -2130,24 +2255,6 @@ export const getActiveUsersCount = async () => {
 		}
 
 		return 0;
-	}
-};
-
-/**
- * Delete a user document from the users collection by $id.
- * @param {string} userId - The $id of the user document to delete
- */
-export const deleteUser = async (userId: string) => {
-	try {
-		const { tablesDB } = await createAdminClient();
-		await tablesDB.deleteRow({
-			databaseId: appwriteConfig.databaseId || "default-db",
-			tableId: appwriteConfig.usersCollectionId || "users",
-			rowId: userId,
-		});
-		return { success: true };
-	} catch (error) {
-		handleError(error, "Failed to delete user");
 	}
 };
 

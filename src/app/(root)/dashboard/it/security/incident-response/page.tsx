@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ export default function Page() {
 				<ITGlassPanel>
 					<div className="flex flex-col items-start gap-3 max-w-xl">
 						<Construction className="h-10 w-10 text-slate-400" />
-						<p className="text-lg font-medium text-slate-900">Coming online</p>
+						<p className="text-lg font-medium text-slate-700">Coming online</p>
 						<p className="text-sm text-slate-600">
 							Live incident-response platform wiring is still pending. Use
 							Runbooks now for recovery procedures.
@@ -41,7 +41,7 @@ export default function Page() {
 				<ITGlassPanel>
 					<div className="flex flex-col items-start gap-3">
 						<BookOpen className="h-10 w-10 text-[#0f5384]" />
-						<p className="text-lg font-medium text-slate-900">
+						<p className="text-lg font-medium text-slate-700">
 							Operational runbooks are ready
 						</p>
 						<p className="text-sm text-slate-600">

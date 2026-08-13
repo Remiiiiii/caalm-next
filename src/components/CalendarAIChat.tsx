@@ -990,7 +990,7 @@ Contract: ${contractTitle}`;
 											<Sparkles className="h-5 w-5" />
 										</span>
 										<div>
-											<h4 className="text-sm font-semibold text-slate-900">
+											<h4 className="text-sm font-semibold text-slate-700">
 												Holiday Information
 											</h4>
 											<p className="text-xs text-slate-600 mt-0.5">
@@ -1041,7 +1041,7 @@ Contract: ${contractTitle}`;
 											<Sparkles className="h-5 w-5" />
 										</span>
 										<div>
-											<h4 className="text-sm font-semibold text-slate-900">
+											<h4 className="text-sm font-semibold text-slate-700">
 												Kickstart your pre-read review
 											</h4>
 											<p className="text-xs text-slate-500">
@@ -1065,7 +1065,7 @@ Contract: ${contractTitle}`;
 													<Icon className="h-5 w-5" />
 												</span>
 												<span className="flex-1">
-													<p className="text-sm font-semibold text-slate-900">
+													<p className="text-sm font-semibold text-slate-700">
 														{title}
 													</p>
 													<p className="mt-1 text-xs text-slate-500">
@@ -1258,7 +1258,7 @@ Contract: ${contractTitle}`;
 												<Icon className="h-5 w-5" />
 											</span>
 											<div className="flex-1">
-												<p className="text-sm font-semibold text-slate-900">
+												<p className="text-sm font-semibold text-slate-700">
 													{title}
 												</p>
 												<p className="mt-1 text-xs text-slate-500">
@@ -1290,7 +1290,7 @@ Contract: ${contractTitle}`;
 								handleSendMessage();
 							}
 						}}
-						className="min-h-16 resize-y border-slate-300 text-sm text-slate-900 focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]"
+						className="min-h-16 resize-y border-slate-300 text-sm text-slate-700 focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]"
 						rows={2}
 					/>
 					<Button

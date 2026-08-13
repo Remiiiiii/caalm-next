@@ -123,6 +123,31 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		],
 	},
 	{
+		header: "Audits",
+		items: [
+			{
+				name: "Compliance Status",
+				icon: "/assets/icons/compliance-status.svg",
+				url: "/audits/status",
+				permissions: [PERMISSIONS.AUDIT.VIEW],
+				// Hidden for Department Manager, full read access for Viewer
+				hiddenForRoles: ["Department Manager"],
+				viewerReadOnly: true,
+				viewerFullAccess: true,
+			},
+			{
+				name: "Audit Logs",
+				icon: "/assets/icons/audit-logs.svg",
+				url: "/audits/audit",
+				permissions: [PERMISSIONS.AUDIT.VIEW],
+				// Super Admin sees all orgs, Org Admin sees own org, Viewer gets full read
+				hiddenForRoles: ["Department Manager"],
+				viewerReadOnly: true,
+				viewerFullAccess: true,
+			},
+		],
+	},
+	{
 		header: "Files",
 		items: [
 			{
@@ -164,31 +189,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		],
 	},
 	{
-		header: "Audits",
-		items: [
-			{
-				name: "Compliance Status",
-				icon: "/assets/icons/compliance-status.svg",
-				url: "/audits/status",
-				permissions: [PERMISSIONS.AUDIT.VIEW],
-				// Hidden for Department Manager, full read access for Viewer
-				hiddenForRoles: ["Department Manager"],
-				viewerReadOnly: true,
-				viewerFullAccess: true,
-			},
-			{
-				name: "Audit Logs",
-				icon: "/assets/icons/audit-logs.svg",
-				url: "/audits/audit",
-				permissions: [PERMISSIONS.AUDIT.VIEW],
-				// Super Admin sees all orgs, Org Admin sees own org, Viewer gets full read
-				hiddenForRoles: ["Department Manager"],
-				viewerReadOnly: true,
-				viewerFullAccess: true,
-			},
-		],
-	},
-	{
 		header: "Team",
 		items: [
 			{
@@ -210,8 +210,19 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				icon: "/assets/icons/task.svg",
 				url: "/team/tasks",
 				permissions: [PERMISSIONS.EVENTS.CREATE, PERMISSIONS.EVENTS.INVITE],
-				// Hidden for Viewer
 				hiddenForRoles: ["Viewer"],
+			},
+			{
+				name: "Report issue",
+				icon: "/assets/icons/info.svg",
+				url: "/tickets/new",
+				permissions: [PERMISSIONS.TICKETS.CREATE],
+			},
+			{
+				name: "Tickets",
+				icon: "/assets/icons/file-document.svg",
+				url: "/tickets",
+				permissions: [PERMISSIONS.TICKETS.VIEW],
 			},
 		],
 	},
@@ -253,6 +264,17 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		],
 	},
 	{
+		header: "My Roles & Permissions",
+		items: [
+			{
+				name: "View My Access",
+				icon: "/assets/icons/users.svg",
+				url: "/settings/permissions",
+				permissions: [], // Everyone can view their own permissions
+			},
+		],
+	},
+	{
 		header: "Settings",
 		items: [
 			{
@@ -288,17 +310,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				// Hidden for Department Manager and Viewer
 				hiddenForRoles: ["Department Manager", "Viewer"],
 				requiresElevated: true,
-			},
-		],
-	},
-	{
-		header: "My Roles & Permissions",
-		items: [
-			{
-				name: "View My Access",
-				icon: "/assets/icons/users.svg",
-				url: "/settings/permissions",
-				permissions: [], // Everyone can view their own permissions
 			},
 		],
 	},

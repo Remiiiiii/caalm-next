@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	ArrowUpDown,
 	Building2,
 	CalendarClock,
 	ChevronDown,
@@ -29,6 +30,7 @@ import {
 	DropdownMenu,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
@@ -53,7 +55,11 @@ import {
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
+import { cn } from "@/lib/utils";
 import { avatarPlaceholderUrl } from "../../../../constants";
+
+const FILTER_SECTION_SCROLL =
+	"max-h-36 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:thin]";
 
 type DateRangeFilter = "all" | "today" | "last7days" | "last30days";
 
@@ -143,6 +149,7 @@ const UserManagement = () => {
 	const [actionKind, setActionKind] = useState<UserActionKind>(null);
 	const [actionBusy, setActionBusy] = useState(false);
 	const [orgRoleNames, setOrgRoleNames] = useState<string[]>([]);
+	const [orgDepartmentNames, setOrgDepartmentNames] = useState<string[]>([]);
 
 	const { orgId, loading: orgLoading } = useOrganization();
 	const { users, isLoading, error, refresh } = useUsers({
@@ -175,6 +182,43 @@ const UserManagement = () => {
 		};
 	}, []);
 
+	useEffect(() => {
+		if (!orgId) return;
+		let cancelled = false;
+		const loadDepartments = async () => {
+			try {
+				const res = await fetch(
+					`/api/org-units?orgId=${encodeURIComponent(orgId)}`,
+				);
+				if (!res.ok) return;
+				const json = await res.json();
+				const units = json?.data?.units;
+				if (!Array.isArray(units)) return;
+				const names = [
+					...new Set(
+						units
+							.filter(
+								(u: { type?: string; active?: boolean }) =>
+									u.type === "department" && u.active !== false,
+							)
+							.flatMap((u: { name?: string; code?: string }) =>
+								[String(u.name || "").trim(), String(u.code || "").trim()].filter(
+									Boolean,
+								),
+							),
+					),
+				];
+				if (!cancelled) setOrgDepartmentNames(names);
+			} catch {
+				// Fall back to departments derived from loaded users
+			}
+		};
+		void loadDepartments();
+		return () => {
+			cancelled = true;
+		};
+	}, [orgId]);
+
 	const allRoles = useMemo(() => {
 		const fromUsers = users.map((user) => user.roleName || "Unassigned");
 		return [...new Set([...orgRoleNames, ...fromUsers])].sort((a, b) =>
@@ -184,23 +228,27 @@ const UserManagement = () => {
 
 	const allAssigners = useMemo(
 		() =>
-			[...new Set(users.map((user) => user.assignedByName || "System"))].sort(
-				(a, b) => a.localeCompare(b),
-			),
-		[users],
+			[
+				...new Set([
+					...users.map((user) => user.assignedByName || "System"),
+					...selectedAssignedBy,
+				]),
+			].sort((a, b) => a.localeCompare(b)),
+		[users, selectedAssignedBy],
 	);
 
-	const allDepartments = useMemo(
-		() =>
-			[
-				...new Set(
-					users
-						.map((user) => user.department?.trim() || "Unassigned")
-						.filter(Boolean),
-				),
-			].sort((a, b) => a.localeCompare(b)),
-		[users],
-	);
+	const allDepartments = useMemo(() => {
+		const fromUsers = users
+			.map((user) => user.department?.trim() || "Unassigned")
+			.filter(Boolean);
+		return [...new Set([...orgDepartmentNames, ...fromUsers, "Unassigned"])].sort(
+			(a, b) => {
+				if (a === "Unassigned") return 1;
+				if (b === "Unassigned") return -1;
+				return a.localeCompare(b);
+			},
+		);
+	}, [users, orgDepartmentNames]);
 
 	const isWithinDateRange = (
 		iso: string | undefined,
@@ -348,16 +396,19 @@ const UserManagement = () => {
 	const renderSortableHead = (label: string, key: SortKey, className = "") => {
 		const isActive = sortConfig.key === key;
 		return (
-			<TableHead className={`${DATA_TABLE_HEADER_CELL} ${className}`}>
+			<TableHead className={cn(DATA_TABLE_HEADER_CELL, className)}>
 				<Button
 					type="button"
 					variant="ghost"
 					onClick={() => toggleSort(key)}
-					className="h-auto px-0 py-0 font-semibold text-slate-700 hover:bg-transparent"
+					className="h-auto px-0 py-0 font-semibold sidebar-gradient-text hover:bg-transparent hover:opacity-80"
 				>
 					{label}
 					<ChevronsUpDown
-						className={`ml-1.5 h-3.5 w-3.5 ${isActive ? "opacity-100" : "opacity-50"}`}
+						className={cn(
+							"ml-1.5 h-3.5 w-3.5",
+							isActive ? "text-[#0f5384] opacity-100" : "opacity-40",
+						)}
 					/>
 				</Button>
 			</TableHead>
@@ -386,383 +437,416 @@ const UserManagement = () => {
 					account actions in one place.
 				</p>
 			</div>
-			<div className="flex justify-between flex-col gap-3 sm:flex-row sm:items-center ">
-				<Input
-					placeholder="Search users by full name or email..."
-					className="max-w-md border-white/40 bg-white/40"
-					value={searchTerm}
-					onChange={(e) => setSearchTerm(e.target.value)}
-				/>
-				<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-					<div className="flex items-center gap-2">
-						<DropdownMenu>
-							<AppDropdownMenuTrigger
-								asChild
-								className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
+
+			<div className="flex items-center justify-end gap-2">
+				<DropdownMenu>
+					<AppDropdownMenuTrigger
+						asChild
+						className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
+					>
+						<Button
+							variant="ghost"
+							size="sm"
+							className="primary-btn border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+						>
+							<Filter className="h-4 w-4" />
+							<span className="hidden sm:inline">Filter</span>
+							{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+							<ChevronDown className="h-4 w-4" />
+						</Button>
+					</AppDropdownMenuTrigger>
+					<AppDropdownMenuContent align="end" className="w-72">
+						<DropdownMenuLabel className="sidebar-gradient-text">
+							Filter by role
+						</DropdownMenuLabel>
+						{allRoles.map((role) => (
+							<AppDropdownMenuCheckboxItem
+								icon={ShieldCheck}
+								key={role}
+								checked={selectedRoles.includes(role)}
+								onCheckedChange={(checked) =>
+									setSelectedRoles((prev) =>
+										checked
+											? [...prev, role]
+											: prev.filter((r) => r !== role),
+									)
+								}
 							>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="primary-btn border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+								{role}
+							</AppDropdownMenuCheckboxItem>
+						))}
+
+						<DropdownMenuSeparator />
+						<DropdownMenuLabel className="sidebar-gradient-text">
+							Filter by department
+						</DropdownMenuLabel>
+						<div className={FILTER_SECTION_SCROLL}>
+							{allDepartments.map((department) => (
+								<AppDropdownMenuCheckboxItem
+									icon={Building2}
+									key={department}
+									checked={selectedDepartments.includes(department)}
+									onCheckedChange={(checked) =>
+										setSelectedDepartments((prev) =>
+											checked
+												? [...prev, department]
+												: prev.filter((d) => d !== department),
+										)
+									}
 								>
-									<Filter className="h-4 w-4" />
-									<span className="hidden sm:inline">Filter</span>
-									{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
-									<ChevronDown className="h-4 w-4" />
-								</Button>
-							</AppDropdownMenuTrigger>
-							<AppDropdownMenuContent align="end" className="w-72">
-								<DropdownMenuLabel className="sidebar-gradient-text">
-									Filter by role
-								</DropdownMenuLabel>
-								{allRoles.map((role) => (
-									<AppDropdownMenuCheckboxItem
-										icon={ShieldCheck}
-										key={role}
-										checked={selectedRoles.includes(role)}
-										onCheckedChange={(checked) =>
-											setSelectedRoles((prev) =>
-												checked
-													? [...prev, role]
-													: prev.filter((r) => r !== role),
-											)
-										}
-									>
-										{role}
-									</AppDropdownMenuCheckboxItem>
-								))}
+									{department}
+								</AppDropdownMenuCheckboxItem>
+							))}
+						</div>
 
-								<DropdownMenuSeparator />
-								<DropdownMenuLabel className="sidebar-gradient-text">
-									Filter by department
-								</DropdownMenuLabel>
-								{allDepartments.map((department) => (
-									<AppDropdownMenuCheckboxItem
-										icon={Building2}
-										key={department}
-										checked={selectedDepartments.includes(department)}
-										onCheckedChange={(checked) =>
-											setSelectedDepartments((prev) =>
-												checked
-													? [...prev, department]
-													: prev.filter((d) => d !== department),
-											)
-										}
-									>
-										{department}
-									</AppDropdownMenuCheckboxItem>
-								))}
-
-								<DropdownMenuSeparator />
-								<DropdownMenuLabel className="sidebar-gradient-text">
-									Filter by assigned by
-								</DropdownMenuLabel>
-								{allAssigners.map((assigner) => (
-									<AppDropdownMenuCheckboxItem
-										icon={UserCheck}
-										key={assigner}
-										checked={selectedAssignedBy.includes(assigner)}
-										onCheckedChange={(checked) =>
-											setSelectedAssignedBy((prev) =>
-												checked
-													? [...prev, assigner]
-													: prev.filter((v) => v !== assigner),
-											)
-										}
-									>
-										{assigner}
-									</AppDropdownMenuCheckboxItem>
-								))}
-
-								<DropdownMenuSeparator />
-								<DropdownMenuLabel className="sidebar-gradient-text">
-									Assigned date
-								</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<DropdownMenuLabel className="sidebar-gradient-text">
+							Filter by assigned by
+						</DropdownMenuLabel>
+						<div className={FILTER_SECTION_SCROLL}>
+							{allAssigners.map((assigner) => (
 								<AppDropdownMenuCheckboxItem
 									icon={UserCheck}
-									checked={dateRangeFilter === "today"}
-									onCheckedChange={() => setDateRangeFilter("today")}
+									key={assigner}
+									checked={selectedAssignedBy.includes(assigner)}
+									onCheckedChange={(checked) =>
+										setSelectedAssignedBy((prev) =>
+											checked
+												? [...prev, assigner]
+												: prev.filter((v) => v !== assigner),
+										)
+									}
 								>
-									Today
+									{assigner}
 								</AppDropdownMenuCheckboxItem>
-								<AppDropdownMenuCheckboxItem
-									icon={UserCheck}
-									checked={dateRangeFilter === "last7days"}
-									onCheckedChange={() => setDateRangeFilter("last7days")}
-								>
-									Last 7 days
-								</AppDropdownMenuCheckboxItem>
-								<AppDropdownMenuCheckboxItem
-									icon={UserCheck}
-									checked={dateRangeFilter === "last30days"}
-									onCheckedChange={() => setDateRangeFilter("last30days")}
-								>
-									Last 30 days
-								</AppDropdownMenuCheckboxItem>
-								<AppDropdownMenuCheckboxItem
-									icon={CalendarClock}
-									checked={dateRangeFilter === "all"}
-									onCheckedChange={() => setDateRangeFilter("all")}
-								>
-									All dates
-								</AppDropdownMenuCheckboxItem>
+							))}
+						</div>
 
-								{activeFilterCount > 0 && (
-									<>
-										<DropdownMenuSeparator />
-										<AppDropdownMenuItem
-											icon={FunnelX}
-											onSelect={(e) => {
-												e.preventDefault();
-												clearAllFilters();
-											}}
-										>
-											Clear filters
-										</AppDropdownMenuItem>
-									</>
-								)}
-							</AppDropdownMenuContent>
-						</DropdownMenu>
+						<DropdownMenuSeparator />
+						<DropdownMenuLabel className="sidebar-gradient-text">
+							Assigned date
+						</DropdownMenuLabel>
+						<AppDropdownMenuCheckboxItem
+							icon={UserCheck}
+							checked={dateRangeFilter === "today"}
+							onCheckedChange={() => setDateRangeFilter("today")}
+						>
+							Today
+						</AppDropdownMenuCheckboxItem>
+						<AppDropdownMenuCheckboxItem
+							icon={UserCheck}
+							checked={dateRangeFilter === "last7days"}
+							onCheckedChange={() => setDateRangeFilter("last7days")}
+						>
+							Last 7 days
+						</AppDropdownMenuCheckboxItem>
+						<AppDropdownMenuCheckboxItem
+							icon={UserCheck}
+							checked={dateRangeFilter === "last30days"}
+							onCheckedChange={() => setDateRangeFilter("last30days")}
+						>
+							Last 30 days
+						</AppDropdownMenuCheckboxItem>
+						<AppDropdownMenuCheckboxItem
+							icon={CalendarClock}
+							checked={dateRangeFilter === "all"}
+							onCheckedChange={() => setDateRangeFilter("all")}
+						>
+							All dates
+						</AppDropdownMenuCheckboxItem>
 
-						<DropdownMenu>
-							<AppDropdownMenuTrigger
-								asChild
-								className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
-							>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="primary-btn border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
-								>
-									<span className="hidden sm:inline">Sort by</span>
-									<ChevronDown className="h-4 w-4" />
-								</Button>
-							</AppDropdownMenuTrigger>
-							<AppDropdownMenuContent align="end" className="w-64">
-								<AppDropdownMenuItem
-									icon={ChevronsUpDown}
-									onSelect={() => applySortPreset("fullName", "asc")}
-								>
-									Full Name (A-Z)
-								</AppDropdownMenuItem>
-								<AppDropdownMenuItem
-									icon={ChevronsUpDown}
-									onSelect={() => applySortPreset("fullName", "desc")}
-								>
-									Full Name (Z-A)
-								</AppDropdownMenuItem>
+						{activeFilterCount > 0 && (
+							<>
 								<DropdownMenuSeparator />
 								<AppDropdownMenuItem
-									icon={ChevronsUpDown}
-									onSelect={() => applySortPreset("assignedDate", "desc")}
+									icon={FunnelX}
+									onSelect={(e) => {
+										e.preventDefault();
+										clearAllFilters();
+									}}
 								>
-									Assigned Date (Newest)
+									Clear filters
 								</AppDropdownMenuItem>
-								<AppDropdownMenuItem
-									icon={ChevronsUpDown}
-									onSelect={() => applySortPreset("assignedDate", "asc")}
-								>
-									Assigned Date (Oldest)
-								</AppDropdownMenuItem>
-								<DropdownMenuSeparator />
-								<AppDropdownMenuItem
-									icon={ChevronsUpDown}
-									onSelect={() => applySortPreset("lastActiveAt", "desc")}
-								>
-									Last Active (Most recent)
-								</AppDropdownMenuItem>
-								<AppDropdownMenuItem
-									icon={ChevronsUpDown}
-									onSelect={() => applySortPreset("lastActiveAt", "asc")}
-								>
-									Last Active (Least recent)
-								</AppDropdownMenuItem>
-							</AppDropdownMenuContent>
-						</DropdownMenu>
-					</div>
-				</div>
+							</>
+						)}
+					</AppDropdownMenuContent>
+				</DropdownMenu>
+
+				<DropdownMenu>
+					<AppDropdownMenuTrigger
+						asChild
+						className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
+					>
+						<Button
+							variant="ghost"
+							size="sm"
+							className="primary-btn border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+						>
+							<ArrowUpDown className="h-4 w-4" />
+							<span className="hidden sm:inline">Sort by</span>
+							<ChevronDown className="h-4 w-4" />
+						</Button>
+					</AppDropdownMenuTrigger>
+					<AppDropdownMenuContent align="end" className="w-64">
+						<AppDropdownMenuItem
+							icon={ChevronsUpDown}
+							onSelect={() => applySortPreset("fullName", "asc")}
+						>
+							Full Name (A-Z)
+						</AppDropdownMenuItem>
+						<AppDropdownMenuItem
+							icon={ChevronsUpDown}
+							onSelect={() => applySortPreset("fullName", "desc")}
+						>
+							Full Name (Z-A)
+						</AppDropdownMenuItem>
+						<AppDropdownMenuItem
+							icon={ChevronsUpDown}
+							onSelect={() => applySortPreset("email", "asc")}
+						>
+							Email (A-Z)
+						</AppDropdownMenuItem>
+						<AppDropdownMenuItem
+							icon={ChevronsUpDown}
+							onSelect={() => applySortPreset("email", "desc")}
+						>
+							Email (Z-A)
+						</AppDropdownMenuItem>
+						<DropdownMenuSeparator />
+						<AppDropdownMenuItem
+							icon={ChevronsUpDown}
+							onSelect={() => applySortPreset("assignedDate", "desc")}
+						>
+							Assigned Date (Newest)
+						</AppDropdownMenuItem>
+						<AppDropdownMenuItem
+							icon={ChevronsUpDown}
+							onSelect={() => applySortPreset("assignedDate", "asc")}
+						>
+							Assigned Date (Oldest)
+						</AppDropdownMenuItem>
+						<DropdownMenuSeparator />
+						<AppDropdownMenuItem
+							icon={ChevronsUpDown}
+							onSelect={() => applySortPreset("lastActiveAt", "desc")}
+						>
+							Last Active (Most recent)
+						</AppDropdownMenuItem>
+						<AppDropdownMenuItem
+							icon={ChevronsUpDown}
+							onSelect={() => applySortPreset("lastActiveAt", "asc")}
+						>
+							Last Active (Least recent)
+						</AppDropdownMenuItem>
+					</AppDropdownMenuContent>
+				</DropdownMenu>
 			</div>
 
-			<Card className="w-full glass-card border border-white/40 bg-white/30 shadow-lg backdrop-blur">
+			<Card className="glass-card w-full">
 				<div className="glass-card-cap" />
-				<CardContent className="p-6 space-y-4">
+				<CardContent className="p-0">
+					<div className="px-4 pb-3 pt-6 sm:px-6 sm:pt-7">
+						<Input
+							placeholder="Search users by full name or email..."
+							className="max-w-md border-slate-200 bg-white"
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+						/>
+					</div>
+
 					{listLoading ? (
 						<div className="flex items-center justify-center py-8">
 							<div className="text-center">
-								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto" />
-								<p className="mt-2 text-sm text-gray-500">Loading users...</p>
+								<div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+								<p className="mt-2 text-sm text-slate-600">Loading users...</p>
 							</div>
 						</div>
 					) : (
-						<div className="w-full overflow-x-auto">
+						<div className="w-full overflow-x-auto px-2 pb-4 sm:px-4">
 							<Table className="border-separate border-spacing-0">
 								<TableHeader className="[&_tr]:border-b-0">
 									<TableRow className={DATA_TABLE_HEADER_ROW}>
-										{renderSortableHead("Full Name", "fullName", "pl-4 pr-3")}
-										{renderSortableHead("Email Address", "email", "px-3")}
-										{renderSortableHead("Role", "roleName", "px-3")}
+										{renderSortableHead("Full name", "fullName", "pl-4 pr-3")}
+										{renderSortableHead(
+											"Role / Dept · Division",
+											"roleName",
+											"px-3",
+										)}
 										{renderSortableHead(
 											"Assigned by",
 											"assignedByName",
 											"px-3",
 										)}
 										{renderSortableHead(
-											"Assigned Date",
+											"Assigned date",
 											"assignedDate",
 											"px-3",
 										)}
-										{renderSortableHead("Last Active", "lastActiveAt", "px-3")}
+										{renderSortableHead("Last active", "lastActiveAt", "px-3")}
 										<TableHead
-											className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+											className={cn(
+												DATA_TABLE_HEADER_CELL,
+												"pl-3 pr-4 text-right",
+											)}
 										>
-											Action
+											<span className="sr-only">Action</span>
 										</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody className="[&_tr:last-child>td]:border-b-0">
-									{filteredAndSortedUsers.map((user) => (
-										<TableRow
-											key={user.$id}
-											className={DATA_TABLE_BODY_ROW_BASE}
-										>
-											<TableCell className="py-4">
-												<div className="flex items-center gap-3">
-													{hasCustomAvatar(user.avatar) ? (
-														<div
-															className="shrink-0 rounded-full overflow-hidden"
-															style={{
-																background:
-																	"linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
-																padding: "2px",
-																width: "32px",
-																height: "32px",
-															}}
-														>
-															<Image
-																src={user.avatar!}
-																alt=""
-																width={28}
-																height={28}
-																className="h-7 w-7 rounded-full object-cover border-2 border-white"
+									{filteredAndSortedUsers.map((user) => {
+										const department = user.department?.trim() || "—";
+										const division = user.division?.trim() || "—";
+										return (
+											<TableRow
+												key={user.$id}
+												className={DATA_TABLE_BODY_ROW_BASE}
+											>
+												<TableCell className="py-3 pl-4 pr-3">
+													<div className="flex min-w-55 items-center gap-2.5">
+														{hasCustomAvatar(user.avatar) ? (
+															<div
+																className="h-7.5 w-7.5 shrink-0 overflow-hidden rounded-full"
+																style={{
+																	background:
+																		"linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
+																	padding: "2px",
+																}}
+															>
+																<Image
+																	src={user.avatar!}
+																	alt=""
+																	width={26}
+																	height={26}
+																	className="h-6.5 w-6.5 rounded-full border-2 border-white object-cover"
+																/>
+															</div>
+														) : (
+															<Avatar
+																name={user.fullName}
+																userId={user.$id}
+																size="sm"
+																className="shrink-0 gap-0"
 															/>
+														)}
+														<div className="min-w-0">
+															<p className="truncate text-sm font-semibold text-slate-700">
+																{user.fullName}
+															</p>
+															<p className="truncate text-sm text-slate-600">
+																{user.email}
+															</p>
 														</div>
-													) : (
-														<Avatar
-															name={user.fullName}
-															userId={user.$id}
-															size="sm"
-															className="shrink-0 gap-0"
-														/>
-													)}
-													<span className="subtitle-2 text-slate-800">
-														{user.fullName}
+													</div>
+												</TableCell>
+												<TableCell className="px-3 py-3">
+													<div className="min-w-0">
+														<p className="truncate text-sm font-semibold text-slate-700">
+															{user.roleName || "Unassigned"}
+														</p>
+														<p className="mt-0.5 truncate text-xs text-slate-500">
+															{department} · {division}
+														</p>
+													</div>
+												</TableCell>
+												<TableCell className="px-3 py-3">
+													<span className="text-sm text-slate-600">
+														{user.assignedByName || "System"}
 													</span>
-												</div>
-											</TableCell>
-											<TableCell className="py-4 text-slate-700">
-												<span className="body-2">{user.email}</span>
-											</TableCell>
-											<TableCell className="py-4 text-slate-700">
-												<span className="body-2">
-													{user.roleName || "Unassigned"}
-												</span>
-											</TableCell>
-											<TableCell className="py-4 text-slate-700">
-												<span className="body-2">
-													{user.assignedByName || "System"}
-												</span>
-											</TableCell>
-											<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-												<span className="body-2 tabular-nums">
-													{formatDateTimeLabel(
-														user.assignedDate || user.$createdAt,
-													)}
-												</span>
-											</TableCell>
-											<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-												<span className="body-2 tabular-nums">
-													{formatDateTimeLabel(
-														user.lastActiveAt || user.$updatedAt,
-													)}
-												</span>
-											</TableCell>
-											<TableCell className="py-4 text-right">
-												<DropdownMenu>
-													<AppDropdownMenuTrigger asChild>
-														<Button
-															variant="ghost"
-															size="icon"
-															className="h-9 w-9 rounded-full shad-no-focus text-slate-500 transition-colors hover:bg-white/30 hover:text-slate-800"
-															aria-label={`Actions for ${user.fullName}`}
+												</TableCell>
+												<TableCell className="whitespace-nowrap px-3 py-3">
+													<span className="text-sm tabular-nums text-slate-600">
+														{formatDateTimeLabel(
+															user.assignedDate || user.$createdAt,
+														)}
+													</span>
+												</TableCell>
+												<TableCell className="whitespace-nowrap px-3 py-3">
+													<span className="text-sm tabular-nums text-slate-600">
+														{formatDateTimeLabel(
+															user.lastActiveAt || user.$updatedAt,
+														)}
+													</span>
+												</TableCell>
+												<TableCell className="py-3 pr-4 pl-3 text-right">
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button
+																variant="ghost"
+																size="icon"
+																className="ml-auto h-8 w-8 shad-no-focus border-0 bg-transparent p-0 shadow-none text-slate-500 hover:bg-transparent hover:text-[#0f5384] focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+																aria-label={`Actions for ${user.fullName}`}
+															>
+																<Image
+																	src="/assets/icons/dots.svg"
+																	alt=""
+																	width={24}
+																	height={24}
+																	className="h-6 w-6"
+																/>
+															</Button>
+														</DropdownMenuTrigger>
+														<AppDropdownMenuContent
+															align="end"
+															className="min-w-[230px]"
 														>
-															<Image
-																src="/assets/icons/dots.svg"
-																alt=""
-																width={34}
-																height={34}
-															/>
-														</Button>
-													</AppDropdownMenuTrigger>
-													<AppDropdownMenuContent
-														align="end"
-														className="min-w-[230px]"
-													>
-														<AppDropdownMenuItem
-															icon={UserRound}
-															onSelect={() => openAction(user, "view")}
-														>
-															View profile
-														</AppDropdownMenuItem>
-														<AppDropdownMenuItem
-															icon={PencilIcon}
-															disabled={!canManageUsers}
-															onSelect={() => openAction(user, "edit")}
-														>
-															Edit user details
-														</AppDropdownMenuItem>
-														<AppDropdownMenuItem
-															icon={ShieldCheck}
-															disabled={!canAssignRoles}
-															onSelect={() => openAction(user, "role")}
-														>
-															Change role
-														</AppDropdownMenuItem>
-														<DropdownMenuSeparator />
-														<AppDropdownMenuItem
-															icon={KeyRound}
-															disabled={!canManageUsers}
-															onSelect={() => openAction(user, "reset")}
-														>
-															Reset password
-														</AppDropdownMenuItem>
-														<AppDropdownMenuItem
-															icon={LogOut}
-															disabled={!canManageUsers}
-															onSelect={() => openAction(user, "revoke")}
-														>
-															Revoke active sessions
-														</AppDropdownMenuItem>
-														<AppDropdownMenuItem
-															icon={Power}
-															disabled={!canManageUsers}
-															onSelect={() => openAction(user, "suspend")}
-														>
-															Suspend / reactivate account
-														</AppDropdownMenuItem>
-														<DropdownMenuSeparator />
-														<AppDropdownMenuItem
-															icon={UserX}
-															tone="danger"
-															disabled={!canManageUsers}
-															onSelect={() => openAction(user, "delete")}
-														>
-															Delete user
-														</AppDropdownMenuItem>
-													</AppDropdownMenuContent>
-												</DropdownMenu>
-											</TableCell>
-										</TableRow>
-									))}
+															<AppDropdownMenuItem
+																icon={UserRound}
+																onSelect={() => openAction(user, "view")}
+															>
+																View profile
+															</AppDropdownMenuItem>
+															<AppDropdownMenuItem
+																icon={PencilIcon}
+																disabled={!canManageUsers}
+																onSelect={() => openAction(user, "edit")}
+															>
+																Edit user details
+															</AppDropdownMenuItem>
+															<AppDropdownMenuItem
+																icon={ShieldCheck}
+																disabled={!canAssignRoles}
+																onSelect={() => openAction(user, "role")}
+															>
+																Change role
+															</AppDropdownMenuItem>
+															<DropdownMenuSeparator />
+															<AppDropdownMenuItem
+																icon={KeyRound}
+																disabled={!canManageUsers}
+																onSelect={() => openAction(user, "reset")}
+															>
+																Reset password
+															</AppDropdownMenuItem>
+															<AppDropdownMenuItem
+																icon={LogOut}
+																disabled={!canManageUsers}
+																onSelect={() => openAction(user, "revoke")}
+															>
+																Revoke active sessions
+															</AppDropdownMenuItem>
+															<AppDropdownMenuItem
+																icon={Power}
+																disabled={!canManageUsers}
+																onSelect={() => openAction(user, "suspend")}
+															>
+																Suspend / reactivate account
+															</AppDropdownMenuItem>
+															<DropdownMenuSeparator />
+															<AppDropdownMenuItem
+																icon={UserX}
+																tone="danger"
+																disabled={!canManageUsers}
+																onSelect={() => openAction(user, "delete")}
+															>
+																Delete user
+															</AppDropdownMenuItem>
+														</AppDropdownMenuContent>
+													</DropdownMenu>
+												</TableCell>
+											</TableRow>
+										);
+									})}
 								</TableBody>
 							</Table>
 
@@ -794,7 +878,12 @@ const UserManagement = () => {
 				roleOptions={allRoles.filter((r) => r !== "Unassigned")}
 				busy={actionBusy}
 				onClose={closeAction}
-				onSaveEdit={async ({ fullName, department, division, managerUserId }) => {
+				onSaveEdit={async ({
+					fullName,
+					department,
+					division,
+					managerUserId,
+				}) => {
 					if (!actionUser) return;
 					await runAction(
 						async () => {
@@ -900,11 +989,10 @@ const UserManagement = () => {
 					if (!actionUser) return;
 					await runAction(
 						async () => {
-							const res = await fetch("/api/user/delete", {
-								method: "DELETE",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({ userId: actionUser.$id }),
-							});
+							const res = await fetch(
+								`/api/user/delete?userId=${encodeURIComponent(actionUser.$id)}`,
+								{ method: "DELETE" },
+							);
 							const data = await res.json().catch(() => ({}));
 							if (!res.ok)
 								throw new Error(data.error || "Failed to delete user");

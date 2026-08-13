@@ -254,7 +254,7 @@ const NavigationSidebar = () => {
 											<div className="ml-4 w-full flex items-start gap-3">
 												<span className="gap-1 flex items-center">
 													<Image src={icon} alt={name} width={20} height={20} />
-													<p className="text-sm text-slate-900 px-2 tabs-underline font-medium whitespace-nowrap">
+													<p className="text-sm text-slate-700 px-2 tabs-underline font-medium whitespace-nowrap">
 														{name}
 													</p>
 												</span>
@@ -280,7 +280,7 @@ const NavigationSidebar = () => {
 																	width={20}
 																	height={20}
 																/>
-																<p className="text-sm text-slate-900 font-medium whitespace-nowrap">
+																<p className="text-sm text-slate-700 font-medium whitespace-nowrap">
 																	{subItem.name}
 																</p>
 															</span>

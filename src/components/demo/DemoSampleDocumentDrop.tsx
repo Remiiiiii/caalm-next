@@ -154,7 +154,7 @@ export function DemoSampleDocumentDrop({
 					/>
 					<FileText className="h-8 w-8 shrink-0 text-[#0f5384]" aria-hidden />
 					<div className="min-w-0 flex-1">
-						<p className="truncate text-sm font-medium text-slate-900">
+						<p className="truncate text-sm font-medium text-slate-700">
 							{sample.label}
 						</p>
 						<p className="truncate text-xs text-slate-500">

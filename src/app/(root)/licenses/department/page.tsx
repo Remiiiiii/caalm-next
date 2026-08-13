@@ -70,7 +70,7 @@ const Page = async () => {
 					<div className="glass-card-cap" />
 					<CardContent className="p-6 sm:p-8 text-center">
 						<Building2 className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-						<p className="text-lg font-medium text-slate-900 mb-2">
+						<p className="text-lg font-medium text-slate-700 mb-2">
 							No department assigned
 						</p>
 						<p className="text-sm text-slate-600 mb-6 max-w-md mx-auto">
@@ -149,7 +149,7 @@ const Page = async () => {
 				</div>
 				<p className="text-sm text-slate-600 mb-4">
 					Showing licenses for{" "}
-					<span className="font-medium text-slate-900">{departmentLabel}</span>
+					<span className="font-medium text-slate-700">{departmentLabel}</span>
 					{division ? (
 						<>
 							{" "}

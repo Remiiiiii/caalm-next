@@ -287,7 +287,7 @@ export function RiskImpactHeroCard({
 						<p className="text-[12.5px] text-slate-600 leading-relaxed max-w-xl">
 							{trackingNote.split(/(\d+)/).map((part, i) =>
 								/^\d+$/.test(part) ? (
-									<span key={i} className="font-semibold text-slate-900">
+									<span key={i} className="font-semibold text-slate-700">
 										{part}
 									</span>
 								) : (
@@ -303,19 +303,19 @@ export function RiskImpactHeroCard({
 							<span className="text-xs text-slate-600">
 								Contracts monitored
 							</span>
-							<span className="font-mono text-[13px] font-medium text-slate-900">
+							<span className="font-mono text-[13px] font-medium text-slate-700">
 								{snapshot.monitoring.contractsMonitored.toLocaleString()}
 							</span>
 						</div>
 						<div className="flex items-baseline justify-between gap-3 pb-2.5 border-b border-slate-300">
 							<span className="text-xs text-slate-600">Grants monitored</span>
-							<span className="font-mono text-[13px] font-medium text-slate-900">
+							<span className="font-mono text-[13px] font-medium text-slate-700">
 								{snapshot.monitoring.grantsMonitored.toLocaleString()}
 							</span>
 						</div>
 						<div className="flex items-baseline justify-between gap-3">
 							<span className="text-xs text-slate-600">Clauses flagged</span>
-							<span className="font-mono text-[13px] font-medium text-slate-900">
+							<span className="font-mono text-[13px] font-medium text-slate-700">
 								{snapshot.monitoring.clausesFlagged.toLocaleString()}
 							</span>
 						</div>

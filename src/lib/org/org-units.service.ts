@@ -24,11 +24,12 @@ import {
 } from "@/lib/org/org-unit-validation";
 
 const db = () => appwriteConfig.databaseId || "default-db";
-const orgUnitsTable = () => appwriteConfig.orgUnitsCollectionId || "org_units";
+const orgUnitsTable = () =>
+	appwriteConfig.orgUnitsCollectionId || "69b8a205005d8c2a6e05";
 const costCentersTable = () =>
-	appwriteConfig.costCentersCollectionId || "cost_centers";
+	appwriteConfig.costCentersCollectionId || "69b8a206006e9d3b7f06";
 const historyTable = () =>
-	appwriteConfig.orgUnitHistoryCollectionId || "org_unit_history";
+	appwriteConfig.orgUnitHistoryCollectionId || "69b8a207007f0e4c8a07";
 const usersTable = () => appwriteConfig.usersCollectionId || "users";
 
 function asOrgUnit(row: Record<string, unknown>): OrgUnit {

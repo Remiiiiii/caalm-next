@@ -240,7 +240,7 @@ export default function ContractDismissalSignatureModal({
 						<div className="space-y-6">
 							{/* Contract Info */}
 							<div className="bg-white rounded-lg p-4 border border-slate-200">
-								<h3 className="font-semibold text-slate-900 mb-2">
+								<h3 className="font-semibold text-slate-700 mb-2">
 									{contract.contractName ||
 										contract.name ||
 										"Untitled Contract"}

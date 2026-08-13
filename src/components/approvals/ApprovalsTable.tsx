@@ -225,7 +225,7 @@ export default function ApprovalsTable({
 							<TableCell className="py-3 sticky left-10 z-10 backdrop-blur-md bg-white/10 group-hover:bg-white/25 border-r border-white/30">
 								<div className="min-w-0 max-w-[220px]">
 									<p
-										className="subtitle-2 text-slate-900 truncate"
+										className="subtitle-2 text-slate-700 truncate"
 										title={item.title}
 									>
 										{item.title}

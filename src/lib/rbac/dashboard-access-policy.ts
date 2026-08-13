@@ -12,6 +12,7 @@ import {
 	hasAllPermissions,
 	hasAnyPermission,
 } from "@/lib/rbac/permissions";
+import { appendSessionChangedNotice } from "@/lib/auth/session-sync";
 import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 
 export type DashboardPolicyEntry = {
@@ -90,6 +91,20 @@ export const DASHBOARD_ROUTE_POLICY: DashboardPolicyEntry[] = [
 		anyOf: [PERMISSIONS.USERS.VIEW, PERMISSIONS.USERS.INVITE],
 	},
 ];
+
+/** Role-specific dashboard home routes (not nested feature pages). */
+export const ROLE_DASHBOARD_HOME_PATHS = [
+	"/dashboard/superadmin",
+	"/dashboard/organizationadmin",
+	"/dashboard/departmentmanager",
+	"/dashboard/viewer",
+	"/dashboard/it",
+	"/dashboard/content-creator",
+] as const;
+
+export function isRoleDashboardHomePath(pathname: string): boolean {
+	return ROLE_DASHBOARD_HOME_PATHS.some((path) => pathname === path);
+}
 
 /** Canonical order for picking a home when role metadata does not resolve */
 const CANONICAL_HOME_CANDIDATES: string[] = [
@@ -234,7 +249,49 @@ export async function getUnauthorizedDashboardRedirect(
 	if (mayAccess) {
 		return null;
 	}
-	return (
-		(await resolveDashboardHomePath(userId, defaultOrg.orgId)) ?? "/dashboard"
-	);
+
+	const home =
+		(await resolveDashboardHomePath(userId, defaultOrg.orgId)) ?? "/dashboard";
+
+	if (isRoleDashboardHomePath(pathname)) {
+		return appendSessionChangedNotice(home);
+	}
+
+	return home;
+}
+
+type DashboardProfile = {
+	division?: string | null;
+};
+
+/**
+ * Redirect when the signed-in user may access a role dashboard shell but lacks
+ * required profile fields (e.g. division on the department manager home).
+ */
+export async function getDashboardProfileRedirect(
+	userId: string,
+	pathname: string,
+	profile: DashboardProfile,
+): Promise<string | null> {
+	if (
+		pathname.startsWith("/dashboard/departmentmanager") &&
+		!profile.division?.trim()
+	) {
+		const defaultOrg = await getUserDefaultOrganization(userId);
+		if (!defaultOrg) {
+			return "/sign-in";
+		}
+
+		const home =
+			(await resolveDashboardHomePath(userId, defaultOrg.orgId)) ??
+			"/dashboard";
+
+		if (pathname === home) {
+			return null;
+		}
+
+		return appendSessionChangedNotice(home);
+	}
+
+	return null;
 }

@@ -268,40 +268,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
 							.catch(() => {});
 					}
 
-					// Check if user came from invitation acceptance
-					const invitation = searchParams?.get("invitation");
-					if (invitation === "accepted") {
-						// For invited users, skip OTP and proceed directly to 2FA check
-						// Optimize: Get user and check 2FA in parallel
-						try {
-							const [user] = await Promise.allSettled([
-								getUserByEmail(values.email),
-							]);
-
-							const userData = user.status === "fulfilled" ? user.value : null;
-							if (userData?.accountId) {
-								setUserId(userData.accountId);
-								// Check 2FA status (now cached) - don't await to show UI faster
-								checkTwoFactorStatus(userData.accountId).catch(() => {
-									// Fallback to dashboard if 2FA check fails
-									router.push("/dashboard");
-								});
-							} else {
-								router.push("/dashboard");
-							}
-						} catch (error) {
-							if (process.env.NODE_ENV === "development") {
-								console.error(
-									"Error getting user info for invited user:",
-									error,
-								);
-							}
-							router.push("/dashboard");
-						}
-					} else {
-						// For regular users, show OTP modal
-						setShowOTPModal(true);
-					}
+					// Always require OTP so an Appwrite session can be established
+					// (including invitees who just accepted an invitation).
+					setShowOTPModal(true);
 				} else {
 					setErrorMessage(res?.error || "Failed to sign in. Please try again.");
 				}
@@ -436,7 +405,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 							<FormItem>
 								<div className="shad-form-item min-h-[88px] h-auto! min-w-0 py-3">
 									<p className="flex w-full min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1 text-left text-[14px] leading-5">
-										<span className="shrink-0 font-medium text-slate-900">
+										<span className="shrink-0 font-medium text-slate-700">
 											Sandbox ID:
 										</span>
 										<span className="min-w-0 break-all text-slate-700 sm:break-words">

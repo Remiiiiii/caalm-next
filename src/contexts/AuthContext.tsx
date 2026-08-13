@@ -8,12 +8,25 @@ import {
 	useContext,
 	useEffect,
 	useLayoutEffect,
+	useRef,
 	useState,
 } from "react";
 import { normalizeUserRole } from "@/constants/rbac";
 import { getSessionUser } from "@/lib/actions/auth.actions";
-import { getCurrentUserFrom2FA } from "@/lib/actions/user.actions";
 import { isAuthRoute, isProtectedAppRoute } from "@/lib/auth/protectedRoutes";
+import {
+	CACHED_USER_STORAGE_KEY,
+	getCachedUserDisplayName,
+	getCachedUserId,
+	SESSION_CHANGED_NOTICE_PARAM,
+	SESSION_CHANGED_NOTICE_VALUE,
+} from "@/lib/auth/session-sync";
+import { getCurrentUserFrom2FA } from "@/lib/actions/user.actions";
+import {
+	getDashboardUrlForUser,
+	invalidateDashboardUrlCache,
+} from "@/lib/utils/dashboard-redirect";
+import { useToast } from "@/hooks/use-toast";
 
 type AuthenticatedUser = Models.User<Models.Preferences> & {
 	role?: string;
@@ -31,7 +44,7 @@ const CACHE_USER_TTL_MS = 300000;
 function readCachedAuthUser(): Models.User<Models.Preferences> | null {
 	if (typeof window === "undefined") return null;
 	try {
-		const cachedUser = localStorage.getItem("cached_user");
+		const cachedUser = localStorage.getItem(CACHED_USER_STORAGE_KEY);
 		if (!cachedUser) return null;
 		const parsed = JSON.parse(cachedUser);
 		if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_USER_TTL_MS) {
@@ -62,6 +75,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 	const [_mounted, setMounted] = useState(false);
 	const [isSessionValid, setIsSessionValid] = useState(false);
 	const pathname = usePathname();
+	const { toast } = useToast();
+	const userIdRef = useRef<string | null>(null);
+	const sessionNoticeShownRef = useRef(false);
+	const crossTabRedirectRef = useRef(false);
 
 	// Hydrate from localStorage before paint so the layout gate does not block warm loads
 	useLayoutEffect(() => {
@@ -82,7 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 				// Optimize: Check localStorage first for cached user data to show UI immediately
 				if (typeof window !== "undefined") {
-					const cachedUser = localStorage.getItem("cached_user");
+					const cachedUser = localStorage.getItem(CACHED_USER_STORAGE_KEY);
 					if (cachedUser) {
 						try {
 							const parsed = JSON.parse(cachedUser);
@@ -137,7 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 					if (typeof window !== "undefined") {
 						try {
 							localStorage.setItem(
-								"cached_user",
+								CACHED_USER_STORAGE_KEY,
 								JSON.stringify({
 									user: serializedUser,
 									timestamp: Date.now(),
@@ -288,6 +305,94 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 		checkSession();
 	}, [pathname]);
 
+	useEffect(() => {
+		userIdRef.current = user?.$id ?? null;
+	}, [user?.$id]);
+
+	useEffect(() => {
+		if (sessionNoticeShownRef.current || typeof window === "undefined") return;
+
+		const params = new URLSearchParams(window.location.search);
+		if (params.get(SESSION_CHANGED_NOTICE_PARAM) !== SESSION_CHANGED_NOTICE_VALUE) {
+			return;
+		}
+
+		sessionNoticeShownRef.current = true;
+		toast({
+			title: "Session changed",
+			description:
+				"Your account changed in another tab. You were redirected to the correct dashboard.",
+		});
+
+		params.delete(SESSION_CHANGED_NOTICE_PARAM);
+		const nextSearch = params.toString();
+		const nextUrl = nextSearch
+			? `${window.location.pathname}?${nextSearch}`
+			: window.location.pathname;
+		window.history.replaceState({}, "", nextUrl);
+	}, [pathname, toast]);
+
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+
+		const redirectForSessionChange = async (
+			nextUserId: string,
+			displayName: string | null,
+		) => {
+			if (crossTabRedirectRef.current) return;
+			crossTabRedirectRef.current = true;
+
+			invalidateDashboardUrlCache();
+
+			toast({
+				title: "Session changed",
+				description: displayName
+					? `You signed in as ${displayName} in another tab. Redirecting to your dashboard.`
+					: "You signed in with a different account in another tab. Redirecting to your dashboard.",
+			});
+
+			const orgId =
+				localStorage.getItem("caalm_org_id") || "default_organization";
+			const home = await getDashboardUrlForUser(nextUserId, orgId);
+			window.location.href = home;
+		};
+
+		const handleStorage = (event: StorageEvent) => {
+			if (event.key !== CACHED_USER_STORAGE_KEY) return;
+
+			const previousUserId = userIdRef.current;
+
+			if (!event.newValue) {
+				if (previousUserId && isProtectedAppRoute(pathname)) {
+					crossTabRedirectRef.current = true;
+					toast({
+						title: "Signed out",
+						description:
+							"You were signed out in another tab. Redirecting to sign in.",
+					});
+					window.location.href = "/sign-in?reason=session_changed";
+				}
+				return;
+			}
+
+			const nextUserId = getCachedUserId(event.newValue);
+			if (!nextUserId || nextUserId === previousUserId) return;
+
+			if (!previousUserId) {
+				userIdRef.current = nextUserId;
+				return;
+			}
+
+			void redirectForSessionChange(
+				nextUserId,
+				getCachedUserDisplayName(event.newValue),
+			);
+		};
+
+		window.addEventListener("storage", handleStorage);
+		return () => window.removeEventListener("storage", handleStorage);
+	}, [pathname, toast]);
+
 	const refreshUser = async () => {
 		try {
 			// Check if on dashboard route (2FA-based user)
@@ -364,7 +469,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 		// Clear any client-side storage immediately
 		localStorage.removeItem("session");
-		localStorage.removeItem("cached_user");
+		localStorage.removeItem(CACHED_USER_STORAGE_KEY);
 		sessionStorage.clear();
 
 		// Redirect immediately without waiting for API call

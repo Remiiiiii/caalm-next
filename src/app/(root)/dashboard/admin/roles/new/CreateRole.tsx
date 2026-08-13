@@ -184,7 +184,7 @@ const CreateRole = () => {
 			<Button
 				variant="ghost"
 				size="sm"
-				className="mb-4 shrink-0 text-slate-600 hover:text-slate-900 bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
+				className="mb-4 shrink-0 text-slate-600 hover:text-slate-700 bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
 				onClick={() => router.push("/dashboard/admin/roles")}
 			>
 				<ArrowLeft className="h-4 w-4" />
@@ -281,7 +281,7 @@ const CreateRole = () => {
 											: "border-white/40",
 									)}
 								>
-									<p className="text-sm font-semibold text-slate-900">
+									<p className="text-sm font-semibold text-slate-700">
 										{template.name}
 									</p>
 									<p className="mt-1 text-xs text-slate-600">

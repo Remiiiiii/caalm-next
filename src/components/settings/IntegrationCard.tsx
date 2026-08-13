@@ -83,7 +83,7 @@ export default function IntegrationCard({
 							)}
 						</div>
 						<div>
-							<p className="text-sm font-medium text-slate-900">{title}</p>
+							<p className="text-sm font-medium text-slate-700">{title}</p>
 							<p className="text-xs text-slate-600 mt-1">{description}</p>
 						</div>
 					</div>

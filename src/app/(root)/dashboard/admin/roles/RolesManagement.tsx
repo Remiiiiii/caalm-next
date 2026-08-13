@@ -271,8 +271,8 @@ const RolesManagement = () => {
 			className={cn(
 				"font-medium",
 				isDefault
-					? "font-medium! border-2 shrink-0 w-fit  text-slate-600 hover:text-slate-900 bg-white/20 backdrop-blur border-white/50 hover:bg-white/30 transition-all duration-300 px-1.5 py-3 text-xs leading-none"
-					: "font-medium! border-2 shrink-0 w-fit  text-slate-600 hover:text-slate-900 bg-white/20 backdrop-blur border-white/50 hover:bg-white/30 transition-all duration-300 px-1.5 py-3 text-xs leading-none",
+					? "font-medium! border-2 shrink-0 w-fit  text-slate-600 hover:text-slate-700 bg-white/20 backdrop-blur border-white/50 hover:bg-white/30 transition-all duration-300 px-1.5 py-3 text-xs leading-none"
+					: "font-medium! border-2 shrink-0 w-fit  text-slate-600 hover:text-slate-700 bg-white/20 backdrop-blur border-white/50 hover:bg-white/30 transition-all duration-300 px-1.5 py-3 text-xs leading-none",
 			)}
 		>
 			{isDefault ? "Default" : "Custom"}

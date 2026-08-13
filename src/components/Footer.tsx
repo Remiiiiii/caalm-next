@@ -41,7 +41,7 @@ const Footer = () => {
 							<li>
 								<a
 									href="#features"
-									className="hover:text-slate-900 transition-colors"
+									className="hover:text-slate-700 transition-colors"
 								>
 									Features
 								</a>
@@ -49,7 +49,7 @@ const Footer = () => {
 							<li>
 								<a
 									href="#how-it-works"
-									className="hover:text-slate-900 transition-colors"
+									className="hover:text-slate-700 transition-colors"
 								>
 									How it works
 								</a>
@@ -57,7 +57,7 @@ const Footer = () => {
 							<li>
 								<a
 									href="#pricing"
-									className="hover:text-slate-900 transition-colors"
+									className="hover:text-slate-700 transition-colors"
 								>
 									Pricing
 								</a>
@@ -65,7 +65,7 @@ const Footer = () => {
 							<li>
 								<Link
 									href="/docs"
-									className="hover:text-slate-900 transition-colors"
+									className="hover:text-slate-700 transition-colors"
 								>
 									Docs
 								</Link>
@@ -73,7 +73,7 @@ const Footer = () => {
 							<li>
 								<a
 									href="#faq"
-									className="hover:text-slate-900 transition-colors"
+									className="hover:text-slate-700 transition-colors"
 								>
 									FAQ
 								</a>
@@ -89,7 +89,7 @@ const Footer = () => {
 							<li>
 								<Link
 									href="/terms"
-									className="hover:text-slate-900 transition-colors"
+									className="hover:text-slate-700 transition-colors"
 								>
 									Terms
 								</Link>
@@ -97,7 +97,7 @@ const Footer = () => {
 							<li>
 								<Link
 									href="/privacy"
-									className="hover:text-slate-900 transition-colors"
+									className="hover:text-slate-700 transition-colors"
 								>
 									Privacy
 								</Link>
@@ -146,7 +146,7 @@ const Footer = () => {
 							/>
 							<a
 								href="mailto:support@caalmsolutions.com"
-								className="text-xs sm:text-sm hover:text-slate-900"
+								className="text-xs sm:text-sm hover:text-slate-700"
 							>
 								support@caalmsolutions.com
 							</a>

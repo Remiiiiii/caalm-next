@@ -1,0 +1,34 @@
+---
+description: Appwrite collection/table and bucket IDs must be alphanumeric, not human-readable strings
+alwaysApply: true
+---
+
+# Appwrite collection IDs
+
+When creating Appwrite database collections (tables) or storage buckets, the resource `$id` must be an **alphanumeric value** (Appwrite-style ID), not a human-readable string name.
+
+## Required
+
+- Use IDs like `69a3f91200a8c4d1e2f0` or `ID.unique()` output (a-z, A-Z, 0-9 only; max 36 chars).
+- Put the human-readable label in the resource **name** field (e.g. name `tickets`, id `69b8a201001f4e8c2a01`).
+- Store the alphanumeric ID in `.env` / `.env.local` and `appwriteConfig` — never hardcode snake_case names as production IDs.
+
+## Forbidden
+
+```text
+❌ table_id / collection_id = "tickets"
+❌ table_id = "org_units"
+❌ bucket_id = "ticket_attachments"
+```
+
+```text
+✅ table_id = "69b8a201001f4e8c2a01"  (name: tickets)
+✅ bucket_id = "69b8a204004c7b1f5d04"  (name: ticket_attachments)
+```
+
+## Checklist when adding a collection
+
+1. Create with an alphanumeric custom ID (or `ID.unique()`).
+2. Set `name` to the readable label.
+3. Update `.env.example` and `.env.local` with the alphanumeric ID.
+4. Update `src/lib/appwrite/config.ts` fallback to that same ID (not the snake_case name).

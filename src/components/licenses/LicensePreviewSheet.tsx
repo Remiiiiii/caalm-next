@@ -282,7 +282,7 @@ export default function LicensePreviewSheet({
 				<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
 					Issuing authority
 				</p>
-				<p className="mt-1 text-lg font-bold tracking-tight text-slate-900">
+				<p className="mt-1 text-lg font-bold tracking-tight text-slate-700">
 					{license.issuingAuthority || "—"}
 				</p>
 				{license.vendor ? (
@@ -292,7 +292,7 @@ export default function LicensePreviewSheet({
 							<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
 								Vendor
 							</p>
-							<p className="mt-0.5 text-sm font-medium leading-snug text-slate-900">
+							<p className="mt-0.5 text-sm font-medium leading-snug text-slate-700">
 								{license.vendor}
 							</p>
 						</div>
@@ -314,7 +314,7 @@ export default function LicensePreviewSheet({
 						{license.$createdAt ? (
 							<FormattedDateTime
 								date={license.$createdAt}
-								className="body-2 font-medium text-slate-900"
+								className="body-2 font-medium text-slate-700"
 							/>
 						) : (
 							"—"

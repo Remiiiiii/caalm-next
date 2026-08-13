@@ -358,7 +358,7 @@ export default function ApprovalDecideSheet({
 						<Users className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
 						<div className="min-w-0">
 							<p className="text-xs text-slate-500">Department / Assignees</p>
-							<p className="text-sm text-slate-900">
+							<p className="text-sm text-slate-700">
 								{item.department || "—"}
 								{item.assignees.length > 0
 									? ` · ${item.assignees.join(", ")}`
@@ -370,14 +370,14 @@ export default function ApprovalDecideSheet({
 						<CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
 						<div className="min-w-0">
 							<p className="text-xs text-slate-500">Type</p>
-							<p className="text-sm text-slate-900">{item.itemType || "—"}</p>
+							<p className="text-sm text-slate-700">{item.itemType || "—"}</p>
 						</div>
 					</div>
 					<div className="flex items-start gap-3">
 						<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
 						<div className="min-w-0">
 							<p className="text-xs text-slate-500">Submitted</p>
-							<p className="text-sm text-slate-900">
+							<p className="text-sm text-slate-700">
 								<FormattedDateTime date={item.submittedAt} className="body-2" />
 							</p>
 						</div>
@@ -385,13 +385,13 @@ export default function ApprovalDecideSheet({
 					{item.vendor ? (
 						<div>
 							<p className="text-xs text-slate-500">Vendor</p>
-							<p className="text-sm text-slate-900">{item.vendor}</p>
+							<p className="text-sm text-slate-700">{item.vendor}</p>
 						</div>
 					) : null}
 					{typeof item.amount === "number" && item.amount > 0 ? (
 						<div>
 							<p className="text-xs text-slate-500">Amount</p>
-							<p className="text-sm text-slate-900">
+							<p className="text-sm text-slate-700">
 								$
 								{new Intl.NumberFormat("en-US", {
 									minimumFractionDigits: 2,

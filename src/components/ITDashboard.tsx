@@ -228,25 +228,25 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
 							<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
 								<div className="p-4 bg-white rounded-lg border border-slate-200">
 									<p className="text-sm text-slate-600 mb-1">CPU Usage</p>
-									<p className="text-2xl font-bold text-slate-900">
+									<p className="text-2xl font-bold text-slate-700">
 										{metrics.systemPerformance.cpuUsage.toFixed(1)}%
 									</p>
 								</div>
 								<div className="p-4 bg-white rounded-lg border border-slate-200">
 									<p className="text-sm text-slate-600 mb-1">Memory Usage</p>
-									<p className="text-2xl font-bold text-slate-900">
+									<p className="text-2xl font-bold text-slate-700">
 										{metrics.systemPerformance.memoryUsage.toFixed(1)}%
 									</p>
 								</div>
 								<div className="p-4 bg-white rounded-lg border border-slate-200">
 									<p className="text-sm text-slate-600 mb-1">Disk I/O</p>
-									<p className="text-2xl font-bold text-slate-900">
+									<p className="text-2xl font-bold text-slate-700">
 										{metrics.systemPerformance.diskIO.toFixed(1)}%
 									</p>
 								</div>
 								<div className="p-4 bg-white rounded-lg border border-slate-200">
 									<p className="text-sm text-slate-600 mb-1">Network Traffic</p>
-									<p className="text-2xl font-bold text-slate-900">
+									<p className="text-2xl font-bold text-slate-700">
 										{metrics.systemPerformance.networkTraffic.toFixed(1)} MB/s
 									</p>
 								</div>
@@ -285,7 +285,7 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
 												<AlertCircle className="h-5 w-5 text-blue-600" />
 											)}
 											<div>
-												<p className="text-sm font-medium text-slate-900">
+												<p className="text-sm font-medium text-slate-700">
 													{alert.message}
 												</p>
 												<p className="text-xs text-slate-600">
@@ -318,7 +318,7 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
 						<CardContent className="pt-6 bg-slate-50">
 							<div className="text-center py-8">
 								<Server className="h-12 w-12 mx-auto text-slate-400 mb-4" />
-								<h3 className="text-lg font-semibold mb-2 text-slate-900">
+								<h3 className="text-lg font-semibold mb-2 text-slate-700">
 									No Dashboard Data
 								</h3>
 								<p className="text-slate-600 mb-4">

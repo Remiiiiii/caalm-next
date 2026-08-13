@@ -1,30 +1,12 @@
 export const dynamic = "force-dynamic";
 
-import { redirect } from "next/navigation";
-import {
-	getCurrentUser,
-	getCurrentUserFrom2FA,
-} from "@/lib/actions/user.actions";
-import { getUnauthorizedDashboardRedirect } from "@/lib/rbac/dashboard-access-policy";
+import { requireDashboardPathAccess } from "@/lib/rbac/page-guards";
 import DepartmentManagerDashboard from "../DepartmentManagerDashboard";
 
 export default async function DepartmentManagerDashboardPage() {
-	let currentUser = await getCurrentUser();
-	if (!currentUser) {
-		currentUser = await getCurrentUserFrom2FA();
-	}
-
-	if (!currentUser) {
-		redirect("/sign-in");
-	}
-
-	const guard = await getUnauthorizedDashboardRedirect(
-		currentUser.$id,
+	const currentUser = await requireDashboardPathAccess(
 		"/dashboard/departmentmanager",
 	);
-	if (guard) {
-		redirect(guard);
-	}
 
 	return <DepartmentManagerDashboard user={currentUser} />;
 }

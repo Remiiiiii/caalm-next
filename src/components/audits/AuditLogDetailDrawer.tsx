@@ -123,7 +123,7 @@ function InfoRow({
 			<p className="shrink-0 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
 				{label}
 			</p>
-			<div className="min-w-0 max-w-[65%] text-right text-sm font-semibold text-slate-900">
+			<div className="min-w-0 max-w-[65%] text-right text-sm font-semibold text-slate-700">
 				{children}
 			</div>
 		</div>
@@ -134,7 +134,7 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
 	return (
 		<div className="flex items-center justify-between gap-4 py-2.5">
 			<p className="shrink-0 text-sm text-slate-500">{label}</p>
-			<div className="min-w-0 text-right text-sm font-semibold text-slate-900">
+			<div className="min-w-0 text-right text-sm font-semibold text-slate-700">
 				{children}
 			</div>
 		</div>
@@ -143,7 +143,7 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
 
 function CountBadge({ value }: { value: number }) {
 	return (
-		<span className="inline-flex min-w-6 items-center justify-center rounded-md bg-[#f3e8d2] px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-900">
+		<span className="inline-flex min-w-6 items-center justify-center rounded-md bg-[#f3e8d2] px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-700">
 			{value}
 		</span>
 	);
@@ -240,7 +240,7 @@ export function AuditLogDetailDrawer({
 					</InfoRow>
 					<InfoRow label="IP address">
 						{log.ip_address ? (
-							<span className="font-mono text-xs font-medium text-slate-900">
+							<span className="font-mono text-xs font-medium text-slate-700">
 								{log.ip_address}
 							</span>
 						) : (
@@ -250,7 +250,7 @@ export function AuditLogDetailDrawer({
 						)}
 					</InfoRow>
 					<InfoRow label="Event ID">
-						<span className="break-all font-mono text-xs font-medium leading-snug text-slate-900">
+						<span className="break-all font-mono text-xs font-medium leading-snug text-slate-700">
 							{log.event_id || "—"}
 						</span>
 					</InfoRow>
@@ -293,7 +293,7 @@ export function AuditLogDetailDrawer({
 						</div>
 					</div>
 					<div className="px-4 py-3">
-						<p className="text-sm text-slate-900">{log.reason}</p>
+						<p className="text-sm text-slate-700">{log.reason}</p>
 					</div>
 				</section>
 			) : null}
@@ -339,13 +339,13 @@ export function AuditLogDetailDrawer({
 										key={`${change.field}-${String(change.before)}-${String(change.after)}`}
 										className="border-t border-white/45"
 									>
-										<td className="px-4 py-2.5 text-slate-900">
+										<td className="px-4 py-2.5 text-slate-700">
 											{change.field}
 										</td>
 										<td className="px-4 py-2.5 text-slate-600">
 											{change.before == null ? "—" : String(change.before)}
 										</td>
-										<td className="px-4 py-2.5 text-slate-900">
+										<td className="px-4 py-2.5 text-slate-700">
 											{change.after == null ? "—" : String(change.after)}
 										</td>
 									</tr>

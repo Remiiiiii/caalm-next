@@ -72,7 +72,7 @@ export function DepartmentActionQueue({
 				) : items.length === 0 ? (
 					<div className="flex flex-col items-center justify-center flex-1 py-10 text-center">
 						<CheckCircle2 className="h-10 w-10 text-green mb-3" />
-						<p className="text-sm font-medium text-slate-900">
+						<p className="text-sm font-medium text-slate-700">
 							You're caught up
 						</p>
 						<p className="text-xs text-slate-600 mt-1 max-w-sm">
@@ -97,7 +97,7 @@ export function DepartmentActionQueue({
 										<ActionIcon type={item.type} />
 									</span>
 									<span className="min-w-0 flex-1">
-										<span className="block text-sm font-medium text-slate-900">
+										<span className="block text-sm font-medium text-slate-700">
 											{item.title}
 										</span>
 										<span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">

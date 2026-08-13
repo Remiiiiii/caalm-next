@@ -25,6 +25,8 @@ const ORG_SCOPED_TABLES = [
 	appwriteConfig.reportsCollectionId,
 	appwriteConfig.auditLogsCollectionId,
 	appwriteConfig.tasksCollectionId,
+	appwriteConfig.ticketsCollectionId,
+	appwriteConfig.ticketEventsCollectionId,
 	appwriteConfig.contractDraftsCollectionId,
 	appwriteConfig.licenseDraftsCollectionId,
 	appwriteConfig.invitationsCollectionId,

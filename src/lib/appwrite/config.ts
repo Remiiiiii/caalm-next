@@ -130,7 +130,7 @@ export const appwriteConfig = {
 
 	pushSubscriptionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_PUSH_SUBSCRIPTIONS_COLLECTION",
-		"push_subscriptions",
+		"69b8a208008a1f5d9b08",
 	),
 
 	smsFormSubmissionsCollectionId: getTestFallback(
@@ -238,19 +238,39 @@ export const appwriteConfig = {
 		"69a3f91200a8c4d1e2f0",
 	),
 
+	ticketsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_TICKETS_COLLECTION",
+		"69b8a201001f4e8c2a01",
+	),
+
+	ticketEventsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_TICKET_EVENTS_COLLECTION",
+		"69b8a202002e5f9d3b02",
+	),
+
+	webhookDeliveriesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_WEBHOOK_DELIVERIES_COLLECTION",
+		"69b8a203003d6a0e4c03",
+	),
+
+	ticketAttachmentsBucketId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_TICKET_ATTACHMENTS_BUCKET",
+		"69b8a204004c7b1f5d04",
+	),
+
 	orgUnitsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ORG_UNITS_COLLECTION",
-		"org_units",
+		"69b8a205005d8c2a6e05",
 	),
 
 	costCentersCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_COST_CENTERS_COLLECTION",
-		"cost_centers",
+		"69b8a206006e9d3b7f06",
 	),
 
 	orgUnitHistoryCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ORG_UNIT_HISTORY_COLLECTION",
-		"org_unit_history",
+		"69b8a207007f0e4c8a07",
 	),
 
 	// Imagine Art API (AI Image Generation)

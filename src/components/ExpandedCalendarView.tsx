@@ -1299,7 +1299,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 											<FileCheck className="h-4 w-4 text-blue-600" />
 										</div>
 										<div>
-											<h3 className="text-base font-semibold text-slate-900">
+											<h3 className="text-base font-semibold text-slate-700">
 												Pending Approvals
 											</h3>
 											<p className="text-xs font-medium text-slate-600 mt-0.5">
@@ -1335,9 +1335,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 										}
 									>
 										{isApprovalsExpanded ? (
-											<ChevronUp className="h-5 w-5 text-slate-600 group-hover:text-slate-900 transition-colors" />
+											<ChevronUp className="h-5 w-5 text-slate-600 group-hover:text-slate-700 transition-colors" />
 										) : (
-											<ChevronDown className="h-5 w-5 text-slate-600 group-hover:text-slate-900 transition-colors" />
+											<ChevronDown className="h-5 w-5 text-slate-600 group-hover:text-slate-700 transition-colors" />
 										)}
 									</button>
 								</div>
@@ -1437,7 +1437,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 															</div>
 															<div className="flex-1 min-w-0">
 																<div className="flex items-start justify-between gap-2 mb-1.5">
-																	<h4 className="text-sm font-semibold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+																	<h4 className="text-sm font-semibold text-slate-700 line-clamp-1 group-hover:text-blue-600 transition-colors">
 																		{title}
 																	</h4>
 																	<div className="flex items-center gap-2 flex-shrink-0">
@@ -1482,7 +1482,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 												<div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-3">
 													<CheckCircle2 className="h-6 w-6 text-green-600" />
 												</div>
-												<p className="text-sm font-medium text-slate-900 mb-1">
+												<p className="text-sm font-medium text-slate-700 mb-1">
 													All caught up
 												</p>
 												<p className="text-xs text-slate-500">
@@ -1601,7 +1601,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 												<div className="space-y-4">
 													{/* Title and Sensitivity */}
 													<div className="flex flex-wrap items-center gap-2">
-														<h3 className="text-base font-semibold text-slate-900">
+														<h3 className="text-base font-semibold text-slate-700">
 															{eventTitle}
 														</h3>
 														{selectedApproval.sensitivityLevel !==
@@ -1630,7 +1630,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 																<Clock className="w-4 h-4 text-blue-600" />
 															</div>
 															<div className="flex-1">
-																<div className="text-sm font-medium text-slate-900">
+																<div className="text-sm font-medium text-slate-700">
 																	{format(eventDate, "EEEE, MMMM d, yyyy")}
 																</div>
 																{(() => {
@@ -2052,7 +2052,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 										<div className="space-y-3 text-sm">
 											<div className="flex items-center justify-between">
 												<span className="text-slate-600">Submitted:</span>
-												<span className="font-medium text-slate-900">
+												<span className="font-medium text-slate-700">
 													{selectedApproval.submittedAt
 														? format(
 																new Date(selectedApproval.submittedAt),

@@ -152,12 +152,12 @@ export function useGroupedNavigation() {
 			"Calendar",
 			"Contracts",
 			"Licenses",
-			"Files",
 			"Audits",
+			"Files",
 			"Team",
 			"Reports & Analytics",
-			"Settings",
 			"My Roles & Permissions",
+			"Settings",
 		] as const;
 
 		for (const header of sectionHeaders) {

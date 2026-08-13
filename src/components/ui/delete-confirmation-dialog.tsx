@@ -63,7 +63,7 @@ export const DeleteConfirmationDialog: React.FC<
 				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
 					<p className="text-sm text-slate-700">
 						Are you sure you want to delete{" "}
-						<span className="font-medium text-slate-900">"{itemName}"</span>?
+						<span className="font-medium text-slate-700">"{itemName}"</span>?
 						This action cannot be undone.
 					</p>
 				</div>

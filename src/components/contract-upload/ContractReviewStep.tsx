@@ -195,7 +195,7 @@ export default function ContractReviewStep({
 				<div className="flex items-start gap-2">
 					<CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#0f5384]" />
 					<div>
-						<p className="text-sm font-medium text-slate-900">
+						<p className="text-sm font-medium text-slate-700">
 							Review before upload
 						</p>
 						<p className="mt-0.5 text-xs text-slate-600">
@@ -246,7 +246,7 @@ export default function ContractReviewStep({
 											</span>
 										) : null}
 									</dt>
-									<dd className="text-sm text-slate-900 wrap-break-word text-left sm:text-right sm:max-w-[60%]">
+									<dd className="text-sm text-slate-700 wrap-break-word text-left sm:text-right sm:max-w-[60%]">
 										{row.isFile ? (
 											<button
 												type="button"

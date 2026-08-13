@@ -201,7 +201,7 @@ export default function LicenseExpiryAlertsWidget({
 							>
 								<div className="flex min-w-0 items-start justify-between gap-2">
 									<div className="min-w-0 flex-1">
-										<h4 className="mb-1 break-words text-sm font-medium text-slate-900">
+										<h4 className="mb-1 break-words text-sm font-medium text-slate-700">
 											{license.licenseName}
 										</h4>
 										<div className="mb-1">{getUrgencyBadge(days)}</div>

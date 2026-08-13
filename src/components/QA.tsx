@@ -106,7 +106,7 @@ export default function QA() {
 						<span>
 							Still have questions?{" "}
 							<a
-								className="underline decoration-slate-400 hover:text-slate-900"
+								className="underline decoration-slate-400 hover:text-slate-700"
 								href="mailto:support@caalmsolutions.com"
 							>
 								support@caalmsolutions.com

@@ -80,7 +80,7 @@ function MetaRow({
 			? "text-[#E5252A] font-semibold"
 			: emphasize === "warning"
 				? "text-orange font-semibold"
-				: "text-slate-900 font-medium";
+				: "text-slate-700 font-medium";
 
 	return (
 		<div className="flex items-start justify-between gap-3 min-w-0 py-1.5 border-b border-slate-200/60 last:border-b-0">
@@ -229,7 +229,7 @@ export default function LicenseCard({
 
 			{/* Title + status */}
 			<div className="min-w-0 space-y-2">
-				<p className="subtitle-2 line-clamp-2 wrap-break-word text-slate-900">
+				<p className="subtitle-2 line-clamp-2 wrap-break-word text-slate-700">
 					{license.licenseName}
 				</p>
 				<div className="flex items-center gap-2 flex-wrap">

@@ -327,7 +327,7 @@ export default function LicensesMock() {
 						<div className="flex min-w-0 items-start gap-2">
 							<AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange" />
 							<div className="min-w-0">
-								<p className="text-[10px] sm:text-xs font-semibold text-slate-900">
+								<p className="text-[10px] sm:text-xs font-semibold text-slate-700">
 									Needs attention
 								</p>
 								<p className="text-[9px] sm:text-[10px] text-slate-600 truncate">

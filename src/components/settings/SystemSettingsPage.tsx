@@ -171,7 +171,7 @@ export default function SystemSettingsPage() {
 							</div>
 							<div className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2">
 								<div>
-									<p className="text-sm font-medium text-slate-900">
+									<p className="text-sm font-medium text-slate-700">
 										Require 2FA for org members
 									</p>
 									<p className="text-xs text-slate-500">
@@ -214,7 +214,7 @@ export default function SystemSettingsPage() {
 							</div>
 							<div className="rounded-md border border-slate-200 bg-white px-3 py-3 flex items-center justify-between">
 								<div>
-									<p className="text-sm font-medium text-slate-900">
+									<p className="text-sm font-medium text-slate-700">
 										Billing &amp; Outlook
 									</p>
 									<p className="text-xs text-slate-500">

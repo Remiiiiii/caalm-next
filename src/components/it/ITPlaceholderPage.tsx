@@ -25,7 +25,7 @@ export function ITPlaceholderPage({
 			<ITGlassPanel>
 				<div className="flex flex-col items-start gap-3 max-w-xl">
 					<Icon className="h-10 w-10 text-slate-400" />
-					<p className="text-lg font-medium text-slate-900">Coming online</p>
+					<p className="text-lg font-medium text-slate-700">Coming online</p>
 					<p className="text-sm text-slate-600">{purpose}</p>
 					<ul className="text-sm text-slate-600 space-y-1 list-disc pl-5">
 						<li>

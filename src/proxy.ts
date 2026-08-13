@@ -190,6 +190,7 @@ export async function proxy(request: NextRequest) {
 		"/documents",
 		"/audits",
 		"/team",
+		"/tickets",
 	];
 
 	const isProtectedPath = protectedPrefixes.some((p) => pathname.startsWith(p));

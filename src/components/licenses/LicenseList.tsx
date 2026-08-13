@@ -142,7 +142,7 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 									<TableCell className="py-4">
 										<div className="flex items-center gap-2">
 											<Key className="h-4 w-4 text-slate-600" />
-											<span className="font-medium text-slate-900">
+											<span className="font-medium text-slate-700">
 												{license.licenseName}
 											</span>
 										</div>

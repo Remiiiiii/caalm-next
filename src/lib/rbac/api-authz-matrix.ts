@@ -97,6 +97,11 @@ const SIGNAL_PATTERNS: Array<{ signal: string; class: DetectedAuthClass; re: Reg
 			class: "webhook",
 			re: /\bconstructWebhookEvent\b|\bstripe-signature\b|\bstripe\.webhooks\b/i,
 		},
+		{
+			signal: "githubWebhook",
+			class: "webhook",
+			re: /\bverifyGitHubWebhookSignature\b|\bx-hub-signature-256\b/i,
+		},
 	];
 
 const CLASS_RANK: Record<DetectedAuthClass, number> = {

@@ -107,7 +107,7 @@ export default function LicenseDetailView({
 					<Key className="h-6 w-6 text-[#0f5384]" />
 				</div>
 				<div className="min-w-0 flex-1">
-					<p className="text-slate-900 font-semibold break-words">
+					<p className="text-slate-700 font-semibold break-words">
 						{license.licenseName}
 					</p>
 					{license.$createdAt && (

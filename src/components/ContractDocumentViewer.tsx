@@ -978,7 +978,7 @@ ${contractDetails.attachments
 										{/* Summary */}
 										<Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
 											<CardHeader className="pb-2">
-												<CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
+												<CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-700">
 													<FileText className="h-4 w-4 text-cyan-600" />
 													Summary
 												</CardTitle>
@@ -993,7 +993,7 @@ ${contractDetails.attachments
 										{/* Key Terms */}
 										<Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
 											<CardHeader className="pb-2">
-												<CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-900">
+												<CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-700">
 													<Lightbulb className="h-4 w-4 text-cyan-600" />
 													Key Terms
 												</CardTitle>

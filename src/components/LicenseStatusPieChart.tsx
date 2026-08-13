@@ -4,7 +4,6 @@ import { Key } from "lucide-react";
 import { useMemo } from "react";
 import {
 	Cell,
-	Legend,
 	Pie,
 	PieChart,
 	ResponsiveContainer,
@@ -126,26 +125,31 @@ export default function LicenseStatusPieChart({
 						License Status
 					</h3>
 				</div>
-				<ResponsiveContainer width="100%" height={300}>
-					<PieChart>
-						<Pie
-							data={chartData}
-							cx="50%"
-							cy="50%"
-							labelLine={false}
-							label={({ name, value }) => `${name}: ${value}%`}
-							outerRadius={80}
-							fill="#8884d8"
-							dataKey="value"
-						>
+				<div className="mx-auto w-full max-w-[220px]">
+					<ResponsiveContainer width="100%" height={180}>
+						<PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+							<Pie
+								data={chartData}
+								cx="50%"
+								cy="50%"
+								labelLine={false}
+								outerRadius={70}
+								fill="#8884d8"
+								dataKey="value"
+							>
 							{chartData.map((entry, index) => (
 								<Cell key={`cell-${index}`} fill={entry.color} />
 							))}
 						</Pie>
-						<Tooltip />
-						<Legend />
+						<Tooltip
+							formatter={(value: number, _name, item) => [
+								`${value} (${item.payload.percentage}%)`,
+								item.payload.name,
+							]}
+						/>
 					</PieChart>
 				</ResponsiveContainer>
+				</div>
 				<div className="mt-4 space-y-2">
 					{chartData.map((item) => (
 						<div
@@ -159,7 +163,7 @@ export default function LicenseStatusPieChart({
 								/>
 								<span className="text-slate-700">{item.name}</span>
 							</div>
-							<span className="font-medium text-slate-900">
+							<span className="font-medium text-slate-700">
 								{item.value} ({item.percentage}%)
 							</span>
 						</div>

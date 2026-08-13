@@ -264,7 +264,7 @@ const CSuitePage = () => {
 											key={dept.name}
 											className="border-b border-slate-100 hover:bg-blue/5 transition-colors duration-200 cursor-pointer"
 										>
-											<td className="py-3 px-4 text-sm text-slate-900 font-medium">
+											<td className="py-3 px-4 text-sm text-slate-700 font-medium">
 												{dept.name}
 											</td>
 											<td className="py-3 px-4 text-sm text-slate-700 text-right">
@@ -306,7 +306,7 @@ const CSuitePage = () => {
 						<div className="flex items-start gap-3">
 							<TrendingUp className="h-5 w-5 text-orange mt-0.5" />
 							<div>
-								<p className="font-semibold text-slate-900 mb-1">
+								<p className="font-semibold text-slate-700 mb-1">
 									Calendar risk alert
 								</p>
 								<p className="text-sm text-slate-600">

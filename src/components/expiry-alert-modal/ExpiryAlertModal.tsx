@@ -294,7 +294,7 @@ export default function ExpiryAlertModal({
 								<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
 									Amount
 								</p>
-								<p className="text-[32px] leading-none font-bold text-slate-900 tracking-tight">
+								<p className="text-[32px] leading-none font-bold text-slate-700 tracking-tight">
 									{showAmount
 										? `$${amount.toLocaleString(undefined, {
 												maximumFractionDigits: 0,
@@ -307,7 +307,7 @@ export default function ExpiryAlertModal({
 								<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
 									Status
 								</p>
-								<p className="text-lg font-medium text-slate-900 capitalize leading-snug">
+								<p className="text-lg font-medium text-slate-700 capitalize leading-snug">
 									{status.replace(/[-_]/g, " ") || "—"}
 								</p>
 							</div>
@@ -316,7 +316,7 @@ export default function ExpiryAlertModal({
 								<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
 									{typeFieldLabel(entityType)}
 								</p>
-								<p className="text-lg font-medium text-slate-900 leading-snug">
+								<p className="text-lg font-medium text-slate-700 leading-snug">
 									{typeLabel || "—"}
 								</p>
 							</div>
@@ -325,7 +325,7 @@ export default function ExpiryAlertModal({
 								<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
 									{vendorFieldLabel(entityType)}
 								</p>
-								<p className="text-lg font-medium text-slate-900 leading-snug">
+								<p className="text-lg font-medium text-slate-700 leading-snug">
 									{vendor || "—"}
 								</p>
 							</div>

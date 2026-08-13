@@ -165,7 +165,19 @@ const Sidebar = memo(
 										if (section.items.length === 0) return null;
 
 										return (
-											<div key={section.header} className="mb-3">
+											<Fragment key={section.header}>
+												{section.header === "Settings" && (
+													<li
+														aria-hidden
+														className="my-3 list-none px-1"
+													>
+														<div
+															className="border-t border-slate-200/80"
+															role="separator"
+														/>
+													</li>
+												)}
+												<div className="mb-3">
 												<li
 													className="sidebar-section-header mb-0 lg:mb-1"
 													data-tour={sectionTourId(section.header)}
@@ -288,7 +300,7 @@ const Sidebar = memo(
 																		})()}
 																		<p
 																			className={cn(
-																				"text-xs text-slate-900 px-2 font-medium flex items-center gap-2",
+																				"text-xs text-slate-700 px-2 font-medium flex items-center gap-2",
 																				item.name === "Admin" && "-ml-px",
 																			)}
 																		>
@@ -350,6 +362,7 @@ const Sidebar = memo(
 													</ul>
 												</div>
 											</div>
+											</Fragment>
 										);
 									})
 								)}

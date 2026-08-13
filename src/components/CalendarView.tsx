@@ -394,7 +394,7 @@ function DashboardMonthMatrix({
 								className={cn(
 									"group relative flex h-11 flex-col items-center justify-center text-[13px] transition-colors",
 									!inMonth && "text-slate-300",
-									inMonth && !today && !disabled && "text-slate-900",
+									inMonth && !today && !disabled && "text-slate-700",
 									disabled && "cursor-not-allowed opacity-50",
 								)}
 							>

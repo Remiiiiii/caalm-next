@@ -73,7 +73,7 @@ export default function ContractsBulkBar({ files }: ContractsBulkBarProps) {
 
 	return (
 		<div className="sticky bottom-4 z-20 mx-4 sm:mx-6 mb-4 flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
-			<p className="text-sm font-medium text-slate-900">
+			<p className="text-sm font-medium text-slate-700">
 				{selectedIds.length} selected
 			</p>
 			<div className="flex items-center gap-2">

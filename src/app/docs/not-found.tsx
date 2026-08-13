@@ -6,7 +6,7 @@ export default function DocsNotFound() {
 			<p className="text-sm font-semibold uppercase tracking-wider text-[#0f5384] dark:text-sky-300">
 				404
 			</p>
-			<h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-50">
+			<h1 className="mt-2 text-3xl font-semibold text-slate-700 dark:text-slate-50">
 				Page not found
 			</h1>
 			<p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">

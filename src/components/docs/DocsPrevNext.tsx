@@ -21,7 +21,7 @@ export function DocsPrevNext({
 						<ArrowLeft className="h-3.5 w-3.5" />
 						Previous
 					</p>
-					<p className="text-sm font-semibold text-slate-900 group-hover:text-[#0f5384] dark:text-slate-100 dark:group-hover:text-sky-300">
+					<p className="text-sm font-semibold text-slate-700 group-hover:text-[#0f5384] dark:text-slate-100 dark:group-hover:text-sky-300">
 						{prev.title}
 					</p>
 				</Link>
@@ -37,7 +37,7 @@ export function DocsPrevNext({
 						Next
 						<ArrowRight className="h-3.5 w-3.5" />
 					</p>
-					<p className="text-sm font-semibold text-slate-900 group-hover:text-[#0f5384] dark:text-slate-100 dark:group-hover:text-sky-300">
+					<p className="text-sm font-semibold text-slate-700 group-hover:text-[#0f5384] dark:text-slate-100 dark:group-hover:text-sky-300">
 						{next.title}
 					</p>
 				</Link>

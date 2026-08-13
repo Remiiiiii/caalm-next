@@ -148,8 +148,8 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 					className={cn(
 						"rounded-md border px-3 py-2 text-sm",
 						enforceSod
-							? "border-red/30 bg-red/10 text-slate-900"
-							: "border-orange/30 bg-orange/10 text-slate-900",
+							? "border-red/30 bg-red/10 text-slate-700"
+							: "border-orange/30 bg-orange/10 text-slate-700",
 					)}
 					role="status"
 				>

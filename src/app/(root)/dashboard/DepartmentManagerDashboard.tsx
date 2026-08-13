@@ -56,7 +56,7 @@ export default function DepartmentManagerDashboard({
 					<div className="glass-card-cap" />
 					<CardContent className="p-8 text-center">
 						<AlertTriangle className="w-12 h-12 text-orange mx-auto mb-4" />
-						<h3 className="text-lg font-semibold text-slate-900 mb-2">
+						<h3 className="text-lg font-semibold text-slate-700 mb-2">
 							Division not assigned
 						</h3>
 						<p className="text-sm text-slate-600 mb-4">

@@ -135,7 +135,7 @@ export function DepartmentContractsTable({
 										key={contract.$id}
 										className="hover:bg-slate-50 transition-colors duration-200"
 									>
-										<TableCell className="font-medium text-slate-900">
+										<TableCell className="font-medium text-slate-700">
 											{contract.contractName}
 											{typeof contract.daysUntilExpiry === "number" ? (
 												<p className="text-xs text-slate-500 mt-0.5">

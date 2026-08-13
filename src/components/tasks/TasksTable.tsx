@@ -94,7 +94,7 @@ export function TasksTable({
 								className="hover:bg-blue-50 transition-all duration-200"
 							>
 								<TableCell>
-									<div className="font-medium text-slate-900">{task.title}</div>
+									<div className="font-medium text-slate-700">{task.title}</div>
 									{task.description ? (
 										<p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
 											{task.description}

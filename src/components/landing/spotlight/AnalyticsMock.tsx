@@ -429,11 +429,11 @@ export default function AnalyticsMock() {
 										</p>
 										<div className="flex flex-wrap gap-3 text-[9px] sm:text-[10px] text-slate-600">
 											<span>
-												<span className="font-semibold text-slate-900">4</span>{" "}
+												<span className="font-semibold text-slate-700">4</span>{" "}
 												areas at risk
 											</span>
 											<span>
-												<span className="font-semibold text-slate-900">12</span>{" "}
+												<span className="font-semibold text-slate-700">12</span>{" "}
 												upcoming deadlines
 											</span>
 										</div>

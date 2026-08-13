@@ -223,7 +223,7 @@ const OTPModal = ({
 								? `Enter the verification code sent to`
 								: `Sending verification code to`}
 						</span>
-						<span className="block font-light text-slate-900">{email}</span>
+						<span className="block font-light text-slate-700">{email}</span>
 					</AlertDialogDescription>
 					{hasAutoSent ? (
 						<p

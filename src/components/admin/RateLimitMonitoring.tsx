@@ -202,7 +202,7 @@ export default function RateLimitMonitoring() {
 							<Activity className="h-4 w-4 text-[#0f5384]" />
 						</CardHeader>
 						<CardContent className="bg-slate-50">
-							<div className="text-2xl font-bold text-slate-900">
+							<div className="text-2xl font-bold text-slate-700">
 								{summary.totalRequests.toLocaleString()}
 							</div>
 							<p className="text-xs text-slate-600 mt-1">All API requests</p>
@@ -242,7 +242,7 @@ export default function RateLimitMonitoring() {
 							<AlertTriangle className="h-4 w-4 text-[#0f5384]" />
 						</CardHeader>
 						<CardContent className="bg-slate-50">
-							<div className="text-2xl font-bold text-slate-900">
+							<div className="text-2xl font-bold text-slate-700">
 								{summary.violations.toLocaleString()}
 							</div>
 							<p className="text-xs text-slate-600 mt-1">Rate limit exceeded</p>
@@ -274,7 +274,7 @@ export default function RateLimitMonitoring() {
 							<Clock className="h-4 w-4 text-[#0f5384]" />
 						</CardHeader>
 						<CardContent className="bg-slate-50">
-							<div className="text-2xl font-bold text-slate-900">
+							<div className="text-2xl font-bold text-slate-700">
 								{summary.averageLatency}
 							</div>
 							<p className="text-xs text-slate-600 mt-1">
@@ -301,13 +301,13 @@ export default function RateLimitMonitoring() {
 								<Table>
 									<TableHeader>
 										<TableRow className="bg-slate-50">
-											<TableHead className="text-slate-900 font-semibold">
+											<TableHead className="text-slate-700 font-semibold">
 												Identifier
 											</TableHead>
-											<TableHead className="text-slate-900 font-semibold">
+											<TableHead className="text-slate-700 font-semibold">
 												Violations
 											</TableHead>
-											<TableHead className="text-slate-900 font-semibold">
+											<TableHead className="text-slate-700 font-semibold">
 												Status
 											</TableHead>
 										</TableRow>
@@ -363,7 +363,7 @@ export default function RateLimitMonitoring() {
 											className="flex items-center justify-between p-4 border-2 border-slate-200 rounded-lg bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 shadow-sm hover:shadow-md"
 										>
 											<div className="flex-1">
-												<p className="font-medium text-sm text-slate-900">
+												<p className="font-medium text-sm text-slate-700">
 													{endpoint}
 												</p>
 												<p className="text-xs text-slate-600 mt-1">
@@ -378,7 +378,7 @@ export default function RateLimitMonitoring() {
 													<p className="text-xs text-slate-600">violations</p>
 												</div>
 												<div className="text-right">
-													<p className="text-sm font-semibold text-slate-900">
+													<p className="text-sm font-semibold text-slate-700">
 														{stats.requests > 0
 															? (
 																	(stats.violations / stats.requests) *
@@ -406,7 +406,7 @@ export default function RateLimitMonitoring() {
 						<CardContent className="pt-6 bg-slate-50">
 							<div className="text-center py-8">
 								<Activity className="h-12 w-12 mx-auto text-slate-400 mb-4" />
-								<h3 className="text-lg font-semibold mb-2 text-slate-900">
+								<h3 className="text-lg font-semibold mb-2 text-slate-700">
 									No Rate Limit Data
 								</h3>
 								<p className="text-slate-600 mb-4">

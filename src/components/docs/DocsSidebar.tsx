@@ -58,7 +58,7 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 							)}
 						>
-							<span className="text-sm font-bold tracking-wide text-slate-900 dark:text-slate-100">
+							<span className="text-sm font-bold tracking-wide text-slate-700 dark:text-slate-100">
 								{group.title}
 							</span>
 							<ChevronDown

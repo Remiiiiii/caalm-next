@@ -633,7 +633,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 												onClick={() => setCurrentPage(pageNum)}
 												className={
 													currentPage === pageNum
-														? "bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+														? "bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-700"
 														: ""
 												}
 											>

@@ -7,9 +7,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
+	isRoleDashboardHomePath,
 	resolveDashboardHomePath,
 	userMayAccessDashboardPath,
 } from "@/lib/rbac/dashboard-access-policy";
+import { appendSessionChangedNotice } from "@/lib/auth/session-sync";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,
@@ -69,8 +71,12 @@ export async function redirectIfNotAuthorizedForDashboard(
 		}
 
 		const userRoles = await getUserRoles(user.$id, orgId);
-		const redirectUrl =
+		let redirectUrl =
 			(await resolveDashboardHomePath(user.$id, orgId)) ?? "/dashboard";
+
+		if (isRoleDashboardHomePath(pathname)) {
+			redirectUrl = appendSessionChangedNotice(redirectUrl);
+		}
 
 		console.warn(
 			`[Dashboard Guard] Unauthorized access attempt by user ${user.$id} (roles: ${userRoles.map((r) => r.roleName).join(", ")}) to ${pathname}. Redirecting to ${redirectUrl}`,

@@ -39,7 +39,7 @@ export default function ApprovalsAttentionStrip({
 			<div className="flex items-start gap-3 min-w-0">
 				<AlertTriangle className="h-5 w-5 text-orange shrink-0 mt-0.5" />
 				<div>
-					<p className="text-sm font-semibold text-slate-900">
+					<p className="text-sm font-semibold text-slate-700">
 						Needs attention
 					</p>
 					<p className="text-xs text-slate-600 mt-0.5">

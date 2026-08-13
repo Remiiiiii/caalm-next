@@ -288,7 +288,7 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 
 ### Text Colors
 
-- **Primary text**: `text-slate-900`
+- **Primary text**: `text-slate-700`
 - **Secondary text**: `text-slate-600`
 - **Muted text**: `text-slate-500`
 - **Headers**: `sidebar-gradient-text` (brand colors)
@@ -307,7 +307,7 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 
 ### Body Text
 
-- **Primary**: `text-slate-900`
+- **Primary**: `text-slate-700`
 - **Secondary**: `text-slate-600`
 - **Muted**: `text-slate-500`
 - **Small**: `text-xs text-slate-600`
@@ -427,7 +427,7 @@ Or combine: `className="glass-card interactive-glass-card"`.
 
 | Surface | Minimum fill | Text |
 |---------|--------------|------|
-| `.glass-card` | `rgba(255,255,255,0.55)` | `text-slate-900` body, `text-slate-600` muted |
+| `.glass-card` | `rgba(255,255,255,0.55)` | `text-slate-700` body, `text-slate-600` muted |
 | `.glass-card-inner` | `rgba(255,255,255,0.30)` | Same as above |
 | `.glass-card-frosted` | `rgba(255,255,255,0.55)` | Dialog content on `bg-slate-50` |
 
@@ -452,7 +452,7 @@ Never use `bg-white/10` for primary readable content. Ensure 4.5:1 contrast on l
 | No emoji icons | Lucide (`lucide-react`) |
 | cursor-pointer | `.interactive-glass-card`, `Button`, table row classes |
 | Hover 150–300ms | `duration-200` on glass and `.primary-btn` |
-| Light contrast | `text-slate-900` / `text-slate-600` on glass |
+| Light contrast | `text-slate-700` / `text-slate-600` on glass |
 | Focus visible | `focus-visible:ring-*` on buttons, cards, table rows |
 | Reduced motion | `@media (prefers-reduced-motion: reduce)` in `globals.css` |
 | Responsive | `375px, 768px, 1024px, 1440px` — standard container padding |

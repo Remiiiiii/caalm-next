@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Database } from "lucide-react";
 import useSWR from "swr";
@@ -41,7 +41,7 @@ export default function DatabaseSchemaPage() {
 		>
 			{isLoading ? (
 				<div className="py-12 flex justify-center">
-					<LoadingSpinner size="sm" label="Loading schema…" />
+					<LoadingSpinner size="sm" label="Loading schema�" />
 				</div>
 			) : error || !data?.success ? (
 				<ITGlassPanel>
@@ -69,7 +69,7 @@ export default function DatabaseSchemaPage() {
 							<TableBody>
 								{data.data.tables.map((table) => (
 									<TableRow key={table.id}>
-										<TableCell className="font-medium text-slate-900">
+										<TableCell className="font-medium text-slate-700">
 											{table.name}
 										</TableCell>
 										<TableCell className="font-mono text-xs text-slate-600">

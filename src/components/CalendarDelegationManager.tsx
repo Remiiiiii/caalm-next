@@ -271,7 +271,7 @@ export const CalendarDelegationManager: React.FC<
 															.toUpperCase()}
 													</div>
 													<div>
-														<div className="font-medium text-sm text-slate-900">
+														<div className="font-medium text-sm text-slate-700">
 															{user.fullName || user.name}
 														</div>
 														<div className="text-xs text-slate-500">
@@ -347,7 +347,7 @@ export const CalendarDelegationManager: React.FC<
 									<div className="flex-1">
 										<div className="flex items-center gap-2 mb-2">
 											<User className="w-4 h-4 text-slate-500" />
-											<span className="font-medium text-slate-900">
+											<span className="font-medium text-slate-700">
 												Delegate ID: {delegation.delegateId}
 											</span>
 											{delegation.isActive ? (

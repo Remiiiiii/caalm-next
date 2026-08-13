@@ -36,7 +36,7 @@ function CustomNavbar(props: NavProps) {
 				type="button"
 				className={cn(
 					buttonVariants({ variant: "ghost" }),
-					"rdp-button_previous shrink-0 text-slate-700 hover:text-slate-900",
+					"rdp-button_previous shrink-0 text-slate-700 hover:text-slate-700",
 				)}
 				aria-label="Previous Month"
 				onClick={props.onPreviousClick}
@@ -48,7 +48,7 @@ function CustomNavbar(props: NavProps) {
 				type="button"
 				className={cn(
 					buttonVariants({ variant: "ghost" }),
-					"rdp-button_next shrink-0 text-slate-700 hover:text-slate-900",
+					"rdp-button_next shrink-0 text-slate-700 hover:text-slate-700",
 				)}
 				aria-label="Next Month"
 				onClick={props.onNextClick}

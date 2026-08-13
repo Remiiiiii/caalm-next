@@ -617,7 +617,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 					{/* Global Settings */}
 					<div className="space-y-4">
 						<div className="flex justify-between">
-							<h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+							<h3 className="text-lg font-semibold text-slate-700 flex items-center gap-2">
 								<Globe className="w-5 h-5 text-[#0f5384]" />
 								Global Settings
 							</h3>
@@ -934,7 +934,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
 						{/* Notification Type Preferences */}
 						<div className="space-y-4">
-							<h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+							<h3 className="text-lg font-semibold text-slate-700 flex items-center gap-2">
 								<Bell className="w-5 h-5 text-[#0f5384]" />
 								Notification Types
 							</h3>

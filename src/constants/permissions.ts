@@ -128,6 +128,7 @@ export const PERMISSIONS = {
 		EDIT: "tickets.edit",
 		DELETE: "tickets.delete",
 		ASSIGN: "tickets.assign",
+		RESOLVE: "tickets.resolve",
 	},
 
 	// Platform / break-glass capabilities (Super Admin only by default)
@@ -153,6 +154,7 @@ export const SENSITIVE_PERMISSIONS: readonly string[] = [
 	PERMISSIONS.APPROVALS.OVERRIDE,
 	PERMISSIONS.TICKETS.DELETE,
 	PERMISSIONS.TICKETS.ASSIGN,
+	PERMISSIONS.TICKETS.RESOLVE,
 	PERMISSIONS.IT.MANAGE_DATABASE,
 	PERMISSIONS.IT.MANAGE_API_KEYS,
 	PERMISSIONS.IT.MANAGE_DEPLOYMENTS,
@@ -636,6 +638,12 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Assign Tickets",
 		category: "tickets",
 		description: "Assign tickets to users or teams",
+	},
+	{
+		key: PERMISSIONS.TICKETS.RESOLVE,
+		name: "Resolve Tickets",
+		category: "tickets",
+		description: "Trigger AI resolution on tickets assigned to you",
 	},
 
 	// Platform

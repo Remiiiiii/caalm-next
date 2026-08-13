@@ -715,21 +715,21 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
 					<div className="px-6 pb-6">
 						<div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-							<h4 className="text-sm font-medium text-slate-900 mb-3">
+							<h4 className="text-sm font-medium text-slate-700 mb-3">
 								Note Details
 							</h4>
 							<div className="space-y-2">
 								{selectedNote?.title && (
 									<div className="flex items-center justify-between py-1">
 										<span className="text-sm text-slate-600">Title:</span>
-										<span className="text-sm font-medium text-slate-900 truncate max-w-[200px]">
+										<span className="text-sm font-medium text-slate-700 truncate max-w-[200px]">
 											{selectedNote.title}
 										</span>
 									</div>
 								)}
 								<div className="flex items-center justify-between py-1">
 									<span className="text-sm text-slate-600">Created:</span>
-									<span className="text-sm font-medium text-slate-900">
+									<span className="text-sm font-medium text-slate-700">
 										{selectedNote?.$createdAt &&
 											new Date(selectedNote.$createdAt).toLocaleDateString(
 												"en-US",

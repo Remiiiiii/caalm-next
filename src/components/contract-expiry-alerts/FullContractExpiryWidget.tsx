@@ -6,7 +6,6 @@ import CountdownTimer from "@/components/CountdownTimer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoadingSpinner } from "@/components/ui/loading";
 import { AlarmControls } from "./AlarmControls";
 import { ContractEmptyState } from "./ContractEmptyState";
 import { ContractFilterControls } from "./ContractFilterControls";
@@ -71,11 +70,12 @@ export const FullContractExpiryWidget: React.FC<
 				</CardHeader>
 				<CardContent>
 					<div className="flex justify-center pb-4">
-						<LoadingSpinner
-							size="sm"
-							label="Loading contracts..."
-							className="!p-0"
-						/>
+						<div className="flex flex-col items-center gap-3">
+							<div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-300 border-t-slate-600" />
+							<p className="text-xs text-slate-500 font-medium">
+								Loading contracts...
+							</p>
+						</div>
 					</div>
 					<div className="space-y-4">
 						{[1, 2, 3].map((i) => (

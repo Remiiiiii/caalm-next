@@ -267,12 +267,12 @@ export const CreateSharedCalendarDialog: React.FC<
 												colorInput?.click();
 											}}
 											className={cn(
-												"flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900 transition-colors",
-												formData.isCustomColor && "text-slate-900 font-medium",
+												"flex items-center gap-2 text-sm text-slate-700 hover:text-slate-700 transition-colors",
+												formData.isCustomColor && "text-slate-700 font-medium",
 											)}
 										>
 											{formData.isCustomColor && (
-												<Check className="w-4 h-4 text-slate-900" />
+												<Check className="w-4 h-4 text-slate-700" />
 											)}
 											<span>Custom Color...</span>
 											{formData.isCustomColor && formData.color && (

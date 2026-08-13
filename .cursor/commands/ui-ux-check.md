@@ -6,7 +6,7 @@ Run this checklist against the page or components you changed.
 
 - [ ] Cards use `glass-card` with `glass-card-cap` (blur + shadow kept)
 - [ ] Clickable cards also use `interactive-glass-card`
-- [ ] Body text is `text-slate-900` / muted `text-slate-600` (readable on glass)
+- [ ] Body text is `text-slate-700` / muted `text-slate-600` (readable on glass)
 - [ ] Brand blue `#0f5384` and Poppins unchanged (no indigo/Fira swap)
 
 ## Interaction

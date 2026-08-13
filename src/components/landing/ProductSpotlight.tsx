@@ -218,7 +218,7 @@ export default function ProductSpotlight() {
 										"inline-flex w-full items-center justify-center rounded-full px-3 py-2.5 sm:w-auto sm:px-4 sm:py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-offset-2",
 										isActive
 											? "primary-btn shadow-sm text-white"
-											: "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-blue-300 hover:text-slate-900 hover:shadow-md sm:border-transparent sm:bg-transparent",
+											: "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-blue-300 hover:text-slate-700 hover:shadow-md sm:border-transparent sm:bg-transparent",
 									)}
 								>
 									<span className="inline-flex items-center gap-1.5 sm:gap-2">

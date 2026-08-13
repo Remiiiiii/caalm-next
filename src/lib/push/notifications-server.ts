@@ -69,7 +69,7 @@ function ensureVapidConfigured(): boolean {
 
 function pushSubscriptionsTableId(): string {
 	return (
-		appwriteConfig.pushSubscriptionsCollectionId || "push_subscriptions"
+		appwriteConfig.pushSubscriptionsCollectionId || "69b8a208008a1f5d9b08"
 	);
 }
 

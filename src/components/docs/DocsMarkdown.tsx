@@ -22,7 +22,7 @@ function Inline({ nodes }: { nodes: InlineNode[] }): ReactNode {
 				);
 			case "strong":
 				return (
-					<strong key={i} className="font-semibold text-slate-900 dark:text-slate-100">
+					<strong key={i} className="font-semibold text-slate-700 dark:text-slate-100">
 						<Inline nodes={node.children} />
 					</strong>
 				);
@@ -74,7 +74,7 @@ function Block({ block }: { block: MdBlock }) {
 	switch (block.type) {
 		case "h1":
 			return (
-				<h1 className="mt-2 mb-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl dark:text-slate-50">
+				<h1 className="mt-2 mb-4 text-3xl font-semibold tracking-tight text-slate-700 sm:text-4xl dark:text-slate-50">
 					{block.text}
 				</h1>
 			);
@@ -82,7 +82,7 @@ function Block({ block }: { block: MdBlock }) {
 			return (
 				<h2
 					id={block.id}
-					className="mt-10 mb-3 scroll-mt-28 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50"
+					className="mt-10 mb-3 scroll-mt-28 text-2xl font-semibold tracking-tight text-slate-700 dark:text-slate-50"
 				>
 					{block.text}
 				</h2>
@@ -91,7 +91,7 @@ function Block({ block }: { block: MdBlock }) {
 			return (
 				<h3
 					id={block.id}
-					className="mt-8 mb-2 scroll-mt-28 text-lg font-semibold text-slate-900 dark:text-slate-100"
+					className="mt-8 mb-2 scroll-mt-28 text-lg font-semibold text-slate-700 dark:text-slate-100"
 				>
 					{block.text}
 				</h3>

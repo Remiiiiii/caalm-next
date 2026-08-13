@@ -3,7 +3,7 @@ export function formatAssistantMarkdown(text: string): string {
 	let formatted = text;
 	formatted = formatted.replace(
 		/\*\*([^*]+)\*\*/g,
-		'<strong class="font-semibold text-slate-900">$1</strong>',
+		'<strong class="font-semibold text-slate-700">$1</strong>',
 	);
 	formatted = formatted.replace(
 		/`([^`]+)`/g,

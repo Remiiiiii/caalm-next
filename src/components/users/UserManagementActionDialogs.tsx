@@ -6,6 +6,7 @@ import {
 	Save,
 	ShieldCheck,
 	Trash2,
+	TriangleAlert,
 	UserRound,
 } from "lucide-react";
 import Image from "next/image";
@@ -44,6 +45,25 @@ function hasCustomAvatar(avatar: string | undefined): boolean {
 	if (a === avatarPlaceholderUrl) return false;
 	if (a.includes("avatar-placeholder")) return false;
 	return true;
+}
+
+function formatLastActiveLabel(iso?: string): string {
+	if (!iso) return "—";
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) return "—";
+
+	const now = Date.now();
+	const diffDays = Math.floor((now - date.getTime()) / (1000 * 60 * 60 * 24));
+
+	if (diffDays <= 0) return "Today";
+	if (diffDays === 1) return "Yesterday";
+	if (diffDays < 30) return `${diffDays} days ago`;
+
+	return date.toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
 }
 
 export type UserActionKind =
@@ -216,7 +236,7 @@ export function UserManagementActionDialogs({
 							/>
 						)}
 						<div>
-							<p className="font-semibold text-slate-900">{user.fullName}</p>
+							<p className="font-semibold text-slate-700">{user.fullName}</p>
 							<p className="text-sm text-slate-600">{user.email}</p>
 						</div>
 					</div>
@@ -436,19 +456,132 @@ export function UserManagementActionDialogs({
 			confirm: isSuspended ? "Reactivate" : "Suspend",
 			onConfirm: onConfirmSuspend,
 		},
-		delete: {
-			title: "Delete user",
-			body: `Permanently delete ${user.fullName}? This cannot be undone.`,
-			confirm: "Delete user",
-			onConfirm: onConfirmDelete,
-		},
 	} as const;
+
+	if (action === "delete") {
+		return (
+			<Dialog open onOpenChange={(next) => !next && onClose()}>
+				<DialogContent className="flex max-h-[90vh] max-w-[440px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
+					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
+
+					<div className="mt-4 flex items-start gap-3 border-b border-slate-200/80 bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-5">
+						<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red/20 bg-red/10">
+							<Trash2 className="h-4 w-4 text-red" aria-hidden />
+						</div>
+						<div className="min-w-0 pt-0.5">
+							<DialogTitle className="text-lg font-semibold sidebar-gradient-text">
+								Delete user
+							</DialogTitle>
+							<p className="mt-0.5 text-xs text-slate-600">
+								This action is permanent and cannot be undone.
+							</p>
+						</div>
+					</div>
+
+					<div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 px-6 py-4">
+						<div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
+							{hasCustomAvatar(user.avatar) ? (
+								<div
+									className="h-10 w-10 shrink-0 overflow-hidden rounded-full"
+									style={{
+										background:
+											"linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
+										padding: "2px",
+									}}
+								>
+									<Image
+										src={user.avatar!}
+										alt=""
+										width={36}
+										height={36}
+										className="h-9 w-9 rounded-full border-2 border-white object-cover"
+									/>
+								</div>
+							) : (
+								<Avatar
+									name={user.fullName}
+									userId={user.$id}
+									size="md"
+									className="shrink-0 gap-0"
+								/>
+							)}
+							<div className="min-w-0 flex-1">
+								<p className="truncate text-sm font-semibold text-slate-700">
+									{user.fullName}
+								</p>
+								<p className="truncate text-xs text-slate-600">{user.email}</p>
+								<div className="mt-1.5 flex flex-wrap gap-4">
+									<div>
+										<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+											Role
+										</p>
+										<p className="text-xs font-semibold text-slate-800">
+											{user.roleName || "Unassigned"}
+										</p>
+									</div>
+									<div>
+										<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+											Last active
+										</p>
+										<p className="text-xs font-semibold text-slate-800">
+											{formatLastActiveLabel(
+												user.lastActiveAt || user.$updatedAt,
+											)}
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div className="flex gap-2.5 rounded-lg border border-red/20 bg-red/10 p-3">
+							<TriangleAlert
+								className="mt-0.5 h-4 w-4 shrink-0 text-red"
+								aria-hidden
+							/>
+							<p className="text-xs leading-relaxed text-slate-800">
+								Removing{" "}
+								<span className="font-semibold text-slate-700">
+									{user.fullName}
+								</span>{" "}
+								revokes their CAALM access immediately and unassigns them from
+								all active tasks and contracts.
+							</p>
+						</div>
+					</div>
+
+					<div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+						<Button
+							type="button"
+							onClick={onClose}
+							disabled={busy}
+							className="btn-primary gap-2 px-3 sm:px-4"
+						>
+							<Ban className="h-4 w-4" aria-hidden />
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							disabled={busy}
+							onClick={onConfirmDelete}
+							className="gap-2 rounded-full border border-brand/30 bg-brand/10 px-4 font-semibold text-brand transition-all duration-200 hover:bg-brand/20 focus-visible:ring-brand/40"
+						>
+							{busy ? (
+								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+							) : (
+								<Trash2 className="h-4 w-4" aria-hidden />
+							)}
+							Delete user
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+		);
+	}
 
 	if (
 		action === "reset" ||
 		action === "revoke" ||
-		action === "suspend" ||
-		action === "delete"
+		action === "suspend"
 	) {
 		const cfg = confirmConfig[action];
 		return (
@@ -456,13 +589,7 @@ export function UserManagementActionDialogs({
 				open
 				onClose={onClose}
 				title={cfg.title}
-				icon={
-					action === "delete" ? (
-						<Trash2 className="h-5 w-5 text-red-600" />
-					) : (
-						<UserRound className="h-5 w-5 text-[#0f5384]" />
-					)
-				}
+				icon={<UserRound className="h-5 w-5 text-[#0f5384]" />}
 				footer={
 					<div className="flex items-center justify-end gap-3">
 						<Button

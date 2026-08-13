@@ -789,7 +789,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 						<div className="min-w-0">
 							<p className="text-xs text-slate-500">{greeting}</p>
 							<div className="mt-0.5 flex flex-wrap items-center gap-2">
-								<h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+								<h1 className="truncate text-xl font-semibold tracking-tight text-slate-700 sm:text-2xl">
 									{displayName}
 								</h1>
 								<span
@@ -850,27 +850,27 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 					<div className="glass-card-cap" />
 					<CardContent className="relative p-3 sm:p-4 lg:p-6">
 						<WidgetCarousel ariaLabel="Executive dashboard widgets">
-							<WeatherWidget
-								location="Miami"
-								latitude={25.7617}
-								longitude={-80.1918}
-							/>
 							<ContractExpiryAlertsWidget
 								maxVisible={2}
 								showSettings={false}
 								compact={true}
 								contracts={contractsFromApi}
 							/>
-							<ContractStatusPieChart contracts={contractsFromApi} />
 							<LicenseExpiryAlertsWidget
 								maxVisible={2}
 								compact={true}
 								licenses={dashboardLicenses}
 							/>
+							<ContractStatusPieChart contracts={contractsFromApi} />
 							<LicenseStatusPieChart licenses={dashboardLicenses} />
 							<DepartmentPerformanceWidget />
 							<CompanyNewsFeed />
 							<QuickNotesWidget user={user ?? undefined} />
+							<WeatherWidget
+								location="Miami"
+								latitude={25.7617}
+								longitude={-80.1918}
+							/>
 						</WidgetCarousel>
 					</CardContent>
 				</Card>
@@ -1486,7 +1486,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 								<div className="px-6 pb-6">
 									<div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-										<h4 className="text-sm font-medium text-slate-900 mb-3">
+										<h4 className="text-sm font-medium text-slate-700 mb-3">
 											Invitation Details
 										</h4>
 										<div className="space-y-2">
@@ -1495,7 +1495,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 													<span className="text-sm text-slate-600">
 														Email Address:
 													</span>
-													<span className="text-sm font-medium text-slate-900">
+													<span className="text-sm font-medium text-slate-700">
 														{deleteEmail}
 													</span>
 												</div>
@@ -1504,7 +1504,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												<span className="text-sm text-slate-600">
 													Request Date:
 												</span>
-												<span className="text-sm font-medium text-slate-900">
+												<span className="text-sm font-medium text-slate-700">
 													{new Date().toLocaleDateString("en-US", {
 														year: "numeric",
 														month: "short",

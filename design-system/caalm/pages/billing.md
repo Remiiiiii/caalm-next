@@ -36,7 +36,7 @@ Patterns from:
 
 - No `CardHeader`; content in `CardContent` with `p-4 sm:p-6`
 - Title: `text-sm font-medium sidebar-gradient-text`
-- Values: `text-slate-900` / muted `text-slate-600`
+- Values: `text-slate-700` / muted `text-slate-600`
 
 ## Integrations tab (Mobbin-informed)
 

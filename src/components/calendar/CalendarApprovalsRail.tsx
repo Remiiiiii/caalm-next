@@ -206,7 +206,7 @@ export function CalendarApprovalsRail({
 									</div>
 									<div className="flex-1 min-w-0">
 										<div className="flex items-start justify-between gap-1 mb-1">
-											<h4 className="text-sm font-semibold text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+											<h4 className="text-sm font-semibold text-slate-700 line-clamp-2 group-hover:text-blue-600 transition-colors">
 												{title}
 											</h4>
 										</div>

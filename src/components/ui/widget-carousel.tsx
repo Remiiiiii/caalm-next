@@ -13,7 +13,7 @@ interface WidgetCarouselProps {
 	itemClassName?: string;
 	/**
 	 * Index of the item whose natural height every other card matches.
-	 * Defaults to the first item (the Weather widget in dashboards).
+	 * Defaults to the first item (expiry alerts in dashboards).
 	 */
 	heightSourceIndex?: number;
 }

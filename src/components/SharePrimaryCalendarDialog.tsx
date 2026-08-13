@@ -253,7 +253,7 @@ export const SharePrimaryCalendarDialog: React.FC<
 											>
 												<div className="flex items-center justify-between">
 													<div>
-														<div className="font-medium text-slate-900">
+														<div className="font-medium text-slate-700">
 															{user.fullName}
 														</div>
 														<div className="text-sm text-slate-500">
@@ -276,7 +276,7 @@ export const SharePrimaryCalendarDialog: React.FC<
 											<div className="flex items-center gap-2">
 												<UserPlus className="w-4 h-4 text-blue-600" />
 												<div>
-													<div className="font-medium text-slate-900">
+													<div className="font-medium text-slate-700">
 														{selectedUser.fullName}
 													</div>
 													<div className="text-sm text-slate-600">

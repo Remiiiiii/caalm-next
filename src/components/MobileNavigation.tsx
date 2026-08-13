@@ -111,6 +111,13 @@ const MobileNavigation = ({
 							<ul className="mobile-nav-list">
 								{groupedNav.map((section) => (
 									<li key={section.header}>
+										{section.header === "Settings" && (
+											<div
+												aria-hidden
+												className="mx-4 mb-3 border-t border-slate-200/80"
+												role="separator"
+											/>
+										)}
 										<p className="mb-2 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
 											{section.header}
 										</p>

@@ -69,7 +69,7 @@ export function AnalyticsInsightsList({
 								>
 									<Icon className="h-4 w-4 shrink-0 mt-0.5 text-slate-700" />
 									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium text-slate-900">
+										<p className="text-sm font-medium text-slate-700">
 											{insight.title}
 										</p>
 										<p className="text-xs text-slate-600 mt-0.5">

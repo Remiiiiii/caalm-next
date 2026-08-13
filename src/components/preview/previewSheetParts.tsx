@@ -28,7 +28,7 @@ export function DetailRow({
 			<p className="pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
 				{label}
 			</p>
-			<div className="min-w-0 text-sm font-medium text-slate-900">
+			<div className="min-w-0 text-sm font-medium text-slate-700">
 				{children}
 			</div>
 		</div>
@@ -56,7 +56,7 @@ export function PreviewFieldSelect({
 		<Select value={value || undefined} onValueChange={onValueChange}>
 			<SelectTrigger
 				className={cn(
-					"h-8 w-full border-white/60 bg-white/80 text-sm font-medium text-slate-900",
+					"h-8 w-full border-white/60 bg-white/80 text-sm font-medium text-slate-700",
 					className,
 				)}
 			>
@@ -92,7 +92,7 @@ export function PreviewLabeledSelect({
 		<Select value={value || undefined} onValueChange={onValueChange}>
 			<SelectTrigger
 				className={cn(
-					"h-8 w-full border-white/60 bg-white/80 text-sm font-medium text-slate-900",
+					"h-8 w-full border-white/60 bg-white/80 text-sm font-medium text-slate-700",
 					className,
 				)}
 			>

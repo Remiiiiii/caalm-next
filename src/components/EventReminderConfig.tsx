@@ -113,7 +113,7 @@ export const EventReminderConfig: React.FC<EventReminderConfigProps> = ({
 							<div className="flex items-center gap-3 flex-1">
 								<Clock className="w-4 h-4 text-slate-500" />
 								<div className="flex-1">
-									<div className="text-sm font-medium text-slate-900">
+									<div className="text-sm font-medium text-slate-700">
 										{formatReminderTime(reminder.minutes)} before event
 									</div>
 									<div className="flex items-center gap-2 mt-1">

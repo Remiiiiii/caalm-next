@@ -673,7 +673,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 											/>
 											<div className="flex-1">
 												<div className="flex items-center gap-2">
-													<span className="font-medium text-slate-900">
+													<span className="font-medium text-slate-700">
 														{calendar.name}
 													</span>
 													{calendar.isPublic && (
@@ -809,7 +809,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 													.toUpperCase()}
 											</div>
 											<div className="flex-1">
-												<div className="font-medium text-sm text-slate-900">
+												<div className="font-medium text-sm text-slate-700">
 													{user.fullName || user.name}
 												</div>
 												<div className="text-xs text-slate-500">
@@ -854,7 +854,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 															.toUpperCase()}
 													</div>
 													<div className="flex-1">
-														<div className="font-medium text-sm text-slate-900">
+														<div className="font-medium text-sm text-slate-700">
 															{user.fullName || user.name}
 														</div>
 														<div className="text-xs text-slate-500">
@@ -1046,13 +1046,13 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 											colorInput?.click();
 										}}
 										className={cn(
-											"flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900 transition-colors",
+											"flex items-center gap-2 text-sm text-slate-700 hover:text-slate-700 transition-colors",
 											editFormData.isCustomColor &&
-												"text-slate-900 font-medium",
+												"text-slate-700 font-medium",
 										)}
 									>
 										{editFormData.isCustomColor && (
-											<Check className="w-4 h-4 text-slate-900" />
+											<Check className="w-4 h-4 text-slate-700" />
 										)}
 										<span>Custom Color...</span>
 										{editFormData.isCustomColor && editFormData.color && (

@@ -94,7 +94,7 @@ export default function RunbookDetailPage() {
 								<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
 									Step {index + 1}
 								</p>
-								<p className="mt-1 text-base font-semibold text-slate-900">
+								<p className="mt-1 text-base font-semibold text-slate-700">
 									{step.title}
 								</p>
 								<p className="mt-2 text-sm leading-6 text-slate-700">

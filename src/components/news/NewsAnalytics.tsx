@@ -348,7 +348,7 @@ const NewsAnalytics: React.FC<NewsAnalyticsProps> = ({ className }) => {
 											{index + 1}
 										</div>
 										<div className="flex-1 min-w-0">
-											<p className="font-medium text-slate-900 truncate">
+											<p className="font-medium text-slate-700 truncate">
 												{article.title}
 											</p>
 											<p className="text-xs text-slate-500 capitalize">
@@ -358,7 +358,7 @@ const NewsAnalytics: React.FC<NewsAnalyticsProps> = ({ className }) => {
 									</div>
 									<div className="flex items-center gap-4">
 										<div className="text-right">
-											<p className="font-semibold text-slate-900">
+											<p className="font-semibold text-slate-700">
 												{article.views}
 											</p>
 											<p className="text-xs text-slate-500">views</p>
